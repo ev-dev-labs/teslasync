@@ -18,8 +18,8 @@
  * they are replaced with faithful inert doubles. Network is never touched.
  *
  * Facets covered:
- *   - loading: PageContainer shows the brand spinner, withholds all trip
- *     scaffolding, but keeps the header + range control mounted.
+ *   - loading: all section headings and contextual skeletons remain mounted;
+ *     the page is busy without inventing measurements or local scope controls.
  *   - populated (km): honest KPI tiles, hook wiring, per-card distance / energy
  *     / cost / efficiency / badges / duration / date, and the energy ladder that
  *     ranks by energy and drops zero-energy trips.
@@ -37,10 +37,11 @@
  *   - formatDuration: in-progress, invalid/negative, whole-hour, minute-only,
  *     and the "1h 60m" rounding regression are each rendered correctly.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { useRangeState } from '@/hooks/useRangeState';
+import { useRangeState, type UseRangeStateReturn } from '@/hooks/useRangeState';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { Trip } from '@/api/types';
@@ -48,6 +49,33 @@ import type { UnitPref } from '@/lib/unitConversion';
 import { convertDistanceFromSI, formatEnergy as libFormatEnergy } from '@/lib/unitConversion';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { formatDate } from '@/lib/dateFormat';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { Button } from '@/components/ui';
+
+const rawBridge = vi.hoisted(() => ({ inputs: [] as Array<readonly StatMetric[]> }));
+const chartBridge = vi.hoisted(() => ({
+  rows: [] as Array<{ name: string; distance: number | null }>,
+  columns: [] as Array<{ key: string; label: string }>,
+  bars: [] as Array<{ fill: string; isAnimationActive: boolean; animationDuration: number }>,
+}));
+const rangeBridge = vi.hoisted(() => ({ override: null as Partial<UseRangeStateReturn> | null }));
+const motionBridge = vi.hoisted(() => ({ fills: [] as Array<{ initial: unknown; transition: unknown }> }));
+vi.mock('@/hooks/useRangeState', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useRangeState')>();
+  return { ...actual, useRangeState: (...args: Parameters<typeof actual.useRangeState>) => ({
+    ...actual.useRangeState(...args), ...rangeBridge.override,
+  }) };
+});
+vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
+  return {
+    ...actual,
+    useOperationalMetrics: (metrics: readonly StatMetric[]) => {
+      rawBridge.inputs.push(metrics);
+      return actual.useOperationalMetrics(metrics);
+    },
+  };
+});
 
 // Same conversion factor the page uses for Wh/km → Wh/mi efficiency.
 const KM_PER_MILE = 1.609344;
@@ -89,6 +117,9 @@ vi.mock('framer-motion', () => {
       get:
         () =>
         ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+          if ('data-metric-fill' in rest) {
+            motionBridge.fills.push({ initial: rest.initial, transition: rest.transition });
+          }
           const safe: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(rest)) {
             if (
@@ -104,7 +135,8 @@ vi.mock('framer-motion', () => {
   return {
     motion: motionProxy,
     AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-    useReducedMotion: () => true,
+    useReducedMotion: () => typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : true,
   };
 });
 
@@ -113,7 +145,12 @@ vi.mock('framer-motion', () => {
 //    mirrors the props the page relies on — title, ariaLabel (role=img body),
 //    the action toolbar, and the loading / empty flags — and renders children
 //    only in the populated state, exactly like the real component. ────────────
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/layout', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/layout')>()),
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
+vi.mock('@/components/charts', async () => ({
   ChartContainer: ({
     title,
     ariaLabel,
@@ -122,6 +159,8 @@ vi.mock('@/components/charts', () => ({
     action,
     children,
     className,
+    data,
+    dataColumns,
   }: {
     title: string;
     ariaLabel: string;
@@ -130,7 +169,12 @@ vi.mock('@/components/charts', () => ({
     action?: ReactNode;
     children?: ReactNode;
     className?: string;
-  }) => (
+    data: Array<{ name: string; distance: number | null }>;
+    dataColumns: Array<{ key: string; label: string }>;
+  }) => {
+    chartBridge.rows = data;
+    chartBridge.columns = dataColumns;
+    return (
     <section
       role="img"
       aria-label={ariaLabel}
@@ -142,18 +186,24 @@ vi.mock('@/components/charts', () => ({
       <div>{action}</div>
       {!loading && !empty ? <div data-testid="chart-body">{children}</div> : null}
     </section>
-  ),
+    );
+  },
   ChartTooltip: () => null,
   ChartGradient: () => null,
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  BarChart: () => null,
-  Bar: () => null,
+  BarChart: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  Bar: (props: { fill: string; isAnimationActive: boolean; animationDuration: number }) => {
+    chartBridge.bars.push(props);
+    return null;
+  },
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,
   axisTickSm: {},
+  axisTick: {},
   chartGrid: null,
   chartAnimation: {},
+  chartAnimationProps: (await import('@/components/charts/chartDefaults')).chartAnimationProps,
   CHART_COLORS: ['#22d3ee', '#f59e0b', '#a855f7', '#34d399'],
 }));
 
@@ -162,7 +212,13 @@ vi.mock('@/components/charts', () => ({
 vi.mock('@/components/mobile', () => ({
   PullToRefresh: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
-vi.mock('@/components/data-display/SavedViewMenu', () => ({ SavedViewMenu: () => null }));
+vi.mock('@/components/data-display/SavedViewMenu', () => ({
+  SavedViewMenu: ({ onApply }: { onApply: (query: string) => void }) => (
+    <Button onClick={() => onApply('vehicle_id=9&from=2026-03-02&to=2026-03-20&page=3&size=2')}>
+      Restore saved view
+    </Button>
+  ),
+}));
 
 // ── Data + environment hooks, driven per test. ──
 vi.mock('@/api/hooks/useTrips', () => ({ useTrips: vi.fn() }));
@@ -180,16 +236,15 @@ import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import TripListPage from './TripListPage';
 
  
-type AnyFn = ReturnType<typeof vi.fn> & any;
-const mockUseTrips = useTrips as unknown as AnyFn;
-const mockSelected = useSelectedVehicle as unknown as AnyFn;
-const mockUnits = useUnits as unknown as AnyFn;
-const mockFormatting = useFormatting as unknown as AnyFn;
-const mockExportCSV = exportAsCSV as unknown as AnyFn;
-const mockExportJSON = exportAsJSON as unknown as AnyFn;
+const mockUseTrips = vi.mocked(useTrips);
+const mockSelected = vi.mocked(useSelectedVehicle);
+const mockUnits = vi.mocked(useUnits);
+const mockFormatting = vi.mocked(useFormatting);
+const mockExportCSV = vi.mocked(exportAsCSV);
+const mockExportJSON = vi.mocked(exportAsJSON);
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Partial<ReturnType<typeof useTrips>> = {}): ReturnType<typeof useTrips> {
   return {
     data: undefined,
     error: null,
@@ -200,7 +255,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
     dataUpdatedAt: Date.now(),
     refetch: vi.fn(),
     ...over,
-  };
+  } as ReturnType<typeof useTrips>;
 }
 
 function makeTrip(over: Partial<Trip> & Pick<Trip, 'id'>): Trip {
@@ -292,13 +347,14 @@ function unitsValue(distance: 'km' | 'mi') {
   return {
     unitPrefs: pref,
     formatEnergy: (wh: number | null | undefined) => libFormatEnergy(wh, pref),
-  };
+  } as ReturnType<typeof useUnits>;
 }
 
 function formattingValue() {
   return {
+    currencySymbol: '$',
     formatCurrency: (amount: number, decimals?: number) => `$${fmtNumber(amount, decimals ?? 2)}`,
-  };
+  } as ReturnType<typeof useFormatting>;
 }
 
 function LocationProbe() {
@@ -309,23 +365,25 @@ function LocationProbe() {
 function HeaderRangeChange() {
   const { setRange } = useRangeState();
   return (
-    <button onClick={() => setRange({ start: '2026-03-02', end: '2026-03-20' })}>
+    <Button onClick={() => setRange({ start: '2026-03-02', end: '2026-03-20' })}>
       Change header range
-    </button>
+    </Button>
   );
 }
 
 function renderPage(initialEntries: string[] = ['/trips']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = () => (
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <TripListPage />
         <HeaderRangeChange />
         <LocationProbe />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const result = render(tree());
+  return { ...result, refresh: () => result.rerender(tree()) };
 }
 
 const statsRegion = () => screen.getByRole('region', { name: 'Trip summary metrics' });
@@ -333,10 +391,10 @@ const listRegion = () => screen.getByRole('region', { name: 'All trips' });
 const primaryRegion = () => screen.getByRole('region', { name: 'Trip distance and energy breakdown' });
 const locSearch = () => screen.getByTestId('loc-search').textContent ?? '';
 
-/** Value <p> that immediately follows a MetricCard's label span. */
+/** Real OperationalBrief measurement, independent of typography elements. */
 function cardValue(region: HTMLElement, label: string): string {
   const span = within(region).getByText(label);
-  return span.closest('p')?.nextElementSibling?.textContent ?? '';
+  return span.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 /** The nearest trip-card panel that contains the given (unique) trip name. */
@@ -347,6 +405,12 @@ function cardByName(name: string): HTMLElement {
 }
 
 beforeEach(() => {
+  rawBridge.inputs = [];
+  chartBridge.rows = [];
+  chartBridge.columns = [];
+  chartBridge.bars = [];
+  motionBridge.fills = [];
+  rangeBridge.override = null;
   mockUseTrips.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
@@ -354,28 +418,79 @@ beforeEach(() => {
   mockExportCSV.mockReset();
   mockExportJSON.mockReset();
 
-  mockSelected.mockReturnValue({ vehicleId: 7, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+  mockSelected.mockReturnValue({ vehicleId: 7, vehicle: null, vehicles: [], setVehicleId: vi.fn() } as ReturnType<typeof useSelectedVehicle>);
   mockUnits.mockReturnValue(unitsValue('km'));
   mockFormatting.mockReturnValue(formattingValue());
   mockUseTrips.mockReturnValue(makeQuery({ data: TRIPS }));
 });
 
+afterEach(() => vi.restoreAllMocks());
+
 describe('TripListPage — loading', () => {
-  it('shows the spinner and withholds trip content while keeping the header', () => {
+  it('keeps every band and contextual skeleton mounted while loading', () => {
     mockUseTrips.mockReturnValue(makeQuery({ data: undefined, isLoading: true, isFetching: true }));
     renderPage();
 
-    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Trips', level: 1 }).closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
     // The page heading persists during load; the range belongs to the header.
     expect(screen.getByRole('heading', { name: 'Trips', level: 1 })).toBeInTheDocument();
     expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
-    // None of the data scaffolding mounts (PageContainer replaces children).
-    expect(screen.queryByRole('region', { name: 'All trips' })).toBeNull();
+    expect(statsRegion()).toBeInTheDocument();
+    expect(primaryRegion()).toBeInTheDocument();
+    expect(listRegion().querySelectorAll('[data-card]')).toHaveLength(6);
+    expect(screen.getByRole('img', { name: /Top trips ranked by distance/ })).toHaveAttribute('data-loading', 'true');
+    expect(screen.getByText('Top Trips by Energy')).toBeInTheDocument();
+    expect(rawBridge.inputs.at(-1)?.map(metric => metric.rawValue)).toEqual([null, null, null, null, null, null]);
     expect(screen.queryByText('No trips recorded yet')).toBeNull();
   });
 });
 
 describe('TripListPage — populated (km) KPIs + wiring', () => {
+  it('preserves the screenshot cohort: six measurements and 60 drives, 2 trips, 32 charging sessions', () => {
+    mockUseTrips.mockReturnValue(makeQuery({ data: [
+      makeTrip({ id: 41, total_distance_m: 300000, total_energy_wh: 50000, total_cost: 15, drive_count: 30, charge_count: 16 }),
+      makeTrip({ id: 42, total_distance_m: 100000, total_energy_wh: 20000, total_cost: 5, drive_count: 30, charge_count: 16 }),
+    ] }));
+    renderPage();
+    const kpi = statsRegion();
+    expect(kpi.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(cardValue(kpi, 'Total Distance')).toBe('400 km');
+    expect(cardValue(kpi, 'Energy Used')).toBe(libFormatEnergy(70000, makePref('km')));
+    expect(cardValue(kpi, 'Total Cost')).toBe('$20.00');
+    expect(cardValue(kpi, 'Total Trips')).toBe('2');
+    expect(cardValue(kpi, 'Avg / Trip')).toBe('200 km');
+    expect(cardValue(kpi, 'Total Charges')).toBe('32');
+    const rawMetrics = rawBridge.inputs[rawBridge.inputs.length - 1];
+    expect(rawMetrics?.map(metric => metric.rawValue)).toEqual([400000, 70000, 20, 2, 200000, 32]);
+    expect(rawMetrics?.map(metric => metric.metricId)).toEqual(['distance', 'energy', 'currency', 'count', 'distance', 'count']);
+    // Metric context moved off the brief face into the drawer's per-metric
+    // groups; scope moved into the drawer header.
+    for (const context of ['2 trips', '60 drives', '60 total drives', '32 charge sessions', '$5.00/100km']) {
+      expect(within(kpi).queryByText(context)).not.toBeInTheDocument();
+    }
+    assertOperationalBriefDisclosure(kpi, 'Loaded page only', { contains: true });
+    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Total Distance' })).toHaveTextContent('2 trips');
+    expect(within(drawer).getByRole('group', { name: 'Energy Used' })).toHaveTextContent('60 drives');
+    expect(within(drawer).getByRole('group', { name: 'Total Cost' })).toHaveTextContent('$5.00/100km');
+    expect(within(drawer).getByRole('group', { name: 'Total Trips' })).toHaveTextContent('60 total drives');
+    expect(within(drawer).getByRole('group', { name: 'Total Charges' })).toHaveTextContent('32 charge sessions');
+    expect(within(drawer).getByText('400 km')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  });
+
+  it('keeps loaded summaries and export controls through a failed background refresh', () => {
+    mockUseTrips.mockReturnValue(makeQuery({ data: TRIPS, isError: true, error: new Error('refresh failed'), isFetching: true }));
+    renderPage();
+    const kpi = statsRegion();
+    expect(cardValue(kpi, 'Total Distance')).toBe(`${fmtInt(convertDistanceFromSI(TOTAL_DIST_M, 'km'))} km`);
+    assertOperationalBriefDisclosure(kpi, 'Retained source');
+    expect(screen.getByRole('button', { name: 'CSV' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
+    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText(`${fmtInt(convertDistanceFromSI(TOTAL_DIST_M, 'km'))} km`)).toBeInTheDocument();
+  });
   it('derives honest KPI tiles from the raw SI trip list', () => {
     renderPage();
     const kpi = statsRegion();
@@ -397,6 +512,23 @@ describe('TripListPage — populated (km) KPIs + wiring', () => {
 });
 
 describe('TripListPage — populated (km) trip cards', () => {
+  it('keeps complete distance, energy, efficiency and cost text wrap-safe inside allocated cards', () => {
+    renderPage();
+    const card = cardByName('Weekend to Coast');
+    const values = [
+      within(card).getByText(`${fmtInt(convertDistanceFromSI(300000, 'km'))} km`),
+      within(card).getByText(libFormatEnergy(54000, makePref('km'))),
+      within(card).getByText(`${fmtInt(54000 / 300)} Wh/km`),
+      within(card).getByText('$12.50'),
+    ];
+    for (const value of values) {
+      expect(value).toHaveClass('break-words');
+      expect(value).not.toHaveClass('truncate');
+    }
+    expect(screen.getByRole('button', { name: 'CSV' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
+  });
+
   it('renders each card with converted distance, energy, cost, badges and duration', () => {
     renderPage();
 
@@ -412,7 +544,7 @@ describe('TripListPage — populated (km) trip cards', () => {
     expect(within(cardA).getByText(formatDate('2026-03-01T08:00:00Z'))).toBeInTheDocument();
   });
 
-  it('falls back to a synthesized name and omits the charges badge / cost when zero', () => {
+  it('keeps synthesized names and zero cost without inventing charges', () => {
     renderPage();
 
     // Unnamed trip B → "Trip #2"; no charges badge; 1h15m duration.
@@ -421,10 +553,10 @@ describe('TripListPage — populated (km) trip cards', () => {
     expect(within(cardB).queryByText(/charges/)).toBeNull();
     expect(within(cardB).getByText('1h 15m')).toBeInTheDocument();
 
-    // In-progress trip C → duration label + em-dash cost.
+    // In-progress trip C still has a measured zero cost.
     const cardC = cardByName('Airport run');
     expect(within(cardC).getByText('In progress')).toBeInTheDocument();
-    expect(within(cardC).getByText('—')).toBeInTheDocument();
+    expect(within(cardC).getByText('$0.00')).toBeInTheDocument();
   });
 });
 
@@ -496,6 +628,18 @@ describe('TripListPage — error', () => {
 });
 
 describe('TripListPage — exports', () => {
+  it('keeps complete loaded-set exports and trip cards during a background refresh failure', () => {
+    mockUseTrips.mockReturnValue(makeQuery({ data: TRIPS, isError: true, error: new Error('refresh failed') }));
+    renderPage();
+    expect(cardByName('Weekend to Coast')).toBeInTheDocument();
+    expect(cardByName('Trip #2')).toBeInTheDocument();
+    expect(cardByName('Airport run')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    expect(mockExportJSON).toHaveBeenCalledWith(TRIPS, 'teslasync-trips.json');
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+    expect(mockExportCSV.mock.calls[0]?.[0]).toHaveLength(TRIPS.length);
+  });
+
   it('exports a flat SI CSV row per trip under the v2 filename', () => {
     renderPage();
 
@@ -561,6 +705,221 @@ describe('TripListPage — URL state', () => {
   });
 });
 
+describe('TripListPage modernization regressions', () => {
+  it('forwards exclusive timezone instants without duplicating workspace selectors', () => {
+    rangeBridge.override = {
+      start: '2026-03-08', end: '2026-03-08', timezone: 'America/Los_Angeles',
+      startInstant: '2026-03-08T08:00:00.000Z', endInstantExclusive: '2026-03-09T07:00:00.000Z',
+    };
+    renderPage();
+    expect(mockUseTrips).toHaveBeenLastCalledWith({
+      vehicle_id: 7, limit: 50, offset: 0,
+      start: '2026-03-08T08:00:00.000Z', end: '2026-03-09T07:00:00.000Z',
+    });
+    // The scope range moved off the brief face into the drawer header.
+    assertOperationalBriefDisclosure(statsRegion(), '2026-03-08 – 2026-03-08', { contains: true });
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument();
+  });
+
+  it('resets the requested page when the workspace vehicle changes', () => {
+    const { refresh } = renderPage(['/trips?page=3&size=2']);
+    mockSelected.mockReturnValue({ vehicleId: 9, vehicle: null, vehicles: [], setVehicleId: vi.fn() } as ReturnType<typeof useSelectedVehicle>);
+    refresh();
+    expect(locSearch()).not.toContain('page=3');
+    expect(mockUseTrips).toHaveBeenLastCalledWith(expect.objectContaining({ vehicle_id: 9, limit: 2, offset: 0 }));
+    expect(locSearch()).toContain('size=2');
+  });
+
+  it('retains explicitly restored saved-view pagination when its range changes', () => {
+    renderPage(['/trips?from=2026-03-01&to=2026-03-10&page=2&size=2']);
+    fireEvent.click(screen.getByRole('button', { name: 'Restore saved view' }));
+    expect(locSearch()).toContain('from=2026-03-02');
+    expect(locSearch()).toContain('to=2026-03-20');
+    expect(locSearch()).toContain('vehicle_id=9');
+    expect(locSearch()).toContain('page=3');
+    expect(mockUseTrips).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 2, offset: 4 }));
+  });
+
+  it('refetches rolling instants across midnight without resetting the selected page', () => {
+    rangeBridge.override = {
+      start: '2026-03-09', end: '2026-03-10', presetId: '24h',
+      startInstant: '2026-03-09T23:59:00.000Z', endInstantExclusive: '2026-03-10T23:59:00.000Z',
+    };
+    const { refresh } = renderPage(['/trips?page=3&size=2']);
+    rangeBridge.override = {
+      ...rangeBridge.override, start: '2026-03-10', end: '2026-03-11',
+      startInstant: '2026-03-10T00:01:00.000Z', endInstantExclusive: '2026-03-11T00:01:00.000Z',
+    };
+    refresh();
+    expect(locSearch()).toContain('page=3');
+    expect(mockUseTrips).toHaveBeenLastCalledWith(expect.objectContaining({
+      offset: 4, start: '2026-03-10T00:01:00.000Z', end: '2026-03-11T00:01:00.000Z',
+    }));
+  });
+
+  it.each([
+    { caseName: 'zero page', query: 'page=0', limit: 50, offset: 0 },
+    { caseName: 'negative page', query: 'page=-2', limit: 50, offset: 0 },
+    { caseName: 'fractional page', query: 'page=1.5', limit: 50, offset: 0 },
+    { caseName: 'unsafe offset', query: 'page=9007199254740991', limit: 50, offset: 0 },
+    { caseName: 'zero size', query: 'size=0', limit: 50, offset: 0 },
+    { caseName: 'fractional size', query: 'size=2.5', limit: 50, offset: 0 },
+    { caseName: 'oversized window', query: 'size=1001', limit: 50, offset: 0 },
+    { caseName: 'valid server maximum', query: 'page=2&size=1000', limit: 1000, offset: 1000 },
+  ])('validates the request window for $caseName', ({ query, limit, offset }) => {
+    renderPage([`/trips?${query}`]);
+    expect(mockUseTrips).toHaveBeenLastCalledWith(expect.objectContaining({ limit, offset }));
+  });
+
+  it('announces loaded rows and unknown totals while retaining empty-page recovery', () => {
+    mockUseTrips.mockReturnValue(makeQuery({ data: [] }));
+    renderPage(['/trips?page=3&size=2']);
+    const pagination = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByText('0 matching / 0 loaded rows')).toBeInTheDocument();
+    expect(within(pagination).getByText('Page 3 of Unknown')).toBeInTheDocument();
+    expect(within(pagination).queryByText(/Showing .* of/)).not.toBeInTheDocument();
+    expect(within(pagination).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(within(pagination).getByRole('textbox', { name: 'Go to page' })).toHaveValue('3');
+    fireEvent.click(within(pagination).getByRole('button', { name: 'Previous page' }));
+    expect(locSearch()).toContain('page=2');
+  });
+
+  it.each([
+    { caseName: 'zero', cost: 0, expected: '$0.00' },
+    { caseName: 'signed refund', cost: -5.25, expected: '$-5.25' },
+  ])('shows $caseName cost and unavailable zero-distance efficiency', ({ cost, expected }) => {
+    mockUseTrips.mockReturnValue(makeQuery({ data: [makeTrip({
+      ...TRIP_A, name: 'Zero distance', total_distance_m: 0, total_cost: cost,
+    })] }));
+    renderPage();
+    const card = cardByName('Zero distance');
+    expect(within(card).getByText(expected)).toBeInTheDocument();
+    expect(within(card).getByText('—')).toBeInTheDocument();
+    expect(within(card).queryByText('0 Wh/km')).not.toBeInTheDocument();
+    // The per-100km cost context moved off the brief face into the drawer's
+    // Total Cost group; the measured cost itself stays numeric on the face.
+    const stats = statsRegion();
+    expect(within(stats).queryByText('—/100km')).not.toBeInTheDocument();
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Total Cost' })).toHaveTextContent('—/100km');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(cardValue(statsRegion(), 'Total Cost')).toBe(expected);
+  });
+
+  it('keeps malformed measurements unknown instead of inventing aggregate zeros', () => {
+    mockUseTrips.mockReturnValue(makeQuery({ data: [makeTrip({
+      ...TRIP_A, total_distance_m: Infinity, total_energy_wh: NaN, total_cost: NaN,
+    })] }));
+    renderPage();
+    expect(rawBridge.inputs.at(-1)?.map(metric => metric.rawValue)).toEqual([null, null, null, 1, null, 2]);
+    const card = cardByName('Weekend to Coast');
+    expect(within(card).getByText(`— ${makePref('km').distance}`)).toBeInTheDocument();
+    expect(within(card).queryByText('$0.00')).not.toBeInTheDocument();
+    expect(chartBridge.rows).toEqual([{ name: 'Weekend to Coast', distance: null }]);
+  });
+
+  it.each(['km', 'mi'] as const)('distinguishes unknown distance from measured zero with %s preferences', distance => {
+    mockUnits.mockReturnValue(unitsValue(distance));
+    mockUseTrips.mockReturnValue(makeQuery({ data: [
+      makeTrip({ ...TRIP_A, id: 71, name: 'Unknown distance', total_distance_m: NaN }),
+      makeTrip({ ...TRIP_A, id: 72, name: 'Measured zero', total_distance_m: 0 }),
+    ] }));
+    renderPage();
+    expect(within(cardByName('Unknown distance')).getByText(`— ${distance}`)).toBeInTheDocument();
+    expect(within(cardByName('Unknown distance')).queryByText(`0 ${distance}`)).not.toBeInTheDocument();
+    expect(within(cardByName('Measured zero')).getByText(`${fmtInt(convertDistanceFromSI(0, distance))} ${distance}`)).toBeInTheDocument();
+    expect(chartBridge.rows).toEqual([
+      { name: 'Unknown distance', distance: null },
+      { name: 'Measured zero', distance: 0 },
+    ]);
+    expect(rawBridge.inputs.at(-1)?.[0].rawValue).toBeNull();
+  });
+
+  it.each([
+    { caseName: 'initial pause', data: undefined, expected: null },
+    { caseName: 'retained pause', data: TRIPS, expected: TOTAL_DIST_M },
+  ])('preserves independent sections through $caseName', ({ data, expected }) => {
+    mockUseTrips.mockReturnValue(makeQuery({ data, fetchStatus: 'paused' }));
+    renderPage();
+    expect(statsRegion()).toBeInTheDocument();
+    expect(primaryRegion()).toBeInTheDocument();
+    expect(listRegion()).toBeInTheDocument();
+    expect(rawBridge.inputs.at(-1)?.[0].rawValue).toBe(expected);
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    if (data) {
+      expect(cardByName('Weekend to Coast')).toBeInTheDocument();
+      // The retained status moved off the brief face into the drawer header.
+      assertOperationalBriefDisclosure(statsRegion(), 'Retained source');
+      expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
+    } else {
+      expect(listRegion().querySelectorAll('[data-card]')).toHaveLength(6);
+      expect(screen.queryByText('No trips recorded yet')).not.toBeInTheDocument();
+    }
+  });
+
+  it.each([
+    { caseName: 'normal motion', reduce: false, active: true, duration: 300 },
+    { caseName: 'reduced motion', reduce: true, active: false, duration: 0 },
+  ])('uses shared series animation and solid fills with $caseName', ({ reduce, active, duration }) => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true, writable: true,
+      value: vi.fn<(query: string) => MediaQueryList>(query => ({
+        matches: query.includes('prefers-reduced-motion') && reduce,
+        media: query, onchange: null, addListener: vi.fn(), removeListener: vi.fn(),
+        addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(),
+      })),
+    });
+    try {
+      renderPage();
+      expect(chartBridge.rows).toEqual(TRIPS.map(trip => ({
+        name: trip.name ?? `Trip ${trip.id}`,
+        distance: convertDistanceFromSI(trip.total_distance_m, makePref('km').distance),
+      })));
+      expect(chartBridge.bars.at(-1)).toMatchObject({
+        fill: '#22d3ee', isAnimationActive: active, animationDuration: duration,
+      });
+      const fills = primaryRegion().querySelectorAll('[data-metric-fill]');
+      expect(fills).toHaveLength(2);
+      for (const fill of fills) {
+        expect(fill.getAttribute('style')).not.toContain('linear-gradient');
+        expect(fill).toHaveStyle({ background: '#f59e0b' });
+      }
+      expect(motionBridge.fills.slice(-2)).toEqual([
+        { initial: reduce ? false : { width: 0 }, transition: { duration: reduce ? 0 : 0.25, ease: [0.2, 0, 0, 1] } },
+        { initial: reduce ? false : { width: 0 }, transition: { duration: reduce ? 0 : 0.25, ease: [0.2, 0, 0, 1] } },
+      ]);
+      expect(screen.getByRole('button', { name: 'CSV' })).toHaveClass('min-h-11', 'min-w-11');
+      expect(within(cardByName('Weekend to Coast')).getByText('$12.50')).toHaveClass('text-[var(--text-primary)]');
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'matchMedia', descriptor);
+      else Reflect.deleteProperty(window, 'matchMedia');
+    }
+  });
+
+  it('keeps all loaded long-name cards and raw exports beyond the top-ten chart', () => {
+    const trips = Array.from({ length: 12 }, (_, index) => makeTrip({
+      id: index + 100, name: `${'LongUnbrokenTripName'.repeat(8)}-${index}`,
+      total_distance_m: index * 1000, total_energy_wh: index * 200,
+    }));
+    const sourceOrder = trips.map(trip => trip.id);
+    mockUseTrips.mockReturnValue(makeQuery({ data: trips }));
+    renderPage();
+    expect(chartBridge.rows.map(row => row.distance)).toEqual([11, 10, 9, 8, 7, 6, 5, 4, 3, 2]);
+    expect(chartBridge.columns).toEqual([{ key: 'name', label: 'Trip' }, { key: 'distance', label: 'Distance (km)' }]);
+    expect(listRegion().querySelectorAll('[data-card]')).toHaveLength(12);
+    for (const trip of trips) expect(cardByName(trip.name ?? '')).toBeInTheDocument();
+    expect(trips.map(trip => trip.id)).toEqual(sourceOrder);
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    expect(mockExportJSON).toHaveBeenCalledWith(trips, 'teslasync-trips.json');
+    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
+    expect(mockExportCSV.mock.calls.at(-1)?.[0]).toHaveLength(12);
+    expect(primaryRegion().querySelectorAll('[role="progressbar"]')).toHaveLength(6);
+  });
+});
+
 describe('TripListPage — duration formatting', () => {
   it('renders whole-hour, minute-only, in-progress and invalid ranges', () => {
     const trips: Trip[] = [
@@ -576,8 +935,8 @@ describe('TripListPage — duration formatting', () => {
     expect(within(cardByName('Alpha')).getByText('2h')).toBeInTheDocument();
     expect(within(cardByName('Bravo')).getByText('40m')).toBeInTheDocument();
     expect(within(cardByName('Charlie')).getByText('In progress')).toBeInTheDocument();
-    // Only the invalid-range card shows the em-dash (all costs are > 0).
-    expect(within(cardByName('Delta')).getByText('—')).toBeInTheDocument();
+    // The timestamp metric remains unavailable, separately from efficiency.
+    expect(within(cardByName('Delta')).getByText('—', { selector: '.inline-flex > span' })).toBeInTheDocument();
   });
 
   it('rolls a rounded-up leftover minute into the hour (no "1h 60m")', () => {

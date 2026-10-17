@@ -1,0 +1,435 @@
+{
+  "item": "audit-page-209",
+  "phase": 0,
+  "mode": "read-only source audit",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+  "routes": ["/signal-log"],
+  "identity": {
+    "repositoryRoot": "F:\\github\\TeslaSync",
+    "rootFile": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+    "rootSHA256": "1448a45d49a730b931ea4ef88cb73ea2101eee75bc9d1fc39ed33f7b1ec8b889",
+    "routeEvidence": [
+      {"file": "web\\src\\App.tsx", "line": 207, "detail": "Lazy import of the assigned page."},
+      {"file": "web\\src\\App.tsx", "line": 735, "detail": "signal-log route mounts SignalLogViewer within SafeRoute."},
+      {"file": "web\\src\\lib\\workspaceScope.ts", "line": 62, "detail": "/signal-log belongs to RANGE_ENABLED_PATHS."}
+    ],
+    "runtimeMountVerified": false
+  },
+  "purpose": "Explicitly query bounded per-signal historical samples and compare HTTP/MQTT producer-time evidence for the submitted vehicle and window.",
+  "primaryGoal": "Select signals, submit a query, inspect returned counts, chart, value composition, transport evidence and paginated expandable rows without changing telemetry.",
+  "dataSources": [
+    {
+      "hook": "useSignals",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoint": "GET /signals/{vehicleID}/available",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4911, "fallbackLine": 4929},
+      "owner": "Telemetry catalog API hook; backend apisignal handler",
+      "behavior": "Vehicle-enabled, cancellable catalog read; rich catalog is reduced to names; STANDARD stale time. Metadata is not available to this selector.",
+      "backendBehavior": "Route registration verified only; deployed availability and response semantics unverified."
+    },
+    {
+      "hook": "useSignalHistoryBatch",
+      "file": "web\\src\\api\\hooks\\useSignals.ts",
+      "line": 375,
+      "endpoint": "GET /signals/{vehicleID}/{signalName}/history?from=...&to=...&limit=...",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4914, "fallbackLine": 4932},
+      "owner": "Typed signals API hook; backend apisignal history handler",
+      "behavior": "Only enabled after submission; revision, vehicle, signals, bounds and limit in query key. URI-encoded signal name, AbortSignal forwarding, historical policy, Promise.all fan-out. Each request asks for perPage * 10 rows. Returned data arrays are null-safe normalized before the page adapts and sorts them.",
+      "backendBehavior": "Actual limit enforcement, ordering, full-window completeness and exclusive-upper-bound semantics not inspected or exercised."
+    },
+    {
+      "hook": "useTransportAgreement",
+      "file": "web\\src\\api\\hooks\\useSignals.ts",
+      "line": 418,
+      "endpoint": "GET /signals/{vehicleID}/transport-agreement?from=...&to=...",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4913, "fallbackLine": 4931},
+      "owner": "Typed signals API hook and TransportAgreementPanel; backend apisignal handler",
+      "behavior": "Independent historical query, abort forwarding. Panel withholds requests beyond its source-defined 168-hour cap without narrowing history bounds. Displays retained/fatal/no-evidence/insufficient-overlap/truncated/invalid-row states.",
+      "backendBehavior": "168-hour frontend guard confirmed; backend cap implementation was not read. Agreement mathematics and runtime units unverified."
+    },
+    {
+      "hook": "useRangeState / useSelectedVehicle / useUrlArray / useProductPreferences",
+      "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+      "line": 81,
+      "endpoint": null,
+      "owner": "Existing workspace, URL and product-preference hooks",
+      "behavior": "Header-owned vehicle and date scope, URL-backed signals; explicitly submitted snapshot remains independent of subsequent draft control edits.",
+      "inspectionLimit": "Only useRangeState implementation inspected; other imported preference/URL/vehicle hooks not traced internally."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 158, "role": "Title/subtitle, source query and copyLink; owner internals not inspected."},
+    {"name": "SignalSelector / ComboboxMulti", "owner": "web\\src\\features\\telemetry\\components\\SignalSelector.tsx", "line": 73, "role": "Uncapped searchable multi-selection using existing forms primitive and localized layer help."},
+    {"name": "SignalLogKpiBand / TelemetrySummaryBrief / OperationalBrief", "owner": "web\\src\\features\\telemetry\\components\\SignalLogKpiBand.tsx", "line": 101, "role": "Six metrics; typed raw count/duration pipeline, submitted window, observed span and returned-row qualification."},
+    {"name": "TransportAgreementPanel / Metrics / FieldList", "owner": "web\\src\\features\\telemetry\\components\\TransportAgreementPanel.tsx", "line": 65, "role": "Independent bounded agreement evidence; source warnings, metrics and per-signal list."},
+    {"name": "SignalChartPanel / EmbeddedChart / SmallMultiplesChart", "owner": "web\\src\\features\\telemetry\\components\\SignalChartPanel.tsx", "line": 214, "role": "Overlay or automatic small-multiples chart, retained series, legend visibility and accessible data rows. Shared chart internals not inspected."},
+    {"name": "SignalHistoryTable / DataTable / Pagination / CodeBlock / CopyButton", "owner": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx", "line": 203, "role": "Timestamp/signal/value/type columns, fixed-height table, persistence ID, expansion, JSON copy and local pagination."},
+    {"name": "SourceContent / useDataState / StaleRefreshWarning", "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "line": 11, "role": "Canonical fatal versus retained trust presentation; several callers currently use only ready/error."},
+    {"name": "GlassPanel / Button / Select / typography / EmptyState / Skeleton / FadeIn", "owner": "Existing category barrels", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 27, "role": "Reuse present; no new presentation library or replacement shell."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+      "line": 40,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Local valueType duplicates the inspected getValueType helper but drops its null branch.",
+      "fix": "Consolidate type classification in the existing signal-domain helper, with a localized display label at the caller.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": {"file": "web\\src\\components\\SignalQueryControls.tsx", "line": 105}
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalLogKpiBand.tsx",
+      "line": 44,
+      "rule": "MDC-033 / MDC-044",
+      "detail": "Local duration formatting bypasses the existing raw-seconds metric formatting path for the observed sample span.",
+      "fix": "Reuse the accepted duration display policy, or retain this specialist representation through a locale-aware shared formatter after parity verification.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Query controls stack below sm; signal names wrap; chart/composition stack until xl then use 2:1 columns. Table container is min-w-0/max-w-full with 520px maximum height; agreement list reflows at lg.",
+    "verifiedViewports": [],
+    "unverifiedViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+        "line": 203,
+        "rule": "MDC-023 / MDC-043",
+        "detail": "DataTable receives no mobilePresentation. The type column is not marked visibleOnMobile, so the existing mobile column filter can hide it; no source-confirmed mobile replacement exposes type independently of expansion.",
+        "fix": "Use the existing opt-in mobile table contract where appropriate, retaining timestamp, value, type, signal, expansion/copy, table ID, ordering and pagination. Verify type remains reachable at narrow allocated widths; do not delete fields to fit.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": [{"file": "web\\src\\components\\ui\\DataTable.tsx", "line": 185}, {"file": "web\\src\\components\\ui\\DataTable.tsx", "line": 725}]
+      }
+    ]
+  },
+  "accessibility": {
+    "sourcePositives": [
+      "Action icons are aria-hidden; Query and Per page have localized visible labels.",
+      "ComboboxMulti exposes associated label, listbox and multiselect ARIA; actual keyboard flow not exercised.",
+      "SignalHistoryTable names its region with useId; JSON copy uses a shared action.",
+      "Overlay chart passes accessible data rows/columns to EmbeddedChart; table/list semantics are present."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\components\\SignalChartPanel.tsx",
+        "line": 274,
+        "rule": "MDC-042",
+        "detail": "Historical lines explicitly set isAnimationActive to true through !isLive without a motion preference check in this component.",
+        "fix": "Verify shared chart-level reduced-motion enforcement; if absent, consume the canonical motion preference for this animation without changing timing APIs or chart behavior.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "Keyboard, focus, screen reader, touch-target sizes, contrast, forced colors, text zoom and motion are unverified."
+  },
+  "states": {
+    "beforeSubmission": "No vehicle produces a shared empty prerequisite; with a vehicle, all results panels remain present. Summary marks unknown; breakdown and agreement explain submission prerequisite.",
+    "initialLoading": "Batch history provides chart/table/breakdown skeletons and summary loading. Catalog query state is not forwarded to selector.",
+    "empty": "Chart, table and composition provide empty bodies. Zero returned-row counts are actual empty batch counts, not server-wide totals.",
+    "fatal": "Top AlertBanner plus per-panel SourceContent fatal recovery; agreement independently retries. Catalog fatal error has no dedicated retry action.",
+    "retained": "useDataState preserves batch payload and top-level StaleRefreshWarning; summary marks retained. Agreement keeps usable data after refresh failures.",
+    "offline": "Canonical DataState distinguishes paused/blocked state; no offline runtime exercised.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+        "line": 184,
+        "rule": "MDC-026 / mission sections 22-25",
+        "detail": "SignalSelector receives catalog data ?? [] but neither loading nor error/retry state. Initial loading and successful empty catalog are indistinguishable in the picker; fatal catalog failure is only the general alert.",
+        "fix": "Forward catalog loading and localized source-specific failure/empty/retry presentation using ComboboxMulti.loading and existing SourceContent/feedback. Keep retained names selectable on refresh failure.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useSignals.ts",
+        "line": 386,
+        "rule": "MDC-026 / MDC-002",
+        "detail": "Batch uses Promise.all: any single signal history failure rejects the aggregate, so initial successful neighbors are not exposed. Page derives one aggregate fatal state, not per-signal partial coverage.",
+        "fix": "Have the integration owner assess a typed per-signal retained/fatal/empty/retry contract using existing evidence-source conventions. Preserve keys, immutable submission, raw SI, request cancellation and query policy; never label failed signals as empty or remove their identities.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx",
+      "line": 34,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "BAR_COLORS hardcodes a cyan/green/amber hex palette, outside the shared theme/semantic palette.",
+      "fix": "Reuse restrained existing semantic chart tokens; retain numeric/text/boolean labels, proportions, counts and user chart color preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+      "line": 149,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Signal body text takes CHART_COLORS in addition to a color dot; chart identity is applied to potentially long body strings rather than neutral readable text.",
+      "fix": "Keep chart/table identity in the dot and shared palette, use theme-aware primary body text, and measure composed contrast across themes. Do not reset persisted chart colors.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalLogKpiBand.tsx",
+      "line": 44,
+      "rule": "MDC-044",
+      "detail": "Observed-span formatter hardcodes s/m/h/d and interpolates unlocalized numbers; it overrides the duration metric formatter.",
+      "fix": "Preserve observed-span meaning and rounding while reusing locale-aware seconds-to-duration display formatting.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+      "line": 171,
+      "rule": "MDC-044 / MDC-025",
+      "detail": "Type badge prints internal English strings number/string/boolean directly.",
+      "fix": "Keep machine type identifiers stable and use localized visible type labels, including a distinct unknown/null label.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+      "line": 89,
+      "rule": "MDC-032",
+      "detail": "Consumes calendar start/end, then reconstructs browser-local midnight to 23:59:59.999 instead of hook startInstant/endInstantExclusive. Rolling Live/24h exact bounds and exclusive-upper-bound semantics are lost.",
+      "fix": "Capture canonical hook instants on Query, retaining immutable submission and the same unshortened agreement window. Integration owner must verify endpoint upper-bound semantics rather than assuming them.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [{"file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 103}, {"file": "web\\src\\hooks\\useRangeState.ts", "line": 656}]
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+      "line": 115,
+      "rule": "MDC-032 / MDC-026",
+      "detail": "Submitted vehicle remains frozen after header vehicle changes. Result scope caption exposes only timestamps, so old-vehicle results can remain beside a new active workspace vehicle with no result-vehicle identity.",
+      "fix": "Preserve deliberate query-on-click semantics, but explicitly label the submitted vehicle and identify draft-versus-submitted scope changes. Do not silently attribute old results to the new selection or erase retained data.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": {"file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 230}
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\components\\TransportAgreementFieldList.tsx",
+      "line": 19,
+      "rule": "MDC-070 preservation / MDC-031",
+      "detail": "Only first 20 fields are rendered. Showing N of total is present, but no reveal/pagination action accesses remaining per-signal evidence.",
+      "fix": "Retain initial compact presentation while making every returned field reachable through existing pagination/reveal primitives; preserve original order and source values.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+      "line": 43,
+      "rule": "MDC-025 / MDC-026",
+      "detail": "Rows with all nullable value fields absent are classified string even though the value cell is an em dash and summary does not count them as text.",
+      "fix": "Reuse the existing helper's null classification and show neutral unavailable/unknown type; retain false and numeric zero as measured values.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+      "line": 41,
+      "rule": "MDC-002 category imports",
+      "detail": "Types/adaptation come from component-root SignalQueryControls; that inspected module also contains older control implementations. Only helper functions/types, not its legacy components, are mounted by this page.",
+      "fix": "Integration owner should consolidate signal adaptation/types under existing domain utility ownership, then update consumers together. Do not reintroduce legacy controls or an alternative fetch layer.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+      "line": 135,
+      "rule": "MDC-045 / MDC-046 preservation of source evidence",
+      "detail": "Adaptation reduces history envelopes to timestamp/name/primitive values. JSON expansion serializes that adapted row, not original kind, ingest origin, producer/receipt time or normalization metadata retained by the hook.",
+      "fix": "Preserve current primitive display and raw SI; integration owner should retain available original envelope metadata for clearly labeled raw inspection/copy, rather than implying the adapter JSON is a complete payload.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [{"file": "web\\src\\api\\hooks\\useSignals.ts", "line": 309}, {"file": "web\\src\\components\\SignalQueryControls.tsx", "line": 38}, {"file": "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx", "line": 110}]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": "Canonical workspace instants, submitted-vehicle identity and source trust",
+    "next": "Reachability of all agreement fields, null classification, catalog feedback",
+    "then": "Restrained palette, locale-aware duration/types and mobile/keyboard verification"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "SignalSelector async catalog presentation",
+      "existingOwnerFile": "web\\src\\features\\telemetry\\components\\SignalSelector.tsx",
+      "decision": "extend domain owner; reuse primitive",
+      "propsVariantsStates": "Optional loading forwarded to existing ComboboxMulti.loading; caller source-specific fatal/empty/retained recovery via SourceContent. Preserve options/value/onChange/max/showLayerHelp/labelOverride/className.",
+      "usedBy": ["SignalLogViewerPage (confirmed consumer)", "Other selector consumers require integration-owner inventory before changing required props"],
+      "dependsOn": ["web\\src\\components\\forms\\ComboboxMulti.tsx", "Existing DataState/SourceContent contracts"],
+      "newPrimitiveNeeded": false
+    },
+    {
+      "name": "Per-signal historical evidence trust",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useSignals.ts",
+      "decision": "integration assessment, not page-owned hook rewrite",
+      "propsVariantsStates": "Typed identities with retained data, exact submitted bounds, fatalError versus refreshError, unavailable versus pending, updatedAt, cancellation and individual retry. Reuse existing evidence-source conventions; preserve current batch keys until a coordinated migration.",
+      "usedBy": ["SignalLogViewerPage via useSignalHistoryBatch"],
+      "dependsOn": ["web\\src\\api\\dataState.ts", "web\\src\\hooks\\useDataState.ts", "Existing signal evidence bundle contract MDC-002"],
+      "newPrimitiveNeeded": false,
+      "evidenceLimit": "Other production consumers and evidence bundle internals not inspected; no speculative second query system authorized."
+    },
+    {
+      "name": "Mobile history table",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "decision": "reuse existing API; no shared table edit evidenced",
+      "propsVariantsStates": "mobilePresentation opt-in, embedded variant, loaded rows, stable tableId, columns, row key, expansion and caller pagination. Preserve all details/copy and keep export scope truthful if exports are enabled later.",
+      "usedBy": ["SignalHistoryTable", "SignalLogViewerPage"],
+      "dependsOn": ["Existing DataTable mobile contracts and allocated-width verification"],
+      "newPrimitiveNeeded": false
+    },
+    {
+      "name": "Signal row adaptation/type utility ownership",
+      "existingOwnerFile": "web\\src\\components\\SignalQueryControls.tsx",
+      "decision": "integration-owned consolidation",
+      "propsVariantsStates": "SignalLogEntry, adaptSignalHistoryPoint, formatValue, null/number/string/boolean classification; optional original envelope retention. Keep null, false and zero distinct; no physical conversion in cache/wire.",
+      "usedBy": ["SignalLogViewerPage", "SignalHistoryTable", "signalLogSummary"],
+      "dependsOn": ["Typed history envelope ownership in useSignals", "Coordinated helper consumer migration"],
+      "newPrimitiveNeeded": false
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\components\\SignalQueryControls.tsx",
+      "line": 142,
+      "rule": "MDC-002",
+      "detail": "Module imported for helpers also defines old SignalMultiSelect with independent query/search state. Assigned page actually mounts SignalSelector/ComboboxMulti, not that implementation.",
+      "fix": "Do not adopt legacy controls; coordinate utility ownership separately. No source deletion authorized by this audit.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "1448a45d49a730b931ea4ef88cb73ea2101eee75bc9d1fc39ed33f7b1ec8b889",
+    "currentLineCount": 278,
+    "currentPageAndInspectedDomainDependencyLineCount": 1732,
+    "lineCountScope": "Page plus SignalSelector, SignalChartPanel, SignalHistoryTable, SignalLogKpiBand, SignalLogBreakdownPanel, TransportAgreementPanel, TransportAgreementMetrics, TransportAgreementFieldList, signalLogSummary and TelemetrySummaryBrief. Shared domain dependencies are not exclusive page-owned implementation targets.",
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Query cockpit", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 181},
+      {"name": "Query summary: records, selected/observed signals, numeric, text, boolean, observed span", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 226, "metricCount": 6},
+      {"name": "HTTP/MQTT transport agreement with per-signal evidence", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 232},
+      {"name": "Signal chart", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 242},
+      {"name": "Value composition and earliest/latest", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 253},
+      {"name": "Paginated signal history and JSON expansion", "file": "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx", "line": 263}
+    ],
+    "rootStructuralCounts": {"GlassPanel": 1, "ChartContainer": 0, "PageLayout": 1},
+    "dependencySections": "Chart, breakdown, history and agreement each retain their own GlassPanel; KPI uses OperationalBrief rather than an artificial extra panel. Six semantic page regions, not inferred from root GlassPanel count.",
+    "actions": ["Header vehicle/range selection", "URL-backed signal search/select/remove", "Per-page choices 25/50/100/500", "Explicit Query and repeat Query revision", "PageLayout copy link", "Chart legend visibility and shared accessible data surface", "History pagination", "Column visibility", "Row expansion", "JSON copy", "History/transport fatal retries"],
+    "dataBehavior": [
+      "Query-on-click; immutable submitted vehicle/signals/window/page size and unique revision.",
+      "Limit per signal equals submitted perPage * 10; local newest-first pagination over returned rows only.",
+      "Summary and composition describe loaded rows, never server-wide counts or guaranteed whole-window coverage.",
+      "Observed time span remains separate from submitted range.",
+      "Boolean chart projection uses 1/0; nonfinite/nonnumeric values are null gaps; stats use finite numeric samples.",
+      "Retained payload and source warnings survive refresh failure.",
+      "Transport agreement keeps exact submitted bounds; over-limit history still renders.",
+      "Measured, no_evidence, insufficient_overlap, truncated and invalid-row transport distinctions remain.",
+      "Shared table persistence identity telemetry:signal-history and legend/chart identities remain.",
+      "No SI wire/cache conversion introduced; generic raw signal values must not be assigned guessed units.",
+      "All returned agreement fields must become reachable without removing the existing initial compact view."
+    ],
+    "noSourceChange": true,
+    "baselineComparison": "Current source snapshot only; no Git, historical baseline or implementation delta."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "NOTRUN: phase-0 source-only assignment forbids full gates.",
+    "typescript": "NOTRUN: no npx tsc --noEmit; no compile claim.",
+    "skillScript": "Read audit.sh but did not run because it unconditionally runs project-wide TypeScript. Used bounded source regex counts instead.",
+    "inspectionBoundary": "Only assigned page and relevant dependencies/contracts; shared files partially inspected for used contracts, not globally audited. Backend router registration inspected, not handlers/database. No source/shared/queue/Git changes; only report and heartbeat written.",
+    "scopeUninspected": ["PageLayout internals", "EmbeddedChart/SmallMultiplesChart internals", "OperationalBrief formatter internals", "Full DataTable implementation", "URL/vehicle/preference hook internals", "Canonical i18n catalogs", "Backend handlers/query semantics", "Native/session/demo behavior"],
+    "sourceChecks": [
+      {
+        "command": "$p='web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx'; $s=Get-Content -Raw -LiteralPath $p; $patterns=[ordered]@{staticInlineStyle='style=\\{\\{[^}]*var\\(--';rawControls='<(button|input|textarea|select|table)\\b';directLibraryImports='from [''\"](recharts|react-leaflet|framer-motion)[''\"]';oldApiImports='from [''\"]\\.\\./(?:\\.\\./)?api[''\"]';rootComponentImports='from [''\"]@/components/[^/''\"]+[''\"]';GlassPanel='<GlassPanel\\b';ChartContainer='<ChartContainer\\b'}; foreach($e in $patterns.GetEnumerator()){ '{0}: {1}' -f $e.Key,([regex]::Matches($s,$e.Value)).Count }",
+        "exitCode": 0,
+        "output": "staticInlineStyle: 0\nrawControls: 0\ndirectLibraryImports: 0\noldApiImports: 0\nrootComponentImports: 6\nGlassPanel: 1\nChartContainer: 0",
+        "interpretation": "Six lexical @/components single-segment imports include five valid category barrels and one component-root SignalQueryControls import. Counts are not a global clean-audit claim."
+      },
+      {
+        "command": "Initial PowerShell source-count probe using incorrectly escaped double-quoted regex strings",
+        "exitCode": 1,
+        "output": "ParserError: Missing ')' in method call.",
+        "interpretation": "Probe corrected and rerun; no source changes."
+      },
+      {
+        "command": "Get-FileHash -Algorithm SHA256 -LiteralPath 'web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx'; (Get-Content -LiteralPath 'web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx').Count",
+        "exitCode": 0,
+        "output": "1448A45D49A730B931EA4EF88CB73EA2101EEE75BC9D1FC39ED33F7B1EC8B889\n278"
+      }
+    ],
+    "acceptance": "Audit artifact only, not runtime acceptance or modernization completion."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalSelector.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalChartPanel.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalLogKpiBand.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx",
+    "web\\src\\features\\telemetry\\components\\TransportAgreementPanel.tsx",
+    "web\\src\\features\\telemetry\\components\\TransportAgreementMetrics.tsx",
+    "web\\src\\features\\telemetry\\components\\TransportAgreementFieldList.tsx",
+    "web\\src\\features\\telemetry\\components\\signalLogSummary.ts",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useSignals.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\SignalQueryControls.tsx",
+    "web\\src\\components\\forms\\ComboboxMulti.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "sourceInventoryNote": "Hashes are of complete inspected files at inventory verification time; read coverage below distinguishes full semantic reads from selected ranges/search results. Hashing a file is not whole-file audit coverage.",
+  "sourceInventory": [
+    {"file":"docs\\frontend-design-contract.md","sha256":"17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255","lineCount":394,"coverage":"Read ranges 1-240,180-195,190-240,240-430; initial long output truncated around line 185."},
+    {"file":"docs\\frontend-worker-conventions.md","sha256":"6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3","lineCount":80,"coverage":"full"},
+    {"file":"docs\\frontend-mission.md","sha256":"2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f","lineCount":1593,"coverage":"1-220,339-422,529-581,673-778,920-1000 plus heading search"},
+    {"file":".github\\skills\\audit-violations\\audit.sh","sha256":"3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46","lineCount":141,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\pages\\SignalLogViewerPage.tsx","sha256":"1448a45d49a730b931ea4ef88cb73ea2101eee75bc9d1fc39ed33f7b1ec8b889","lineCount":278,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\SignalSelector.tsx","sha256":"7d04300e476275ea9318d00dabf8001ad0e8bf91d9b8b3c999e6fd6585967b97","lineCount":91,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\SignalChartPanel.tsx","sha256":"a702b9d9995dc00c2a3f27c26fb25af7e5529946936d73aa2b0b76f136efbbd7","lineCount":287,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\SignalHistoryTable.tsx","sha256":"d7a719be584a0ea58934d5b16bd11647ff5324d0ef3b23cadc718b8df011b3cb","lineCount":243,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\SignalLogKpiBand.tsx","sha256":"b98a11a4362599e8cb414e537fc3ae00679d1fd2ce8868b696a9c36b09c7d8ac","lineCount":109,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx","sha256":"59e8b2ec299e077def8061b89b5966d122d6c9d64016260b377324a75aebd6fc","lineCount":142,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\TransportAgreementPanel.tsx","sha256":"f46dc43d583c5ae87ab96ecaccd17643f0878999cdab93460b0842a85bb1a501","lineCount":170,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\TransportAgreementMetrics.tsx","sha256":"9253f969858f8fa81a05a0183df6616fe14a11c1785ddee356476e56746c9ba5","lineCount":111,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\TransportAgreementFieldList.tsx","sha256":"781b94dd0cc4b25df1cc4f186f6903b34ca091d4d0bb1e96596b59c96c594d9b","lineCount":89,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\signalLogSummary.ts","sha256":"ce7fd0dc97da8252f7b5b9e6184fa7d58fe74f99a7a60410765c01d9c3c65ebe","lineCount":159,"coverage":"full"},
+    {"file":"web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx","sha256":"1654daf6a1f7d0f3810641b017213494725a9e4326f7e6095c3eba38158c134b","lineCount":53,"coverage":"full"},
+    {"file":"web\\src\\api\\hooks\\useSignals.ts","sha256":"accd8580c7144c90f7b6d1aff14e3a43510c9aa2dd59b5fd85330c9d91ed1966","lineCount":442,"coverage":"285-328,329-442 plus history/request symbol search"},
+    {"file":"web\\src\\api\\hooks\\useTelemetry.ts","sha256":"5d042611bb8cfccc88904d1acd2f29ed27b09cc29647e218809d88df29850e50","lineCount":665,"coverage":"80-128 plus catalog/history symbol search"},
+    {"file":"web\\src\\hooks\\useRangeState.ts","sha256":"bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea","lineCount":694,"coverage":"1-210,650-683 plus canonical instant/preset search"},
+    {"file":"web\\src\\hooks\\useDataState.ts","sha256":"785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b","lineCount":65,"coverage":"full"},
+    {"file":"web\\src\\api\\dataState.ts","sha256":"21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761","lineCount":434,"coverage":"90-220"},
+    {"file":"web\\src\\components\\SignalQueryControls.tsx","sha256":"b3d53ae1df6ce4d4a933f69d613d51465a64ab3b0df5ccbc4eb42c0f5c34f00e","lineCount":461,"coverage":"1-150"},
+    {"file":"web\\src\\components\\forms\\ComboboxMulti.tsx","sha256":"999fca4914a481d9d8eed20fbaf7c10877a3921da80095ade3270f0b052acd11","lineCount":617,"coverage":"35-84 plus props/loading/ARIA search"},
+    {"file":"web\\src\\components\\ui\\DataTable.tsx","sha256":"92e3a46f15e401b57303823693aac8825693b4edc2b04cfe289663d8e1386438","lineCount":1687,"coverage":"184-211 plus props/mobile/ARIA/export search"},
+    {"file":"web\\src\\components\\layout\\layout-reference\\SourceContent.tsx","sha256":"283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43","lineCount":72,"coverage":"full"},
+    {"file":"web\\src\\lib\\workspaceScope.ts","sha256":"aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7","lineCount":168,"coverage":"signal-log/range membership search"},
+    {"file":"web\\src\\App.tsx","sha256":"23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3","lineCount":918,"coverage":"signal-log lazy import/mount search"},
+    {"file":"internal\\api\\router.go","sha256":"98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750","lineCount":5366,"coverage":"4875-4940 plus relevant signal route search"}
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-209.json", ".agent-status\\audit-page-209.txt"]
+}

@@ -41,9 +41,9 @@ export function TrueCostSensitivityMatrix({
         variant="bodySm"
         mono
         className={cn(
-          scenario.disposition === 'savings' && 'text-emerald-300',
-          scenario.disposition === 'loss' && 'text-rose-300',
-          scenario.disposition === 'balanced' && 'text-amber-300',
+          scenario.disposition === 'savings' && 'text-[var(--semantic-success)]',
+          scenario.disposition === 'loss' && 'text-[var(--semantic-danger)]',
+          scenario.disposition === 'balanced' && 'text-[var(--semantic-warning)]',
         )}
       >
         {display.formatSignedCurrency(scenario.fuelDelta)}
@@ -58,11 +58,12 @@ export function TrueCostSensitivityMatrix({
   const columns = useMemo<Column<MatrixRow>[]>(() => [
     {
       key: 'price',
+      align: 'right',
       header: t('tco.sensitivity.priceFactor', 'Gas-price factor'),
       render: (row) => (
         <Text variant="label" mono>
           {t('tco.sensitivity.factorValue', '{{value}}×', {
-            value: display.formatNumber(row.priceFactor, 1),
+            value: display.formatNumber(row.priceFactor),
           })}
         </Text>
       ),
@@ -70,18 +71,21 @@ export function TrueCostSensitivityMatrix({
     },
     {
       key: 'lowMpg',
+      align: 'right',
       header: t('tco.sensitivity.lowMpg', '0.8× MPG'),
       render: (row) => cell(row.lowMpg),
       visibleOnMobile: true,
     },
     {
       key: 'baselineMpg',
+      align: 'right',
       header: t('tco.sensitivity.baselineMpg', '1.0× MPG'),
       render: (row) => cell(row.baselineMpg),
       visibleOnMobile: true,
     },
     {
       key: 'highMpg',
+      align: 'right',
       header: t('tco.sensitivity.highMpg', '1.2× MPG'),
       render: (row) => cell(row.highMpg),
     },
@@ -104,11 +108,26 @@ export function TrueCostSensitivityMatrix({
           {rows.length > 0 ? (
             <DataTable
               tableId="analytics:true-cost-sensitivity"
+              resizable={false}
+              columnReorder={false}
+              columnVisibility={false}
               columns={columns}
               data={rows}
               keyExtractor={(row) => row.priceFactor}
               density="compact"
-              mobileColumns={['price', 'lowMpg', 'baselineMpg']}
+              mobileColumns={columns.map((column) => column.key)}
+              mobilePresentation={{
+                roles: { price: 'title', baselineMpg: 'primary', lowMpg: 'meta', highMpg: 'meta' },
+                displayValue: (row, key) => {
+                  if (key === 'price') return t('tco.sensitivity.factorValue', '{{value}}×', {
+                    value: display.formatNumber(row.priceFactor),
+                  });
+                  const scenario = key === 'lowMpg' ? row.lowMpg
+                    : key === 'baselineMpg' ? row.baselineMpg
+                      : key === 'highMpg' ? row.highMpg : null;
+                  return scenario ? display.formatSignedCurrency(scenario.fuelDelta) : null;
+                },
+              }}
             />
           ) : (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.sensitivity.empty', 'A supported baseline fuel comparison is required for scenarios.')} />

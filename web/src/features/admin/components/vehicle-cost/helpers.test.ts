@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 
 import {
   avgRowsPerVehicle,
+  costReading,
+  formatCostReading,
   rankVehicles,
   vehicleName,
   type SectionState,
@@ -12,11 +14,9 @@ import type { VehicleCostRow } from '@/types/admin-operator-confidence';
 // ---------------------------------------------------------------------------
 // vehicle-cost/helpers — contract lock + null-safety hardening
 //
-// These pure helpers back the Vehicle Ingest Cost admin page. The API returns
-// operational counters (row counts, byte estimates, ingest rates, DLQ
-// failures) that flow straight into a Recharts bar chart and a MetricBar
-// share list, so a single `undefined` or mis-ordered row would surface as a
-// blank bar, a `NaN%` label, or a `.toFixed` crash at the display boundary.
+// These pure helpers back the Vehicle Ingest Cost admin page. Operational
+// counters must distinguish unknown readings from measured zero without
+// changing their source values, units, or stable ranking order.
 // The cases below pin: (1) display-name fallback semantics, (2) the ranking
 // map → sort → slice contract including null-safety and input immutability,
 // (3) the divide-by-zero guard on the fleet average, and (4) the shared
@@ -104,7 +104,7 @@ describe('rankVehicles', () => {
     expect(bars.map((b) => b.name)).toEqual(['V2', 'V3', 'V1']);
   });
 
-  it('coerces missing/nullish numeric fields to 0 for chart null-safety', () => {
+  it('preserves missing numeric fields as unknown, not measured zero', () => {
     // A row that arrived without its counters (defensive: the API contract
     // types these as required, but a partial payload must never yield NaN).
     const sparse = {
@@ -116,17 +116,82 @@ describe('rankVehicles', () => {
     expect(bar).toEqual({
       vehicle_id: 42,
       name: 'Vehicle #42',
-      bytes: 0,
-      rows: 0,
-      rate: 0,
-      failures: 0,
+      bytes: null,
+      rows: null,
+      rate: null,
+      failures: null,
     });
+  });
+
+  it('preserves explicit null readings independently of measured zero', () => {
+    const unknown = makeRow({ vehicle_id: 2 });
+    Object.assign(unknown, {
+      signal_bytes_est: null,
+      signal_row_count: null,
+      ingest_rate_per_minute_24h: null,
+      dlq_failures_24h: null,
+    });
+    const zero = makeRow({
+      signal_bytes_est: 0,
+      signal_row_count: 0,
+      ingest_rate_per_minute_24h: 0,
+      dlq_failures_24h: 0,
+    });
+    for (const by of ['bytes', 'rows'] as const) {
+      const result = rankVehicles([unknown, zero], nameOf, by, 2);
+      expect(result.map(row => row.vehicle_id)).toEqual([1, 2]);
+      expect(result[0]).toMatchObject({ bytes: 0, rows: 0, rate: 0, failures: 0 });
+      expect(result[1]).toMatchObject({ bytes: null, rows: null, rate: null, failures: null });
+    }
+    expect(unknown.signal_row_count).toBeNull();
+  });
+
+  it.each(['bytes', 'rows'] as const)('ranks unknown %s last, retaining rows and stable ties', (by) => {
+    const values = [NaN, -2.5, 0, Infinity, 1.25, -Infinity, 1.25];
+    const input = values.map((value, index) => makeRow({
+      vehicle_id: index + 1,
+      signal_bytes_est: value,
+      signal_row_count: value,
+      ingest_rate_per_minute_24h: value,
+      dlq_failures_24h: value,
+    }));
+    const snapshot = input.map((row) => ({ ...row }));
+    const result = rankVehicles(input, nameOf, by, input.length);
+    expect(result.map((row) => row.vehicle_id)).toEqual([5, 7, 3, 2, 1, 4, 6]);
+    expect(result.map((row) => row[by])).toEqual([1.25, 1.25, 0, -2.5, null, null, null]);
+    for (const row of result) {
+      expect([row.bytes, row.rows, row.rate, row.failures]).toEqual(Array(4).fill(row[by]));
+    }
+    expect(input).toEqual(snapshot);
+    expect(rankVehicles(input, nameOf, by, 3).map((row) => row.vehicle_id)).toEqual([5, 7, 3]);
   });
 
   it('respects the top-N limit', () => {
     const bars = rankVehicles(vehicles, nameOf, 'bytes', 2);
     expect(bars).toHaveLength(2);
     expect(bars.map((b) => b.vehicle_id)).toEqual([2, 3]);
+  });
+
+  describe('cost reading display boundary', () => {
+    it.each([null, undefined, NaN, Infinity, -Infinity, '', '0', false])(
+      'keeps missing/invalid %s unknown without invoking the numeric formatter',
+      (value) => {
+        const format = vi.fn(String);
+        expect(costReading(value)).toBeNull();
+        expect(formatCostReading(value, format)).toBe('—');
+        expect(format).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([0, -0, -12, 12, -0.25, 0.25])(
+      'preserves measured signed/fractional value %s',
+      (value) => {
+        const format = vi.fn(String);
+        expect(costReading(value)).toBe(value);
+        expect(formatCostReading(value, format)).toBe(String(value));
+        expect(format).toHaveBeenCalledWith(value);
+      },
+    );
   });
 
   it.each<number>([0, -5])('returns an empty list for a non-positive limit (%i)', (limit) => {

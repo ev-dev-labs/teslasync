@@ -212,8 +212,10 @@ function SectionRowItem({ row, onRequestReset, busy }: SectionRowItemProps) {
           {row.description}
         </HelperText>
       </div>
+      {/* flow-cta: the reset flow’s call to action; onRequestReset confirms */}
       <Button
         variant="ghost"
+        wrapLabel
         onClick={() => onRequestReset(row)}
         disabled={busy}
         data-testid={`reset-section-button-${row.id}`}
@@ -404,6 +406,7 @@ export function ResetSection() {
             </HelperText>
             <Button
               variant="danger"
+              wrapLabel
               onClick={() => setResetAllOpen(true)}
               disabled={allBusy}
               data-testid="reset-section-reset-all"

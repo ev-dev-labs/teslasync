@@ -76,6 +76,40 @@ function drive(id = 1, startMs = DEPARTURE): Drive {
 }
 
 describe('summarizePreconditioningEffectiveness source accounting', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'accounts for missing or invalid cabin input %s separately from measured zero',
+    (insideTemp) => {
+      const invalid = summarizePreconditioningEffectiveness([
+        { ...climate(30, 0, true), insideTemp },
+      ], []);
+      const zero = summarizePreconditioningEffectiveness([climate(30, 0, true)], []);
+
+      expect(invalid.climateRows.missingInsideTempRows).toBe(1);
+      expect(invalid.climateSources.insideTempRows).toBe(0);
+      expect(zero.climateRows.missingInsideTempRows).toBe(0);
+      expect(zero.climateSources.insideTempRows).toBe(1);
+      expect(invalid.climateSources.denominatorRows).toBe(1);
+      expect(zero.climateSources.denominatorRows).toBe(1);
+    },
+  );
+
+  it('preserves signed fractional thermal measurements and raw count denominators', () => {
+    const result = summarizePreconditioningEffectiveness([
+      climate(30, -5.75, true),
+      climate(5, -2.25, true),
+    ], [drive()]);
+
+    expect(result.departures[0]).toMatchObject({
+      initialDeltaC: 26.75,
+      startDeltaC: 23.25,
+      improvementC: 3.5,
+    });
+    expect(result.joinedDepartures).toBe(1);
+    expect(result.conditionedDepartures).toBe(1);
+    expect(result.driveRows.uniqueValidDrives).toBe(1);
+    expect(result.climateSources.denominatorRows).toBe(2);
+  });
+
   it('assigns every returned climate row to one exact outcome', () => {
     const duplicate = climate(30, 35, true).timestamp;
     const result = summarizePreconditioningEffectiveness([
@@ -452,9 +486,59 @@ describe('summarizePreconditioningEffectiveness comparisons and profiles', () =>
       ),
     ).toBe(result.joinedDepartures);
   });
+
+  it('retains raw instants and browser-local hourly buckets', () => {
+    const result = summarizePreconditioningEffectiveness(
+      [climate(30, 35, true), climate(5, 23, true)],
+      [drive()],
+    );
+
+    expect(result.departures[0]?.departureMs).toBe(DEPARTURE);
+    expect(result.directory.items[0]?.departureMs).toBe(DEPARTURE);
+    expect(result.coverage).toMatchObject({
+      climateEarliestMs: DEPARTURE - 30 * 60_000,
+      climateLatestMs: DEPARTURE - 5 * 60_000,
+      climateSpanS: 25 * 60,
+      driveEarliestMs: DEPARTURE,
+      driveLatestMs: DEPARTURE,
+    });
+    expect(result.hourlyProfile.filter(bucket => bucket.classifiedDepartures > 0))
+      .toEqual([expect.objectContaining({
+        hour: new Date(DEPARTURE).getHours(),
+        classifiedDepartures: 1,
+        conditionedDepartures: 1,
+      })]);
+  });
 });
 
 describe('summarizePreconditioningEffectiveness support and resilience', () => {
+  it('retains fractional window and distinct-state medians as raw numbers', () => {
+    const secondDeparture = DEPARTURE + 2 * 60 * 60_000;
+    const result = summarizePreconditioningEffectiveness(
+      [
+        climateAt(DEPARTURE, 30, 35, true),
+        climateAt(DEPARTURE, 5, 25, true),
+        climateAt(secondDeparture, 30, 35, false),
+        climateAt(secondDeparture, 20, 30, false),
+        climateAt(secondDeparture, 5, 25, false),
+      ],
+      [drive(1), drive(2, secondDeparture)],
+    );
+
+    expect(result.windowSupport).toMatchObject({
+      departuresWithWindowRows: 2,
+      departuresWithThermalSupport: 2,
+      windowRowReferences: 5,
+      climateRowsUsed: 5,
+      climateRowsReused: 0,
+      medianWindowRows: 2.5,
+      medianThermalSamples: 2.5,
+      medianObservationSpanS: 1500,
+      medianLastSampleLeadS: 300,
+      p90LastSampleLeadS: 300,
+    });
+  });
+
   it('discloses climate-row reuse across overlapping departure windows', () => {
     const secondDeparture = DEPARTURE + 20 * 60_000;
     const result = summarizePreconditioningEffectiveness(

@@ -1,0 +1,321 @@
+{
+  "item": "audit-page-041",
+  "page": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx",
+  "routes": ["/analytics/carbon"],
+  "purpose": "Explain model-attributed charging CO2, selected-period evidence, lifetime context, grid-model coverage and bounded green-window scenarios.",
+  "primaryGoal": "Compare charging emissions with the fixed gas baseline and evaluate timing opportunities without confusing static-model scenarios with live grid data or executable schedules.",
+  "dataSources": [
+    {
+      "hook": "useCarbonIntensity",
+      "file": "web\\src\\api\\hooks\\useCarbon.ts",
+      "line": 84,
+      "endpoint": "GET /api/v1/carbon/intensity",
+      "ownership": "Shared vehicle-independent static model; backend CarbonHandler.Intensity.",
+      "routeEvidence": "internal\\api\\router.go:3863",
+      "behavior": "Always enabled; ['carbon-intensity']; STALE_TIMES.STATIC; AbortSignal forwarded. Curve, min/max, greenest/dirtiest hour sets; hour timezone is not exposed.",
+      "pageEvidence": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx:49"
+    },
+    {
+      "hook": "useCarbonSummary",
+      "file": "web\\src\\api\\hooks\\useCarbon.ts",
+      "line": 97,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/carbon/summary?from={RFC3339}&to={RFC3339}",
+      "ownership": "Vehicle selected-period summary; backend CarbonHandler.Summary.",
+      "routeEvidence": "internal\\api\\router.go:3372",
+      "behavior": "Positive vehicle ID required; key includes vehicle/from/to; ANALYTICS stale time; signal forwarded; URLSearchParams encodes both bounds.",
+      "pageEvidence": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx:50",
+      "fields": ["total_energy_kwh", "total_co2_kg", "gas_equiv_co2_kg", "co2_saved_kg", "green_score", "sessions_scored", "monthly[].month", "monthly[].co2_kg", "monthly[].energy_kwh"]
+    },
+    {
+      "hook": "useCarbonSummary(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useCarbon.ts",
+      "line": 97,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/carbon/summary",
+      "ownership": "Separate full-history vehicle summary, not a selected-period fallback.",
+      "routeEvidence": "internal\\api\\router.go:3372",
+      "pageEvidence": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx:55",
+      "behavior": "Same hook with null bound key slots; independent request and recovery; lifetime denominator supports period shares, timing score and scenario math."
+    },
+    {
+      "hook": "useCarbonRecommendation",
+      "file": "web\\src\\api\\hooks\\useCarbon.ts",
+      "line": 121,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/carbon/recommendation",
+      "ownership": "Full-history greenest-window scenario; backend CarbonHandler.Recommendation.",
+      "routeEvidence": "internal\\api\\router.go:3373",
+      "pageEvidence": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx:56",
+      "behavior": "Positive vehicle ID required; ['carbon-recommendation', vehicleId]; ANALYTICS stale time; signal forwarded; deliberately independent of selected range.",
+      "fields": ["current_avg_intensity", "greenest_window.start_hour", "greenest_window.end_hour", "greenest_window.avg_intensity", "potential_co2_saving_kg", "potential_saving_pct"]
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "PageContainer adapter, full-width min-w-0 container, inherited shell/workspace ownership; page passes query array and copyLink."},
+    {"name": "Grid and FadeIn", "owner": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 116, "contract": "Two single-column-to-xl-two-column section groups; shared FadeIn honors reduced motion (web\\src\\components\\motion\\FadeIn.tsx:24)."},
+    {"name": "OperationalBrief / useOperationalMetrics", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 118, "contract": "Eight compact briefs, numeric typed measurements with specialist display formatters; semantic status, scope/provenance and Review details drawer. Shared compact grid stacks at small widths (line 167). Formatter bridge implementation not inspected."},
+    {"name": "CarbonBriefBand", "owner": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonBriefBand.tsx", "line": 8, "contract": "Seven domain brief wrappers; title/description/scope/state/metrics/children. Evidence brief separately implements equivalent status presentation."},
+    {"name": "ChartCard", "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "line": 13, "contract": "Existing EmbeddedChart pipeline accepts export data, accessibility data/columns, hidden-series render function, chartKey and explicit heights; no replacement chart engine."},
+    {"name": "LayoutCard, Table, Badge, Button, Text, AlertBanner, EmptyState, Skeleton", "owner": "web\\src\\components\\ui\\Table.tsx", "line": 14, "contract": "Existing primitives and category imports. Table owns bounded horizontal scrolling; domain lists retain row headings and text status alternatives."},
+    {"name": "CarbonSectionBody", "owner": "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonSectionBody.tsx", "line": 44, "contract": "Adapts domain source state to deriveDataState and SourceContent; initial loading, disabled selection, paused/pending, fatal error and retained-data refresh failures."},
+    {"name": "buildCarbonIntelligence / useCarbonDisplay / useCarbonQueryStates", "owner": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 58, "contract": "Memoized typed analysis separated from presentation; existing display preferences, localization and independent query recovery."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonEvidenceBrief.tsx",
+      "line": 51,
+      "rule": "MDC-002",
+      "detail": "Evidence brief repeats the loading/unavailable/retained/returned status decision already implemented by CarbonBriefBand.tsx:18-22.",
+      "fix": "Reuse a domain-level presentation adapter where provenance/scope needs permit; preserve evidence-specific accessible section name and invalid-window warning.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "observed": [
+      "Page groups stack until xl (CarbonIntelligencePage.tsx:116,136); source ledger and identities use lg two-column grids; methodology uses md two/xl three columns.",
+      "Shared brief compact metrics use one column, sm two, md three and 1920px six (OperationalBrief.tsx:167-168).",
+      "Table.tsx:21-23 contains overflow within the table scroll owner; no page-level overflow was exercised.",
+      "Monthly chart reserves two 48px Y axes (CarbonMonthlyTrend.tsx:128,139) and 340px height; intensity chart sets 360px height (CarbonIntensityCurve.tsx:100)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonMonthlyTrend.tsx",
+        "line": 128,
+        "rule": "MDC-043",
+        "detail": "Fixed dual-axis gutter widths and month labels leave limited plot space in a 320px allocated container; no page-specific small-width tick-density policy is supplied. This is a source-backed risk, not observed clipping.",
+        "fix": "Validate narrow allocated widths and long localized labels; adapt chart ticks/gutters using the existing chart contract without dropping either series or the data-table alternative.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtimeStatus": "All ten mandated widths, text zoom, RTL and touch scrolling unverified."
+  },
+  "accessibility": {
+    "observed": [
+      "Named chart sections and aria descriptions, structured accessible dataColumns, table aria-labels and row header scope are present.",
+      "Source status includes words, not color alone; retry Buttons have visible localized text.",
+      "CarbonSectionBody.tsx:100 announces loading through role=status; decorative icons mostly explicitly aria-hidden.",
+      "OperationalBrief.tsx:118 names sections by title ID; its Review details action uses the existing Drawer.",
+      "FadeIn.tsx:31 suppresses initial animation under reduced-motion preference."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonDirectoryBrief.tsx",
+        "line": 34,
+        "rule": "MDC-040",
+        "detail": "The mounted three-column hourly directory has row headings but no column headings identifying intensity and band. The table label describes the overall table, not those column relationships.",
+        "fix": "Add localized column headings using the existing semantic Table; preserve rank/hour row headers and every band/intensity value.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtimeStatus": "Keyboard order, drawer focus trapping/restoration, screen-reader announcements, table scroll keyboard reachability, effective contrast, forced colors and 44px targets unverified."
+  },
+  "states": {
+    "loading": "Four source states are independent; initial source skeletons and brief loading suppression retain section shells.",
+    "empty": "Selected-period valid-zero message, monthly and curve EmptyState, lifetime unsupported-score EmptyState, recommendation empty/invalid messages are present.",
+    "error": "Fatal source failure has SourceContent recovery plus source-ledger retry; errors do not gate all page content.",
+    "retained": "queryState.ts:34-35 separates fatal and refresh errors; cached payloads remain available; CarbonSourceRow.tsx:126-153 provides retry refresh and paused-refresh explanation.",
+    "offline": "Paused initial and retained requests receive different messages; no independent invented offline source is used.",
+    "partialUnknown": "Curve coverage and invalid rows are accounted for; unknown/invalid numeric values remain null; reconciliation availability is explicit.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonDirectoryBrief.tsx",
+        "line": 37,
+        "rule": "MDC-026",
+        "detail": "A successfully resolved empty or entirely invalid intensity curve renders an empty tbody in this directory, without an empty/invalid explanation. Neighboring curve and coverage sections do not explain this table locally.",
+        "fix": "Render an explicit empty/invalid state inside the retained directory section when rankedRows is empty; retain its statistics, scope and retry behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonOpportunityBrief.tsx",
+        "line": 39,
+        "rule": "MDC-026",
+        "detail": "combinedState overrides hasData/loading/refresh fields but inherits isResolved, isPaused, error and onRetry solely from recommendation. If recommendation succeeds and lifetime fatally fails or pauses initially, the outer wrapper can show pending rather than the actual lifetime failure and suppress the nested lifetime recovery.",
+        "fix": "Compose both source trust states with the existing deriveDataState/aggregateDataState pipeline or preserve separate visible source boundaries; bind recovery to the failed source, not recommendation by default.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\queryState.ts",
+        "line": 3,
+        "rule": "MDC-026",
+        "detail": "Domain query adapter drops dataUpdatedAt and source age. CarbonSectionBody.tsx:51 passes a boolean payload without timestamps, so source-level age/freshness cannot be shown. PageContainer can still show its aggregate query freshness; this is not a claim that the entire page has no freshness.",
+        "fix": "Forward the existing canonical data-state freshness metadata and provide actual source freshness to OperationalBrief; do not label successful old cache as fresh without age evidence.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonMonthlyTrend.tsx",
+      "line": 22,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Feature-local fixed amber #f59e0b and bright cyan #22d3ee bypass shared theme/chart palette preferences.",
+      "fix": "Consume existing restrained chart palette while retaining clearly differentiated CO2 bars and energy line; preserve opt-in saved chart/theme choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonIntensityCurve.tsx",
+      "line": 119,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Fixed teal/green/rose colors (lines 22-24), area gradient opacity 0.4, and clean/dirty reference strokes at 0.8 create avoidable saturated decoration and competing annotation weight.",
+      "fix": "Use existing palette/tokens, reduce decorative fill and reference-line intensity without removing extrema or changing data meaning.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonScoreBrief.tsx",
+      "line": 39,
+      "rule": "MDC-010/MDC-025",
+      "detail": "Gauge has feature-local fixed rose/amber/emerald threshold colors; meaning is supported by labels but presentation bypasses semantic chart tokens.",
+      "fix": "Use existing semantic gauge colors without altering the 35/70 thresholds, numeric score, support-session requirement or disclaimer.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useCarbon.ts",
+      "line": 53,
+      "rule": "MDC-045",
+      "detail": "Current CarbonSummary wire/cache type still exposes total_energy_kwh and monthly.energy_kwh. carbonIntelligence.ts:437,484 normalizes these once to Wh after query caching. This is a real inherited SI-boundary exception, not permission to blindly rename or multiply a future SI payload.",
+      "fix": "Coordinate a backend/API-contract migration outside the page item. Until verified server shape changes, preserve current once-only conversion and document the exception; do not introduce dual-shape guesses.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "rationale": "Fix multi-source opportunity trust/recovery first, then directory empty/semantic gaps and palette consistency. Preserve the unusually complete existing evidence and caveat sections.",
+    "runtimeAcceptance": "Not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Coordinated carbon SI wire/cache cutover",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useCarbon.ts",
+      "nameEvidence": "web\\src\\api\\hooks\\useCarbon.ts:53; web\\src\\features\\analytics\\lib\\carbonIntelligence.ts:437",
+      "propsVariantsStates": "Typed canonical energy fields plus monthly energy; preserve valid zero, missing/invalid payloads, signed saved CO2, three-hour end-exclusive scenario, scopes and source-independent retries.",
+      "usedBy": ["CarbonIntelligencePage selected-period summary", "CarbonIntelligencePage lifetime summary", "CarbonMonthlyTrend exports", "CarbonEvidenceBrief", "CarbonOpportunityBrief"],
+      "dependsOn": ["Verified backend CarbonHandler.Summary response and producer units", "API/schema owner and Phase-48 SI migration ordering", "Preservation of calculations and wire-rounding tolerances"],
+      "owner": "integration",
+      "note": "No new shared renderer is required by this audit; existing dataState, Table, ChartCard and OperationalBrief capabilities should be reused."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\index.ts",
+      "line": 2,
+      "rule": "MDC-002",
+      "detail": "The barrel still exports eight original carbon presentation components while the mounted page aliases eight Carbon*Brief replacements from operationalbrief-a-m. Original CarbonEvidenceLedger.tsx:32 uses text StatStrip metrics; mounted CarbonEvidenceBrief.tsx:17 uses numeric OperationalBrief metrics. Original CarbonHourlyDirectory.tsx:42 separately implements the same directory/band pattern.",
+      "fix": "Keep the mounted implementation as the audited authority. Establish actual consumers before any later consolidation; do not delete unmounted candidates on name similarity or re-adopt text metrics.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidenceLimit": "Only two original bodies were sampled; other exports were enumerated, not semantically audited. Whole-app usage/dead-code status is unknown."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "F3D1EFAEFC0483678787CB658FE247606278BC99F92CD6468E5CFE2F0CD5E64F",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact root-relative page bytes, not extracted-component aggregation.",
+    "currentLineCount": 155,
+    "mountedPresentationLineCount": 1605,
+    "mountedPresentationLineCountScope": "Root page, nine operationalbrief-a-m Carbon files including CarbonBriefBand, seven mounted carbon-intelligence presentation/support files; excludes lib/hooks, tests and unmounted alternatives.",
+    "sectionCount": 13,
+    "sections": [
+      {"name": "Selected-period evidence ledger", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 111, "preserve": "Energy, CO2, sessions, weighted intensity, gas baseline, signed net and actual period provenance."},
+      {"name": "Source, query status and scope ledger", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 114, "preserve": "Four independently scoped sources, statuses, retries, RFC3339 bounds, calendar timezone/days, invalid-window warning."},
+      {"name": "Selected-period footprint vs gas baseline", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 118, "preserve": "Charging/gas/net mass, reverse-derived baseline distance and excess/avoided/balanced/unknown interpretation."},
+      {"name": "Lifetime context and period share", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 121, "preserve": "Energy/CO2/session shares, lifetime months and unavailable zero-denominator rule."},
+      {"name": "Selected-period monthly CO2 and energy", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 125, "preserve": "Both series and axes, localized months, legend persistence, raw/display export columns and accessible data."},
+      {"name": "Curve source accounting and completeness", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 128, "preserve": "Returned/valid unique/invalid-hour/invalid-intensity/duplicate counts, missing clock hours, first-valid-row rule and exact 24-hour completeness."},
+      {"name": "24-hour grid intensity curve", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 131, "preserve": "Static-model curve, extrema annotations, backend-hour label, export rank/band/intensity and accessible rows."},
+      {"name": "Ranked hourly directory and bands", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 134, "preserve": "Min/max/mean/median/span, all ranked hours, descriptive thirds and flat-curve meaning."},
+      {"name": "Green timing score and evidence support", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 138, "preserve": "Lifetime score, support sessions, realized intensity, model span, unavailable score behavior and non-causal disclaimer."},
+      {"name": "Full-history greenest-window scenario", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 141, "preserve": "Three-hour inclusive-start/exclusive-end wrapping window, current/window intensity, reported kg/percentage saving and lifetime-only boundary."},
+      {"name": "Opportunity math and boundaries", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 145, "preserve": "Shifted lifetime energy, current/shifted/recomputed CO2, reported residual and no dispatch/schedule/guarantee claims."},
+      {"name": "Exact accounting identities", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 148, "preserve": "Sixteen defined checks with expected/observed/residual/tolerance, hour-set checks and unavailable never passing by default."},
+      {"name": "Methodology, source assumptions and limitations", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 151, "preserve": "Six explanations: source model, clock attribution, charging formula, gas baseline, selected range and scenario boundary; once-only legacy normalization note."}
+    ],
+    "actions": [
+      {"name": "Copy current page link", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 108, "behavior": "Existing shell-compatible copyLink action; PageContainer.tsx:236 delegates to CopyLinkButton."},
+      {"name": "Retry individual source / retry refresh", "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonSourceRow.tsx", "line": 119, "behavior": "Four independent refetch callbacks; retained-data refresh recovery at line 144."},
+      {"name": "Review details", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 158, "behavior": "Shared drawer available on all eight mounted brief summaries; preserve full metric/context/provenance details."},
+      {"name": "Monthly export and legend visibility", "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonMonthlyTrend.tsx", "line": 80, "behavior": "selected-period-carbon-monthly; month/co2_kg/energy_wh plus selected display unit; chartKey carbon-period-monthly; both series honor hiddenSeries."},
+      {"name": "Model export and accessible chart data", "file": "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonIntensityCurve.tsx", "line": 74, "behavior": "carbon-intensity-model; backend_model_hour/intensity/rank/band. Both charts supply structured data alternatives; actual inherited toolbar controls were not exercised."},
+      {"name": "Workspace vehicle/range selection", "file": "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx", "line": 40, "behavior": "Consume shell-owned selectors, carbon.range, 90d default, vehicle timezone, startInstant/endInstantExclusive. Route registered in workspaceScope.ts:26; no duplicate page picker."}
+    ],
+    "dataBehavior": [
+      "Four independent queries; do not substitute lifetime rows for unavailable selected-period monthly data.",
+      "Null/invalid inputs remain unknown, zero remains valid, signed net avoided mass remains negative for excess emissions.",
+      "Legacy total_energy_kwh/monthly.energy_kwh multiply by 1000 once in carbonIntelligence.ts:437,484; raw existing cache payload is unchanged. Canonical analytical energy is Wh, inferred distance m, CO2 mass kg; model intensity explicitly g CO2/kWh and clock hours are source-domain quantities.",
+      "Display-only energy/distance conversion uses useUnits and convertEnergyFromSI; localized precision and locale remain reactive (useCarbonDisplay.ts:14-32). Do not guess backend changes.",
+      "Model curve validation rejects invalid hour/intensity rows, retains first valid duplicate-hour row deterministically, computes coverage and ranks without fabricated missing points.",
+      "Monthly rows sort by YYYY-MM and retain duplicate detection; period shares require positive lifetime denominator (carbonIntelligence.ts:437-580).",
+      "Gas baseline remains 0.192 kg CO2/km; rounding tolerances energyWh=5, massKg=0.005, intensity=0.05, percentage=0.05 (carbonIntelligence.ts:6-13).",
+      "Recommendation validates a wrapping three-hour window and lifetime inputs; recalculated saving clips at zero, unlike signed gas-baseline net comparison (carbonIntelligence.ts:632-717).",
+      "Backend model attribution timezone is not exposed; never relabel clock-hour as vehicle-local or claim live/location-aware/marginal emissions.",
+      "All thirteen sections remain reachable without an all-page data gate; extracted components count toward preservation."
+    ]
+  },
+  "evidenceLimits": {
+    "basis": "Read-only source audit, no application execution or backend query.",
+    "unverified": ["Mounted runtime/render behavior", "Authenticated API payloads and actual database/model values", "Backend producer units and exact bound filtering", "Chart toolbar downloads/fullscreen/data-table interaction", "Keyboard and screen-reader behavior", "Contrast in composed themes and forced colors", "All ten viewport widths and allocated-container widths", "RTL/long translations/text zoom", "Offline and refresh-failure interaction", "Cross-page consumers of original exported components"],
+    "validation": [
+      {"command": "Get-FileHash web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx -Algorithm SHA256", "exitCode": 0, "output": "F3D1EFAEFC0483678787CB658FE247606278BC99F92CD6468E5CFE2F0CD5E64F"},
+      {"command": "Get-Content line counts over root and explicitly listed mounted carbon presentation files", "exitCode": 0, "output": "pageLineCount=155; mountedPresentationTotal=1605"},
+      {"command": "Scoped Select-String source pattern scan over mounted presentation files; repeat raw HTML selector with -CaseSensitive", "exitCode": 0, "output": "style= count=0; direct recharts/react-leaflet/framer-motion imports count=0; text-white|neon|glow count=0; case-sensitive raw HTML count=0. Initial case-insensitive scan returned four shared <Table> matches; these are not raw HTML findings."}
+    ],
+    "notRun": "TypeScript, skill audit.sh, tests, lint, build and browser QA intentionally not run: assignment forbids full-repository validation; audit.sh unconditionally invokes project TypeScript. No clean-build/runtime/zero-all-violations claim.",
+    "scope": "Narrow page dependencies only. Shared owner snippets and route declarations inspected, not whole-app implementations. No source/Git/production operations.",
+    "visualFindingLimits": "Fixed saturated colors and gradient/reference styling are observed in source. No explicit neon/glow/pure-white decoration was found in mounted presentation scan; actual resolved shared theme output was not measured."
+  },
+  "filesRead": [
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "web\\src\\features\\analytics\\pages\\CarbonIntelligencePage.tsx",
+    "web\\src\\api\\hooks\\useCarbon.ts",
+    "web\\src\\features\\analytics\\lib\\carbonIntelligence.ts",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\index.ts",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\types.ts",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\queryState.ts",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\useCarbonQueryStates.ts",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\useCarbonDisplay.ts",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonSectionBody.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonSourceRow.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonSourceScopeLedger.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonMonthlyTrend.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonIntensityCurve.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonAccountingIdentities.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonMethodology.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonEvidenceLedger.tsx",
+    "web\\src\\features\\analytics\\components\\carbon-intelligence\\CarbonHourlyDirectory.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonBriefBand.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonEvidenceBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonCoverageBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonFootprintBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonLifetimeBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonDirectoryBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonScoreBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonRecommendationBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\CarbonOpportunityBrief.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\ui\\index.ts",
+    "web\\src\\components\\motion\\index.ts",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go"
+  ]
+}

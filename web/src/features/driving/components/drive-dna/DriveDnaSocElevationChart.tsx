@@ -6,13 +6,14 @@ import { ChartContainer } from '@/components/charts';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDurationFromSI } from '@/lib/unitConversion';
 
 import type { DriveDnaModel } from '../../lib/driveDNA';
 import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import { DriveDnaSocElevationPlot } from './DriveDnaSocElevationPlot';
 import type { DriveDnaSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveDnaSocElevationChartProps {
   model: DriveDnaModel;
@@ -25,6 +26,7 @@ export function DriveDnaSocElevationChart({
   state,
   units,
 }: DriveDnaSocElevationChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -79,7 +81,7 @@ export function DriveDnaSocElevationChart({
             label: elapsedLabel,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 2)} ${units.unitPrefs.duration}`
+                ? `${fmtNumber(value)} ${units.unitPrefs.duration}`
                 : '—',
           },
           {
@@ -87,7 +89,7 @@ export function DriveDnaSocElevationChart({
             label: socName,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 1)}%`
+                ? `${fmtNumber(value)}%`
                 : '—',
           },
           {
@@ -96,7 +98,7 @@ export function DriveDnaSocElevationChart({
             format: (value) =>
               typeof value === 'number'
                 ? t('driveDna.context.metresValue', '{{value}} m', {
-                    value: fmtNumber(value, 0),
+                    value: fmtNumber(value),
                   })
                 : '—',
           },

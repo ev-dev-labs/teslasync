@@ -159,8 +159,20 @@ func (e *CommandExecutor) Execute(ctx context.Context, vehicleID *int64, raw jso
 // wrappers. CommandParams remains the sole schema-on-read JSON exception.
 func (e *CommandExecutor) ExecuteTyped(ctx context.Context, vehicleID *int64, payload any) (json.RawMessage, error) {
 	action, ok := payload.(*models.AutomationAction)
-	if !ok {
+	if !ok || action == nil {
 		return nil, fmt.Errorf("command action payload type %T is not *models.AutomationAction", payload)
+	}
+	cfg, err := DecodeTypedCommandSpec(action)
+	if err != nil {
+		return nil, err
+	}
+	return e.executeCommandConfig(ctx, vehicleID, cfg)
+}
+
+// DecodeTypedCommandSpec validates the CTI command used by live and dry-run paths.
+func DecodeTypedCommandSpec(action *models.AutomationAction) (*CommandConfig, error) {
+	if action == nil {
+		return nil, fmt.Errorf("typed command action is nil")
 	}
 	params := map[string]interface{}{}
 	if len(action.CommandParams) > 0 && string(action.CommandParams) != "null" {
@@ -176,10 +188,23 @@ func (e *CommandExecutor) ExecuteTyped(ctx context.Context, vehicleID *int64, pa
 	if cfg.Command == "" {
 		return nil, fmt.Errorf("command_name is required")
 	}
-	if !tesla.IsKnownCommand(cfg.Command) {
+	if !tesla.IsKnownCommand(automationTeslaCommand(cfg.Command)) {
 		return nil, fmt.Errorf("unknown command %q", cfg.Command)
 	}
-	return e.executeCommandConfig(ctx, vehicleID, cfg)
+	return cfg, nil
+}
+
+// The canonical graph preserves these descriptive names; the Tesla adapter
+// already owns their real endpoints and default parameters under shorter names.
+func automationTeslaCommand(name string) string {
+	switch name {
+	case "cabin_overheat_protection_on":
+		return "cop_on"
+	case "hvac_on":
+		return "climate_on"
+	default:
+		return name
+	}
 }
 
 func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *int64, cfg *CommandConfig) (json.RawMessage, error) {
@@ -275,7 +300,7 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *vehiclemodel.Veh
 		}
 	}
 
-	cmdErr := e.teslaClient.SendCommand(ctx, v.VIN, cfg.Command, cfg.Params)
+	cmdErr := e.teslaClient.SendCommand(ctx, v.VIN, automationTeslaCommand(cfg.Command), cfg.Params)
 	result.DurationMs = time.Since(start).Milliseconds()
 
 	status := "success"

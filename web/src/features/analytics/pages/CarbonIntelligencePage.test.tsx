@@ -128,6 +128,11 @@ vi.mock('@/components/forms', () => ({
   RangePicker: () => <div data-testid="carbon-range">Range picker</div>,
 }));
 
+vi.mock('@/components/layout', async () => ({
+  ...(await vi.importActual<typeof import('@/components/layout')>('@/components/layout')),
+  ChartCard: (await import('@/components/charts')).ChartContainer,
+}));
+
 vi.mock('@/components/charts', () => {
   const Wrapper = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const SvgWrapper = ({ children }: { children?: ReactNode }) => (
@@ -338,9 +343,19 @@ const sectionIds = [
   'carbon-methodology',
 ] as const;
 
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+
 function expectEverySection(): void {
   for (const id of sectionIds) {
-    expect(screen.getByTestId(id)).toBeInTheDocument();
+    const section = screen.getByTestId(id);
+    expect(section).toBeInTheDocument();
+    if (id !== 'carbon-monthly-trend' && id !== 'carbon-intensity-curve') {
+      expect(section.querySelector(['carbon-evidence-ledger', 'carbon-period-footprint', 'carbon-lifetime-context',
+        'carbon-curve-coverage', 'carbon-hourly-directory', 'carbon-green-timing-score', 'carbon-recommendation',
+        'carbon-opportunity-math'].includes(id) ? '[data-operational-brief]' : '[data-card]')).toBeInTheDocument();
+    }
   }
 }
 
@@ -365,8 +380,20 @@ describe('CarbonIntelligencePage', () => {
     expectEverySection();
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Carbon Intelligence',
+      name: 'Carbon intelligence',
     })).toBeInTheDocument();
+    for (const [id, count] of [
+      ['carbon-evidence-ledger', 6],
+      ['carbon-period-footprint', 4],
+      ['carbon-lifetime-context', 4],
+      ['carbon-curve-coverage', 5],
+      ['carbon-hourly-directory', 5],
+      ['carbon-green-timing-score', 3],
+      ['carbon-recommendation', 4],
+      ['carbon-opportunity-math', 5],
+    ] as const) {
+      expect(screen.getByTestId(id).querySelectorAll('[data-operational-metric]')).toHaveLength(count);
+    }
   });
 
   it('converts URL calendar labels to vehicle-timezone instants for only the period hook', () => {
@@ -524,12 +551,19 @@ describe('CarbonIntelligencePage', () => {
     renderPage();
 
     expectEverySection();
-    expect(screen.getAllByText(
+    const sources = within(screen.getByTestId('carbon-source-scope'));
+    expect(sources.getAllByText(
       'Refresh failed; the most recently loaded evidence remains visible.',
     )).toHaveLength(2);
-    expect(screen.getAllByText(
+    expect(sources.getAllByText(
       'The network is unavailable; cached evidence remains visible while refresh is paused.',
     )).toHaveLength(2);
+    expect(within(screen.getByTestId('carbon-curve-coverage')).getByText(
+      'Refresh failed; the most recently loaded evidence remains visible.',
+    )).toBeInTheDocument();
+    expect(within(screen.getByTestId('carbon-evidence-ledger')).getByText(
+      'The network is unavailable; cached evidence remains visible while refresh is paused.',
+    )).toBeInTheDocument();
     expect(screen.getByText('2.5 kWh')).toBeInTheDocument();
     expect(screen.getByText('24-hour grid intensity curve')).toBeInTheDocument();
   });

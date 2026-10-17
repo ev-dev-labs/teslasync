@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
@@ -11,10 +11,12 @@ import {
 import { Badge, Button, ConfirmDialog, GlassPanel, Text } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
   repairApplyInput,
   useRepairImpactPreview,
   type RepairSuggestion,
+  type RepairImpactPreview,
 } from '@/api/hooks/useDataRepair';
 
 import { RepairChangeDetails } from './RepairChangeDetails';
@@ -62,12 +64,30 @@ export function RepairSuggestionCard({
   disabledReason,
 }: RepairSuggestionCardProps) {
   const { t } = useTranslation();
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const operationalMode = useOperationalMode();
+  const [review, setReview] = useState<{
+    suggestion: RepairSuggestion;
+    preview: RepairImpactPreview;
+    revision: number;
+  } | null>(null);
   const preview = useRepairImpactPreview(suggestion.kind);
+  const contextKey = JSON.stringify(
+    suggestion,
+    [...Object.keys(suggestion), 'ts', 'source', 'field', 'value'].sort(),
+  );
+  const context = useRef({ key: contextKey, revision: 0, canWrite: true });
+  if (context.current.key !== contextKey) {
+    context.current.key = contextKey;
+    context.current.revision += 1;
+  }
+  const previewRequest = useRef(0);
+  useEffect(() => () => { previewRequest.current += 1; }, []);
 
   const KindIcon = suggestion.kind === 'drive' ? Route : BatteryCharging;
   const blocked = !suggestion.applicable;
-  const applyDisabled = disabled || blocked || isApplied;
+  const applyDisabled = !operationalMode.canWrite || disabled || blocked || isApplied || isApplying;
+  context.current.canWrite = !applyDisabled;
+  const reviewCurrent = review?.revision === context.current.revision;
   const previewError = preview.error instanceof Error ? preview.error.message : undefined;
 
   // Timestamps arrive as RFC3339 and are rendered in the browser locale at the
@@ -78,9 +98,9 @@ export function RepairSuggestionCard({
     'dataRepair.confirm.message',
     'This rewrites {{kind}} #{{id}} to end at {{end}}. Distance, energy and speed totals are NOT recomputed — they were measured over the original window. This is recorded in the audit log and is not undone automatically.',
     {
-      kind: sessionKindLabel(t, suggestion.kind),
-      id: suggestion.session_id,
-      end: at(suggestion.suggested_ended_at),
+      kind: sessionKindLabel(t, review?.suggestion.kind ?? suggestion.kind),
+      id: review?.suggestion.session_id ?? suggestion.session_id,
+      end: at(review?.suggestion.suggested_ended_at ?? suggestion.suggested_ended_at),
     },
   );
 
@@ -157,9 +177,18 @@ export function RepairSuggestionCard({
           <Button
             variant="secondary"
             onClick={() => {
+              if (applyDisabled || preview.isPending) return;
+              const original = structuredClone(suggestion);
+              const revision = context.current.revision;
+              const request = ++previewRequest.current;
               preview.reset();
-              preview.mutate(repairApplyInput(suggestion), {
-                onSuccess: () => setConfirmOpen(true),
+              preview.mutate(repairApplyInput(original), {
+                onSuccess: (impact) => {
+                  if (request !== previewRequest.current
+                    || revision !== context.current.revision
+                    || !context.current.canWrite) return;
+                  setReview({ suggestion: original, preview: structuredClone(impact), revision });
+                },
               });
             }}
             loading={isApplying || preview.isPending}
@@ -178,19 +207,27 @@ export function RepairSuggestionCard({
       </article>
 
       <ConfirmDialog
-        open={confirmOpen}
+        open={review != null}
         variant="warning"
         title={t('dataRepair.confirm.title', 'Apply this repair?')}
         message={confirmMessage}
-        details={preview.data ? <RepairImpactSummary preview={preview.data} /> : undefined}
+        details={review ? <>
+          {(disabled || !operationalMode.canWrite) && <Text as="p" variant="caption" role="note">
+            {disabledReason ?? operationalMode.writeBlockReason
+              ?? t('dataRepair.cases.readOnly', 'Repair controls are read-only')}
+          </Text>}
+          <RepairImpactSummary preview={review.preview} />
+        </> : undefined}
         confirmLabel={t('dataRepair.confirm.apply', 'Apply repair')}
         cancelLabel={t('common.cancel', 'Cancel')}
         loading={isApplying}
+        confirmDisabled={applyDisabled || !reviewCurrent}
         onConfirm={() => {
-          setConfirmOpen(false);
-          onApply(suggestion);
+          if (applyDisabled || !review || !reviewCurrent) return;
+          setReview(null);
+          onApply(structuredClone(review.suggestion));
         }}
-        onCancel={() => setConfirmOpen(false)}
+        onCancel={() => { previewRequest.current += 1; setReview(null); }}
       />
     </GlassPanel>
   );

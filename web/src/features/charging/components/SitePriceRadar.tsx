@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { BadgePercent } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { GlassPanel, PanelTitle, Text, Caption, Icon } from '@/components/ui';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, DataSourceNotice } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useDataState } from '@/hooks/useDataState';
 import { useChargingSiteRanking } from '@/api/hooks/useCharging';
+import { typography } from '@/lib/tokens';
 
 interface SitePriceRadarProps {
   vin?: string;
@@ -18,25 +20,40 @@ interface SitePriceRadarProps {
 export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
-  const { data, isLoading, isError, error, refetch } = useChargingSiteRanking(vin, { enabled });
+  const query = useChargingSiteRanking(vin, { enabled });
+  const state = useDataState(query, { provenance: 'historical' });
+  const data = state.data;
 
-  const sites = (data?.sites ?? []).slice(0, 8);
+  // The endpoint ranks all sites in its bounded invoice scan; only the rows are capped here.
+  const rankedSites = data?.sites ?? [];
+  const sites = rankedSites.slice(0, 8);
   const cheapest = sites[0]?.avg_per_kwh ?? 0;
+  const priciest = rankedSites[rankedSites.length - 1]?.avg_per_kwh ?? cheapest;
 
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <BadgePercent className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icon icon={BadgePercent} size="md" className={typography.color.secondary} />
         {t('tesla_charging.priceRadar', 'Price Radar')}
       </PanelTitle>
 
-      {isLoading ? (
-        <Skeleton height={220} />
-      ) : isError ? (
-        <QueryError error={error} onRetry={() => refetch()} />
+      <StaleRefreshWarning state={state} className="mb-3" />
+      {state.fatalError ? (
+        <QueryError error={state.fatalError} onRetry={() => query.refetch()} />
+      ) : !state.hasData && state.isRefreshBlocked ? (
+        <DataSourceNotice sources={[{
+          id: 'site-price-ranking',
+          label: t('tesla_charging.priceRadar', 'Price Radar'),
+          query,
+          enabled,
+        }]} />
+      ) : !state.hasData && query.isLoading ? (
+        <div role="status" aria-label={t('dataSources.status.loading', 'Loading')}>
+          <Skeleton height={220} />
+        </div>
       ) : sites.length === 0 ? (
         <EmptyState /* no-action: informational empty — no CTA */
-          icon={<BadgePercent className="h-10 w-10" aria-hidden="true" />}
+          icon={<Icon icon={BadgePercent} size="xl" className={typography.color.secondary} />}
           message={t('tesla_charging.noPriceData', 'No priced Supercharger visits yet.')}
         />
       ) : (
@@ -55,8 +72,8 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
                 </Caption>
               </div>
               <Text variant="bodySm" className="shrink-0 tabular-nums">
-                <span className={`font-semibold ${i === 0 ? 'text-emerald-300' : ''}`}>
-                  {formatCurrency(s.avg_per_kwh, 3)}
+                <span className={`font-semibold ${i === 0 ? typography.color.primary : ''}`}>
+                  {formatCurrency(s.avg_per_kwh)}
                 </span>{' '}
                 <Text as="span" variant="caption">/kWh</Text>
               </Text>
@@ -72,7 +89,7 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
           {sites.length > 1 && (
             <Caption className="block tabular-nums">
               {t('tesla_charging.spread', 'Cheapest stop saves {{save}}/kWh vs priciest', {
-                save: formatCurrency((sites[sites.length - 1]?.avg_per_kwh ?? cheapest) - cheapest, 3),
+                save: formatCurrency(priciest - cheapest),
               })}
             </Caption>
           )}

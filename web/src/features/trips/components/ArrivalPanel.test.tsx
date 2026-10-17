@@ -10,6 +10,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { formatTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ ...actual.useSettings(), locale: datePreferences.locale }) };
+});
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return { ...actual, useTimezone: () => datePreferences.tz };
+});
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -98,11 +109,18 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
   vi.clearAllMocks();
   mockArrival.mockReturnValue(idle({ data: arrival }));
 });
 
 describe('ArrivalPanel', () => {
+  it('formats ETA in the selected locale and timezone', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    renderPanel();
+    expect(screen.getByText(formatTime(arrival.eta_at, datePreferences))).toBeInTheDocument();
+  });
+
   it('renders ETA, pace, distance, advice, and evidence', () => {
     renderPanel();
     expect(screen.getByText('ETA')).toBeInTheDocument();
@@ -141,5 +159,28 @@ describe('ArrivalPanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('retains ETA, route context and every evidence line across an arrival refresh failure', () => {
+    mockArrival.mockReturnValue(idle({
+      data: arrival, error: new Error('arrival refresh failed'), isError: true, isFetching: true,
+    }));
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'Arrival' })).toBeInTheDocument();
+    expect(screen.getByText('KC')).toBeInTheDocument();
+    expect(screen.getByText('Top up en route')).toBeInTheDocument();
+    expect(screen.getByText('adjusted 1.05× from 2 trips')).toBeInTheDocument();
+    for (const line of arrival.evidence) expect(screen.getByText(`· ${line}`)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+  });
+
+  it('shows measured zero pace, remaining distance and shortfall instead of unavailable placeholders', () => {
+    mockArrival.mockReturnValue(idle({
+      data: { ...arrival, pace_ms: 0, left_m: 0, shortfall_wh: 0, eta_at: null },
+    }));
+    renderPanel();
+    expect(screen.getByText(/0 m\/s · 0 m/)).toBeInTheDocument();
+    expect(screen.getByText('top up ≈ 0 Wh en route')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 });

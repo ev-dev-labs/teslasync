@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import '@/i18n';
 import { SearchInput } from './SearchInput';
+import { clearScope, recordSearch } from '@/lib/searchHistory';
 
 interface HarnessProps {
   initial?: string;
@@ -29,6 +30,19 @@ describe('SearchInput', () => {
   it('renders the placeholder', () => {
     render(<Harness />);
     expect(screen.getByPlaceholderText('Search…')).toBeInTheDocument();
+  });
+
+  it('keeps the recent-search heading in authored case and preserves query casing', () => {
+    const scope = 'search-input-casing';
+    clearScope(scope);
+    recordSearch(scope, 'Tesla FSD');
+    render(<SearchInput value="" onChange={() => undefined} historyScope={scope} ariaLabel="Search drives" />);
+
+    fireEvent.focus(screen.getByRole('combobox', { name: 'Search drives' }));
+
+    expect(screen.getByText('Recent searches')).not.toHaveClass('uppercase', 'capitalize');
+    expect(screen.getByRole('option')).toHaveTextContent('Tesla FSD');
+    clearScope(scope);
   });
 
   it('forwards a programmatic label to the search field', () => {

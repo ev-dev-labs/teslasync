@@ -62,8 +62,8 @@ func newEnergyFlowRequest(t *testing.T, vehicleID string) *http.Request {
 // must reflect the latest forward-folded state — so a future regression
 // that anchors this lookup to a stale timestamp would freeze the energy
 // flow panel and is caught here. The test also pins the projection of all
-// seven fields onto their JSON output keys (dc_charging_power,
-// ac_charging_power, energy_remaining, pack_voltage, pack_current, soc,
+// seven fields onto their JSON output keys (dc_charging_power_w,
+// ac_charging_power_w, energy_remaining, pack_voltage, pack_current, soc,
 // charge_state) so the frontend wire-shape contract is locked in.
 func TestEnergyFlow_Latest_UsesNow(t *testing.T) {
 	vid := int64(42)
@@ -107,8 +107,8 @@ func TestEnergyFlow_Latest_UsesNow(t *testing.T) {
 		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
 	}
 	wantKeys := []string{
-		"dc_charging_power",
-		"ac_charging_power",
+		"dc_charging_power_w",
+		"ac_charging_power_w",
 		"energy_remaining",
 		"pack_voltage",
 		"pack_current",
@@ -126,9 +126,15 @@ func TestEnergyFlow_Latest_UsesNow(t *testing.T) {
 	if body["charge_state"] != "Charging" {
 		t.Fatalf("charge_state = %#v, want \"Charging\"", body["charge_state"])
 	}
-	if body["dc_charging_power"] != 48.5 || body["ac_charging_power"] != 7.2 {
-		t.Fatalf("charging power = (%v, %v), want (48.5, 7.2) kW",
-			body["dc_charging_power"], body["ac_charging_power"])
+	if body["dc_charging_power_w"] != 48500.0 || body["ac_charging_power_w"] != 7200.0 {
+		t.Fatalf("charging power = (%v, %v), want (48500, 7200) W",
+			body["dc_charging_power_w"], body["ac_charging_power_w"])
+	}
+	if body["energy_remaining"] != 62.3 {
+		t.Fatalf("energy_remaining = %v, want unchanged raw reading 62.3", body["energy_remaining"])
+	}
+	if len(body) != len(wantKeys) {
+		t.Fatalf("response must not contain compatibility aliases: %v", body)
 	}
 }
 
@@ -147,6 +153,7 @@ func TestEnergyFlow_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
+
 	h := &EnergyFlowHandler{state: fake, live: newTestLiveStateReader(fake)}
 
 	rec := httptest.NewRecorder()
@@ -154,5 +161,46 @@ func TestEnergyFlow_PropagatesError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestEnergyFlow_PreservesStoredReadings(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		snap signal.State
+		dc   any
+		ac   any
+	}{
+		{"numeric codec values", signal.State{"DCChargingPower": float32(48500), "ACChargingPower": int32(7200), "EnergyRemaining": 62.3}, 48500.0, 7200.0},
+		{"measured zero", signal.State{"DCChargingPower": 0.0, "ACChargingPower": 0.0}, 0.0, 0.0},
+		{"missing channel", signal.State{"ACChargingPower": 7200.0}, nil, 7200.0},
+		{"no telemetry", signal.State{}, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fake := &fakeStateReader{stateFn: func(context.Context, int64, time.Time) (signal.State, error) {
+				return tc.snap, nil
+			}}
+			h := NewEnergyFlowHandler(nil, fake, newTestLiveStateReader(fake))
+			rec := httptest.NewRecorder()
+			h.Get(rec, newEnergyFlowRequest(t, "42"))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+			}
+			var body map[string]any
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body["dc_charging_power_w"] != tc.dc || body["ac_charging_power_w"] != tc.ac {
+				t.Fatalf("power = (%v, %v), want (%v, %v)", body["dc_charging_power_w"], body["ac_charging_power_w"], tc.dc, tc.ac)
+			}
+			if body["energy_remaining"] != tc.snap["EnergyRemaining"] {
+				t.Fatalf("raw energy changed: %v", body["energy_remaining"])
+			}
+			for _, old := range []string{"dc_charging_power", "ac_charging_power", "energy_remaining_wh"} {
+				if _, ok := body[old]; ok {
+					t.Fatalf("unexpected inferred unit or compatibility key %q", old)
+				}
+			}
+		})
 	}
 }

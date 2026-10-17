@@ -1,0 +1,401 @@
+{
+  "item": "audit-page-064",
+  "page": "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx",
+  "routes": ["/battery-passport"],
+  "purpose": "Inspect a selected vehicle's current battery certificate, its reported and reconstructed evidence, provenance boundaries, verification result, and canonical JSON download.",
+  "primaryGoal": "Understand exactly what the current server certificate says and what its digest does and does not protect, without treating proxies as calibrated health, causality, safety, warranty, or remaining-life claims.",
+  "dataSources": [
+    {
+      "hook": "useBatteryPassport",
+      "file": "web\\src\\api\\hooks\\useBatteryPassport.ts",
+      "line": 69,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/battery-passport",
+      "owner": "Battery Passport API hook; batteryPassportHandler.Get registered in internal\\api\\router.go:3352",
+      "behavior": "Key ['battery-passport', vehicleId]; enabled only with non-null selected ID; ANALYTICS stale time; forwards AbortSignal; returns raw snake_case certificate facts.",
+      "limits": "Route registration confirmed, not server response execution. Router comments at 3345-3351 describe a best-effort ledger append during certificate reads; no request was issued."
+    },
+    {
+      "hook": "useVerifyPassport",
+      "file": "web\\src\\api\\hooks\\useBatteryPassport.ts",
+      "line": 87,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/battery-passport/verify?hash=<encoded digest>",
+      "owner": "Battery Passport API hook; batteryPassportHandler.Verify registered in internal\\api\\router.go:3353",
+      "behavior": "Key ['battery-passport-verify', vehicleId, hash]; disabled until ID and nonempty digest exist; ANALYTICS stale time; forwards AbortSignal; failure does not discard certificate.",
+      "limits": "Digest agreement is not upstream evidence validation. Backend recomputation and hash algorithm were not executed or independently audited."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": null,
+      "owner": "Existing shared workspace selection; internally consumes useVehicles",
+      "behavior": "URL ID, persisted ID, then first known fleet vehicle precedence; no second page picker. getWorkspaceRouteScope returns vehicle=true and range=false for /battery-passport (workspaceScope.ts:23-77,98-131,165-176). Certificate snapshot and UTC trend are not a range-filtered analysis endpoint.",
+      "limits": "Nested fleet request implementation was not inspected. Header/mobile picker operation remains unverified."
+    },
+    {
+      "hook": "useDataState / useTimezone('vehicle') / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx",
+      "line": 119,
+      "endpoint": null,
+      "owner": "Existing shared trust, timezone, saved numeric preferences and operational metric formatting",
+      "behavior": "Fatal and refresh failures separated; identity instants use vehicle timezone; trend uses UTC day keys; one mount clock and memoized analyzeBatteryPassport result drive all sections.",
+      "limits": "Only trust adapter and its contract were inspected directly; nested settings/timezone queries and locale catalogs were not audited."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / CardGrid / LayoutCard / ChartCard / SourceContent",
+      "owner": "web\\src\\components\\layout\\index.ts:8-15 and layout-reference implementations",
+      "usage": "Existing orchestration, paired half-width evidence cards, twelve LayoutCard shells, one chart shell, and passive/loading interiors. Root has no page loading/error/empty gate.",
+      "contract": "LayoutCard title/description/actions/children/footer/size; ChartCard inherits EmbeddedChart props including data/dataColumns/loading/empty/toolbar/height; feature callers use layout barrel."
+    },
+    {
+      "name": "BatteryPassportSectionBody",
+      "owner": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportSectionBody.tsx:44",
+      "usage": "Domain-local unavailable/pending/loading/empty interiors; leaves each evidence shell mounted and delegates initial retry to masthead.",
+      "contract": "state, children, requirePassport=true, className, skeletonHeight=180."
+    },
+    {
+      "name": "BatteryEvidenceBrief / OperationalBrief",
+      "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx:19",
+      "usage": "Six source-backed headline metrics, snapshot issue period, source caveats, retained-data status and shared review drawer.",
+      "contract": "title, description, metrics: readonly StatMetric[], period: StatPeriod, loading, retained, secondary, id. Numeric source formatter keeps missing separate from value."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx:186,238-248,716-725",
+      "usage": "Provenance matrix and complete field directory. Preserve tableId battery:passport-provenance and battery:passport-fields.",
+      "contract": "columns/data/keyExtractor/mobileColumns; optional mobilePresentation keyValue, roles, displayValue and rowLabel. mobileColumns alone hides omitted cells below md."
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx:8-27,49-66",
+      "usage": "Distribution and thermal shares.",
+      "contract": "value accepts number|null|undefined; null removes aria-valuenow and announces No reading; color accepts existing CSS token; fill='solid' avoids decorative gradient; max/label/ariaLabel/sublabel retained."
+    },
+    {
+      "name": "MetricCard / Text / Heading / PanelTitle / Caption / Code / Badge / Button / CopyButton / GlassPanel",
+      "owner": "Existing components/data-display and components/ui category owners",
+      "usage": "Specialist diagnostic metrics, text roles, semantic status, export/hash copy and masthead. Do not replace with raw controls or a second design engine.",
+      "limits": "MetricCard, CopyButton and typography internals were not separately audited."
+    },
+    {
+      "name": "FadeIn / StaleRefreshWarning",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx:23; web\\src\\components\\feedback\\StaleRefreshWarning.tsx:11-19,49-122",
+      "usage": "FadeIn already honors shared reduced-motion preference. StaleRefreshWarning is available but not adopted by this page.",
+      "contract": "FadeIn children/delay/className. StaleRefreshWarning state: DataState<unknown>, label/title/message/hideRetry; nonblocking offline, stale, partial and unavailable presentation."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx",
+      "line": 73,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Verification label, icon and Badge variant switching is repeated in VerificationDiagnostics.tsx:39-104; wording and previous-result handling must remain aligned.",
+      "fix": "Keep a single small battery-domain presentation descriptor for existing verification statuses; retain section-specific layout and separate expected/provided hash evidence. Do not create an app-wide competing status registry.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Masthead.tsx:151-175 wraps title/actions; identity stacks until lg, hashes break-all (223,322-330).",
+      "CapacityContext.tsx:37 and UsageProfile.tsx:37 use md three-column grids inside half-width CardGrid placements. Allocated card width, not viewport alone, needs verification.",
+      "FieldDirectory.tsx:436-457 explicitly supplies keyValue mobile presentation with field/summary/source/binding roles.",
+      "Methodology.tsx:181 uses md two columns and xl four without removing its twelve disclosures."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportProvenanceMatrix.tsx",
+        "line": 336,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "mobileColumns keeps only field/value/binding, no mobilePresentation or expanded detail is supplied, and columnVisibility is disabled at 331. DataTable.tsx:725 applies hidden md:table-cell to source. Thus the source-and-meaning evidence has no page-provided mobile access path below md.",
+        "fix": "Reuse the field directory's existing DataTable keyValue mobile contract with source as meta and binding as badge, or retain all columns with contained scroll. Preserve every source explanation and the existing table ID/order.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Unverified at every prescribed viewport and allocated container size; no browser, mobile drawer, RTL or 200%-text exercise."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "TrendTimeline.tsx:79-88 supplies chart name, description and dataColumns.",
+      "SectionBody.tsx:79-85 supplies role=status and localized loading name.",
+      "Masthead status icons and most decorative section icons have aria-hidden; actions use shared Button/CopyButton.",
+      "FadeIn.tsx:24-36 uses shared reduced-motion preference; OS behavior was not exercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx",
+        "line": 309,
+        "rule": "MDC-013 / MDC-040",
+        "detail": "The prominent reported grade is aria-hidden and uses an ad-hoc text-5xl/font-bold span. Its caption only identifies the metric, not the hidden value. Grade is available later in KPI/audit sections, so this is a local identity-summary omission, not total loss from the page.",
+        "fix": "Use existing MetricValue/Text roles and expose a localized Certificate-reported grade plus actual grade within this masthead; preserve independent verification status and grade semantics.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportThermalProfile.tsx",
+        "line": 85,
+        "rule": "MDC-026 / MDC-040 / unknown-is-not-zero",
+        "detail": "Unknown or invalid thermal shares are converted to 0 before MetricBar. Distribution.tsx:78 similarly converts null share to 0. The shared MetricBar then sets aria-valuenow=0 even when sublabel says an em dash; visible and assistive trust semantics disagree.",
+        "fix": "Pass band.valuePct directly and bin.share == null ? null : bin.share * 100. Reuse current nullable MetricBar API, retaining true measured zero, labels, counts, exact unnormalized sums and invalid/no-data explanations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard, focus, touch targets, screen reader, effective contrast, forced colors and reduced motion unverified. Token names and source ARIA are not acceptance."
+  },
+  "states": {
+    "loading": "Both hooks remain mounted; null inputs disable requests. Initial certificate loading is local to shells. Methodology remains independent.",
+    "empty": "Resolved null remains distinct from undefined; export disabled; domain interiors describe absent certificate. Recommendations and thermal sections have source-specific empty/invalid descriptions.",
+    "error": "Only masthead owns initial certificate retry. Retained certificate survives refresh error. Verification error remains nonblocking; cached verify payload is retained.",
+    "partial": "Sanitized diagnostic fields remain nullable; grade mismatch remains separate; invalid thermal and trend accounting are described rather than silently reconciled.",
+    "offline": "Shared trust adapter knows paused queries but the page's narrowed state drops that information.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx",
+        "line": 211,
+        "rule": "MDC-026 / MDC-046 / mission 25",
+        "detail": "queryState forwards fatalError/refreshError but drops passportSource.status, isRefreshBlocked, isRefreshing and updatedAt. With retained data and fetchStatus=paused, useDataState knows the source is stale/offline; masthead only warns on refreshError and BatteryEvidenceBrief only marks retained on refreshError (KpiBand.tsx:93). It can continue labeling cached data Available source readings. With no data and a paused first fetch, no local offline recovery reason is supplied.",
+        "fix": "Carry the existing DataState alongside the domain selection/resolution state. Reuse nonblocking StaleRefreshWarning/DataStateNotice for retained offline/refresh state and shared initial offline notice for paused-first-load; preserve all shells, initial masthead retry ownership, cached facts, query keys and enablement.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendTimeline.tsx",
+        "line": 56,
+        "rule": "MDC-026 / mission 23-24",
+        "detail": "No vehicle, fatal certificate failure, unresolved certificate, null certificate and zero qualifying trend points all feed the chart's same empty flag. Unlike SectionBody, this chart does not supply a source-specific empty explanation.",
+        "fix": "Reuse existing chart emptyContent/emptyMessage capability or a domain passive explanation to distinguish these causes; maintain the chart shell, UTC series/data table and sole masthead initial retry.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx",
+      "line": 149,
+      "rule": "MDC-010 / mission 5-8",
+      "detail": "A green/cyan/purple saturated gradient stripe decorates certificate identity independent of state. Repeated cyan section action icons (CapacityContext.tsx:35, Methodology.tsx:180-187) compete with actual verification meaning.",
+      "fix": "Remove the decorative stripe or use a neutral existing border token; neutralize ordinary section icons and keep muted semantic hue only on actual verification/grade distinctions. Preserve saved theme choices and all sections.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendTimeline.tsx",
+      "line": 108,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Timeline and distribution use fixed electric cyan #22d3ee (Distribution.tsx:80); thermalColor defines fixed blue/green/red hex at ThermalProfile.tsx:53-57. Bars default to shared gradient fill. These bypass the canonical palette and are not proof of light-theme contrast.",
+      "fix": "Use existing canonical chart/semantic palette references and MetricBar fill='solid'. Preserve cold/nominal/hot categories and textual labels, chart user preferences, series, tooltip formats and actual values; do not introduce a new palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportGradeAudit.tsx",
+      "line": 66,
+      "rule": "MDC-033 / mission 7",
+      "detail": "Six adjacent diagnostic MetricCards select cyan/amber/purple/blue/green/red for formula inputs and both grades; CapacityContext.tsx:55,78,93 and UsageProfile.tsx:51,66,81 similarly color neutral rollups differently. The source encodes categorical color without demonstrating meaningful distinctions.",
+      "fix": "Reuse the operational metrics pipeline for neutral numeric groups where specialist formatter parity is proven; retain every metric, subtitle, source formula, mismatch notice and display preference. Keep unsupported specialist fields rather than deleting them to fit generic stats.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\lib\\batteryPassportAnalysis.ts",
+      "line": 845,
+      "rule": "MDC-045 / preservation / raw-certificate-export",
+      "detail": "toBatteryPassportCertificate says values are copied without diagnostic reinterpretation, but degradation_trend.flatMap discards nonobjects, invalid UTC dates and out-of-range/nonfinite SoH at 845-854. A downloaded certificate can omit exactly the malformed evidence reported by trend diagnostics while retaining the original provenance hash. This is a source-confirmed conditional loss, not an executed export failure.",
+      "fix": "Keep canonical snake_case export distinct from sanitized display analysis; preserve original trend fact ordering and anomalous facts or explicitly identify a separately named sanitized export. Establish behavior for malformed objects and unknown fields without reintroducing camelCase convenience mirrors or inventing measurements.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useBatteryPassport.ts",
+      "line": 45,
+      "rule": "MDC-045 / phase-48 SI contract",
+      "detail": "Current typed wire shape still declares capacity_kwh and original_capacity_kwh; analysis uses 0..500 kWh validation (batteryPassportAnalysis.ts:618-623) and presentation/export bind those exact names. This is an inherited contract conflict with the canonical SI mandate, not permission for a page-only rename or assumed multiplication.",
+      "fix": "Integration owner must inspect actual backend JSON, canonical OpenAPI and tsbp-v1 hash/ledger migration before any coordinated wire change. Preserve current bytes, export keys, precision and hash-bound facts until that contract is proven. Modernization must not guess that existing values are Wh or secretly rescale them.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "first": ["Unknown shares announced as measured zero", "Provenance source explanations hidden on mobile", "Preserve raw export evidence", "Surface paused/offline trust"],
+    "then": ["Restrain palette and neutral metric groups", "Masthead accessible grade and typography", "Source-specific chart empty reason", "Deduplicate verification descriptor"],
+    "integrationDependency": "Canonical SI and hash compatibility must be resolved by its owner, not by this audit or a page presentation worker."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Nullable neutral MetricBar adoption",
+      "existingOwnerFile": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "change": "reuse; no shared source extension required",
+      "props": ["value: number|null|undefined", "color: canonical CSS token", "fill: solid", "max", "label/ariaLabel", "sublabel"],
+      "variants": ["solid existing fill"],
+      "states": ["known zero", "unknown", "invalid withheld", "known positive"],
+      "usedBy": ["BatteryPassportTrendDistribution", "BatteryPassportThermalProfile"],
+      "dependsOn": ["Existing nullable MetricBar API; preserve display-only percentages and exact thermal accounting"]
+    },
+    {
+      "name": "Nonblocking historical source trust",
+      "existingOwnerFile": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "change": "reuse alongside retained certificate; integration of existing DataState into page-specific state required",
+      "props": ["state: DataState<unknown>", "label", "message", "hideRetry"],
+      "variants": ["existing stale/partial/unavailable notices"],
+      "states": ["retained refresh error", "retained paused/offline", "initial paused separately", "healthy no warning"],
+      "usedBy": ["BatteryPassportMasthead", "BatteryPassportKpiBand / BatteryEvidenceBrief"],
+      "dependsOn": ["web\\src\\api\\dataState.ts", "web\\src\\hooks\\useDataState.ts", "Preserve sole initial-error masthead recovery and nonblocking verification"]
+    },
+    {
+      "name": "Complete mobile provenance presentation",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "change": "reuse existing keyValue mobile presentation; no competing table or shared source change",
+      "props": ["tableId unchanged", "mobilePresentation.variant: keyValue", "roles: field=title,value=primary,source=meta,binding=badge", "displayValue", "rowLabel"],
+      "variants": ["existing keyValue; contained-scroll alternative if parity cannot be shown"],
+      "states": ["full facts", "unknown value", "bound UTC day", "unbound field", "long localized source"],
+      "usedBy": ["BatteryPassportProvenanceMatrix", "BatteryPassportFieldDirectory existing example"],
+      "dependsOn": ["Preserve source text, row order, column definitions and stable table IDs; mobile behavior requires actual exercise"]
+    },
+    {
+      "name": "Canonical SI certificate and digest compatibility",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useBatteryPassport.ts; backend contract owner not inspected",
+      "change": "integration investigation required; not a requested shared edit",
+      "props": ["Actual wire capacity fields and units", "Canonical certificate export keys", "Hash core-fact precision and units"],
+      "variants": [],
+      "states": ["legacy-shaped current response", "canonical SI response only when proven", "hash match/mismatch", "unknown capacities"],
+      "usedBy": ["BatteryPassportPage", "batteryPassportAnalysis", "CapacityContext", "KpiBand", "FieldDirectory", "ProvenanceMatrix"],
+      "dependsOn": ["Backend JSON and OpenAPI evidence", "Phase-48 methodology", "Hash and ledger compatibility decision"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Verification presentation switches",
+      "files": ["web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx:73", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportVerificationDiagnostics.tsx:39"],
+      "resolution": "Domain-local descriptor only; use existing Badge/status semantics."
+    },
+    {
+      "name": "Operational KPI brief versus legacy colored diagnostic metric groups",
+      "files": ["web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportKpiBand.tsx:31", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportGradeAudit.tsx:52"],
+      "resolution": "Existing stats owner remains canonical; prove specialist formatter parity before adoption, never reduce evidence to a generic handful of metrics."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "348464eeba73054d849377eb0fe745a6522230909af8101756ea77c1f2a1b19d",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Raw bytes of web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx",
+    "currentLineCount": 444,
+    "pagePlusSectionTsxLineCount": 3586,
+    "sectionCount": 14,
+    "shellCounts": {"GlassPanel": 1, "LayoutCard": 12, "ChartCard": 1},
+    "sections": [
+      "Certificate identity and controls",
+      "Certificate-reported KPI band (six headline fields)",
+      "UTC SoH trend timeline",
+      "Trend diagnostics and exact accounting",
+      "Trend distribution and range bands",
+      "Capacity and reference context",
+      "Grade and scoring reconstruction",
+      "Usage-factor profile",
+      "Thermal exposure profile",
+      "Server-generated recommendation directory",
+      "Provenance core-facts matrix",
+      "Verification diagnostics",
+      "Certificate field directory",
+      "Methodology and interpretation limits (twelve disclosures)"
+    ],
+    "actions": [
+      "Header-owned selected vehicle and vehicle_id URL scope",
+      "Export certificate JSON with vehicle ID and first twelve hash characters in filename",
+      "Copy full certificate provenance hash with current toast behavior",
+      "Retry certificate initial failure from masthead",
+      "Existing empty-response refresh-error retry",
+      "Existing chart toolbar and accessible data table (chart export explicitly disabled)",
+      "Existing operational brief evidence/details drawer",
+      "Existing field-directory table controls and persistent table identities",
+      "Read full LayoutCard descriptions through existing help affordance"
+    ],
+    "data": [
+      "All top-level certificate fields, nested thermal shares, ordered trend facts, ordered recommendation strings and separate expected/provided hashes",
+      "Both query hooks remain unconditionally mounted with original keys, enablement, cancellation, stale-time and inherited policy",
+      "One selected vehicle; no new page range picker or invented server range support",
+      "One immutable mount clock and memoized shared analysis; trend calendar remains UTC and identity instants use vehicle time",
+      "SoH 0 plus grade N/A sentinel is unknown, not measured zero",
+      "Exact included/excluded categories, counts, 180-point cap caveat, quantiles, cadence, span, recency, variability and fit gates",
+      "Separate reported/reconstructed grade, penalties, clamp rules, mismatch and unknown reasons",
+      "Raw certificate facts separate from derived ratios, evidence breadth, causal/nonclaim caveats and seven hash-bound core facts",
+      "Current capacity_kwh contract remains untouched pending canonical SI/hash investigation",
+      "Retained facts survive certificate/verification refresh failure; all fourteen section shells and static methodology remain reachable"
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source audit; no application request, mutation, Git operation, build, lint, TypeScript compilation, test runner or browser session.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified except source observations; no keyboard/screen-reader/contrast acceptance",
+    "responsive": "unverified except source layout and hiding rules",
+    "backend": "Two route registrations and ledger caveat inspected; handlers, DTOs, SQL, SI units, OpenAPI, hash arithmetic and actual responses not verified.",
+    "translations": "Catalog presence and locale/RTL runtime not audited.",
+    "scopedPatternCounts": {
+      "scope": "Assigned page plus fifteen battery-passport section/body TSX files",
+      "rawControls": 0,
+      "staticInlineVarStylesSingleLine": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "textNeonOccurrences": 0,
+      "sectionElements": 14,
+      "shellElements": 14,
+      "output": "raw_controls: 0\nstatic_inline_style: 0\ndirect_libraries: 0\nneon_body: 0\nshells: 14\nsections: 14\npage+section_tsx_lines: 3586",
+      "exitCode": 0,
+      "limitations": "Regex counts are not a comprehensive zero-violations claim. Fixed hex, gradient decoration, null-to-zero semantics and mobile information loss remain findings.",
+      "command": "PowerShell read-only Get-Content over assigned page and battery-passport *.tsx, [regex]::Matches counts for <(button|input|textarea|select|table)\\b, style=\\{\\{[^\\r\\n]*var\\(--, direct library imports, text-neon-, <(GlassPanel|LayoutCard|ChartCard)\\b and <section\\b; Measure-Object line totals."
+    },
+    "skillAuditScript": "Read audit.sh but did not execute: it unconditionally runs project-wide npx tsc --noEmit, contrary to this Phase0 bounded audit restriction. Equivalent bounded source pattern checks above were executed instead.",
+    "sourceReadCoverage": "All fourteen section components and SectionBody read fully. Analysis helper inspected only lines 1-210,560-675,748-861 plus line-cited scoped matches; trust/layout/table contracts inspected bounded ranges. Not a complete mathematical/backend audit.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-064.json", ".agent-status\\audit-page-064.txt"],
+    "sourceChanges": "none"
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\index.ts",
+    "web\\src\\features\\battery\\components\\battery-passport\\types.ts",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportKpiBand.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendTimeline.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendDiagnostics.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendDistribution.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportCapacityContext.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportGradeAudit.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportUsageProfile.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportThermalProfile.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportRecommendations.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportProvenanceMatrix.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportVerificationDiagnostics.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportFieldDirectory.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMethodology.tsx",
+    "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportSectionBody.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\battery\\lib\\batteryPassportAnalysis.ts",
+    "web\\src\\api\\hooks\\useBatteryPassport.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx (route/lazy import matches only)",
+    "internal\\api\\router.go (passport registrations and comments only)"
+  ]
+}

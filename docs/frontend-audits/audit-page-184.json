@@ -1,0 +1,412 @@
+{
+  "item": "audit-page-184",
+  "page": "web\\src\\features\\system\\pages\\CommandsPage.tsx",
+  "routes": ["/commands"],
+  "purpose": "Selected-vehicle remote command center with fleet context, vehicle evidence, readiness, searchable categorized actions, favorites, guarded input/confirmation dialogs and latest per-command outcomes.",
+  "primaryGoal": "Select the workspace vehicle, review trustworthy readiness, send an authorized live remote action and inspect its reported outcome.",
+  "dataSources": [
+    {
+      "hook": "useVehicles",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3320-3321",
+      "behavior": "Shared roster query and safeArray selection; cancellation signal forwarded. Roster state is explicitly historical, not proof of reachability."
+    },
+    {
+      "hook": "useVehicleState",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 260,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/state",
+      "routeEvidence": "internal\\api\\router.go:3329-3333",
+      "behavior": "Selected vehicle query forwards cancellation, maps nullable state and trust metadata, respects as_of cache identity and disables historical polling. Live center requests 15000ms polling."
+    },
+    {
+      "hook": "useCommandLatest",
+      "owner": "web\\src\\api\\hooks\\useCommands.ts",
+      "line": 95,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/commands/latest",
+      "routeEvidence": "internal\\api\\router.go:3336",
+      "behavior": "Latest outcome per command, normalized vehicle key, cancellation and null-array normalization, periodic refresh. Container consumes payload but discards loading/error/freshness/retry state."
+    },
+    {
+      "hook": "useVehicleCommand",
+      "owner": "web\\src\\api\\hooks\\useVehicleCommand.ts",
+      "line": 50,
+      "endpoint": "POST /api/v1/vehicles/{vehicleID}/command",
+      "routeEvidence": "internal\\api\\router.go:3335",
+      "behavior": "Source inspection only; never invoked. requiresLiveMode, success discriminator, toast, vehicle/latest/history/roster invalidation and expired-Tesla-auth recovery queue must survive.",
+      "backendLimits": "Router proves route registration only. Authorization internals, command support, vendor units, execution outcome and recovery replay were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": null,
+      "behavior": "URL > persisted store > first valid fleet vehicle; reconciles unknown IDs, retains unrelated URL parameters and shares roster query. No page-local picker."
+    },
+    {
+      "hook": "useCommandFavorites",
+      "owner": "web\\src\\features\\system\\components\\command-center\\useCommandFavorites.ts",
+      "line": 21,
+      "endpoint": null,
+      "behavior": "Per-vehicle localStorage favorite IDs with defaults and malformed/storage-failure fallback; group expansion uses per-vehicle sessionStorage."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "usage": "CommandsPage.tsx:74; existing shell/page composition, subtitle, metadata and history action"},
+    {"name": "StaleRefreshWarning/useDataState", "owner": "web\\src\\hooks\\useDataState.ts", "usage": "CommandsPage.tsx:38-39,114; shared roster fatal versus retained-refresh handling"},
+    {"name": "VehicleCommandCenter", "owner": "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx", "usage": "Selected-vehicle query/mutation orchestrator; hero, readiness, workspace"},
+    {"name": "SystemSummaryBrief", "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "usage": "Existing OperationalBrief and useOperationalMetrics adapter; numeric SI measurements remain numeric and missing values remain missing"},
+    {"name": "GlassPanel/Heading/Text/Caption/Badge/Button/Input/Modal/StatusPill", "owner": "@/components/ui", "usage": "Existing category primitives; no new theme, surface or dialog engine needed"},
+    {"name": "EmptyState/QueryError/Skeleton/AlertBanner/InlineCallout", "owner": "@/components/feedback", "usage": "Fleet placeholders, state recovery, mode safety and execution feedback"},
+    {"name": "TimeStamp/useIsStale", "owner": "@/components/data-display", "usage": "Observed time and telemetry age, existing formatting owner"},
+    {"name": "FadeIn", "owner": "@/components/motion", "usage": "Route, favorites and expanded group entrances; underlying reduced-motion implementation not inspected"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\components\\InputCommandTile.tsx",
+      "line": 56,
+      "rule": "MDC-002 component reuse",
+      "detail": "CommandTile, ToggleCommandTile and InputCommandTile repeat clickable GlassPanel geometry, nested favorite control, icon, pending, disabled and result presentation; their keyboard handlers have already diverged.",
+      "fix": "Consolidate the feature-local tile presentation into one accessible command tile frame with sibling action and favorite buttons, leaving dispatch/toggle/input business logic in existing owners.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "CommandsPage.tsx:100 uses full-width wrapping history actions, sm auto width and min-h-11.",
+      "CommandCenterHero.tsx:76 stacks identity/status before lg; VIN uses break-all.",
+      "CommandWorkspace.tsx:147 stacks heading/search before lg; search results use two/three/four columns.",
+      "CommandDomainBrowser.tsx:50 uses two-column domains before xl.",
+      "CollapsibleCommandGroup.tsx:73 preserves two/three/four/five-column commands."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+        "line": 83,
+        "rule": "MDC-031/MDC-043 preservation and long labels",
+        "detail": "Selected vehicle name is truncated without an explicit full-name affordance; two-column tiles also need narrow-container and long-translation checks, not presumed acceptance.",
+        "fix": "Prefer wrapping the vehicle heading or provide an accessible full-name expansion; exercise long labels and tile/favorite target separation at 320-430px.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "unverified at all specified widths; no browser was launched"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "CommandsPage.tsx:116 names the selected-vehicle section.",
+      "CommandReadinessStrip.tsx:130 uses polite atomic feedback announcements.",
+      "CommandTile.tsx:49 and ToggleCommandTile.tsx:66 ignore descendant key events; InputCommandTile does not.",
+      "CommandConfirmDialog uses Modal, countdown and typed confirmation; dialog focus trapping/restoration is delegated to shared Modal and unexercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\components\\InputCommandTile.tsx",
+        "line": 40,
+        "rule": "MDC-040 keyboard action isolation",
+        "detail": "Enter/Space on the nested favorite button bubbles into the tile handler, which prevents default and opens the command input dialog. Sibling command/toggle handlers explicitly guard target !== currentTarget.",
+        "fix": "Immediately match the descendant-event guard; preferably render separate sibling native Button targets in the feature-local frame so favorite never activates the command.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+        "line": 47,
+        "rule": "MDC-040 tab semantics",
+        "detail": "Custom tablist has tab roles and aria-selected/controls but no tab IDs, panel aria-labelledby, roving tabIndex or arrow/Home/End keyboard implementation.",
+        "fix": "Use the canonical shared Tabs contract after verifying it supports this domain layout, or retain ordinary buttons/group semantics; preserve every domain/category and selection behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+        "line": 107,
+        "rule": "MDC-021/MDC-040 field naming",
+        "detail": "Typed-confirmation Input has placeholder and preceding HelperText but no label, aria-label or aria-labelledby connecting its instruction to the field.",
+        "fix": "Supply a localized Input label and linked instruction while preserving exact confirmation word, case-insensitive matching, countdown and modal behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+        "line": 59,
+        "rule": "MDC-040 independent interactive targets",
+        "detail": "All three tile variants contain a native favorite button inside a role=button container. This combines interactive semantics and risks descendant accessibility representation despite pointer propagation guards.",
+        "fix": "Use a non-interactive card with independently named command and favorite Button targets; preserve 44px favorites, pressed state, read-only reason and loading.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboardScreenReaderContrastForcedColors": "unverified; findings above are source defects/risks, not executed interaction results"
+  },
+  "states": {
+    "initialLoading": "Fleet fallback retains three sections with skeleton geometry; hero/brief independently supports state loading.",
+    "empty": "Fleet connect-account recovery, live-state-unavailable guidance and clear-search no-results recovery exist.",
+    "error": "Fleet QueryError retry and vehicle-state QueryError retry exist; roster retained refresh warning exists.",
+    "offlineHistorical": "useOperationalMode disables workspace and closes active dialog; executeCommand rechecks canWrite; mutation client requiresLiveMode. Controls remain selectable for uncertain/asleep/offline vehicle state in live mode, with explanatory warnings.",
+    "retained": "Hero/readiness pass retained state to SystemSummaryBrief; fleet content retained through shared DataState.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx",
+        "line": 50,
+        "rule": "MDC-026 asynchronous trust",
+        "detail": "latestQuery.data ?? [] hides initial loading, fatal failure and background refresh failure. Workspace sees neither latestQuery error nor dataUpdatedAt/refetch and cannot distinguish no attempts from unavailable/stale outcomes.",
+        "fix": "Adapt latest query with useDataState, pass trust/retry into workspace and retain existing badges on refresh failure. Render independent status/recovery without disabling unrelated command availability.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+        "line": 32,
+        "rule": "MDC-025/MDC-026 unknown is not OFF",
+        "detail": "A present state object with an absent/null stateField becomes false; absent state uses false localToggle. Workspace supplies no field-trust metadata, so an unverified reading can appear as an authoritative ON/OFF control.",
+        "fix": "Carry existing verifiedFields/freshness through workspace, show unknown/last-known explicitly, and preserve command availability and on/off command semantics rather than inventing a state or disabling everything.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\command-center\\commandLabels.ts",
+        "line": 45,
+        "rule": "MDC-025 status meaning",
+        "detail": "Every latest status other than literal success receives a failure cross; unknown/pending backend statuses cannot be inferred as failures. Actual backend status vocabulary was not inspected.",
+        "fix": "Confirm the existing backend vocabulary before mapping; preserve explicit success/failure and render unsupported statuses neutrally with source text.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+      "line": 73,
+      "rule": "MDC-010/MDC-015 restrained visual intensity",
+      "detail": "Decorative cyan-to-purple hero wash adds unrelated hue; verified online also requests an ongoing pulse at line 94.",
+      "fix": "Remove the decorative wash, retain neutral panel tokens and semantic status text/dot; remove decorative continuous pulse without changing status trust.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+      "line": 22,
+      "rule": "MDC-010/MDC-025 semantic restrained palette",
+      "detail": "ON state uses neon panel/icon/dot palettes; ordinary tiles repeat neon hover borders, favorites use neon amber, input submit overrides shared primary with neon cyan and select options override focus with neon cyan.",
+      "fix": "Use existing surface/border/focus tokens and subdued semantic success/danger accents only where meaningful; remove arbitrary page palette overrides. Keep ON/OFF text, favorite stars and destructive warning cues.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\system\\components\\CommandTile.tsx:21-24,93",
+        "web\\src\\features\\system\\components\\InputCommandTile.tsx:20-23",
+        "web\\src\\features\\system\\components\\FavoritesBar.tsx:37",
+        "web\\src\\features\\system\\components\\CommandInputDialog.tsx:248",
+        "web\\src\\features\\system\\components\\CommandSelectDialog.tsx:70-71"
+      ]
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+      "line": 67,
+      "rule": "MDC-010/MDC-012/MDC-015 theme-aware neutral surfaces",
+      "detail": "Selected domain adds hardcoded cyan, panel uses fixed white transparency at line 82 and CommandSearch overrides Input with white surface/border at line 21.",
+      "fix": "Let Button/Input canonical variants own selected, field and focus styling; use existing surface and border variables rather than fixed-white overlays.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+      "line": 86,
+      "rule": "MDC-015 surface restraint",
+      "detail": "All three command dialogs explicitly apply backdrop-blur-xl; confirmation also establishes a red modal border, bypassing canonical flat surface defaults.",
+      "fix": "Remove unnecessary blur/surface overrides; communicate destructive meaning through existing danger Button and a restrained localized warning rather than the entire modal.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\commands.ts",
+      "line": 89,
+      "rule": "MDC-002/MDC-045 typed source ownership",
+      "detail": "Local Vehicle, VehicleState and CommandLogEntry interfaces compete with shared vehicle/API/hook types; local state omits freshness/verified-field metadata needed by command toggles.",
+      "fix": "Use the existing authoritative API/domain types and trust helpers when compatible; keep CommandDef as feature configuration. Do not rewrite unit contracts as a cosmetic change.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\commands.ts",
+      "line": 176,
+      "rule": "MDC-045 vendor command boundary",
+      "detail": "Speed-limit form explicitly uses MPH and limit_mph. Only this definition and router registration were inspected; vendor/backend conversion semantics are unknown.",
+      "fix": "Preserve vendor command name/parameter/validation until backend boundary is verified. Do not blindly rename to SI or introduce conversion during visual modernization; retained SI display metrics stay unchanged.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "first": ["Favorite keyboard event isolation", "Unknown/unverified toggle state", "Latest-outcome source trust", "Typed confirmation field name"],
+    "next": ["Tab semantics and tile target structure", "Restrained palette and canonical modal/field styling", "Narrow-width long-label verification"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse shared DataState and refresh warning; no shared API extension demonstrated",
+      "owner": "web\\src\\hooks\\useDataState.ts",
+      "propsVariantsStates": "Existing query adapter exposes fatalError/refreshError, retained data, age/provenance and retry; add page-local latest-outcomes presentation.",
+      "usedBy": ["VehicleCommandCenter", "CommandWorkspace"],
+      "dependsOn": ["useCommandLatest query result", "existing feedback category components"],
+      "changeNeeded": false
+    },
+    {
+      "name": "Reuse existing vehicle field-currentness contract",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "propsVariantsStates": "isVehicleStateFieldCurrent(response, field, now), observedAt, freshness and verifiedFields; propagate to feature-local tile frame as known/unknown/last-known.",
+      "usedBy": ["CommandWorkspace", "ToggleCommandTile", "CommandCenterHero", "CommandReadinessStrip"],
+      "dependsOn": ["mapped useVehicleState response"],
+      "changeNeeded": false
+    },
+    {
+      "name": "Feature-local command tile frame; no new universal shared card requested",
+      "owner": "Explicit missing feature-local owner: web\\src\\features\\system\\components\\CommandTileFrame.tsx",
+      "propsVariantsStates": "label, sublabel, icon, action callback, favorite callback/pressed/name, pending, disabled reason, last result, toggle evidence; sibling native action/favorite targets and token-based focus/surface.",
+      "usedBy": ["CommandTile", "ToggleCommandTile", "InputCommandTile"],
+      "dependsOn": ["existing Button, GlassPanel, Text", "field-currentness integration"],
+      "changeNeeded": false,
+      "note": "Feature dependency changes need separate assigned ownership; this audit never edits them."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\system\\commands.ts", "line": 89, "detail": "Local source interfaces overlap shared vehicle/API/command-hook contracts."},
+    {"file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx", "line": 47, "detail": "Custom tab implementation overlaps existing UI Tabs; no new tabs engine justified."},
+    {"file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx", "line": 22, "detail": "Feature neon palette overlaps canonical semantic surface/status styling."}
+  ],
+  "preservation": {
+    "sourceHash": "709175f347c03fead3fd1f02be00061637e20bb3ad1a05f7072ea6faa63b6d2f",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 137,
+    "rootSourceUnchanged": true,
+    "sections": [
+      {"name": "Page header, historical fleet active count and history navigation", "count": 1},
+      {"name": "Selected vehicle hero and battery/range/cabin/access brief", "count": 1},
+      {"name": "Command readiness, motion/freshness, asleep/offline guidance and execution feedback", "count": 1},
+      {"name": "Workspace search, favorites, four domains and fourteen categories", "count": 1},
+      {"name": "Conditional input/select/guarded confirmation dialogs", "count": 3}
+    ],
+    "primaryContentSectionCount": 3,
+    "rootGlassPanelCount": 0,
+    "rootChartContainerCount": 0,
+    "dependencyGlassPanelOccurrences": 9,
+    "dependencyChartContainerOccurrences": 0,
+    "note": "Nine source opening tags include three alternate fallback panels and three reusable tile templates; not nine mounted sections.",
+    "commandCatalogue": {"configuredEntries": 67, "commandOffEntries": 8, "wireCommandNames": 75, "domains": 4, "categories": 14},
+    "actions": [
+      "Shared header vehicle selection; no duplicate local selector",
+      "View history to /command-history",
+      "Roster/state retry; connect account to /tesla-account",
+      "Localized search by command label/category/wire name and clear-search recovery",
+      "Per-vehicle favorites and session-persisted group expansion",
+      "All configured actions/toggles/selects/inputs and their params",
+      "Dangerous confirmations, countdowns, required confirmation words, PIN/numeric validation",
+      "Pending/result feedback, latest outcome badges, toast and expired-auth recovery",
+      "Historical/offline read-only guard at UI, execution and client boundaries"
+    ],
+    "dataBehavior": [
+      "Preserve query keys, cancellation, polling, retry policy and invalidations.",
+      "Keep numeric battery percent, distance SI and temperature readings in OperationalBrief's existing formatting pipeline.",
+      "Preserve nullable readings and explicit observedAt/freshness/verifiedFields; do not replace unknown with zero/OFF.",
+      "Use workspace selection and keyed vehicle center to isolate favorites/search/dialog state across vehicle changes.",
+      "/commands range=false, vehicle=true from workspaceScope; no new date picker needed for live actions.",
+      "Treat request acceptance separately from physical execution; do not invent command capabilities.",
+      "Preserve localStorage/sessionStorage key names, theme/unit preferences, route aliases and wire params."
+    ],
+    "sourceInventory": [
+      {"file": "web\\src\\features\\system\\pages\\CommandsPage.tsx", "lines": 137},
+      {"file": "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx", "lines": 162},
+      {"file": "web\\src\\features\\system\\components\\command-center\\CommandCenterFallback.tsx", "lines": 114},
+      {"file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx", "lines": 145},
+      {"file": "web\\src\\features\\system\\components\\command-center\\CommandReadinessStrip.tsx", "lines": 164},
+      {"file": "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.tsx", "lines": 223},
+      {"file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx", "lines": 117},
+      {"file": "web\\src\\features\\system\\components\\command-center\\CommandDialogs.tsx", "lines": 99},
+      {"file": "web\\src\\features\\system\\components\\command-center\\commandDomains.ts", "lines": 66},
+      {"file": "web\\src\\features\\system\\components\\command-center\\commandLabels.ts", "lines": 47},
+      {"file": "web\\src\\features\\system\\components\\command-center\\useCommandFavorites.ts", "lines": 43},
+      {"file": "web\\src\\features\\system\\components\\command-center\\types.ts", "lines": 5},
+      {"file": "web\\src\\features\\system\\components\\command-center\\index.ts", "lines": 6},
+      {"file": "web\\src\\features\\system\\components\\CommandTile.tsx", "lines": 114},
+      {"file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx", "lines": 122},
+      {"file": "web\\src\\features\\system\\components\\InputCommandTile.tsx", "lines": 122},
+      {"file": "web\\src\\features\\system\\components\\CommandSearch.tsx", "lines": 24},
+      {"file": "web\\src\\features\\system\\components\\FavoritesBar.tsx", "lines": 49},
+      {"file": "web\\src\\features\\system\\components\\CollapsibleCommandGroup.tsx", "lines": 81},
+      {"file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx", "lines": 148},
+      {"file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx", "lines": 257},
+      {"file": "web\\src\\features\\system\\components\\CommandSelectDialog.tsx", "lines": 109}
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Bounded source-only read audit of the assigned mounted route and its direct feature/data dependencies; router and client excerpts read only to establish endpoint contracts.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified at runtime; source findings only",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "responsiveViewports": "unverified",
+    "forcedColorsReducedMotionRTL": "unverified",
+    "validation": "No TypeScript, tests, builds, full lint, Git, queue edits, network calls, vehicle commands or mutations performed. Skill script read but not executed because it unconditionally runs whole-frontend TypeScript; manual scoped static scan used instead.",
+    "staticScan": {
+      "scope": "Root page, vehicle center, command-center non-test files and nine supporting command components in sourceInventory",
+      "command": "PowerShell Get-Content plus [regex]::Matches over the explicit sourceInventory paths",
+      "exitCode": 0,
+      "rawOutput": ["style=: 0", "<(button|input|textarea|select|table)\\b: 0", "from ['\"](recharts|react-leaflet|framer-motion)['\"]: 0", "from ['\"]\\.\\./(\\.\\./)?api['\"]: 0"],
+      "interpretation": "Pattern counts only, not zero-violations certification; neon, keyboard and trust findings remain."
+    },
+    "unknowns": [
+      "Shared primitive implementation internals and application-wide foundations not comprehensively audited.",
+      "Only cited portions of large hooks/router/client/mission/design contract and command catalogue were semantically read; inventory counts do not claim full backend/catalogue review.",
+      "No current browser/native/authentication availability, screenshots, screen-reader tests or production command outcomes established.",
+      "No page/dependency tests read or executed. Concurrent source changes outside this report are possible."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-184.json", ".agent-status\\audit-page-184.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\CommandsPage.tsx",
+    "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx",
+    "web\\src\\features\\system\\components\\command-center\\index.ts",
+    "web\\src\\features\\system\\components\\command-center\\types.ts",
+    "web\\src\\features\\system\\components\\command-center\\CommandCenterFallback.tsx",
+    "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+    "web\\src\\features\\system\\components\\command-center\\CommandReadinessStrip.tsx",
+    "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.tsx",
+    "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+    "web\\src\\features\\system\\components\\command-center\\CommandDialogs.tsx",
+    "web\\src\\features\\system\\components\\command-center\\commandDomains.ts",
+    "web\\src\\features\\system\\components\\command-center\\commandLabels.ts",
+    "web\\src\\features\\system\\components\\command-center\\useCommandFavorites.ts",
+    "web\\src\\features\\system\\components\\CommandTile.tsx",
+    "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+    "web\\src\\features\\system\\components\\InputCommandTile.tsx",
+    "web\\src\\features\\system\\components\\CommandSearch.tsx",
+    "web\\src\\features\\system\\components\\FavoritesBar.tsx",
+    "web\\src\\features\\system\\components\\CollapsibleCommandGroup.tsx",
+    "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+    "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+    "web\\src\\features\\system\\components\\CommandSelectDialog.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\features\\system\\commands.ts",
+    "web\\src\\api\\hooks\\useCommands.ts",
+    "web\\src\\api\\hooks\\useVehicleCommand.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

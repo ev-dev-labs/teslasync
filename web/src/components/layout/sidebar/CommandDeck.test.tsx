@@ -28,6 +28,11 @@ import { Icons } from '@/lib/icons'
 import type { SectionGroup } from '../sectionGroups'
 import CommandDeckDefault, { CommandDeck, type CommandDeckProps } from './CommandDeck'
 
+const motionPreference = vi.hoisted(() => ({ reduce: false, durationMs: 250 }))
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => motionPreference,
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, second?: string | Record<string, unknown>, third?: Record<string, unknown>) => {
@@ -146,6 +151,9 @@ const mobilePanel = () => within(screen.getByTestId('command-deck-mobile-panel')
 afterEach(() => {
   cleanup()
   window.localStorage.clear()
+  document.documentElement.removeAttribute('dir')
+  motionPreference.reduce = false
+  motionPreference.durationMs = 250
   vi.restoreAllMocks()
 })
 
@@ -464,8 +472,8 @@ describe('CommandDeck', () => {
       suggestions: [{ ...alertsItem, reason: '1 need attention', kind: 'now' as const }],
     })
     fireEvent.click(desktopRail().getByRole('button', { name: 'Suggested' }))
-    expect(secondaryPanel().getByText('Recently Used')).toBeInTheDocument()
-    // Recently Used starts collapsed so suggestions own the first paint.
+    expect(secondaryPanel().getByText('Recently used')).toBeInTheDocument()
+    // Recently used starts collapsed so suggestions own the first paint.
     expect(secondaryPanel().queryByRole('link', { name: 'Trips' })).not.toBeInTheDocument()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Show recently used' }))
     expect(secondaryPanel().getByRole('link', { name: 'Trips' })).toBeInTheDocument()
@@ -579,6 +587,27 @@ describe('CommandDeck', () => {
     expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
   })
 
+  it('restores a stored section once late-loading sections include it, without overwriting it', () => {
+    window.localStorage.setItem('teslasync-deck-view', '{"kind":"section","title":"Driving"}')
+    const sections = makeSections()
+    const props = baseProps({ pathname: '/drives', activeSectionTitle: 'Home', panelOpen: true })
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <CommandDeck {...props} sections={sections.filter(section => section.title !== 'Driving')} />
+      </MemoryRouter>,
+    )
+    expect(desktopRail().getByRole('button', { name: 'Home, 1 pages' })).toHaveAttribute('aria-expanded', 'true')
+    expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
+
+    rerender(
+      <MemoryRouter initialEntries={['/drives']}>
+        <CommandDeck {...props} sections={sections} />
+      </MemoryRouter>,
+    )
+    expect(desktopRail().getByRole('button', { name: 'Driving, 3 pages' })).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('replaces a retired search preference with the current section', () => {
     window.localStorage.setItem('teslasync-deck-view', '{"kind":"search"}')
     renderControlledDeck({ pathname: '/drives', activeSectionTitle: 'Driving' })
@@ -608,5 +637,33 @@ describe('CommandDeck', () => {
   it('degrades instead of crashing on undefined props', () => {
     renderDeck({ sections: undefined, pinnedItems: undefined } as unknown as Partial<CommandDeckProps>)
     expect(desktopRail().getByRole('button', { name: 'Suggested' })).toBeInTheDocument()
+  })
+
+  it.each(['ltr', 'rtl'])('keeps a sharp directional entrance in %s on both panel levels', (direction) => {
+    document.documentElement.dir = direction
+    renderDeck({ panelOpen: true })
+    const desktop = screen.getByTestId('command-deck-secondary')
+    expect(desktop.style.transform).toContain(`translateX(${direction === 'rtl' ? 22 : -22}px)`)
+    expect(desktop.style.filter).toBe('')
+    expect(desktop.style.transform).not.toContain('scale')
+    expect(desktop).toHaveClass('ease-standard', 'motion-reduce:transition-none')
+
+    fireEvent.click(mobileRail().getByRole('button', { name: 'Suggested' }))
+    const mobile = screen.getByTestId('command-deck-mobile-panel')
+    expect(mobile.style.transform).toContain(`translateX(${direction === 'rtl' ? -22 : 22}px)`)
+    expect(mobile.style.filter).toBe('')
+    expect(mobile.style.transform).not.toContain('scale')
+  })
+
+  it('renders both panel levels immediately when the shared motion policy requests reduction', () => {
+    motionPreference.reduce = true
+    motionPreference.durationMs = 0
+    renderDeck({ panelOpen: true })
+    expect(screen.getByTestId('command-deck-secondary')).toHaveStyle({ opacity: '1', transform: 'none' })
+    fireEvent.click(mobileRail().getByRole('button', { name: 'Suggested' }))
+    expect(screen.getByTestId('command-deck-mobile-panel')).toHaveStyle({ opacity: '1', transform: 'none' })
+    expect(mobilePanel().getByRole('button', { name: 'Back to sections' })).toBeInTheDocument()
+    fireEvent.click(mobilePanel().getByRole('button', { name: 'Back to sections' }))
+    expect(screen.getByTestId('command-deck-mobile-rail')).toBeInTheDocument()
   })
 })

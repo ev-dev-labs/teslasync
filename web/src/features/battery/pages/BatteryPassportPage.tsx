@@ -10,11 +10,14 @@ import {
   useVerifyPassport,
   type BatteryPassport,
 } from '@/api/hooks/useBatteryPassport';
-import { Grid, PageContainer } from '@/components/layout';
+import { CardGrid, PageLayout } from '@/components/layout';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import {
   BatteryPassportCapacityContext,
@@ -36,7 +39,6 @@ import {
 } from '../components/battery-passport';
 import {
   analyzeBatteryPassport,
-  toBatteryPassportCertificate,
 } from '../lib/batteryPassportAnalysis';
 
 /**
@@ -52,13 +54,13 @@ import {
  * - capture one immutable page clock for every date-based diagnostic;
  * - derive one immutable analysis result for every extracted section;
  * - create the canonical snake_case download from unmodified response facts;
- * - pass vehicle-time display context only to instant-based identity fields;
+ * - pass saved date/time display context to instant-based certificate fields;
  * - leave UTC trend dates in UTC throughout analysis and presentation;
- * - expose one retry action, owned by the masthead's initial-error surface;
+ * - keep certificate retry separate from nonblocking verification retry;
  * - treat verification failure as status evidence rather than page failure.
  *
  * Section components own their panel shells and state-specific interiors.
- * Consequently, PageContainer must never receive a page-level loading,
+ * Consequently, PageLayout must never receive a page-level loading,
  * error, or empty gate: doing so would unmount all fourteen evidence shells.
  *
  * Persistent state matrix:
@@ -77,15 +79,24 @@ import {
  * the substantial rendering and deterministic evidence logic remain in the
  * extracted component and lib modules.
  */
-const TWO_COLUMNS = {
-  default: 1,
-  xl: 2,
-} as const;
-
 function downloadCertificate(passport: BatteryPassport): void {
-  const certificate = toBatteryPassportCertificate(passport);
+  // Strip only client-added camel mirrors, never diagnostically excluded facts.
+  const certificate = JSON.stringify(passport, function (
+    this: unknown,
+    key: string,
+    value: unknown,
+  ) {
+    if (this != null && typeof this === 'object' && !Array.isArray(this)) {
+      const isMirror = Object.keys(this).some((field) =>
+        field.includes('_')
+        && field.replace(/_([a-z0-9])/g, (_match, letter: string) => letter.toUpperCase()) === key,
+      );
+      if (isMirror) return undefined;
+    }
+    return value;
+  }, 2);
   const blob = new Blob(
-    [JSON.stringify(certificate, null, 2)],
+    [certificate],
     { type: 'application/json' },
   );
   const url = URL.createObjectURL(blob);
@@ -104,7 +115,7 @@ function downloadCertificate(passport: BatteryPassport): void {
 }
 
 export default function BatteryPassportPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   usePageTitle(
     t(
       'batteryPassport.title',
@@ -119,7 +130,7 @@ export default function BatteryPassportPage() {
    * no-vehicle state.
    */
   const { vehicleId } = useSelectedVehicle();
-  const vehicleTimeZone = useTimezone('vehicle');
+  const { opts: timestampContext, locale, tz } = useDateFormat();
   const vehicleIdString =
     vehicleId != null
       ? String(vehicleId)
@@ -128,6 +139,7 @@ export default function BatteryPassportPage() {
   const passportQuery = useBatteryPassport(
     vehicleIdString,
   );
+  const passportSource = useDataState(passportQuery, { provenance: 'historical' });
   const passport = passportQuery.data ?? null;
 
   /*
@@ -184,15 +196,11 @@ export default function BatteryPassportPage() {
     );
   const initialError =
     vehicleSelected
-    && !payloadResolved
-    && passportQuery.isError
-      ? passportQuery.error
+      ? passportSource.fatalError
       : null;
   const refreshError =
     vehicleSelected
-    && payloadResolved
-    && passportQuery.isError
-      ? passportQuery.error
+      ? passportSource.refreshError
       : null;
   const isResolved =
     vehicleSelected
@@ -215,6 +223,7 @@ export default function BatteryPassportPage() {
     initialError,
     refreshError,
     onRetry,
+    timestampContext,
   };
 
   /*
@@ -223,7 +232,13 @@ export default function BatteryPassportPage() {
    * During a background fetch, cached evidence is identified explicitly as
    * a previous result rather than presented as a current digest comparison.
    */
-  const verification: BatteryPassportVerificationState = (() => {
+  const onVerifyRetry = useCallback(
+    () => {
+      void verifyQuery.refetch();
+    },
+    [verifyQuery.refetch],
+  );
+  const verificationResult = ((): Pick<BatteryPassportVerificationState, 'status' | 'data' | 'error'> => {
     if (
       passport == null
       || typeof passport.provenance_hash !== 'string'
@@ -236,7 +251,17 @@ export default function BatteryPassportPage() {
       };
     }
     if (
-      verifyQuery.isLoading
+      verifyQuery.fetchStatus === 'paused'
+      && !verifyQuery.error
+    ) {
+      return {
+        status: 'unavailable',
+        data: verifyQuery.data ?? null,
+        error: null,
+      };
+    }
+    if (
+      verifyQuery.isFetching
       && verifyQuery.data == null
     ) {
       return {
@@ -282,6 +307,12 @@ export default function BatteryPassportPage() {
       error: null,
     };
   })();
+  const verification: BatteryPassportVerificationState = {
+    ...verificationResult,
+    onRetry: onVerifyRetry,
+    isPaused: verifyQuery.fetchStatus === 'paused',
+    isRetrying: verifyQuery.isFetching,
+  };
 
   const onExport = useCallback(
     () => {
@@ -293,7 +324,7 @@ export default function BatteryPassportPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t(
         'batteryPassport.title',
         'Battery Passport',
@@ -303,6 +334,25 @@ export default function BatteryPassportPage() {
         'Persistent certificate evidence, transparent reconstruction, provenance boundaries, and verification diagnostics',
       )}
     >
+      {vehicleSelected && passportSource.isRefreshBlocked && !refreshError && !initialError ? (
+        passport != null ? (
+          <StaleRefreshWarning
+            state={passportSource}
+            label={t('batteryPassport.title', 'Battery Passport')}
+          />
+        ) : (
+          <AlertBanner variant="info" role="status" data-refresh-blocked>
+            <Text as="p" variant="bodySm" color="secondary">
+              {t('Paused', 'Paused')}
+            </Text>
+            {!passportSource.hasData ? (
+              <Text as="p" variant="bodySm" color="secondary">
+                {t('batteryPassport.states.pending', 'Certificate availability has not resolved.')}
+              </Text>
+            ) : null}
+          </AlertBanner>
+        )
+      ) : null}
       {/*
        * 1 · Certificate identity, controls, export, and verification state.
        * This is the sole owner of the initial-query retry action.
@@ -311,8 +361,8 @@ export default function BatteryPassportPage() {
         <BatteryPassportMasthead
           state={queryState}
           verification={verification}
-          locale={i18n.language}
-          timeZone={vehicleTimeZone}
+          locale={locale}
+          timeZone={tz}
           onExport={onExport}
         />
       </FadeIn>
@@ -336,7 +386,7 @@ export default function BatteryPassportPage() {
         <BatteryPassportTrendTimeline
           analysis={analysis}
           state={queryState}
-          locale={i18n.language}
+          locale={locale}
         />
       </FadeIn>
 
@@ -356,20 +406,16 @@ export default function BatteryPassportPage() {
        * These sit together visually but retain independent panel shells.
        */}
       <FadeIn delay={0.12}>
-        <Grid
-          cols={TWO_COLUMNS}
-          gap={4}
-          className="items-stretch"
-        >
-          <BatteryPassportTrendDistribution
+        <CardGrid label={t('batteryPassport.capacityEvidence', 'Distribution and capacity context')} items={[
+          { id: 'passport-trend-distribution', size: 'half', content: <BatteryPassportTrendDistribution
             analysis={analysis}
             state={queryState}
-          />
-          <BatteryPassportCapacityContext
+          /> },
+          { id: 'passport-capacity-context', size: 'half', content: <BatteryPassportCapacityContext
             analysis={analysis}
             state={queryState}
-          />
-        </Grid>
+          /> },
+        ]} />
       </FadeIn>
 
       {/*
@@ -388,20 +434,16 @@ export default function BatteryPassportPage() {
        * Neutral rollups and exact thermal accounting share one dense row.
        */}
       <FadeIn delay={0.18}>
-        <Grid
-          cols={TWO_COLUMNS}
-          gap={4}
-          className="items-stretch"
-        >
-          <BatteryPassportUsageProfile
+        <CardGrid label={t('batteryPassport.profileEvidence', 'Usage and thermal profiles')} items={[
+          { id: 'passport-usage-profile', size: 'half', content: <BatteryPassportUsageProfile
             analysis={analysis}
             state={queryState}
-          />
-          <BatteryPassportThermalProfile
+          /> },
+          { id: 'passport-thermal-profile', size: 'half', content: <BatteryPassportThermalProfile
             analysis={analysis}
             state={queryState}
-          />
-        </Grid>
+          /> },
+        ]} />
       </FadeIn>
 
       {/*
@@ -454,6 +496,6 @@ export default function BatteryPassportPage() {
       <FadeIn delay={0.33}>
         <BatteryPassportMethodology />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

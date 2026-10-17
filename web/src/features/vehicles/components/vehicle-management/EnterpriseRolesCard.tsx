@@ -27,6 +27,7 @@ export function EnterpriseRolesCard({ vehicleId }: EnterpriseRolesCardProps) {
       prerequisite="enterprise"
       kind="roles"
       data={roles.data?.data}
+      source={roles}
       fetchedAt={roles.data?.fetched_at}
       loading={roles.isLoading}
       error={refreshRoles.error ?? roles.error}

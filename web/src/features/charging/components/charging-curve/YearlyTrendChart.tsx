@@ -4,6 +4,7 @@ import {
   ChartContainer,
   ChartLegend,
   ChartTooltip,
+  chartAnimationProps,
   chartGrid,
   axisTickSm,
   CHART_COLORS,
@@ -48,12 +49,13 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
         'Average time-to-charge and session count by year',
       )}
       ariaLabel={t(
-        'charging.curve.yearlyTrend.aria',
+        'charging.curve.yearlyTrendAria',
         'Yearly average charge-time and session-count composed chart',
       )}
       chartKey="charging-curve-yearly-trend"
       empty={isEmpty}
       data={data}
+      exportData={data.map(({ year, avg10to80, avg20to80, count }) => ({ year, avg10to80, avg20to80, count }))}
       dataColumns={dataColumns}
       height={280}
       exportable
@@ -72,7 +74,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
               value: t('charging.curve.minutes', 'Minutes'),
               angle: -90,
               position: 'insideLeft',
-              style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+              style: axisTickSm,
             }}
           />
           <YAxis
@@ -83,12 +85,13 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
               value: t('charging.curve.sessionCount', 'Sessions'),
               angle: 90,
               position: 'insideRight',
-              style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+              style: axisTickSm,
             }}
           />
           <Tooltip content={<ChartTooltip />} />
           <ChartLegend />
           <Bar
+            {...chartAnimationProps()}
             yAxisId="count"
             dataKey="count"
             name={t('charging.curve.dcSessions', 'DC Sessions')}

@@ -9,6 +9,8 @@ import {
   useChangelog,
 } from '../useChangelog'
 import { CHANGELOG, LATEST_VERSION } from '@/generated/changelog'
+import { CHANGELOG_VERSIONS } from '@/generated/changelogVersions'
+import { useChangelogStatus } from '../useChangelogStatus'
 
 describe('compareVersions', () => {
   it('returns 0 when versions are identical', () => {
@@ -110,6 +112,55 @@ describe('useChangelog', () => {
     const { result } = renderHook(() => useChangelog())
     expect(result.current.entries).toBe(CHANGELOG)
     expect(result.current.latestVersion).toBe(LATEST_VERSION)
+  })
+
+  it('keeps shell version metadata aligned with complete release content', () => {
+    expect(CHANGELOG_VERSIONS).toEqual(CHANGELOG.map((entry) => entry.version))
+    const { result } = renderHook(() => ({
+      status: useChangelogStatus(),
+      content: useChangelog(),
+    }))
+    expect(result.current.status.unseenCount).toBe(result.current.content.newEntries.length)
+    expect(result.current.status.latestVersion).toBe(result.current.content.latestVersion)
+  })
+
+  it('updates shell badges immediately when release content is acknowledged', () => {
+    const { result } = renderHook(() => ({
+      status: useChangelogStatus(),
+      content: useChangelog(),
+    }))
+    act(() => result.current.content.markSeen())
+    expect(result.current.status.hasUnseen).toBe(false)
+    expect(result.current.status.unseenCount).toBe(0)
+    expect(result.current.status.seenVersion).toBe(LATEST_VERSION)
+    expect(result.current.content.newEntries).toHaveLength(0)
+    expect(result.current.content.entries).toBe(CHANGELOG)
+  })
+
+  it('shares manual-open throttling between shell tracking and release content', () => {
+    const { result } = renderHook(() => ({
+      status: useChangelogStatus(),
+      content: useChangelog(),
+    }))
+    act(() => result.current.status.stampShown())
+    expect(result.current.status.hasUnseen).toBe(true)
+    expect(result.current.content.hasUnseen).toBe(true)
+    expect(result.current.content.canAutoShow).toBe(false)
+    expect(result.current.status.canAutoShow).toBe(false)
+  })
+
+  it('keeps shell counts and complete entries synchronized after cross-tab acknowledgment', () => {
+    const { result } = renderHook(() => ({
+      status: useChangelogStatus(),
+      content: useChangelog(),
+    }))
+    act(() => {
+      localStorage.setItem(SEEN_VERSION_KEY, LATEST_VERSION)
+      window.dispatchEvent(new StorageEvent('storage', { key: SEEN_VERSION_KEY }))
+    })
+    expect(result.current.status.hasUnseen).toBe(false)
+    expect(result.current.status.unseenCount).toBe(0)
+    expect(result.current.content.newEntries).toHaveLength(0)
   })
 })
 

@@ -1,0 +1,734 @@
+{
+  "item": "audit-page-162",
+  "phase": "Phase0",
+  "page": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+  "routes": [
+    "/ownership/warranty-command"
+  ],
+  "purpose": "Vehicle-scoped recorded warranty coverage, projected expiry, factual claim readiness, claim ledger and evidence provenance.",
+  "primaryGoal": "Understand which coverage limit binds and record coverage/claim history without confusing projections with contract interpretation or filing a legal submission.",
+  "identity": {
+    "routeFile": "web\\src\\App.tsx",
+    "lazyImportLine": 247,
+    "routeLine": 779,
+    "component": "WarrantyCommandPage",
+    "boundary": "SafeRoute name=WarrantyCommand",
+    "rootSha256": "d735191918fe8e03d136f36abd71e5f51a2584bc0555726bb43edfdbc7cb4a9e",
+    "rootLineCount": 918,
+    "mountedAtRuntime": "unverified"
+  },
+  "dataSources": [
+    {
+      "hook": "useWarrantyOverview(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 422,
+      "endpoint": "GET /api/v1/warranty-command?vehicle_id={id}",
+      "owner": "internal\\handler\\v1\\ownershipintel\\handler.go:144-149,537-556",
+      "routerIntegration": "internal\\api\\router.go:3918 mounts ownershipIntelHandler.MountRoutes",
+      "sourceOwnership": "internal\\app\\ownershipintelsvc\\warranty.go:184-275; durable warranties and claims plus vehicle snapshot and trailing server-defined driving window",
+      "behavior": "Positive vehicle enablement, scope-specific ownership-intel key, AbortSignal forwarded. Overview supplies coverages, readiness, claims, SI odometer, quality, evidence, as_of and digest. Fixed server pace window is not a header-selected date range.",
+      "runtime": "unverified"
+    },
+    {
+      "hook": "useWarranties(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 430,
+      "endpoint": "GET /api/v1/warranty-command/warranties?vehicle_id={id}",
+      "owner": "internal\\handler\\v1\\ownershipintel\\handler.go:146,558-577",
+      "sourceOwnership": "subject/vehicle durable coverage register",
+      "behavior": "items null-safe in page; handler returns items and total; independent source state from overview"
+    },
+    {
+      "hook": "useCreateWarranty / useDeleteWarranty / useCreateWarrantyClaim",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 438,
+      "endpoints": [
+        "POST /api/v1/warranty-command/warranties",
+        "DELETE /api/v1/warranty-command/warranties/{id}",
+        "POST /api/v1/warranty-command/claims"
+      ],
+      "owner": "internal\\handler\\v1\\ownershipintel\\handler.go:147-149,580-623",
+      "behavior": "Typed bodies, existing mutation toast/error pipeline, ownership-intel invalidation. Delete requires danger confirmation. Claim is a local record, not provider filing. No mutation was executed."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 55,
+      "endpoint": "useVehicles dependency; endpoint implementation not expanded in this audit",
+      "owner": "workspace selection hook and selectedVehicle store",
+      "behavior": "URL vehicle_id, store and fleet fallback; no duplicate page picker. workspaceScope.ts:156-174 evaluates this route as vehicle=true, range=false."
+    },
+    {
+      "hook": "useUnits / useNumberFormatting / useOperationalMetrics",
+      "owner": "existing formatting/preferences hooks and shared OperationalBrief pipeline",
+      "behavior": "Display formatting only; settings endpoint dependencies not recursively expanded. Warranty wire types use m, s, m_per_s, percentages and ISO currency minor units."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "Existing category barrel; width/container and existing shell; query is header freshness metadata, not page fatal replacement."
+    },
+    {
+      "name": "OwnershipPanel",
+      "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "contract": "Domain adapter over LayoutCard/SourceContent; source/sourceEnabled/empty/editing/preserveSummary; localized retry and independent retained source content."
+    },
+    {
+      "name": "OwnershipBrief",
+      "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+      "contract": "OperationalBrief and useOperationalMetrics; rawValue/metricId/display, selected scope, source freshness and missing-state reporting."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "contract": "Three persistent tableIds; typed column renderers/filter values, mobileColumns, existing table/export controller. Mobile details/actions require explicit mobilePresentation opt-in."
+    },
+    {
+      "name": "MobileDataTablePresentation",
+      "owner": "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+      "contract": "roles/displayValue/allDetails/inlineActions/onOpenRow; DataTable keeps data/filter/pagination/export ownership."
+    },
+    {
+      "name": "Input / Select / Textarea / Button / Badge / Text / ConfirmDialog",
+      "owner": "existing web\\src\\components\\ui category",
+      "contract": "Shared primitives already used; keyboard/focus/runtime acceptance not inferred."
+    },
+    {
+      "name": "MoneyInput / SiNumberInput",
+      "owner": "web\\src\\features\\ownership\\components",
+      "contract": "Canonical minor units and SI typed fields; preferred-unit hints; null handling and native numeric bounds."
+    },
+    {
+      "name": "EvidencePanel / VerdictBadge / MutationError",
+      "owner": "web\\src\\features\\ownership\\components",
+      "contract": "Domain provenance/limitations, status tone, inline write failure; reuse rather than page-local replacements."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "contract": "Existing useMotionPreference path; reduced initial=false and duration from preference. Browser/OS behavior unverified."
+    },
+    {
+      "name": "UsageBar",
+      "owner": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx:79",
+      "contract": "Local labeled percent/hint visual; dynamic width is valid, not static-style violation."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 417,
+      "rule": "MDC-015/MDC-002",
+      "detail": "Coverage card, battery inset and claim editor repeat raw fixed-white surface styling; EvidencePanel evidence rows repeat the same domain surface pattern.",
+      "fix": "Reuse existing LayoutCard/Card and canonical neutral surface tokens without adding another warranty card framework.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 79,
+      "rule": "mission 4",
+      "detail": "Time and distance meters use one local UsageBar already; cross-page recurrence was not established.",
+      "fix": "Keep local unless independent consumers establish a shared need; do not speculatively create a shared meter.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source inspected; every viewport unverified",
+    "widthsUnverified": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "existing": "Coverage flex wrap and md three-column meters; warranty editor md two/xl three columns; claim editor md two columns; evidence lg three columns; digest break-all.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+        "line": 788,
+        "rule": "MDC-023/MDC-043 preservation",
+        "detail": "Warranty table mobileColumns excludes actions, floor and deductible. No mobilePresentation or expandable fallback is supplied. DataTable's normal cells apply colHiddenClass and its mobile adapter is opt-in, so Claim/Remove are hidden below md rather than reachable as mobile actions.",
+        "fix": "Use existing mobilePresentation roles/displayValue, allDetails and inlineActions to expose every term and both actions. Preserve confirmation, pending state and tableId.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+        "line": 630,
+        "rule": "MDC-023/MDC-043",
+        "detail": "Readiness hides detail below md; claims at line 873 hide amount and evidence note. Neither table supplies a full-detail mobile alternative.",
+        "fix": "Adopt existing mobile presentation/details, keeping all three tables' complete records, loaded filtering/export semantics and source ordering.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+        "line": 421,
+        "rule": "MDC-043 extreme content",
+        "detail": "Coverage label/status row does not wrap or establish a min-width/wrapping strategy; outer row wraps but long inner labels may still overflow.",
+        "fix": "Add token-compatible min-w-0 and safe wrap behavior and validate long provider/label/status text at allocated 320px width.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "keyboard, screen-reader, focus, targets and composed contrast unverified",
+    "existing": "Shared labeled fields, explicit submit/cancel buttons, localized delete confirmation, decorative action icons aria-hidden, shared reduced-motion entrance path.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+        "line": 221,
+        "rule": "MDC-040 semantic status",
+        "detail": "Readiness state renderer consists only of CheckCircle2/XCircle marked aria-hidden. It exposes no satisfied/unmet text, leaving the State cell without an accessible value. DataTable text extraction also skips aria-hidden content.",
+        "fix": "Add localized visible or screen-reader text for satisfied/unmet; retain icons as decoration and supply corresponding mobile/export text.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+        "line": 644,
+        "rule": "MDC-040 disclosure",
+        "detail": "Add coverage toggles an inline form without aria-expanded/aria-controls. Claim opens an editor in a later section without an explicit target label or focus transfer.",
+        "fix": "Associate toggle/editor with stable IDs, expanded state and claim target text; use existing focus mechanisms rather than a new overlay. Verify keyboard return/cancel behavior.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+        "line": 94,
+        "rule": "MDC-040 visualization alternatives",
+        "detail": "UsageBar has visible percent/hint text but no semantic meter association. Dynamic width is acceptable; visual color is not the sole information channel.",
+        "fix": "If upgraded, use shared progress/meter semantics with localized accessible label/value and preserve the text/hint; first verify whether an existing primitive fits.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "loading": "OwnershipPanel:40-48 maps initial loading to SourceContent skeleton; summary preserves OwnershipBrief loading presentation.",
+    "empty": "Coverage/readiness/register/ledger each retain panel shell and localized messages. EvidencePanel independently reports unavailable quality and absent evidence.",
+    "error": "Fatal source failure stays in OwnershipPanel and forwards retry. Register remains independent of failed overview; mutation errors remain inline.",
+    "stale": "OwnershipPanel preserves data via retained SourceContent and retry. OwnershipBrief reports retained source with observation/client load timestamp.",
+    "offline": "DataState exposes isRefreshBlocked; retained paused fetch maps to stale. Page/domain adapter do not explicitly distinguish offline pending from ordinary empty.",
+    "unknown": "Overview metrics use nullable raw values rather than default-zero measurements; projections retain quality reasons. Optional capacity and pace remain optional.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+        "line": 41,
+        "rule": "MDC-026 async trust",
+        "detail": "Without retained data, a paused initial query is typically isPending=true/isLoading=false. Adapter checks source.isLoading only and can render the caller's empty state, e.g. 'No warranties recorded yet', although register was never loaded. It also reduces retained offline to generic retained copy.",
+        "fix": "Extend existing domain adapter to distinguish unresolved/paused source from authoritative empty, consume DataState/isPending/isRefreshBlocked and provide explicit offline prerequisite/recovery text without blanking retained data.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 417,
+      "rule": "MDC-010/MDC-012/MDC-015",
+      "detail": "Six fixed-white border/background occurrences across coverage card, battery inset and claim editor do not use canonical theme surfaces. Effective contrast is not measured.",
+      "fix": "Use existing neutral surface/border tokens and shared card composition; retain muted semantic readiness/warning color without a new palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 436,
+      "rule": "MDC-013",
+      "detail": "Readiness score uses raw p with text-lg/font-semibold; percent captions and digest also define text-xs/text-sm independently.",
+      "fix": "Use existing metric/Text/Code typography roles, preserving tabular numbers, all values and digest wrapping.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 129,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Evidence-source cards repeat fixed-white border/background styling inside the domain trailer.",
+      "fix": "Domain owner replaces chrome with neutral surface tokens while preserving evidence source, summary, samples and timestamps.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 109,
+      "rule": "MDC-032/MDC-046 workspace identity",
+      "detail": "claimFor is only a warranty ID and persists across header vehicle changes. submitClaim uses it without verifying that it belongs to current warranties; currency at line 159 derives from current overview. An editor opened for vehicle A can remain while the surrounding source switches to vehicle B.",
+      "fix": "Bind the unsaved editor to its original vehicle/warranty/currency and visibly preserve that identity; prevent submission under an inconsistent workspace. Do not silently discard drafts on scope change.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 159,
+      "rule": "MDC-045 currency/source preservation",
+      "detail": "Claim amounts and claim editor use one overview currency rather than selected/parent warranty currency. Service warranty.go:224-226 sums claim minor units and :241-243 chooses first warranty currency; coverage form accepts per-row currency. Mixed-currency correctness is not established.",
+      "fix": "Integration owner must define per-warranty claim currency and currency-aware totals without implicit conversion. Page should retain each claim's parent currency and selected-warranty identity; never fabricate exchange rates.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 632,
+      "rule": "MDC-046 stable identity",
+      "detail": "Readiness key uses warrantyLabel plus check code. Labels need not be unique and are editable human content; different warranties with same label can collide.",
+      "fix": "Carry warranty ID when flattening readiness and key by ID/code, retaining labels for presentation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "line": 659,
+      "rule": "MDC-044 localization",
+      "detail": "Coverage kind options render raw enum labels. Provider/kind metadata, binding limit, severity and VerdictBadge default status likewise show backend vocabulary instead of localized display labels. Claim form already has a localized status map.",
+      "fix": "Localize known display vocabulary through canonical catalogs/domain label adapters while preserving raw wire values and user/backend narratives verbatim. Catalog edits belong to integration owner.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": [
+      "Restore mobile Claim/Remove and complete table details",
+      "Expose readiness satisfied/unmet semantics",
+      "Protect unsaved claim workspace/currency identity",
+      "Distinguish paused initial source from loaded empty"
+    ],
+    "then": [
+      "Resolve multi-currency source contract",
+      "Stable readiness keys",
+      "Theme-neutral surfaces and role typography",
+      "Localized enums and measured responsive/a11y validation"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "OwnershipPanel unresolved/offline source state",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "propsVariantsStates": "Keep title/source/sourceEnabled/empty/editing/preserveSummary. Derive pending-without-data independently of authoritative empty; add an explicit paused/offline message/recovery through current SourceContent contract if necessary. Retained data and unsaved editor stay visible.",
+      "usedBy": [
+        "WarrantyCommandPage coverage/register/ledger/readiness/evidence panels",
+        "EvidencePanel domain adapter"
+      ],
+      "dependsOn": [
+        "web\\src\\api\\dataState.ts isRefreshBlocked/isPending",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"
+      ],
+      "owner": "shared",
+      "acceptance": "Focused initial paused, offline retained, fatal retry, disabled selection and editing-without-data cases; no new trust renderer."
+    },
+    {
+      "name": "Ownership evidence neutral surfaces",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Keep quality/evidence/limitations/unsupported/source/sourceEnabled unchanged; token-only chrome replacement for evidence cards and semantic warnings.",
+      "usedBy": [
+        "WarrantyCommandPage provenance trailer",
+        "OwnershipBrief provenance description references the same evidence trailer"
+      ],
+      "dependsOn": [
+        "existing neutral surface/border tokens",
+        "OwnershipPanel"
+      ],
+      "owner": "shared",
+      "acceptance": "Preserve full evidence rows, sample count, timestamps, reasons and unsupported statements in all themes."
+    },
+    {
+      "name": "Currency-aware warranty claim source contract",
+      "existingOwnerFile": "internal\\app\\ownershipintelsvc\\warranty.go",
+      "propsVariantsStates": "Existing Warranty.currency is authoritative per coverage; claim amount_minor must retain parent currency. Total claimed requires currency grouping or explicit same-currency limitation, not an invented conversion.",
+      "usedBy": [
+        "WarrantyCommandPage claim editor",
+        "claim ledger",
+        "Coverage posture total claimed"
+      ],
+      "dependsOn": [
+        "web\\src\\types\\ownership.ts Warranty/WarrantyClaim/WarrantyOverview",
+        "useOwnership typed hooks",
+        "durable source currency contract"
+      ],
+      "owner": "integration",
+      "acceptance": "Mixed-currency and workspace-change evidence plus explicit API/UI preservation review; no backend change is authorized by this audit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Mobile table",
+      "disposition": "Reuse DataTable.mobilePresentation and MobileDataTablePresentation; do not add local responsive tables/cards or another export controller."
+    },
+    {
+      "pattern": "Source trust",
+      "disposition": "Reuse OwnershipPanel, SourceContent, DataState and OperationalBrief; fix adapter rather than introduce another query state store."
+    },
+    {
+      "pattern": "Surfaces and metrics",
+      "disposition": "Reuse LayoutCard/Card/Text and existing OperationalBrief metrics; do not create WarrantyCard/ModernCard/KPI replacement."
+    },
+    {
+      "pattern": "Workspace scope",
+      "disposition": "Keep header vehicle owner. No page vehicle/date picker: route intentionally has vehicle=true/range=false; coverage start date is a business field."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "d735191918fe8e03d136f36abd71e5f51a2584bc0555726bb43edfdbc7cb4a9e",
+    "currentLineCount": 918,
+    "sectionCount": 7,
+    "sectionNames": [
+      "Coverage posture",
+      "Coverage burn-down",
+      "Claim readiness checklist",
+      "Recorded coverages",
+      "Claim ledger",
+      "Evidence bundle",
+      "Evidence, quality, and limitations"
+    ],
+    "sectionStructure": "Six OwnershipPanel instances plus one EvidencePanel, with three evidence subsections: Data quality, Evidence sources, Limitations. Terms warning precedes these sections.",
+    "counts": {
+      "OwnershipPanel": 6,
+      "EvidencePanel": 1,
+      "DataTable": 3,
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "summaryMetrics": 5,
+      "forms": 2
+    },
+    "tableIds": [
+      "ownership-warranty-readiness",
+      "ownership-warranty-list",
+      "ownership-warranty-claims"
+    ],
+    "actions": [
+      "Toggle add-coverage editor",
+      "Save coverage",
+      "Open per-warranty claim editor",
+      "Record claim",
+      "Cancel claim editor",
+      "Danger-confirmed permanent coverage-and-claims removal",
+      "Existing source retry",
+      "Existing DataTable filtering/exports/preferences"
+    ],
+    "fields": {
+      "coverage": [
+        "kind",
+        "label",
+        "provider",
+        "start_at",
+        "start_odometer_m",
+        "term_days mapped to term_s",
+        "term_distance_m",
+        "capacity_floor_pct",
+        "deductible_minor",
+        "currency",
+        "notes"
+      ],
+      "claim": [
+        "title",
+        "status draft/submitted/approved/denied/closed",
+        "amount_minor",
+        "evidence_note",
+        "warranty_id",
+        "confirmed=true local record"
+      ]
+    },
+    "dataBehavior": [
+      "SI m/s/distance and ISO minor units remain unchanged on wire/cache",
+      "useUnits display conversion and saved locale/precision survive",
+      "Measured annual pace, binding limit, time/distance burn-down, battery retention/headroom/floor projection and optional closing window survive",
+      "Readiness label/detail/severity and factual narrative survive",
+      "Claim note/status/opened/amount and coverage terms remain reachable on mobile",
+      "Digest, source quality/reasons/timestamps and explicit legal/provider-filing exclusions remain",
+      "Source-specific loading/error/empty/retained behavior and mutation errors remain",
+      "AbortSignal, positive vehicle enablement, ownership keys/invalidation and danger confirmation remain"
+    ],
+    "minimumModernizedFeatureLines": 643,
+    "lineCountNote": "Future >=70% root baseline may include extracted components in the feature; this audit changes no source and does not assert modernization parity."
+  },
+  "evidenceLimits": {
+    "sourceOnly": true,
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "themesRtlForcedColors": "unverified",
+    "serverResponses": "unverified; route registration and selected service source only",
+    "legalSubmissions": "none; no page action, mutation or production request executed",
+    "checks": [
+      {
+        "command": "PowerShell Get-FileHash root -Algorithm SHA256; ReadAllLines; scoped regex counts",
+        "exitCode": 0,
+        "output": "SHA256=d735191918fe8e03d136f36abd71e5f51a2584bc0555726bb43edfdbc7cb4a9e; LINES=918; staticVariableStyle=0; rawControls=0; directLibraries=0; oldApi=0; neon=0; fixedWhite=6; ownershipPanels=6; dataTables=3; evidencePanels=1"
+      },
+      {
+        "command": "Initial PowerShell count attempt",
+        "exitCode": 1,
+        "output": "ParserError: Unexpected token ']' in expression or statement. Corrected quote handling and reran successfully."
+      },
+      {
+        "command": "bash .github\\skills\\audit-violations\\audit.sh assigned root",
+        "exitCode": null,
+        "output": "NOT RUN: inspected script unconditionally runs project-wide npx tsc --noEmit; assignment prohibits full gates. Used bounded equivalent source pattern counts instead."
+      },
+      {
+        "command": "TypeScript/lint/build/test/browser",
+        "exitCode": null,
+        "output": "NOT RUN: Phase0 source-only audit; no validation baton/full gates or runtime acceptance."
+      }
+    ],
+    "dependencyBoundary": "Only root and dependencies needed for page presentation, source trust, currency, workspace and registered route were inspected. Not a recursive whole-app audit or backend security assessment.",
+    "historicalProof": "No prior acceptance receipt used as current runtime proof."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+    "web\\src\\features\\ownership\\components\\index.ts",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MoneyInput.tsx",
+    "web\\src\\features\\ownership\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useConfirm.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go",
+    "internal\\app\\ownershipintelsvc\\warranty.go"
+  ],
+  "sourceInventory": [
+    {
+      "path": "docs\\frontend-design-contract.md",
+      "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255",
+      "lineCount": 394,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "docs\\frontend-worker-conventions.md",
+      "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3",
+      "lineCount": 80,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "docs\\frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lineCount": 1593,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": ".github\\skills\\audit-violations\\audit.sh",
+      "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46",
+      "lineCount": 141,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx",
+      "sha256": "d735191918fe8e03d136f36abd71e5f51a2584bc0555726bb43edfdbc7cb4a9e",
+      "lineCount": 918,
+      "inspection": "complete root"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\index.ts",
+      "sha256": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lineCount": 8,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "sha256": "dce748f082d1e9543b4edd26315b7b832df13928a2b1c5e8fa93179279c2e793",
+      "lineCount": 75,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "sha256": "52b60ea9e46fba7734f2d09d0609653bfd256ad542639fdd918b6f6dfe14b0ba",
+      "lineCount": 192,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\MoneyInput.tsx",
+      "sha256": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "lineCount": 52,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\SiNumberInput.tsx",
+      "sha256": "9e5942357afd0cba06ccb529f5090f4c66ae87d47d4c0f171cb5b0fd87221bee",
+      "lineCount": 52,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\MutationError.tsx",
+      "sha256": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lineCount": 22,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+      "sha256": "98853bb9668e8cdc09083a3158962d97770becc568ebc3930d748a7fca699d3d",
+      "lineCount": 74,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+      "sha256": "a9ec82253358e3b0ff132754d99bc63a15c6058fbd93ce3f9bc0a70e413ebc6f",
+      "lineCount": 81,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+      "sha256": "9ceaafa9ac813f1a1cc58160798fa4c9cf4448b1cf31e23c2418cd85a2752526",
+      "lineCount": 9,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\features\\ownership\\formatters.ts",
+      "sha256": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lineCount": 148,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useOwnership.ts",
+      "sha256": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lineCount": 801,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\types\\ownership.ts",
+      "sha256": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lineCount": 1106,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lineCount": 174,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\hooks\\useConfirm.ts",
+      "sha256": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "lineCount": 118,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lineCount": 65,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\components\\layout\\index.ts",
+      "sha256": "de1196b246ad1bfdf2e96dee54f398c921873c7ef8ed76964c09735dffbe7624",
+      "lineCount": 26,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6",
+      "lineCount": 17,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "sha256": "283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43",
+      "lineCount": 72,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55",
+      "lineCount": 259,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\components\\ui\\DataTable.tsx",
+      "sha256": "92e3a46f15e401b57303823693aac8825693b4edc2b04cfe289663d8e1386438",
+      "lineCount": 1687,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+      "sha256": "856f1aae79e959d4709a4661e11a385fecd35714003488d599919bca6d50d092",
+      "lineCount": 30,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\components\\motion\\FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lineCount": 39,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\api\\dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+      "lineCount": 918,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "internal\\api\\router.go",
+      "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+      "lineCount": 5366,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "internal\\handler\\v1\\ownershipintel\\handler.go",
+      "sha256": "2e4621219d010836ea6af00d2aa5e8422a8a61858ab2d1a8d1cb677121e922f9",
+      "lineCount": 1194,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    },
+    {
+      "path": "internal\\app\\ownershipintelsvc\\warranty.go",
+      "sha256": "dacf63ebd4bd3408a709688e28895bf24cea928576f0832ba2d8b98bad6bcbe8",
+      "lineCount": 611,
+      "inspection": "selected page-related source/ranges; not necessarily whole file"
+    }
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-162.json",
+    ".agent-status\\audit-page-162.txt"
+  ]
+}

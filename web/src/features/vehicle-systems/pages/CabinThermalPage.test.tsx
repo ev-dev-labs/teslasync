@@ -10,6 +10,10 @@ const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   history: undefined as unknown,
   historyHook: vi.fn(),
+  range: {
+    startInstant: '2026-08-01T07:00:00.000Z',
+    endInstantExclusive: '2026-08-09T07:00:00.000Z',
+  },
   temperatureUnit: '°C' as '°C' | '°F',
 }));
 const refetch = vi.fn();
@@ -30,9 +34,13 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => h.range,
+}));
+
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
-  useClimateHistory: (vehicleId: string) => {
-    h.historyHook(vehicleId);
+  useClimateHistory: (vehicleId: string, range?: { start?: string; end?: string }) => {
+    h.historyHook(vehicleId, range);
     return h.history;
   },
 }));
@@ -73,20 +81,21 @@ vi.mock('@/components/charts', () => ({
   Bar: () => null,
   BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
-  ChartContainer: ({
+  EmbeddedChart: ({
     children,
     title,
     ariaLabel,
   }: {
-    children: ReactNode;
+    children: ReactNode | ((context: { hiddenSeries?: undefined }) => ReactNode);
     title: string;
     ariaLabel: string;
   }) => (
     <div>
       <h4>{title}</h4>
-      <div role="img" aria-label={ariaLabel}>{children}</div>
+      <div role="img" aria-label={ariaLabel}>{typeof children === 'function' ? children({}) : children}</div>
     </div>
   ),
+  ChartLegend: () => null,
   ChartTooltip: () => null,
   Legend: () => null,
   Line: () => null,
@@ -195,20 +204,48 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.vehicleId = 7;
   h.temperatureUnit = '°C';
+  h.range = {
+    startInstant: '2026-08-01T07:00:00.000Z',
+    endInstantExclusive: '2026-08-09T07:00:00.000Z',
+  };
   h.history = query({ data: soak() });
 });
 
 describe('CabinThermalPage', () => {
+  it('forwards changed rolling and custom instants without filtering returned evidence', () => {
+    const view = renderPage();
+    h.range = {
+      startInstant: '2026-10-13T21:39:59.000Z',
+      endInstantExclusive: '2026-10-14T21:39:59.000Z',
+    };
+    view.rerender(<MemoryRouter initialEntries={['/cabin-thermal']}><CabinThermalPage /></MemoryRouter>);
+    expect(h.historyHook).toHaveBeenLastCalledWith('7', {
+      start: h.range.startInstant, end: h.range.endInstantExclusive,
+    });
+    expectEverySection();
+    expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
+    expect(screen.queryByText(/seven-day endpoint/)).toBeNull();
+    expect(screen.getByText(/both start and end bounds applied by the server/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /view settings|date range/i })).toBeNull();
+  });
   it('renders all fourteen persistent analytical shells with accepted evidence', () => {
     renderPage();
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Cabin Thermal Model',
+      name: 'Cabin thermal model',
     })).toBeInTheDocument();
     expectEverySection();
-    expect(h.historyHook).toHaveBeenLastCalledWith('7');
-    expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
+    expect(h.historyHook).toHaveBeenLastCalledWith('7', {
+      start: h.range.startInstant, end: h.range.endInstantExclusive,
+    });
+    expect(screen.getByRole('img', {
+      name: 'Line chart of the accepted-fit worked cabin scenario approaching ambient temperature',
+    })).toBeInTheDocument();
+    expect(within(screen.getByTestId('cabin-thermal-kpis'))
+      .getByText('Accepted median τ')
+      .closest('[role="listitem"]')
+      ?.querySelector('[data-operational-value]')).toHaveTextContent(/^90\.0 min$/);
   });
 
   it('keeps every shell visible without a vehicle or duplicate control', () => {
@@ -218,7 +255,9 @@ describe('CabinThermalPage', () => {
 
     expectEverySection();
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
-    expect(h.historyHook).toHaveBeenLastCalledWith('');
+    expect(h.historyHook).toHaveBeenLastCalledWith('', {
+      start: h.range.startInstant, end: h.range.endInstantExclusive,
+    });
     expect(screen.getByText(
       'Select a vehicle to analyze its returned climate history.',
     )).toBeInTheDocument();
@@ -263,6 +302,10 @@ describe('CabinThermalPage', () => {
       'Climate history could not refresh. Showing the most recently loaded thermal evidence.',
     )).toBeInTheDocument();
     expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
+    expect(within(screen.getByTestId('cabin-thermal-kpis'))
+      .getByText('Accepted median τ')
+      .closest('[role="listitem"]')
+      ?.querySelector('[data-operational-value]')).toHaveTextContent(/^90\.0 min$/);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -319,8 +362,11 @@ describe('CabinThermalPage', () => {
     h.history = query({ data: soak() });
     renderPage();
 
-    expect(screen.getByText(/113°F cabin/)).toBeInTheDocument();
-    expect(screen.getByText(/5\.4°F/)).toBeInTheDocument();
+    expectEverySection();
+    expect(within(screen.getByTestId('cabin-thermal-prediction'))
+      .getByText(/113\.0°F cabin, 71\.6°F ambient/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('cabin-thermal-thresholds'))
+      .getByText(/≥ 5\.4(?:0)?°F/)).toBeInTheDocument();
     expect(screen.getAllByText(/°F/).length).toBeGreaterThan(1);
   });
 });

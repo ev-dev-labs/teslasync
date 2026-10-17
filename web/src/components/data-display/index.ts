@@ -1,4 +1,9 @@
 export { StatCard } from './StatCard';
+export { StatStrip } from './stat-reference/StatStrip';
+export { StatGroup } from './stat-reference/StatGroup';
+export { useMetricPreferences } from './stat-reference/useMetricPreferences';
+export type { StatStripProps, StatGroupProps, StatMetric } from './stat-reference/types';
+export type { StatPeriod, MetricPreferences, MetricId } from '@/lib/metric-reference';
 export {
   UsageCard,
   type UsageCardProps,
@@ -12,6 +17,12 @@ export {
   type UsageCardFooterLink,
 } from './UsageCard';
 export { KVList, type KVItem, type KVListProps } from './KVList';
+export {
+  CompositionRail,
+  type CompositionRailProps,
+  type CompositionRailSegment,
+  type CompositionRailSize,
+} from './CompositionRail';
 export {
   Avatar,
   avatarColorIndex,
@@ -31,6 +42,12 @@ export { StatusBadge } from './StatusBadge';
 export { ProgressRing } from './ProgressRing';
 export { AnimatedNumber } from './AnimatedNumber';
 export { Timeline, type TimelineItemData, type TimelineProps } from './Timeline';
+export {
+  OrderedStepList,
+  type OrderedStep,
+  type OrderedStepAction,
+  type OrderedStepListProps,
+} from './OrderedStepList';
 export { RecentActivityFeed, type RecentActivityFeedProps } from './RecentActivityFeed';
 export { MetricCard } from './MetricCard';
 export { MetricTile, type MetricTileProps } from './MetricTile';
@@ -39,16 +56,16 @@ export { MetricBar } from './MetricBar';
 export { TimelineItem, type TimelineItemProps } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow, type TransitionArrowProps } from './TransitionArrow';
-export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
+export { useIsStale } from './useIsStale';
 export {
-  DataFreshness,
-  DataFreshnessAuto,
+  FreshnessDot,
+  FreshnessDotAuto,
   FRESHNESS_COLORS,
-  type DataFreshnessProps,
-  type DataFreshnessAutoProps,
+  type FreshnessDotProps,
+  type FreshnessDotAutoProps,
   type FreshnessStatus,
   type FreshnessQuery,
-} from './DataFreshness';
+} from './FreshnessDot';
 export {
   DataProvenanceBadge,
   type DataProvenanceBadgeProps,
@@ -123,6 +140,8 @@ export {
 export {
   TimelineScrubber,
   type TimelineScrubberProps,
+  type InteractiveTimelineScrubberProps,
+  type ReadOnlyTimelineScrubberProps,
   type TimelineMarker,
   type TimelineMarkerKind,
   type TimelinePreviewPoint,
@@ -155,3 +174,5 @@ export {
   useRangeLabel,
 } from './format';
 export type { DateTimeVariant, DurationVariant } from './format';
+export { GridMetricIndicator } from './GridMetricIndicator';
+export type { GridMetricBand, GridMetricKind } from './GridMetricIndicator';

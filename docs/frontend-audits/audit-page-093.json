@@ -1,0 +1,359 @@
+{
+  "item": "audit-page-093",
+  "page": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+  "routes": ["/quick-stats"],
+  "purpose": "Fleet-wide fixed 30-day operating summary and distance/efficiency comparison, alongside a workspace-selected vehicle spotlight and navigation.",
+  "primaryGoal": "Read fleet totals without confusing fleet scope with the selected vehicle, inspect the vehicle's available telemetry, and open dashboard, analytics, details, commands or map.",
+  "routeEvidence": ["web\\src\\App.tsx:32,561", "web\\src\\lib\\workspaceScope.ts:23-77,100-136,155-166"],
+  "dataSources": [
+    {
+      "hook": "useAnalyticsSummary(30)",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 31,
+      "endpoint": "GET /api/v1/analytics/fleet?days=30",
+      "sourceOwner": "AnalyticsHandler.Fleet; internal\\api\\router.go:3852; internal\\api\\analytics\\queries.go:46-80,604-636",
+      "consumerEvidence": "QuickStatsPage.tsx:33,49-82,146-169,208-214",
+      "contract": "['analytics','summary',days], abort signal forwarded, existing query defaults inherited. Fleet-wide independently of spotlight selection. Page marks provenance historical. Existing response uses snake_case plus client camelCase aliases; kilometre/kWh/Wh-per-km fields are normalized only at presentation boundary.",
+      "trust": "Backend returns generated_at, source, partial_result.is_partial/reasons and period_days. AnalyticsSummary does not declare these fields and page does not consume them. Exact start/end instants are not present in the inspected response core; request days=30 is a moving server window.",
+      "limits": "No HTTP request, payload or repository behavior executed. Backend CO2 field absent in inspected response core and documented absent in frontend type."
+    },
+    {
+      "hook": "useVehicles / useSelectedVehicle",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 74,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "vehicleHandler.List; internal\\api\\router.go:3319-3320",
+      "consumerEvidence": "QuickStatsPage.tsx:84-91,178-205; useSelectedVehicle.ts:48-76",
+      "contract": "vehicleKeys.all; FAST staleTime, cancellation, safeArray. Selection URL/path precedence then persisted known vehicle then first known fleet vehicle. Both callers subscribe to the same registry key, not evidence of duplicate network requests.",
+      "scope": "/quick-stats enables header vehicle selection and does not enable header range. No duplicate local scope picker exists."
+    },
+    {
+      "hook": "useVehicleState(vehicleId ?? 0)",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 259,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/state, optional encoded as_of",
+      "sourceOwner": "vehicleHandler.CurrentState; internal\\api\\router.go:3333",
+      "consumerEvidence": "QuickStatsPage.tsx:92-93,106-111,195-204",
+      "contract": "vehicleKeys.state(vehicleId, asOf), enabled id > 0, abort signal, queryPolicy live, STANDARD polling by default and no interval in historical as_of mode. Mapper retains null readings and live/observedAt/freshness/verifiedFields (useVehicles.ts:219-299).",
+      "limits": "Only .state is passed into VehicleHeroCard; observation metadata is discarded by the page presentation. Backend state assembly and freshness correctness not audited here."
+    },
+    {
+      "hook": "useUnits / useFormatting / useNumberFormatting / useChartPalette / useOperationalMetrics",
+      "file": "web\\src\\hooks\\useChartPalette.ts",
+      "line": 39,
+      "endpoint": "Settings-backed shared display dependencies; endpoint not traced in this bounded audit",
+      "sourceOwner": "Existing settings/preferences and shared formatting owners",
+      "contract": "Distance/temperature/power/energy preference, locale/precision, source-denominated cost formatting and saved chart palette remain authoritative. useChartPalette reads useSettings and defaults to cb_safe, preserving explicit neon choice.",
+      "consumerEvidence": ["QuickStatsPage.tsx:36-47,57-82", "FleetComparisonPanel.tsx:42-71", "VehicleHeroCard.tsx:69-108", "useOperationalMetrics.tsx:11-24"],
+      "limits": "Settings hook endpoint, actual currency denomination and persisted preference payload were not independently verified."
+    }
+  ],
+  "components": [
+    {
+      "name": "DashboardSourceBrief -> OperationalBrief",
+      "owner": "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx",
+      "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "contracts": "Existing typed readonly StatMetric[] / DataState adapter, compact brief, source status/provenance, full description/scope, eight source metrics, loading suppression, Review details drawer, useOperationalMetrics validated formatter bridge.",
+      "evidence": ["QuickStatsPage.tsx:57-82,146-156", "DashboardSourceBrief.tsx:9-52", "OperationalBrief.tsx:115-190,231-266"],
+      "preserve": "Prior OperationalBrief migration, quick-stats-operational-brief testId and every metric/description/raw measurement are authoritative. Do not regress to replacement KPI cards."
+    },
+    {
+      "name": "PageLayout / PageContainer / Section",
+      "owner": "web\\src\\components\\layout",
+      "contracts": "Existing full-width min-w-0 allocated container, shell-owned header, labelled metrics Section, query freshness header, independent named DataSourceNotice and route focus target. Page does not pass whole-page loading/error gates, preserving independent neighbors.",
+      "evidence": ["QuickStatsPage.tsx:135-146", "layout-reference\\PageLayout.tsx:9-16", "PageContainer.tsx:100-108,153-221,245-253"]
+    },
+    {
+      "name": "VehicleHeroCard",
+      "owner": "web\\src\\components\\vehicles\\VehicleHeroCard.tsx",
+      "contracts": "Identity/name/VIN/model/status, four nullable LinearGauges, eight StatCards, absence placeholder and Details/Commands/Live map links. SI metres/Celsius/watts converted at display boundary. Optional photo capability exists but QuickStats supplies no photoUrl.",
+      "evidence": ["QuickStatsPage.tsx:195-205", "VehicleHeroCard.tsx:22-45,80-108,110-260"],
+      "limits": "Hero receives only registry identity/state and mapped readings; source trust/loading/error metadata is not part of current props."
+    },
+    {
+      "name": "FleetComparisonPanel -> MetricBar",
+      "owner": "web\\src\\features\\dashboard\\components\\FleetComparisonPanel.tsx",
+      "sharedOwner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "contracts": "Existing all-entry distance descending sort, unknown-last, locale/precision formatting, distance/efficiency display conversion, max-relative scale and zero guard, saved palette, own loading/empty/error/retry. MetricBar retains missing track, named progressbar, forced-color fallback and OS/low-bandwidth reduced-motion support.",
+      "evidence": ["QuickStatsPage.tsx:208-214", "FleetComparisonPanel.tsx:40-117", "MetricBar.tsx:44-100"]
+    },
+    {
+      "name": "GlassPanel / Button / Caption / feedback / FadeIn",
+      "owner": "Existing ui, feedback and motion category owners",
+      "contracts": "Existing surfaces and actions, translated labels, contextual skeletons, source retries, retained warnings and no custom fetch or overlay system. Three entrance bands use FadeIn honoring useMotionPreference.",
+      "evidence": ["QuickStatsPage.tsx:118-131,142-143,157-193,218-253", "GlassPanel.tsx:31-77", "FadeIn.tsx:23-35", "Button.tsx:38-47"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+      "line": 29,
+      "rule": "MDC-002 / MDC-045 boundary formatter reuse",
+      "detail": "Page and FleetComparisonPanel each define km-to-display and Wh/km-to-display conversions with the same constants. VehicleHeroCard also repeats inside/outside/range readings in gauges and cards; these are intentional separate data presentations, not permission to remove either.",
+      "fix": "Prefer existing SI display helpers after confirming precision parity; if a typed analytics boundary adapter is necessary, keep it feature-owned and preserve raw payload, rounding and all repeated detail capabilities.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["QuickStatsPage.tsx:29-47", "FleetComparisonPanel.tsx:17-18,52-54", "VehicleHeroCard.tsx:153-226"]
+    }
+  ],
+  "responsive": {
+    "sourceConfirmed": ["Spotlight stacks base and uses 2:1 columns at xl; quick links wrap and footer stacks until sm (QuickStatsPage.tsx:174-176,221-222).", "Compact brief uses 1/2/3/6 columns and break-words values (OperationalBrief.tsx:165-190).", "Hero identity wraps, gauges use two/four columns, eight cards use two/four columns and links wrap with min-h-11 (VehicleHeroCard.tsx:136-154,189-191,230-259)."],
+    "issues": [
+      {
+        "file": "web\\src\\components\\vehicles\\VehicleHeroCard.tsx",
+        "line": 154,
+        "rule": "MDC-043 allocated width and long content",
+        "detail": "Four 100px gauges at viewport sm and four detail cards at md can be cramped in a narrow allocated hero column. Page uses xl viewport bento despite @container wrapper. VIN has no explicit break-anywhere and MetricBar header has a nowrap-style flex allocation without explicit label/readout wrapping contract. Actual overflow not observed.",
+        "fix": "Existing owners should verify ten widths and narrow shell allocations with long VIN/name/locale strings, using container-aware reflow and wrap/min-w-0 where required. Keep every gauge, detail and comparison row.",
+        "owner": "shared",
+        "confidence": "medium",
+        "relatedEvidence": ["QuickStatsPage.tsx:175-177", "VehicleHeroCard.tsx:145-148,154,189-191", "MetricBar.tsx:66-73", "PageLayout.tsx:12"]
+      }
+    ],
+    "verification": "All ten contract widths, RTL, 200% text zoom, touch geometry, long-data overflow and viewport/container screenshots NOTRUN."
+  },
+  "accessibility": {
+    "sourceConfirmed": ["Translated refresh aria-label and decorative action icons aria-hidden; labelled metrics Section and spotlight region; shared route focus heading and brief labelled section (QuickStatsPage.tsx:126-128,146,174; PageContainer.tsx:185-192; OperationalBrief.tsx:117).", "Hero group named by vehicle; status text, named gauges, finite/null guards and labelled comparison list/progress bars keep meaning beyond hue (VehicleHeroCard.tsx:113-115,136-170; FleetComparisonPanel.tsx:100; MetricBar.tsx:57-62).", "FadeIn and MetricBar use existing reduced-motion preference; OperationalBrief loading pulses are motion-safe."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+        "line": 134,
+        "rule": "MDC-040 landmark semantics",
+        "detail": "Page adds main inside existing shell main#main-content, producing nested main landmarks on the mounted shell route.",
+        "fix": "Keep shell main as sole landmark and use a neutral page wrapper; retain Section/spotlight labels and route focus target.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\layout\\Layout.tsx:1498-1503,1534-1535"]
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+        "line": 118,
+        "rule": "MDC-040 mobile targets",
+        "detail": "Refresh and quick-link Buttons use size sm; shared default is h-9 (36px), below 44px mobile target preference. Hero links have min-h-11 but no explicit shared BUTTON_BASE focus treatment; runtime focus is unknown.",
+        "fix": "Preserve actions and shared density semantics, providing existing touch geometry/focus composition where required; test WCAG spacing exception rather than declaring current buttons inaccessible from height alone.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": ["QuickStatsPage.tsx:223-248", "Button.tsx:38-47", "VehicleHeroCard.tsx:230-259"]
+      },
+      {
+        "file": "web\\src\\components\\vehicles\\VehicleHeroCard.tsx",
+        "line": 156,
+        "rule": "MDC-034 / MDC-045 exact measurement preservation",
+        "detail": "Hero gauges do not opt into preserveReadingAndScale. LinearGauge default clamps displayed reading to scale; range above 400mi/644km or temperature outside ambient scale can disagree with cards displaying the actual reading. Threshold tone changes are not explained by text, although numeric readings remain accessible.",
+        "fix": "Reuse existing preserveReadingAndScale/status contract to retain exact reading and actual scale; distinguish geometry bounds from measurement and avoid inventing battery-health severity.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": ["VehicleHeroCard.tsx:99-108,156-187,193-205", "LinearGauge.tsx:131-140,195-198"]
+      }
+    ],
+    "acceptanceRequired": ["Keyboard navigation, visible focus, drawer Escape/trap/restoration and screen-reader metric descriptions.", "Header announcements during partial loading: page passes query but not loading/busy; actual loading announcements need runtime verification.", "Effective light/dark/custom/forced-colors contrast and localized long labels; progressbar numeric units and sublabel announcement."],
+    "verification": "No keyboard, screen reader, contrast measurement, focus or OS-mode exercise."
+  },
+  "states": {
+    "loading": "Brief retains eight slots and suppresses values on initial analytics load; comparison own 200px skeleton; registry initial absence yields 300px skeleton. State query initial loading with resolved vehicle shows hero telemetry-unavailable rather than a dedicated pending body. Header independent source notice can describe delay.",
+    "empty": "Missing analytics adds retry empty panel without deleting brief. Empty registry has /vehicles CTA. Comparison empty list has retry. Hero missing state uses telemetry-unavailable; individual readings use dash/null, not synthetic zero.",
+    "error": "Analytics fatal QueryError and independent comparison error/retry; registry fatal QueryError; state failure is reported by shared DataSourceNotice while hero shows generic unavailable. No whole-page gate hides successful neighbors.",
+    "stale": "Analytics/registry StaleRefreshWarning retains data; comparison consumes fatalError only, keeping retained rows. State retained readings remain in hero and shared source notice reports refresh failure but source-specific observation age is not rendered.",
+    "offline": "Shared notice supports paused/offline state and retained content. State default polling is inherited; page does not request connection-aware interval. Vehicle FSM offline status is not network offline or unknown freshness.",
+    "partial": "Backend emits partial_result, but page derives historical trust without partial/unavailable options. CO2 missing does stay unknown at metric level; successful query can still be labelled Source available with incomplete or absent fields.",
+    "success": "Fleet summary, selected-vehicle hero, full comparison and quick links remain independently mounted; conditional vehicle-details link reflects selection, not missing analytics.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+        "line": 56,
+        "rule": "MDC-026 / MDC-033 source completeness",
+        "detail": "Fleet backend returns partial_result reasons for capped/failed sources and generated_at/source, but AnalyticsSummary omits them and deriveDataState defaults to ok for any defined payload. Description says source coverage is not supplied even though partial coverage evidence is supplied. This may present incomplete rollups as available without qualification.",
+        "fix": "Extend existing typed analytics source contract to actual metadata and feed existing DataState partial/unavailable plus source descriptions. Preserve returned totals/comparison, unknown CO2 and all retained data; show reasons rather than inventing coverage.",
+        "owner": "integration",
+        "confidence": "high",
+        "relatedEvidence": ["QuickStatsPage.tsx:152", "types\\analytics.ts:10-25", "internal\\api\\analytics\\queries.go:116-118,604-626", "api\\dataState.ts:190-191,254-265"]
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+        "line": 204,
+        "rule": "MDC-026 / MDC-045 / MDC-046 observation trust",
+        "detail": "Hero receives state readings without live/observedAt/freshness/verifiedFields or pending/error state. With as_of, historical readings retain Live telemetry terminology; successful empty envelope resolves as ready in DataSourceNotice. Shared hero falls back to registry status, and unrecognized status coerces offline, conflating unknown with offline.",
+        "fix": "Use existing DataState and observation metadata at feature boundary, disclose as_of and distinguish pending/unavailable/partial/stale/unknown from verified live. Preserve all telemetry, registry fallback context, independent retries and navigation; do not create a new status registry.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": ["useVehicles.ts:219-299", "DataSourceNotice.tsx:80-96", "VehicleHeroCard.tsx:62-66,141,219-224"]
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+        "line": 121,
+        "rule": "MDC-046 query prerequisites",
+        "detail": "Refresh calls refetchState unconditionally even when vehicleId is absent and the hook's normal enabled condition is false. Manual refetch can bypass enabled and attempt /vehicles/0/state; query array also includes disabled state while dataSources correctly omits it.",
+        "fix": "Guard manual state refresh and representative query participation with the same positive-id prerequisite; preserve fleet/registry refresh and independent source recovery.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["QuickStatsPage.tsx:92,110,123-125,139", "useVehicles.ts:272"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\vehicles\\VehicleHeroCard.tsx",
+      "line": 116,
+      "rule": "MDC-010 / MDC-015 / mission 5-8",
+      "detail": "Hero requests glow=cyan and hover; current GlassPanel maps this to a cyan hover border plus neutral elevation, NOT an actual luminous glow. Hero Details link uses saturated cyan background/text while four gauge tones and eight detail cards compete with summary. No fixed-white/neon/glow classes occur in root page.",
+      "fix": "Shared owner should subdue decorative accent border/link chrome through existing semantic tokens and shared navigation/button composition. Preserve readings/actions and saved palette, not theme resets.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": ["GlassPanel.tsx:31-35,69-77", "VehicleHeroCard.tsx:154-217,233-235"]
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\components\\FleetComparisonPanel.tsx",
+      "line": 80,
+      "rule": "MDC-010 / MDC-034 visual intensity",
+      "detail": "Decorative title icon is fixed cyan-300; each bar uses palette color with hard-coded electric-cyan #22d3ee fallback and MetricBar defaults to gradient. Explicit saved neon palette is supported and must survive; this does not establish that default bars render neon. No pure-white decoration found in inspected root/hero/comparison sources.",
+      "fix": "Use semantic muted icon and existing solid-fill capability where appropriate; keep saved chart palette choice, all entry colors/identities, exact values and relative scale. Avoid adding a palette engine.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["FleetComparisonPanel.tsx:108", "MetricBar.tsx:46,95", "useChartPalette.ts:19-21,39-41"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+      "line": 50,
+      "rule": "MDC-032 date scope ownership",
+      "detail": "Date-scoped fleet page is intentionally fixed at 30 days and not registered in RANGE_ENABLED_PATHS. Current description explicitly separates fleet and selected-vehicle scope. Contract calls for header range on dated routes, but changing this is a behavior decision, not permission to silently replace fixed-window summary.",
+      "fix": "Integration owner should decide how shared range and fixed 30-day product meaning coexist, extending existing summary hook for start/end only if authorized, with matching source labels and query keys. Do not add a local picker or filter client-side rows.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["QuickStatsPage.tsx:33,138,152-153", "workspaceScope.ts:23-77", "useAnalytics.ts:31-35,38-65"]
+    },
+    {
+      "file": "web\\src\\types\\analytics.ts",
+      "line": 10,
+      "rule": "MDC-045 existing SI-wire exception",
+      "detail": "Existing analytics payload publishes total_distance_km, total_energy_kwh, avg_efficiency_wh_km and comparison distance/efficiency in scaled units, not canonical m/Wh/Wh-per-m. Page correctly normalizes existing response to shared metric raw units and converts only at display. Comment calls kilometres 'SI canonical' but this is not canonical base-unit wire parity.",
+      "fix": "Designated SI integration owner must reconcile backend/types/hooks/all callers together before changing multipliers; preserve current display parity and source cost denomination. Do not invent source CO2 or mutate cached values.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["internal\\api\\analytics\\queries.go:629-636", "QuickStatsPage.tsx:57,66,73", "FleetComparisonPanel.tsx:52-66"]
+    },
+    {
+      "file": "web\\src\\types\\analytics.ts",
+      "line": 18,
+      "rule": "MDC-002 / MDC-033 preservation documentation",
+      "detail": "CO2 type comment still says QuickStats uses ?? 0; current migrated metric passes optional rawValue directly. Correct missing-vs-zero behavior now differs from stale documentation.",
+      "fix": "Update related comment during authorized implementation without adding a fake field or restoring zero fallback.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Preserve prior brief and repair fleet completeness plus hero observation trust.", "Guard no-vehicle refresh and remove nested landmark.", "Resolve shared range/SI contracts through integration ownership, then subdue decoration and verify mobile/a11y."],
+    "reason": "Partial rollups and live/historical ambiguity affect evidence interpretation; decoration is secondary to correct source scope and preservation."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "VehicleHeroCard observation/state presentation",
+      "existingOwnerFile": "web\\src\\components\\vehicles\\VehicleHeroCard.tsx",
+      "propsVariantsStates": "Optional existing DataState/observation metadata with live/historical mode, pending/fatal/retained/partial/unavailable and retry, while retaining current identity/readings/photo/link API. Exact gauge reading and scale, unknown vs offline status.",
+      "usedBy": ["QuickStatsPage.tsx:195-205", "Other hero consumers outside this one-page audit must be coordinated by owner"],
+      "dependsOn": ["useVehicleState envelope", "Existing DataState, StatusBadge/FSM and LinearGauge preserveReadingAndScale contracts", "Existing shell time-machine policy"],
+      "owner": "shared",
+      "evidence": ["VehicleHeroCard.tsx:22-45,62-66,156-224", "useVehicles.ts:219-299"]
+    },
+    {
+      "name": "Analytics source metadata and SI reconciliation",
+      "existingOwnerFile": "web\\src\\types\\analytics.ts",
+      "propsVariantsStates": "Typed generated_at/source/partial_result reasons/period_days, missing CO2 preserved, canonical units reconciled across backend and all consumers rather than page-local guessing.",
+      "usedBy": ["QuickStatsPage.tsx:56-82,152", "FleetComparisonPanel.tsx:52-71"],
+      "dependsOn": ["internal\\api\\analytics\\queries.go response contract", "Phase-48 methodology and integration owner", "Existing DataState/useOperationalMetrics/useUnits"],
+      "owner": "integration",
+      "evidence": ["queries.go:604-636", "types\\analytics.ts:10-40"]
+    },
+    {
+      "name": "Header range contract decision for fixed fleet quick summary",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Existing range registration and typed start/end summary scope with fixed-window preservation decision; vehicle selection continues to scope spotlight only.",
+      "usedBy": ["QuickStatsPage.tsx:33,50,84,138,152-153"],
+      "dependsOn": ["useRangeState shared header ownership", "useAnalyticsSummary key/endpoint", "Existing server analyticsWindow start/end precedence"],
+      "owner": "integration",
+      "evidence": ["workspaceScope.ts:23-77", "useAnalytics.ts:31-65", "queries.go:23-43"]
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": "No competing summary, overlay, query store or unit engine introduced. Existing DashboardSourceBrief delegates to OperationalBrief and useOperationalMetrics; FleetComparisonPanel and VehicleHeroCard are reused.",
+    "doNotCreate": ["Replacement KPI summary", "Second vehicle/range selector", "New data trust/status registry", "Parallel units/palette/focus system"],
+    "scopeLimit": "Dashboard and Glance pages were not inspected as page audits; shared dependencies only were read."
+  },
+  "preservation": {
+    "sourceHash": "95CB004FB6C9A61DC9770E0753EC48ECD2E37AAFFA242F85FD74FFCDCAD074A1",
+    "hashAlgorithm": "SHA-256",
+    "hashTarget": "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+    "currentLineCount": 257,
+    "sectionCount": 3,
+    "sectionNames": ["Fleet metrics / operating summary", "Vehicle spotlight and fleet comparison", "Quick links and powered-by footer"],
+    "sourceStructureCounts": {"Section": 1, "GlassPanel": 5, "DashboardSourceBrief": 1, "VehicleHeroCard": 1, "FleetComparisonPanel": 1, "ChartContainer": 0, "Button": 4, "FadeIn": 3},
+    "countExplanation": "Five literal GlassPanels include four alternative source-state shells and navigation band; shared brief/hero/comparison supply their own panels. Hero has four LinearGauge and eight StatCard mounts. Counts are source occurrences, not simultaneous rendered totals.",
+    "actions": [
+      {"name": "Refresh quick stats", "evidence": "QuickStatsPage.tsx:118-130", "preserve": "Fleet analytics, selected state and registry recovery; align state prerequisite."},
+      {"name": "Review details", "evidence": "OperationalBrief.tsx:151-160,231-266", "preserve": "Existing source narrative, all eight raw/validated metrics, full descriptions and loading suppression."},
+      {"name": "Retry analytics / comparison / registry", "evidence": "QuickStatsPage.tsx:157-165,183-185,208-213", "preserve": "Independent source retries with successful neighbors retained; shared notice also exposes source retry."},
+      {"name": "Go to vehicles", "evidence": "QuickStatsPage.tsx:188-192", "preserve": "/vehicles empty-registry CTA."},
+      {"name": "Open dashboard / vehicle details / analytics", "evidence": "QuickStatsPage.tsx:223-248", "preserve": "/, /vehicles/{id}, /statistics; conditional details availability."},
+      {"name": "Hero details / commands / live map", "evidence": "VehicleHeroCard.tsx:230-259", "preserve": "/vehicles/{id}, /vehicles/{id}/commands, /vehicles/{id}/map navigation; no direct command mutation occurs on this page."}
+    ],
+    "dataBehavior": [
+      "Eight fleet metrics: distance m, drive count, charging session count, energy Wh, recorded source-denominated cost, efficiency Wh/m, optional CO2 kg, total fleet vehicles. Retain exact descriptions, locale/precision, preference conversion and missing-versus-zero.",
+      "Root migration retains DashboardSourceBrief/OperationalBrief, quick-stats-operational-brief identity, historical provenance, explicit all-fleet fixed-30-day scope and selected spotlight distinction; source trust must be improved, not removed.",
+      "Fleet comparison preserves all entries and current descending-distance/unknown-last sort; distance and efficiency units/rounding, source-relative maximum, zero guard, vehicle identities/names and saved chart palette.",
+      "Hero identity/name/VIN/model/status plus battery/range/interior/exterior gauges; detail interior/exterior/odometer/range/lock/sentry/firmware/signed power; placeholders and every navigation destination survive.",
+      "Preserve current SI reading conversions, lifetime odometer meaning, signed W power, metre range, Celsius temperatures, source payload/cache units and currency denomination; analytics exceptions require coordinated integration.",
+      "Preserve query keys, abort signals, inherited retry/cache/polling, as_of key separation, URL/persisted vehicle selection and retained-source behavior. No table/export/chart legend exists in inspected page; do not invent one.",
+      "No root source edits, policy/preference writes, fake data, metrics deletion or page section loss are authorized by this audit."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only Phase 0 one-page source audit; only assigned JSON and heartbeat written.",
+    "runtime": "UNVERIFIED / NOTRUN: browser route, API payload, screenshots, ten viewports, keyboard, screen reader, contrast, forced colors and production actions.",
+    "validation": "No Git, source edit, nested agent, TypeScript, tests, full-repository lint/build or production action. Skill script inspected but not executed because it unconditionally runs project tsc, outside bounded Phase 0 permission.",
+    "focusedPatternChecks": {
+      "command": "PowerShell Get-Content and case-sensitive Select-String on only web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+      "exitCode": 0,
+      "output": ["lineCount=257", "style= : 0", "<(button|input|textarea|select|table)\\b : 0", "from .(recharts|react-leaflet|framer-motion) : 0", "text-white|border-white|neon|glow|shadow|text-cyan : 0", "<Section\\b : 1", "<GlassPanel\\b : 5", "<DashboardSourceBrief\\b : 1"],
+      "interpretation": "Root source checks only; not full audit acceptance. Shared mounted hero/comparison decoration separately cited."
+    },
+    "backendLimits": "Route mapping and narrow analytics window/response code inspected. Full repository queries, state assembler, settings endpoints, backend currency/CO2 model and actual returned data not exercised.",
+    "concurrency": "SHA-256 applies to inspected root snapshot; shared files can evolve independently. Existing audit-page-092 was read only as schema example, not borrowed acceptance or re-audit."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-092.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\dashboard\\pages\\QuickStatsPage.tsx",
+    "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx",
+    "web\\src\\features\\dashboard\\components\\FleetComparisonPanel.tsx",
+    "web\\src\\components\\vehicles\\VehicleHeroCard.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\charts\\LinearGauge.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\analytics.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useChartPalette.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\analytics\\queries.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-093.json", ".agent-status\\audit-page-093.txt"]
+}

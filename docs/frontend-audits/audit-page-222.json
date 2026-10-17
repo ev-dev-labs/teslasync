@@ -1,0 +1,265 @@
+{
+  "item": "audit-page-222",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\MaintenancePage.tsx",
+  "routes": ["/maintenance"],
+  "purpose": "Selected-vehicle maintenance schedule, service projections, independent service history/cost evidence, and opt-in Helix narration.",
+  "primaryGoal": "Review due maintenance and inspect service evidence without confusing defaults, missing measurements, retained results, or estimates with confirmed vehicle facts.",
+  "dataSources": [
+    {
+      "hook": "useMaintenance(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useMaintenance.ts",
+      "line": 46,
+      "endpoint": "GET /api/v1/maintenance?vehicle_id={vehicleId}",
+      "owner": "internal\\api\\maintenance\\handler.go",
+      "routeEvidence": "internal\\api\\router.go:3497-3499",
+      "behavior": "Key ['maintenance', vehicleId], null selection disables automatic reads, AbortSignal forwarded, inherited query policy. Backend validates selected vehicle and returns eight deterministic defaults based on SI odometer; lookup failures become successful empty arrays."
+    },
+    {
+      "hook": "useServiceRecords(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useMaintenance.ts",
+      "line": 58,
+      "endpoint": "GET /api/v1/maintenance/records?vehicle_id={vehicleId}",
+      "owner": "internal\\api\\maintenance\\handler.go",
+      "routeEvidence": "internal\\api\\router.go:3500",
+      "behavior": "Key ['maintenance-records', vehicleId], independent historical DataState, null gate and AbortSignal. Handler Records at lines 219-222 returns [] unconditionally. No populated producer, record mileage unit, currency denomination, write capability, or server history filtering established."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "useVehicles dependency; its endpoint implementation was not traced in this bounded audit",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "behavior": "URL, stored selection, first-vehicle precedence; scoped query identities follow vehicle selection. No competing local picker. /maintenance has vehicle=true and range=false under workspaceScope."
+    },
+    {
+      "hook": "useAiStream via AIPredictiveMaintenance",
+      "file": "web\\src\\components\\ai\\AIPredictiveMaintenance.tsx",
+      "line": 130,
+      "endpoint": "POST /api/v1/ai/maintenance/predict",
+      "owner": "web\\src\\components\\ai\\AIPredictiveMaintenance.tsx",
+      "behavior": "Feature-gated optional narration, positive vehicle scope, stream scopeKey resets on selection change; deterministic sections remain independent. Client endpoint inspected; literal complete backend route not located in router.go and registration was not followed further. No request invoked."
+    }
+  ],
+  "components": {
+    "layout": ["PageLayout", "CardGrid", "LayoutCard", "SourceContent"],
+    "primitives": ["Button", "Select", "Badge", "Accordion", "Text", "Subhead", "Skeleton", "EmptyState"],
+    "composites": ["OperationalBrief through VehicleOperationalBrief", "MetricBar", "DataTable", "EntityPreviewDrawer", "AIFeatureCard"],
+    "domainOwners": ["maintenance-modernization presenters and pure model", "AIPredictiveMaintenance"],
+    "sourceEvidence": "MaintenancePage.tsx:10-28,101-163; maintenance-modernization/index.ts:1-22",
+    "reuseDecision": "Reuse existing contracts; no evidence supports a new card, table, overlay, stats engine, query owner, or workspace selector."
+  },
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceSource.tsx",
+      "line": 17,
+      "detail": "Source isolation is already extracted and shared by five panels. Similar skeleton and empty recovery composition remains small presentation-specific code, not a reason to add another global wrapper."
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": ["MaintenancePage.tsx:101-143 supplies full/half/third CardGrid items", "MaintenanceGridSlot.tsx:15-22 forwards placement to the direct FadeIn grid child", "MaintenanceItemsPanel.tsx:44-60 wraps controls; 69-79 uses container-responsive columns", "MaintenanceItemCard.tsx:79-143 uses min-w-0, wrapping and responsive metadata disclosure", "MaintenanceRecordsPanel.tsx:38-49 uses existing embedded compact paginated DataTable"],
+    "issues": [],
+    "verification": "UNVERIFIED at all ten required widths. Shared DataTable mobile defaults, table overflow, long select options, large metadata, drawer layout and allocated container widths were not exercised. No source-based assertion of mobile acceptance."
+  },
+  "accessibility": {
+    "sourceEvidence": ["MaintenancePage.tsx:150-156 names refresh and hides decorative icons", "MaintenanceItemsPanel.tsx:49,57 names filters", "MaintenanceItemCard.tsx:102-107 supplies named progressbar and numeric bounds", "serviceColumns.tsx:59-69 supplies 44px named inspection button", "MaintenanceEvidenceDrawer.tsx:27-29 delegates drawer dismissal"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\MaintenancePage.tsx",
+        "line": 154,
+        "rule": "MDC-040",
+        "detail": "Schedule and refresh request size sm with no local 44px minimum, unlike record inspection. Actual target dimensions and WCAG spacing exceptions depend on shared Button/shell and are unknown.",
+        "fix": "Exercise target reachability at 320px and compact density; use existing sizing/minimum-target contract if measured targets fail. Preserve actions and names.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Keyboard, focus trapping/restoration, screen readers, contrast, forced colors, reduced motion and zoom UNVERIFIED. Shared overlay/motion source ownership is not runtime proof."
+  },
+  "states": {
+    "loading": "Five panels supply contextual skeletons; summary supplies OperationalBrief loading state. Independent sources do not replace one another.",
+    "empty": "Successful [] preserves panel shells and source-specific empty bodies; missing disabled/paused sources instead receive generic no-data text.",
+    "error": "Fatal errors are confined through SourceContent with retry; summary surfaces source error independently.",
+    "retained": "Refresh errors/paused fetches preserve rows, show warnings and retries. SourceContent itself supports this at lines 53-69.",
+    "offline": "Paused retained sources are preserved; paused initial sources are presented as generic empty, losing paused-state explanation.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceSource.tsx",
+        "line": 30,
+        "rule": "MDC-026",
+        "detail": "No-data disabled selection and paused initial fetch both map to empty; line 36 replaces page-specific EmptyState/recovery with generic No data available. The manage-vehicles links prepared by downstream panels are therefore absent precisely when enabled=false and no cache exists.",
+        "fix": "Keep SourceContent owner, but supply distinct localized selection-required/refresh-paused initial bodies and preserve applicable recovery links. Do not turn unknown into authoritative empty or zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\maintenancePresentation.ts",
+      "line": 22,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Eight hardcoded categorical hex accents plus fallback bypass canonical chart palette and persisted chart color choices. Text/surfaces are otherwise restrained variable tokens; category labels prevent color-only meaning.",
+      "fix": "Coordinate use of existing chart palette with stable category identity and preference preservation; do not introduce another palette or force-reset explicit neon chart choices.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceItemCard.tsx",
+      "line": 92,
+      "rule": "MDC-013",
+      "detail": "Progress and footer metadata use raw text-xs at lines 92 and 118 despite established Text/caption roles elsewhere.",
+      "fix": "Use existing typography roles with semantic as overrides, retaining tabular numeric values, layout, accessibility and all metadata.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\MaintenancePage.tsx",
+      "line": 97,
+      "rule": "mission-0 functional honesty",
+      "detail": "The primary Schedule action executes an explicitly inherited no-op. No scheduling endpoint exists in the inspected maintenance route group. This is a current capability limitation, not an audit-authorized invitation to invent CRUD.",
+      "fix": "Report limitation and coordinate honest localized unavailable/context guidance while retaining discoverability; wire scheduling only against an established approved capability.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "internal\\api\\maintenance\\handler.go",
+      "line": 197,
+      "rule": "MDC-026/MDC-045",
+      "detail": "readOdometer returns 0 for absent cache, failed reads or missing/non-numeric Odometer. defaultItems emits it as current_mileage. Lookup failure also returns [] with 200 (lines 151-154). UI cannot distinguish missing odometer/outage from measured zero or authoritative empty; this is source-side trust ambiguity.",
+      "fix": "Integration owner must establish explicit availability/provenance while preserving SI and existing default-item semantics; page must not reverse-engineer unknown from a genuine zero.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceItemCard.tsx",
+      "line": 25,
+      "rule": "MDC-026",
+      "detail": "Missing/invalid interval basis becomes numeric 0 in computeProgress (maintenanceModel.ts:58-73); non-completed visual status is then derived as good regardless of source status. Summary/sorting/projections use raw status instead. Backend date-only defaults with no last-service basis consequently appear as measured 0% progress.",
+      "fix": "Preserve specialist calculations/thresholds for valid inputs, expose unavailable basis separately, and explicitly distinguish derived progress status from raw source status. Coordinate semantics rather than silently changing calculations.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\MaintenancePage.tsx",
+      "line": 47,
+      "rule": "MDC-032/MDC-046",
+      "detail": "Selected previewRecord is not scoped/reset when vehicleId changes; line 162 continues rendering the old record while queries switch identity. The current backend emits no records, so this risk is latent for populated retained/future history. Category filter also persists even if the new vehicle lacks its selected option (lines 45,66).",
+      "fix": "Reconcile drawer/filter against the new scope using existing workspace identity, preserving all evidence navigation and deliberate valid filters. Do not claim an exercised cross-vehicle leak.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceCostPanel.tsx",
+      "line": 25,
+      "rule": "mission-23 recovery honesty",
+      "detail": "Empty cost copy tells users to log service records, but inspected history handler produces only [] and page exposes no logging action. A populated record's mileage units and cost currency cannot be verified from this producer.",
+      "fix": "State current source limitation honestly and preserve history/cost/evidence renderers for real future data; do not invent record writes, currency conversion or mileage adapters.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Data-trust and nonfunctional primary-action limitations outrank cosmetic modernization. Most existing layout and component reuse is already established; runtime acceptance remains open."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Maintenance source availability/provenance contract",
+      "existingOwnerFile": "internal\\api\\maintenance\\handler.go",
+      "propsVariantsStates": "Explicit unknown odometer versus measured zero; unavailable lookup versus authoritative empty; default schedule provenance. Preserve SI raw values, query keys, AbortSignal and independent retained/fatal states.",
+      "usedBy": ["useMaintenance", "MaintenanceSummary", "MaintenanceItemsPanel", "MaintenanceProjectionsPanel", "MaintenanceCategoriesPanel", "AIPredictiveMaintenance"],
+      "dependsOn": ["Backend/API integration owner approval and typed contract; no page-local inference or fabricated capability"]
+    },
+    {
+      "name": "Canonical categorical maintenance palette adoption",
+      "existingOwnerFile": "web\\src\\lib\\colors.ts (canonical owner identified by design contract; implementation not inspected)",
+      "propsVariantsStates": "Stable category-to-color assignment, neutral unknown fallback, saved palette/custom-choice preservation, semantic status colors separate from category accents.",
+      "usedBy": ["MaintenanceCategoriesPanel", "maintenancePresentation.categoryColor"],
+      "dependsOn": ["Existing chart-palette owner coordination; no new component or color engine"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 84,
+      "detail": "Another useMaintenance/useServiceRecords pair requests the same endpoint family without selected-vehicle parameters, uses different keys and explicit retry=false/static policy. Assigned page uses dedicated scoped useMaintenance.ts. Do not opportunistically consolidate or alter other consumers in this audit."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "9b0903d2fd6f2e04793bd0a4abbc8de342495745cca300fe4d819de10221288c",
+    "hashAlgorithm": "SHA256",
+    "hashTarget": "web\\src\\features\\vehicle-systems\\pages\\MaintenancePage.tsx",
+    "currentLineCount": 166,
+    "rootPlusLocalDependencyLineCount": 1191,
+    "lineCountScope": "Root plus all 16 direct files in maintenance-modernization, including barrel/model/presentation; excludes tests and shared components. Historical baseline comparison not available and not claimed.",
+    "sectionNames": ["Maintenance summary", "Helix maintenance advisor (feature gated)", "Maintenance items", "Service projections", "Estimated annual cost", "Maintenance by category", "Service records", "Service evidence drawer (record selection)"],
+    "sectionCounts": {"cardGridSlots": 7, "deterministicMainSections": 6, "optionalAdvisor": 1, "conditionalEvidenceDrawer": 1, "localLayoutCardDeclarations": 5, "localGlassPanelDeclarations": 0, "localChartContainerDeclarations": 0},
+    "actions": ["Refresh both independent reads", "Schedule (inherited no-op)", "Category filter and clear filter", "Four sort choices", "Service interval/metadata accordion", "Source-specific retry/recovery", "DataTable pagination, sorting, value filters and saved column/export pipeline", "Inspect record and dismiss drawer", "Vehicle, drives, charging, locations, inbox, signals and service-evidence navigation", "Opt-in scoped Helix stream"],
+    "dataBehavior": [
+      "Keep existing selected-vehicle workspace owner; no second selector and no speculative date scope.",
+      "Preserve raw query/cache objects and keys, enablement, cancellation and inherited policies.",
+      "Maintenance distance fields, including legacy interval_miles name, carry SI metres; useUnits formats at render boundary. Do not rename wire shape or add legacy converters.",
+      "Record mileage producer/unit and currency denomination remain unknown, not assumed or corrected.",
+      "Summary uses all returned items before filter, including completed count and distinct category count.",
+      "Copy-sort arrays; preserve status sort order and specialist 30.44-day interval denominator, 70/90 thresholds and clamp for established valid inputs.",
+      "Projections retain eligibility, overdue-first sorting, remaining SI distance and eight-row horizon.",
+      "Cost estimates retain all-record denominator, valid-date span and 0.1-year minimum; fewer than two valid dates uses total cost.",
+      "Category bars retain largest-category denominator rather than total-item percentage.",
+      "Preserve tableId vehicle-systems:maintenance-records, original column keys and full metadata/evidence links.",
+      "AI gating, redaction explanation and scope-reset behavior remain independent of deterministic maintenance sections."
+    ],
+    "rootHashRecheckedUnchanged": true
+  },
+  "evidenceLimits": {
+    "method": "Bounded Phase 0 source-only audit; no application started, no network invocation, no mutation, no Git or queue operations.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewports": "UNVERIFIED",
+    "typescript": "NOTRUN: audit assignment prohibits project-wide validation; source inspection does not establish type correctness.",
+    "skillAuditScript": "NOTRUN: inspected audit.sh unconditionally invokes full frontend tsc. Replaced with bounded read-only pattern inspection; no full lint/build/test run.",
+    "boundedPatternResults": {"staticVariableInlineStyles": 0, "rawLowercaseControls": 0, "directChartMapMotionImports": 0, "oldApiImports": 0, "neonWhiteGrayTextPatterns": 0, "legacyConverterPatterns": 0},
+    "patternCaveat": "Select-String initial case-insensitive raw-control probe matched five uppercase shared Button/Select uses; corrected -CaseSensitive probe returned 0. Counts cover root and direct maintenance-modernization files only, not shared implementations.",
+    "backend": "Only assigned page endpoint handlers/router fragments inspected. Redis freshness plumbing, populated records, AI registration chain and other consumers not fully traced.",
+    "historicalEvidence": "No old test receipts or comments treated as runtime proof.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-222.json", ".agent-status\\audit-page-222.txt"],
+    "sourceChanges": "none"
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\MaintenancePage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceCategoriesPanel.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceCostPanel.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceEvidenceDrawer.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceGridSlot.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceItemCard.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceItemsPanel.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceProjectionsPanel.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceRecordsPanel.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceSource.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceStatusBadge.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\MaintenanceSummary.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\maintenanceModel.ts",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\maintenancePresentation.ts",
+    "web\\src\\features\\vehicle-systems\\components\\maintenance-modernization\\serviceColumns.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useMaintenance.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts (lines 75-105)",
+    "web\\src\\api\\dataState.ts (lines 1-240)",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\ai\\AIPredictiveMaintenance.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx (lines 1-220)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx (route/import search excerpts)",
+    "internal\\api\\router.go (maintenance route and search excerpts)",
+    "internal\\api\\maintenance\\handler.go"
+  ]
+}

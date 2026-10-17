@@ -9,17 +9,24 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+import { Heading, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
+import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
+import type { ComfortConsistencyQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyMethodologyProps {
   summary: ComfortConsistencySummary;
+  state: ComfortConsistencyQueryState;
 }
 
 export function ComfortConsistencyMethodology({
   summary,
+  state,
 }: ComfortConsistencyMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
     {
@@ -80,11 +87,7 @@ export function ComfortConsistencyMethodology({
 
   return (
     <section data-testid="comfort-consistency-methodology">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BookOpenCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.method.title', 'Methodology and limitations')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.method.title', 'Methodology and limitations')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.method.subtitle',
@@ -105,20 +108,27 @@ export function ComfortConsistencyMethodology({
             </article>
           ))}
         </div>
-        <AlertBanner className="mt-4" variant="warning">
-          <Text as="p" variant="caption">
-            {t(
-              'comfortConsistency.method.notice',
-              '{{rows}} returned rows, {{samples}} active samples, and {{windows}} outside-band fragments support only the disclosed observational summaries.',
-              {
-                rows: fmtInt(summary.rows.returnedRows),
-                samples: fmtInt(summary.analyzedSamples),
-                windows: fmtInt(summary.stabilizationWindows.length),
-              },
-            )}
-          </Text>
-        </AlertBanner>
-      </GlassPanel>
+        <ComfortConsistencySectionBody
+          summary={summary}
+          state={state}
+          className="mt-4"
+          skeletonHeight={64}
+        >
+          <AlertBanner variant="warning">
+            <Text as="p" variant="caption">
+              {t(
+                'comfortConsistency.method.notice',
+                '{{rows}} returned rows, {{samples}} active samples, and {{windows}} outside-band fragments support only the disclosed observational summaries.',
+                {
+                  rows: fmtInt(summary.rows.returnedRows),
+                  samples: fmtInt(summary.analyzedSamples),
+                  windows: fmtInt(summary.stabilizationWindows.length),
+                },
+              )}
+            </Text>
+          </AlertBanner>
+        </ComfortConsistencySectionBody>
+      </LayoutCard>
     </section>
   );
 }

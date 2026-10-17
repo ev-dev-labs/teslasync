@@ -211,7 +211,9 @@ export interface WarrantyCoverage {
   name: string;
   expires_at: string;
   days_remaining: number;
+  /** Source kilometers, not SI meters; preserve the API value unchanged. */
   km_limit: number | null;
+  /** Source kilometers; bridge to meters only at the display formatter boundary. */
   km_remaining: number | null;
   status: 'active' | 'expiring_soon' | 'expired';
   basis: string;

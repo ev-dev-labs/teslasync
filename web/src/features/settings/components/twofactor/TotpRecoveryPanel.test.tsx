@@ -66,6 +66,20 @@ beforeEach(() => {
 })
 
 describe('TotpRecoveryPanel — structure', () => {
+  it('uses neutral theme roles rather than warning or success colors for advice', () => {
+    const { container } = render(<TotpRecoveryPanel />)
+
+    expect(container.querySelector('svg')?.parentElement).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+      'ring-[var(--border-default)]',
+    )
+    for (const item of screen.getAllByRole('listitem')) {
+      expect(item.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]')
+    }
+    expect(container.innerHTML).not.toMatch(/(?:text|bg|ring)-(?:neon|cyan|purple|emerald|amber)/)
+  })
+
   it('always renders the panel heading and subtitle', () => {
     render(<TotpRecoveryPanel />)
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument()

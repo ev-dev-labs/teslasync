@@ -1,0 +1,372 @@
+{
+  "item": "audit-page-136",
+  "page": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+  "routes": ["/locations"],
+  "purpose": "Explore real visited locations derived from completed drives, ranked by visit frequency, with dwell-time comparisons and location evidence.",
+  "primaryGoal": "Understand where the selected vehicle has been during the workspace time window and inspect or navigate to related evidence without confusing loaded-page summaries with full-range totals.",
+  "dataSources": [
+    {
+      "name": "locationsQuery",
+      "hook": "Inline useQuery in LocationsPage",
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 132,
+      "endpoint": "GET /api/v1/locations",
+      "parameters": ["vehicle_id", "limit=50", "offset=(page-1)*50", "from", "to"],
+      "queryKey": ["visited-locations", "vehicleId", "page", "pageSize", "startInstant", "endInstantExclusive"],
+      "enabled": "vehicleId !== null",
+      "owner": "internal\\api\\visitedlocation\\handler.go",
+      "sourceOwnership": "internal\\database\\trip\\visited_location_repo.go derives groups from completed drives and joined geofences; geofence name precedes end_place, IDs are MIN(d.id), ordering is visit_count descending then ID.",
+      "evidence": [
+        {"file": "internal\\api\\router.go", "line": 4191, "detail": "GET /locations mounted under the API router."},
+        {"file": "internal\\api\\visitedlocation\\handler.go", "line": 59, "detail": "Parses pagination and paired RFC3339 bounds; positive vehicle IDs; empty slices normalized to []."},
+        {"file": "internal\\database\\trip\\visited_location_repo.go", "line": 39, "detail": "COUNT(*) and SUM(duration_s), MAX(ended_at), grouped before LIMIT/OFFSET; both bounds apply to ended_at."}
+      ],
+      "trust": "Historical deriveDataState; fatal failures replace only data-bound content, refresh failures retain payload. Receipt freshness is not the last visit time.",
+      "units": "total_duration_s is seconds on the wire/cache; useUnits.formatDuration converts only for display. Chart hours are a display derivation.",
+      "scope": "All six summary metrics and both leaderboards use only the loaded 50-row page; search filters only those returned rows."
+    },
+    {
+      "name": "AI auto-name draft",
+      "hook": "useAiStream via AIAutoNameUnnamedLocations",
+      "file": "web\\src\\components\\ai\\AIAutoNameUnnamedLocations.tsx",
+      "line": 96,
+      "endpoint": "POST /api/v1/ai/locations/{locationID}/name/draft (consumer contract)",
+      "owner": "Shared AI component and backend auto-name handler",
+      "sourceOwnership": "Router constructs the auto-name source/validator/handler at internal\\api\\router.go:2129-2144 and supplies it to AI routing at line 5082. Final route registration and AI source adapter were not inspected.",
+      "trust": "Feature-gated, propose-only; stream is cancelled on unmount/scope changes; rejected or blank drafts cannot be applied.",
+      "dataBehavior": "Apply copies a proposed name into page-local state only. No persistence action is visible in this page.",
+      "endpointVerification": "List route verified; AI consumer URL and handler wiring inspected, final AI route registration unverified."
+    },
+    {
+      "name": "Workspace and display preferences",
+      "hook": "useSelectedVehicle, useRangeState, useUrlNumber, useUrlString, useUnits, useNumberFormatting",
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 109,
+      "owner": "Existing workspace, URL-state and formatting owners",
+      "endpoint": null,
+      "dataBehavior": "Vehicle and exclusive instant bounds scope requests; page and q remain URL-backed; date change resets page; /locations is range-enabled in workspaceScope.ts:48.",
+      "evidenceLimits": "Implementation of range, selection, URL-state and unit hooks was not re-audited."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Full-width shared orchestrator and persistent detail/chart panels; delegates shell/freshness to PageContainer."},
+    {"name": "MapsOperationalBrief / OperationalBrief", "owner": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx", "role": "Six source-backed metrics, loaded-page scope, receipt time, provenance and retained/partial/unavailable status via useOperationalMetrics."},
+    {"name": "LocationLeaderboardPanel", "owner": "web\\src\\features\\maps\\components\\LocationLeaderboardPanel.tsx", "role": "One domain renderer reused for visits and time; skeleton/error/reset-range empty states; EmbeddedChart with accessible data columns."},
+    {"name": "SearchInput / FilterBar / ActiveFilterChips", "owner": "web\\src\\components\\forms\\SearchInput.tsx", "role": "Debounced controlled search, scoped recent searches, filter clear affordances."},
+    {"name": "GlassPanel / Text / Button / Pagination", "owner": "Existing @/components/ui category", "role": "Ranked list rows, semantics, inspect action and pagination. Individual primitive implementations not re-audited."},
+    {"name": "EntityPreviewDrawer", "owner": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx", "role": "Four evidence fields, six related navigation actions, canonical Drawer and close control."},
+    {"name": "AIAutoNameUnnamedLocations", "owner": "web\\src\\components\\ai\\AIAutoNameUnnamedLocations.tsx", "role": "Optional naming proposal on unnamed/Unknown/coordinate-only locations, review and local apply."},
+    {"name": "Skeleton / QueryError / EmptyState / FadeIn", "owner": "Existing feedback and motion categories", "role": "Section-owned initial/error/empty feedback and three entrance wrappers; reduced-motion implementation not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 243,
+      "rule": "MDC-002 / reuse",
+      "detail": "Both horizontal leaderboards already reuse LocationLeaderboardPanel; no competing chart renderer is needed.",
+      "fix": "Preserve this domain owner and use the existing chart frame/palette APIs for any extension.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 349,
+      "rule": "MDC-033 / preservation",
+      "detail": "Per-row total/average/last-visit evidence is also presented in the drawer. This is useful progressive disclosure, not grounds to delete either surface.",
+      "fix": "Keep both representations and their shared duration/date policies; a local pure evidence adapter is optional if equivalence is proven.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceEvidence": [
+      {"file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx", "line": 241, "detail": "Charts stack until xl; list/skeletons use one column until 2xl; search is full width then sm:w-72."},
+      {"file": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx", "line": 90, "detail": "Footer stacks; evidence/actions change to two columns at sm."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+        "line": 356,
+        "rule": "MDC-043 / mission 15-16",
+        "detail": "A non-wrapping flex row simultaneously reserves rank width, count chip and inspect button. Long address/metadata has little room at 320px despite min-w-0 and break-words; charts also reserve a 112px Y axis plus margins.",
+        "fix": "Test allocated container widths and long/RTL addresses at all contract widths; allow row controls/metadata to reflow without removing evidence or the inspect action.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "acceptanceNeeded": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "200% text", "RTL", "long address", "drawer open", "AI proposal open"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      {"file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx", "line": 339, "detail": "Semantic ul/li list; inspect has localized entity-specific name and decorative Eye icon hidden."},
+      {"file": "web\\src\\features\\maps\\components\\LocationLeaderboardPanel.tsx", "line": 115, "detail": "EmbeddedChart receives title, ariaLabel, data and dataColumns for shared accessible fallback."},
+      {"file": "web\\src\\components\\forms\\SearchInput.tsx", "line": 28, "detail": "Shared search guarantees an accessible name using ariaLabel, placeholder or translated Search."},
+      {"file": "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx", "line": 111, "detail": "Evidence is a dl/dt/dd structure; related context uses a labelled nav and native Link elements."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+        "line": 184,
+        "rule": "MDC-034 / MDC-040",
+        "detail": "Chart names are truncated before being supplied to accessible fallback rows. The full-address list mitigates loss, but identical 22-character prefixes cannot be distinguished in the chart/table itself.",
+        "fix": "Retain full source labels in chart data/table/tooltips and truncate only the visual axis tick. Extend the domain panel datum with a separate display label if needed.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+        "line": 378,
+        "rule": "MDC-040 / mobile targets",
+        "detail": "Inspect button explicitly has h-9 w-9 (36px), below the contract's stronger 44px mobile default. Actual spacing exception/target overlap has not been measured.",
+        "fix": "Use a 44px mobile target through Button sizing while preserving desktop density; verify focus and target separation.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+        "line": 216,
+        "rule": "MDC-040 / asynchronous announcements",
+        "detail": "PageLayout receives query but no loading/busy/error props. PageContainer:135 uses those props, not query, for useLoadAnnouncement; this page does not wire its section loading transition into that shared announcement.",
+        "fix": "Verify mounted announcements; use the shared non-blocking busy/announcement contract without gating all page sections behind page-level loading/error.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["keyboard order", "drawer focus trap/restoration/Escape", "screen reader", "forced colors", "effective contrast", "reduced motion", "chart fallback interaction"]
+  },
+  "states": {
+    "initialLoading": "Six list skeletons, chart skeletons and brief loading; panels persist.",
+    "initialFailure": "Fatal DataState error produces section QueryError with refetch; summary uses unavailable data and retry.",
+    "empty": "Successful [] gives list explanation plus View drives; each chart provides Reset date range.",
+    "searchEmpty": "Clear search CTA; summary/charts intentionally remain based on unfiltered loaded page.",
+    "retainedRefreshFailure": "FatalError remains null with retained payload; list/charts stay visible; brief marks retained and page delegates query source notice/freshness.",
+    "offline": "Brief checks isRefreshBlocked; current browser/offline notices are unverified.",
+    "ai": "Feature gate, streaming/paused busy handling, proposal validation, local apply and cleanup inspected; no AI request executed.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+        "line": 147,
+        "rule": "MDC-026 / unknown is not empty",
+        "detail": "Disabled query with no selected vehicle has no data but isLoading is false; the detail/chart branches can claim no recorded locations rather than selection-required/unknown. No request has established emptiness.",
+        "fix": "Render an explicit select-vehicle/unavailable state while retaining all section shells; do not label an unrequested source as empty.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+        "line": 146,
+        "rule": "MDC-026",
+        "detail": "deriveDataState is not told when [] is authoritatively empty; hasData is true for [], so MapsOperationalBrief reports Source data available even when the list is empty. This is resolved availability but does not communicate the shared unavailable/empty distinction.",
+        "fix": "Use explicit unavailable for a successful empty source and a deliberate empty-summary label while preserving genuine successful zero totals.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+        "line": 456,
+        "rule": "MDC-026 / contextual trust",
+        "detail": "previewLocation is a retained object independent of selected vehicle/range/page. Scope changes do not close/rebind it, yet related links use the current vehicle/range, potentially combining old location evidence with new scope.",
+        "fix": "Bind preview and applied draft to source identity or close/revalidate them when vehicle/range changes; retain intentional open-state behavior only with explicit source scope.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 250,
+      "rule": "MDC-010 / MDC-034 / mission 5-7",
+      "detail": "Hardcoded emerald #10b981 and purple #a855f7 chart fills bypass the existing palette/semantic theme contract; purple is a saturated decorative comparison hue. Rank podiums, chart icons and repeated count chips add cyan/amber emphasis across every list row.",
+      "fix": "Use existing restrained chart palette tokens and neutral row metadata; retain ranking/count semantics and persisted explicit theme choices without resets.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\components\\LocationLeaderboardPanel.tsx",
+      "line": 47,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Tooltip cursor uses literal translucent white instead of a surface-hover token; low intensity but fixed to white irrespective of theme.",
+      "fix": "Consume the canonical chart hover/surface token rather than another page-specific color.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 201,
+      "rule": "MDC-045 / display-boundary formatting",
+      "detail": "timeChartData applies unary + to fmtNumber(seconds/3600), a locale/precision formatted string. Decimal-comma or grouped output can become NaN; LocationLeaderboardPanel:78 silently maps non-finite values to zero. Precision preferences also alter plotted measurements rather than only their labels.",
+      "fix": "Keep the raw numeric display derivation seconds/3600 in chart data; apply locale/precision formatting only in ticks/tooltips/table cells. Invalid measurements must remain unknown, not zero.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 134,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Page owns request construction instead of a typed domain data hook, and queryFn ignores TanStack Query's AbortSignal.",
+      "fix": "Extract to the existing locations API-hook owner after inspection; forward signal to request while preserving exact key, enablement, URL parameters and inherited policies.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 121,
+      "rule": "MDC-046 / preserve real actions",
+      "detail": "Comments and AI UI describe an Apply-to-form/save handoff, but onApplyName only stores appliedName and displays Suggested name ready to save. This page has no canonical rename/geofence form or save action.",
+      "fix": "Trace the existing canonical form/navigation owner before implementation and provide a real review handoff if available; otherwise accurately label local draft behavior. Never add an invented endpoint or allow AI to persist automatically.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+      "line": 199,
+      "rule": "MDC-033 / source scope",
+      "detail": "Time leaderboard sorts only the visit-ranked loaded page; generic Top locations titles do not independently explain this restriction. Search is also loaded-page-only; rank badges restart at #1 for every page/filter and pagination uses a speculative next-row total.",
+      "fix": "Keep all existing loaded-page calculations and next-page behavior but disclose page-local ranking/search scope at the chart/list. Full-range time leaders or server search require an explicit backend contract change, not invented client totals.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Locale-dependent false-zero time bars, stale preview scope and unrequested-source emptiness affect data trust before visual modernization.",
+    "order": ["Numeric chart integrity", "Source/scope states and preview identity", "Real AI review handoff", "Mobile target/reflow and full chart labels", "Restrained palette and typed cancellable hook"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Typed visited-location query contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useLocations.ts (candidate owner, not inspected)",
+      "propsVariantsStates": "vehicleId nullable; page/pageSize; from and exclusive to; typed SI response; query signal forwarding; preserve inherited retry/cache and exact key; disabled/initial/empty/retained/fatal states.",
+      "usedBy": ["LocationsPage"],
+      "dependsOn": ["GET /locations route", "request AbortSignal contract", "deriveDataState", "workspace range/vehicle owners"],
+      "owner": "integration",
+      "reason": "Extend an existing domain owner only after inspection; no competing query system."
+    },
+    {
+      "name": "Canonical AI proposal-to-form handoff",
+      "existingOwnerFile": "Explicit missing confirmed owner: canonical location rename/geofence review form was not identified in this bounded trace",
+      "propsVariantsStates": "Synthetic location ID, current label and proposed name, source vehicle/window identity, validated draft status, explicit user review/save/cancel; no automatic write.",
+      "usedBy": ["LocationsPage", "AIAutoNameUnnamedLocations"],
+      "dependsOn": ["Existing canonical form/action source trace", "AI feature gate and useAiStream", "Confirmed backend persistence contract"],
+      "owner": "integration",
+      "reason": "Current UI promises a form handoff it does not visibly implement; requires integration ownership, not an audit source edit."
+    },
+    {
+      "name": "Existing shared presentation contracts to consume, not replace",
+      "existingOwnerFile": "docs\\frontend-design-contract.md",
+      "propsVariantsStates": "Chart palette tokens; Button 44px mobile target; PageLayout dataSources/query and non-blocking announcement; EntityPreviewDrawer fields/actions; OperationalBrief retained/unavailable states; EmbeddedChart data/dataColumns with full labels.",
+      "usedBy": ["LocationsPage", "LocationLeaderboardPanel", "MapsOperationalBrief"],
+      "dependsOn": ["MDC-010", "MDC-024", "MDC-026", "MDC-034", "MDC-040", "MDC-043", "MDC-045"],
+      "owner": "shared",
+      "reason": "No new shared renderer, palette engine, overlay or status registry justified by this one-page evidence. Shared implementation changes require designated owners and independent consumer evidence."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx", "line": 132, "detail": "Inline query construction competes with the established API-hook layer; exact existing domain hook equivalence unverified."},
+    {"file": "web\\src\\features\\maps\\pages\\LocationsPage.tsx", "line": 250, "detail": "Local fixed chart palette competes with shared palette tokens."},
+    {"file": "web\\src\\features\\maps\\components\\LocationLeaderboardPanel.tsx", "line": 114, "detail": "Canonical EmbeddedChart already used; no competing chart frame detected in inspected dependencies."}
+  ],
+  "preservation": {
+    "sourceHash": "15B1EF18551FD94D883787CCEF16D6E9F793978BD5BE95EB55D387CC2722C8FD",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact root page file bytes only",
+    "currentLineCount": 508,
+    "sections": [
+      {"name": "Location summary", "count": 1, "metrics": 6},
+      {"name": "Top locations by visits", "count": 1, "maximumRows": 15},
+      {"name": "Top locations by time spent", "count": 1, "maximumRows": 10},
+      {"name": "All locations", "count": 1, "pageSize": 50},
+      {"name": "Location evidence drawer", "count": 1, "fields": 4, "relatedActions": 6},
+      {"name": "Unnamed-location AI naming proposal", "count": "0..N per loaded list"}
+    ],
+    "sectionCounts": {
+      "alwaysMountedPrimarySections": 4,
+      "optionalDrawer": 1,
+      "pageLayoutCardInstances": 1,
+      "leaderboardLayoutCardInstances": 2,
+      "pageGlassPanelTemplateInstances": 1,
+      "canonicalEmbeddedChartTemplates": 1,
+      "fadeInWrappers": 3
+    },
+    "actions": [
+      "Header-owned workspace vehicle/range selection",
+      "URL-backed page and search",
+      "Address search, scoped recent-search history and clear chips",
+      "Retry failed source",
+      "Reset range from empty charts",
+      "View drives from empty list",
+      "Pagination with next-page sentinel",
+      "Inspect location / close drawer",
+      "Related vehicle, drives, charging, alerts, maintenance and signals navigation",
+      "Feature-gated AI suggest-name draft and validated local apply"
+    ],
+    "dataBehavior": [
+      "Preserve real historical drive-derived location groups, geofence-label precedence and synthetic IDs.",
+      "Preserve paired [from,to) backend filtering on drive end time, selection enablement and query keys.",
+      "Keep wire/cache total_duration_s in seconds; never introduce legacy unit fields or display conversions into raw cached data.",
+      "Keep loaded-page metrics, city final-address-segment heuristic with unnamed exclusion and unfiltered summaries.",
+      "Preserve visit ordering; sort a copy for time so list ranks and summary do not mutate.",
+      "Preserve successful true zeros separately from missing/unrequested/invalid source measurements.",
+      "Keep retained rows on refresh failure, independent section states and receipt provenance.",
+      "Do not invent coordinates, map capability, saved rename action, full-result export or full-range aggregates.",
+      "AI remains propose-only; no production mutation or test request occurred."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified; visual findings are class/token source evidence, not screenshots",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "motion": "unverified",
+    "backendExecution": "unverified; handler/repository source inspected, no database or HTTP request executed",
+    "scope": "One assigned route/root page and directly relevant presentation/data dependencies only; no application-wide audit.",
+    "sourceChecks": [
+      {"command": "Get-FileHash 'web\\src\\features\\maps\\pages\\LocationsPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\maps\\pages\\LocationsPage.tsx').Count", "exitCode": 0, "output": "SHA256 15B1EF18551FD94D883787CCEF16D6E9F793978BD5BE95EB55D387CC2722C8FD; 508"},
+      {"command": "Scoped rg for inline styles, raw controls, direct chart/map/motion imports, white/neon/glow classes and literal colors in the page and two domain components", "exitCode": 0, "output": "Three matches: LocationsPage.tsx:93 comment mentioning neon; :250 #10b981; :264 #a855f7. No inline-style/raw-control/direct-library-import/pure-white-class matches in this three-file scope."}
+    ],
+    "notRun": [
+      "audit.sh: inspected but not executed because it unconditionally runs project-wide npx tsc --noEmit, outside this read-only Phase 0 validation scope",
+      "TypeScript, lint, build and tests",
+      "Browser, screenshots, viewport/keyboard/a11y interactions",
+      "Git, nested agents and production actions"
+    ],
+    "unknowns": [
+      "Actual route reachability/auth state and loaded database records",
+      "Canonical AI persistence form and final AI endpoint registration",
+      "Shared Drawer, FadeIn, query-policy and palette implementation runtime behavior",
+      "Existing useLocations hook equivalence",
+      "Saved theme/unit/locale preferences and composed mobile contrast"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\maps\\pages\\LocationsPage.tsx",
+    "web\\src\\features\\maps\\components\\LocationLeaderboardPanel.tsx",
+    "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+    "web\\src\\components\\ai\\AIAutoNameUnnamedLocations.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\forms\\SearchInput.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useFilteredList.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\visitedlocation\\handler.go",
+    "internal\\database\\trip\\visited_location_repo.go"
+  ]
+}

@@ -70,7 +70,7 @@ describe('computeReplayMarkers', () => {
     expect(stop?.at).toBe(1);
   });
 
-  it('emits charge-start + charge-stop when power < 0 for >=30s', () => {
+  it('annotates sustained negative drive power as regen, not a charge session', () => {
     const positions: DrivePosition[] = [
       pos({ secondsFromStart: 0, power: 20 }),
       pos({ secondsFromStart: 30, power: -5 }),
@@ -79,8 +79,41 @@ describe('computeReplayMarkers', () => {
       pos({ secondsFromStart: 120, power: 25 }),
     ];
     const out = computeReplayMarkers(positions);
-    expect(out.some((m) => m.kind === 'charge-start')).toBe(true);
-    expect(out.some((m) => m.kind === 'charge-stop')).toBe(true);
+    expect(out.filter((m) => m.kind === 'regen-peak')).toEqual([
+      { at: 0.5, kind: 'regen-peak' },
+    ]);
+    expect(out.some((m) => m.kind === 'charge-start' || m.kind === 'charge-stop')).toBe(false);
+    expect(out.find((m) => m.kind === 'start')?.at).toBe(0);
+    expect(out.find((m) => m.kind === 'stop')?.at).toBe(1);
+  });
+
+  it.each([0, null, 30])(
+    'does not infer a trailing charge session from negative power and rising SoC at speed %s',
+    (speed) => {
+      const out = computeReplayMarkers([
+        pos({ secondsFromStart: 0, power: 20, speed, batteryLevel: 70 }),
+        pos({ secondsFromStart: 30, power: -5, speed, batteryLevel: 71 }),
+        pos({ secondsFromStart: 60, power: -8, speed, batteryLevel: 72 }),
+        pos({ secondsFromStart: 90, power: -3, speed, batteryLevel: 73 }),
+      ]);
+      expect(out.filter((m) => m.kind === 'regen-peak')).toEqual([
+        { at: 2 / 3, kind: 'regen-peak' },
+      ]);
+      expect(out.some((m) => m.kind === 'charge-start' || m.kind === 'charge-stop')).toBe(false);
+    },
+  );
+
+  it('preserves populated markers when power evidence is missing', () => {
+    const out = computeReplayMarkers([
+      pos({ secondsFromStart: 0, power: null }),
+      pos({ secondsFromStart: 60, power: null, batteryLevel: 19 }),
+      pos({ secondsFromStart: 120, power: null, batteryLevel: 18 }),
+    ]);
+    expect(out).toEqual([
+      { at: 0, kind: 'start' },
+      { at: 0.5, kind: 'low-soc' },
+      { at: 1, kind: 'stop' },
+    ]);
   });
 
   it('does NOT emit charge markers for short power-negative blips (<30s)', () => {

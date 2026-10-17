@@ -3,30 +3,30 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives, useRegenEfficiency } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { CardGrid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 
 import {
-  AmbientTemperatureContext,
-  CoverageMethodology,
   MonthlyRecoveryTrend,
   RankedDriveEvidence,
-  RecoveryOverview,
+  RecoveryContext,
   RecoveryRatioDistribution,
-  RegenKpiBand,
-  StartingSocContext,
-  type RegenSectionState,
-} from '../components/regen-efficiency';
+  RegenCardSlot,
+  toRegenSectionState,
+} from '../components/regen-efficiency-modernization';
+import { RegenSummaryBrief } from '../components/operationalbrief-n-z/RegenSummaryBrief';
+import { RegenOverviewBrief } from '../components/operationalbrief-n-z/RegenOverviewBrief';
+import { RegenCoverageBrief } from '../components/operationalbrief-n-z/RegenCoverageBrief';
 import {
   REGEN_HISTORY_LIMIT,
   buildRegenEfficiencyModel,
 } from '../lib/regenEfficiency';
-
-const CONTEXT_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function RegenEfficiencyPage() {
   const { t } = useTranslation();
@@ -51,53 +51,64 @@ export default function RegenEfficiencyPage() {
     end: endInstantExclusive,
     limit: REGEN_HISTORY_LIMIT,
   });
+  // Source trust is independent: a failed refresh cannot erase either the
+  // retained payload or a healthy neighboring source. Query policy is untouched.
+  const aggregateDataState = useDataState(aggregateQuery, { provenance: 'historical' });
+  const detailDataState = useDataState(drivesQuery, { provenance: 'historical' });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
   const model = useMemo(
     () => buildRegenEfficiencyModel(drives, REGEN_HISTORY_LIMIT, timezone),
     [drives, timezone],
   );
 
-  const aggregateState: RegenSectionState = {
-    isLoading: aggregateQuery.isLoading,
-    isResolved: aggregateQuery.isSuccess,
-    error: aggregateQuery.isError ? aggregateQuery.error : null,
-    onRetry: () => {
-      void aggregateQuery.refetch();
-    },
-  };
-  const detailState: RegenSectionState = {
-    isLoading: drivesQuery.isLoading,
-    isResolved: drivesQuery.isSuccess,
-    error: drivesQuery.isError ? drivesQuery.error : null,
-    onRetry: () => {
-      void drivesQuery.refetch();
-    },
-  };
+  const aggregateState = toRegenSectionState(aggregateDataState, aggregateQuery);
+  const detailState = toRegenSectionState(detailDataState, drivesQuery);
+  const summaryScope = startInstant && endInstantExclusive
+    ? `${startInstant} — ${endInstantExclusive} (${timezone})`
+    : t('regen.brief.allReturned', 'Selected all-time scope; detailed rows remain capped.');
+  // Match the shared warning's trust contract: paused refreshes can retain
+  // evidence without a refresh error. An unresolved source is not retained.
+  const retained = [aggregateDataState, detailDataState].some(
+    (state) => state.hasData && state.status !== 'ok',
+  );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('regen.title', 'Regenerative Braking')}
       subtitle={t(
         'regen.subtitle',
         'Descriptive energy-recovery evidence for the selected date window',
       )}
       query={[aggregateQuery, drivesQuery]}
+      busy={aggregateDataState.isRefreshing || detailDataState.isRefreshing}
     >
+      <StaleRefreshWarning
+        state={aggregateDataState}
+        label={t('regen.overview.aggregateTitle', 'Complete aggregate')}
+      />
+      <StaleRefreshWarning
+        state={detailDataState}
+        label={t('regen.overview.sampleTitle', 'Detailed returned sample')}
+      />
       <FadeIn>
-        <RegenKpiBand
+        <RegenSummaryBrief
           aggregate={aggregateQuery.data}
           model={model}
           aggregateState={aggregateState}
           detailState={detailState}
+          retained={retained}
+          scope={summaryScope}
         />
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <RecoveryOverview
+        <RegenOverviewBrief
           aggregate={aggregateQuery.data}
           model={model}
           aggregateState={aggregateState}
           detailState={detailState}
+          scope={summaryScope}
+          retained={retained}
         />
       </FadeIn>
 
@@ -110,10 +121,29 @@ export default function RegenEfficiencyPage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <Grid cols={CONTEXT_COLUMNS} gap={4}>
-          <AmbientTemperatureContext model={model} state={detailState} />
-          <StartingSocContext model={model} state={detailState} />
-        </Grid>
+        <CardGrid
+          label={t('regen.modernization.contextGrid', 'Recovery context')}
+          items={[
+            {
+              id: 'regen-temperature',
+              size: 'half',
+              content: (
+                <RegenCardSlot>
+                  <RecoveryContext kind="temperature" model={model} state={detailState} />
+                </RegenCardSlot>
+              ),
+            },
+            {
+              id: 'regen-soc',
+              size: 'half',
+              content: (
+                <RegenCardSlot>
+                  <RecoveryContext kind="soc" model={model} state={detailState} />
+                </RegenCardSlot>
+              ),
+            },
+          ]}
+        />
       </FadeIn>
 
       <FadeIn delay={0.25}>
@@ -121,13 +151,15 @@ export default function RegenEfficiencyPage() {
       </FadeIn>
 
       <FadeIn delay={0.3}>
-        <CoverageMethodology
+        <RegenCoverageBrief
           aggregate={aggregateQuery.data}
           model={model}
           aggregateState={aggregateState}
           detailState={detailState}
+          scope={summaryScope}
+          retained={retained}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

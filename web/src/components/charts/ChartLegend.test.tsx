@@ -23,7 +23,7 @@
  *                         formatter → dimming, context resolution, prop-over-
  *                         context precedence, and the fully-passive fallback.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import type { ReactElement } from 'react'
 
@@ -59,19 +59,19 @@ import {
 import { ChartHiddenSeriesContext } from './ChartHiddenSeriesContext'
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries'
 
-function makeSource(hidden: string[] = []): ChartLegendToggleSource & { toggle: ReturnType<typeof vi.fn> } {
+function makeSource(hidden: string[] = []): ChartLegendToggleSource & { toggle: Mock<(key: string) => void> } {
   const set = new Set(hidden)
   return {
-    toggle: vi.fn(),
+    toggle: vi.fn<(key: string) => void>(),
     isHidden: (k: string) => set.has(k),
   }
 }
 
-function makeContextState(hidden: string[] = []): HiddenSeriesState & { toggle: ReturnType<typeof vi.fn> } {
+function makeContextState(hidden: string[] = []): HiddenSeriesState & { toggle: Mock<(key: string) => void> } {
   const set = new Set(hidden)
   return {
     hidden: set,
-    toggle: vi.fn(),
+    toggle: vi.fn<(key: string) => void>(),
     isHidden: (k: string) => set.has(k),
     reset: vi.fn(),
   }
@@ -196,6 +196,49 @@ describe('LegendSeriesLabel', () => {
     screen.getByRole('button', { name: 'Speed' }).click()
     expect(source.toggle).toHaveBeenCalledWith('speed')
   })
+
+  it('keeps native focus and a single toggle without bubbling to the legend handler', () => {
+    const source = makeSource()
+    const outerClick = vi.fn()
+    render(
+      <div onClick={outerClick}>
+        <LegendSeriesLabel resolved={source} value="Speed" entry={{ dataKey: 'speed' }} />
+      </div>,
+    )
+    const button = screen.getByRole('button', { name: 'Speed' })
+    expect(button).toHaveAttribute('type', 'button')
+    expect(button).not.toHaveAttribute('tabindex')
+    button.focus()
+    expect(button).toHaveFocus()
+    expect(button).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2')
+    button.click()
+    expect(source.toggle).toHaveBeenCalledTimes(1)
+    expect(source.toggle).toHaveBeenCalledWith('speed')
+    expect(outerClick).not.toHaveBeenCalled()
+  })
+
+  it('wraps long RTL labels with mobile targets and preserves identity across hidden-state updates', () => {
+    const label = 'سرعة السيارة — اسم سلسلة طويل جدًا مع تفاصيل القياس'
+    const entry = { dataKey: 'speed', color: '#91b4d2' }
+    const { rerender } = render(
+      <div dir="rtl">
+        <LegendSeriesLabel resolved={makeSource()} value={label} entry={entry} />
+      </div>,
+    )
+    const button = screen.getByRole('button', { name: label })
+    expect(button).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9', 'max-w-full', 'whitespace-normal')
+    expect(screen.getByText(label)).toHaveClass('break-words')
+    expect(button).toHaveAttribute('data-series-key', 'speed')
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+    rerender(
+      <div dir="rtl">
+        <LegendSeriesLabel resolved={makeSource(['speed'])} value={label} entry={entry} />
+      </div>,
+    )
+    expect(screen.getByRole('button', { name: label })).toHaveAttribute('data-series-key', 'speed')
+    expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true')
+    expect(entry.color).toBe('#91b4d2')
+  })
 })
 
 describe('ChartLegend — recharts wiring', () => {
@@ -222,6 +265,15 @@ describe('ChartLegend — recharts wiring', () => {
     expect(p.wrapperStyle).toBe(style)
     expect(p.verticalAlign).toBe('top')
     expect(p.align).toBe('right')
+  })
+
+  it('preserves payload series colors, IDs and ordering without imposing a palette', () => {
+    const payload = [
+      { dataKey: 'speed', value: 'Speed', color: '#91b4d2', type: 'line' as const },
+      { dataKey: 'power', value: 'Power', color: '#91b9a5', type: 'line' as const },
+    ]
+    render(<ChartLegend state={makeSource()} payload={payload} />)
+    expect(H.legendProps?.payload).toBe(payload)
   })
 
   it('wires onClick to toggle the clicked series via the state prop', () => {

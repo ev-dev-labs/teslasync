@@ -386,3 +386,176 @@ describe('ThemePicker — accessibility', () => {
     expect(screen.getByLabelText('Accent')).toBeInTheDocument()
   })
 })
+
+function expectSelectionChrome(button: HTMLElement, selected: boolean) {
+  expect(button).toHaveAttribute('aria-pressed', String(selected))
+  expect(button).toHaveClass(selected ? 'border-[var(--theme-primary)]' : 'border-[var(--glass-border)]')
+  expect(button.style.borderColor).toBe('')
+  const check = button.querySelector('svg[aria-hidden="true"]')
+  if (selected) {
+    expect(check).toBeInTheDocument()
+    expect(check).toHaveClass('text-[var(--theme-primary)]')
+    expect(check).not.toHaveAttribute('style')
+  } else {
+    expect(check).toBeNull()
+  }
+  // The shared Button's crisp keyboard outline is not decorative selection glow.
+  expect(button).toHaveClass(
+    'focus-visible:outline',
+    'focus-visible:outline-2',
+    'focus-visible:outline-offset-2',
+    'focus-visible:outline-[var(--focus-ring)]',
+  )
+}
+
+function expectNoInlineSelectionShadows(container: HTMLElement) {
+  for (const element of container.querySelectorAll<HTMLElement>('[style]')) {
+    expect(element.style.boxShadow).toBe('')
+    expect(element.getAttribute('style')).not.toMatch(/box-shadow/i)
+  }
+}
+
+/** Each swatch is painted solid with the one source hex the app applies. */
+function expectSourceSwatch(button: HTMLElement, primary: string) {
+  const swatch = button.querySelector<HTMLElement>('div.rounded-full')
+  const expected = document.createElement('div')
+  expected.style.background = primary
+  expect(expected.style.background).not.toBe('')
+  expect(swatch).toBeInTheDocument()
+  expect(swatch?.style.background).toBe(expected.style.background)
+  expect(swatch?.style.background).not.toContain('gradient')
+}
+
+function expectRawModePreview(button: HTMLElement, mode: ModeTheme) {
+  const preview = button.querySelector<HTMLElement>('div.rounded-lg')
+  const expected = document.createElement('div')
+  expected.style.background = mode.surface3
+  expected.style.border = `1px solid ${mode.glassBorder}`
+  expect(preview?.style.background).toBe(expected.style.background)
+  expect(preview?.style.border).toBe(expected.style.border)
+  expected.style.color = mode.textPrimary
+  expect(preview?.querySelector('span')?.style.color).toBe(expected.style.color)
+  const palette = button.querySelectorAll<HTMLElement>('div.rounded-sm')
+  expect(palette).toHaveLength(4)
+  for (const [index, color] of [mode.bg, mode.surface1, mode.surface2, mode.surface3].entries()) {
+    expected.style.background = color
+    expect(palette[index].style.background).toBe(expected.style.background)
+  }
+}
+
+describe.each([
+  { layout: 'full', compact: false },
+  { layout: 'compact', compact: true },
+])('ThemePicker — restrained selection decoration ($layout)', ({ compact }) => {
+  it('keeps selected and unselected modes glow-free with raw surface previews and exact mode callbacks', () => {
+    const onModeChange = vi.fn()
+    const { container, spies } = renderPicker({ picker: { compact, onModeChange } })
+    const dark = screen.getByRole('button', { name: 'Dark' })
+    const light = screen.getByRole('button', { name: 'Light' })
+    expectSelectionChrome(dark, true)
+    expectSelectionChrome(light, false)
+    expectRawModePreview(dark, MODES.dark)
+    expectRawModePreview(light, MODES.light)
+    expectNoInlineSelectionShadows(container)
+
+    light.focus()
+    expect(light).toHaveFocus()
+    fireEvent.click(light)
+
+    expect(spies.setMode).toHaveBeenLastCalledWith('light')
+    expect(onModeChange).toHaveBeenLastCalledWith('light')
+    expect(toastInfo).toHaveBeenLastCalledWith('Mode: Light')
+    expectSelectionChrome(dark, false)
+    expectSelectionChrome(light, true)
+    expectRawModePreview(dark, MODES.dark)
+    expectRawModePreview(light, MODES.light)
+    expect(light).toHaveFocus()
+    expectNoInlineSelectionShadows(container)
+  })
+
+  it('uses the derived selection role for every raw preset hue with one exact source swatch per preset, identities and toast names', () => {
+    const onChange = vi.fn()
+    const { container, spies } = renderPicker({ picker: { compact, onChange } })
+    const presets = Object.values(THEMES).filter(theme => theme.id !== 'custom')
+    for (const selected of presets) {
+      const button = screen.getByRole('button', { name: selected.name })
+      button.focus()
+      fireEvent.click(button)
+      expect(spies.setTheme).toHaveBeenLastCalledWith(selected.id)
+      expect(onChange).toHaveBeenLastCalledWith(selected.id)
+      expect(toastInfo).toHaveBeenLastCalledWith(`Theme: ${selected.name}`)
+      expect(button).toHaveFocus()
+      for (const theme of presets) {
+        const preset = screen.getByRole('button', { name: theme.name })
+        expectSelectionChrome(preset, theme.id === selected.id)
+        expectSourceSwatch(preset, theme.primary)
+      }
+      const custom = screen.getByRole('button', { name: 'Custom' })
+      expectSelectionChrome(custom, false)
+      expectSourceSwatch(custom, DEFAULT_PRIMARY)
+      expectNoInlineSelectionShadows(container)
+    }
+    expect(spies.setCustomColors).not.toHaveBeenCalled()
+    expect(spies.setMode).not.toHaveBeenCalled()
+  })
+
+  it('retains saved custom hues and both edit arguments while selected chrome stays derived and glow-free', () => {
+    const savedPrimary = '#ff00ee'
+    const savedAccent = '#39ff14'
+    localStorage.setItem('teslasync-custom-primary', savedPrimary)
+    localStorage.setItem('teslasync-custom-accent', savedAccent)
+    const onChange = vi.fn()
+    const { container, spies } = renderPicker({ picker: { compact, onChange } })
+    const custom = screen.getByRole('button', { name: 'Custom' })
+    expectSelectionChrome(custom, false)
+    expectSourceSwatch(custom, savedPrimary)
+    expectNoInlineSelectionShadows(container)
+
+    custom.focus()
+    fireEvent.click(custom)
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith(savedPrimary, savedAccent)
+    expect(onChange).toHaveBeenLastCalledWith('custom')
+    expect(toastInfo).toHaveBeenLastCalledWith('Theme: Custom')
+    expectSelectionChrome(custom, true)
+    expectSelectionChrome(screen.getByRole('button', { name: 'Neon Cyan' }), false)
+    expectSourceSwatch(custom, savedPrimary)
+    expect(screen.getByLabelText('Primary')).toHaveValue(savedPrimary)
+    expect(screen.getByLabelText('Accent')).toHaveValue(savedAccent)
+    expect(custom).toHaveFocus()
+    expectNoInlineSelectionShadows(container)
+
+    fireEvent.change(screen.getByLabelText('Primary'), { target: { value: '#00ff99' } })
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', savedAccent)
+    expect(onChange).toHaveBeenLastCalledWith('custom')
+    expectSourceSwatch(custom, '#00ff99')
+    expectSelectionChrome(custom, true)
+    expectNoInlineSelectionShadows(container)
+
+    fireEvent.change(screen.getByLabelText('Accent'), { target: { value: '#ff0044' } })
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', '#ff0044')
+    expect(onChange).toHaveBeenLastCalledWith('custom')
+    expect(screen.getByLabelText('Primary')).toHaveValue('#00ff99')
+    expect(screen.getByLabelText('Accent')).toHaveValue('#ff0044')
+    expectSourceSwatch(custom, '#00ff99')
+    expectSelectionChrome(custom, true)
+    expectNoInlineSelectionShadows(container)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Matrix Green' }))
+    expect(spies.setTheme).toHaveBeenLastCalledWith('matrix-green')
+    expect(onChange).toHaveBeenLastCalledWith('matrix-green')
+    expect(toastInfo).toHaveBeenLastCalledWith('Theme: Matrix Green')
+    expectSelectionChrome(custom, false)
+    expectSourceSwatch(custom, '#00ff99')
+    expect(screen.queryByLabelText('Primary')).not.toBeInTheDocument()
+    fireEvent.click(custom)
+    expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', '#ff0044')
+    expect(onChange).toHaveBeenLastCalledWith('custom')
+    expect(toastInfo).toHaveBeenLastCalledWith('Theme: Custom')
+    expectSelectionChrome(custom, true)
+    expectNoInlineSelectionShadows(container)
+    // Provider persistence is outside this stateful useTheme boundary.
+    expect(localStorage.getItem('teslasync-custom-primary')).toBe(savedPrimary)
+    expect(localStorage.getItem('teslasync-custom-accent')).toBe(savedAccent)
+    expect(spies.setMode).not.toHaveBeenCalled()
+  })
+})

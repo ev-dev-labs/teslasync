@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
+import { MetricGrid } from '@/components/layout';
 import {
   GlassPanel,
   Heading,
@@ -187,7 +188,7 @@ export function PackCapacityMethodology({
             'Eligibility, uncertainty, filtering, fit gates, accounting, calendar semantics, and explicit non-claims.',
           )}
         </Text>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <MetricGrid>
           {items.map((item) => (
             <article
               key={item.key}
@@ -202,7 +203,7 @@ export function PackCapacityMethodology({
               </Text>
             </article>
           ))}
-        </div>
+        </MetricGrid>
         <AlertBanner className="mt-4" variant="warning">
           <Text as="p" variant="caption">
             {t(

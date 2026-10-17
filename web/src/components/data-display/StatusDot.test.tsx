@@ -25,6 +25,15 @@ describe('StatusDot — rendering + base classes', () => {
     expect(cls).toContain('rounded-full')
     expect(cls).toContain(severityTokens.info.dot)
   })
+
+  it('preserves caller overrides for size and colour without changing native span semantics', () => {
+    const { container } = render(<StatusDot severity="info" className="h-3 w-3 bg-current" />)
+    const el = getDot(container)
+    expect(el).toHaveClass('h-3', 'w-3', 'bg-current', 'rounded-full')
+    expect(el).not.toHaveClass('h-2', 'w-2', severityTokens.info.dot)
+    expect(el.tagName).toBe('SPAN')
+    expect(el).not.toHaveAttribute('tabindex')
+  })
 })
 
 describe('StatusDot — severity → colour mapping', () => {
@@ -33,6 +42,19 @@ describe('StatusDot — severity → colour mapping', () => {
   it.each(canonical)('uses the %s dot token for the canonical severity', (sev: Severity) => {
     const { container } = render(<StatusDot severity={sev} />)
     expect(getDot(container).className).toContain(severityTokens[sev].dot)
+  })
+
+  it.each([
+    ['info', 'info'],
+    ['warn', 'warning'],
+    ['critical', 'danger'],
+    ['success', 'success'],
+  ] as const)('keeps %s restrained and theme-aware through the existing %s semantic role', (sev, role) => {
+    const { container } = render(<StatusDot severity={sev} />)
+    const el = getDot(container)
+    expect(el).toHaveClass(`bg-[var(--semantic-${role})]`)
+    expect(el.className).not.toMatch(/neon|glow|shadow|white|animate-|gradient/)
+    expect(el).not.toHaveAttribute('style')
   })
 
   const aliases: Array<[string, Severity]> = [
@@ -87,5 +109,19 @@ describe('StatusDot — accessibility', () => {
     expect(el).not.toHaveAttribute('aria-label')
     expect(el).toHaveAttribute('aria-hidden', 'true')
     expect(el).not.toHaveAttribute('role')
+  })
+
+  it('updates severity and localized labels without leaving stale graphic semantics', () => {
+    const { container, rerender } = render(<StatusDot severity="warn" label="Alerte non lue" />)
+    expect(screen.getByRole('img', { name: 'Alerte non lue' })).toHaveClass(severityTokens.warn.dot)
+
+    rerender(<StatusDot severity={null} label="" />)
+    const el = getDot(container)
+    expect(el).toHaveClass(severityTokens.info.dot)
+    expect(el).not.toHaveClass(severityTokens.warn.dot)
+    expect(el).toHaveAttribute('aria-hidden', 'true')
+    expect(el).not.toHaveAttribute('role')
+    expect(el).not.toHaveAttribute('aria-label')
+    expect(screen.queryByRole('img')).toBeNull()
   })
 })

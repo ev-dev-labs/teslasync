@@ -160,12 +160,12 @@ describe('AuditPanel', () => {
 
   it('maps each known result to its Badge variant colour', () => {
     const cases: Array<[DLQReplayResult, string]> = [
-      ['ok', 'bg-green-100'],
-      ['publish_failed', 'bg-red-100'],
-      ['rate_limited', 'bg-yellow-100'],
-      ['disabled', 'bg-yellow-100'],
+      ['ok', 'bg-[var(--semantic-success-bg)]'],
+      ['publish_failed', 'bg-[var(--semantic-danger-bg)]'],
+      ['rate_limited', 'bg-[var(--semantic-warning-bg)]'],
+      ['disabled', 'bg-[var(--semantic-warning-bg)]'],
       ['not_found', BADGE_VARIANTS.neutral],
-      ['unparseable', 'bg-red-100'],
+      ['unparseable', 'bg-[var(--semantic-danger-bg)]'],
     ]
 
     for (const [result, expectedClass] of cases) {

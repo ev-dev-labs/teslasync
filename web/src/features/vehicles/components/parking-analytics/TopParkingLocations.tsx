@@ -13,11 +13,13 @@ import {
   type Column,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
 
 import type { LocationDwell, ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TopParkingLocationsProps {
   summary: ParkingSummary;
@@ -31,14 +33,21 @@ export function TopParkingLocations({
   state,
   className,
 }: TopParkingLocationsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
-  const ongoing = summary.stints.find((stint) => stint.ongoing);
+  const { formatDateTime } = useDateFormat();
+  const censoredLocations = useMemo(
+    () => new Set(summary.stints.filter((stint) => stint.rightCensored).map((stint) => stint.location)),
+    [summary.stints],
+  );
   const columns = useMemo<Column<LocationDwell>[]>(
     () => [
       {
         key: 'location',
         header: t('parking.location', 'Location'),
+        filterValue: (row) => row.location ?? null,
+        filterValueLabel: (_value, row) => row.location ?? t('parking.unknown', 'Unknown location'),
         visibleOnMobile: true,
         render: (row) => (
           <span className="flex items-center gap-2">
@@ -49,9 +58,9 @@ export function TopParkingLocations({
             >
               {row.location ?? t('parking.unknown', 'Unknown location')}
             </Text>
-            {ongoing?.location === row.location ? (
-              <Badge variant="info" size="sm">
-                {t('parking.now', 'now')}
+            {censoredLocations.has(row.location) ? (
+              <Badge variant="neutral" size="sm">
+                {t('comfortConsistency.directory.censored', 'Right-censored')}
               </Badge>
             ) : null}
           </span>
@@ -60,6 +69,8 @@ export function TopParkingLocations({
       {
         key: 'stints',
         header: t('parking.stints', 'Stints'),
+        filterValue: (row) => row.stints,
+        filterValueLabel: (_value, row) => fmtInt(row.stints),
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
@@ -69,27 +80,36 @@ export function TopParkingLocations({
       },
       {
         key: 'totalMs',
-        header: t('parking.dwell', 'Time Parked'),
+        header: t('parking.dwell', 'Time parked'),
+        filterValue: (row) => row.totalMs / 1_000,
+        filterValueLabel: (_value, row) => formatDuration(row.totalMs / 1_000),
         align: 'right',
         visibleOnMobile: true,
         render: (row) => (
           <Text variant="body" mono>
-            {formatDuration(row.totalMs / 1_000, { precision: 1 })}
+            {formatDuration(row.totalMs / 1_000)}
+            {censoredLocations.has(row.location) ? (
+              <Text as="span" variant="caption" className="block">
+                {t('batteryPassport.distribution.minimum', 'Observed minimum')}
+              </Text>
+            ) : null}
           </Text>
         ),
       },
       {
         key: 'share',
         header: t('parking.share', 'Share'),
+        filterValue: (row) => row.share,
+        filterValueLabel: (_value, row) => `${fmtNumber(row.share * 100)}%`,
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {fmtNumber(row.share * 100, 0)}%
+            {fmtNumber(row.share * 100)}%
           </Text>
         ),
       },
     ],
-    [formatDuration, ongoing, t],
+    [formatDuration, censoredLocations, t, fmtInt, fmtNumber],
   );
 
   return (
@@ -100,8 +120,8 @@ export function TopParkingLocations({
     >
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('parking.topLocations', 'Where It Sits')}
+          <MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+          {t('parking.topLocations', 'Where it sits')}
           <HelpTooltip
             size="sm"
             i18nKey="help.parkingAnalytics.body"
@@ -122,6 +142,20 @@ export function TopParkingLocations({
             },
           )}
         </Text>
+        <Text as="p" variant="caption" className="mt-1">
+          {t('vehicles.detail.brief.snapshot', 'Source snapshot')}: {formatDateTime(
+            summary.coverage.observationEndMs == null
+              ? null
+              : new Date(summary.coverage.observationEndMs),
+            { tz: summary.coverage.timeZone },
+          )}
+        </Text>
+        <Text as="p" variant="caption" className="mt-1">
+          {t(
+            'parking.briefDescription',
+            'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.',
+          )}
+        </Text>
         <ParkingSectionBody state={state} className="mt-3 min-h-72">
           {summary.locations.length === 0 ? (
             <EmptyState
@@ -139,6 +173,7 @@ export function TopParkingLocations({
           ) : (
             <DataTable
               tableId="vehicles:parking-locations"
+              enableValueFilters={!summary.coverage.possiblyCapped}
               columns={columns}
               data={summary.locations}
               keyExtractor={(row) => row.location ?? '__unknown__'}

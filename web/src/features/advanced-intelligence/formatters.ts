@@ -14,7 +14,7 @@ export function formatEfficiencyFromSI(
   if (whPerM == null || !Number.isFinite(whPerM)) return '—';
   const whPerDisplayDistance = whPerM * convertDistanceToSI(1, units.distance);
   const energy = convertEnergyFromSI(whPerDisplayDistance, units.energy);
-  return `${fmtNumber(energy, 3)} ${units.energy}/${units.distance}`;
+  return `${fmtNumber(energy)} ${units.energy}/${units.distance}`;
 }
 
 /** Format an ISO-currency amount supplied in that currency's minor units. */

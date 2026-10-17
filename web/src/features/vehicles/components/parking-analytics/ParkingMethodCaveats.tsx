@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ParkingMethodCaveatsProps {
   summary: ParkingSummary;
@@ -20,6 +21,7 @@ export function ParkingMethodCaveats({
   rangeStart,
   rangeEnd,
 }: ParkingMethodCaveatsProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
   const coverage = summary.coverage;
@@ -27,7 +29,7 @@ export function ParkingMethodCaveats({
     coverage.overlappingGaps + coverage.zeroLengthGaps;
   const observationEnd =
     coverage.observationEndMs != null
-      ? formatDateTime(new Date(coverage.observationEndMs))
+      ? formatDateTime(new Date(coverage.observationEndMs), { tz: coverage.timeZone })
       : '—';
 
   return (
@@ -40,7 +42,7 @@ export function ParkingMethodCaveats({
         <Text as="p" variant="bodySm">
           {t(
             'parking.coverage.utcWindow',
-            'The server filters drive starts from {{start}} through {{end}} as UTC calendar dates; parking before the first returned drive cannot be reconstructed.',
+            'The server filters drive starts from {{start}} (inclusive) to {{end}} (exclusive) as exact instants; parking before the first returned drive cannot be reconstructed.',
             { start: rangeStart, end: rangeEnd },
           )}
         </Text>

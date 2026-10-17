@@ -62,6 +62,7 @@ import {
   TOTP_INVALID_CODE,
   TOTP_RATE_LIMITED_CODE,
   TOTP_ENROLLMENT_EXPIRED_CODE,
+  totpKeys,
 } from '@/api/hooks/useTOTP'
 import type { TOTPEnrollment } from '@/api/types'
 import { ToastProvider } from '@/components/feedback/Toast'
@@ -96,13 +97,12 @@ function mockApi(handlers: Record<string, Handler> = {}) {
   })
 }
 
-function createWrapper() {
-  const qc = new QueryClient({
+function createWrapper(qc = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
       mutations: { retry: false },
     },
-  })
+  })) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
@@ -113,11 +113,232 @@ function createWrapper() {
 }
 
 /** Render the flow and wait until the initial status query has settled. */
-async function setupFlow() {
-  const view = renderHook(() => useTotpEnrollmentFlow(), { wrapper: createWrapper() })
+async function setupFlow(qc?: QueryClient) {
+  const view = renderHook(() => useTotpEnrollmentFlow(), { wrapper: createWrapper(qc) })
   await waitFor(() => expect(view.result.current.status.isLoading).toBe(false))
   return view
 }
+
+function deferred() {
+  let resolve!: (value: unknown) => void
+  let reject!: (reason: Error) => void
+  const promise = new Promise<unknown>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+const pendingCases = [
+  { action: 'handleEnroll', flag: 'enrolling', path: '/auth/totp/enroll', response: ENROLLMENT },
+  { action: 'handleVerify', flag: 'verifying', path: '/auth/totp/verify', response: { activated: true } },
+  { action: 'handleRegenerate', flag: 'regenerating', path: '/auth/totp/backup-codes/regenerate', response: { backup_codes: ['NEW-CODE'] } },
+  { action: 'handleConfirmDisable', flag: 'revoking', path: '/auth/totp', response: undefined },
+] as const
+
+describe('useTotpEnrollmentFlow — pending ownership', () => {
+  it.each(pendingCases)('guards every dismissal and duplicate action during $action', async ({ action, flag, path, response }) => {
+    const work = deferred()
+    mockApi({
+      '/auth/totp/enroll': () => ENROLLMENT,
+      [path]: (opts) => path === '/auth/totp' && !isDelete(opts) ? NOT_ENROLLED : work.promise,
+    })
+    const { result } = await setupFlow()
+    if (action !== 'handleEnroll') {
+      await act(async () => { await result.current.handleEnroll() })
+    }
+    act(() => {
+      result.current.changeVerifyCode('123456')
+      result.current.openDisableConfirm()
+    })
+    const previousEnrollment = result.current.enrollment
+    const previousStep = result.current.dialogStep
+    let completion!: Promise<void>
+    act(() => {
+      completion = result.current[action]()
+      result.current.closeDialog()
+      result.current.closeDisableConfirm()
+      result.current.changeVerifyCode('999999')
+      void result.current[action]()
+    })
+    expect(result.current[flag]).toBe(true)
+    expect(result.current.dialogStep).toBe(previousStep)
+    expect(result.current.enrollment).toEqual(previousEnrollment)
+    expect(result.current.showDisableConfirm).toBe(true)
+    expect(result.current.verifyCode).toBe('123456')
+    await waitFor(() => {
+      const calls = mockedRequest.mock.calls.filter(([url, opts]) =>
+        url === path && (path !== '/auth/totp' || isDelete(opts)),
+      )
+      expect(calls).toHaveLength(1)
+    })
+    await act(async () => {
+      work.resolve(response)
+      await completion
+    })
+    expect(result.current[flag]).toBe(false)
+    if (action === 'handleEnroll') expect(result.current.dialogStep).toBe('enroll')
+    if (action === 'handleVerify') expect(result.current.revealedCodes).toEqual(ENROLLMENT.backup_codes)
+    if (action === 'handleRegenerate') expect(result.current.revealedCodes).toEqual(['NEW-CODE'])
+    if (action === 'handleConfirmDisable') expect(result.current.showDisableConfirm).toBe(false)
+    act(() => {
+      result.current.closeDialog()
+      result.current.closeDisableConfirm()
+    })
+    expect(result.current.dialogStep).toBe('closed')
+    expect(result.current.showDisableConfirm).toBe(false)
+  })
+
+  describe.each(['success', 'rejection'] as const)('stale %s', (settlement) => {
+    it.each(pendingCases)('cannot reopen, reset, or unlock a newer flow after $action', async ({ action, path, response }) => {
+      const oldWork = deferred()
+      const newWork = deferred()
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+      mockApi({
+        '/auth/totp/enroll': () => ENROLLMENT,
+        [path]: (opts) => path === '/auth/totp' && !isDelete(opts) ? NOT_ENROLLED : oldWork.promise,
+      })
+      const { result } = await setupFlow(qc)
+      if (action !== 'handleEnroll') {
+        await act(async () => { await result.current.handleEnroll() })
+      }
+      act(() => {
+        result.current.changeVerifyCode('123456')
+        result.current.openDisableConfirm()
+      })
+      let oldCompletion!: Promise<void>
+      act(() => { oldCompletion = result.current[action]() })
+      await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(path, expect.objectContaining({
+        method: path === '/auth/totp' ? 'DELETE' : 'POST',
+      })))
+      // The status observer propagates a cache write asynchronously, so
+      // await the contracted reset (and the restore below) rather than
+      // asserting synchronously inside the write's act() block.
+      await act(async () => { qc.setQueryData(totpKeys.status, { mode: 'open' }) })
+      await waitFor(() => expect(result.current.dialogStep).toBe('closed'))
+      expect(result.current.enrollment).toBeNull()
+      expect(result.current.showDisableConfirm).toBe(false)
+      await act(async () => { qc.setQueryData(totpKeys.status, NOT_ENROLLED) })
+      await waitFor(() => expect(result.current.status.data).toEqual(NOT_ENROLLED))
+      mockApi({ '/auth/totp/enroll': () => newWork.promise })
+      act(() => { result.current.openDisableConfirm() })
+      let newCompletion!: Promise<void>
+      act(() => { newCompletion = result.current.handleEnroll() })
+      await act(async () => {
+        if (settlement === 'success') oldWork.resolve(response)
+        else oldWork.reject(new ApiError('old failure', 401, TOTP_INVALID_CODE))
+        await oldCompletion
+      })
+      expect(result.current.enrolling).toBe(true)
+      expect(result.current.dialogStep).toBe('closed')
+      expect(result.current.enrollment).toBeNull()
+      expect(result.current.revealedCodes).toBeNull()
+      expect(result.current.verifyError).toBeNull()
+      expect(result.current.showDisableConfirm).toBe(true)
+      act(() => {
+        result.current.closeDialog()
+        result.current.closeDisableConfirm()
+      })
+      expect(result.current.showDisableConfirm).toBe(true)
+      await act(async () => {
+        newWork.resolve(ENROLLMENT)
+        await newCompletion
+      })
+      expect(result.current.dialogStep).toBe('enroll')
+      expect(result.current.enrollment).toEqual(ENROLLMENT)
+      expect(result.current.enrolling).toBe(false)
+      qc.clear()
+    })
+  })
+
+  it.each(pendingCases)('unlocks matching rejection of $action without losing the verification draft', async ({ action, flag, path }) => {
+    const work = deferred()
+    mockApi({
+      '/auth/totp/enroll': () => ENROLLMENT,
+      [path]: (opts) => path === '/auth/totp' && !isDelete(opts) ? NOT_ENROLLED : work.promise,
+    })
+    const { result } = await setupFlow()
+    if (action !== 'handleEnroll') {
+      await act(async () => { await result.current.handleEnroll() })
+    }
+    act(() => {
+      result.current.changeVerifyCode('123456')
+      result.current.openDisableConfirm()
+    })
+    let completion!: Promise<void>
+    act(() => { completion = result.current[action]() })
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(path, expect.objectContaining({
+      method: path === '/auth/totp' ? 'DELETE' : 'POST',
+    })))
+    await act(async () => {
+      work.reject(new ApiError('mismatch', 401, TOTP_INVALID_CODE))
+      await completion
+    })
+    expect(result.current[flag]).toBe(false)
+    expect(result.current.verifyCode).toBe('123456')
+    if (action === 'handleVerify') {
+      expect(result.current.dialogStep).toBe('enroll')
+      expect(result.current.enrollment).toEqual(ENROLLMENT)
+      expect(result.current.verifyError).toMatch(/did not match/i)
+    }
+    act(() => {
+      result.current.closeDialog()
+      result.current.closeDisableConfirm()
+    })
+    expect(result.current.dialogStep).toBe('closed')
+    expect(result.current.showDisableConfirm).toBe(false)
+  })
+
+  it('invalidates settlement when the query-client scope changes during pending work', async () => {
+    const work = deferred()
+    mockApi({ '/auth/totp/enroll': () => work.promise })
+    const first = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const second = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    second.setQueryData(totpKeys.status, NOT_ENROLLED)
+    let currentClient = first
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <QueryClientProvider client={currentClient}><ToastProvider>{children}</ToastProvider></QueryClientProvider>
+    }
+    const { result, rerender } = renderHook(() => useTotpEnrollmentFlow(), { wrapper: Wrapper })
+    await waitFor(() => expect(result.current.status.isLoading).toBe(false))
+    let completion!: Promise<void>
+    act(() => { completion = result.current.handleEnroll() })
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/auth/totp/enroll', expect.anything()))
+    currentClient = second
+    rerender()
+    expect(result.current.enrolling).toBe(false)
+    act(() => { result.current.openDisableConfirm() })
+    await act(async () => {
+      work.resolve(ENROLLMENT)
+      await completion
+    })
+    expect(result.current.dialogStep).toBe('closed')
+    expect(result.current.enrollment).toBeNull()
+    expect(result.current.showDisableConfirm).toBe(true)
+    first.clear()
+    second.clear()
+  })
+
+  it('does not apply an unmounted instance completion to a fresh instance', async () => {
+    const work = deferred()
+    mockApi({ '/auth/totp/enroll': () => work.promise })
+    const old = await setupFlow()
+    let completion!: Promise<void>
+    act(() => { completion = old.result.current.handleEnroll() })
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/auth/totp/enroll', expect.anything()))
+    old.unmount()
+    mockApi({ '/auth/totp/enroll': () => ENROLLMENT })
+    const fresh = await setupFlow()
+    await act(async () => { await fresh.result.current.handleEnroll() })
+    act(() => { fresh.result.current.changeVerifyCode('654321') })
+    await act(async () => {
+      work.resolve({ ...ENROLLMENT, backup_codes: ['OLD-CODE'] })
+      await completion
+    })
+    expect(fresh.result.current.enrollment).toEqual(ENROLLMENT)
+    expect(fresh.result.current.verifyCode).toBe('654321')
+  })
+})
 
 beforeEach(() => {
   mockedRequest.mockReset()

@@ -61,6 +61,9 @@ vi.mock('@/components/charts', () => {
       title,
       subtitle,
       ariaLabel,
+      ariaDescription,
+      metadata,
+      exportData,
       data,
       dataColumns,
       exportFilename,
@@ -70,6 +73,9 @@ vi.mock('@/components/charts', () => {
       title?: string;
       subtitle?: string;
       ariaLabel?: string;
+      ariaDescription?: string;
+      metadata?: { sourceLabel?: string; rangeLabel?: string };
+      exportData?: ReadonlyArray<Record<string, unknown>>;
       data?: ReadonlyArray<Record<string, unknown>>;
       dataColumns?: ReadonlyArray<{ key: string; label: string }>;
       exportFilename?: string;
@@ -81,6 +87,9 @@ vi.mock('@/components/charts', () => {
         {subtitle ? <p data-testid="cc-subtitle">{subtitle}</p> : null}
         <div role="img" aria-label={ariaLabel}>
           <span data-testid="cc-data">{JSON.stringify(data ?? [])}</span>
+          <span data-testid="cc-description">{ariaDescription}</span>
+          <span data-testid="cc-metadata">{JSON.stringify(metadata)}</span>
+          <span data-testid="cc-export-data">{JSON.stringify(exportData ?? [])}</span>
           <span data-testid="cc-columns">{JSON.stringify(dataColumns ?? [])}</span>
           <span data-testid="cc-export-filename">{String(exportFilename ?? '')}</span>
           <span data-testid="cc-exportable">{String(exportable ?? '')}</span>
@@ -156,7 +165,7 @@ describe('SessionCurveChart — panel chrome', () => {
 
     expect(screen.getByRole('heading', { name: 'Power vs SOC' })).toBeInTheDocument();
     expect(screen.getByTestId('cc-subtitle')).toHaveTextContent(
-      'Charging power curve for selected session',
+      'Curves are modeled from session metadata, not sampled charging telemetry.',
     );
     expect(
       screen.getByRole('img', {
@@ -175,6 +184,20 @@ describe('SessionCurveChart — panel chrome', () => {
     ]);
     expect(screen.getByTestId('cc-export-filename')).toHaveTextContent('power-vs-soc');
     expect(screen.getByTestId('cc-exportable')).toHaveTextContent('true');
+  });
+
+  it('carries modeled assumptions and returned-window limits into descriptions, metadata and exported rows', () => {
+    renderChart(CURVE);
+    const source = 'Curves are modeled from session metadata, not sampled charging telemetry.';
+    const scope = 'Up to 200 returned sessions; not a full-history aggregate.';
+    expect(screen.getByTestId('cc-description')).toHaveTextContent(`${source} ${scope}`);
+    expect(JSON.parse(screen.getByTestId('cc-metadata').textContent ?? '{}')).toEqual({
+      sourceLabel: source,
+      rangeLabel: scope,
+    });
+    expect(JSON.parse(screen.getByTestId('cc-export-data').textContent ?? '[]')).toEqual(
+      readChartRows().map((row) => ({ ...row, source_context: source, returned_window: scope })),
+    );
   });
 });
 

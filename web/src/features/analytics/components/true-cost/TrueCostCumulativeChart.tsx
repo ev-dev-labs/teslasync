@@ -14,10 +14,9 @@ import {
   axisTick,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
-
-const DELTA_COLOR = '#818cf8';
 
 export function TrueCostCumulativeChart({
   analysis,
@@ -25,6 +24,7 @@ export function TrueCostCumulativeChart({
   display,
 }: TrueCostSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const rows = useMemo(
     () => analysis.eligibleMonthly
       .filter((row) => row.month && row.derivedCumulativeDelta != null)
@@ -86,7 +86,7 @@ export function TrueCostCumulativeChart({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value: number) => display.formatCurrency(value, 0)}
+                  tickFormatter={(value: number) => display.formatCurrency(value)}
                 />
                 <Tooltip
                   content={<ChartTooltip valueFormatter={(value) =>
@@ -96,9 +96,9 @@ export function TrueCostCumulativeChart({
                   type="monotone"
                   dataKey="derivedCumulativeDelta"
                   name={t('tco.charts.cumulative.series', 'Derived cumulative fuel delta')}
-                  stroke={DELTA_COLOR}
-                  fill={DELTA_COLOR}
-                  fillOpacity={0.16}
+                  stroke={palette[4]}
+                  fill={palette[4]}
+                  fillOpacity={0.08}
                   strokeWidth={2}
                 />
               </AreaChart>

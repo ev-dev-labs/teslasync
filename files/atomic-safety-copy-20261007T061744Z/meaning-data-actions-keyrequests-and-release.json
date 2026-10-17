@@ -1,0 +1,71 @@
+{
+  "recordedUtc": "2026-10-07T06:19:03.282111+00:00",
+  "actualStartUtc": "2026-10-07T06:16:47.7503845Z",
+  "hardStopUtc": "2026-10-07T06:36:47.7503845Z",
+  "status": "SOURCE APPLIED; FOCUSED TESTS AUTHORED ONLY; NOT TECHNICALLY ACCEPTED",
+  "exactSourceDeltaOnlyTwoApprovedKeys": true,
+  "sourceLineCountBefore": 353,
+  "sourceLineCountAfter": 353,
+  "originalTestUnchanged": true,
+  "newTestAbsentBefore": true,
+  "canonicalKeyRequests": [
+    {
+      "oldKey": "safetySettings.listing.subtitle",
+      "key": "safetySettings.listing.cardsSubtitle",
+      "english": "Each tile shows the current value on this install and links to the canonical Settings page where you can change it."
+    },
+    {
+      "oldKey": "safetySettings.pageSubtitle",
+      "key": "safetySettings.cardsPageSubtitle",
+      "english": "Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to change a value."
+    }
+  ],
+  "catalogOwner": "Parent; no canonical or generated catalog writes by this task",
+  "meaningDataActionMap": {
+    "posture": "Same settings-derived four metrics: safeguards, quiet window, cadence, Fleet API state; same unavailable/initial/stale operands.",
+    "narrator": "AISafetySettingExplainer and feature gating untouched; focused copy suite isolates narrator only.",
+    "listing": "Same seven cards, titles, descriptions, docs anchors, value renderers, badge variants and test IDs; only listing instruction key changes.",
+    "settingsValues": [
+      "quiet_hours_enabled",
+      "quiet_hours_start",
+      "quiet_hours_end",
+      "alert_digest_mode",
+      "critical_flash_enabled",
+      "tab_badge_enabled",
+      "api_suspended"
+    ],
+    "actions": "Existing docs links remain on every card. Refetch retry remains in fatal/stale states; no setting mutation action added or changed.",
+    "query": "useSettings invocation untouched; no additional request, filter or range introduced.",
+    "linksCaveat": "Actual existing per-card links are documentation deep-links, not direct Settings edit links; preserved exactly per approval. Existing listing changeHint still directs the user to the main Settings page.",
+    "sections": "KPI region, opt-in AI wrapper, listing panel, seven cards and changeHint unchanged."
+  },
+  "focusedCasesAuthored": [
+    "Canonical-English listing sibling exists and renders; all seven values and docs links retained.",
+    "Canonical-English page sibling exists and renders; both original row-copy leaves retain exact original values.",
+    "Unavailable state preserves links and unknown-value chips, and retry invokes refetch."
+  ],
+  "executed": {
+    "tests": false,
+    "typecheck": false,
+    "lint": false,
+    "audit": false,
+    "build": false,
+    "browser": false,
+    "preview": false,
+    "install": false,
+    "commit": false,
+    "push": false,
+    "deploy": false
+  },
+  "metadataScope": "Read-only byte/hash, line-count and scoped diff inspection only; no technical validator or test runner.",
+  "exclusivePairRelease": {
+    "paths": [
+      "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "web\\src\\features\\settings\\pages\\SafetyPage.catalogCopy.test.tsx"
+    ],
+    "sourceWritesFinished": true,
+    "leaseReleased": true,
+    "noFurtherWritesByTask": true,
+    "parentNextStep": "Append the exact approved English sibling leaves without changing existing leaves; run focused cases only during the parent consolidated stable-source gate."
+  }
+}

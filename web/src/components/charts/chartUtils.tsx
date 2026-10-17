@@ -1,6 +1,6 @@
 import { CartesianGrid } from 'recharts'
 import { fmtNumber } from '../../lib/numberFormat'
-import { chartTokens } from '../../lib/tokens'
+import { chartTokens, motion } from '../../lib/tokens'
 
 export { CHART_COLORS, CHART_COLORS_NEON as NEON_COLORS } from '../../lib/colors'
 
@@ -14,10 +14,13 @@ export const safe = (v: unknown): number => (typeof v === 'number' && isFinite(v
 // `fmt` inside axis tick / label formatters; a stray out-of-range `decimals`
 // would make `Intl.NumberFormat` throw a RangeError and blank the whole chart
 // through the render boundary, so we guard the value instead of trusting callers.
-export const fmt = (v: unknown, decimals = 1): string => fmtNumber(v, Math.max(0, Math.min(20, decimals)))
+// Pure utility: mounted callers must subscribe via useNumberFormatting so
+// memoized axis callbacks are refreshed when settings change.
+export const fmt = (v: unknown, decimals?: number): string =>
+  fmtNumber(v, decimals == null ? undefined : Math.max(0, Math.min(20, decimals)))
 
 export const chartAnimation = {
-  animationDuration: 800,
+  animationDuration: parseFloat(motion.duration.normal),
   animationEasing: 'ease-out' as const,
 }
 

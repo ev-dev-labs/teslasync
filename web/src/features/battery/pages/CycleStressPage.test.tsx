@@ -19,6 +19,7 @@ import {
 } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 
@@ -224,6 +225,7 @@ interface QueryStub {
   isSuccess: boolean;
   isError: boolean;
   error: unknown;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   refetch: () => void;
 }
 
@@ -307,6 +309,125 @@ beforeEach(() => {
 });
 
 describe('CycleStressPage', () => {
+  it.each(['no vehicle', 'loading', 'paused initial', 'failure', 'empty', 'unqualified'] as const)(
+    'CSQA-03 excludes generated chart alternatives for %s while preserving every shell',
+    (sourceState) => {
+      if (sourceState === 'no vehicle') h.vehicleId = null;
+      if (sourceState === 'loading') {
+        h.sessions = query(refetchCharging, { isLoading: true });
+        h.drives = query(refetchDrives, { isLoading: true });
+      }
+      if (sourceState === 'paused initial') {
+        h.sessions = query(refetchCharging, { fetchStatus: 'paused', isSuccess: false });
+        h.drives = query(refetchDrives, { fetchStatus: 'paused', isSuccess: false });
+      }
+      if (sourceState === 'failure') {
+        h.sessions = query(refetchCharging, { isError: true });
+        h.drives = query(refetchDrives, { isError: true });
+      }
+      if (sourceState === 'empty' || sourceState === 'unqualified') {
+        const history = readyHistory();
+        h.sessions = query(refetchCharging, {
+          data: sourceState === 'empty' ? [] : [{ ...history.sessions[0], end_soc_pct: null }],
+        });
+        h.drives = query(refetchDrives, { data: [] });
+      }
+      renderPage();
+      expectEverySection();
+      for (const id of ['depth-distribution', 'threshold-sensitivity', 'exponent-sensitivity',
+        'mean-soc-profile', 'duration-profile']) {
+        const section = screen.getByTestId(`cycle-stress-${id}`);
+        expect(section.querySelector('figcaption table')).toBeNull();
+        expect(section.querySelector('figcaption')).toHaveTextContent(
+          /Select a vehicle|Loading Cycle Stress|Both source histories|has not resolved|No drive or charging|No returned row/,
+        );
+      }
+    },
+  );
+
+  it('CSQA-03 retains all raw chart alternatives and real zero bins with available cycles', () => {
+    h.drives = query(refetchDrives, { isLoading: true });
+    renderPage();
+    for (const [id, rowCount] of [
+      ['depth-distribution', 5], ['threshold-sensitivity', 5], ['exponent-sensitivity', 4],
+      ['mean-soc-profile', 5], ['duration-profile', 4],
+    ] as const) {
+      const table = screen.getByTestId(`cycle-stress-${id}`).querySelector('figcaption table');
+      expect(table).not.toBeNull();
+      expect(table?.querySelectorAll('tbody tr')).toHaveLength(rowCount);
+    }
+    const depthTable = screen.getByTestId('cycle-stress-depth-distribution')
+      .querySelector('figcaption table');
+    // First histogram bin per HISTOGRAM_EDGES [0, 10, 25, 50, 75, 100]
+    // (unchanged since the lib was created; the old '0-20%' label never
+    // matched production). Zero bins stay explicit, never blank.
+    expect(depthTable?.querySelector('tbody tr')).toHaveTextContent('0-10%000');
+  });
+
+  it('CSQA-04/06 keeps every diagnostic label and caption wrapping with neutral decorative icons', () => {
+    renderPage();
+    for (const [id, count] of [
+      ['source-coverage', 8], ['continuity', 10], ['composition', 6], ['evidence-support', 6],
+    ] as const) {
+      const section = screen.getByTestId(`cycle-stress-${id}`);
+      expect(section.querySelectorAll('[data-role="metric-card"]')).toHaveLength(count);
+      for (const caption of section.querySelectorAll('[data-role="metric-subtitle"]')) {
+        expect(caption).toHaveClass('whitespace-normal', 'break-words');
+        expect(caption).not.toHaveClass('truncate');
+      }
+      for (const label of section.querySelectorAll('[data-role="metric-label"]')) {
+        expect(label).not.toHaveClass('truncate');
+        expect(label.firstElementChild).toHaveClass('break-words');
+      }
+      for (const icon of section.querySelectorAll('[data-role="metric-icon"]')) {
+        expect(icon).toHaveAttribute('data-color', 'neutral');
+      }
+    }
+  });
+
+  it.each(['cap', 'unqualified', 'thin'] as const)(
+    'CSQA-07 keeps the %s caveat beside available evidence with an ordinary pending neighbor',
+    (caveat) => {
+      const history = readyHistory();
+      h.sessions = query(refetchCharging, {
+        data: caveat === 'cap'
+          ? Array.from({ length: 1_000 }, (_, index) => ({ ...history.sessions[0], id: String(index) }))
+          : caveat === 'unqualified'
+            ? [{ ...history.sessions[0], end_soc_pct: null }]
+            : [history.sessions[0]],
+      });
+      h.drives = query(refetchDrives, { isLoading: true });
+      const view = renderPage();
+      const text = caveat === 'cap' ? /1,000-row cap/
+        : caveat === 'unqualified' ? /no complete, valid/ : /Thin support/;
+      expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(text);
+      h.drives = query(refetchDrives, { data: [] });
+      view.rerenderPage();
+      expect(screen.queryByTestId('cycle-stress-retained-caveat')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('cycle-stress-kpis')).getAllByText(text)).toHaveLength(1);
+    },
+  );
+
+  it('CSQA-01 wires cached paused trust into both summary and accounting', () => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, { data: history.sessions, fetchStatus: 'paused' });
+    renderPage();
+    // The retained marker moved off the face into the summary drawer's
+    // status badge.
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('cycle-stress-kpis'),
+      'Retained source evidence',
+      { contains: true },
+    );
+    // Accounting renders no brief: paused trust surfaces as retained numbers
+    // (never a blanked section) while the marker lives in the summary drawer.
+    // (The old accounting text assertion never matched production and is
+    // replaced by this retained-content check.)
+    const accounting = screen.getByTestId('cycle-stress-accounting');
+    expect(within(accounting).getByText('Known rows returned')).toBeInTheDocument();
+    expect(within(accounting).queryByText('No accounting categories are available.')).not.toBeInTheDocument();
+  });
+
   it('renders all fifteen analytical shells with both capped hooks', () => {
     renderPage();
 
@@ -334,9 +455,16 @@ describe('CycleStressPage', () => {
       { target: { value: '2' } },
     );
 
-    const kpis = within(screen.getByTestId('cycle-stress-kpis'));
+    const kpisBand = screen.getByTestId('cycle-stress-kpis');
+    const kpis = within(kpisBand);
     expect(kpis.getByText('80%+ cycle share')).toBeInTheDocument();
-    expect(kpis.getByText('illustrative exponent 2')).toBeInTheDocument();
+    // Metric context moved off the face into the drawer's per-metric groups.
+    fireEvent.click(kpis.getByRole('button', { name: 'Review details' }));
+    const kpisDrawer = screen.getByRole('dialog');
+    expect(within(kpisDrawer).getByRole('group', { name: 'Depth-weighted index' }))
+      .toHaveTextContent('illustrative exponent 2');
+    fireEvent.keyDown(kpisDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('cycle-stress-methodology')).getByText(
         /raised to exponent 2/i,
@@ -401,7 +529,7 @@ describe('CycleStressPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows one retry surface when both histories fail', () => {
+  it('offers independently scoped retries when both histories fail', () => {
     h.sessions = query(refetchCharging, {
       isError: true,
       error: new Error('charging failed'),
@@ -414,10 +542,12 @@ describe('CycleStressPage', () => {
     renderPage();
 
     expectEverySection();
-    const retries = screen.getAllByRole('button', { name: /retry/i });
-    expect(retries).toHaveLength(1);
-    fireEvent.click(retries[0]!);
+    const retries = screen.getAllByRole('button', { name: /^Retry / });
+    expect(retries).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Charging history' }));
     expect(refetchCharging).toHaveBeenCalledTimes(1);
+    expect(refetchDrives).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Drive history' }));
     expect(refetchDrives).toHaveBeenCalledTimes(1);
   });
 
@@ -438,9 +568,9 @@ describe('CycleStressPage', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: 'Retry' }),
+      screen.getAllByRole('button', { name: /^Retry / }),
     ).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Charging history' }));
     expect(refetchCharging).toHaveBeenCalledTimes(1);
     expect(refetchDrives).not.toHaveBeenCalled();
   });
@@ -463,8 +593,11 @@ describe('CycleStressPage', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: 'Retry' }),
+      screen.getAllByRole('button', { name: 'Retry Charging history' }),
     ).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Charging history' }));
+    expect(refetchCharging).toHaveBeenCalledTimes(1);
+    expect(refetchDrives).not.toHaveBeenCalled();
   });
 
   it('keeps all shells and exact accounting for empty success', () => {
@@ -484,5 +617,89 @@ describe('CycleStressPage', () => {
         '0 known returned = 0 included + 0 excluded. Missing completion times are never synthesized from duration, and missing SoC is never imputed.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'retained refresh failure', partial: false },
+    { name: 'independent source failure', partial: true },
+  ])('keeps the history-cap caveat alongside $name', ({ partial }) => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, {
+      data: Array.from({ length: 1_000 }, (_, index) => ({
+        ...history.sessions[0],
+        id: String(index + 1),
+      })),
+      isError: !partial,
+      error: partial ? null : new Error('refresh failed'),
+    });
+    if (partial) {
+      h.drives = query(refetchDrives, {
+        isError: true,
+        error: new Error('drives failed'),
+      });
+    }
+
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(
+      'At least one source returned exactly its 1,000-row cap. Older matching history may be omitted, and the two source spans may differ.',
+    );
+    expect(screen.getAllByRole('button', {
+      name: partial ? 'Retry Drive history' : 'Retry Charging history',
+    })).toHaveLength(1);
+    const unaffectedRetry = partial ? refetchCharging : refetchDrives;
+    fireEvent.click(screen.getByRole('button', {
+      name: partial ? 'Retry Drive history' : 'Retry Charging history',
+    }));
+    expect(unaffectedRetry).not.toHaveBeenCalled();
+  });
+
+  it('retains qualification limits alongside a paused source without inventing zero SoC', () => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, {
+      data: [{ ...history.sessions[0], end_soc_pct: null }],
+      fetchStatus: 'paused',
+    });
+    h.drives = query(refetchDrives, { data: [] });
+
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(
+      'Returned rows contained no complete, valid, non-future interval with direction-consistent SoC endpoints.',
+    );
+    expect(screen.getByText(
+      'Charging history is paused while offline. Previously loaded evidence, if available, is retained.',
+    )).toBeInTheDocument();
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('cycle-stress-kpis'),
+      'Retained source evidence',
+      { contains: true },
+    );
+    expect(screen.getAllByRole('button', { name: 'Retry Charging history' })).toHaveLength(1);
+  });
+
+  it('keeps thin-support limits visible with retained history and avoids duplicate normal notices', () => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, {
+      data: [history.sessions[0]],
+      fetchStatus: 'paused',
+    });
+    h.drives = query(refetchDrives, { data: [] });
+    const view = renderPage();
+
+    expectEverySection();
+    expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(
+      'Thin support: interpret cycle summaries as limited reconstructed evidence.',
+    );
+
+    h.sessions = query(refetchCharging, { data: [history.sessions[0]] });
+    view.rerenderPage();
+
+    expect(screen.queryByTestId('cycle-stress-retained-caveat')).not.toBeInTheDocument();
+    expect(screen.getAllByText(
+      'Thin support: interpret cycle summaries as limited reconstructed evidence.',
+    )).toHaveLength(1);
   });
 });

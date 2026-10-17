@@ -1,0 +1,992 @@
+{
+  "item": "phase6-qa-maps-temperature-impact",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "started_at": "2026-10-14T01:56:22.235825+00:00",
+  "pins_before": [
+    {
+      "path": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "sha256": "80fbe25757bba3fc9c81d9a6a8571897884190c24b29a7b1899079b8130fb34c",
+      "bytes": 31359
+    },
+    {
+      "path": "web/src/features/maps/pages/TemperatureImpactPage.test.tsx",
+      "sha256": "a990832fc41f43abbc5edcb031d195228fc830129535933aaadad8338bed49cd",
+      "bytes": 27493
+    },
+    {
+      "path": "web/src/features/maps/components/EfficiencyDetectivePanel.tsx",
+      "sha256": "3e78655308d20b2d94cd94d58395f7d7c5fa8456a3a0466bce5c712638b8914f",
+      "bytes": 5256
+    },
+    {
+      "path": "web/src/features/maps/components/EfficiencyDetectivePanel.test.tsx",
+      "sha256": "978ea1b8f809f7b1284ad280317f85f8a44268d9e0aade0799661abc87851a14",
+      "bytes": 4638
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "sha256": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "bytes": 3092
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+      "sha256": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b",
+      "bytes": 11718
+    },
+    {
+      "path": "web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx",
+      "sha256": "dcf332e467233ee84ebde5ac99705ba15088d922b2b1e4d525e3bcc551bba385",
+      "bytes": 4474
+    },
+    {
+      "path": "web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx",
+      "sha256": "96e812070eadf689fa3f3d83d2b2855bc9c32488cabde7c502ba9c834bec5cc3",
+      "bytes": 11408
+    },
+    {
+      "path": "web/src/api/hooks/useAnalytics.ts",
+      "sha256": "f775818ac815813432f0a576ab6e22dbdbbd5106d513aa81fb56b953c5dadb20",
+      "bytes": 22722
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "bytes": 6545
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes": 2095
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "bytes": 6593
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "bytes": 16774
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes": 18863
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411
+    },
+    {
+      "path": "web/src/components/ai/AICabinTemperatureImpactNarrative.tsx",
+      "sha256": "a4cd514a565c43fba478de186a4b275a4e0945b0ecca952bf279d9a1bfebf139",
+      "bytes": 5028
+    },
+    {
+      "path": "web/src/components/layout/PageLayout.tsx",
+      "missing": true
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "bytes": 1225
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "bytes": 41517
+    },
+    {
+      "path": "web/src/components/charts/ChartTooltip.tsx",
+      "sha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "bytes": 6130
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "bytes": 77157
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658,
+      "pin_at": "2026-10-14T01:57:30.451571+00:00"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783,
+      "pin_at": "2026-10-14T01:57:30.451945+00:00"
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "bytes": 4608,
+      "pin_at": "2026-10-14T01:57:30.452223+00:00"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "bytes": 6443,
+      "pin_at": "2026-10-14T01:57:30.452422+00:00"
+    },
+    {
+      "path": "web/src/hooks/useAiStream.ts",
+      "sha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "bytes": 23120,
+      "pin_at": "2026-10-14T01:57:30.452610+00:00"
+    },
+    {
+      "path": "web/src/components/ai/withAiFeature.tsx",
+      "sha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "bytes": 2255,
+      "pin_at": "2026-10-14T01:57:30.452764+00:00"
+    },
+    {
+      "path": "web/src/components/ai/AIFeatureCard.tsx",
+      "sha256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "bytes": 13277,
+      "pin_at": "2026-10-14T01:57:30.452902+00:00"
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "bytes": 7868,
+      "pin_at": "2026-10-14T01:57:30.453087+00:00"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "bytes": 5230,
+      "pin_at": "2026-10-14T01:58:21.697581+00:00"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "bytes": 3322,
+      "pin_at": "2026-10-14T01:59:07.142957+00:00"
+    },
+    {
+      "path": "web/src/components/ai/AiOutputPanel.tsx",
+      "sha256": "c3bb5766576f4e80b16762122d2ee35038a9aa7cf6fe96df426269fe07e3c8a4",
+      "bytes": 4830,
+      "pin_at": "2026-10-14T01:59:07.143147+00:00"
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "bytes": 5253,
+      "pin_at": "2026-10-14T02:00:16.179776+00:00"
+    },
+    {
+      "path": "web/src/lib/timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "bytes": 1863,
+      "pin_at": "2026-10-14T02:00:16.180241+00:00"
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes": 1493,
+      "pin_at": "2026-10-14T02:01:36.167904+00:00"
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "sha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "bytes": 2081,
+      "pin_at": "2026-10-14T02:01:36.168159+00:00"
+    }
+  ],
+  "schema_version": 1,
+  "confirmed_findings": [
+    {
+      "id": "TI-QA-001",
+      "rule": "initial-paused-not-empty",
+      "severity": "high",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "line": 164,
+      "support_lines": [
+        327,
+        355
+      ],
+      "mechanism": "Enabled pending/paused/no-data query has isLoading=false, initial DataState with isRefreshBlocked=true, no fatal error. sectionFallback ignores initial blocked state and shows No drive data available yet in all six sections. Header warning does not establish empty results.",
+      "repro": "Synthetic vehicleId=7,data=undefined,isPending=true,isLoading=false,fetchStatus=paused,error=null: all six sectionFallback calls reach EmptyState. Expected unresolved/blocked explanation, not recorded-drive emptiness.",
+      "fix": "Distinct no-retained initial-blocked branch before authoritative empty; retain no-vehicle prerequisite and fatal/retained paths.",
+      "owner": "temperature-page-pair",
+      "test_gap": "Page test375 covers retained paused, not initial paused.",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-002",
+      "rule": "initial-paused-not-empty",
+      "severity": "medium",
+      "file": "web/src/features/maps/components/EfficiencyDetectivePanel.tsx",
+      "line": 69,
+      "support_lines": [
+        36,
+        41,
+        75,
+        77
+      ],
+      "mechanism": "With nonempty selected vehicleId, pending/paused has no data/isLoading false. SourceContent maps status initial to empty and says Select a vehicle to diagnose efficiency shifts although a vehicle is selected. Custom emptyContent has no blocked reason/recovery.",
+      "repro": "Synthetic vehicleId=7,undefined data,isLoading=false,fetchStatus=paused: empty selection prompt. Expected selected-vehicle unresolved/blocked state.",
+      "fix": "Own initial-blocked/resolved-empty diagnosis copy and recovery; retain fatal and retained Retry.",
+      "owner": "detective-pair",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-003",
+      "rule": "date-preference-bypass",
+      "severity": "medium",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "line": 235,
+      "support_lines": [
+        29,
+        279
+      ],
+      "mechanism": "Recent-drive cells and scatter alternative use pure formatDate without options. dateFormat.ts37-72 defaults to browser locale/timezone, unlike useDateFormat.ts74-92 saved preference bridge. Memo dependencies omit preference-aware date callback.",
+      "repro": "Assume synthetic browser UTC, saved tz_display_default=user,timezone_user=America/Los_Angeles,locale=de-DE, drive_date=2026-01-01T00:30Z: source displays January1/browser locale, expected December31/saved locale. No actual timezone/browser queried.",
+      "fix": "Reuse useDateFormat, update memo dependencies; independent boundary/reactivity expectations.",
+      "owner": "temperature-page-pair",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-004",
+      "rule": "date-preference-bypass",
+      "severity": "medium",
+      "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "line": 57,
+      "support_lines": [
+        8,
+        54,
+        59
+      ],
+      "mechanism": "Freshness calls pure formatDateTime without saved options. Direct test147-153 derives expectation using same helper.",
+      "repro": "Synthetic receipt and saved locale/timezone differing from assumed browser: source follows browser, expected saved preference.",
+      "fix": "Existing useDateFormat at this adapter, direct independent rerender/date-boundary assertions.",
+      "owner": "shared-maps-brief-pair",
+      "duplicate_of": "docs/frontend-audits/phase6-qa-maps-map-overview.json#MAP-QA-005",
+      "new_fix_request": false,
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-005",
+      "rule": "precision-preservation",
+      "severity": "medium",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "line": 216,
+      "support_lines": [
+        289,
+        292
+      ],
+      "mechanism": "monthlyData rounds converted avg_temp to one decimal before saved-precision formatting and plotting; lost digits cannot be recovered. Raw query payload stays unchanged.",
+      "repro": "Synthetic avg_temp=12.345Ã‚Â°C, saved precision3: chart value12.3; alternative formats12.300Ã‚Â°C instead of12.345Ã‚Â°C.",
+      "fix": "Keep unrounded converted chart number; round only formatted output.",
+      "owner": "temperature-page-pair",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-006",
+      "rule": "bucket-boundary-label",
+      "severity": "medium",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "line": 100,
+      "support_lines": [
+        71,
+        84
+      ],
+      "mechanism": "Hot membership min-inclusive at30Ã‚Â°C, but label says >30Ã‚Â°C (>86Ã‚Â°F). Boundary reading is assigned to a caption that excludes it. Clamping extends hot bucket above60.",
+      "repro": "Synthetic outside_temp=30,efficiency=150: assigned hot bucket >30Ã‚Â°C/>86Ã‚Â°F, expected Ã¢â€°Â¥30Ã‚Â°C/Ã¢â€°Â¥86Ã‚Â°F.",
+      "fix": "Correct caption inequality only; retain membership/clamping/raw signs.",
+      "owner": "temperature-page-pair",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-007",
+      "rule": "model-versus-observed-claim",
+      "severity": "medium",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "line": 505,
+      "support_lines": [
+        173,
+        192,
+        498,
+        507
+      ],
+      "mechanism": "Unweighted per-point bucket mean worst.avg-best.avg is described as you save. Canonical tempImpact.optimalDelta repeats that claim. No matched-distance/speed/route control or counterfactual/model is applied; brief correctly says observed consumption.",
+      "repro": "Synthetic cold drive200Wh/km versus mild150Wh/km with differing distances/unknown covariates: source says save50Wh/km; expected observed population difference, not causal/guaranteed saving.",
+      "fix": "Observed-difference wording and coverage caveat; retain arithmetic and coordinate canonical catalog with parent.",
+      "owner": "temperature-page-pair",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-008",
+      "rule": "nonsemantic-decorative-accent",
+      "severity": "low",
+      "file": "web/src/features/maps/components/EfficiencyDetectivePanel.tsx",
+      "line": 63,
+      "mechanism": "aria-hidden decorative Lightbulb uses fixed text-cyan-300 independent of verdict/theme; verdict badge already owns semantic status. Source accent violation, not measured contrast failure.",
+      "repro": "Any detective state: fixed cyan decorative icon. Expected existing muted icon/typography role.",
+      "fix": "Muted semantic token; preserve icon and verdict text.",
+      "owner": "detective-pair",
+      "historical_recurrence": "audit-page-139 visualIssues",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    },
+    {
+      "id": "TI-QA-009",
+      "rule": "i18n-pluralization",
+      "severity": "low",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "line": 496,
+      "support_lines": [
+        488,
+        496
+      ],
+      "mechanism": "t passes count but fallback/canonical optimalDesc say across {{count}} drives; optimalDesc_one/_other absent. Page test521 expects across 1 drives.",
+      "repro": "Best bucket count1: source text across 1 drives; expected across 1 drive.",
+      "fix": "Parent canonical plural forms and future authorized covering expectation update.",
+      "owner": "temperature-page-pair",
+      "confirmation": "Confirmed source mechanism; reproduction reasoned, NOT EXECUTED; no native observation"
+    }
+  ],
+  "summary": {
+    "confirmed_finding_records": 9,
+    "new_confirmed_records": 8,
+    "shared_duplicate_recurrences": 1,
+    "confirmed_by_rule": {
+      "initial-paused-not-empty": 2,
+      "date-preference-bypass": 2,
+      "precision-preservation": 1,
+      "bucket-boundary-label": 1,
+      "model-versus-observed-claim": 1,
+      "nonsemantic-decorative-accent": 1,
+      "i18n-pluralization": 1
+    },
+    "confirmed_by_primary_file": {
+      "web/src/features/maps/pages/TemperatureImpactPage.tsx": 6,
+      "web/src/features/maps/components/EfficiencyDetectivePanel.tsx": 2,
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx": 1
+    },
+    "counting_method": "One mechanism per record; six empty panels count once; shared recurrence not a new fix; candidates/native excluded.",
+    "source_writes": 0,
+    "test_writes": 0,
+    "catalog_writes": 0,
+    "tests_executed": 0,
+    "conditional_candidates": 6,
+    "native_NOTRUN_groups": 5,
+    "deduplicated_owner_groups": 3,
+    "new_owner_groups": 2,
+    "existing_shared_owner_groups": 1,
+    "authored_cases_NOTRUN": 47,
+    "source_test_files_pinned": 36,
+    "priority": "Initial paused truth; saved date/timezone and precision; observed wording/boundaries; decorative accent/plural grammar."
+  },
+  "generation_failure": {
+    "command": "Oversized inline PowerShell/Python full report generation",
+    "exit": 1,
+    "raw": "The filename or extension is too long. (os error 206)",
+    "effect": "Host rejected before execution; retained initial pins/report; split into bounded artifact-only writes."
+  },
+  "scope": {
+    "readonly_target": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+    "readonly": "Direct source supports/tests; authority docs; exact canonical label lookups. No unrelated source/backend implementation audit.",
+    "writable": [
+      "docs/frontend-audits/phase6-qa-maps-temperature-impact.json",
+      "web/logs/phase6-qa-maps-temperature-impact.log"
+    ],
+    "actual_route": "/temperature-impact",
+    "test_route": "/analytics/temperature-impact; test mount is not production/header route evidence."
+  },
+  "clock": {
+    "first_tool_utc": "2026-10-14T01:55:02.1963757Z",
+    "queue_reservation_utc": "2026-10-14T01:47:59.989Z",
+    "return_deadline_utc": "2026-10-14T02:07:59.989Z",
+    "hard_deadline_utc": "2026-10-14T02:12:59.989Z",
+    "rule": "Earlier explicit deadlines retained; no clock renewal."
+  },
+  "authorities_read": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "range": "entire file"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "range": "1-606 applicable contract and addendum headings"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "range": "1-280,529-615,921-964,1410-1515"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "range": "target audit-page-139 and support crosswalk; original target report read"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "range": "1-48,2219-2270 current Phase6/source/native limits"
+    },
+    {
+      "file": "migration-queue.md",
+      "range": "Exact row64, dependency and duplicate-owner searches"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "range": "applicable SI/frontend/integrity,218-397"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "range": "applicable frontend text"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "range": "entire file"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "range": "relevant text; current SI contract outranks legacy compatibility examples"
+    }
+  ],
+  "exact_queue": {
+    "line": 64,
+    "status": "[~]",
+    "item": "phase6-qa-maps-temperature-impact",
+    "attempt": 1,
+    "type": "read-only-finished-page-QA",
+    "dependency": "phase5-page-maps-temperature-impact",
+    "note": "TemperatureImpactPage/direct supports; source-only, model/physical signs/temperature units verified, not guessed.",
+    "queue_written": false
+  },
+  "source_coverage": {
+    "sections_actions": [
+      {
+        "section": "AI narrative",
+        "lines": [
+          386,
+          389
+        ],
+        "actions": "Optional consent-gated Ask Helix/Narrate accessible label; user-triggered POST; disabled until positive vehicle id and not streaming; no action executed."
+      },
+      {
+        "section": "Summary",
+        "lines": [
+          393,
+          404
+        ],
+        "actions": "Review details drawer; six metric occurrences with original captions,scope,receipt,provenance."
+      },
+      {
+        "section": "Efficiency detective",
+        "lines": [
+          408,
+          412
+        ],
+        "actions": "Independent query; fatal/retained retry; explanation always when returned, numeric details absent for insufficient_data."
+      },
+      {
+        "section": "Scatter + optimal",
+        "lines": [
+          415,
+          525
+        ],
+        "actions": "Persistent shells, source fallback, manual bucket legend; structured scatter data alternative."
+      },
+      {
+        "section": "Bucket + monthly",
+        "lines": [
+          528,
+          636
+        ],
+        "actions": "Null gaps/counts, dual monthly axes, structured alternatives; monthly chartKey=temp-monthly-trend retains series hiding preference."
+      },
+      {
+        "section": "Recommendations + recent drives",
+        "lines": [
+          639,
+          677
+        ],
+        "actions": "Prose recommendations; four sortable fields; pagination; tableId=maps:temperature-impact-drives. No row navigation/mutation declared."
+      }
+    ],
+    "population_bounds": {
+      "vehicle": "useSelectedVehicle URL positive known id > persisted id > first fleet id; once fleet resolves unknown ids rejected. String selected id scopes all two read hooks and AI. Hook query keys include id, enabled only nonempty, forwards AbortSignal. No local picker.",
+      "points": "Exactly returned points. Total data points counts every original row; average uses finite efficiency, even absent temp; bucket/scatter require finite temperature AND efficiency. Equal point weights, not distance weights. No drive id/full-result count or truncation coverage declared.",
+      "temperature_buckets_c": "(-infinity,0),[0,10),[10,20),[20,30),[30,infinity), because sensor extremes clamp to nearest edge; nominal -50..60 does not exclude rows.",
+      "time": "GET hooks485-533 pass vehicle_id only, no start/end/limit. Point window explicitly unspecified at page362. Monthly rows use independent server month labels; complete population/calendar/timezone boundaries uninspected. Detective latest_month/prior_month are independent server periods.",
+      "workspace": "Actual /temperature-impact is absent from RANGE_ENABLED_PATHS; vehicle enabled by default. Page does not useRangeState. No assumed server bound capability or client-only filtering fix."
+    },
+    "model_observed_provenance": {
+      "main": "Historical source; descriptive client means/best-worst of returned consumption, not forecast or counterfactual. TI-QA-007 is the exception wording.",
+      "detective": "Server verdict/explanation/temp_attributed_pct is diagnosis; client defaults deriveDataState provenance=cached. Producer model/sample/sensitivity/coverage semantics uninspected, not independently established observed causal effect.",
+      "AI": "Description says recent descriptive aggregates, not forecast. Sends vehicle_id only, never plotted snapshot/receipt/rows/bounds; same-chart aggregate parity conditional, not verified. Generation not performed."
+    },
+    "physical_si_signed_unknown": {
+      "contract": "Hook fields outside_temp/avg_temp Celsius, distance_km endpoint-derived km, efficiency_wh_km Wh/km. These are frontend declared contracts, not independently inspected backend serialization/SQL.",
+      "display": "Main temperature converter honors Â°C/Â°F; efficiency Wh/kmâ†’Wh/mi via1.609344; distance_km*1000 feeds SI-meter formatter. Brief raw efficiency avgWhKm/1000=Wh/m; custom formatter restores Wh/km or Wh/mi at boundary. Raw query fields unchanged.",
+      "signed": "Finite negative temperatures and signed consumption/delta percentages are not zero-clamped. Detective temp_delta_c intentionally explicit source Celsius difference, tested -8Â°C; do not apply absolute Fahrenheit +32 offset to a difference.",
+      "unknown_zero": "Missing/nonfinite scalars use â€”; invalid efficiencies excluded from means; absent points count=null versus known [] count0. Bucket missing avg=null/count0. Monthly missing count/temp=null, measured0Â°C converts32Â°F. No zero fabricated from initial failure."
+    },
+    "trust": {
+      "loading": "Six source-shaped skeletons for isLoading and no retained data; brief values withheld.",
+      "fatal": "Only fatalError replaces main content; per-section refetch Retry. Detective owns fatal retry independently, not all-page error.",
+      "retained": "Main refresh failed/paused keeps rows/stats/brief receipt and warning; detective retains explanation and nonblocking retry. Main header registers temperature-impact only; detective locally owns its trust.",
+      "initial_paused": "Confirmed TI-QA-001/002, not authoritative emptiness.",
+      "no_vehicle": "Main hook empty string/disabled; Manage vehicles links /vehicles; AI id undefined; detective not mounted. Unresolved fleet without persisted id is a separate prerequisite conditional."
+    },
+    "saved_preferences": {
+      "units_locale": "useUnits uses saved unit_of_temp/unit_of_length,locale,decimal_precision; table formatters reactive. useNumberFormatting subscribes global locale/precision bridge from useSettings; main efficiency conversion correct by source math.",
+      "precision": "Monthly loses digits at216 (TI-QA-005). Boundary labels are intentionally integer Â°C/Â°F cutoffs; localized digits/RTL fit not certified.",
+      "dates_timezone": "Page and shared freshness bypass saved locale/tz_display_default/timezone_user/vehicle tz (TI-QA-003/004); existing useDateFormat is owner.",
+      "date_time": "Date column intentionally date-only; freshness absolute. useSettings.time_format_default defaults relative but these pure helpers do not consume it. No invented 12/24-hour API, date format setting or passing preference acceptance. Detective source-Celsius difference remains explicitly captioned specialist exception, conditional policy review."
+    },
+    "mobile_a11y_declarations": {
+      "layout": "Three localized regions stack until xl; min-w-0 scatter/table hosts; bounded chart heights h72/sm:h80,h56/sm:h64; legends/badges wrap, recommendation Text break-words.",
+      "table": "mobileColumns ALL four keys date/temp/efficiency/distance; preserves distance. Shared sorting/pagination semantics used, native scroll/targets not measured.",
+      "charts": "All3 EmbeddedChart data/dataColumns/ariaLabel. ChartContainer renders semantic fallback table under stable figcaption, exposed SR/forced colors. Scatter alternatives use raw originals once; bucket/monthly already display-converted and not double-converted.",
+      "motion": "FadeIn24-33 and useMotionPreference44-48: OS reduced motion OR low bandwidth disables entrance, duration0, delay0. No runtime test.",
+      "actions": "AI card min-h11 below md; SourceContent retained Retry min-h11; declarations only. EmbeddedChart defaults exportable=false/fullscreen=false; no export/fullscreen availability claimed."
+    }
+  },
+  "conditional_candidates": [
+    {
+      "id": "TI-C-001",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "lines": [
+        154,
+        164
+      ],
+      "condition": "Malformed non-array payload or null members outside typed contract",
+      "mechanism": "??[] only nullish-normalizes; partial Array.isArray does not guard later map/some/dereferences",
+      "needs": "Producer contract/safe fixtures; not confirmed production crash."
+    },
+    {
+      "id": "TI-C-002",
+      "file": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "lines": [
+        173,
+        192
+      ],
+      "condition": "Finite efficiency with missing temp/differing distances",
+      "mechanism": "Average and scatter/buckets have different eligible subsets; count all points, usable coverage/point weighting not explicit",
+      "needs": "Caption/coverage clarification, no invented denominator or changed aggregate."
+    },
+    {
+      "id": "TI-C-003",
+      "file": "web/src/components/ai/AICabinTemperatureImpactNarrative.tsx",
+      "lines": [
+        55,
+        81
+      ],
+      "condition": "Retained chart data or source change before user narration",
+      "mechanism": "vehicle_id-only independent request has no snapshot parity guarantee",
+      "needs": "Producer-owned provenance/parity contract; no API calls or actual mismatch asserted."
+    },
+    {
+      "id": "TI-C-004",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "lines": [
+        484,
+        533
+      ],
+      "condition": "If product adopts workspace range",
+      "mechanism": "No typed start/end; actual range-disabled route",
+      "needs": "Integration/API/workspace owners establish full-result bounds before control adoption, not loaded-row filter."
+    },
+    {
+      "id": "TI-C-005",
+      "file": "web/src/features/maps/components/EfficiencyDetectivePanel.tsx",
+      "lines": [
+        40,
+        58
+      ],
+      "condition": "Diagnostic provenance/coverage or source-Celsius preference exception requires policy",
+      "mechanism": "cached default,explicit signed sourceCelsius,no sample/model-confidence metadata",
+      "needs": "Confirm inferential/observed producer semantics; preserve signs, no absolute temp delta conversion."
+    },
+    {
+      "id": "TI-C-006",
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "lines": [
+        63,
+        81
+      ],
+      "condition": "Initial unresolved fleet without persisted/URL selection",
+      "mechanism": "No fleet trust in returned result; page cannot distinguish unresolved null id from selection needed",
+      "needs": "Existing workspace owner, no duplicate picker or invented empty fleet."
+    }
+  ],
+  "native_NOTRUN": [
+    {
+      "group": "responsive_mobile",
+      "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560,narrow allocated cards,200%text,long labels,RTL",
+      "limit": "No mounted geometry/browser/device."
+    },
+    {
+      "group": "keyboard_screen_reader",
+      "matrix": "Review details focus/restore,Retry,monthly legend,pagination/sort,SR fallback/live announcements",
+      "limit": "Source declarations and inert charts do not establish acceptance."
+    },
+    {
+      "group": "theme_forced_colors_contrast",
+      "matrix": "Dark/light/custom,palette,real OS forced colors,4.5:1text/3:1focus",
+      "limit": "No native capture or contrast run; fixed cyan is source-only."
+    },
+    {
+      "group": "trust_preferences",
+      "matrix": "Initial paused/fatal/retained,error/unknown/zero/signed/huge,locale/units/precision/date/timezone changes",
+      "limit": "Reasoned paths only; no test/runtime."
+    },
+    {
+      "group": "motion_ai_lifecycle",
+      "matrix": "OS reduced motion/low bandwidth,AI off gate/disabled/duplicate start/abort/vehicle switch/narrative clearing",
+      "limit": "No generation/stream/API/server/device action."
+    }
+  ],
+  "test_declarations": {
+    "status": "READ_ONLY_NOTRUN",
+    "files": [
+      {
+        "file": "web/src/features/maps/pages/TemperatureImpactPage.test.tsx",
+        "declarations": 18,
+        "authored_cases": 18,
+        "limits": "Charts/ResponsiveContainer inert,detective mocked,i18n fallback,data/vehicle/units mocked; no native layout."
+      },
+      {
+        "file": "web/src/features/maps/components/EfficiencyDetectivePanel.test.tsx",
+        "declarations": 4,
+        "authored_cases": 4
+      },
+      {
+        "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+        "declarations": 10,
+        "authored_cases": 19,
+        "each_expansion": "7 ordinary + each5/3/4"
+      },
+      {
+        "file": "web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx",
+        "declarations": 3,
+        "authored_cases": 3
+      },
+      {
+        "file": "web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx",
+        "declarations": 3,
+        "authored_cases": 3,
+        "limits": "fetch/SSE stub; not real backend parity."
+      }
+    ],
+    "total_declarations": 38,
+    "total_authored_cases": 47,
+    "runner_discovery": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "correction": "Initial loose regex hit2 AI-on comment lines and missed multiline each; anchored grep/explicit arrays corrected counts, not a test rerun."
+  },
+  "needs": [
+    {
+      "owner": "temperature-page-pair",
+      "files": [
+        "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+        "web/src/features/maps/pages/TemperatureImpactPage.test.tsx"
+      ],
+      "findings": [
+        "TI-QA-001",
+        "TI-QA-003",
+        "TI-QA-005",
+        "TI-QA-006",
+        "TI-QA-007",
+        "TI-QA-009"
+      ],
+      "request": "One future exclusive source/test lease, not granted by QA. Parent canonical observed-difference optimalDelta and optimalDesc plural integration; no catalog writes here."
+    },
+    {
+      "owner": "detective-pair",
+      "files": [
+        "web/src/features/maps/components/EfficiencyDetectivePanel.tsx",
+        "web/src/features/maps/components/EfficiencyDetectivePanel.test.tsx"
+      ],
+      "findings": [
+        "TI-QA-002",
+        "TI-QA-008"
+      ],
+      "request": "One future exclusive support/test lease; preserve signed source Celsius and all explanation/fatal/retained behavior."
+    },
+    {
+      "owner": "shared-maps-brief-pair",
+      "files": [
+        "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+        "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx"
+      ],
+      "findings": [
+        "TI-QA-004"
+      ],
+      "request": "Reuse MAP-QA-005 exact adapter/test need from map-overview report; no duplicate shared root or new claim."
+    }
+  ],
+  "queue_deduplication": {
+    "exact_assigned_row": 64,
+    "shared_duplicate": "TI-QA-004=MAP-QA-005 in phase6-qa-maps-map-overview.json; same source hash.",
+    "distinct_existing": "phase6-fix-relative-future-dates is future/past relative helper, not these absolute date callers; advanced-evidence and action-center date fixes own other callsites.",
+    "no_queue_writes": true,
+    "repair_owners_not_reserved": true
+  },
+  "historical_disposition": {
+    "report": "audit-page-139.json",
+    "current_resolved": [
+      "All4 mobile fields include distance",
+      "Recommendations now readable prose",
+      "All3 structured chart alternatives",
+      "Shared chart palette/typography and neutral table efficiency",
+      "TrendingUp imported",
+      "Unknown values no zero-fill"
+    ],
+    "remaining": "Fixed detective cyan; range and stable drive identity integration unknown. No historical phase/test acceptance rerun."
+  },
+  "guideline_candidate_checks": {
+    "method": "Logged inline regex grep and semantic review, not official audit CLI.",
+    "raw_target_matches": "static-inline-style/raw-html/direct-library-import/old-api-import/double-prefix/camelcase-param/hidden-section/fetch-useeffect each0. Hardcoded heuristic1 at84 is arithmetic false positive; PageLayout3 references delegates to PageContainer.",
+    "support_exceptions": "Detective data&&2 wraps badge/inner content in persistent shell, not hidden section. AI /api/v1 comment1 not execution; hook execution-site double-prefix/camelcase-param/fetch-useeffect each0. Dynamic backgroundColor:b.color and Recharts API props acceptable. Shared vendor imports are building-block boundaries.",
+    "backend": "NOT_APPLICABLE no Go source audited",
+    "limit": "No whole-repository clean claim; no TypeScript/lint pass claimed."
+  },
+  "checks": {
+    "performed": "Authority/queue/inventory reads; before/after SHA256; exact line captures; scoped regex; canonical labels; anchored declarations/each expansion; read-only Git status/branch/recent log; JSON parse/pin checks. Raw outputs and exits in paired log.",
+    "failures": [
+      {
+        "command": "First combined Python document/instruction print",
+        "exit": 1,
+        "raw": "UnicodeEncodeError: cp1252 cannot encode U+2192; later focused UTF-8 reads completed, original traceback retained."
+      },
+      {
+        "command": "Get-Command rg -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source",
+        "exit": 1,
+        "raw": "No stdout; rg unavailable. Inline logged regex scan used instead, no install."
+      },
+      {
+        "command": "Oversized inline PowerShell/Python full report generation",
+        "exit": 1,
+        "raw": "The filename or extension is too long. (os error 206)",
+        "effect": "Host rejected before execution; retained initial pins/report; split into bounded artifact-only writes."
+      }
+    ],
+    "NOTRUN": [
+      "Fresh tests/lint/build/npx tsc --noEmit/official audits/preservation helpers/full suites/passing reruns",
+      "Browsers/native/screenshots/e2e/servers/API/devices/real locations",
+      "Installs/subagents/Git/source/test/catalog/queue/handoff writes"
+    ],
+    "raw_receipts": "web/logs/phase6-qa-maps-temperature-impact.log"
+  },
+  "pins_after": [
+    {
+      "path": "web/src/features/maps/pages/TemperatureImpactPage.tsx",
+      "sha256": "80fbe25757bba3fc9c81d9a6a8571897884190c24b29a7b1899079b8130fb34c",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/maps/pages/TemperatureImpactPage.test.tsx",
+      "sha256": "a990832fc41f43abbc5edcb031d195228fc830129535933aaadad8338bed49cd",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/maps/components/EfficiencyDetectivePanel.tsx",
+      "sha256": "3e78655308d20b2d94cd94d58395f7d7c5fa8456a3a0466bce5c712638b8914f",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/maps/components/EfficiencyDetectivePanel.test.tsx",
+      "sha256": "978ea1b8f809f7b1284ad280317f85f8a44268d9e0aade0799661abc87851a14",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "sha256": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+      "sha256": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx",
+      "sha256": "dcf332e467233ee84ebde5ac99705ba15088d922b2b1e4d525e3bcc551bba385",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/maps/__tests__/TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx",
+      "sha256": "96e812070eadf689fa3f3d83d2b2855bc9c32488cabde7c502ba9c834bec5cc3",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useAnalytics.ts",
+      "sha256": "f775818ac815813432f0a576ab6e22dbdbbd5106d513aa81fb56b953c5dadb20",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ai/AICabinTemperatureImpactNarrative.tsx",
+      "sha256": "a4cd514a565c43fba478de186a4b275a4e0945b0ecca952bf279d9a1bfebf139",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/charts/ChartTooltip.tsx",
+      "sha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useAiStream.ts",
+      "sha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ai/withAiFeature.tsx",
+      "sha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ai/AIFeatureCard.tsx",
+      "sha256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ai/AiOutputPanel.tsx",
+      "sha256": "c3bb5766576f4e80b16762122d2ee35038a9aa7cf6fe96df426269fe07e3c8a4",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "sha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "matches_before": true
+    }
+  ],
+  "pin_check": {
+    "compared_files": 36,
+    "mismatches": [],
+    "all_match": true,
+    "scope_note": "Initial root target pin plus incremental direct-support pins before their focused audit; no source/test edits. Missing-path probes excluded from hashed file count."
+  },
+  "completed_at_utc": "2026-10-14T02:07:40.920762+00:00",
+  "release": {
+    "status": "RELEASE",
+    "utc": "2026-10-14T02:07:40.920762+00:00",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-maps-temperature-impact.json",
+      "web/logs/phase6-qa-maps-temperature-impact.log"
+    ],
+    "source_and_test_writes": 0,
+    "commands": "All started commands synchronous completed; no running bounded command/helper/server. Oversized generation failed before execution, logged; no remaining actor/shell claim.",
+    "acceptance": "Source-only QA with findings, not page/native/application release acceptance."
+  },
+  "final_validation": {
+    "json_parse": "PASS pending immediate independent reparse below",
+    "pin_check": "PASS",
+    "source_write_scope": "Only two assigned artifacts written",
+    "deadline": "2026-10-14T02:07:59.989Z return deadline; completion time above"
+  }
+}

@@ -17,13 +17,32 @@
  *   6. Timestamp formatting + multi-event ordering.
  *   7. The default export is the same component as the named export.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import '@/i18n';
 
 import type { AlertEvent } from '@/api/types';
+import { useSettings } from '@/hooks/useSettings';
+import { useTimezone } from '@/lib/timezone';
+import { formatDateTime } from '@/lib/dateFormat';
 import { AlertDetailTimeline } from '../AlertDetailTimeline';
 import AlertDetailTimelineDefault from '../AlertDetailTimeline';
+
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return { ...actual, useSettings: vi.fn() };
+});
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: vi.fn() };
+});
+beforeEach(() => {
+  vi.mocked(useSettings).mockReturnValue({
+    settings: { tz_display_default: 'user' },
+    locale: 'en-US',
+  } as ReturnType<typeof useSettings>);
+  vi.mocked(useTimezone).mockReturnValue('UTC');
+});
 
 let seq = 0;
 function makeEvent(overrides: Partial<AlertEvent> = {}): AlertEvent {
@@ -62,7 +81,7 @@ describe('AlertDetailTimeline — empty states', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No events yet')).toBeInTheDocument();
     // No timeline rows are drawn in the empty branch.
-    expect(container.querySelectorAll('.pl-6')).toHaveLength(0);
+    expect(container.querySelectorAll('ol > li')).toHaveLength(0);
   });
 
   it('forwards className to the EmptyState container', () => {
@@ -228,6 +247,34 @@ describe('AlertDetailTimeline — timestamp + ordering + wiring', () => {
   beforeEach(() => cleanup());
   afterEach(() => cleanup());
 
+  it('updates populated timestamps when locale and saved zone change without replacing events', () => {
+    const occurred_at = '2026-07-04T01:00:00Z';
+    const events = [
+      makeEvent({ occurred_at }),
+      makeEvent({ kind: 'acknowledged', actor: 'alice', note: 'Reviewed', occurred_at }),
+    ];
+    const { rerender } = render(<AlertDetailTimeline events={events} />);
+    const list = screen.getByRole('list', { name: 'Timeline' });
+    const initialLabel = formatDateTime(occurred_at, { locale: 'en-US', tz: 'UTC' });
+    expect(within(list).getAllByText(initialLabel)).toHaveLength(2);
+
+    vi.mocked(useSettings).mockReturnValue({
+      settings: { tz_display_default: 'vehicle' },
+      locale: 'de-DE',
+    } as ReturnType<typeof useSettings>);
+    vi.mocked(useTimezone).mockImplementation((mode) =>
+      mode === 'vehicle' ? 'America/Los_Angeles' : 'UTC',
+    );
+    rerender(<AlertDetailTimeline events={events} />);
+    const updatedLabel = formatDateTime(occurred_at, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    expect(within(list).getAllByText(updatedLabel)).toHaveLength(2);
+    expect(within(list).queryByText(initialLabel)).not.toBeInTheDocument();
+    expect(vi.mocked(useTimezone)).toHaveBeenCalledWith('vehicle');
+    expect(screen.getByText('Acknowledged by alice')).toBeInTheDocument();
+    expect(screen.getByText('Reviewed')).toBeInTheDocument();
+    expect(events.map((event) => event.occurred_at)).toEqual([occurred_at, occurred_at]);
+  });
+
   it('formats occurred_at for display', () => {
     render(
       <AlertDetailTimeline
@@ -264,7 +311,7 @@ describe('AlertDetailTimeline — timestamp + ordering + wiring', () => {
         ]}
       />,
     );
-    expect(container.querySelectorAll('.pl-6')).toHaveLength(3);
+    expect(container.querySelectorAll('ol > li')).toHaveLength(3);
     expect(titleTexts(container)).toEqual([
       'Alert created',
       'Acknowledged by alice',

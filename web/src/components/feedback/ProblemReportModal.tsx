@@ -76,6 +76,9 @@ export function ProblemReportModal({ open, onClose }: ProblemReportModalProps) {
     () => (showPreview ? previewProblemReport(input) : ''),
     [showPreview, input],
   )
+  const attachmentPolicyLabels = {
+    never: t('Never', 'Never'),
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -178,16 +181,16 @@ export function ProblemReportModal({ open, onClose }: ProblemReportModalProps) {
 
           <ul className="space-y-0.5 text-2xs text-[var(--text-muted)]" data-testid="attachment-policy">
             <li>
-              {t('problemReport.policy.consoleTail', 'Console output')}: {ATTACHMENT_POLICY.consoleTail}
+              {t('problemReport.policy.consoleTail', 'Console output')}: {attachmentPolicyLabels[ATTACHMENT_POLICY.consoleTail]}
             </li>
             <li>
-              {t('problemReport.policy.files', 'File attachments')}: {ATTACHMENT_POLICY.files}
+              {t('problemReport.policy.files', 'File attachments')}: {attachmentPolicyLabels[ATTACHMENT_POLICY.files]}
             </li>
             <li>
-              {t('problemReport.policy.screenshots', 'Screenshots')}: {ATTACHMENT_POLICY.screenshots}
+              {t('problemReport.policy.screenshots', 'Screenshots')}: {attachmentPolicyLabels[ATTACHMENT_POLICY.screenshots]}
             </li>
             <li>
-              {t('problemReport.policy.userEmail', 'E-mail address')}: {ATTACHMENT_POLICY.userEmail}
+              {t('problemReport.policy.userEmail', 'E-mail address')}: {attachmentPolicyLabels[ATTACHMENT_POLICY.userEmail]}
             </li>
           </ul>
 

@@ -4,10 +4,13 @@ import { GlassPanel, Toggle, CopyButton, Caption, PanelTitle, Button } from '@/c
 import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { StateBadge } from '@/features/system/components/StateBadge';
 import { cn } from '@/lib/cn';
-import { formatRelative } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
 import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { DataState } from '@/api/dataState';
+import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 
 /**
  * Right-rail inspector for the FSM debugger.
@@ -40,6 +43,10 @@ export interface SnapshotInspectorProps {
    * the definitive "no signals captured" message during the fetch.
    */
   loading?: boolean;
+  selectedTrust?: DataState<SignalSnapshotResponse>;
+  previousTrust?: DataState<SignalSnapshotResponse>;
+  previousLoading?: boolean;
+  hasPreviousTransition?: boolean;
   /** Most recent transition (in or outside the window). */
   lastTransition?: FSMTransition | null;
   /** Number of selectable transitions inside the active window. */
@@ -67,13 +74,50 @@ export function SnapshotInspector({
   snapshot,
   previousSnapshot,
   loading,
+  selectedTrust,
+  previousTrust,
+  previousLoading,
+  hasPreviousTransition = previousSnapshot != null,
   lastTransition,
   inWindowCount,
   onJumpToLast,
   className,
 }: SnapshotInspectorProps) {
+  const { formatDurationMs } = useNumberFormatting();
+  const { formatRelative } = useDateFormat();
   const { t } = useTranslation();
   const [diffMode, setDiffMode] = useState(false);
+  const canCompare = snapshot != null && previousSnapshot != null;
+
+  const sourceNotice = (state: DataState<SignalSnapshotResponse> | undefined, label: string, fetching?: boolean) => {
+    if (!state) return null;
+    if (state.hasData) {
+      return (
+        <>
+          <StaleRefreshWarning state={state} label={label} />
+          {state.isRefreshing ? <Caption role="status">{label}: {t('freshness.updating', 'Updating…')}</Caption> : null}
+        </>
+      );
+    }
+    if (state.fatalError) {
+      return (
+        <div className="space-y-2">
+          <Caption>{label}</Caption>
+          <QueryError error={state.fatalError} onRetry={state.retry ?? undefined} />
+        </div>
+      );
+    }
+    return (
+      <div role="status" className="space-y-2 text-sm text-[var(--text-secondary)]">
+        <Caption>{label}</Caption>
+        <div>{fetching && !state.isRefreshBlocked
+          ? t('debugger.inspector.loading', 'Loading…')
+          : t('operations.sourceStatus.initial', 'Awaiting source')}</div>
+        {state.isRefreshBlocked ? <Caption>{t('dataSources.status.paused', 'Refresh paused')}</Caption> : null}
+        {state.retry && !fetching ? <Button size="sm" variant="ghost" onClick={state.retry}>{t('common.retry', 'Retry')}</Button> : null}
+      </div>
+    );
+  };
 
   const rows = useMemo(() => {
     if (!snapshot?.signals) return [] as Array<{
@@ -201,7 +245,8 @@ export function SnapshotInspector({
           <div>
             <Caption>{t('debugger.inspector.duration', 'Duration')}</Caption>
             <div className="mt-1 text-[var(--text-primary)]">
-              {(typeof transition.details?.duration_in_state_ms === 'number' ? fmtInt(transition.details.duration_in_state_ms) : null) ?? '—'} ms
+              {formatDurationMs(typeof transition.details?.duration_in_state_ms === 'number'
+                ? transition.details.duration_in_state_ms : null)}
             </div>
           </div>
         </div>
@@ -216,17 +261,29 @@ export function SnapshotInspector({
           />
         </div>
 
-        {loading && !snapshot ? (
+        {sourceNotice(selectedTrust, t('debugger.inspector.signalsTitle', 'Signals at transition'), loading)}
+        {diffMode ? (
+          <div data-testid="snapshot-inspector-comparison-status">
+            {hasPreviousTransition
+              ? sourceNotice(previousTrust, t('debugger.inspector.diffMode', 'Diff vs previous'), previousLoading)
+              : <Caption>{t('debugger.inspector.diffMode', 'Diff vs previous')}: {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}</Caption>}
+            {!canCompare && hasPreviousTransition && !previousTrust ? (
+              <Caption>{t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}</Caption>
+            ) : null}
+          </div>
+        ) : null}
+
+        {!snapshot && selectedTrust ? null : loading && !snapshot ? (
           <div
             data-testid="snapshot-inspector-signals-loading"
-            className="rounded-md border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-6 text-center text-xs text-[var(--text-muted)]"
+            className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-6 text-center text-xs text-[var(--text-muted)]"
           >
             {t('debugger.inspector.loading', 'Loading…')}
           </div>
         ) : rows.length === 0 ? (
           <div
             data-testid="snapshot-inspector-no-signals"
-            className="rounded-md border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-6 text-center text-xs text-[var(--text-muted)]"
+            className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-6 text-center text-xs text-[var(--text-muted)]"
           >
             {t('debugger.inspector.noSignals', 'No signals captured for this transition')}
           </div>
@@ -236,16 +293,16 @@ export function SnapshotInspector({
             className="max-h-[480px] space-y-1 overflow-y-auto pr-1"
           >
             {rows.map((row) => {
-              const dim = diffMode && !row.changed;
-              const highlight = diffMode && row.changed;
+              const dim = diffMode && canCompare && !row.changed;
+              const highlight = diffMode && canCompare && row.changed;
               return (
                 <li
                   key={row.name}
                   className={cn(
                     'flex items-start justify-between gap-3 rounded-md border px-2 py-1.5 text-xs',
                     highlight
-                      ? 'border-amber-400/30 bg-amber-500/[0.06]'
-                      : 'border-[var(--border-subtle)] bg-white/[0.02]',
+                      ? 'border-[var(--semantic-warning)] bg-[var(--surface-2)]'
+                      : 'border-[var(--border-subtle)] bg-[var(--surface-1)]',
                     dim && 'opacity-40',
                   )}
                 >
@@ -256,7 +313,7 @@ export function SnapshotInspector({
                     <div className="mt-0.5 break-all text-[var(--text-primary)]">
                       {formatValue(row.value)}
                     </div>
-                    {diffMode && row.changed && row.previous !== undefined ? (
+                    {diffMode && canCompare && row.changed && row.previous !== undefined ? (
                       <div className="mt-0.5 break-all text-2xs text-[var(--text-muted)] line-through">
                         {formatValue(row.previous)}
                       </div>

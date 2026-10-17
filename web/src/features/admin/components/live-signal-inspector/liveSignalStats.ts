@@ -13,6 +13,7 @@ import type {
   VehicleLiveSignalsResponse,
 } from '@/api/hooks/useTelemetry';
 import type { SignalSource } from '@/components/data-display';
+import { fmtNumber } from '@/lib/numberFormat';
 
 /** Flat row consumed by the table + breakdown panels. */
 export interface LiveSignalRow {
@@ -59,7 +60,7 @@ export interface LiveSignalStats {
 }
 
 /** Discriminates the render state of each self-sufficient page section. */
-export type SectionStatus = 'no-vehicle' | 'loading' | 'error' | 'empty' | 'ready';
+export type SectionStatus = 'no-vehicle' | 'loading' | 'error' | 'empty' | 'ready' | 'retained' | 'retained-empty';
 
 const NUMERIC_KINDS = new Set([
   'ValueKindFloat',
@@ -107,6 +108,16 @@ function isEnvelope(raw: unknown): raw is VehicleLiveSignal {
   );
 }
 
+function knownTimestamp(timestamp: string | undefined): string | undefined {
+  if (!timestamp) return undefined;
+  const parsed = Date.parse(timestamp);
+  // Go's zero time is parseable, but carries no observation time.
+  if (!Number.isFinite(parsed) || parsed === Date.parse('0001-01-01T00:00:00Z')) {
+    return undefined;
+  }
+  return timestamp;
+}
+
 /**
  * Normalise a single `signals` entry into a flat row. Accepts both the typed
  * envelope and a bare scalar; unknown/malformed shapes degrade gracefully.
@@ -126,7 +137,7 @@ export function rowFromEntry(name: string, raw: unknown): LiveSignalRow {
         typeof env.age_ms === 'number' && Number.isFinite(env.age_ms)
           ? env.age_ms
           : undefined,
-      timestamp: env.timestamp ?? env.ts,
+      timestamp: knownTimestamp(env.timestamp) ?? knownTimestamp(env.ts),
     };
   }
   return { name, value: raw };
@@ -230,8 +241,8 @@ export function computeStats(
 export function formatAge(ms: number | null | undefined): string {
   if (ms == null || !Number.isFinite(ms)) return '—';
   if (ms < 1000) return `${Math.round(ms)}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 60_000) return `${fmtNumber((ms / 1000))}s`;
   if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
-  if (ms < 86_400_000) return `${(ms / 3_600_000).toFixed(1)}h`;
-  return `${(ms / 86_400_000).toFixed(1)}d`;
+  if (ms < 86_400_000) return `${fmtNumber((ms / 3_600_000))}h`;
+  return `${fmtNumber((ms / 86_400_000))}d`;
 }

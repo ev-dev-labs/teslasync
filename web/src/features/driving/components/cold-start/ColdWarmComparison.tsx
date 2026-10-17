@@ -3,23 +3,24 @@ import { useTranslation } from 'react-i18next';
 
 import { CHART_COLORS } from '@/components/charts';
 import { MetricBar } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { EmptyState } from '@/components/feedback';
 import {
   Badge,
   GlassPanel,
   HelpTooltip,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { ColdStartSummary } from '../../lib/coldStart';
 import { ColdStartSectionBody } from './ColdStartSectionBody';
 import type { ColdStartSectionState } from './types';
 import { useColdStartDisplay } from './useColdStartDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ColdWarmComparisonProps {
   summary: ColdStartSummary;
@@ -28,13 +29,14 @@ interface ColdWarmComparisonProps {
   className?: string;
 }
 
-/** Aggregate weighted comparison and the only panel allowed to claim a penalty. */
+/** Distance-weighted whole-drive cohort comparison, not a causal warm-up model. */
 export function ColdWarmComparison({
   summary,
   penaltyCostLabel,
   state,
   className,
 }: ColdWarmComparisonProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEfficiency, formatEnergy } = useColdStartDisplay();
   const classified = summary.cold.drives + summary.warm.drives;
@@ -51,14 +53,30 @@ export function ColdWarmComparison({
     summary.penaltyShare != null
       ? t('coldStart.penaltyVsWarm', '{{sign}}{{pct}}% vs warm starts', {
           sign: summary.penaltyShare > 0 ? '+' : summary.penaltyShare < 0 ? '−' : '',
-          pct: fmtNumber(Math.abs(summary.penaltyShare) * 100, 0),
+          pct: fmtNumber(Math.abs(summary.penaltyShare) * 100),
         })
       : t('coldStart.comparison.awaitingDelta', 'Aggregate difference withheld');
+  const cohortContext = t('coldStart.comparison.samples', '{{cold}} cold and {{warm}} warm observations', {
+    cold: summary.cold.drives, warm: summary.warm.drives,
+  });
+  const metrics: StatMetric[] = [
+    { metricId: 'efficiency', occurrenceId: 'cold-warm-penalty',
+      rawValue: summary.penaltyWhPerKm == null ? null : summary.penaltyWhPerKm / 1000,
+      label: t('coldStart.brief.penalty', 'Cold minus warm consumption'),
+      description: deltaLabel, context: cohortContext,
+      display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } },
+    { metricId: 'efficiency', occurrenceId: 'cold-consumption', rawValue: summary.cold.whPerKm == null ? null : summary.cold.whPerKm / 1000,
+      label: t('coldStart.coldGroup', 'Cold starts ({{count}} drives)', { count: summary.cold.drives }),
+      context: cohortContext, display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } },
+    { metricId: 'efficiency', occurrenceId: 'warm-consumption', rawValue: summary.warm.whPerKm == null ? null : summary.warm.whPerKm / 1000,
+      label: t('coldStart.warmGroup', 'Warm starts ({{count}} drives)', { count: summary.warm.drives }),
+      context: cohortContext, display: { formatter: raw => ({ value: formatEfficiency(raw * 1000), unit: '' }) } },
+  ];
 
   return (
     <GlassPanel
       className={cn(
-        'h-full overflow-hidden bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-emerald-500/[0.06] p-5 sm:p-6',
+        'h-full overflow-hidden p-5 sm:p-6',
         className,
       )}
       role="region"
@@ -66,12 +84,12 @@ export function ColdWarmComparison({
       data-testid="cold-start-comparison"
     >
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <Snowflake className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Snowflake className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('coldStart.duel', 'Cold vs Warm Starts')}
         <HelpTooltip
           size="sm"
           i18nKey="coldStart.comparison.help"
-          defaultValue="A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous."
+          defaultValue="A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less; in-between gaps are excluded as ambiguous. The comparison uses distance-weighted whole-drive consumption, not just the first kilometres. It does not adjust for temperature, route, speed or trip length, so the observed difference does not isolate battery or cabin warm-up."
           ariaLabel={t('help.coldStart.iconLabel', 'More info about cold start math')}
         />
       </PanelTitle>
@@ -97,10 +115,13 @@ export function ColdWarmComparison({
                     ? t('coldStart.comparison.sufficient', 'Aggregate sample ready')
                     : t('coldStart.comparison.building', 'Building aggregate confidence')}
                 </Badge>
-                <MetricValue className="mt-4">
-                  {formatEfficiency(summary.penaltyWhPerKm)}
-                </MetricValue>
-                <MetricLabel className="mt-1">{deltaLabel}</MetricLabel>
+                <NestedDrivingBrief variant="embedded" metrics={metrics}
+                  title={t('coldStart.brief.cohortTitle', 'Distance-weighted cohort consumption')}
+                  description={deltaLabel} loading={state.isLoading}
+                  retained={state.retained}
+                  unavailable={state.error != null}
+                  period={{ kind: 'unknown', label: cohortContext,
+                    reason: t('coldStart.comparison.help', 'A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less; in-between gaps are excluded as ambiguous. The comparison uses distance-weighted whole-drive consumption, not just the first kilometres. It does not adjust for temperature, route, speed or trip length, so the observed difference does not isolate battery or cabin warm-up.') }} />
                 <Text as="p" variant="bodySm" className="mt-3">
                   {t(
                     'coldStart.comparison.samples',
@@ -115,7 +136,7 @@ export function ColdWarmComparison({
                   label={t('coldStart.coldGroup', 'Cold starts ({{count}} drives)', {
                     count: summary.cold.drives,
                   })}
-                  value={summary.cold.whPerKm ?? 0}
+                  value={summary.cold.whPerKm}
                   max={maxEfficiency}
                   color={CHART_COLORS[0]}
                   sublabel={formatEfficiency(summary.cold.whPerKm)}
@@ -124,7 +145,7 @@ export function ColdWarmComparison({
                   label={t('coldStart.warmGroup', 'Warm starts ({{count}} drives)', {
                     count: summary.warm.drives,
                   })}
-                  value={summary.warm.whPerKm ?? 0}
+                  value={summary.warm.whPerKm}
                   max={maxEfficiency}
                   color={CHART_COLORS[1]}
                   sublabel={formatEfficiency(summary.warm.whPerKm)}
@@ -137,28 +158,28 @@ export function ColdWarmComparison({
                 {!summary.sampleSufficient
                   ? t(
                       'coldStart.noData',
-                      'Not enough cold and warm starts in this period to compare fairly (5+ of each needed).',
+                      'At least five cold and five warm starts are needed to report an aggregate whole-drive difference in this observed window.',
                     )
                   : penaltyPositive
                     ? penaltyCostLabel
                       ? t(
                           'coldStart.takeawayCost',
-                          'Warm-up overhead added {{energy}} across this period — about {{cost}} at your electricity rate. Preconditioning while plugged in shifts that energy to the wall.',
+                          'Applying the observed whole-drive cold-minus-warm consumption difference to the cold cohort distance gives {{energy}} — about {{cost}} at your electricity rate. This is not measured warm-up energy or guaranteed savings. If plugged in before departure, preconditioning may shift some warm-up energy to the wall; this comparison does not estimate that benefit.',
                           {
-                            energy: formatEnergy(summary.totalPenaltyWh, { precision: 1 }),
+                            energy: formatEnergy(summary.totalPenaltyWh),
                             cost: penaltyCostLabel,
                           },
                         )
                       : t(
                           'coldStart.takeaway',
-                          'Warm-up overhead added {{energy}} across this period. Preconditioning while plugged in shifts that energy to the wall.',
+                          'Applying the observed whole-drive cold-minus-warm consumption difference to the cold cohort distance gives {{energy}}. This is not measured warm-up energy or guaranteed savings. If plugged in before departure, preconditioning may shift some warm-up energy to the wall; this comparison does not estimate that benefit.',
                           {
-                            energy: formatEnergy(summary.totalPenaltyWh, { precision: 1 }),
+                            energy: formatEnergy(summary.totalPenaltyWh),
                           },
                         )
                     : t(
                         'coldStart.comparison.noPositivePenalty',
-                        'Cold starts did not consume more than the weighted warm baseline in this selected observed window, so no avoidable energy is claimed.',
+                        'The cold cohort did not consume more than the distance-weighted warm cohort in this selected observed window. No positive whole-drive difference or savings is claimed.',
                       )}
               </Text>
             </div>

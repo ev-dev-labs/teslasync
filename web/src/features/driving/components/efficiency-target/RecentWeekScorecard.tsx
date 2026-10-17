@@ -10,6 +10,7 @@ import type { TargetBand, WeekResult } from '../../lib/efficiencyTarget';
 import { EfficiencyTargetSectionBody } from './EfficiencyTargetSectionBody';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const RECENT_WEEK_COUNT = 8;
 interface ScorecardRow {
@@ -33,6 +34,7 @@ interface RecentWeekScorecardProps {
 export function RecentWeekScorecard(
   { completedWeeks, state, className }: RecentWeekScorecardProps,
 ) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     formatDistance,
@@ -61,9 +63,9 @@ export function RecentWeekScorecard(
           weekStart: week.weekStart,
           week: formatWeek(week.weekStart),
           rank: week.rank,
-          consumption: formatEfficiency(week.whPerKm, 1),
-          gap: formatSignedEfficiency(week.targetGapWhPerKm, 1),
-          distance: formatDistance(week.distanceM, { precision: 1 }),
+          consumption: formatEfficiency(week.whPerKm),
+          gap: formatSignedEfficiency(week.targetGapWhPerKm),
+          distance: formatDistance(week.distanceM),
           drives: week.drives,
           status: statusLabel(week.band),
           band: week.band,
@@ -74,7 +76,7 @@ export function RecentWeekScorecard(
       formatEfficiency,
       formatSignedEfficiency,
       formatWeek,
-      t,
+      t, displayPrecision, displayLocale,
     ],
   );
   const columns = useMemo<Column<ScorecardRow>[]>(
@@ -148,7 +150,7 @@ export function RecentWeekScorecard(
       data-testid="efficiency-target-scorecard"
     >
       <PanelTitle className="flex items-center gap-2">
-        <ListOrdered className="h-4 w-4 text-purple-300" aria-hidden="true" />
+        <ListOrdered className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
         {t('effTarget.score.title', 'Recent completed-week scorecard')}
       </PanelTitle>
       <Text as="p" variant="caption" className="mt-1">
@@ -174,7 +176,30 @@ export function RecentWeekScorecard(
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.weekStart}
+            rowLabel={(row) => row.week}
             mobileColumns={['rank', 'week', 'consumption', 'status']}
+            mobilePresentation={{
+              roles: {
+                week: 'title',
+                consumption: 'primary',
+                rank: 'meta',
+                status: 'badge',
+              },
+              displayValue: (row, key) => {
+                const values: Record<string, string | number | null> = {
+                  rank: row.rank != null
+                    ? t('effTarget.score.rankValue', '#{{rank}}', { rank: row.rank })
+                    : null,
+                  week: row.week,
+                  consumption: row.consumption,
+                  gap: row.gap,
+                  distance: row.distance,
+                  drives: row.drives,
+                  status: row.status,
+                };
+                return values[key];
+              },
+            }}
             density="compact"
             maxHeight={360}
             emptyMessage={t(
@@ -187,7 +212,7 @@ export function RecentWeekScorecard(
               rank: row.rank,
               week: row.week,
               consumption: row.consumption,
-              target_gap: row.gap,
+              gap: row.gap,
               distance: row.distance,
               drives: row.drives,
               status: row.status,

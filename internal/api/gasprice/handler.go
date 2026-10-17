@@ -11,6 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // dbOpTimeout bounds each request-triggered database round-trip so a stalled
@@ -78,7 +79,10 @@ type gasPriceHistoryRow struct {
 
 // Status returns the current gas price poll status.
 // GET /api/v1/gas-price/status
+// current_price_unit belongs to the recorded quote, not current gas settings.
 func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
+	_, span := otel.Tracer("api").Start(r.Context(), "gas_price.status")
+	defer span.End()
 	status := h.worker.Status()
 	httpx.WriteJSON(w, http.StatusOK, status)
 }

@@ -1,22 +1,23 @@
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { LayoutCard } from '@/components/layout';
 
-import { Grid } from '@/components/layout';
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeExactAccounting({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const source = summary.source;
   const clusterMembers = summary.clusters.reduce(
@@ -138,11 +139,10 @@ export function ArchetypeExactAccounting({
 
   return (
     <section data-testid="drive-archetypes-accounting">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('archetypes.accounting.title', 'Exact accounting identities')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('archetypes.accounting.title', 'Exact accounting identities')}
+        actions={<Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'archetypes.accounting.subtitle',
@@ -150,28 +150,31 @@ export function ArchetypeExactAccounting({
           )}
         </Text>
         <ArchetypeSectionBody summary={summary} state={state} requirement="resolved">
-          <Grid cols={{ default: 1, xl: 2 }} gap={3}>
+          <Table aria-label={t('archetypes.accounting.title', 'Exact accounting identities')}>
+            <tbody>
             {identities.map((identity) => (
-              <div
+              <tr
                 key={identity.label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <MetricLabel>{identity.label}</MetricLabel>
+                <th scope="row"><MetricLabel>{identity.label}</MetricLabel></th>
+                <td>
+                  <Text as="p" variant="bodySm">
+                    {identity.equation}
+                  </Text>
+                </td>
+                <td>
                   <Badge variant={identity.balanced ? 'success' : 'danger'}>
                     {identity.balanced
                       ? t('archetypes.common.balanced', 'Balances')
                       : t('archetypes.common.mismatch', 'Mismatch')}
                   </Badge>
-                </div>
-                <Text as="p" variant="bodySm" className="mt-2">
-                  {identity.equation}
-                </Text>
-              </div>
+                </td>
+              </tr>
             ))}
-          </Grid>
+            </tbody>
+          </Table>
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

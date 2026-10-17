@@ -1,0 +1,163 @@
+ITEM=phase6-native-home-energy-scenario-target-remeasure
+AUTHORITY=Explicit browserlock1/4; installed msedge only; shared localhost:5173 only; return before 2026-10-14T06:27:20.229Z.
+SCOPE=Only docs\frontend-audits\phase6-native-home-energy-scenario-target-remeasure.json and this ignored exact log.
+READS=Full docs\orchestrator-loop.md; exact queue row2615; full original HomeEnergy native JSON; full source7pass receipt; existing original inline native harness; existing frontend-qa mode/default capture/budget functions; Playwright defaults; mission43-45 and design contract.
+HISTORY=Original20width/theme measurements and six captures immutable, no reruns or new screenshots. Old three targets36px; export332x49px NOT failing and out of measurement scope.
+SOURCE_RECEIPT=Historical final7pass/0fail; scoped lint0; source-only min-h-11 md:min-h-9 at49/52/55; preservation2/15unchanged unknowns; not repeated or promoted to native proof.
+GUARDS=Policy asserted before every isolated context, device viewport and navigation; context request routing installed before page creation. Only local5173 static resources and exact original unavailable API paths use GET/HEAD/OPTIONS. Unknown APIs/non-read/external requests aborted. API success/304 stops measurements and closes context; no response bodies, queries, private page text, downloads, action clicks, scenario persistence or successful fixtures.
+NO_TESTS=No TypeScript/audit/lint/build/test/catalog/source/helper/server/Docker/seed/Git/install/nested-agent operations; documentation-only measurement receipt.
+NATIVE_TARGET_REMEASURE_COMMAND_BEGIN 2026-10-14T06:11:47.9646210Z
+import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { seedApplicationMode, synchronizeApplicationMode, mountedApplicationMode, applicationModeMatches } from './scripts/frontend-qa.mjs';
+const item='phase6-native-home-energy-scenario-target-remeasure';
+const historicalPath='..\\docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json';
+const sourcePath='src\\features\\home-energy\\components\\ScenarioControls.tsx';
+const pin=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
+const original=JSON.parse(readFileSync(historicalPath,'utf8'));
+const priorLine=readFileSync('logs\\phase6-qa-home-energy-whole-home-energy.log','utf8').split(/\r?\n/).find(line=>line.startsWith('NATIVE_MATRIX_RESULT {'));
+const prior=JSON.parse(priorLine.slice('NATIVE_MATRIX_RESULT '.length));
+const allowedAPI=new Set(prior.apiResponses.map(record=>record.path));
+const origin='http://localhost:5173';
+const actions=['Recompute from now','Save as stability baseline','Reset to defaults'];
+const e={item,kind:'bounded-native-scenario-target-remeasure',startedAtUtc:new Date().toISOString(),channel:'msedge',origin,route:'/energy-orchestrator',fixtureResponses:0,actionInvocations:0,screenshotsAdded:0,measurements:[],guardChecks:[],contexts:[],apiResponses:[],blocked:{external:0,nonRead:0,unapprovedPath:0},pageErrorCount:0,privacyStop:null,sourceBeforeSha256:pin(sourcePath),originalReportBeforeSha256:pin(historicalPath),priorMeasurementCount:prior.matrices.filter(record=>record.width).length,priorScreenshotCount:prior.screenshots.length,browserLock:'Explicit user-granted browserlock1/4; no inferred semaphore occupancy'};
+let browser,context,contextRelease;
+const deadline=Date.now()+100000;
+const assertGuard=(stage,mode)=>{
+  if(e.privacyStop)throw Error('PRIVACY_STOP_UNAPPROVED_SUCCESSFUL_SOURCE_READ');
+  if(Date.now()>deadline)throw Error('BOUNDED_COMMAND_DEADLINE');
+  if(Number(process.versions.node.split('.')[0])<26)throw Error('SUPPORTED_NODE_REQUIRED');
+  if(process.env.E2E_STORAGE_STATE)throw Error('NOTRUN_SHARED_STORAGE_STATE_NOT_AUTHORIZED');
+  if(process.env.E2E_MOCKS && process.env.E2E_MOCKS!=='0')throw Error('NOTRUN_MOCKED_DATA_NOT_AUTHORIZED');
+  e.guardChecks.push({stage,mode,atUtc:new Date().toISOString(),origin,readOnly:true,approvedSuccessfulSourceReads:0});
+};
+try {
+  assertGuard('before-installed-msedge-launch',null);
+  browser=await chromium.launch({channel:'msedge',headless:true,timeout:20000});
+  e.browserVersion=browser.version();
+  for(const mode of ['dark','light']) {
+    assertGuard('before-context',mode);
+    context=await browser.newContext({serviceWorkers:'block',acceptDownloads:false,locale:'en-US',timezoneId:'UTC',colorScheme:mode});
+    contextRelease={mode,createdAtUtc:new Date().toISOString(),guardInstalledAtUtc:null,closedAtUtc:null};e.contexts.push(contextRelease);
+    await context.route('**/*',route=>{
+      const request=route.request();const url=new URL(request.url());
+      if(url.origin!==origin){e.blocked.external++;return route.abort('blockedbyclient');}
+      if(!['GET','HEAD','OPTIONS'].includes(request.method())){e.blocked.nonRead++;return route.abort('blockedbyclient');}
+      if(e.privacyStop)return route.abort('blockedbyclient');
+      const type=request.resourceType();
+      const isAPI=url.pathname.startsWith('/api/');
+      const staticRead=['script','stylesheet','font','image'].includes(type);
+      const documentRead=type==='document' && url.pathname==='/energy-orchestrator';
+      if((isAPI && !allowedAPI.has(url.pathname)) || (!isAPI && !staticRead && !documentRead)){
+        e.blocked.unapprovedPath++;return route.abort('blockedbyclient');
+      }
+      return route.continue();
+    });
+    if(typeof context.routeWebSocket==='function')await context.routeWebSocket('**/*',ws=>{
+      const url=new URL(ws.url());
+      if(url.hostname==='localhost' && url.port==='5173')ws.connectToServer();
+      else {e.blocked.external++;ws.close();}
+    });
+    context.on('response',response=>{
+      const url=new URL(response.url());if(!url.pathname.startsWith('/api/'))return;
+      const status=response.status();e.apiResponses.push({mode,path:url.pathname,status});
+      if((status>=200 && status<300) || status===304){
+        e.privacyStop={mode,reason:'UNAPPROVED_SUCCESSFUL_NONFIXTURE_API_READ',path:url.pathname,status,atUtc:new Date().toISOString()};
+        void context.close().catch(()=>{});
+      }
+    });
+    contextRelease.guardInstalledAtUtc=new Date().toISOString();
+    await context.addInitScript(seedApplicationMode,{origin,mode});
+    await context.addInitScript(()=>{for(const[k,v]of Object.entries({'teslasync-onboarded':'true','teslasync:onboarding:skipped:v1':'1','teslasync:themeFirstRunDismissed:v1':'1','teslasync:whats-new:dismissed':'1','teslasync:dev-banner:dismissed':'1','teslasync:changelog:seen-version':'99.0.0','teslasync:checklist:dismissed':'1','teslasync-tour-completed':'true'}))localStorage.setItem(k,v);});
+    const page=await context.newPage();page.on('pageerror',()=>e.pageErrorCount++);
+    page.setDefaultTimeout(8000);page.setDefaultNavigationTimeout(20000);
+    assertGuard('before-device-viewport390x900',mode);
+    await page.setViewportSize({width:390,height:900});
+    assertGuard('before-navigation',mode);
+    const response=await page.goto(origin+'/energy-orchestrator',{waitUntil:'domcontentloaded'});
+    if(response?.status()!==200 || page.url()!==origin+'/energy-orchestrator')throw Error('NOTRUN_ROUTE_UNAVAILABLE_OR_REDIRECTED');
+    await page.locator('main').waitFor({state:'visible'});
+    await page.waitForTimeout(5000);
+    assertGuard('before-theme-synchronization',mode);
+    if(!e.apiResponses.some(record=>record.mode===mode && record.path==='/api/v1/settings'))throw Error('NOTRUN_THEME_SETTINGS_READ_NOT_SETTLED');
+    for(const path of ['/api/v1/vehicles','/api/v1/tesla/energy-sites'])if(!e.apiResponses.some(record=>record.mode===mode && record.path===path && record.status>=400))throw Error('NOTRUN_ORIGINAL_UNAVAILABLE_SOURCE_NOT_OBSERVED');
+    await page.evaluate(synchronizeApplicationMode,mode);
+    await page.waitForFunction(({mode})=>{
+      const root=document.documentElement;
+      return localStorage.getItem('teslasync-mode')===mode && root.style.colorScheme===mode && root.classList.contains('dark')===(mode==='dark') && root.classList.contains('light-mode')===(mode==='light');
+    },{mode});
+    const actualMode=await page.evaluate(mountedApplicationMode);
+    if(!applicationModeMatches(mode,actualMode))throw Error('NOTRUN_MOUNTED_MODE_MISMATCH');
+    await page.evaluate(async()=>{await document.fonts.ready;await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)));});
+    for(const action of actions) {
+      assertGuard('before-target-measurement:'+action,mode);
+      const locator=page.getByRole('button',{name:action,exact:true});
+      if(await locator.count()!==1)throw Error('NOTRUN_EXACT_TARGET_NOT_UNIQUE');
+      await locator.scrollIntoViewIfNeeded();
+      const measured=await locator.evaluate(button=>{
+        const rect=button.getBoundingClientRect(),style=getComputedStyle(button);
+        const points=[['center',rect.x+rect.width/2,rect.y+rect.height/2],['top-left-inset1',rect.x+1,rect.y+1],['top-right-inset1',rect.right-1,rect.y+1],['bottom-left-inset1',rect.x+1,rect.bottom-1],['bottom-right-inset1',rect.right-1,rect.bottom-1]];
+        return {bounds:{x:rect.x,y:rect.y,width:rect.width,height:rect.height,right:rect.right,bottom:rect.bottom},viewport:{width:innerWidth,height:innerHeight},devicePixelRatio,rootFontPx:Number.parseFloat(getComputedStyle(document.documentElement).fontSize),rootClasses:document.documentElement.className,minHeight:style.minHeight,display:style.display,visibility:style.visibility,pointerEvents:style.pointerEvents,disabled:button.disabled,sourceMobileClass:button.classList.contains('min-h-11'),sourceDesktopClass:button.classList.contains('md:min-h-9'),hits:points.map(([point,x,y])=>{const top=document.elementFromPoint(x,y);return{point,x,y,hit:top===button || !!(top && button.contains(top))};})};
+      });
+      assertGuard('after-target-measurement:'+action,mode);
+      const expected=original.nativeContinuation.nativeMeasurements.nativeCandidateN01.at390.find(record=>record.action===action);
+      const status=measured.bounds.width>=44 && measured.bounds.height>=44 && measured.hits.every(point=>point.hit) && !measured.disabled && measured.sourceMobileClass && measured.sourceDesktopClass ? 'MEASURED_44PX_AND_SAMPLED_HITS_PASS' : 'MEASURED_FAILURE';
+      e.measurements.push({mode,action,atUtc:new Date().toISOString(),previousHeightPx:expected.heightPx,status,...measured});
+    }
+    await context.close();contextRelease.closedAtUtc=new Date().toISOString();context=null;
+  }
+  e.status=e.measurements.length===6 && e.measurements.every(record=>record.status==='MEASURED_44PX_AND_SAMPLED_HITS_PASS')?'NATIVE_THREE_TARGETS_PASS_UNAVAILABLE_SOURCE_ONLY':'NATIVE_TARGET_FAILURE';
+}catch(error){e.status=e.privacyStop?'NOTRUN_PRIVACY_STOP':'NOTRUN_EXACT_BLOCKER';e.blocker=String(error.message).replace(/http[^\s]*/g,'[URL_REDACTED]');process.exitCode=2;}
+finally {
+  if(context){await context.close().catch(()=>{});contextRelease.closedAtUtc=new Date().toISOString();context=null;}
+  if(browser){await browser.close();e.browserReleasedAtUtc=new Date().toISOString();}
+  e.browserClosed=!!browser;e.sourceAfterSha256=pin(sourcePath);e.originalReportAfterSha256=pin(historicalPath);
+  e.sourceUnchanged=e.sourceBeforeSha256===e.sourceAfterSha256;e.originalReportUnchanged=e.originalReportBeforeSha256===e.originalReportAfterSha256;
+  e.successfulAPIReadCount=e.apiResponses.filter(record=>(record.status>=200 && record.status<300)||record.status===304).length;
+  e.commandFinishedAtUtc=new Date().toISOString();e.browserLockReleasedAtUtc=e.browserReleasedAtUtc??e.commandFinishedAtUtc;
+  console.log('NATIVE_TARGET_REMEASURE_RESULT '+JSON.stringify(e));
+}
+NATIVE_TARGET_REMEASURE_RESULT {"item":"phase6-native-home-energy-scenario-target-remeasure","kind":"bounded-native-scenario-target-remeasure","startedAtUtc":"2026-10-14T06:11:48.792Z","channel":"msedge","origin":"http://localhost:5173","route":"/energy-orchestrator","fixtureResponses":0,"actionInvocations":0,"screenshotsAdded":0,"measurements":[],"guardChecks":[{"stage":"before-installed-msedge-launch","mode":null,"atUtc":"2026-10-14T06:11:48.794Z","origin":"http://localhost:5173","readOnly":true,"approvedSuccessfulSourceReads":0},{"stage":"before-context","mode":"dark","atUtc":"2026-10-14T06:11:49.190Z","origin":"http://localhost:5173","readOnly":true,"approvedSuccessfulSourceReads":0},{"stage":"before-device-viewport390x900","mode":"dark","atUtc":"2026-10-14T06:11:49.412Z","origin":"http://localhost:5173","readOnly":true,"approvedSuccessfulSourceReads":0},{"stage":"before-navigation","mode":"dark","atUtc":"2026-10-14T06:11:49.429Z","origin":"http://localhost:5173","readOnly":true,"approvedSuccessfulSourceReads":0}],"contexts":[{"mode":"dark","createdAtUtc":"2026-10-14T06:11:49.206Z","guardInstalledAtUtc":"2026-10-14T06:11:49.210Z","closedAtUtc":"2026-10-14T06:11:53.445Z"}],"apiResponses":[{"mode":"dark","path":"/api/v1/system/version","status":200},{"mode":"dark","path":"/api/v1/system/version","status":200},{"mode":"dark","path":"/api/v1/settings","status":200},{"mode":"dark","path":"/api/v1/settings","status":200}],"blocked":{"external":1,"nonRead":0,"unapprovedPath":3},"pageErrorCount":0,"privacyStop":{"mode":"dark","reason":"UNAPPROVED_SUCCESSFUL_NONFIXTURE_API_READ","path":"/api/v1/settings","status":200,"atUtc":"2026-10-14T06:11:53.388Z"},"sourceBeforeSha256":"7da2c2d9a28655bb2b9b0af5e95c7e98258a6abc9c23bc6d7f35d5fb61e0cccd","originalReportBeforeSha256":"220b8ab75101bad956474585c72ec97bbd01d228303ee101c616111e93ee301c","priorMeasurementCount":20,"priorScreenshotCount":6,"browserLock":"Explicit user-granted browserlock1/4; no inferred semaphore occupancy","browserVersion":"155.0.4283.45","status":"NOTRUN_PRIVACY_STOP","blocker":"page.waitForTimeout: Target page, context or browser has been closed","browserReleasedAtUtc":"2026-10-14T06:11:53.760Z","browserClosed":true,"sourceAfterSha256":"7da2c2d9a28655bb2b9b0af5e95c7e98258a6abc9c23bc6d7f35d5fb61e0cccd","originalReportAfterSha256":"220b8ab75101bad956474585c72ec97bbd01d228303ee101c616111e93ee301c","sourceUnchanged":true,"originalReportUnchanged":true,"successfulAPIReadCount":4,"commandFinishedAtUtc":"2026-10-14T06:11:53.760Z","browserLockReleasedAtUtc":"2026-10-14T06:11:53.760Z"}
+NATIVE_TARGET_REMEASURE_COMMAND_EXIT=2 COMMAND_RELEASE_UTC=2026-10-14T06:11:53.7953147Z
+REPORT_VALIDATION_COMMAND_BEGIN 2026-10-14T06:14:11.7308563Z
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import assert from 'node:assert/strict';
+const reportPath='..\\docs\\frontend-audits\\phase6-native-home-energy-scenario-target-remeasure.json';
+const report=JSON.parse(readFileSync(reportPath,'utf8'));
+const log=readFileSync('logs\\phase6-native-home-energy-scenario-target-remeasure.log','utf8');
+const marker='NATIVE_TARGET_REMEASURE_RESULT ';
+const raw=JSON.parse(log.split(/\r?\n/).find(line=>line.startsWith(marker+'{')).slice(marker.length));
+const hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
+assert.equal(raw.status,'NOTRUN_PRIVACY_STOP');assert.equal(raw.measurements.length,0);
+assert.equal(report.native44Proof,'NOTRUN');assert.equal(report.nativeAttempt.targetResults.length,6);
+for(const target of report.nativeAttempt.targetResults){assert(target.status.startsWith('NOTRUN'));assert.equal(target.bounds,null);assert.equal(target.hits,null);}
+assert.equal(raw.sourceBeforeSha256,raw.sourceAfterSha256);assert.equal(hash('src\\features\\home-energy\\components\\ScenarioControls.tsx'),raw.sourceBeforeSha256);
+assert.equal(raw.originalReportBeforeSha256,raw.originalReportAfterSha256);assert.equal(hash('..\\docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json'),raw.originalReportBeforeSha256);
+assert.equal(raw.priorMeasurementCount,20);assert.equal(raw.priorScreenshotCount,6);assert.equal(raw.screenshotsAdded,0);assert.equal(raw.actionInvocations,0);
+assert.equal(raw.contexts.length,1);assert(raw.contexts[0].closedAtUtc);assert(raw.browserClosed);assert(raw.browserReleasedAtUtc);
+assert.equal(raw.successfulAPIReadCount,4);assert.equal(report.nativeAttempt.observedAPIMetadataOnly.length,4);
+assert.equal(report.nativeAttempt.exit,2);assert(log.includes('NATIVE_TARGET_REMEASURE_COMMAND_EXIT=2 COMMAND_RELEASE_UTC='));
+assert(log.includes('NATIVE_TARGET_REMEASURE_COMMAND_BEGIN'));assert(log.includes('import { chromium } from'));
+console.log('REPORT_JSON_PARSE=PASS TARGET_RECORDS=6 MEASURED_BOUNDS=0 MEASURED_HITS=0 NATIVE44=NOTRUN');
+console.log('PRIVACY_STOP=ENFORCED API_SUCCESS_METADATA=4 BODY_READS_LOGGED=0 SECOND_CONTEXT=NOTRUN');
+console.log('SOURCE_UNCHANGED=True ORIGINAL_REPORT_UNCHANGED=True PRIOR20_MEASUREMENTS_PRESERVED=True PRIOR6_CAPTURES_PRESERVED=True NEW_CAPTURES=0');
+console.log('BROWSER_CONTEXT_CLOSED=True BROWSER_CLOSED=True BROWSER_LOCK_RELEASED=True NATIVE_COMMAND_EXIT=2');
+console.log('RECEIPT_VALIDATION_EXIT=0 NOT_PAGE_APPROVAL');
+REPORT_JSON_PARSE=PASS TARGET_RECORDS=6 MEASURED_BOUNDS=0 MEASURED_HITS=0 NATIVE44=NOTRUN
+PRIVACY_STOP=ENFORCED API_SUCCESS_METADATA=4 BODY_READS_LOGGED=0 SECOND_CONTEXT=NOTRUN
+SOURCE_UNCHANGED=True ORIGINAL_REPORT_UNCHANGED=True PRIOR20_MEASUREMENTS_PRESERVED=True PRIOR6_CAPTURES_PRESERVED=True NEW_CAPTURES=0
+BROWSER_CONTEXT_CLOSED=True BROWSER_CLOSED=True BROWSER_LOCK_RELEASED=True NATIVE_COMMAND_EXIT=2
+RECEIPT_VALIDATION_EXIT=0 NOT_PAGE_APPROVAL
+REPORT_VALIDATION_EXIT=0 VALIDATION_COMMAND_RELEASE_UTC=2026-10-14T06:14:12.0087333Z
+FINAL_REPARSE_COMMAND_BEGIN 2026-10-14T06:15:00.8056475Z
+const fs=require('fs'),assert=require('assert/strict');
+const p='..\\docs\\frontend-audits\\phase6-native-home-energy-scenario-target-remeasure.json';
+const r=JSON.parse(fs.readFileSync(p,'utf8'));
+assert.equal(r.finalValidation.exit,0);assert.equal(r.native44Proof,'NOTRUN');assert.equal(r.release.status,'RELEASED_NATIVE_NOTRUN_PRIVACY_BLOCKED');
+assert.equal(r.nativeAttempt.targetResults.length,6);assert(r.nativeAttempt.targetResults.every(x=>x.bounds===null && x.hits===null));
+assert(Date.now()<Date.parse(r.authority.returnDeadlineUtc));
+console.log('FINAL_JSON_REPARSE=PASS ALL6_TARGETS_NOTRUN=True REPORT_WRITE_COMPLETED_UTC='+fs.statSync(p).mtime.toISOString());
+FINAL_JSON_REPARSE=PASS ALL6_TARGETS_NOTRUN=True REPORT_WRITE_COMPLETED_UTC=2026-10-14T06:14:37.507Z
+FINAL_REPARSE_EXIT=0 REPORT_RELEASE_UTC=2026-10-14T06:15:01.1171328Z ALL_OWNED_COMMANDS_RELEASE_UTC=2026-10-14T06:15:01.1171328Z BROWSER_RELEASE_UTC=2026-10-14T06:11:53.760Z CONTEXT_RELEASE_UTC=2026-10-14T06:11:53.445Z BROWSERLOCK1/4_RELEASED=True RETURN20MIN_MET=True

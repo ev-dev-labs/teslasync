@@ -1,0 +1,268 @@
+{
+  "item": "audit-page-107",
+  "page": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+  "routes": ["/drive-compare"],
+  "purpose": "Compare two independently selected drives from the workspace vehicle, including fair-metric verdict, context, normalized telemetry and all aggregate metrics.",
+  "primaryGoal": "Understand which drive performed better on comparable consumption, regen and score without mistaking different trip sizes or missing measurements for advantages.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "usage": "Workspace vehicle ID; no duplicate vehicle selector.",
+      "evidence": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx:42-45",
+      "inspection": "Consumer inspected; hook implementation not inspected."
+    },
+    {
+      "hook": "useDrives(vehicleIdStr, { limit: 1000 })",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "endpoint": "/drives?vehicle_id=<workspace vehicle>&limit=1000",
+      "backendOwner": "driveHandler.ListByVehicle",
+      "evidence": ["web\\src\\features\\driving\\pages\\DriveComparePage.tsx:34-47", "web\\src\\api\\hooks\\useDriving.ts:110-136", "internal\\api\\router.go:3463-3464"],
+      "behavior": "Enabled only with a vehicle; safeArray select; FAST stale time; forwards AbortSignal; bounded list, not all-time history. No range or pagination supplied by this page."
+    },
+    {
+      "hook": "useDrive(activeA), useDrive(activeB)",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "endpoint": "/drives/{driveID}",
+      "backendOwner": "driveHandler.Get",
+      "evidence": ["web\\src\\features\\driving\\pages\\DriveComparePage.tsx:83-96", "web\\src\\api\\hooks\\useDriving.ts:200-210", "internal\\api\\router.go:3471-3472"],
+      "behavior": "Independent singular drive cache keys; enabled for nonempty IDs; abort signal forwarded; live drive detail polls at INTERVALS.FAST. Detail payload supplies aggregates, positions and telemetry; no separate telemetry request is made by this page.",
+      "unknowns": "Handler/database implementation, actual historical ordering, completeness and telemetry unit mapping were not exercised or independently traced."
+    },
+    {
+      "hook": "useDataState; useUnits; useNumberFormatting; useOperationalMetrics",
+      "owner": "Existing shared data-trust and display-formatting hooks",
+      "evidence": ["web\\src\\features\\driving\\pages\\DriveComparePage.tsx:44-46,85-86", "web\\src\\features\\driving\\components\\drive-compare\\useCompareMetricFormatter.ts:13-59", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:31"],
+      "behavior": "Historical trust adapters separate fatal and refresh errors. SI values stay in query/model state; distance, speed, energy and temperature are converted for display. Formatting hook endpoints and internals were not inspected."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout, Grid", "category": "layout", "owner": "web\\src\\components\\layout", "usage": "Shared full-width orchestration; 1/xl:5 hero, 1/lg:2 context and chart grids."},
+    {"name": "OperationalBrief through DrivingSummaryBrief", "category": "data-display", "owner": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx", "usage": "Current mounted verdict summary; metrics adapt through useOperationalMetrics."},
+    {"name": "Select, GlassPanel, Badge, typography wrappers, HelpTooltip", "category": "ui", "owner": "web\\src\\components\\ui", "usage": "Independent A/B native-select primitives, panel shells, labels and explanations."},
+    {"name": "ChartContainer, ChartLegend, ChartTooltip and chart barrel exports", "category": "charts", "owner": "web\\src\\components\\charts", "usage": "Speed and SOC plots, chart persistence IDs, sample export and accessible data-column definitions."},
+    {"name": "RouteDisplay", "category": "data-display", "owner": "web\\src\\components\\data-display", "usage": "Source-backed start/end route context; implementation not inspected."},
+    {"name": "StaleRefreshWarning, QueryError, Skeleton, EmptyState", "category": "feedback", "owner": "web\\src\\components\\feedback", "usage": "Three independent stale notices plus panel-local retry/loading/empty surfaces."},
+    {"name": "CompareSectionBody", "category": "feature", "owner": "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx", "usage": "Existing common state body reused by every comparison section."},
+    {"name": "AdvantageBreakdown, DriveIdentityCard, HeadToHeadGrid, SpeedComparisonChart, BatteryComparisonChart", "category": "feature", "owner": "web\\src\\features\\driving\\components\\drive-compare", "usage": "Complete domain presentation; identity component instantiated once per side."},
+    {"name": "FadeIn, NoVehicleSelected", "category": "motion/onboarding", "owner": "Existing motion barrel and onboarding component", "usage": "Four entrance groups and no-workspace-vehicle recovery; implementations not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx",
+      "line": 62,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Speed and battery chart shells repeat progress axis, legends, dual series, export metadata and state composition. They already reuse the chart library and CompareSectionBody; duplication is domain-local, not evidence for a new global library.",
+      "fix": "Consider one local typed progress-comparison presentation component while preserving each domain's conversion, axis bounds, sample columns and missing-data message.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx:53-161",
+      "priority": "low"
+    }
+  ],
+  "responsive": {
+    "verified": "Source only",
+    "existingStrategy": "Grid stacks at small widths; selectors wrap; head-to-head owns an overflow-x-auto region with 640px minimum table width; charts have 310px height.",
+    "issues": [
+      {
+        "id": "R1",
+        "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+        "line": 100,
+        "rule": "MDC-031 / MDC-043 / preserve all metadata",
+        "detail": "All fact values are truncated inside a fixed two-column grid without an expansion or full-value alternate. Battery transitions, duration and temperature-plus-status can become inaccessible visually on narrow screens or with enlarged/localized text.",
+        "fix": "Allow facts to wrap or reflow to one column at constrained container width; keep full values reachable without hover and preserve every fact.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "id": "R2",
+        "file": "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx",
+        "line": 89,
+        "rule": "MDC-043 / MDC-044 / preservation",
+        "detail": "Fair-metric explanation is truncated while the adjacent outcome badge cannot shrink. Long localized edge/needs-both explanations have no full-text affordance.",
+        "fix": "Wrap explanation text and let row alignment adapt at constrained widths; retain outcome text and all fairness explanations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["All ten contract viewport widths", "Actual chart and selector overflow", "200% text", "RTL", "Long labels", "Allocated container width"]
+  },
+  "accessibility": {
+    "existing": ["Localized distinct A/B aria-labels", "Native Select controls with shared focus styling", "Decorative icons explicitly aria-hidden", "Named comparison sections", "Chart aria labels and dataColumns", "Explicit table row/cell roles", "Loading status names and shared retry controls"],
+    "issues": [
+      {
+        "id": "A1",
+        "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+        "line": 180,
+        "rule": "MDC-040",
+        "detail": "Both comparison selectors explicitly use size=sm; Select defines sm as min-h-9 (36px), below the contract's stronger 44px mobile target default. Actual dimensions/spacing and any WCAG exception are unverified.",
+        "fix": "Use the existing large/density-appropriate Select sizing at touch widths; preserve two independent selectors, their accessible names and URL values.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\driving\\pages\\DriveComparePage.tsx:187", "web\\src\\components\\ui\\Select.tsx:32-37"]
+      },
+      {
+        "id": "A2",
+        "file": "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+        "line": 56,
+        "rule": "MDC-023 / MDC-040",
+        "detail": "The horizontal scroll wrapper has no explicit keyboard focus or scroll-region name, while its inner table exceeds narrow container width. Keyboard scroll reachability is not established by source and can vary by browser.",
+        "fix": "Reuse the existing semantic Table matrix/scroll presentation where capable, or add a labeled focusable scroll region with visible focus. Preserve all ten rows and both sides; do not invent DataTable sorting/export behavior.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["Keyboard interactions", "Screen reader table/legend behavior", "Effective contrast", "Focus visibility/restoration", "Forced colors", "Reduced motion"]
+  },
+  "states": {
+    "loading": "Three historical source adapters feed skeleton bodies. Seven panels remain mounted when comparison sources load; no-vehicle state returns onboarding recovery.",
+    "empty": "Fewer than two drives and same A/B choice have specific recovery copy; browse-drives action supplied to verdict for fewer than two drives. Missing detail and per-profile insufficient samples are explicit, not zero.",
+    "error": "Fatal-only errors feed CompareSectionBody/QueryError with refetch and /drives recovery. Identity state is source-local except list error and selection message.",
+    "staleOffline": "Three StaleRefreshWarning components preserve retained data and offer source-specific retry. Shared warning distinguishes paused/offline refresh in its copy. Page consumes fatalError rather than raw query error.",
+    "partial": "A retained identity can remain usable while B initially fails; pair-dependent panels require both details. This is intentional, not a reason to fabricate partial verdicts.",
+    "issues": [
+      {
+        "id": "S1",
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\CompareVerdictBrief.tsx",
+        "line": 40,
+        "rule": "MDC-026 / MDC-033",
+        "detail": "When retained=true and a prior summary exists, the explicit winner/tie statusLabel overrides DrivingSummaryBrief's Retained evidence label. The brief does retain warning tone and the page provides stale notices, but the verdict's own status text omits retained trust, especially in an isolated screenshot.",
+        "fix": "Compose source-derived retained status with verdict wording using existing OperationalBrief capabilities, keeping the fair score and winner explanation visible.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:40-48", "web\\src\\features\\driving\\pages\\DriveComparePage.tsx:204-205"]
+      }
+    ],
+    "preservationCaution": "identityState currently propagates selectionMessage to both identity cards even when their source detail exists. Existing unexecuted tests explicitly expect this. Do not silently change this policy or hide independent successful identities on unrelated query errors.",
+    "testEvidence": "DriveComparePage.test.tsx:208-308 has authored retained-refresh, partial failure, URL preselection, same-pick and no-vehicle tests. They mock presentation components and were NOT executed; they do not prove mounted chart/brief behavior."
+  },
+  "visualIssues": [
+    {
+      "id": "V1",
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+      "line": 54,
+      "rule": "MDC-010 / MDC-025 / visual noise reduction",
+      "detail": "Side identity sets fixed cyan/purple panel borders and a hardcoded purple badge override rather than existing neutral/semantic tokens. AdvantageBreakdown duplicates the purple badge override. This is not fluorescent/neon source, but it independently decorates multiple surfaces and bypasses saved/custom theme semantics.",
+      "fix": "Prefer neutral token surfaces and existing Badge variants, retaining explicit A/B names and stable chart series identities. Subdue decorative borders; do not reset saved chart palettes or remove comparison meaning.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx:65", "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx:95"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "id": "I1",
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "line": 34,
+      "rule": "MDC-026 / MDC-033 / transparent source scope",
+      "detail": "The selector choices are limited to one 1000-row request, yet the subtitle says any two drives and the brief scope does not disclose the observed-history cap. URL preselection outside that loaded list is silently replaced by fallback selection. No backend capability beyond this bounded endpoint is asserted.",
+      "fix": "Disclose the observed selection window in existing scope/help presentation. If arbitrary historical deep links must be supported, assign a separate integration design for resolving/paging them while validating workspace vehicle ownership; retain existing independent A/B selectors and URL defaults.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\driving\\pages\\DriveComparePage.tsx:50-74,169", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\CompareVerdictBrief.tsx:37", "web\\src\\api\\hooks\\useDriving.ts:105-108"]
+    }
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": ["I1: expose actual selection scope", "R1/R2: preserve readable full context at narrow widths", "S1: retain source-trust wording in verdict"],
+    "next": ["A1: touch sizing", "A2: keyboard matrix scroll verification", "V1: token-based noise reduction"],
+    "notClaimed": "No critical runtime failure, contrast violation or backend defect is claimed from this static audit."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Head-to-head semantic matrix/scroll capability assessment",
+      "existingOwner": "web\\src\\components\\ui (Table category export; concrete Table implementation not inspected)",
+      "propsVariantsStates": "Static A/B comparison matrix; caption/name, column and row headers, labeled keyboard-reachable horizontal overflow, focus visibility, long values, all rows preserved. Reuse current owner if capable; no new sort, paging or export semantics.",
+      "usedBy": ["web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx"],
+      "dependsOn": ["Inspect existing Table API and scroll owner before adoption", "Exercise keyboard and narrow viewport behavior"],
+      "status": "Assessment only; no confirmed missing shared API and no shared edit authorized."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\ComparisonVerdict.tsx",
+      "line": 17,
+      "detail": "Original ComparisonVerdict renderer and mounted CompareVerdictBrief both implement winner/explanation/neutral copy. The page mounts only CompareVerdictBrief; ComparisonVerdict is still barrel-exported and used for a type reference and the page test mock. Its gradient at line 59 is NOT evidence of a mounted page gradient.",
+      "fix": "Consolidate pure verdict wording/contract when safely scoped; inspect all consumers before removing an exported renderer. Do not report or modernize the unmounted gradient as this route's visual defect.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "343CBD3EB0786D44102196E948C013F79AF837C4A5A71C415FB345BDD275B9AB",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashPath": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+    "currentLineCount": 248,
+    "sectionNames": ["Fair comparison verdict", "What decided it", "Drive A context", "Drive B context", "Speed through trip progress", "Battery through trip progress", "Full head-to-head"],
+    "sectionCounts": {"mountedPanels": 7, "namedHtmlSections": 3, "entranceGroups": 4, "identityCards": 2, "charts": 2, "fairMetrics": 3, "headToHeadMetrics": 10, "staleNotices": 3},
+    "actions": [
+      "Independent Choose drive A and Choose drive B selectors",
+      "drive_a and drive_b URL state, fallback defaults and replace semantics",
+      "Workspace vehicle selection supplied by existing shell",
+      "Per-source stale retry, identity retry and combined comparison retry",
+      "Browse drives /drives recovery",
+      "Chart legends, hidden-series controls and export/data-column contracts inherited from ChartContainer"
+    ],
+    "persistenceKeys": ["drive_a", "drive_b", "drive-compare-speed", "drive-compare-battery", "drive-a-wins", "drive-b-wins"],
+    "dataBehavior": [
+      "Compare selection is independent business selection, not a competing workspace range/vehicle selector. /drive-compare is not RANGE_ENABLED_PATHS; do not add a second date picker or force range-scoped comparison behavior.",
+      "List limit=1000, selected workspace vehicle, singular detail cache keys, abort signals and live-only detail polling must survive.",
+      "All ten metrics: distanceM, durationS, avgSpeedMps, maxSpeedMps, energyUsedWh, whPerKm, regenShare, socUsed, outsideTempAvgC, score.",
+      "Only consumption, regen share and valid 0-100 score decide winners. Trip totals and speeds stay neutral.",
+      "Consumption/regen need positive used energy and at least 1000m distance; absent or invalid measurements remain null. Score bounds and SOC validation survive.",
+      "Source timestamps, start/end routes, battery transition, conditions and live/completed/unknown statuses remain available.",
+      "Profiles normalize each drive independently to 0-100% trip progress; timestamp aliases, telemetry-first/position fallback and null merge gaps remain.",
+      "Speed uses display-boundary SI conversion; raw SI model/cache values must not change. Actual backend speed unit mapping remains unverified.",
+      "Each chart requires at least two valid samples on each side; no fabricated zero or interpolation-derived observations.",
+      "Retained data and independent identity failure isolation, all panel shells, empty/error/loading states and localized explanations must survive."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "READ-ONLY Phase 0 source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "NOT RUN",
+    "typeScript": "NOT RUN: assignment restricts audit to source and report/heartbeat writes",
+    "lintBuild": "NOT RUN: prohibited by assignment",
+    "auditScript": "Inspected but NOT RUN: audit.sh includes project TypeScript compilation. Bounded literal scans used instead.",
+    "scanEvidence": "Page-specific presentation scan: inline style= 0, direct recharts/react-leaflet/framer-motion imports 0, text-white/gray/neon classes 0, truncation sites 2. Initial PowerShell scan failed to parse; corrected command succeeded. Case-insensitive Select-String initially counted two shared <Select> usages as raw lowercase controls; case-sensitive regex on root confirmed 0 actual raw controls. These literal scans are not exhaustive lint or runtime acceptance.",
+    "routes": "App.tsx lazy import line 144 and mounted Route line 846; router source confirms both used drive endpoints. No network request made.",
+    "scope": "Only assigned page and directly relevant comparison, formatting, trust and selector dependencies; shared implementations read only where needed for a concrete claim.",
+    "ownership": "Only docs\\frontend-audits\\audit-page-107.json and .agent-status\\audit-page-107.txt written. No source, queue, Git, catalogs, configuration or shared component mutations.",
+    "unknowns": ["Actual endpoint responses", "Backend list ordering/completeness", "Shared chart export/fullscreen runtime", "Formatter settings fetches", "NoVehicleSelected implementation", "Reduced-motion implementation", "Global shell composition and PageContainer internals"],
+    "historicalEvidence": "Existing tests are source context only, not borrowed acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+    "web\\src\\features\\driving\\pages\\DriveComparePage.test.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\index.ts",
+    "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\ComparisonVerdict.tsx",
+    "web\\src\\features\\driving\\components\\drive-compare\\useCompareMetricFormatter.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\CompareVerdictBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\lib\\driveCompare.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

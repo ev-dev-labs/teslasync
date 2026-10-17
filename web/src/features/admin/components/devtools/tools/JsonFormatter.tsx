@@ -44,12 +44,12 @@ export function JsonFormatterTool() {
     <ToolCard
       icon={Braces}
       color="green"
-      title={t('devtools.utils.json', 'JSON Formatter')}
+      title={t('devtools.utils.json', 'JSON formatter')}
       description={t('devtools.utils.jsonDesc', 'Validate and pretty-print JSON with 2-space indentation.')}
     >
       <div className="space-y-3">
         <Textarea
-          label={t('devtools.utils.jsonInput', 'JSON Input')}
+          label={t('devtools.utils.jsonInput', 'JSON input')}
           rows={4}
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}

@@ -28,6 +28,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { ChargingSession } from '@/api/types';
+import { chartTokens } from '@/lib/tokens';
 import {
   buildGrid,
   heatColor,
@@ -143,24 +144,51 @@ describe('buildGrid', () => {
 
 describe('heatColor', () => {
   it('returns the floor swatch when count or max is 0', () => {
-    expect(heatColor(0, 10)).toBe('rgba(0, 240, 255, 0.04)');
-    expect(heatColor(5, 0)).toBe('rgba(0, 240, 255, 0.04)');
+    expect(heatColor(0, 10)).toBe(HEAT_LEGEND[0]);
+    expect(heatColor(5, 0)).toBe(HEAT_LEGEND[0]);
+    expect(heatColor(0, 0)).toBe(HEAT_LEGEND[0]);
+    expect(heatColor(-0, 10)).toBe(HEAT_LEGEND[0]);
   });
 
   it('maps each intensity band, honouring exclusive < boundaries', () => {
     // ratio 0.1 → lowest active band.
-    expect(heatColor(1, 10)).toBe('rgba(0, 240, 255, 0.15)');
-    // ratio exactly 0.25 is NOT < 0.25 → next band up (green).
-    expect(heatColor(25, 100)).toBe('rgba(16, 185, 129, 0.4)');
-    // ratio exactly 0.5 is NOT < 0.5 → amber.
-    expect(heatColor(50, 100)).toBe('rgba(245, 158, 11, 0.55)');
-    // ratio exactly 0.75 is NOT < 0.75 → red.
-    expect(heatColor(75, 100)).toBe('rgba(239, 68, 68, 0.75)');
+    expect(heatColor(1, 10)).toBe(HEAT_LEGEND[1]);
+    expect(heatColor(25, 100)).toBe(HEAT_LEGEND[2]);
+    expect(heatColor(50, 100)).toBe(HEAT_LEGEND[3]);
+    expect(heatColor(75, 100)).toBe(HEAT_LEGEND[4]);
   });
 
   it('returns the hottest swatch at full intensity', () => {
-    expect(heatColor(10, 10)).toBe('rgba(239, 68, 68, 0.75)');
-    expect(heatColor(9, 10)).toBe('rgba(239, 68, 68, 0.75)');
+    expect(heatColor(10, 10)).toBe(HEAT_LEGEND[4]);
+    expect(heatColor(9, 10)).toBe(HEAT_LEGEND[4]);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'keeps missing or invalid input %s distinct from measured zero',
+    (value) => {
+      expect(heatColor(value, 10)).toBe('var(--surface-2)');
+      expect(heatColor(5, value)).toBe('var(--surface-2)');
+      expect(heatColor(0, value)).toBe('var(--surface-2)');
+      expect(heatColor(value, 0)).toBe('var(--surface-2)');
+      expect(heatColor(value, 10)).not.toBe(heatColor(0, 10));
+    },
+  );
+
+  it.each([
+    [-1, 10, 1],
+    [1, -10, 1],
+    [-25, -100, 2],
+    [-50, -100, 3],
+    [-75, -100, 4],
+    [0.124, 0.5, 1],
+    [0.125, 0.5, 2],
+    [0.249, 0.5, 2],
+    [0.25, 0.5, 3],
+    [0.374, 0.5, 3],
+    [0.375, 0.5, 4],
+    [2, 1, 4],
+  ])('preserves count/max for signed and fractional inputs (%s / %s)', (count, max, stop) => {
+    expect(heatColor(count, max)).toBe(HEAT_LEGEND[stop]);
   });
 });
 
@@ -173,7 +201,11 @@ describe('HEAT_LEGEND', () => {
   it('aligns with heatColor at the floor and ceiling of the scale', () => {
     expect(HEAT_LEGEND[0]).toBe(heatColor(0, 10));
     expect(HEAT_LEGEND[HEAT_LEGEND.length - 1]).toBe(heatColor(10, 10));
-    expect(HEAT_LEGEND).toContain('rgba(16, 185, 129, 0.4)');
+    expect(HEAT_LEGEND).toEqual(
+      [4, 15, 40, 55, 75].map(
+        (strength) => `color-mix(in srgb, ${chartTokens.series[0]} ${strength}%, transparent)`,
+      ),
+    );
   });
 });
 

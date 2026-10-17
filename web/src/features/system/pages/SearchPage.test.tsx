@@ -31,13 +31,14 @@
  * CommandsPage / DiagnosticPage use) so nothing touches the real network. The
  * heavy AI natural-language surface is stubbed to a marker so the page's own
  * typed-search behaviour is isolated. `@testing-library/user-event` is
- * intentionally not used — it is not a dependency of this repo (see
- * CommandsPage.test.tsx) — interactions go through `fireEvent`.
+ * used only for native keyboard activation; URL/filter events use `fireEvent`.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -108,6 +109,13 @@ if (typeof window.matchMedia !== 'function') {
 import { request } from '@/api/client';
 import type { SearchHit, SearchHitType, SearchResponse } from '@/api/types';
 import SearchPage from './SearchPage';
+import { subscribeAnnouncer, __resetAnnouncerForTests } from '@/hooks/useAnnouncer';
+import { __resetStatusAnnouncerForTests } from '@/hooks/useStatusAnnouncer';
+import { __resetAnnouncePolicyForTests } from '@/lib/announcePolicy';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -133,6 +141,7 @@ function makeHit(type: SearchHitType, id: number, overrides: Partial<SearchHit> 
  */
 function installSearch(config: {
   hits?: SearchHit[];
+  completeness?: SearchResponse['completeness'];
   error?: Error;
   pending?: boolean;
 }) {
@@ -140,7 +149,7 @@ function installSearch(config: {
     if (config.pending) return new Promise<SearchResponse>(() => {});
     if (config.error) return Promise.reject(config.error);
     const params = new URLSearchParams(path.split('?')[1] ?? '');
-    return Promise.resolve({ hits: config.hits ?? [], query: params.get('q') ?? '' });
+    return Promise.resolve({ hits: config.hits ?? [], query: params.get('q') ?? '', completeness: config.completeness });
   });
 }
 
@@ -167,20 +176,105 @@ function renderPage(initialEntry = '/search') {
 /** The MetricCard root (`[data-role="metric-card"]`) that owns the given KPI label. */
 function metricCard(label: string): HTMLElement {
   const span = screen.getByText(label);
-  const root = span.closest('[data-role="metric-card"]');
+  const root = span.closest('[data-operational-metric]');
   if (!root) throw new Error(`no MetricCard root for "${label}"`);
   return root as HTMLElement;
 }
 
 beforeEach(() => {
   mockedRequest.mockReset();
+  onlineManager.setOnline(true);
+  __resetAnnouncerForTests();
+  __resetStatusAnnouncerForTests();
+  __resetAnnouncePolicyForTests();
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
+  __resetAnnouncerForTests();
+  __resetStatusAnnouncerForTests();
+  __resetAnnouncePolicyForTests();
   vi.restoreAllMocks();
 });
 
 describe('SearchPage', () => {
+  it('preserves every extracted result group and action across a facet round-trip', async () => {
+    const types: SearchHitType[] = [
+      'vehicle', 'drive', 'charging', 'alert', 'notification',
+      'geofence', 'automation', 'location', 'trip',
+    ];
+    installSearch({
+      hits: [...types].reverse().map(type => makeHit(type, 1, {
+        when: '2026-10-12T12:00:00Z',
+      })),
+    });
+    renderPage('/search?q=model');
+
+    const region = await screen.findByRole('region', { name: 'Search results' });
+    expect(within(region).getAllByRole('link').map(link => link.getAttribute('href')))
+      .toEqual(types.map(type => `/${type}/1`));
+    for (const type of types) {
+      expect(within(region).getByText(`${type}-subtitle-1`)).toBeInTheDocument();
+      const row = within(region).getByRole('link', { name: `Open ${type}-title-1` });
+      expect(row.querySelector('[class~="basis-full"]')).toBeInTheDocument();
+    }
+    expect(metricCard('Total results')).toHaveTextContent('9');
+    expect(metricCard('Categories')).toHaveTextContent('9');
+    expect(metricCard('Top match')).toHaveTextContent('Vehicles');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Trips' }));
+    await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) =>
+      new URLSearchParams(String(path).split('?')[1]).get('types') === 'trip',
+    )).toBe(true));
+    expect(screen.getByRole('button', { name: 'Trips' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByRole('button', { name: 'Trips' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(screen.getByRole('region', { name: 'Search results' })).getAllByRole('link')).toHaveLength(9);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Open trip-title-1' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/trip/1');
+  });
+
+  it('preserves successful hits and reports producer-confirmed failed sources', async () => {
+    installSearch({
+      hits: [makeHit('vehicle', 1)],
+      completeness: { failed_types: ['drive'], limit_reached_types: [], total_limit_reached: false },
+    });
+    renderPage('/search?q=model');
+    expect(await screen.findByRole('link', { name: 'Open vehicle-title-1' })).toBeInTheDocument();
+    expect(screen.getByText(/Some sources did not respond: Drives/)).toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('1');
+    expect(screen.queryByText(/A search result limit was reached/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { failed_types: [], limit_reached_types: ['vehicle'] as SearchHitType[], total_limit_reached: false },
+    { failed_types: [], limit_reached_types: [], total_limit_reached: true },
+  ])('reports producer-confirmed caps without hiding ranked results: %j', async completeness => {
+    installSearch({ hits: [makeHit('vehicle', 2), makeHit('vehicle', 1)], completeness });
+    renderPage('/search?q=model');
+    const region = await screen.findByRole('region', { name: 'Search results' });
+    expect(within(region).getAllByRole('link').map(link => link.getAttribute('href'))).toEqual(['/vehicle/2', '/vehicle/1']);
+    expect(screen.getByText(/A search result limit was reached/)).toBeInTheDocument();
+  });
+
+  it('does not infer partial coverage from a full frontend result count without metadata', async () => {
+    installSearch({ hits: Array.from({ length: 25 }, (_, i) => makeHit('vehicle', i + 1)) });
+    renderPage('/search?q=model');
+    await screen.findByRole('region', { name: 'Search results' });
+    expect(screen.queryByText('Search coverage is limited')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes failed empty sources from a complete empty response', async () => {
+    installSearch({
+      hits: [],
+      completeness: { failed_types: ['drive'], limit_reached_types: [], total_limit_reached: false },
+    });
+    renderPage('/search?q=model');
+    expect(await screen.findByText('No results')).toBeInTheDocument();
+    expect(screen.getByText(/no matches does not prove there are none/)).toBeInTheDocument();
+  });
+
   it('renders the idle empty state and makes NO request with an empty query', () => {
     installSearch({ hits: [] });
 
@@ -193,7 +287,7 @@ describe('SearchPage', () => {
 
     // Idle guidance, no KPI band, and — critically — no network call.
     expect(screen.getByText('Start typing to search')).toBeInTheDocument();
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
@@ -203,8 +297,34 @@ describe('SearchPage', () => {
     renderPage('/search?q=a');
 
     expect(screen.getByText('Type at least 2 characters')).toBeInTheDocument();
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
     expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('shares the Unicode floor with the hook and restores populated results at two code points', async () => {
+    installSearch({ hits: [makeHit('vehicle', 11)] });
+    renderPage('/search?q=model');
+    await screen.findByRole('link', { name: 'Open vehicle-title-11' });
+    const calls = mockedRequest.mock.calls.length;
+    const input = screen.getByRole('searchbox', { name: 'Search query' });
+
+    fireEvent.change(input, { target: { value: ' \u{1f697} ' } });
+    expect(screen.getByText('Type at least 2 characters')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open vehicle-title-11' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Search summary' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Refresh results' })).not.toBeInTheDocument();
+    expect(mockedRequest.mock.calls.length).toBe(calls);
+
+    const query = '\u{1f697}a';
+    fireEvent.change(input, { target: { value: ` ${query} ` } });
+    expect(await screen.findByRole('link', { name: 'Open vehicle-title-11' })).toBeInTheDocument();
+    expect(screen.queryByText('Type at least 2 characters')).not.toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('1');
+    expect(screen.getByRole('button', { name: 'Refresh results' })).toBeInTheDocument();
+    const [path, options] = mockedRequest.mock.calls.at(-1)!;
+    expect(new URLSearchParams(String(path).split('?')[1]).get('q')).toBe(query);
+    expect(new URLSearchParams(String(path).split('?')[1]).get('limit')).toBe('25');
+    expect(options.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('renders KPI + results skeletons while the search is pending', () => {
@@ -217,9 +337,26 @@ describe('SearchPage', () => {
       expect.stringContaining('q=model'),
       expect.anything(),
     );
-    // Resolved KPI labels are absent; the band is skeletonised instead.
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
+    // The brief retains labels, but does not expose a resolved numeric value.
+    expect(screen.getByText('Total results')).toBeInTheDocument();
+    expect(metricCard('Total results').querySelector('[data-operational-value]')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Search summary' })).toHaveAttribute('aria-busy', 'true');
+    const summary = screen.getByRole('region', { name: 'Search summary' });
+    expect(summary.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--surface-3)]"][class~="h-5"][class~="w-20"]')).toHaveLength(4);
+    const heading = container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][class~="w-1/3"]');
+    expect(heading).toHaveClass('h-4');
+    const results = heading!.closest('[data-print-card]');
+    expect(results).not.toBeNull();
+    const placeholders = results!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders.length).toBeGreaterThanOrEqual(4);
+    expect(placeholders).toHaveLength(6);
+    const rows = results!.querySelectorAll('.space-y-2 > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(rows).toHaveLength(5);
+    rows.forEach(row => {
+      expect(row).toHaveStyle({ height: '48px' });
+      expect(row).toHaveClass('w-full');
+    });
+    expect(screen.queryByRole('region', { name: 'Search results' })).not.toBeInTheDocument();
   });
 
   it('groups hits into ALL_TYPES order and derives the KPI band from the hit set', async () => {
@@ -248,9 +385,9 @@ describe('SearchPage', () => {
     expect(txt.indexOf('Drives')).toBeLessThan(txt.indexOf('Charging'));
 
     // KPI band: 6 total hits across 3 categories, no active filters.
-    expect(metricCard('Total Results')).toHaveTextContent('6');
+    expect(metricCard('Total results')).toHaveTextContent('6');
     expect(metricCard('Categories')).toHaveTextContent('3');
-    expect(metricCard('Active Filters')).toHaveTextContent('0');
+    expect(metricCard('Active filters')).toHaveTextContent('0');
   });
 
   it('surfaces the LARGEST group (not the first) as the Top Match KPI', async () => {
@@ -269,7 +406,7 @@ describe('SearchPage', () => {
 
     await screen.findByRole('region', { name: 'Search results' });
     // Drives (3) beats Vehicles (2) even though Vehicles sorts first.
-    const top = metricCard('Top Match');
+    const top = metricCard('Top match');
     expect(top).toHaveTextContent('Drives');
     expect(top).toHaveTextContent('3 results');
   });
@@ -283,8 +420,8 @@ describe('SearchPage', () => {
     expect(screen.getByText(/No matches for "zzz"/)).toBeInTheDocument();
 
     // The KPI band still renders (never gated) with zeroed derivations.
-    expect(metricCard('Total Results')).toHaveTextContent('0');
-    expect(metricCard('Top Match')).toHaveTextContent('—');
+    expect(metricCard('Total results')).toHaveTextContent('0');
+    expect(metricCard('Top match')).toHaveTextContent('—');
   });
 
   it('shows the QueryError banner on a failed fetch and re-issues on Retry', async () => {
@@ -308,7 +445,8 @@ describe('SearchPage', () => {
 
     renderPage('/search?q=model');
 
-    const row = await screen.findByRole('button', { name: 'Open coast-run' });
+    const row = await screen.findByRole('link', { name: 'Open coast-run' });
+    expect(row).toHaveAttribute('href', '/drive/21');
     expect(screen.getByTestId('location')).toHaveTextContent('/search');
 
     fireEvent.click(row);
@@ -331,7 +469,7 @@ describe('SearchPage', () => {
     // Chip is now pressed, Clear appears, and the KPI reflects one filter.
     expect(screen.getByRole('button', { name: 'Drives' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
-    expect(metricCard('Active Filters')).toHaveTextContent('1');
+    expect(metricCard('Active filters')).toHaveTextContent('1');
 
     // The refined query threads the selected type to the backend.
     await waitFor(() =>
@@ -344,7 +482,7 @@ describe('SearchPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(screen.getByRole('button', { name: 'Drives' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
-    expect(metricCard('Active Filters')).toHaveTextContent('0');
+    expect(metricCard('Active filters')).toHaveTextContent('0');
   });
 
   it('restores an active type filter from the URL on first mount', async () => {
@@ -355,7 +493,7 @@ describe('SearchPage', () => {
     // The Charging chip is pre-pressed and the KPI shows one active filter.
     expect(screen.getByRole('button', { name: 'Charging' })).toHaveAttribute('aria-pressed', 'true');
     await screen.findByRole('region', { name: 'Search results' });
-    expect(metricCard('Active Filters')).toHaveTextContent('1');
+    expect(metricCard('Active filters')).toHaveTextContent('1');
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.stringContaining('types=charging'),
       expect.anything(),
@@ -410,5 +548,272 @@ describe('SearchPage', () => {
     await waitFor(() =>
       expect(mockedRequest.mock.calls.length).toBeGreaterThan(before),
     );
+  });
+});
+
+
+describe('SearchPage restrained migration', () => {
+  it('keeps all nine facets, neutral result icons, complete labels, and ordered API filters', async () => {
+    const title = 'A complete long vehicle name that must remain available';
+    installSearch({ hits: [makeHit('vehicle', 11, { title, when: '2026-10-12T12:00:00Z' })] });
+    renderPage('/search?q=%20model%20&types=drive,vehicle,unknown');
+
+    const filters = screen.getByRole('group', { name: 'Filter results by type' });
+    for (const label of ['Vehicles', 'Drives', 'Charging', 'Alerts', 'Notifications', 'Geofences', 'Automations', 'Locations', 'Trips']) {
+      expect(within(filters).getByRole('button', { name: label })).toBeInTheDocument();
+    }
+    expect(within(filters).getByRole('button', { name: 'Vehicles' })).toHaveClass('max-w-full');
+    const region = await screen.findByRole('region', { name: 'Search results' });
+    expect(within(region).getByText('Vehicles')).not.toHaveClass('truncate');
+    expect(within(region).getByRole('link', { name: `Open ${title}` })).toHaveTextContent(title);
+    expect(region.querySelector('[class~="text-[var(--text-secondary)]"]')).not.toBeNull();
+    expect(region.querySelector('[class*="bg-neon-"]')).toBeNull();
+    expect(region.querySelector('[class~="basis-full"]')).toBeInTheDocument();
+    const [path, options] = mockedRequest.mock.calls[0];
+    expect(path).toBe('/search?q=model&types=drive%2Cvehicle&limit=25');
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('keeps resolved empty results and measured zeroes during a pending refresh', async () => {
+    installSearch({ hits: [] });
+    const { container } = renderPage('/search?q=zzz');
+    await screen.findByText('No results');
+    installSearch({ pending: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
+    await waitFor(() => expect(mockedRequest.mock.calls.length).toBe(2));
+
+    expect(screen.getByText('No results')).toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('0');
+    expect(metricCard('Total results').querySelector('[data-operational-value]')).not.toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"][class~="w-1/3"]')).toBeNull();
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('retains rows, summary, warning, and retry after a background refresh failure', async () => {
+    installSearch({ hits: [makeHit('drive', 21, { title: 'retained coast run' })] });
+    renderPage('/search?q=model');
+    await screen.findByRole('region', { name: 'Search results' });
+    installSearch({ error: new Error('refresh failed') });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
+
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open retained coast run' })).toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('1');
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    installSearch({ hits: [makeHit('drive', 21)] });
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+  });
+
+  it('labels placeholder results with their original query while the next query loads', async () => {
+    installSearch({ hits: [makeHit('vehicle', 11)] });
+    renderPage('/search?q=model');
+    await screen.findByRole('region', { name: 'Search results' });
+    installSearch({ pending: true });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'roadster' } });
+    await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => String(path).includes('q=roadster'))).toBe(true));
+
+    expect(screen.getByRole('link', { name: 'Open vehicle-title-11' })).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Search summary' });
+    expect(summary).toHaveTextContent('for “model”');
+    expect(summary).not.toHaveTextContent('for “roadster”');
+    assertOperationalBriefDisclosure(summary, 'Retained source', { contains: true });
+  });
+
+  it('handles a null response without crashing or dropping the query and AI controls', async () => {
+    mockedRequest.mockResolvedValue(null);
+    renderPage('/search?q=model');
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('No results')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Search summary' })).not.toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search query' })).toBeInTheDocument();
+    expect(screen.getByTestId('ai-nl-search')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Filter results by type' })).toBeInTheDocument();
+    installSearch({ hits: [] });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByText('No results')).toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('0');
+  });
+
+  it('clears retained rows and the summary when the query falls below the minimum', async () => {
+    installSearch({ hits: [makeHit('vehicle', 11)] });
+    renderPage('/search?q=model');
+    await screen.findByRole('region', { name: 'Search results' });
+    const calls = mockedRequest.mock.calls.length;
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'a' } });
+
+    expect(screen.getByText('Type at least 2 characters')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open vehicle-title-11' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Search summary' })).not.toBeInTheDocument();
+    expect(mockedRequest.mock.calls.length).toBe(calls);
+  });
+
+  describe('SearchPage trust and destination repairs', () => {
+    it('attributes retained zero results to the previous query and facet scope', async () => {
+      installSearch({ hits: [] });
+      renderPage('/search?q=model&types=drive');
+      await screen.findByText('No results');
+      installSearch({ pending: true });
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'roadster' } });
+      await waitFor(() => expect(mockedRequest.mock.calls.length).toBe(2));
+      expect(screen.getByText(/No matches for "model"/)).toBeInTheDocument();
+      expect(screen.queryByText(/No matches for "roadster"/)).not.toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Search summary' })).toHaveTextContent('for “model” · result types: Drives');
+      expect(metricCard('Total results')).toHaveTextContent('0');
+    });
+
+    it('preserves native destinations for every category and supports Enter activation', async () => {
+      const types: SearchHitType[] = [
+        'vehicle', 'drive', 'charging', 'alert', 'notification', 'geofence', 'automation', 'location', 'trip',
+      ];
+      installSearch({ hits: types.map((type, index) => makeHit(type, index + 1)) });
+      renderPage('/search?q=model');
+      const region = await screen.findByRole('region', { name: 'Search results' });
+      expect(within(region).getAllByRole('link')).toHaveLength(9);
+      for (const [index, type] of types.entries()) {
+        const link = within(region).getByRole('link', { name: `Open ${type}-title-${index + 1}` });
+        expect(link).toHaveAttribute('href', `/${type}/${index + 1}`);
+        expect(link).toHaveTextContent(`${type}-subtitle-${index + 1}`);
+        expect(link).toHaveClass('min-h-11', 'whitespace-normal');
+        expect(link).not.toHaveAttribute('role', 'button');
+      }
+      const drive = within(region).getByRole('link', { name: 'Open drive-title-2' });
+      drive.focus();
+      expect(drive).toHaveFocus();
+      await userEvent.keyboard('{Enter}');
+      expect(screen.getByTestId('location')).toHaveTextContent('/drive/2');
+    });
+
+    it('deduplicates valid restored facets in first-occurrence order and preserves unrelated URL state', async () => {
+      installSearch({ hits: [makeHit('drive', 21)] });
+      renderPage('/search?q=model&types=drive,vehicle,drive,unknown,vehicle&keep=retained');
+      await screen.findByRole('region', { name: 'Search results' });
+
+      expect(metricCard('Active filters')).toHaveTextContent('2');
+      expect(mockedRequest.mock.calls[0]?.[0]).toBe('/search?q=model&types=drive%2Cvehicle&limit=25');
+      expect(screen.getByRole('button', { name: 'Drives' })).toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(screen.getByRole('button', { name: 'Drives' }));
+      expect(screen.getByTestId('location')).toHaveTextContent('types=vehicle');
+      expect(screen.getByTestId('location')).toHaveTextContent('keep=retained');
+      expect(metricCard('Active filters')).toHaveTextContent('1');
+      fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+      expect(screen.getByTestId('location')).not.toHaveTextContent('types=');
+      expect(screen.getByTestId('location')).toHaveTextContent('keep=retained');
+    });
+
+    it('identifies the retained query and facets separately from newly requested scope', async () => {
+      installSearch({ hits: [makeHit('drive', 21, { title: 'retained drive' })] });
+      renderPage('/search?q=model&types=drive');
+      await screen.findByRole('link', { name: 'Open retained drive' });
+      installSearch({ pending: true });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Vehicles' }));
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'roadster' } });
+      await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => String(path).includes('q=roadster'))).toBe(true));
+      const summary = screen.getByRole('region', { name: 'Search summary' });
+      expect(summary).toHaveTextContent('for “model” · result types: Drives');
+      expect(summary).not.toHaveTextContent('result types: Drives, Vehicles');
+      assertOperationalBriefDisclosure(summary, 'Retained source', { contains: true });
+      expect(screen.getByText('Requested: “roadster” · types: Drives, Vehicles')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Open retained drive' })).toHaveAttribute('href', '/drive/21');
+      expect(metricCard('Active filters')).toHaveTextContent('2');
+      expect(metricCard('Total results')).toHaveTextContent('1');
+    });
+
+    it('retains an all-type response scope when the first facet is requested', async () => {
+      installSearch({ hits: [makeHit('drive', 21)] });
+      renderPage('/search?q=model');
+      await screen.findByRole('region', { name: 'Search results' });
+      installSearch({ pending: true });
+      fireEvent.click(screen.getByRole('button', { name: 'Vehicles' }));
+      await waitFor(() => expect(mockedRequest.mock.calls.length).toBe(2));
+      expect(screen.getByRole('region', { name: 'Search summary' })).toHaveTextContent('result types: All types shown');
+      expect(screen.getByText('Requested: “model” · types: Vehicles')).toBeInTheDocument();
+    });
+
+    it('shows a visible label associated with the unchanged search control', () => {
+      installSearch({ hits: [] });
+      renderPage('/search?q=a');
+      const input = screen.getByRole('searchbox', { name: 'Search query' });
+      expect(screen.getByText('Search query', { selector: 'label' })).toHaveAttribute('for', input.id);
+      expect(input).toHaveFocus();
+      expect(input).toHaveValue('a');
+      expect(input).toHaveAttribute('placeholder', 'Search vehicles, drives, charging…');
+    });
+
+    it('announces a settled result count through the governed source-scoped announcer', async () => {
+      const listener = vi.fn();
+      const unsubscribe = subscribeAnnouncer(listener);
+      installSearch({ hits: [makeHit('drive', 21), makeHit('drive', 22)] });
+      renderPage('/search?q=model&types=drive');
+      await screen.findByRole('region', { name: 'Search results' });
+      await waitFor(() => expect(listener).toHaveBeenCalledWith(
+        expect.stringContaining('search results for “model” · types: Drives loaded, 2 items'), 'polite',
+      ));
+      expect(listener).toHaveBeenCalledTimes(1);
+      unsubscribe();
+    });
+
+    it('announces authoritative no-match without announcing idle or too-short searches', async () => {
+      const listener = vi.fn();
+      const unsubscribe = subscribeAnnouncer(listener);
+      installSearch({ hits: [] });
+      renderPage('/search?q=a');
+      expect(listener).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'zzz' } });
+      await screen.findByText('No results');
+      await waitFor(() => expect(listener).toHaveBeenCalledWith(
+        expect.stringContaining('No search results for “zzz” · types: All types shown to show'), 'polite',
+      ));
+      expect(listener).toHaveBeenCalledTimes(1);
+      unsubscribe();
+    });
+
+    it('shows updating only during a real fetch and does not announce placeholder counts', async () => {
+      const listener = vi.fn();
+      const unsubscribe = subscribeAnnouncer(listener);
+      installSearch({ hits: [makeHit('drive', 21)] });
+      renderPage('/search?q=model&types=drive');
+      await screen.findByRole('region', { name: 'Search results' });
+      listener.mockClear();
+      installSearch({ pending: true });
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'roadster' } });
+      await waitFor(() => expect(mockedRequest.mock.calls.length).toBe(2));
+      expect(screen.getByText('Updating…')).toBeInTheDocument();
+      expect(listener).not.toHaveBeenCalled();
+      expect(metricCard('Total results')).toHaveTextContent('1');
+      unsubscribe();
+    });
+
+    it('explains a cold paused request without empty counts, offline claims or hidden controls', async () => {
+      onlineManager.setOnline(false);
+      installSearch({ hits: [] });
+      const listener = vi.fn();
+      const unsubscribe = subscribeAnnouncer(listener);
+      renderPage('/search?q=model&types=drive');
+      const explanation = screen.getByRole('status');
+      expect(explanation).toHaveTextContent('Search request paused');
+      expect(explanation).toHaveTextContent('No response has been received, so result counts are unknown.');
+      expect(explanation).not.toHaveTextContent(/offline|failed/i);
+      const total = metricCard('Total results');
+      expect(total).toHaveAttribute('data-value-state', 'missing');
+      expect(total.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
+      expect(metricCard('Categories')).toHaveAttribute('data-value-state', 'missing');
+      expect(metricCard('Top match')).toHaveTextContent('Unknown');
+      expect(screen.queryByText('No results')).not.toBeInTheDocument();
+      expect(screen.queryByText('Updating…')).not.toBeInTheDocument();
+      expect(screen.getByRole('searchbox', { name: 'Search query' })).toHaveValue('model');
+      expect(screen.getByRole('group', { name: 'Filter results by type' })).toBeInTheDocument();
+      expect(screen.getByTestId('ai-nl-search')).toBeInTheDocument();
+      expect(mockedRequest).not.toHaveBeenCalled();
+      expect(listener).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(mockedRequest).not.toHaveBeenCalled();
+      onlineManager.setOnline(true);
+      await screen.findByText('No results');
+      expect(screen.queryByText('Search request paused')).not.toBeInTheDocument();
+      unsubscribe();
+    });
   });
 });

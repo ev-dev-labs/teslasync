@@ -84,6 +84,37 @@ export function ArrivalReliabilityQueryStatus({
             type="button"
             variant="ghost"
             size="sm"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+            onClick={state.onRetry}
+            disabled={state.fetchStatus === 'fetching'}
+            aria-busy={state.fetchStatus === 'fetching' || undefined}
+          >
+            {state.fetchStatus === 'fetching'
+              ? t('freshness.updating', 'Updating…')
+              : t('arrivalReliability.states.retry', 'Retry')}
+          </Button>
+        </div>
+      </AlertBanner>
+    );
+  }
+  if (!state.isResolved && state.isRefreshBlocked) {
+    return (
+      <AlertBanner className="mt-4" variant="info" role="status" aria-live="polite">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Text as="p" variant="caption">
+            {t(
+              'chargingPlaces.workspace.initialPaused',
+              '{{source}} loading is paused. No data has been loaded yet.',
+              { source: t('arrivalReliability.title', 'Arrival Reliability') },
+            )}
+          </Text>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             onClick={state.onRetry}
           >
             {t('arrivalReliability.states.retry', 'Retry')}

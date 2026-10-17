@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, Caption, GlassPanel, Icon, PanelTitle, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
+import { typography } from '@/lib/tokens';
 import type {
   ActionCenterProviderAvailability,
   ActionCenterProviderStatus,
@@ -27,7 +28,7 @@ export function ProviderStatusPanel({ providers, loading }: ProviderStatusPanelP
   return (
     <GlassPanel padding="md">
       <div className="flex items-center gap-2">
-        <SourceIcon className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+        <Icon icon={SourceIcon} size="lg" className={typography.color.secondary} />
         <PanelTitle>{t('actionCenter.providers.title', 'Source coverage')}</PanelTitle>
       </div>
       <Text as="p" variant="bodySm" className="mt-1">
@@ -47,28 +48,28 @@ export function ProviderStatusPanel({ providers, loading }: ProviderStatusPanelP
           {providers.map((provider) => (
             <div
               key={provider.source_feature}
-              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-medium text-[var(--text-primary)]">
+                <Text size="sm" weight="medium" color="primary">
                   {t(
                     `actionCenter.source.${provider.source_feature}`,
                     provider.source_feature.replace(/_/g, ' '),
                   )}
-                </span>
+                </Text>
                 <Badge variant={variantByStatus[provider.status]} dot>
                   {t(`actionCenter.providerStatus.${provider.status}`, provider.status)}
                 </Badge>
               </div>
-              <p className="mt-2 text-xs text-[var(--text-muted)]">
+              <Caption as="p" className="mt-2">
                 {t('actionCenter.providers.findings', '{{count}} findings', {
                   count: provider.item_count,
                 })}
-              </p>
+              </Caption>
               {provider.limitations.map((limitation) => (
-                <p key={limitation} className="mt-1 text-xs text-amber-200">
+                <Text as="p" key={limitation} variant="caption" className="mt-1">
                   {limitation}
-                </p>
+                </Text>
               ))}
             </div>
           ))}

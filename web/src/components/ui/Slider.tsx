@@ -1,5 +1,7 @@
 import { forwardRef, useCallback, useId, useMemo } from 'react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
+import { Caption } from './Typography';
 
 export interface SliderProps {
   /** Current numeric value. */
@@ -46,10 +48,8 @@ export interface SliderProps {
  * string is announced via `aria-valuetext`, and the raw number remains
  * in `aria-valuenow` for assistive tech that prefers it.
  *
- * Layout: matches `<Input>`/`<Select>` (md size) — same label style
- * (`text-sm text-secondary`) and same overall row height so a Slider
- * dropped into a form grid alongside other controls aligns vertically.
-
+ * The native control owns thumb/track geometry and keyboard handling.
+ * Its mobile hit area is 44px; desktop retains the 36px form row.
  */
 export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   {
@@ -84,24 +84,21 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
   );
 
   return (
-    <div className={cn('space-y-1', className)}>
+    <div className={cn('min-w-0 space-y-1', className)}>
       {showLabel && (
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-[var(--text-secondary)]"
+            className={cn(typography.role.subhead, 'min-w-0 break-words')}
           >
             {label}
           </label>
-          <span className="text-xs text-[var(--text-muted)] tabular-nums">
+          <Caption className="min-w-0 break-words tabular-nums">
             {display}
-          </span>
+          </Caption>
         </div>
       )}
-      {/* Track wrapper matches the height of an md <Input>/<Select>
-          (~36px, h-9) so the slider visually aligns with adjacent
-          form controls in the same grid row. */}
-      <div className="flex h-9 items-center">
+      <div className="flex h-11 items-center md:h-9">
         <input
           ref={ref}
           id={inputId}
@@ -115,9 +112,9 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(function Slider(
           aria-label={showLabel ? undefined : label}
           aria-valuetext={display}
           className={cn(
-            'h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--glass-border)]',
-            'accent-cyan-500',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+            'h-full min-w-11 w-full cursor-pointer appearance-auto bg-transparent',
+            'accent-[var(--semantic-info)]',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}
         />

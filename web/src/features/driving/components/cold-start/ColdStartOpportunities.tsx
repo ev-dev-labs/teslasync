@@ -11,7 +11,7 @@ import {
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type {
   ColdStartOpportunity,
@@ -56,12 +56,12 @@ export function ColdStartOpportunities({
   className,
 }: ColdStartOpportunitiesProps) {
   const { t } = useTranslation();
+  const { formatDate } = useDateFormat();
   const {
     formatDistance,
     formatDuration,
     formatEnergy,
     formatTemperature,
-    unitPrefs,
   } = useColdStartDisplay();
   const opportunities: ColdStartOpportunity[] = summary.opportunities.slice(0, 5);
 
@@ -106,15 +106,11 @@ export function ColdStartOpportunities({
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <Text as="p" variant="body" className="truncate">
-                      {formatDate(opportunity.startTs, {
-                        locale: unitPrefs.locale,
-                      })}
+                      {formatDate(opportunity.startTs)}
                     </Text>
                     <Text as="p" variant="caption">
                       {t('coldStart.opportunities.gapValue', '{{gap}} preceding gap', {
-                        gap: formatDuration(opportunity.precedingGapS, {
-                          precision: 1,
-                        }),
+                        gap: formatDuration(opportunity.precedingGapS),
                       })}
                     </Text>
                   </div>
@@ -129,23 +125,19 @@ export function ColdStartOpportunities({
                   <div>
                     <MetricLabel>{t('coldStart.opportunities.distance', 'Distance')}</MetricLabel>
                     <Text as="p" variant="bodySm" mono className="mt-1">
-                      {formatDistance(opportunity.distanceM, { precision: 1 })}
+                      {formatDistance(opportunity.distanceM)}
                     </Text>
                   </div>
                   <div>
                     <MetricLabel>{t('coldStart.opportunities.temperature', 'Temperature')}</MetricLabel>
                     <Text as="p" variant="bodySm" mono className="mt-1">
-                      {formatTemperature(opportunity.outsideTempAvgC, {
-                        precision: 1,
-                      })}
+                      {formatTemperature(opportunity.outsideTempAvgC)}
                     </Text>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <MetricLabel>{t('coldStart.opportunities.energy', 'Above baseline')}</MetricLabel>
                     <MetricValue className="mt-1 text-base">
-                      {formatEnergy(opportunity.estimatedAvoidableWh, {
-                        precision: 2,
-                      })}
+                      {formatEnergy(opportunity.estimatedAvoidableWh)}
                     </MetricValue>
                   </div>
                 </div>

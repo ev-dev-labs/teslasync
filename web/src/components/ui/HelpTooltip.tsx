@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { ExternalLink, HelpCircle } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { Icon } from './Icon';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -40,12 +42,6 @@ export interface HelpTooltipProps {
   ariaLabel?: string;
 }
 
-const SIZE_CLASS: Record<NonNullable<HelpTooltipProps['size']>, string> = {
-  xs: 'h-3 w-3',
-  sm: 'h-3.5 w-3.5',
-  md: 'h-4 w-4',
-};
-
 export function HelpTooltip({
   text,
   i18nKey,
@@ -68,12 +64,11 @@ export function HelpTooltip({
   // to gate the tooltip themselves.
   if (!preferences.contextualHelp || !resolved) return null;
 
-  const iconClass = SIZE_CLASS[size];
   const label = ariaLabel ?? t('help.tooltip.iconLabel', { defaultValue: 'More info' });
 
   const tooltipBody = (
-    <span className="block text-2xs leading-snug">
-      <span className="block text-[var(--text-primary)]">{resolved}</span>
+    <span className={cn('block leading-relaxed', typography.size.sm)}>
+      <span className="block">{resolved}</span>
       {learnMore && (
         <a
           href={learnMore.url}
@@ -84,10 +79,10 @@ export function HelpTooltip({
           // so users can actually click "Learn more" before the tooltip
           // closes (focus stays inside the wrapper while pointer is over
           // the new-tab link).
-          className="pointer-events-auto mt-1 inline-flex items-center gap-1 text-[var(--text-secondary)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
+          className="pointer-events-auto mt-1 inline-flex items-center gap-1 underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
         >
           {learnMore.label ?? t('common.learnMore', { defaultValue: 'Learn more' })}
-          <ExternalLink className="h-3 w-3" aria-hidden />
+          <Icon icon={ExternalLink} size="xs" />
         </a>
       )}
     </span>
@@ -102,14 +97,15 @@ export function HelpTooltip({
         // and touch users (tap focuses the button → :focus-within reveals
         // the tooltip; tapping elsewhere blurs and dismisses it).
         className={cn(
-          'inline-flex items-center justify-center align-middle',
-          'rounded-full text-[var(--text-muted)] transition-colors',
-          'hover:text-[var(--text-secondary)]',
-          'focus:outline-none focus-visible:text-[var(--text-secondary)] focus-visible:ring-1 focus-visible:ring-[var(--text-secondary)]',
+          'inline-flex h-11 w-11 shrink-0 items-center justify-center align-middle md:h-6 md:w-6',
+          'rounded-shape-sm transition-colors duration-fast ease-standard motion-reduce:transition-none',
+          typography.color.secondary,
+          'hover:text-[var(--text-primary)]',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
           className,
         )}
       >
-        {children ?? <HelpCircle className={iconClass} aria-hidden />}
+        {children ?? <Icon icon={HelpCircle} size={size} />}
       </button>
     </Tooltip>
   );

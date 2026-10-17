@@ -19,11 +19,12 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WeekdayProfileProps {
   summary: UtilizationSummary;
@@ -34,6 +35,7 @@ export function WeekdayProfile({
   summary,
   state,
 }: WeekdayProfileProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { distanceUnit, toDisplayDistance } =
     useUtilizationDisplay();
@@ -63,17 +65,19 @@ export function WeekdayProfile({
       summary.weekdays.map((weekday) => ({
         weekday: weekdayLabels[weekday.weekday] ?? '—',
         activeRate:
-          weekday.activeDayShare != null
-            ? Math.round(weekday.activeDayShare * 1_000) / 10
-            : 0,
+          weekday.observedDays > 0 &&
+          Number.isFinite(weekday.observedDays) &&
+          weekday.activeDayShare != null &&
+          Number.isFinite(weekday.activeDayShare)
+            ? weekday.activeDayShare * 100
+            : null,
         averageDistance:
-          weekday.averageDistancePerActiveDayM != null
-            ? Math.round(
-                toDisplayDistance(
-                  weekday.averageDistancePerActiveDayM,
-                ) * 10,
-              ) / 10
-            : 0,
+          weekday.activeDays > 0 &&
+          Number.isFinite(weekday.activeDays) &&
+          weekday.averageDistancePerActiveDayM != null &&
+          Number.isFinite(weekday.averageDistancePerActiveDayM)
+            ? toDisplayDistance(weekday.averageDistancePerActiveDayM)
+            : null,
         drives: weekday.driveCount,
         observedDays: weekday.observedDays,
       })),
@@ -142,7 +146,7 @@ export function WeekdayProfile({
               'utilization.columns.activeRate',
               'Active-day rate (%)',
             ),
-            format: (value) => `${fmtNumber(value, 1)}%`,
+            format: (value) => value == null ? '—' : `${fmtNumber(value)}%`,
           },
           {
             key: 'averageDistance',
@@ -151,7 +155,7 @@ export function WeekdayProfile({
               'Distance ({{unit}})',
               { unit: distanceUnit },
             ),
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => value == null ? '—' : fmtNumber(value),
           },
           {
             key: 'drives',
@@ -210,7 +214,7 @@ export function WeekdayProfile({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `${fmtNumber(value, 0)}%`}
+                  tickFormatter={(value) => `${fmtNumber(value)}%`}
                   width={44}
                 />
                 <YAxis
@@ -219,7 +223,7 @@ export function WeekdayProfile({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => fmtNumber(value, 0)}
+                  tickFormatter={(value) => fmtNumber(value)}
                   width={40}
                 />
                 <Tooltip
@@ -227,12 +231,12 @@ export function WeekdayProfile({
                     <ChartTooltip
                       valueFormatter={(value, name) =>
                         name === activeRateName
-                          ? `${fmtNumber(value, 1)}%`
+                          ? `${fmtNumber(value)}%`
                           : t(
                               'utilization.value.distance',
                               '{{value}} {{unit}}',
                               {
-                                value: fmtNumber(value, 1),
+                                value: fmtNumber(value),
                                 unit: distanceUnit,
                               },
                             )

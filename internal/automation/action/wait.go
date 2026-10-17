@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -78,10 +79,34 @@ func (e *WaitExecutor) Execute(ctx context.Context, _ *int64, raw json.RawMessag
 		return nil, fmt.Errorf("invalid wait action config: %w", err)
 	}
 
-	duration := time.Duration(cfg.DurationSeconds) * time.Second
+	return e.executeDuration(ctx, cfg.DurationSeconds)
+}
+
+// ExecuteTyped consumes the canonical CTI child without a legacy JSON bridge.
+func (e *WaitExecutor) ExecuteTyped(ctx context.Context, _ *int64, payload any) (json.RawMessage, error) {
+	var durationS int
+	switch a := payload.(type) {
+	case *models.AutomationStepActionWait:
+		if a == nil {
+			return nil, fmt.Errorf("typed wait action is nil")
+		}
+		durationS = a.DurationS
+	case models.AutomationStepActionWait:
+		durationS = a.DurationS
+	default:
+		return nil, fmt.Errorf("unsupported typed wait payload %T", payload)
+	}
+	if durationS < 1 || durationS > MaxWaitSeconds {
+		return nil, fmt.Errorf("duration_s must be between 1 and %d", MaxWaitSeconds)
+	}
+	return e.executeDuration(ctx, durationS)
+}
+
+func (e *WaitExecutor) executeDuration(ctx context.Context, durationS int) (json.RawMessage, error) {
+	duration := time.Duration(durationS) * time.Second
 
 	e.logger.Info().
-		Int("duration_seconds", cfg.DurationSeconds).
+		Int("duration_seconds", durationS).
 		Msg("wait action starting")
 
 	start := time.Now()
@@ -89,7 +114,7 @@ func (e *WaitExecutor) Execute(ctx context.Context, _ *int64, raw json.RawMessag
 	waitErr := e.sleep(ctx, duration)
 
 	result := WaitResult{
-		RequestedSeconds: cfg.DurationSeconds,
+		RequestedSeconds: durationS,
 		WaitedMs:         time.Since(start).Milliseconds(),
 	}
 
@@ -98,7 +123,7 @@ func (e *WaitExecutor) Execute(ctx context.Context, _ *int64, raw json.RawMessag
 		result.CancelReason = waitErr.Error()
 
 		e.logger.Warn().
-			Int("duration_seconds", cfg.DurationSeconds).
+			Int("duration_seconds", durationS).
 			Int64("waited_ms", result.WaitedMs).
 			Msg("wait action cancelled")
 
@@ -107,7 +132,7 @@ func (e *WaitExecutor) Execute(ctx context.Context, _ *int64, raw json.RawMessag
 	}
 
 	e.logger.Info().
-		Int("duration_seconds", cfg.DurationSeconds).
+		Int("duration_seconds", durationS).
 		Int64("waited_ms", result.WaitedMs).
 		Msg("wait action completed")
 

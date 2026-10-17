@@ -2,14 +2,18 @@ import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
-import type { EvidenceQuality } from '../lib/rootCauseIntelligence';
+
+import type { EvidenceQuality, RootCausePresentation } from '../lib/rootCauseIntelligence';
+import { localizeRootCause } from '../lib/rootCauseIntelligence';
 import { QualityBadge } from './QualityBadge';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface RootCauseInterpretationPanelProps {
   summary: string;
   limitations: string[];
   quality: EvidenceQuality;
+  presentation?: RootCausePresentation;
+  focalHistoryAvailable?: boolean;
   hasChosenSignal: boolean;
   isLoading: boolean;
   isError: boolean;
@@ -29,6 +33,8 @@ export function RootCauseInterpretationPanel({
   summary,
   limitations,
   quality,
+  presentation,
+  focalHistoryAvailable = true,
   hasChosenSignal,
   isLoading,
   isError,
@@ -36,13 +42,15 @@ export function RootCauseInterpretationPanel({
   onRetry,
   className,
 }: RootCauseInterpretationPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const display = presentation ? localizeRootCause(presentation, t) : undefined;
 
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <ShieldAlert className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('rootCauseIntelligence.interpretation.title', 'Interpretation & Limits')}
+        <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        {t('rootCauseIntelligence.interpretation.title', 'Interpretation & limits')}
       </PanelTitle>
       {isError ? (
         <QueryError error={error} onRetry={onRetry} />
@@ -56,23 +64,23 @@ export function RootCauseInterpretationPanel({
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <QualityBadge band={quality.band} />
+            <QualityBadge band={presentation?.scoreComputed === false ? 'insufficient' : quality.band} />
             <Caption>
               {t('rootCauseIntelligence.interpretation.coverage', '{{withEvidence}} of {{considered}} related signals corroborated · {{samples}} focal samples', {
-                withEvidence: quality.candidatesWithEvidence,
-                considered: quality.candidatesConsidered,
-                samples: quality.focalSampleCount,
+                withEvidence: presentation?.scoreComputed === false ? '—' : quality.candidatesWithEvidence,
+                considered: presentation?.candidatesUsable ?? quality.candidatesConsidered,
+                samples: focalHistoryAvailable ? quality.focalSampleCount : '—',
               })}
             </Caption>
           </div>
-          <Text variant="body">{summary}</Text>
+          <Text variant="body">{display && summary === presentation?.summary ? display.summary : summary}</Text>
           {limitations.length > 0 && (
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
               <Text variant="body" weight="semibold" className="mb-1.5 block">
                 {t('rootCauseIntelligence.interpretation.limitationsTitle', 'Limitations')}
               </Text>
               <ul className="list-disc space-y-1 pl-5">
-                {limitations.map((note) => (
+                {(display && limitations === presentation?.limitations ? display.limitations : limitations).map((note) => (
                   <li key={note}>
                     <Text variant="bodySm">{note}</Text>
                   </li>
@@ -81,7 +89,9 @@ export function RootCauseInterpretationPanel({
             </div>
           )}
           <Caption>
-            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', { n: fmtNumber(quality.overallScore, 2) })}
+            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', {
+              n: presentation?.scoreComputed === false ? '—' : fmtNumber(quality.overallScore),
+            })}
           </Caption>
         </div>
       )}

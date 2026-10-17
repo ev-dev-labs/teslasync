@@ -1,0 +1,91 @@
+{
+  "session": "bba4960d-f516-4831-bda3-877640f907ce",
+  "owner": "statstrip-ingest-dlq-redis",
+  "design": "Actual shared OperationalBrief compact + useOperationalMetrics",
+  "sourceWriteRelease": true,
+  "validation": "Not run under parent instruction",
+  "pending": "Parent translation catalog synchronization and serialized validation; no missing bridge or formatter dependency",
+  "replacedNames": [
+    "IngestStatStrip.tsx",
+    "DLQStatStrip.tsx",
+    "RedisStatStrip.tsx",
+    "StatStrips.test.tsx"
+  ],
+  "sourceFiles": [
+    {
+      "path": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+      "sha256": "A9553FAAFB570E4B9BD05A63F432ACE6A890FAC013A5F863795E62ADDEC01570",
+      "bytes": 7231
+    },
+    {
+      "path": "web\\src\\features\\admin\\pages\\IngestXRayPage.test.tsx",
+      "sha256": "84503C65DD04C53543BAD65D8E07DCA2B4DB87598A424A098AE2FFA426D3C3A4",
+      "bytes": 16373
+    },
+    {
+      "path": "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx",
+      "sha256": "6FE3CF33C0D955DDE97A0924B3DFE629ED15907C0E7B68310A744AC6FFCD8C7A",
+      "bytes": 8834
+    },
+    {
+      "path": "web\\src\\features\\admin\\pages\\DLQInspectorPage.test.tsx",
+      "sha256": "CD355FFBA1E0DA4DA8E8F7F3FE3C7E26FA6E416BB6F22AF4204BFACBA339DEFB",
+      "bytes": 19872
+    },
+    {
+      "path": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+      "sha256": "76D5265B96859036F6D5E8FA9B24A8F62BC4A4679330CA7FE769C5DABC24FF65",
+      "bytes": 27808
+    },
+    {
+      "path": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.continuation.test.tsx",
+      "sha256": "D66F5A76A471AA8A2D200ACD1CE5B2A01C9FAF2BE73E61D45CE29A7216A38820",
+      "bytes": 8814
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx",
+      "sha256": "B2AFAE1799615F78C50B6A0DEC1694AF5867F5C9534C854245192B919217F0F9",
+      "bytes": 3206
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts",
+      "sha256": "BCF74E7B4C81FC3FCB7182C76F8033EE965E4FEF95D9AFA92660CB02D1CE3FAD",
+      "bytes": 2742
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\DLQOperationalBrief.tsx",
+      "sha256": "1ABD47AA55E725FFA0E4892A91C103B4AA6BA2231F8F114743E7C37AD6698E4A",
+      "bytes": 2338
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\dlqMetrics.ts",
+      "sha256": "826D60DCA7BEEBBE4C704AFA9138C2F6F2EBEC48D355B23C9EAD5DB330C5B4A7",
+      "bytes": 2761
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx",
+      "sha256": "9612CB239E77DC4668B2D02BBCBFB644F9259087AC2C7B406F01673C33698E3E",
+      "bytes": 2001
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts",
+      "sha256": "9D6A2F7AD6A7A205CC3D9D0F49BB81FEC9F5D7B8D00ACB55797290B6FB488CA0",
+      "bytes": 2058
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts",
+      "sha256": "8B9AC5836FFE8C7E6855C93F7BC89E11D1FF194648F8C1C53A600A04EB11EDE7",
+      "bytes": 1137
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\metrics.test.ts",
+      "sha256": "1AC44E27F54D89F8DB08EC411338E28812DC64F026FF4986B6731CDF753EEAFF",
+      "bytes": 7081
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\OperationalBriefs.test.tsx",
+      "sha256": "2C6B7BC019D8BA33C590A9DFF8B1AB41A741293B661357CB7EC50E0E348AA409",
+      "bytes": 6955
+    }
+  ]
+}

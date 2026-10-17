@@ -75,7 +75,7 @@ export function DataAvailabilityMatrix({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <DatabaseZap
-            className="h-4 w-4 text-emerald-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t('sleep.availability.title', 'Data-availability matrix')}
@@ -86,13 +86,31 @@ export function DataAvailabilityMatrix({
             'Availability follows explicit evidence gates. The breadth score awards one point for available and half a point for partial sources.',
           )}
         </Text>
-        <SleepEfficiencySectionBody state={state} skeletonHeight={260}>
+        <SleepEfficiencySectionBody
+          state={{ ...state, isResolved: state.isResolved && analysis.source.hasResponse }}
+          skeletonHeight={260}
+        >
           <DataTable<SleepAvailabilityRow>
             tableId="battery:sleep-availability"
+            caption={t('sleep.availability.title', 'Data-availability matrix')}
+            resizable={false}
+            columnReorder={false}
+            columnVisibility={false}
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.key}
             mobileColumns={['source', 'status']}
+            mobilePresentation={{
+              roles: { source: 'title', status: 'badge', reason: 'meta' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'source': return availabilityKeyLabel(t, row.key);
+                  case 'status': return availabilityStatusLabel(t, row.status);
+                  case 'reason': return availabilityReasonLabel(t, row.reason);
+                  default: return '—';
+                }
+              },
+            }}
             density="compact"
             emptyMessage={t(
               'sleep.availability.empty',

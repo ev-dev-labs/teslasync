@@ -25,9 +25,9 @@
  *   - Loading / error / empty branches for the period-stats query.
  *   - Battery, mileage, state-distribution and fleet-comparison each: loaded +
  *     empty (+ error where the source surfaces one).
- *   - `total_min` snake_case fallback for the deleted state-summary endpoint.
+ *   - Raw seconds/percentage rows from the restored state-summary envelope.
  *   - Bug-fix regression guard: the fleet comparison is scoped by BOTH the URL
- *     `from` AND `to` dates (previously the end date was silently dropped).
+ *     header instants, including the exclusive end and rolling 24-hour scope.
  *   - Request contract: snake_case `vehicle_id`, no `/api/v1` double-prefix.
  *   - Interactions: refresh re-fetches; picking a vehicle dispatches selection.
  *   - Imperial unit conversion of distance + efficiency.
@@ -43,15 +43,34 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.unmock('@/api/hooks/useAnnotations');
+
 // i18n stub: return the fallback string, interpolating {{var}} tokens so
 // assertions can target the rendered English copy.
-vi.mock('react-i18next', () => ({
+const displayState = vi.hoisted(() => ({ locale: 'en-US', timezone: '', language: 'en' }));
+
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const { default: en } = await import('@/i18n/en.json');
+  const translations = createInstance();
+  await translations.init({
+    lng: 'en', fallbackLng: 'en',
+    resources: {
+      en: { translation: en },
+      fr: { translation: { statistics: { ageMonths_one: 'mois', ageMonths_other: 'mois' } } },
+    },
+  });
+  return {
   useTranslation: () => ({
     t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+      if (key === 'statistics.ageMonths') {
+        return translations.t(key, { ...(fallbackOrOpts as { count: number; defaultValue: string }), lng: displayState.language });
+      }
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           const o = opts as Record<string, unknown>;
-          return fallbackOrOpts.replace(/{{(\w+)}}/g, (_m, name: string) =>
+          const plural = typeof o.count === 'number' ? o.count === 1 ? o.defaultValue_one : o.defaultValue_other : undefined;
+          return (typeof plural === 'string' ? plural : fallbackOrOpts).replace(/{{(\w+)}}/g, (_m, name: string) =>
             name in o ? String(o[name]) : `{{${name}}}`,
           );
         }
@@ -67,7 +86,8 @@ vi.mock('react-i18next', () => ({
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
-}));
+  };
+});
 
 // Mutable unit preference so a single file can exercise both the metric (km)
 // and imperial (mi) display-conversion branches. Hoisted so the settings mock
@@ -116,12 +136,13 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
   return {
     ...actual,
     useSettings: () => ({
-      settings: { ...defaults, unit_of_length: unitState.length },
+      settings: { ...defaults, unit_of_length: unitState.length, locale: displayState.locale,
+        timezone_user: displayState.timezone, tz_display_default: displayState.timezone ? 'user' : 'vehicle' },
       isMiles: unitState.length === 'mi',
       isFahrenheit: false,
       isPSI: false,
       decimals: 2,
-      locale: 'en-US',
+      locale: displayState.locale,
       density: 'comfortable' as const,
       rangeType: 'rated' as const,
     }),
@@ -171,7 +192,10 @@ import { request } from '@/api/client';
 import { useMileageStats, useStateSummary, useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { calendarRangeToInstants } from '@/lib/dateRange';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
+import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import StatisticsPage from './StatisticsPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
@@ -185,8 +209,8 @@ let periodStatsHandler: () => Promise<unknown>;
 let setVehicleIdSpy: ReturnType<typeof vi.fn>;
 
 /** Minimal `UseQueryResult`-shaped stub for the mocked data hooks. */
-function qr(over: Record<string, unknown> = {}): any {
-  return { data: undefined, isLoading: false, error: null, refetch: vi.fn(), ...over };
+function qr<T>(over: Record<string, unknown> = {}): T {
+  return { data: undefined, isLoading: false, error: null, refetch: vi.fn(), ...over } as T;
 }
 
 function makeStats(over: Record<string, unknown> = {}) {
@@ -236,9 +260,9 @@ function makeMileage(over: Record<string, unknown> = {}) {
 
 function makeStateSummary() {
   return [
-    { state: 'driving', totalMin: 120, count: 10 },
-    { state: 'parked', totalMin: 300, count: 5 },
-    { state: 'charging', totalMin: 60, count: 3 },
+    { state: 'driving', total_seconds: 7200, percentage: 25, transition_count: 10 },
+    { state: 'parked', total_seconds: 18000, percentage: 62.5, transition_count: 5 },
+    { state: 'charging', total_seconds: 3600, percentage: 12.5, transition_count: 3 },
   ];
 }
 
@@ -264,7 +288,7 @@ function installHappyPath() {
     vehicles: [
       { id: 1, display_name: 'Car One', vin: 'VIN1' },
       { id: 2, display_name: 'Car Two', vin: 'VIN2' },
-    ] as any,
+    ] as ReturnType<typeof useSelectedVehicle>['vehicles'],
     setVehicleId: setVehicleIdSpy,
   });
   mockBattery.mockReturnValue(qr({ data: makeBattery() }));
@@ -277,15 +301,19 @@ function renderPage(initialEntries: string[] = ['/statistics']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const page = () => (
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
-        <ToastProvider>
-          <StatisticsPage />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <StatisticsPage />
+          </ToastProvider>
+        </ThemeProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const result = render(page());
+  return { ...result, client, rerenderPage: () => result.rerender(page()) };
 }
 
 /** Every request path issued so far (drops the non-string signal arg). */
@@ -299,9 +327,38 @@ function periodStatsCallCount(): number {
   return issuedPaths().filter((p) => p.startsWith('/analytics/period-stats')).length;
 }
 
+function withBriefDetails(brief: HTMLElement, check: (dialog: HTMLElement) => void) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  check(dialog);
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+function expectDetails(brief: HTMLElement, ...texts: string[]) {
+  withBriefDetails(brief, dialog => {
+    for (const text of texts) expect(within(dialog).getByText(text)).toBeInTheDocument();
+  });
+}
+function expectHiddenFields(brief: HTMLElement, count: number, total: number) {
+  expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(total - count);
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(total - count);
+  expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0);
+  if (count === total) {
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(within(brief).getByText('Values will appear when the source provides measurements.')).toBeInTheDocument();
+  }
+  withBriefDetails(brief, dialog => {
+    expect(within(dialog).getByText(count === 1 ? '1 empty field is hidden.' : `${count} empty fields are hidden.`)).toBeInTheDocument();
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   unitState.length = 'km';
+  displayState.locale = 'en-US';
+  displayState.timezone = '';
+  displayState.language = 'en';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   periodStatsHandler = () => Promise.resolve(makeStats());
   mockedRequest.mockImplementation((path: unknown) => {
     if (typeof path === 'string') {
@@ -315,6 +372,337 @@ beforeEach(() => {
 });
 
 describe('StatisticsPage', () => {
+  it('places every card-grid item as one spanned cell so briefs never collapse to a single column', async () => {
+    mockMileage.mockReturnValue(qr({ data: makeMileage(), error: new Error('mileage refresh failed') }));
+    renderPage();
+    await screen.findByText('500 km');
+    const grids = document.querySelectorAll('[data-card-grid] > *');
+    expect(grids).toHaveLength(3);
+    const cells = Array.from(grids).map(grid => Array.from(grid.children));
+    expect(cells.map(row => row.length)).toEqual([1, 2, 2]);
+    for (const cell of cells.flat()) expect(cell.className).toMatch(/\bcol-span-\d+\b/);
+  });
+
+  it('renders recorded state shares from the real summary hook and restored seconds envelope', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockStateSummary.mockImplementation(actual.useStateSummary);
+    const response = {
+      vehicle_id: 1,
+      days: 7,
+      start: '2026-10-01T00:00:00Z',
+      end: '2026-10-08T00:00:00Z',
+      total_seconds: 28_800,
+      by_state: [
+        { state: 'driving', total_seconds: 7_200, percentage: 25, transition_count: 10 },
+        { state: 'parked', total_seconds: 18_000, percentage: 62.5, transition_count: 5 },
+        { state: 'charging', total_seconds: 3_600, percentage: 12.5, transition_count: 3 },
+      ],
+    };
+    mockedRequest.mockImplementation((path: unknown) => {
+      if (typeof path === 'string' && path.startsWith('/vehicle-states/summary?vehicle_id=1')) return Promise.resolve(response);
+      if (typeof path === 'string' && path.startsWith('/analytics/period-stats')) return periodStatsHandler();
+      if (typeof path === 'string' && path.startsWith('/annotations')) return Promise.resolve([]);
+      return Promise.resolve({});
+    });
+    renderPage();
+    await screen.findByText('500 km');
+
+    await waitFor(() => {
+      const table = screen.getByRole('table', { name: 'State distribution — data table' });
+      for (const [state, share] of [['driving', '25'], ['parked', '63'], ['charging', '13']]) {
+        const row = within(table).getAllByRole('row').find(candidate => within(candidate).queryByText(state));
+        expect(row).toBeDefined();
+        expect(within(row!).getByText(share)).toBeInTheDocument();
+      }
+    });
+    const call = mockedRequest.mock.calls.find(args => String(args[0]).startsWith('/vehicle-states/summary?vehicle_id=1'));
+    expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(response.by_state[0]).toEqual({
+      state: 'driving', total_seconds: 7_200, percentage: 25, transition_count: 10,
+    });
+  });
+
+  it('discloses capped and partial reasons beside retained comparison rows through failure and recovery', async () => {
+    const partial = {
+      is_partial: true,
+      reasons: ['drive_record_cap_reached', 'charging_record_cap_reached', 'future_source_reason'],
+    };
+    const data = { ...makeFleet(2), partial_result: partial };
+    const retry = vi.fn();
+    mockFleet.mockReturnValue(qr({ data, isSuccess: true, refetch: retry }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+
+    const assertRetained = () => {
+      const notice = screen.getByTestId('statistics-fleet-partial');
+      expect(notice).toHaveAttribute('data-data-state', 'partial');
+      expect(notice).toHaveTextContent('Available results remain visible and are not treated as complete.');
+      for (const reason of partial.reasons) expect(within(notice).getByText(reason)).toBeInTheDocument();
+      const table = screen.getByRole('table', { name: 'Vehicle comparison — data table' });
+      expect(within(table).getByText('Car 1')).toBeInTheDocument();
+      expect(within(table).getByText('Car 2')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Distance and energy bar chart comparing all vehicles in the fleet' })).toBeInTheDocument();
+      expect(notice.parentElement).toContainElement(table);
+    };
+    assertRetained();
+    fireEvent.click(within(screen.getByTestId('statistics-fleet-partial')).getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(mockMileage.mock.results.at(-1)?.value.refetch).not.toHaveBeenCalled();
+    expect(mockStateSummary.mock.results.at(-1)?.value.refetch).not.toHaveBeenCalled();
+    retry.mockClear();
+    mockFleet.mockReturnValue(qr({ data, error: new Error('refresh failed'), isError: true, refetch: retry }));
+    rerenderPage();
+    assertRetained();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    mockFleet.mockReturnValue(qr({ data, isFetching: true, fetchStatus: 'fetching', refetch: retry }));
+    rerenderPage();
+    assertRetained();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('statistics-fleet-partial')).getByRole('button', { name: 'Refresh' })).toBeDisabled();
+
+    mockFleet.mockReturnValue(qr({ data: { ...makeFleet(2), partial_result: { is_partial: false, reasons: [] } }, isSuccess: true }));
+    rerenderPage();
+    expect(screen.queryByTestId('statistics-fleet-partial')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Vehicle comparison — data table' })).toHaveTextContent('Car 2');
+  });
+
+  it('retains a partial notice when the producer supplies no reason list', async () => {
+    mockFleet.mockReturnValue(qr({ data: { ...makeFleet(2), partial_result: { is_partial: true, reasons: null } } }));
+    renderPage();
+    await screen.findByText('500 km');
+    expect(screen.getByTestId('statistics-fleet-partial')).toHaveTextContent('not treated as complete');
+  });
+
+  it('shows active chart loading without claiming successful empty results', async () => {
+    mockStateSummary.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
+    mockFleet.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
+    renderPage();
+    await screen.findByText('500 km');
+    expect(document.querySelectorAll('[data-chart-state="loading"]')).toHaveLength(2);
+    expect(screen.getAllByRole('status', { name: 'Loading chart…' })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('statistics-fleet-partial')).not.toBeInTheDocument();
+  });
+
+  it('explains paused first chart loads without claiming empty history or a vehicle outage', async () => {
+    mockStateSummary.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'paused' }));
+    mockFleet.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'paused' }));
+    renderPage();
+    await screen.findByText('500 km');
+    expect(screen.getAllByText('Refresh paused')).toHaveLength(2);
+    expect(screen.queryByTestId('statistics-state-loading')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('statistics-fleet-loading')).not.toBeInTheDocument();
+    expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each(['state', 'fleet'] as const)('threads independent %s source states into chart controls and retains exports on refresh', async (source) => {
+    const mockSource = source === 'state' ? mockStateSummary : mockFleet;
+    const title = source === 'state' ? 'State distribution' : 'Vehicle comparison';
+    const otherTitle = source === 'state' ? 'Vehicle comparison' : 'State distribution';
+    const data = source === 'state' ? makeStateSummary() : makeFleet(2);
+    const emptyData = source === 'state' ? [] : makeFleet(1);
+    const retry = vi.fn();
+    mockSource.mockReturnValue(qr({
+      isLoading: true, isPending: true, fetchStatus: 'fetching', refetch: retry,
+    }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+
+    const chart = (name: string) => {
+      const figure = screen.getAllByText(name).map(element => element.closest('figure')).find(Boolean);
+      expect(figure).not.toBeNull();
+      return figure!;
+    };
+    const assertUnavailable = (phase: string) => {
+      expect(chart(title)).toHaveAttribute('data-chart-state', phase);
+      expect(within(chart(title)).queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+      expect(chart(otherTitle)).toHaveAttribute('data-chart-state', 'ready');
+      expect(within(chart(otherTitle)).getByRole('button', { name: 'Export chart' })).toBeEnabled();
+    };
+    assertUnavailable('loading');
+
+    mockSource.mockReturnValue(qr({ error: new Error(`${source} initial failure`), isError: true, refetch: retry }));
+    rerenderPage();
+    assertUnavailable('error');
+    fireEvent.click(within(chart(title)).getByRole('button', { name: /retry|try again/i }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    mockSource.mockReturnValue(qr({ data: emptyData, isSuccess: true }));
+    rerenderPage();
+    assertUnavailable('empty');
+
+    for (const refresh of [
+      { isFetching: true, fetchStatus: 'fetching' },
+      { isError: true, error: new Error(`${source} refresh failure`) },
+      { fetchStatus: 'paused' },
+      { isSuccess: true },
+    ]) {
+      mockSource.mockReturnValue(qr({ data, refetch: retry, ...refresh }));
+      rerenderPage();
+      expect(chart(title)).toHaveAttribute('data-chart-state', 'ready');
+      expect(within(chart(title)).getByRole('table', { name: `${title} — data table` })).toHaveTextContent(
+        source === 'state' ? 'driving' : 'Car 2',
+      );
+      const exportButton = within(chart(title)).getByRole('button', { name: 'Export chart' });
+      expect(exportButton).toBeEnabled();
+      fireEvent.click(exportButton);
+      expect(screen.getByText('Download data as CSV')).toBeInTheDocument();
+      fireEvent.keyDown(document, { key: 'Escape' });
+    }
+  });
+
+  it('distinguishes successful empty fleet results from measured zero comparison values', async () => {
+    mockFleet.mockReturnValue(qr({ data: makeFleet(0), isSuccess: true }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+    expect(screen.getByText('Add more vehicles to compare')).toBeInTheDocument();
+    expect(screen.queryByTestId('statistics-fleet-partial')).not.toBeInTheDocument();
+
+    const data = makeFleet(2);
+    data.vehicle_comparison.forEach(vehicle => { vehicle.distance = 0; vehicle.energy = 0; });
+    mockFleet.mockReturnValue(qr({ data, isSuccess: true }));
+    rerenderPage();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Vehicle comparison — data table' });
+    expect(within(table).getAllByText('0')).toHaveLength(4);
+    expect(within(table).queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it('keeps all three sections and both charts visible during independent retained refresh failures', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: makeStateSummary(), error: new Error('state refresh failed') }));
+    mockFleet.mockReturnValue(qr({ data: makeFleet(2), error: new Error('fleet refresh failed') }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    expect(screen.getByRole('region', { name: 'Totals and averages' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Battery health and vehicle states' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Mileage and fleet comparison' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByRole('img', { name: 'Vehicle state distribution pie chart' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Distance and energy bar chart comparing all vehicles in the fleet' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+  });
+
+  it('marks a paused retained state source without claiming the vehicle is offline and retries only that source', async () => {
+    const retryState = vi.fn();
+    const retryFleet = vi.fn();
+    mockStateSummary.mockReturnValue(qr({ data: makeStateSummary(), fetchStatus: 'paused', refetch: retryState }));
+    mockFleet.mockReturnValue(qr({ data: makeFleet(2), refetch: retryFleet }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(warning).getByText('State distribution may be out of date')).toBeInTheDocument();
+    expect(warning).not.toHaveTextContent(/offline/i);
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(retryState).toHaveBeenCalledOnce();
+    expect(retryFleet).not.toHaveBeenCalled();
+    expect(screen.getByText('92.00')).toBeInTheDocument();
+  });
+
+  it('keeps raw state identities and measured zero while leaving shares unknown when a duration is missing', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: [
+      { state: 'driving', total_seconds: 0, transition_count: 1 },
+      { state: 'charging', count: 1 },
+    ] }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'State distribution — data table' });
+    expect(within(table).getByText('driving')).toBeInTheDocument();
+    expect(within(table).getByText('charging')).toBeInTheDocument();
+    expect(within(table).getAllByText('—')).toHaveLength(2);
+    expect(within(table).queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('preserves a measured zero share and every unknown state row in the accessible chart table', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: [
+      { state: 'driving', total_seconds: 0, percentage: 0, transition_count: 1 },
+      { state: 'new_source_state', total_seconds: 1800, percentage: 100, transition_count: 1 },
+    ] }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'State distribution — data table' });
+    expect(within(table).getByText('0')).toBeInTheDocument();
+    expect(within(table).getByText('100')).toBeInTheDocument();
+    expect(within(table).getAllByText('new_source_state')).toHaveLength(2);
+    expect(within(table).getByText('digitalTwin.statusLabel.driving')).toBeInTheDocument();
+  });
+
+  it('treats prototype property names as unknown state identities without dropping their measured shares', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: [
+      { state: 'constructor', total_seconds: 600, percentage: 10, transition_count: 1 },
+      { state: 'toString', total_seconds: 1200, percentage: 20, transition_count: 1 },
+      { state: '__proto__', total_seconds: 4200, percentage: 70, transition_count: 1 },
+    ] }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'State distribution — data table' });
+    for (const [state, share] of [['constructor', '10'], ['toString', '20'], ['__proto__', '70']]) {
+      const row = within(table).getAllByRole('row').find(candidate => within(candidate).queryAllByText(state).length > 0);
+      expect(row).toBeDefined();
+      expect(within(row!).getAllByText(state)).toHaveLength(2);
+      expect(within(row!).getByText(share)).toBeInTheDocument();
+    }
+  });
+
+  it('preserves complete vehicle names and distinguishes missing comparison values from measured zero', async () => {
+    const fleet = makeFleet(2);
+    fleet.vehicle_comparison[0].name = 'A very long synthetic vehicle name retained in full';
+    mockFleet.mockReturnValue(qr({ data: { vehicle_comparison: [
+      { ...fleet.vehicle_comparison[0], distance: 0, energy: 0 },
+      { ...fleet.vehicle_comparison[1], name: null, distance: null, energy: null },
+    ] } }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'Vehicle comparison — data table' });
+    expect(within(table).getByText('A very long synthetic vehicle name retained in full')).toBeInTheDocument();
+    expect(within(table).getByText('Vehicle 2')).toBeInTheDocument();
+    expect(within(table).getAllByText('0')).toHaveLength(2);
+    expect(within(table).getAllByText('—')).toHaveLength(2);
+  });
+
+  it('forwards the period query abort signal and gives the page refresh a mobile-sized target', async () => {
+    renderPage();
+    await screen.findByText('500 km');
+
+    const call = mockedRequest.mock.calls.find(args => args[0] === '/analytics/period-stats?vehicle_id=1');
+    expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    const refresh = screen.getAllByRole('button', { name: 'Refresh' }).find(el => el.tagName === 'BUTTON');
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9');
+  });
+
+  it('reviews totals, kilometre cost denominators and mixed mileage windows without another request', async () => {
+    renderPage();
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await within(totals).findByText('500 km');
+    expect(totals.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
+    const averages = screen.getByTestId('statistics-averages-brief');
+    expect(averages.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    const mileage = screen.getByTestId('statistics-mileage-brief');
+    const calls = periodStatsCallCount();
+    expectDetails(mileage, 'Mixed lifetime and last-30-day windows', 'Last 30 days divided by 30');
+    expect(periodStatsCallCount()).toBe(calls);
+    fireEvent.click(within(averages).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Recorded cost divided by source kilometres; not display-distance units.')).toBeInTheDocument();
+    expect(within(drawer).getByText('$0.50')).toBeInTheDocument();
+    expect(periodStatsCallCount()).toBe(calls);
+  });
+
   it('renders the page shell (h1 + subtitle) and sets the document title', async () => {
     renderPage();
 
@@ -334,19 +722,48 @@ describe('StatisticsPage', () => {
     renderPage();
 
     const totals = await screen.findByRole('region', { name: 'Statistics' });
-    expect(within(totals).getByText('Total Distance')).toBeInTheDocument();
-    expect(within(totals).getByText('500 km')).toBeInTheDocument();
+    expect(within(totals).getByText('Total distance')).toBeInTheDocument();
+    expect(await within(totals).findByText('500 km')).toBeInTheDocument();
     expect(within(totals).getByText('42')).toBeInTheDocument();
     expect(within(totals).getByText('100.00 kWh')).toBeInTheDocument();
-    expect(within(totals).getByText('$250')).toBeInTheDocument();
+    expect(within(totals).getByText('$250.00')).toBeInTheDocument();
     expect(within(totals).getByText('50.00 kg')).toBeInTheDocument();
 
     const averages = screen.getByRole('region', { name: 'Averages' });
     // 500 km / 42 drives = 11.90 km
     expect(within(averages).getByText('11.90 km')).toBeInTheDocument();
     expect(within(averages).getByText('160.00 Wh/km')).toBeInTheDocument();
-    // 250 cost / 500 km = 0.500
-    expect(within(averages).getByText('$0.500')).toBeInTheDocument();
+    // 250 cost / 500 km = 0.50 at the selected two decimals.
+    expect(within(averages).getByText('$0.50')).toBeInTheDocument();
+  });
+
+  it.each(['km', 'mi'] as const)('discloses the existing CO₂ estimate in the occurrence and details without recalculating mass in %s', async length => {
+    unitState.length = length;
+    renderPage();
+
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await within(totals).findByText('50.00 kg');
+    const co2 = totals.querySelector('[data-operational-metric="statistics-co2"]');
+    expect(co2).toHaveTextContent('CO₂ saved');
+    expect(co2).toHaveTextContent('50.00 kg');
+    const calls = periodStatsCallCount();
+    withBriefDetails(totals, dialog => {
+      const detail = within(dialog).getByRole('group', { name: 'CO₂ saved' });
+      expect(detail).toHaveTextContent('Estimated CO₂ savings, not measured emissions.');
+      expect(detail).toHaveTextContent('completed-drive distance in kilometres × 0.120 kg CO₂/km');
+      expect(detail).toHaveTextContent('fixed ICE baseline and assuming zero EV emissions');
+      expect(detail).toHaveTextContent('Grid emissions vary and are not deducted.');
+    });
+    // The returned fixture is 50 kg, not 500 km × 0.120 = 60 kg.
+    expect(within(totals).queryByText('60.00 kg')).not.toBeInTheDocument();
+    expect(periodStatsCallCount()).toBe(calls);
+    fireEvent.click(within(totals).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('50.00 kg')).toBeInTheDocument();
+    expect(within(drawer).getByText('Estimated CO₂ savings, not measured emissions.')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Grid emissions vary and are not deducted/)).toBeInTheDocument();
+    expect(within(drawer).getByText('Period statistics; CO₂ is a distance-based estimate with a fixed ICE baseline, excluding grid emissions.')).toBeInTheDocument();
+    expect(periodStatsCallCount()).toBe(calls);
   });
 
   it('shows loading skeletons while the period-stats query is pending', async () => {
@@ -354,10 +771,135 @@ describe('StatisticsPage', () => {
 
     renderPage();
 
-    expect(await screen.findAllByTestId('stat-grid-skeleton')).toHaveLength(2);
-    expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('statistics-totals-brief')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('statistics-averages-brief')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('statistics-totals-brief').querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No statistics yet')).not.toBeInTheDocument();
   });
+
+  it.each([
+    ['km', '160.00 Wh/km'],
+    ['mi', '257.50 Wh/mi'],
+  ] as const)('discloses the charging numerator and efficiency proxy without recomputing returned values in %s', async (length, efficiency) => {
+    unitState.length = length;
+    renderPage();
+
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await within(totals).findByText('100.00 kWh');
+    const energy = totals.querySelector('[data-operational-metric="statistics-total-energy"]');
+    expect(energy).toHaveTextContent('Total energy');
+    expect(energy).toHaveTextContent('100.00 kWh');
+    withBriefDetails(totals, dialog => {
+      expect(within(dialog).getByRole('group', { name: 'Total energy' })).toHaveTextContent('Charging-session energy added, not measured drive energy used; numerator of the efficiency proxy.');
+    });
+
+    const averages = screen.getByTestId('statistics-averages-brief');
+    const proxy = averages.querySelector('[data-operational-metric="statistics-average-efficiency"]');
+    expect(proxy).toHaveTextContent(efficiency);
+    withBriefDetails(averages, dialog => {
+      expect(within(dialog).getByRole('group', { name: 'Avg efficiency' })).toHaveTextContent('Charging-energy/distance proxy: charging-session energy added divided by completed-drive distance, not measured driving efficiency.');
+    });
+    // The fixture intentionally returns 160 Wh/km, not 100 kWh / 500 km = 200 Wh/km.
+    expect(within(averages).queryByText(length === 'km' ? '200.00 Wh/km' : '321.87 Wh/mi')).not.toBeInTheDocument();
+    expect(within(averages).getByText('$0.50')).toBeInTheDocument();
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '12', false])(
+    'does not turn absent or invalid period measurements (%s) into zero',
+    async value => {
+      periodStatsHandler = () => Promise.resolve(makeStats({
+        total_distance: value, total_drives: value, energy_used: value,
+        total_cost: value, co2_saved: value, avg_efficiency: value,
+      }));
+      renderPage();
+      const totals = screen.getByTestId('statistics-totals-brief');
+      await waitFor(() => expect(totals).not.toHaveAttribute('aria-busy'));
+      expectHiddenFields(totals, 5, 5);
+      expectHiddenFields(screen.getByTestId('statistics-averages-brief'), 3, 3);
+    },
+  );
+
+  it.each([undefined, null, NaN, Infinity, -1, 0, 1.5, '2'])(
+    'requires a known positive integer drive count (%s) for average distance',
+    async total_drives => {
+      periodStatsHandler = () => Promise.resolve(makeStats({ total_drives }));
+      renderPage();
+      const averages = screen.getByTestId('statistics-averages-brief');
+      await waitFor(() => expect(within(averages).getByText('$0.50')).toBeInTheDocument());
+      expectHiddenFields(averages, 1, 3);
+    },
+  );
+
+  it('preserves measured zero totals but withholds averages without denominators', async () => {
+    periodStatsHandler = () => Promise.resolve(makeStats({
+      total_distance: 0, total_drives: 0, energy_used: 0,
+      total_cost: 0, co2_saved: 0, avg_efficiency: 0,
+    }));
+    renderPage();
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await waitFor(() => expect(totals.querySelectorAll('[data-value-state="value"]')).toHaveLength(5));
+    expect(within(totals).getByText('0 km')).toBeInTheDocument();
+    expect(within(totals).getByText('$0.00')).toBeInTheDocument();
+    const averages = screen.getByTestId('statistics-averages-brief');
+    expectHiddenFields(averages, 2, 3);
+    expect(within(averages).getByText('0.00 Wh/km')).toBeInTheDocument();
+  });
+
+  it('preserves zero average distance with positive count and zero cost/km with positive distance', async () => {
+    periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: 0, total_drives: 2 }));
+    const { unmount } = renderPage();
+    await screen.findByText('0.00 km');
+    unmount();
+    periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: 0.5, total_cost: 0 }));
+    renderPage();
+    await waitFor(() => expect(within(screen.getByTestId('statistics-averages-brief')).getByText('$0.00')).toBeInTheDocument());
+  });
+
+  it('preserves signed fractional measurements and source-kilometre cost under imperial display', async () => {
+    unitState.length = 'mi';
+    periodStatsHandler = () => Promise.resolve(makeStats({
+      total_distance: 0.5, total_drives: 2, energy_used: -0.25,
+      total_cost: -0.125, co2_saved: -0.5, avg_efficiency: -10.5,
+    }));
+    renderPage();
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await within(totals).findByText('-0.25 kWh');
+    expect(within(totals).getByText('-0.50 kg')).toBeInTheDocument();
+    const averages = screen.getByTestId('statistics-averages-brief');
+    expect(within(averages).getByText('0.16 mi')).toBeInTheDocument();
+    expect(within(averages).getByText('-16.90 Wh/mi')).toBeInTheDocument();
+    expect(within(averages).getByText('$-0.25')).toBeInTheDocument();
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '500'])(
+    'requires known distance (%s) for both distance and cost averages',
+    async total_distance => {
+      periodStatsHandler = () => Promise.resolve(makeStats({ total_distance }));
+      renderPage();
+      const averages = screen.getByTestId('statistics-averages-brief');
+      await within(averages).findByText('160.00 Wh/km');
+      expectHiddenFields(averages, 2, 3);
+    },
+  );
+
+  it('retains signed distance but requires positive distance for cost/km', async () => {
+    periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: -0.5, total_drives: 2 }));
+    renderPage();
+    const averages = screen.getByTestId('statistics-averages-brief');
+    await within(averages).findByText('-0.25 km');
+    expectHiddenFields(averages, 1, 3);
+  });
+
+  it.each([undefined, null, NaN, Infinity, '0', false])(
+    'withholds cost/km when cost is not a known measurement (%s)',
+    async total_cost => {
+      periodStatsHandler = () => Promise.resolve(makeStats({ total_cost }));
+      renderPage();
+      const averages = screen.getByTestId('statistics-averages-brief');
+      await within(averages).findByText('11.90 km');
+      expectHiddenFields(averages, 1, 3);
+    },
+  );
 
   it('surfaces a retry-able error when the period-stats request fails', async () => {
     periodStatsHandler = () => Promise.reject(new Error('period stats down'));
@@ -366,7 +908,7 @@ describe('StatisticsPage', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
+    expectHiddenFields(screen.getByTestId('statistics-totals-brief'), 5, 5);
   });
 
   it('re-fetches the period stats when the error retry button is clicked', async () => {
@@ -392,7 +934,7 @@ describe('StatisticsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Complete a drive or charging session/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
-    expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
+    expectHiddenFields(screen.getByTestId('statistics-totals-brief'), 5, 5);
   });
 
   it('renders the battery-health gauge and its stat cards on the happy path', async () => {
@@ -400,11 +942,135 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(screen.getByText('Health')).toBeInTheDocument();
-    expect(screen.getByText('92')).toBeInTheDocument();
+    expect(screen.getByText('92.00')).toBeInTheDocument();
     expect(screen.getByText('Capacity')).toBeInTheDocument();
-    expect(screen.getByText('71.5 kWh')).toBeInTheDocument();
+    expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
     expect(screen.getByText('412')).toBeInTheDocument();
-    expect(screen.getByText('30 mo')).toBeInTheDocument();
+    expect(screen.getByText('30.00 months')).toBeInTheDocument();
+  });
+
+  it.each([
+    [0, '0.00 months'],
+    [1, '1.00 month'],
+    [1.5, '1.50 months'],
+    [1234.5, '1,234.50 months'],
+  ])('formats source calendar months (%s) with numeric formatting and plural selection', async (age, expected) => {
+    const battery = Object.freeze(makeBattery({ battery_age_months: age }));
+    mockBattery.mockReturnValue(qr({ data: battery }));
+    renderPage();
+    const brief = screen.getByTestId('statistics-battery-brief');
+    expect(brief.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+    expect(within(brief).getByText(expected)).toBeInTheDocument();
+    expect(battery.battery_age_months).toBe(age);
+  });
+
+  it.each([
+    ['2026-03-01T07:59:59Z', '2026-02-28T23:59:59-08:00'],
+    ['2026-03-01T08:00:00Z', '2026-03-01T00:00:00-08:00'],
+    ['2026-03-01T08:00:00Z', 'invalid-date'],
+    ['2026-03-01T08:00:00Z', null],
+    ['2026-03-01T08:00:00Z', undefined],
+  ])('keeps calendar-month age with saved locale/timezone at %s and source date %s', async (now, date) => {
+    displayState.locale = 'fr-FR';
+    displayState.timezone = 'America/Los_Angeles';
+    displayState.language = 'fr';
+    setGlobalLocale(displayState.locale);
+    vi.setSystemTime(new Date(now));
+    try {
+      mockBattery.mockReturnValue(qr({ data: makeBattery({ battery_age_months: 1234.5 }) }));
+      mockMileage.mockReturnValue(qr({ data: makeMileage({ first_drive_at: date, last_drive_at: date }) }));
+      renderPage();
+      expect(within(screen.getByTestId('statistics-battery-brief')).getByText(/1\s234,50 mois/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '30'])(
+    'does not invent calendar-month age from missing or invalid age (%s)',
+    async battery_age_months => {
+      mockBattery.mockReturnValue(qr({ data: makeBattery({ battery_age_months }) }));
+      renderPage();
+      const brief = screen.getByTestId('statistics-battery-brief');
+      expect(brief.querySelector('[data-operational-metric="statistics-battery-age"]')).not.toBeInTheDocument();
+      expectHiddenFields(brief, 1, 4);
+      expect(brief).not.toHaveTextContent('0.00 months');
+      expect(brief).not.toHaveTextContent('NaN');
+      expect(brief).not.toHaveTextContent('Infinity');
+    },
+  );
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '92'])(
+    'does not present missing or invalid health (%s) as measured zero',
+    async current_soh => {
+      const battery = Object.freeze(makeBattery({ current_soh }));
+      mockBattery.mockReturnValue(qr({ data: battery }));
+      renderPage();
+      await screen.findByRole('region', { name: 'Statistics' });
+      const health = screen.getByRole('group', { name: 'Health' });
+      expect(within(health).getByText('—')).toBeInTheDocument();
+      expect(health).not.toHaveAttribute('aria-valuenow');
+      expect(screen.getByTestId('statistics-battery-brief')).toBeInTheDocument();
+      expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
+      expect(battery.current_soh).toBe(current_soh);
+    },
+  );
+
+  it.each([
+    { current_soh: 0, estimated_capacity_wh: 0, original_capacity_wh: 75_000, history: [], prediction: { has_enough_data: false } },
+    { current_soh: 0, estimated_capacity_wh: 0, history: [{ soh_pct: NaN, capacity_wh: 0 }], prediction: { has_enough_data: false } },
+    { current_soh: 0, estimated_capacity_wh: 71_500, original_capacity_wh: null, history: [], prediction: { has_enough_data: false } },
+    { current_soh: 92, estimated_capacity_wh: NaN, original_capacity_wh: 75_000, history: [], prediction: null },
+    { current_soh: 0, current_soh_available: false },
+  ])('keeps unsupported health unknown without hiding other metrics: %j', async overrides => {
+    mockBattery.mockReturnValue(qr({ data: makeBattery(overrides) }));
+    renderPage();
+    await screen.findByRole('region', { name: 'Statistics' });
+    expect(within(screen.getByRole('group', { name: 'Health' })).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: 'Health' })).not.toBeInTheDocument();
+    expect(screen.getByText('412')).toBeInTheDocument();
+    expect(screen.getByTestId('statistics-battery-brief')).toBeInTheDocument();
+  });
+
+  it.each([
+    {},
+    { estimated_capacity_wh: 0, history: [{ soh_pct: 0, capacity_wh: 0 }] },
+    { estimated_capacity_wh: 0, prediction: { has_enough_data: true } },
+    { estimated_capacity_wh: 0, current_soh_available: true },
+  ])('preserves measured zero health with source evidence: %j', async evidence => {
+    mockBattery.mockReturnValue(qr({ data: makeBattery({
+      current_soh: 0, degradation_rate_pct_per_year: 0, total_cycles: 0, battery_age_months: 0, ...evidence,
+    }) }));
+    renderPage();
+    await screen.findByRole('region', { name: 'Statistics' });
+    expect(screen.getByRole('meter', { name: 'Health' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByTestId('statistics-battery-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    expect(screen.getByText('0.00 months')).toBeInTheDocument();
+  });
+
+  it.each([92.34, -2.34, 102.34])('preserves fractional and signed health %s without rounding or clamping its reading', async current_soh => {
+    mockBattery.mockReturnValue(qr({ data: makeBattery({ current_soh, degradation_rate_pct_per_year: -1.25, battery_age_months: 2.5 }) }));
+    renderPage();
+    await screen.findByRole('region', { name: 'Statistics' });
+    const health = screen.getByRole(current_soh >= 0 && current_soh <= 100 ? 'meter' : 'group', { name: 'Health' });
+    expect(within(health).getByText(current_soh.toFixed(2))).toBeInTheDocument();
+    expect(screen.getByText('-1.25 %/yr')).toBeInTheDocument();
+    expect(screen.getByText('2.50 months')).toBeInTheDocument();
+  });
+
+  it('retains unknown health and measured neighbors during failed battery refresh', async () => {
+    const refetch = vi.fn();
+    mockBattery.mockReturnValue(qr({ data: makeBattery({ current_soh: null }), error: new Error('refresh failed'), refetch }));
+    renderPage();
+    await screen.findByRole('region', { name: 'Statistics' });
+    expect(within(screen.getByRole('group', { name: 'Health' })).getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Battery health may be out of date');
+    expectDetails(screen.getByTestId('statistics-battery-brief'), 'Retained statistics');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
   it('renders battery empty and error placeholders without blanking the panel', async () => {
@@ -412,22 +1078,123 @@ describe('StatisticsPage', () => {
     const { unmount } = renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No battery health data available')).toBeInTheDocument();
-    expect(screen.queryByText('Capacity')).not.toBeInTheDocument();
+    expectHiddenFields(screen.getByTestId('statistics-battery-brief'), 4, 4);
     unmount();
 
     mockBattery.mockReturnValue(qr({ error: new Error('battery down') }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Capacity')).not.toBeInTheDocument();
+    expectHiddenFields(screen.getByTestId('statistics-battery-brief'), 4, 4);
   });
 
   it('renders the mileage summary cards on the happy path', async () => {
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
-    expect(screen.getByText('Daily Average')).toBeInTheDocument();
-    expect(screen.getByText('Yearly Projection')).toBeInTheDocument();
+    expect(screen.getByText('Daily average')).toBeInTheDocument();
+    expect(screen.getByText('Yearly projection')).toBeInTheDocument();
     expect(screen.getByText('8,000 km')).toBeInTheDocument();
+  });
+
+  it('distinguishes active mileage loading, paused first load, successful empty and measured zero', async () => {
+    const retryMileage = vi.fn();
+    const retryBattery = vi.fn();
+    mockBattery.mockReturnValue(qr({ data: makeBattery(), refetch: retryBattery }));
+    mockMileage.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+    expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Loading statistics');
+    expect(screen.queryByText('No mileage data available')).not.toBeInTheDocument();
+
+    mockMileage.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch: retryMileage }));
+    rerenderPage();
+    expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Refresh paused');
+    const notice = screen.getByRole('alert');
+    expect(notice).toHaveTextContent('Refresh paused');
+    expect(notice).not.toHaveTextContent(/offline/i);
+    expect(screen.queryByText('No mileage data available')).not.toBeInTheDocument();
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry unavailable sources: Mileage summary' }));
+    expect(retryMileage).toHaveBeenCalledOnce();
+    expect(retryBattery).not.toHaveBeenCalled();
+
+    mockMileage.mockReturnValue(qr({ data: null, isSuccess: true, fetchStatus: 'idle' }));
+    rerenderPage();
+    expect(screen.getByText('No mileage data available')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    mockMileage.mockReturnValue(qr({ data: makeMileage({ lifetime_km: 0, last_30d_km: 0, drive_count_lifetime: 0 }), isSuccess: true }));
+    rerenderPage();
+    const brief = screen.getByTestId('statistics-mileage-brief');
+    expect(within(brief).getAllByText('0 km')).toHaveLength(2);
+    expect(within(brief).getByText('0.00 km')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    expect(screen.queryByText('No mileage data available')).not.toBeInTheDocument();
+  });
+
+  it('marks paused and refreshing battery health without claiming returned or empty statistics', async () => {
+    const retryBattery = vi.fn();
+    const retryMileage = vi.fn();
+    mockMileage.mockReturnValue(qr({ data: makeMileage(), refetch: retryMileage }));
+    mockBattery.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch: retryBattery }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+    const brief = () => screen.getByTestId('statistics-battery-brief');
+    expectDetails(brief(), 'Refresh paused');
+    expect(screen.queryByText('No battery health data available')).not.toBeInTheDocument();
+    const notice = screen.getByRole('alert');
+    expect(notice).not.toHaveTextContent(/offline/i);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry unavailable sources: Battery health' }));
+    expect(retryBattery).toHaveBeenCalledOnce();
+    expect(retryMileage).not.toHaveBeenCalled();
+
+    mockBattery.mockReturnValue(qr({ data: makeBattery(), fetchStatus: 'paused', refetch: retryBattery }));
+    rerenderPage();
+    expectDetails(brief(), 'Refresh paused');
+    withBriefDetails(brief(), dialog => expect(within(dialog).queryByText('Returned statistics')).not.toBeInTheDocument());
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+
+    mockBattery.mockReturnValue(qr({ data: makeBattery(), isFetching: true, fetchStatus: 'fetching', refetch: retryBattery }));
+    rerenderPage();
+    expectDetails(brief(), 'Refreshing');
+
+    mockBattery.mockReturnValue(qr({ data: makeBattery(), isSuccess: true, refetch: retryBattery }));
+    rerenderPage();
+    expectDetails(brief(), 'Returned statistics');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('retains mileage through refresh progress, failure and pause, retries only mileage and recovers', async () => {
+    const retryMileage = vi.fn();
+    const retryFleet = vi.fn();
+    mockFleet.mockReturnValue(qr({ data: makeFleet(2), refetch: retryFleet }));
+    mockMileage.mockReturnValue(qr({ data: makeMileage(), isFetching: true, fetchStatus: 'fetching', refetch: retryMileage }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+    expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Refreshing');
+    expect(screen.getByText('8,000 km')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+
+    mockMileage.mockReturnValue(qr({ data: makeMileage(), error: new Error('mileage refresh failed'), refetch: retryMileage }));
+    rerenderPage();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Mileage summary may be out of date');
+    expect(screen.getByText('8,000 km')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(retryMileage).toHaveBeenCalledOnce();
+    expect(retryFleet).not.toHaveBeenCalled();
+
+    mockMileage.mockReturnValue(qr({ data: makeMileage(), fetchStatus: 'paused', refetch: retryMileage }));
+    rerenderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByTestId('stale-refresh-warning')).not.toHaveTextContent(/offline/i);
+    expect(screen.getByText('8,000 km')).toBeInTheDocument();
+
+    mockMileage.mockReturnValue(qr({ data: makeMileage({ lifetime_km: 9000 }), isSuccess: true, refetch: retryMileage }));
+    rerenderPage();
+    expect(screen.getByText('9,000 km')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('92.00')).toBeInTheDocument();
   });
 
   it('renders mileage empty and error placeholders without blanking the panel', async () => {
@@ -435,14 +1202,14 @@ describe('StatisticsPage', () => {
     const { unmount } = renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No mileage data available')).toBeInTheDocument();
-    expect(screen.queryByText('Daily Average')).not.toBeInTheDocument();
+    expectHiddenFields(screen.getByTestId('statistics-mileage-brief'), 4, 4);
     unmount();
 
     mockMileage.mockReturnValue(qr({ error: new Error('mileage down') }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Daily Average')).not.toBeInTheDocument();
+    expectHiddenFields(screen.getByTestId('statistics-mileage-brief'), 4, 4);
   });
 
   it('renders the state-distribution chart figure when data is present', async () => {
@@ -450,7 +1217,7 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'State Distribution' }),
+      screen.getByRole('heading', { level: 3, name: 'State distribution' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
@@ -458,14 +1225,14 @@ describe('StatisticsPage', () => {
     expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
   });
 
-  it('reads the snake_case total_min fallback for state summary rows', async () => {
+  it('reads the source percentage for state summary rows', async () => {
     mockStateSummary.mockReturnValue(
-      qr({ data: [{ state: 'driving', total_min: 90, count: 4 }] }),
+      qr({ data: [{ state: 'driving', total_seconds: 5400, percentage: 100, transition_count: 4 }] }),
     );
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
-    // total_min is read via fallback → the chart branch renders (no empty state).
+    // The restored raw row renders without a minute-shape adapter.
     expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
@@ -485,7 +1252,7 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Vehicle Comparison' }),
+      screen.getByRole('heading', { level: 3, name: 'Vehicle comparison' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
   });
@@ -503,13 +1270,77 @@ describe('StatisticsPage', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
-  it('scopes the fleet comparison to BOTH the URL from and to dates', async () => {
-    renderPage(['/statistics?from=2025-03-01&to=2025-03-15']);
+  it.each(['2025-03-15', '2025-03-16'])('passes calendar instants through the fleet request and key with exclusive end %s', async (endDate) => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockFleet.mockImplementation(actual.useFleetAnalytics);
+    mockedRequest.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith('/analytics/fleet') ? makeFleet(2) : makeStats(),
+    ));
+    const { startInstant, endInstantExclusive } = calendarRangeToInstants({
+      startDate: '2025-03-01',
+      endDate,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    const { client } = renderPage([`/statistics?from=2025-03-01&to=${endDate}`]);
     await screen.findByRole('region', { name: 'Statistics' });
 
-    // Regression guard: the end date must reach the fleet query. Previously the
-    // page called useFleetAnalytics(30, startDate), silently dropping `to`.
-    expect(mockFleet).toHaveBeenCalledWith({ start: '2025-03-01', end: '2025-03-15' });
+    const params = new URLSearchParams({ start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(issuedPaths()).toContain(`/analytics/fleet?${params}`));
+    expect(mockFleet).toHaveBeenCalledWith({ start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(client.getQueryData(
+      actual.analyticsKeys.fleet(undefined, startInstant, endInstantExclusive),
+    )).toEqual(makeFleet(2)));
+    expect(screen.getByRole('group', {
+      name: 'Distance and energy bar chart comparing all vehicles in the fleet',
+    })).toBeInTheDocument();
+  });
+
+  it('scopes the state distribution request and key to the selected range', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockStateSummary.mockImplementation(actual.useStateSummary);
+    const response = {
+      vehicle_id: 1, days: 15, start: '', end: '', total_seconds: 3_600,
+      by_state: [{ state: 'driving', total_seconds: 3_600, percentage: 100, transition_count: 1 }],
+    };
+    mockedRequest.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith('/vehicle-states/summary') ? response : makeStats(),
+    ));
+    const { startInstant, endInstantExclusive } = calendarRangeToInstants({
+      startDate: '2025-03-01',
+      endDate: '2025-03-15',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    const { client } = renderPage(['/statistics?from=2025-03-01&to=2025-03-15']);
+    await screen.findByRole('region', { name: 'Statistics' });
+
+    const params = new URLSearchParams({ vehicle_id: '1', start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(issuedPaths()).toContain(`/vehicle-states/summary?${params}`));
+    expect(mockStateSummary).toHaveBeenCalledWith('1', { start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(client.getQueryData(
+      actual.analyticsKeys.stateSummary('1', startInstant, endInstantExclusive),
+    )).toEqual(response));
+  });
+
+  it('preserves precise rolling 24-hour bounds in the fleet request and key', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockFleet.mockImplementation(actual.useFleetAnalytics);
+    mockedRequest.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith('/analytics/fleet') ? makeFleet(2) : makeStats(),
+    ));
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-14T17:45:46.022Z'));
+    try {
+      const start = '2026-10-13T17:45:46.022Z';
+      const end = '2026-10-14T17:45:46.022Z';
+      const { client } = renderPage(['/statistics?time_scope=24h']);
+      const params = new URLSearchParams({ start, end });
+      await waitFor(() => expect(issuedPaths()).toContain(`/analytics/fleet?${params}`));
+      expect(mockFleet).toHaveBeenCalledWith({ start, end });
+      await waitFor(() => expect(client.getQueryData(
+        actual.analyticsKeys.fleet(undefined, start, end),
+      )).toEqual(makeFleet(2)));
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('requests period stats with a snake_case vehicle_id and no /api/v1 prefix', async () => {
@@ -526,7 +1357,7 @@ describe('StatisticsPage', () => {
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
-    // Both the toolbar <button> and the DataFreshness chip expose a "Refresh"
+    // Both the toolbar <button> and the FreshnessDot chip expose a "Refresh"
     // accessible name; target the real <button> element.
     const toolbarRefresh = screen
       .getAllByRole('button', { name: 'Refresh' })
@@ -568,7 +1399,7 @@ describe('StatisticsPage', () => {
 
     const totals = await screen.findByRole('region', { name: 'Statistics' });
     // 500 km → 310.69 mi → fmtInt → 311 mi
-    expect(within(totals).getByText('311 mi')).toBeInTheDocument();
+    expect(await within(totals).findByText('311 mi')).toBeInTheDocument();
 
     const averages = screen.getByRole('region', { name: 'Averages' });
     // 160 Wh/km × 1.609344 → 257.50 Wh/mi
@@ -590,7 +1421,7 @@ describe('StatisticsPage', () => {
       }),
     ).toBeInTheDocument();
     // The toolbar exposes a labelled refresh <button> (distinct from the
-    // DataFreshness chip which also carries a "Refresh" accessible name).
+    // FreshnessDot chip which also carries a "Refresh" accessible name).
     expect(
       screen
         .getAllByRole('button', { name: 'Refresh' })

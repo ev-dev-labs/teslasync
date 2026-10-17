@@ -12,19 +12,20 @@ const HOUR = 3_600_000;
 
 function hourlySeries(values: readonly number[]): TrendSample[] {
   return values.map((v, i) => ({
-    timestamp: new Date(BASE + i * HOUR).toISOString(),
-    valueNum: v,
+    ts: new Date(BASE + i * HOUR).toISOString(),
+    kind: 'ValueKindDouble',
+    value: v,
   }));
 }
 
 describe('toNumericPoints', () => {
   it('drops non-numeric and unparsable-timestamp rows, sorts, and de-dupes', () => {
     const points = toNumericPoints([
-      { timestamp: new Date(BASE + HOUR).toISOString(), valueNum: 2 },
-      { timestamp: new Date(BASE).toISOString(), valueNum: 1 },
-      { timestamp: new Date(BASE).toISOString(), valueNum: 9 },
-      { timestamp: undefined, valueNum: 5 },
-      { timestamp: new Date(BASE + 2 * HOUR).toISOString(), valueNum: undefined },
+      { ts: new Date(BASE + HOUR).toISOString(), kind: 'ValueKindDouble', value: 2 },
+      { ts: new Date(BASE).toISOString(), kind: 'ValueKindDouble', value: 1 },
+      { ts: new Date(BASE).toISOString(), kind: 'ValueKindDouble', value: 9 },
+      { ts: '', kind: 'ValueKindDouble', value: 5 },
+      { ts: new Date(BASE + 2 * HOUR).toISOString(), kind: 'ValueKindDouble', value: null },
     ]);
     expect(points.map((p) => p.ms)).toEqual([BASE, BASE + HOUR]);
     expect(points[0]!.value).toBe(9);
@@ -91,6 +92,19 @@ describe('mannKendall', () => {
 });
 
 describe('summarizeSignalTrend', () => {
+  it('counts canonical measured zeros without fabricating significance or a forecast', () => {
+    const s = summarizeSignalTrend(hourlySeries(Array.from({ length: 24 }, () => 0)));
+    expect(s.samples).toBe(24);
+    expect(s.spanHours).toBe(23);
+    expect(s.slopePerHour).toBe(0);
+    expect(s.slopePerDay).toBe(0);
+    expect(s.interceptAtStart).toBe(0);
+    expect(s.residualSpread).toBe(0);
+    expect(s.evidenceLimited).toBe(false);
+    expect(s.mannKendall?.significant).toBe(false);
+    expect(s.forecast).toEqual([]);
+  });
+
   it('returns nulls with no samples', () => {
     const s = summarizeSignalTrend([]);
     expect(s.samples).toBe(0);

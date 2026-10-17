@@ -1,0 +1,320 @@
+{
+  "item": "audit-page-008",
+  "page": "web\\src\\features\\admin\\pages\\DevToolsPage.tsx",
+  "routes": ["/dev-tools"],
+  "purpose": "Developer operations surface combining live fleet diagnostics, Fleet API setup, infrastructure inspection, local utilities and documentation.",
+  "primaryGoal": "Inspect and troubleshoot integration health, configure Fleet Telemetry and use developer tools without confusing missing or retained observations with healthy measurements.",
+  "dataSources": [
+    {
+      "hook": "useFleetTelemetryErrorVINs",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts:618-624",
+      "endpoints": ["GET /tesla/fleet-telemetry/error-vins"],
+      "routeEvidence": "internal\\api\\router.go:3583-3587",
+      "behavior": "Independent fleet-wide snapshot, shared with telemetry tab; cancellation signal forwarded."
+    },
+    {
+      "hook": "useVehicles",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts:73-78",
+      "endpoints": ["GET /vehicles"],
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "behavior": "Overview inventory uses safeArray and inherited query policy. Local useVehicleOptions separately reimplements the same query without signal or equivalent normalization."
+    },
+    {
+      "hook": "useFleetTelemetryErrors / useRefreshFleetTelemetryErrorVINs / useRefreshFleetTelemetryErrors",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts:626-665",
+      "endpoints": ["GET /tesla/fleet-telemetry/errors?vin={vin}", "POST /tesla/fleet-telemetry/error-vins/refresh", "POST /tesla/fleet-telemetry/errors/refresh"],
+      "routeEvidence": "internal\\api\\router.go:3583-3587",
+      "behavior": "Telemetry tab has local optional VIN selection and independent read retries; POST refresh retrieves Tesla data. No request or mutation exercised."
+    },
+    {
+      "hook": "apiFetch through component-local useQuery/useMutation",
+      "owner": "web\\src\\features\\admin\\components\\devtools\\helpers.ts:8-20",
+      "endpoints": ["GET /dev-tools/fleet-api-info", "POST /dev-tools/register-partner", "GET /dev-tools/partner-public-key?domain={domain}", "GET /dev-tools/public-key-status", "POST /dev-tools/generate-keypair", "POST /dev-tools/upload-public-key", "DELETE /dev-tools/public-key", "POST /dev-tools/fleet-telemetry-subscribe", "GET /dev-tools/fleet-telemetry-config?vin={vin}", "DELETE /dev-tools/fleet-telemetry-config?vin={vin}", "GET /dev-tools/fleet-telemetry-errors?vin={vin}", "POST /dev-tools/fleet-status", "GET /dev-tools/nearby-charging?vin={vin}", "GET /dev-tools/release-notes?vin={vin}", "GET /dev-tools/recent-alerts?vin={vin}", "GET /dev-tools/service-data?vin={vin}", "GET /dev-tools/db-stats", "GET /dev-tools/migration-status", "POST /dev-tools/mqtt-test", "GET /dev-tools/env-check", "GET /dev-tools/runtime-info"],
+      "routeEvidence": "internal\\api\\router.go:4745-4773",
+      "behavior": "All listed method/path pairs have source-confirmed routes. Helper catches rejected requests and resolves an error payload; component query policy therefore treats failures as success. Setup status queries poll every 30 seconds while Fleet API tab is mounted. No backend response shapes or operational permissions certified."
+    },
+    {
+      "hook": "Bundled catalogs and local input processing",
+      "owner": "web\\src\\features\\admin\\components\\devtools\\constants.ts",
+      "endpoints": [],
+      "behavior": "Endpoint/signal/reference counts are explicitly catalog counts, not live coverage. Fifteen utilities consume local inputs. Tesla signal names are upstream identifiers, not physical-unit contracts. Onboarding completion persists under devtools-onboarding."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "use": "Existing full-width layout, page actions, freshness and error boundary; query is metadata, not a whole-page loading gate."},
+    {"name": "TabNav / Button / Input / Textarea / Select / Accordion / Badge / GlassPanel / CopyButton / DataTable", "owner": "web\\src\\components\\ui", "use": "Existing controls and tables; preserve table IDs, filters, pagination and mobile detail access."},
+    {"name": "OperationalBrief through AdminSummary", "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx", "use": "Existing useOperationalMetrics pipeline separates live counts from local catalog counts."},
+    {"name": "AlertBanner / StaleRefreshWarning / QueryError / Skeleton / EmptyState", "owner": "web\\src\\components\\feedback", "use": "Overview uses trust adapter; child tabs have uneven state handling."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion", "use": "Existing entry and tab transitions; implementation and reduced-motion runtime not exercised."},
+    {"name": "ToolCard / ResultPanel / TelemetryErrorsPanel", "owner": "web\\src\\features\\admin\\components\\devtools", "use": "Page-domain presentation owners; reuse rather than introducing another tool-card/result renderer."},
+    {"name": "SignalConfigModal", "owner": "web\\src\\components\\ui\\SignalConfigModal.tsx", "use": "Shared signal selection/interval overlay; caller inspected, overlay internals not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\devtools\\helpers.ts",
+      "line": 25,
+      "rule": "MDC-002 / MDC-046",
+      "detail": "useVehicleOptions reimplements the vehicle inventory query rather than adapting useVehicles, losing its cancellation/normalization/policy contract.",
+      "fix": "Adapt existing useVehicles to VIN options without changing query identities, source values or local selections.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\devtools\\ClientUtilitiesSection.tsx",
+      "line": 91,
+      "rule": "Mission section 4",
+      "detail": "Accordion already provides outer name/description/icon, while individual utilities render a nested ToolCard with the same name/description. This is repeated framing, not a reason to delete utility content.",
+      "fix": "Reuse ToolCard or introduce a page-local embedded presentation option after preserving every utility input/result/action.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceObservations": ["Utilities stack then expand at md/lg/2xl/3xl; reference links use sm/lg grids; Fleet API uses lg two-column layout; infrastructure uses md/2xl grids.", "TabNav has horizontal overflow containment, not a verified mobile interaction result."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx",
+        "line": 111,
+        "rule": "MDC-043",
+        "detail": "Affected-count badge, selected VIN badge and refresh action share an unwrapped flex row. A long VIN/localized action can exceed a narrow tool card.",
+        "fix": "Allow wrapping/stacking and min-width containment while keeping VIN selection, clear and refresh reachable.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+        "line": 116,
+        "rule": "MDC-043",
+        "detail": "Long OpenSSL commands share a flex row with copy controls without explicit overflow or break handling; onboarding navigation at line 810 is also an unwrapped three-action row.",
+        "fix": "Contain command overflow independently and let navigation reflow; preserve complete copy payload and all three wizard actions.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\tools\\ByteSizeConverter.tsx",
+        "line": 72,
+        "rule": "MDC-043",
+        "detail": "Converted values always use five columns, including inside narrow utility cards; long numeric results have no explicit wrap strategy.",
+        "fix": "Use responsive result columns or bounded numeric overflow without dropping any of the five units.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceObservations": ["Refresh action has a localized accessible name; page tab icons are decorative; reference links have safe new-tab attributes and hidden new-tab hint.", "TabNav intentionally implements a native-button pressed group, not an ARIA tablist. Do not impose tab roles without implementing the corresponding interaction model."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+        "line": 326,
+        "rule": "MDC-021 / MDC-040",
+        "detail": "Upload PEM textarea has a nearby span but no label, explicit ID association or aria-label. CA certificate textarea at line 442 has the same pattern.",
+        "fix": "Pass localized label to existing Textarea, or explicit stable ID and matching label/description; preserve controlled values and PEM content.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\DevToolsPage.tsx",
+        "line": 129,
+        "rule": "MDC-040",
+        "detail": "TabNav has an ariaLabel API but this caller does not provide a group name. Outer section is named, which does not automatically name its nested group.",
+        "fix": "Pass existing localized developer-tool-area name through ariaLabel.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx",
+        "line": 121,
+        "rule": "MDC-040 / MDC-014",
+        "detail": "VIN clear button explicitly removes minimum height; VIN row action at line 45 also overrides height/padding. Source suggests undersized touch targets; actual geometry/spacing exceptions are unmeasured.",
+        "fix": "Retain native buttons and action names, restore reachable target sizing or demonstrate applicable spacing exception.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "verified": false,
+    "preservedStrengths": ["Overview adapts each query through useDataState, reports refresh failures separately and passes unknown flags instead of displaying fallback zero as a measurement.", "Live and static catalog summaries remain independent; tabs are not gated on overview data.", "TelemetryErrorsPanel distinguishes idle/loading/error/data/empty and retains unknown-shape raw disclosure and JSON download."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx",
+        "line": 113,
+        "rule": "MDC-026",
+        "detail": "vinList defaults to [] and an always-rendered success badge reports 0 affected even while loading or on initial failure. isError branches at lines 145 and 191 replace retained tables during refresh failure.",
+        "fix": "Use existing per-source data-state adapter; display unknown until resolved and keep retained rows with stale warning plus independent retry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\helpers.ts",
+        "line": 18,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "apiFetch resolves request failures into {error}, so TanStack Query does not enter error/retry/retained-data states. Setup query error payloads replace previously valid configuration and onSuccess callbacks can run on failed writes; upload callback at FleetApiSection line 257 clears PEM input on such a failure.",
+        "fix": "Move reads/mutations into typed existing API hook ownership and preserve rejection/trust semantics. Audit all consumers before changing helper error shape; clear inputs/invalidate only on confirmed successful writes.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+        "line": 553,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "Changing local VIN does not reset or bind prior mutation responses. Config/error output and download filename use current VIN although retained payload may belong to an earlier VIN; vehicle-data tools at line 661 share this mismatch risk.",
+        "fix": "Associate results with submitted VIN, or reset affected results on selection changes; never relabel earlier observations as the current vehicle.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\devtools\\constants.ts",
+      "line": 8,
+      "rule": "MDC-010 / Mission sections 5-7",
+      "detail": "Page-local icon color map uses neon background/text/ring for five hues across tool and reference cards. Wizard at FleetApiSection line 764 adds a neon cyan-to-green gradient; ResultPanel lines 45-46 uses neon result fills and fixed-white idle surface.",
+      "fix": "Use existing neutral surfaces/borders and restrained semantic tokens; reserve hue for meaningful warning/failure/success rather than tool category decoration. Preserve explicit user palette preferences and all payloads.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\devtools\\ToolCard.tsx",
+      "line": 25,
+      "rule": "MDC-013",
+      "detail": "Domain tool headings/body use ad-hoc h3/p typography. Fleet API headings and specialist metadata repeat independent text-size/weight classes.",
+      "fix": "Adopt existing PanelTitle/Text/Code roles with semantic as overrides, retaining heading hierarchy, identifiers and all explanations.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "line": 26,
+      "rule": "MDC-002 / Mission section 33",
+      "detail": "An 874-line feature file owns nine tool components, polling, mutations, request paths and presentation. apiFetch and useVehicleOptions also omit query cancellation.",
+      "fix": "Extract domain tools into single-purpose files and route typed data access through current API hooks; preserve mutation methods, payloads, polling, query keys and every tool.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "line": 10,
+      "rule": "MDC-002",
+      "detail": "SignalConfigModal is imported directly from the component implementation rather than the category barrel.",
+      "fix": "Use an existing public export if available; otherwise request one centrally rather than editing shared exports from the page assignment.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\devtools\\constants.ts",
+      "line": 137,
+      "rule": "MDC-044",
+      "detail": "Onboarding labels/descriptions are literal English rendered directly at FleetApiSection lines 791 and 804-806. describeCron/getRelativeTime also return English text rather than localized phrases.",
+      "fix": "Use canonical localization keys with fallbacks at presentation boundary; preserve onboarding IDs, persistence key and cron/timestamp calculations.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Repair child-source trust and VIN/result association before cosmetic adoption.", "Fix field names and narrow-width action/result containment.", "Subdue page-domain palette and unify typography without dropping tools.", "Decompose Fleet API and reuse existing typed hook/query owners."],
+    "runtimeAcceptance": "unverified"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Typed developer-tool query and mutation ownership",
+      "existingOwnerFile": "web\\src\\features\\admin\\components\\devtools\\helpers.ts",
+      "targetOwner": "web\\src\\api\\hooks\\useAdmin.ts (existing domain candidate; file not inspected, API suitability unverified)",
+      "propsVariantsStates": ["Typed endpoint response contracts after backend verification", "AbortSignal forwarding for reads", "Rejected failures and retained-data trust", "Preserve current write methods, request-client live-mode guard and no offline queueing", "Success-only input clearing/invalidation"],
+      "usedBy": ["FleetApiSection", "InfrastructureSection", "BackendTool"],
+      "dependsOn": ["Audit helper consumers and backend response/error envelopes", "Existing request/useDataState contracts; no new query engine"]
+    },
+    {
+      "name": "Existing SignalConfigModal category export, if absent",
+      "existingOwnerFile": "web\\src\\components\\ui\\SignalConfigModal.tsx",
+      "propsVariantsStates": ["No behavior or overlay API change; preserve open/onClose/categories/initialSelected/initialInterval/onSubmit"],
+      "usedBy": ["FleetApiSection"],
+      "dependsOn": ["Central UI barrel owner confirms current export; export not inspected"]
+    }
+  ],
+  "competingImplementations": [
+    {"name": "Vehicle query duplication", "evidence": "helpers.ts:25-35 versus useVehicles.ts:73-78", "decision": "Reuse typed hook; retain local VIN selector because header selection is intentionally disabled."},
+    {"name": "Page-local neon category palette", "evidence": "constants.ts:7-13", "decision": "Use existing tokens, not another semantic palette."},
+    {"name": "Unused DevToolsOverview export", "evidence": "devtools\\index.ts:1; mounted page uses DevToolsBrief instead", "decision": "Not mounted coverage; do not infer behavior from unused predecessor or delete it in this audit."}
+  ],
+  "preservation": {
+    "sourceHash": "0484E9F3DEA41C655FB8135B180CC78235A19F9DE2F17BCE0526FFF66656B079",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashFile": "web\\src\\features\\admin\\pages\\DevToolsPage.tsx",
+    "currentLineCount": 144,
+    "sectionNames": ["Live fleet snapshot", "Local developer catalog", "Fleet API", "Telemetry", "Infrastructure", "Utilities", "Reference"],
+    "sectionCounts": {"overviewSummaries": 2, "tabAreas": 5, "fleetApiWizard": 1, "fleetApiTools": 9, "telemetryPanels": 2, "infrastructureTools": 5, "clientUtilities": 15, "referenceLinks": 4, "rootGlassPanel": 0, "rootChartContainer": 0},
+    "fleetApiTools": ["Configuration", "Partner registration", "Partner public key verification", "Public key generation/upload/deletion", "Vehicle key pairing URL", "Fleet Telemetry subscription and signal configuration", "Fleet Telemetry config/errors/deletion", "Fleet status", "Vehicle nearby charging/release notes/recent alerts/service data"],
+    "utilities": ["VIN decoder", "JWT decoder", "Timestamp converter", "Base64", "URL encoder", "JSON formatter", "UUID generator", "Hash calculator", "Byte-size converter", "Color converter", "Cron parser", "HTTP status reference", "Tesla API reference", "Regex tester", "Unix permissions"],
+    "actions": ["Refresh both overview queries", "Select URL-backed tab", "Wizard previous/next/mark-complete/direct-step and automatic completion", "Register partner", "Verify partner public key", "Generate/upload/delete keypair", "Copy keys/URLs/OpenSSL/result payloads", "Select local VIN", "Configure signals and per-field intervals", "Subscribe", "Get/delete telemetry configuration", "View/download telemetry errors and inspect unknown raw payload", "Check fleet status", "Fetch four vehicle-data actions", "Filter telemetry by VIN/clear/retry/refresh from Tesla", "Inspect DB/migrations/environment/runtime", "Publish MQTT test", "Search/open local utilities and perform their operations", "Open four external references", "DataTable filtering/mobile details/pagination and existing export affordances"],
+    "dataBehavior": ["Keep tab query parameter tab with default fleet-api and five allowed values.", "Keep devtools-onboarding localStorage key and seven stable step IDs.", "Keep admin:fleet-health-vins, admin:fleet-health-errors and admin:fleet-api-errors table IDs.", "Keep independent live-source trust and static catalog provenance.", "Do not turn unknown into zero or clear retained measurements on refresh errors.", "Preserve raw request/response payloads, catalog identifiers and SI values; no guessed conversion of upstream signal identifiers.", "Keep 30-second setup status polling and existing query identities until deliberately reviewed.", "Do not gate the whole page on a failed overview source.", "Use current request-client live-mode and offline-write boundaries; no actual writes were tested."],
+    "workspace": "workspaceScope.ts:23-76 does not register /dev-tools for global range; line 118 explicitly disables header vehicle selection. Keep fleet-wide inventory and required local VIN selectors. Adding a header range or deleting local selectors is not warranted.",
+    "sourceReadback": "Root SHA256 unchanged at release preparation; no source files written."
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source audit; no Git, server, browser, production requests, source edits, queue writes or authentication bypass.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified at all contract widths",
+    "tests": "NOT RUN; audit skill script read but not executed because it includes project-wide TypeScript, reserved for centralized validation. No lint/build/test executed.",
+    "scan": {"scope": "Root page plus 29 non-test devtools source files, excluding summary/shared dependencies from scan counts", "staticVariableStyleMatchingLines": 0, "rawControlMatchingLinesCaseSensitive": 0, "directLibraryImportMatchingLines": 0, "oldApiImportMatchingLines": 0, "neonMatchingLines": 21, "note": "Literal pattern matches, not exhaustive compliance. Initial case-insensitive raw-control count 62 included shared component names; corrected case-sensitive count is 0."},
+    "coverage": "Full root page, five mounted tab owners, brief/summary, shared domain card/results/helpers inspected. Utility internals mostly inspected only through bounded pattern excerpts; CronParser and ByteSizeConverter read in detail. Shared primitives, SignalConfigModal internals, backend response implementations and i18n catalog completeness not fully audited.",
+    "noClaims": ["Route source registration is not mounted-route acceptance.", "Existing tests were enumerated, not read as execution proof.", "Preservation inventory is a source baseline, not complete runtime feature-parity certification."]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\DevToolsPage.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\index.ts",
+    "web\\src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\FleetTelemetryHealth.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\InfrastructureSection.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\ClientUtilitiesSection.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\ReferenceLinksSection.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\BackendTool.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\ToolCard.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\ResultPanel.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\TelemetryErrorsPanel.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\helpers.ts",
+    "web\\src\\features\\admin\\components\\devtools\\constants.ts",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\DevToolsBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\VinDecoder.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\UuidGenerator.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\UrlEncoder.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\UnixPermissionTool.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\TimestampTool.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\TeslaApiRefTool.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\RegexTester.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\JwtDecoder.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\JsonFormatter.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\HttpStatusTool.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\HashCalculator.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\CronParser.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\ColorConverter.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\ByteSizeConverter.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\tools\\Base64Tool.tsx",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\TabNav.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-008.json", ".agent-status\\audit-page-008.txt"]
+}

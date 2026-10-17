@@ -1,9 +1,13 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import { BackgroundWorkersCard } from '../BackgroundWorkersCard'
 import type { WorkersHealth, WorkerStatus } from '@/api/types'
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 function harness(ui: React.ReactNode) {
   return render(<MemoryRouter>{ui}</MemoryRouter>)
@@ -30,12 +34,13 @@ function makeHealth(workers: WorkerStatus[]): WorkersHealth {
 describe('BackgroundWorkersCard', () => {
   it('renders an empty state when no workers are reporting', () => {
     harness(<BackgroundWorkersCard health={makeHealth([])} />)
-    expect(screen.getByText(/No background workers reporting/i)).toBeInTheDocument()
+    expect(screen.getByText(/No Background workers reporting/i)).toBeInTheDocument()
   })
 
-  it('renders an empty state when health is undefined', () => {
+  it('distinguishes an unavailable worker source from a confirmed empty set', () => {
     harness(<BackgroundWorkersCard health={undefined} />)
-    expect(screen.getByText(/No background workers reporting/i)).toBeInTheDocument()
+    expect(screen.getByText('Background worker health is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText(/No Background workers reporting/i)).not.toBeInTheDocument()
   })
 
   it('renders one row per worker for the single-instance default', () => {
@@ -176,5 +181,32 @@ describe('BackgroundWorkersCard', () => {
 
     expect(within(container).getByText('nw-a:8081')).toBeInTheDocument()
     expect(within(container).getByText('nw-b:8081')).toBeInTheDocument()
+  })
+
+  it('preserves full long host provenance, multiline errors and source instance order without truncating text', () => {
+    const host = `http://${'replica-with-a-long-name-'.repeat(8)}:8081/healthz`
+    const error = 'First diagnostic line\nSecond diagnostic line with complete remediation context'
+    harness(<BackgroundWorkersCard health={makeHealth([
+      makeInstance({ host, status: 'down', error }),
+      makeInstance({ host: 'http://second-replica:8081/healthz', latency_ms: 0 }),
+    ])} />)
+    const first = screen.getByText(host.replace(/^http:\/\//, '').replace(/\/healthz$/, ''))
+    expect(first).toHaveAttribute('title', host)
+    expect(first).toHaveClass('break-all')
+    expect(first).not.toHaveClass('truncate')
+    expect(screen.getByText(error.replace('\n', ' ')).textContent).toBe(error)
+    expect(screen.getByText('0 ms')).toBeInTheDocument()
+    const row = first.closest('li')!
+    expect(within(row).getByRole('img', { name: 'instance status: down' })).toBeInTheDocument()
+    expect(row.nextElementSibling).toHaveTextContent('second-replica:8081')
+    expect(screen.getByText('1 / 2 healthy')).toBeInTheDocument()
+  })
+
+  it('preserves exact environment identifiers as code and the existing API-logs destination', () => {
+    harness(<BackgroundWorkersCard health={makeHealth([makeInstance({})])} />)
+    for (const name of ['NOTIFICATION_WORKER_HOSTS', 'EXPORT_WORKER_HOSTS', 'AUTOMATION_WORKER_HOSTS']) {
+      expect(screen.getByText(name).tagName).toBe('CODE')
+    }
+    expect(screen.getByRole('link', { name: 'API logs' })).toHaveAttribute('href', '/api-logs')
   })
 })

@@ -17,10 +17,12 @@ import {
   type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 interface DwellDatum extends ChartDataRow {
   state: string;
@@ -32,7 +34,25 @@ export function DwellDurationChart({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
+  const available = state.vehicleSelected && state.isResolved
+    && analysis.source.hasResponse && analysis.dwell.available;
+  const emptyMessage = !state.vehicleSelected
+    ? t(
+        'sleep.states.noVehiclePassive',
+        'Select a vehicle to make sleep evidence available.',
+      )
+    : !state.isResolved || !analysis.source.hasResponse
+      ? t(
+          'sleep.states.pendingPassive',
+          'Sleep evidence availability has not resolved.',
+        )
+      : t(
+          'sleep.dwellChart.unavailable',
+          'Unavailable pending dwell reconstruction. Zero total_minutes rows are retained as valid rows but do not establish duration evidence.',
+        );
   const data = useMemo<DwellDatum[]>(
     () =>
       analysis.transitions.states.map((row) => ({
@@ -65,7 +85,7 @@ export function DwellDurationChart({
               }),
       },
     ],
-    [t],
+    [t, fmtNumber],
   );
 
   return (
@@ -84,12 +104,23 @@ export function DwellDurationChart({
           'Bar chart of reconstructed dwell minutes by state when available',
         )}
         height={320}
-        data={analysis.dwell.available ? data : []}
+        loading={state.isLoading}
+        error={state.error}
+        empty={!available}
+        emptyTitle={state.vehicleSelected && state.isResolved && analysis.source.hasResponse
+          ? t('sleep.dwellChart.unavailableTitle', 'Dwell reconstruction unavailable')
+          : undefined}
+        emptyMessage={emptyMessage}
+        emptyIcon={<Clock4 className="h-8 w-8" aria-hidden="true" />}
+        data={available ? data : []}
         dataColumns={columns}
-        exportData={analysis.dwell.available ? data : []}
+        exportData={available ? data : []}
       >
-        <SleepEfficiencySectionBody state={state} skeletonHeight={240}>
-          {analysis.dwell.available ? (
+        <SleepEfficiencySectionBody
+          state={{ ...state, isResolved: state.isResolved && analysis.source.hasResponse }}
+          skeletonHeight={240}
+        >
+          {available ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={data}>
                 {chartGrid}
@@ -108,7 +139,7 @@ export function DwellDurationChart({
                 <Bar
                   dataKey="minutes"
                   name={t('sleep.dwellChart.minutes', 'Dwell minutes')}
-                  fill="#a855f7"
+                  fill={palette[3]}
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

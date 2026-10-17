@@ -1,30 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-
-/**
- * StatusPageSkeleton contract.
- *
- * A prop-less, state-invariant loading placeholder for the System Status page.
- * It renders no data and no interactive controls, so the behaviours worth
- * pinning are the ones that would silently regress and reintroduce a layout
- * shift or an inaccessible spinner:
- *
- *   1. a11y — the whole surface is ONE `role="status"` live region with
- *      `aria-busy="true"` and an i18n-labelled accessible name, so assistive
- *      tech announces "loading" rather than reading silent pulse blocks.
- *   2. i18n — the accessible name is sourced through `t()` (matching the
- *      namespaced keys the sibling SystemStatusPage uses), not a
- *      hardcoded string, and falls back to English when untranslated.
- *   3. Layout fidelity — the eight glass panels appear in the documented order
- *      (hero → health → action items → resources → 4 accordions), the chip bar
- *      has eight pills, and every band renders the exact placeholder count that
- *      mirrors the real page, so content doesn't reflow on arrival.
- *   4. Decorative-only — the placeholder blocks carry no text, so the aria-label
- *      is the sole announcement.
- *
- * Per the repo convention (see DigestSkeleton.test.tsx) react-i18next is stubbed
- * so `t(key, fallback)` echoes real copy and can be asserted against.
- */
+import { GlassPanel } from '@/components/ui'
+import { StatusHero, type HeroStatus } from '@/components/status'
 
 const { tSpy } = vi.hoisted(() => ({
   tSpy: vi.fn((key: string, fallback?: string) => fallback ?? key),
@@ -39,7 +16,7 @@ vi.mock('react-i18next', () => ({
 
 import { StatusPageSkeleton } from '../StatusPageSkeleton'
 
-const PULSE = '.animate-pulse'
+const PLACEHOLDER = '[class*="--skeleton-bg"]'
 const PANEL = '[data-print-card]'
 
 beforeEach(() => {
@@ -58,8 +35,7 @@ describe('StatusPageSkeleton', () => {
     expect(
       screen.getByRole('status', { name: 'Loading system status' }),
     ).toBeInTheDocument()
-    // The vertical-rhythm + width container is preserved on the labelled node.
-    expect(region).toHaveClass('space-y-5', 'max-w-3xl', 'mx-auto')
+    expect(region).not.toHaveClass('max-w-3xl', 'mx-auto')
   })
 
   it('sources the accessible name from i18n and falls back to English', () => {
@@ -87,63 +63,76 @@ describe('StatusPageSkeleton', () => {
     )
   })
 
-  it('mirrors the status-page layout: eight glass panels with the documented placeholder counts', () => {
+  it('allocates only one hero panel rather than duplicating independent source shells', () => {
     const { container } = render(<StatusPageSkeleton />)
 
     const panels = Array.from(container.querySelectorAll(PANEL)) as HTMLElement[]
-    expect(panels).toHaveLength(8)
-
-    const [hero, health, actionItems, resources, ...accordions] = panels
-    // Hero → avatar + title + subtitle + action button.
-    expect(hero.querySelectorAll(PULSE)).toHaveLength(4)
-    // Health → section title + six rows.
-    expect(health.querySelectorAll(PULSE)).toHaveLength(1 + 6)
-    // Action items → title + two rows.
-    expect(actionItems.querySelectorAll(PULSE)).toHaveLength(1 + 2)
-    // Resources → title + five rows.
-    expect(resources.querySelectorAll(PULSE)).toHaveLength(1 + 5)
-    // The remaining panels are the four accordion stubs.
-    expect(accordions).toHaveLength(4)
+    expect(panels).toHaveLength(1)
+    const [hero] = panels
+    expect(hero.querySelectorAll(PLACEHOLDER)).toHaveLength(4)
+    expect(screen.getByTestId('status-page-skeleton').children).toHaveLength(1)
+    expect(hero).toHaveClass('p-4', 'md:p-5')
   })
 
-  it('renders four accordion stubs, each with a glyph/title/meta/badge quartet', () => {
+  it('matches the hero mobile stack and desktop row without a page-width constraint', () => {
     const { container } = render(<StatusPageSkeleton />)
-
-    const accordions = (
-      Array.from(container.querySelectorAll(PANEL)) as HTMLElement[]
-    ).slice(4)
-    expect(accordions).toHaveLength(4)
-    for (const accordion of accordions) {
-      expect(accordion.querySelectorAll(PULSE)).toHaveLength(4)
-    }
+    const blocks = container.querySelectorAll(PLACEHOLDER)
+    expect(blocks[0].parentElement).toHaveClass(
+      'flex', 'flex-col', 'items-center', 'gap-4', 'md:flex-row', 'md:gap-6',
+    )
+    expect(blocks[0]).toHaveClass('h-14', 'w-14', 'rounded-full', 'shrink-0')
+    expect(blocks[1].parentElement).toHaveClass('flex-1', 'min-w-0', 'space-y-2')
+    expect(blocks[3]).toHaveClass('h-11', 'shrink-0')
   })
 
-  it('renders the chip bar as eight pill-shaped placeholders in a non-panel row', () => {
-    render(<StatusPageSkeleton />)
-
-    const region = screen.getByTestId('status-page-skeleton')
-    // Eight panels + one chip bar = nine direct children.
-    expect(region.children).toHaveLength(9)
-
-    // The chip bar is the only non-panel direct child (a plain flex row).
-    const chipBar = region.children[1] as HTMLElement
-    expect(chipBar).not.toHaveAttribute('data-print-card')
-
-    const chips = Array.from(chipBar.querySelectorAll(PULSE)) as HTMLElement[]
-    expect(chips).toHaveLength(8)
-    for (const chip of chips) {
-      expect(chip.className).toContain('rounded-full')
-      expect(chip.className).toContain('shrink-0')
-    }
-  })
-
-  it('renders decorative-only pulse blocks so the aria-label is the sole announcement', () => {
+  it('renders decorative-only blocks so the aria-label is the sole announcement', () => {
     const { container } = render(<StatusPageSkeleton />)
     const region = screen.getByTestId('status-page-skeleton')
 
-    // 4 hero + 8 chips + 7 health + 3 action + 6 resources + 16 accordions = 44.
-    expect(container.querySelectorAll(PULSE)).toHaveLength(44)
+    expect(container.querySelectorAll(PLACEHOLDER)).toHaveLength(4)
+    for (const block of container.querySelectorAll(PLACEHOLDER)) {
+      expect(block).toHaveAttribute('aria-hidden', 'true')
+    }
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
     // No readable text — assistive tech only hears the aria-label.
     expect(region.textContent).toBe('')
   })
+
+  it.each<HeroStatus>(['healthy', 'degraded', 'unhealthy', 'unknown', 'maintenance'])(
+    'preserves independent shells across the loading-to-%s hero transition',
+    (status) => {
+      const refresh = vi.fn()
+      // Mirror the page's hero-only conditional; independent sources are siblings.
+      const surface = (loading: boolean) => (
+        <>
+          {loading ? <StatusPageSkeleton /> : (
+            <StatusHero
+              status={status}
+              headline={`Observed ${status}`}
+              subline="Last checked 5s ago"
+              cta={{ label: 'Run health check', onClick: refresh }}
+            />
+          )}
+          <GlassPanel data-testid="resources-source">512 MB</GlassPanel>
+          <GlassPanel data-testid="workers-source">2 / 2 healthy</GlassPanel>
+        </>
+      )
+      const { container, rerender } = render(surface(true))
+      const resources = screen.getByTestId('resources-source')
+      const workers = screen.getByTestId('workers-source')
+      expect(container.querySelectorAll(PANEL)).toHaveLength(3)
+      expect(resources).toHaveTextContent('512 MB')
+      expect(workers).toHaveTextContent('2 / 2 healthy')
+
+      rerender(surface(false))
+      expect(screen.queryByTestId('status-page-skeleton')).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: `Observed ${status}` })).toBeInTheDocument()
+      expect(screen.getByText('Last checked 5s ago')).toBeInTheDocument()
+      expect(screen.getByTestId('resources-source')).toBe(resources)
+      expect(screen.getByTestId('workers-source')).toBe(workers)
+      expect(container.querySelectorAll(PANEL)).toHaveLength(3)
+      fireEvent.click(screen.getByRole('button', { name: 'Run health check' }))
+      expect(refresh).toHaveBeenCalledOnce()
+    },
+  )
 })

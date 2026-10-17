@@ -1,0 +1,246 @@
+{
+  "item": "phase6-qa-admin-tesla-feature-flags",
+  "phase": 6,
+  "reportStatus": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "sourceAcceptance": "FAIL",
+  "nativeAcceptance": "NOTRUN",
+  "applicationAcceptance": "NOTRUN",
+  "mode": "Read-only source inspection. Individual PASS establishes only the cited source property, never mounted, browser, backend-response or native acceptance.",
+  "route": "/tesla-features",
+  "page": "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+  "clock": {
+    "creationLocal": "2026-10-13T09:33:28.371-07:00",
+    "firstRecordedSourcePinsLocal": "2026-10-13T09:36:08.3740569-07:00",
+    "latestRecordedEvidenceLocal": "2026-10-13T09:41:22.1246916-07:00",
+    "returnByLocal": "2026-10-13T09:53:28.371-07:00",
+    "hardByLocal": "2026-10-13T09:58:28.371-07:00",
+    "commandLimitSeconds": 480,
+    "completionEvidence": "Actual final validation timestamp and explicit ALL ownership release are retained in web\\logs\\phase6-qa-admin-tesla-feature-flags.log."
+  },
+  "ownership": {
+    "writableFiles": ["docs\\frontend-audits\\phase6-qa-admin-tesla-feature-flags.json", "web\\logs\\phase6-qa-admin-tesla-feature-flags.log"],
+    "applicationFiles": "READ_ONLY",
+    "ignoredLogEvidence": ".gitignore:80 contains logs/; read directly without Git.",
+    "applicationSourceWrites": 0,
+    "testWrites": 0,
+    "configWrites": 0,
+    "catalogWrites": 0,
+    "queueWrites": 0,
+    "gitCommands": 0,
+    "subagents": 0,
+    "installs": 0,
+    "helpersCreatedOrExecuted": 0,
+    "extensionsUsed": 0,
+    "serversStarted": 0,
+    "backgroundCommandsStarted": 0,
+    "browserGrant": false,
+    "browserActions": 0,
+    "apiRequests": 0,
+    "preferenceMutations": 0,
+    "vehicleFlagMutations": 0,
+    "realIdentityUse": 0,
+    "release": "ALL ownership held by this worker, including report, log, read-only source claim, command and browser/resource ownership, is released on the final DONE return. No post-return writes, background work or processes. No other owner's claim is released."
+  },
+  "instructionsRead": [
+    "migration-queue.md:143-190,1544 — rolling QA contract, assigned row and original accepted SOURCE ONLY receipt",
+    "docs\\orchestrator-loop.md:1-296 — sole playbook, worker restrictions, deadlines, exact claims and release",
+    "docs\\session-handoff.md:58-151,1715-1735 — preserved passing technical receipts, no reruns, runtime convention",
+    "docs\\frontend-design-contract.md:1-210,420-610 — architecture, unknown/trust, preservation, localization/SI/privacy, native limits",
+    "docs\\frontend-mission.md:529-570,700-789,921-965,1416-1486 — responsive, states, accessibility and actual acceptance",
+    "docs\\frontend-inventory.md:1-58 — source-only definitions and existing preservation responsibilities",
+    ".github\\instructions\\react-frontend.instructions.md:1-570",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md — historical source-unit examples do not override canonical SI",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh — read, not executed because it invokes helper/global compilation",
+    "audit-violations, verify-api-hooks and a11y-debugging skill guidance — direct scoped source review only; prohibited helper/browser workflows NOTRUN",
+    "docs\\frontend-audits\\audit-page-024.json — preserved original Tesla page inventory",
+    "docs\\frontend-audits\\phase6-qa-admin-feature-flags.json — existing neighboring report schema only; distinct /admin/flags page not audited here"
+  ],
+  "preservation": {
+    "baseline": "docs\\frontend-audits\\audit-page-024.json:255-328",
+    "originalPageLines": 126,
+    "currentPageLines": 128,
+    "originalMountedPresentationLines": 583,
+    "currentMountedPresentationLines": 585,
+    "minimum70Percent": 408.1,
+    "lineCountStatus": "PASS",
+    "currentFileLines": {
+      "TeslaFeatureFlagsPage.tsx": 128,
+      "FeatureConfigOperationalBrief.tsx": 39,
+      "FeatureConfigDistribution.tsx": 98,
+      "FeatureConfigComposition.tsx": 108,
+      "FeatureConfigTable.tsx": 212,
+      "parseFeatureFlags.ts": 108,
+      "useAccountBriefStatus.ts": 21,
+      "useAccountSnapshotPeriod.ts": 17
+    },
+    "parserInclusiveOriginal": 691,
+    "parserInclusiveCurrent": 693,
+    "countBasis": "Same page plus four mounted presentation components as the original inventory; parser-inclusive counts separately. Unmounted FeatureConfigKpis, shared internals and unrelated admin components are excluded, not silently counted as preservation.",
+    "originalSections": 3,
+    "currentSections": 3,
+    "originalContentUnits": 4,
+    "currentContentUnits": [
+      "Operational account summary — TeslaFeatureFlagsPage.tsx:86-90",
+      "Distribution — TeslaFeatureFlagsPage.tsx:99-106",
+      "Enabled/disabled composition — TeslaFeatureFlagsPage.tsx:108-115",
+      "Feature table — TeslaFeatureFlagsPage.tsx:119-124"
+    ],
+    "actualTagCounts": {"GlassPanel": 3, "ChartContainer": 0, "EmbeddedChart": 1, "LinearGauge": 1, "FeatureConfigOperationalBrief": 1},
+    "originalTagAgreement": "Same three feature panels, embedded composition chart, distribution gauge and four summary metrics as audit-page-024.json:266-281. Page wraps two named sections plus the table, with three FadeIn wrappers.",
+    "actionsRetained": ["Explicit POST refresh with pending disable/loading", "Safe GET retries and freshness-chip refetch", "Search exact feature key/details", "All/enabled/disabled filter", "Key/type/status sorting", "Four-column value filtering", "Pagination, persistent table layout and loaded-row exports", "Composition legend and accessible data alternative", "OperationalBrief details"],
+    "limits": "Source structure and count preservation do not establish mobile field reachability; TFF-01 fails that property. Existing own11/11 test receipt at migration-queue.md:1544 is historical, not rerun or relabeled as current QA."
+  },
+  "sourcePins": {
+    "capturedLocal": "2026-10-13T09:36:08.3740569-07:00",
+    "algorithm": "SHA256",
+    "files": {
+      "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx": "4998DB26CB0DCD37B609760EFC469CBA2BCEBBB1C699EE2FAB67307D0025FF05",
+      "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx": "75EF0C618AE3B989AF4FC4DF4E01AFE4338524DB222553FB6CA04A88C1C5E2CF",
+      "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx": "697D5ED16D5F32BC2DC837F65F52F724C9860B746152D67725AF53D67B80FC64",
+      "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx": "162D4C0E6E2E53FB1618676118CC00933382FEFE0B9778B44E477D0B36726786",
+      "web\\src\\features\\admin\\components\\tesla-feature-flags\\parseFeatureFlags.ts": "0A8405544D5DF2295D2DB9D756D3A52994DBF694471A7C4E433FB96FF16EF4A1",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\FeatureConfigOperationalBrief.tsx": "3F71AAABDBE9B590896C9A5258A113F4ED9593FD6CEA62991F17FD466BA87775",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts": "2B9506F65B7683CBF5D22D060EDD50803C03DDCBE2C73423195BA7F3F9770139",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts": "B66114B80A7A7847B7D6185447B064C48DDB862681DC48ABD8DE94DCC03C9A54",
+      "web\\src\\api\\hooks\\useUser.ts": "15625474CF8C6C50B62468FAD3E109D2973C78F068460EF48DBE8D909E4092B1",
+      "web\\src\\api\\dataState.ts": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    "finalComparison": "Recorded by final report validation in the ignored log. Pins identify inspected source, not a Git commit, global freeze or attribution of another owner's edits."
+  },
+  "checks": [
+    {"id":"route-preservation","status":"PASS","basis":"source","evidence":["web\\src\\App.tsx:261,724","web\\src\\lib\\routeRegistry.ts:250"],"result":"Lazy /tesla-features route retained; this is not /admin/flags."},
+    {"id":"four-content-units-and-persistent-shells","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:73-127","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:145","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:51","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:56"],"result":"No global data/error/empty gate removes page sections. Original units and counts remain."},
+    {"id":"get-hook-router-agreement","status":"PASS","basis":"source","evidence":["web\\src\\api\\hooks\\useUser.ts:94-99","web\\src\\api\\client.ts:90-94","internal\\api\\router.go:3210,3642-3643"],"result":"GET /tesla/user/feature-config receives one /api/v1 prefix and exactly matches the router mount."},
+    {"id":"post-refresh-hook-router-agreement","status":"PASS","basis":"source","evidence":["web\\src\\api\\hooks\\useUser.ts:102-113","internal\\api\\router.go:3644"],"result":"POST /tesla/user/feature-config/refresh matches the 5/minute IP-rate-limited route. No POST performed."},
+    {"id":"response-envelope-upstream-schema-and-auth","status":"NOTRUN","basis":"scope-limit","evidence":["web\\src\\api\\hooks\\useUser.ts:89-92","internal\\api\\router.go:3643-3644"],"result":"Frontend expects data and fetched_at; router alone cannot establish backend payload, cache, identity eligibility or refresh atomicity. Handler, Tesla upstream and real identities are outside this read scope."},
+    {"id":"query-cancellation-cache-policy","status":"PASS","basis":"source","evidence":["web\\src\\api\\hooks\\useUser.ts:13,94-99","web\\src\\api\\client.ts:413-425"],"result":"Query key and EXTENDED stale policy retained; read forwards AbortSignal. Client short-circuits caller AbortError."},
+    {"id":"initial-fetch-loading","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:88,102,110,121","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:161-162","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:57-58","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:66"],"result":"Fetching first load has contextual table/gauge/chart skeleton paths plus unknown summary metrics."},
+    {"id":"fatal-initial-error-and-get-retry","status":"PASS","basis":"source","evidence":["web\\src\\api\\dataState.ts:203-217","web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:57,103-104,111-112,122-123","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:163-164"],"result":"Only fatalError replaces local content; persistent panels and corresponding GET retry remain."},
+    {"id":"successful-empty-vs-filtered-no-match","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:165-169,205","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:61-65","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:69-70"],"result":"Resolved empty and loaded-but-filtered-empty table copy differ. Empty views refer to the header recovery action."},
+    {"id":"retained-background-error","status":"PASS","basis":"source","evidence":["web\\src\\api\\dataState.ts:223-241","web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:47-57,79-83","web\\src\\components\\feedback\\DataSourceNotice.tsx:82,167-170,258-273"],"result":"Last-good rows, summary and chart survive failed GET refresh. Named source notice exposes Cached/refresh failed and individual retry."},
+    {"id":"retained-paused-offline","status":"PASS","basis":"source","evidence":["web\\src\\api\\dataState.ts:193,244-250","web\\src\\components\\feedback\\DataSourceNotice.tsx:83,159-162","web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:79-89"],"result":"Retained pause is stale, never fatal; header explicitly says Paused offline and source-backed summary says Retained account snapshot."},
+    {"id":"initial-paused-not-authoritative-empty","status":"FAIL","basis":"source-proven-branch","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:45-50,88,102,110,121","web\\src\\api\\dataState.ts:203-217","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:161-169","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:57-65","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:66-70"],"issueIds":["TFF-07"],"result":"An unresolved paused initial query with isLoading=false reaches all three empty branches while summary remains initial/loading. Source warning does not make an unanswered source authoritatively empty."},
+    {"id":"valid-boolean-counts-and-account-scope","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\parseFeatureFlags.ts:60-90","web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:42-50","web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts:15"],"result":"Real true/false inputs remain true/false, including disabled zero-enabled counts. This account snapshot has no vehicle toggle, configuration editor or date-range total."},
+    {"id":"eligibility-unknown-and-invalid-payload-semantics","status":"NOTRUN","basis":"integration-unknown","evidence":["web\\src\\api\\hooks\\useUser.ts:89-97","web\\src\\features\\admin\\components\\tesla-feature-flags\\parseFeatureFlags.ts:60-76","web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:47-50,87"],"candidateIds":["TFF-C01","TFF-C02"],"result":"Deterministic empty/coercion mechanisms are recorded as candidates; actual upstream meaning of omitted/nonboolean enabled and unsynced-empty envelopes is not proven by the router. Do not silently change compatibility coercion."},
+    {"id":"pending-refresh-and-success-error-feedback","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:60-70","web\\src\\components\\ui\\Button.tsx:75-83","web\\src\\api\\hooks\\useUser.ts:108-112"],"result":"Refresh now passes shared loading/aria-busy and pending disable, correcting the old inventory observation. Success invalidates GET; error uses toast without clearing retained cache. Pending duplicate clicks are blocked."},
+    {"id":"refresh-live-only-operational-boundary","status":"FAIL","basis":"source-proven","evidence":["web\\src\\api\\hooks\\useUser.ts:107","web\\src\\api\\client.ts:373-392","web\\src\\lib\\operationalMode.ts:66-76","web\\src\\api\\offlineCache.ts:50-75,101-104","web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:66-67"],"issueIds":["TFF-03"],"result":"POST refresh does not opt into requiresLiveMode; shared operational guard returns early and offline unsafe-path list does not include this path. This is a refresh boundary defect, not an observed vehicle mutation."},
+    {"id":"search-sort-filter-and-identity-preservation","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:30-89,194-206","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:63"],"result":"Search and status filters, immutable deterministic sort, four-column value filters, pagination, exact tableId and chartKey remain."},
+    {"id":"mobile-all-fields-reachable","status":"FAIL","basis":"source-proven","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:100,107-137,194-206","web\\src\\components\\ui\\DataTable.tsx:478,715-725,1162,1386-1397,1522"],"issueIds":["TFF-01"],"result":"Below md Type and Details are display:none with no mobile adapter, expansion or row navigation; complete configured data cannot be read in-page."},
+    {"id":"source-responsive-reflow","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:63,96-108","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:145,173-189","web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:11-13"],"result":"One-column base/three-column xl overview, min-w-0, stacked filters and 44px mobile Refresh are present. Geometry and overflow are not measured."},
+    {"id":"localized-visible-labels-canonical-presence","status":"PASS","basis":"source-plus-read-only-catalog-lookup","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:28-50,181,189","web\\src\\i18n\\en.json:22215","web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts:5-20"],"result":"45 distinct mounted feature/account t() keys exist in canonical English. Showing counts use interpolation; raw Tesla keys/details are data, not translation copy."},
+    {"id":"mutation-toast-canonical-keys","status":"FAIL","basis":"source-plus-direct-absence-check","evidence":["web\\src\\api\\hooks\\useUser.ts:110-112","web\\src\\api\\hooks\\_toastHelpers.ts:87-90,96-103","web\\src\\i18n\\en.json:8266-8267"],"issueIds":["TFF-04"],"result":"Both toast.user.featureConfig keys are absent; existing equivalent canonical messages use toast.featureConfigRefreshed and toast.featureConfigFailed."},
+    {"id":"saved-date-time-preference-agreement","status":"FAIL","basis":"source-proven","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:9,92","web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts:2,7,13","web\\src\\hooks\\useDateFormat.ts:74-96","web\\src\\lib\\dateFormat.ts:29-35,55-63"],"issueIds":["TFF-02"],"result":"Distribution bypasses saved locale/timezone while summary uses preference-aware formatter for the identical fetched_at."},
+    {"id":"source-a11y-names-text-status-and-chart-alternative","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:65,70,86,95","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:125-126,181,189","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:65,72-76","web\\src\\components\\charts\\ChartContainer.tsx:790-791,905-922","web\\src\\components\\ui\\DataTable.tsx:1509-1546"],"result":"Visible/localized names, non-color-only badges, semantic sort state and chart data alternative exist. Mobile data loss separately fails; no screen-reader pass claimed."},
+    {"id":"source-reduced-motion-boundaries","status":"PASS","basis":"source","evidence":["web\\src\\components\\motion\\FadeIn.tsx:24-34","web\\src\\components\\ui\\Button.tsx:79-83"],"result":"FadeIn and shared pending spinner have existing reduced-motion branches; OS execution NOTRUN."},
+    {"id":"raw-si-and-observability-boundaries","status":"PASS","basis":"source","evidence":["web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\FeatureConfigOperationalBrief.tsx:20-30","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:37,69-82","web\\src\\api\\hooks\\useUser.ts:94-113"],"result":"Counts/percentages are dimensionless raw metrics with existing formatting hooks. No physical-unit fields/converters, page RUM bootstrap, direct ingest, telemetry writes or identity logging introduced."},
+    {"id":"scoped-prohibited-patterns","status":"PASS","basis":"executed-scoped-static-scan","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:16-36","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:5-9","web\\src\\api\\hooks\\useUser.ts:97,107"],"result":"Actual raw output: inline-style assignments 0; static CSS-variable styles 0; raw controls 0; direct vendor imports 0; old API imports 0; camelCase URL query parameters 0; hook prefix matches 0; neon body classes 0. Scope is nine named production files, not whole app. any token matches 1 is a comment, not an any type."},
+    {"id":"category-barrel-import-agreement","status":"FAIL","basis":"executed-scoped-static-scan","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:5","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:6"],"issueIds":["TFF-05"],"result":"Exactly two feature imports bypass the required UI category barrel."},
+    {"id":"shared-palette-owner-adoption","status":"FAIL","basis":"source-contract","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:22","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:21-22,90,99"],"issueIds":["TFF-06"],"result":"Local repeated fixed green and fixed disabled color bypass shared palette ownership. No measured contrast/theme/forced-color failure claimed."},
+    {"id":"native-keyboard-focus-screen-reader-and-long-text","status":"NOTRUN","basis":"no-browser-grant","evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:100,135,181,189","docs\\frontend-design-contract.md:531-539"],"result":"No mounted focus order/restoration, full-text touch access, announcement, screen-reader or open-control test."},
+    {"id":"native-responsive-and-accessibility-matrix","status":"NOTRUN","basis":"explicit-scope","evidence":["docs\\frontend-design-contract.md:587-595","docs\\frontend-mission.md:1416-1468"],"result":"All required widths, allocated containers, light/dark/custom themes, RTL, 200% text, long data, contrast, touch sizes, forced colors, reduced motion and offline scenarios remain unrun."},
+    {"id":"typescript-tests-build-and-full-lint","status":"NOTRUN","basis":"explicit-no-global-or-passing-rerun","evidence":["docs\\session-handoff.md:65-69","migration-queue.md:1544","docs\\orchestrator-loop.md:238-246"],"result":"No npx tsc --noEmit, test runner, build or lint was executed. Existing passing serialized gate and own11/11 tests are historical only; report-only QA does not rerun them."}
+  ],
+  "confirmedIssues": [
+    {
+      "id":"TFF-01","priority":"P1","status":"FAIL","basis":"source-proven preservation defect",
+      "evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:194-206","web\\src\\components\\ui\\DataTable.tsx:478,715-725,1162,1386-1397,1522"],
+      "mechanism":"mobileColumns allows only key/enabled. Type and Details receive hidden md:table-cell on headers and cells. Caller opts into neither mobilePresentation nor expansion/navigation. Export does not restore in-page mobile reachability.",
+      "repro":"Source branch trace, not browser execution: use a synthetic configured row {key:'synthetic_example',enabled:true,kind:'configured',details:'limit: 3'} below md. Both kind/details cells are hidden and no mounted alternative exposes them. Long keys/details additionally rely on truncate/title.",
+      "nextFix":"One bounded table-caller adoption: use existing mobile/full-row detail presentation so all four fields and exact full strings are keyboard/touch reachable; preserve filters, sort, pagination, identities and exports.",
+      "runtimeRepro":"NOTRUN"
+    },
+    {
+      "id":"TFF-02","priority":"P2","status":"FAIL","basis":"source-proven preference inconsistency",
+      "evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:9,92","web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts:7,13","web\\src\\hooks\\useDateFormat.ts:86-96","web\\src\\lib\\dateFormat.ts:29-35,55-63"],
+      "mechanism":"Distribution calls formatDateTime with no options, selecting browser locale/timezone. Summary supplies saved locale and resolved timezone through useDateFormat.",
+      "repro":"Static call comparison: consider fetched_at='2026-10-13T00:30:00Z', browser timezone America/Los_Angeles and existing saved UTC display preference. Footer formats prior local evening; summary formats October 13 UTC. No preference was changed or Intl/browser scenario executed.",
+      "nextFix":"One bounded distribution formatter adoption: consume existing useDateFormat without changing fetched_at or saved preferences; use interpolation for the synced sentence.",
+      "runtimeRepro":"NOTRUN"
+    },
+    {
+      "id":"TFF-03","priority":"P2","status":"FAIL","basis":"source-proven live-only refresh boundary gap",
+      "evidence":["web\\src\\api\\hooks\\useUser.ts:107","web\\src\\api\\client.ts:373-392","web\\src\\lib\\operationalMode.ts:66-76","web\\src\\api\\offlineCache.ts:50-75,101-104","web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:66-67"],
+      "mechanism":"Refresh POST omits requiresLiveMode, defaulting false. assertOperationalWriteAllowed returns before checking as_of/offline; this path is not in OFFLINE_UNSAFE_PATTERNS. Button only disables for pending, while shared header can indicate read-only mode.",
+      "repro":"Static request-path trace: valid synthetic ?as_of=2026-10-13T00:00:00Z with online=true and isPending=false leaves Refresh enabled. Its hook reaches directRequest without operational-mode rejection. No URL, navigator, API or flag state was mutated.",
+      "nextFix":"One narrow refresh-hook/page boundary fix: apply existing requiresLiveMode protection and source-derived unavailable/read-only affordance. Preserve safe GET retry separately. Upstream vehicle impact is not asserted.",
+      "runtimeRepro":"NOTRUN"
+    },
+    {
+      "id":"TFF-04","priority":"P2","status":"FAIL","basis":"executed canonical-key absence check",
+      "evidence":["web\\src\\api\\hooks\\useUser.ts:110-112","web\\src\\api\\hooks\\_toastHelpers.ts:87-90,96-103","web\\src\\i18n\\en.json:8266-8267"],
+      "mechanism":"Hook requests toast.user.featureConfig.success/error, both absent in canonical English. Helper falls back to English defaultValue. Equivalent accepted messages already exist under toast.featureConfigRefreshed/featureConfigFailed.",
+      "repro":"Actual read-only canonical lookup printed both MISSING and missing=2; corrected same-scope assertion exited 1. Success/error toast invocation was not executed.",
+      "nextFix":"One hook-key alignment with the existing canonical messages, with targeted localization evidence; no translation campaign or catalog reset.",
+      "runtimeRepro":"NOTRUN"
+    },
+    {
+      "id":"TFF-05","priority":"P3","status":"FAIL","basis":"executed static architecture check",
+      "evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:5","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:6"],
+      "mechanism":"Feature components import @/components/ui/Typography rather than @/components/ui. Shared implementation concrete-import exemptions do not apply to these feature callers.",
+      "repro":"Actual tool rg and native Select-String both returned these exact two import lines, categoryBypass=2.",
+      "nextFix":"One bounded import-only alignment in these two feature components; shared internals remain untouched.",
+      "runtimeRepro":"NOTRUN"
+    },
+    {
+      "id":"TFF-06","priority":"P3","status":"FAIL","basis":"confirmed source design-contract violation, not visual failure",
+      "evidence":["web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:22","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:21-22,90,99","docs\\frontend-audits\\audit-page-024.json:91-96"],
+      "mechanism":"Both views independently hardcode #10b981 and composition additionally hardcodes #64748b. These local chart roles do not follow the existing shared palette owner or saved chart preference.",
+      "repro":"Read the literal constants and their fill/color props. Source trace confirms palette bypass in any mode; it does not prove contrast failure, neon appearance or forced-color output.",
+      "nextFix":"One palette-owner adoption in the two views, preserving enabled/disabled meaning, labels, chart/gauge and series identities. Do not add a new palette engine or hardcoded replacement colors.",
+      "runtimeRepro":"NOTRUN"
+    },
+    {
+      "id":"TFF-07","priority":"P2","status":"FAIL","basis":"source-proven initial-paused branch inconsistency",
+      "evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:45-50,88,102,110,121","web\\src\\api\\dataState.ts:203-217","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:161-169","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx:57-65","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx:66-70"],
+      "mechanism":"Summary uses deriveDataState.status==='initial', but three detail views use raw isLoading only. A pending paused query has no retained data and isLoading=false; parsed rows/summary are zero, so each detail view renders its no-data state even though the source has not answered.",
+      "repro":"Static branch trace, not a mounted fixture: featureQuery={data:undefined,isPending:true,isLoading:false,isFetching:false,isError:false,fetchStatus:'paused'}. deriveDataState returns initial with isRefreshBlocked=true; summary loads while table/gauge/chart take empty paths. Header paused notice exists but does not correct these local classifications.",
+      "nextFix":"One source-state propagation fix across the page and its existing views: distinguish unresolved/paused from successfully empty while preserving every shell, retained rows and safe recovery. Do not simply fabricate zero values or hide sections.",
+      "runtimeRepro":"NOTRUN"
+    }
+  ],
+  "candidates": [
+    {
+      "id":"TFF-C01","status":"NOTRUN","evidence":["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx:47-50,87","web\\src\\api\\dataState.ts:190,253-254,266","web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts:18-19"],
+      "sourceMechanism":"Successful {data:{},fetched_at:null} counts as retained/ok; brief shows known zero/available while detail units say no data. A non-record successful payload also parses to empty.",
+      "whyCandidate":"Unknown whether the mounted backend uses this envelope for never-synced, authoritatively empty or invalid payload. Empty account configuration can legitimately have zero features; no backend response or handler evidence was obtained.",
+      "neededEvidence":"Integration owner establish the actual empty/unsynced envelope contract before choosing unavailable/partial/unknown and changing metric availability."
+    },
+    {
+      "id":"TFF-C02","status":"NOTRUN","evidence":["web\\src\\api\\hooks\\useUser.ts:89-92","web\\src\\features\\admin\\components\\tesla-feature-flags\\parseFeatureFlags.ts:60-76","web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx:118-126"],
+      "sourceMechanism":"Boolean coercion makes a synthetic string 'false' truthy, null false, and a configured object without enabled false; there is no unknown eligibility row kind. These are branch deductions, not executed parser tests.",
+      "whyCandidate":"Router does not establish whether Tesla can return these values or whether omitted enabled intentionally means disabled. Accepted inventory explicitly preserves coercion pending upstream-contract review. Valid true/false behavior is not accused of being broken.",
+      "neededEvidence":"Pin upstream/schema guarantees and safe representative unknown cases with the integration owner before modifying the parser or claiming a real eligibility misclassification."
+    }
+  ],
+  "commandReceipts": [
+    {"shellId":"4724","command":"Get-Date; Get-FileHash/ReadAllLines for ten explicit production inputs; direct .gitignore rule and assigned report/log existence checks","exitCode":0,"result":"10 pins; exact line counts; logs/ rule found; initial report/log absent."},
+    {"shellId":"4735","command":"Scoped shell rg -n patterns with Tee-Object to assigned log","exitCode":1,"result":"Execution failure: rg not on PowerShell PATH. No counts/pass inferred. Actual raw error shown in tool output; failure retained in log."},
+    {"shellId":"4738","command":"Native Select-String -CaseSensitive for printed rules on nine explicit production files; mounted tags and hook/router grep","exitCode":0,"result":"Basic prohibited counts zero; category bypass 2; any token 1 is a comment; six mounted tags; both exact routes shown."},
+    {"command":"functions.rg combined prohibited-pattern query over seven explicit production files","exitCode":null,"result":"Tool does not expose a numeric exit. Actual output is exactly two UI/Typography bypass imports; copied to log without fabricating an exit."},
+    {"shellId":"4743","command":"Read-only canonical English lookup for mounted t() keys plus two refresh toast keys","exitCode":0,"result":"47 keys: 45 present, 2 missing. Exit condition used outer-scope counter; numeric exit 0 is NOT a missing-key assertion pass."},
+    {"shellId":"4746","command":"Same-scope direct canonical lookup of the two missing feature-config toast keys","exitCode":1,"result":"MISSING both keys; missing=2; actual assertion failure retained. No passing test rerun."},
+    {"shellId":"4755","command":"Select-String all inline-style assignments on five mounted presentation files; original inventory/current line-count comparison","exitCode":0,"result":"Inline style assignments 0; original583/current585/minimum408.1; original page126/current128."}
+  ],
+  "tests": {"status":"NOTRUN","discovered":0,"executed":0,"passed":0,"failed":0,"skipped":0,"meaning":"No runner invoked; zero discovery is not a test pass. Original accepted tests were neither edited nor rerun."},
+  "nativeMatrix": {
+    "status":"NOTRUN",
+    "widths":[320,375,390,430,768,1024,1280,1440,1920,2560],
+    "otherCases":["narrow allocated container","light/dark/saved custom theme","RTL","200 percent text","long raw keys/details","large/filter-empty datasets","open filters","keyboard/focus restoration","screen reader","touch target measurement","composed contrast","OS forced colors","OS reduced motion","initial/offline/retained refresh","cold split-i18n runtime"],
+    "captures":[],
+    "networkCalls":0,
+    "reason":"Explicit no browser grant or API/preference/flag mutation. No native check is labeled PASS."
+  },
+  "needs": [
+    "Queue one bounded complete-mobile-row adoption for TFF-01.",
+    "Queue one preference-aware distribution formatter adoption for TFF-02.",
+    "Queue one refresh operational-mode boundary fix for TFF-03.",
+    "Queue one existing toast-key alignment for TFF-04.",
+    "Queue one two-import category-barrel fix for TFF-05.",
+    "Queue one existing palette-owner adoption for TFF-06.",
+    "Queue one initial-paused state propagation fix for TFF-07.",
+    "Obtain integration contract evidence for C01/C02; do not count them as confirmed upstream defects.",
+    "Native/application/type/build/test acceptance remains separate and NOTRUN here; parent owns subsequent authorized scheduling and integration."
+  ]
+}

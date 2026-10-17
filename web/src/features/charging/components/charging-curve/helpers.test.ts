@@ -1,15 +1,15 @@
 // charging-curve/helpers unit tests.
 //
 // Every export is exercised across multiple facets / branches:
-//   isDcSession          — charger_type presence, the 20 kW peak-power
+//   isDcSession          — explicit AC exclusion, the 20 kW peak-power
 //                          threshold (exclusive boundary) and the fully-null
 //                          "AC" fallback.
-//   getChargerLabel      — Tesla → Supercharger, any other charger_type or a
+//   getChargerLabel      — explicit AC → Home / AC, Tesla → Supercharger, DC or a
 //                          high peak → DC Fast, otherwise Home / AC.
 //   durationMinutes      — happy path, null end, non-positive/equal ranges,
 //                          unparseable timestamps and minute rounding.
-//   distanceAddedM       — positive delta, both missing-odometer guards and the
-//                          zero/negative-delta → null branch.
+//   distanceAddedM       — finite signed/fractional deltas, measured zero,
+//                          missing/invalid readings and overflow → null.
 //   sessionLabel         — composed "date — label — energy kWh" string plus the
 //                          "?" fallback when energy is missing.
 //   generateChargingCurve— flat AC curve, tapered DC curve (monotonic, clamped
@@ -24,20 +24,32 @@
 // string is deterministic regardless of the CI host locale.
 
 import { describe, it, expect, beforeAll } from 'vitest';
+import i18n, { createInstance } from 'i18next';
+import english from '@/i18n/en.json';
 import { setGlobalLocale } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
 import {
   isDcSession,
   getChargerLabel,
+  getChargerCategoryId,
+  getChargerCategoryLabel,
+  getChargerClassification,
   durationMinutes,
   distanceAddedM,
   sessionLabel,
   generateChargingCurve,
   avg,
+  availableAverage,
+  crossesSocWindow,
 } from './helpers';
 
-beforeAll(() => {
+beforeAll(async () => {
   setGlobalLocale('en-US');
+  await i18n.init({
+    lng: 'en',
+    fallbackLng: false,
+    resources: { en: { translation: english } },
+  });
 });
 
 function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession {
@@ -68,7 +80,7 @@ function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession 
 }
 
 describe('isDcSession', () => {
-  it('treats any populated charger_type as a DC session', () => {
+  it('treats populated non-AC charger types as DC sessions', () => {
     expect(isDcSession(makeSession({ charger_type: 'Tesla', peak_power_w: null }))).toBe(true);
     expect(isDcSession(makeSession({ charger_type: 'CCS', peak_power_w: null }))).toBe(true);
   });
@@ -84,15 +96,69 @@ describe('isDcSession', () => {
     // Empty-string charger_type is falsy and must not force a DC classification.
     expect(isDcSession(makeSession({ charger_type: '', peak_power_w: null }))).toBe(false);
   });
+
+  it.each(['AC', 'ac', 'Home', 'Wall Connector', 'Tesla Wall Connector'])(
+    'keeps explicit %s charging AC even above the fallback power threshold',
+    charger_type => {
+      expect(isDcSession(makeSession({ charger_type, peak_power_w: null }))).toBe(false);
+      expect(isDcSession(makeSession({ charger_type, peak_power_w: 44_000 }))).toBe(false);
+    },
+  );
+
+  it.each(['DC', 'CCS', 'CHAdeMO', 'Supercharger', 'Tesla'])(
+    'keeps explicit %s charging DC without recorded peak power',
+    charger_type => {
+      expect(isDcSession(makeSession({ charger_type, peak_power_w: null }))).toBe(true);
+    },
+  );
 });
 
 describe('getChargerLabel', () => {
+  it('localizes display labels without changing grouping or color category IDs', async () => {
+    const translations = createInstance();
+    await translations.init({
+      lng: 'fr',
+      fallbackLng: false,
+      resources: {
+        fr: { translation: { charging: { curve: { chargerLabels: {
+          homeAc: 'Recharge',
+          supercharger: 'Recharge',
+          dcFast: 'Recharge rapide',
+        } } } } },
+      },
+    });
+    const t = translations.getFixedT('fr');
+    const sessions = [
+      makeSession({ id: 1, charger_type: 'Tesla Wall Connector', peak_power_w: 44_000 }),
+      makeSession({ id: 2, charger_type: 'Tesla' }),
+      makeSession({ id: 3, charger_type: 'tesla supercharger v3' }),
+      makeSession({ id: 4, charger_type: 'CCS' }),
+      makeSession({ id: 5, charger_type: null, peak_power_w: 50_000 }),
+    ];
+    expect(sessions.map(s => getChargerLabel(s, t))).toEqual([
+      'Recharge', 'Recharge', 'Recharge', 'Recharge rapide', 'Recharge rapide',
+    ]);
+    expect(sessions.map(getChargerCategoryId)).toEqual([
+      'Home / AC', 'Supercharger', 'Supercharger', 'DC Fast', 'DC Fast',
+    ]);
+    const groups = new Map<string, number[]>();
+    sessions.forEach(session => {
+      const id = getChargerCategoryId(session);
+      groups.set(id, [...(groups.get(id) ?? []), session.id]);
+    });
+    expect([...groups]).toEqual([
+      ['Home / AC', [1]], ['Supercharger', [2, 3]], ['DC Fast', [4, 5]],
+    ]);
+    expect(getChargerCategoryLabel('Supercharger', t)).toBe('Recharge');
+    expect(sessions.map(s => s.id)).toEqual([1, 2, 3, 4, 5]);
+  });
+
   it('labels Tesla hardware as a Supercharger (case-insensitive contains)', () => {
     expect(getChargerLabel(makeSession({ charger_type: 'Tesla' }))).toBe('Supercharger');
     expect(getChargerLabel(makeSession({ charger_type: 'tesla supercharger v3' }))).toBe('Supercharger');
   });
 
-  it('labels any other charger_type or a high peak as DC Fast', () => {
+  it('labels non-AC charger types or an unknown high peak as DC Fast', () => {
     expect(getChargerLabel(makeSession({ charger_type: 'CCS' }))).toBe('DC Fast');
     expect(getChargerLabel(makeSession({ charger_type: null, peak_power_w: 50_000 }))).toBe('DC Fast');
   });
@@ -100,6 +166,67 @@ describe('getChargerLabel', () => {
   it('falls back to Home / AC when nothing indicates DC', () => {
     expect(getChargerLabel(makeSession({ charger_type: null, peak_power_w: null }))).toBe('Home / AC');
     expect(getChargerLabel(makeSession({ charger_type: null, peak_power_w: 5_000 }))).toBe('Home / AC');
+  });
+
+  it.each(['AC', 'Home', 'Tesla Wall Connector'])(
+    'labels explicit %s sessions Home / AC rather than DC Fast or Supercharger',
+    charger_type => {
+      expect(getChargerLabel(makeSession({ charger_type, peak_power_w: 44_000 }))).toBe('Home / AC');
+      expect(sessionLabel(makeSession({ charger_type, peak_power_w: 44_000 }))).toContain('Home / AC');
+    },
+  );
+});
+
+describe('getChargerClassification', () => {
+  it.each(['AC', 'Home', 'Tesla Wall Connector', 'DC', 'CCS', 'CHAdeMO', 'Supercharger', 'Tesla'])(
+    'exposes reported provenance for %s without changing its accepted bucket',
+    charger_type => {
+      const session = makeSession({ charger_type, peak_power_w: null });
+      expect(getChargerClassification(session)).toEqual({
+        isDc: isDcSession(session),
+        label: getChargerLabel(session),
+        provenance: 'reported',
+      });
+    },
+  );
+
+  it.each([7_000, 20_000, 20_001])(
+    'exposes power-inferred provenance at %s W without changing the threshold',
+    peak_power_w => {
+      for (const charger_type of [null, '']) {
+        const session = makeSession({ charger_type, peak_power_w });
+        expect(getChargerClassification(session)).toEqual({
+          isDc: peak_power_w > 20_000,
+          label: peak_power_w > 20_000 ? 'DC Fast' : 'Home / AC',
+          provenance: 'inferred',
+        });
+      }
+    },
+  );
+
+  it.each([null, 0, -1, NaN, Infinity, -Infinity])(
+    'does not present missing or unusable power (%s) as classification evidence',
+    peak_power_w => {
+      const session = makeSession({ charger_type: null, peak_power_w });
+      expect(getChargerClassification(session)).toEqual({
+        isDc: isDcSession(session),
+        label: getChargerLabel(session),
+        provenance: 'unknown',
+      });
+    },
+  );
+
+  it.each([null, 7_000, 150_000])(
+    'keeps unrecognized populated types in their accepted DC bucket at %s W',
+    peak_power_w => {
+      expect(getChargerClassification(makeSession({ charger_type: 'Unrecognized', peak_power_w })))
+        .toEqual({ isDc: true, label: 'DC Fast', provenance: 'unknown' });
+    },
+  );
+
+  it('preserves reported AC precedence over a high power inference', () => {
+    expect(getChargerClassification(makeSession({ charger_type: 'Tesla Wall Connector', peak_power_w: 44_000 })))
+      .toEqual({ isDc: false, label: 'Home / AC', provenance: 'reported' });
   });
 });
 
@@ -133,14 +260,46 @@ describe('distanceAddedM', () => {
     expect(distanceAddedM(makeSession({ start_odometer_m: 1_000_000, end_odometer_m: 1_050_000 }))).toBe(50_000);
   });
 
-  it('returns null when either odometer reading is missing', () => {
-    expect(distanceAddedM(makeSession({ start_odometer_m: null }))).toBeNull();
-    expect(distanceAddedM(makeSession({ end_odometer_m: null }))).toBeNull();
+  it.each([null, undefined])('returns null when either reading is missing (%s)', value => {
+    for (const field of ['start_odometer_m', 'end_odometer_m']) {
+      const session = makeSession();
+      Object.assign(session, { [field]: value });
+      expect(distanceAddedM(session)).toBeNull();
+    }
   });
 
-  it('returns null for a zero or negative delta', () => {
-    expect(distanceAddedM(makeSession({ start_odometer_m: 1_000_000, end_odometer_m: 1_000_000 }))).toBeNull();
-    expect(distanceAddedM(makeSession({ start_odometer_m: 1_050_000, end_odometer_m: 1_000_000 }))).toBeNull();
+  it.each([NaN, Infinity, -Infinity, '', '1000000', false])(
+    'returns null when either reading is invalid (%s)',
+    value => {
+      for (const field of ['start_odometer_m', 'end_odometer_m']) {
+        const session = makeSession();
+        Object.assign(session, { [field]: value });
+        expect(distanceAddedM(session)).toBeNull();
+      }
+    },
+  );
+
+  it.each([
+    [1_000_000, 1_000_000, 0],
+    [0, 0, 0],
+    [0, 1.25, 1.25],
+    [1.25, 0, -1.25],
+    [1_050_000, 1_000_000, -50_000],
+    [1_000_000.25, 1_000_000.75, 0.5],
+    [1_000_000.75, 1_000_000.25, -0.5],
+  ])('preserves the measured delta from %s to %s as %s meters', (start, end, expected) => {
+    expect(distanceAddedM(makeSession({ start_odometer_m: start, end_odometer_m: end }))).toBe(expected);
+  });
+
+  it('returns null when finite readings produce a non-finite delta', () => {
+    expect(distanceAddedM(makeSession({
+      start_odometer_m: -Number.MAX_VALUE,
+      end_odometer_m: Number.MAX_VALUE,
+    }))).toBeNull();
+    expect(distanceAddedM(makeSession({
+      start_odometer_m: Number.MAX_VALUE,
+      end_odometer_m: -Number.MAX_VALUE,
+    }))).toBeNull();
   });
 });
 
@@ -148,7 +307,7 @@ describe('sessionLabel', () => {
   it('composes a "date — label — energy kWh" string', () => {
     const label = sessionLabel(makeSession({ charger_type: 'Tesla', total_energy_added_wh: 42_500 }));
     expect(label).toContain('Supercharger');
-    expect(label).toContain('42.5 kWh');
+    expect(label).toContain('42.50 kWh');
     // Two em-dash separators between the three segments.
     expect(label.split(' — ')).toHaveLength(3);
   });
@@ -175,6 +334,14 @@ describe('generateChargingCurve', () => {
     expect(curve).toHaveLength(61);
     expect(curve.every((p) => p.power === 11)).toBe(true);
     expect(curve[0]).toEqual({ soc: 20, power: 11 });
+  });
+
+  it('does not apply DC taper to an explicitly AC session with a high recorded peak', () => {
+    const curve = generateChargingCurve(
+      makeSession({ charger_type: 'AC', peak_power_w: 44_000, start_soc_pct: 20, end_soc_pct: 100 }),
+    );
+    expect(curve).toHaveLength(81);
+    expect(curve.every(point => point.power === 44)).toBe(true);
   });
 
   it('tapers a DC curve monotonically and never emits negative power', () => {
@@ -236,6 +403,38 @@ describe('avg', () => {
     expect(avg([10, 20, 30])).toBe(20);
     expect(avg([5])).toBe(5);
     expect(avg([-10, 10])).toBe(0);
+  });
+
+  describe('availableAverage', () => {
+    it('uses only finite recorded samples as the denominator', () => {
+      expect(availableAverage([null, undefined, NaN, Infinity, -Infinity])).toBeNull();
+      expect(availableAverage([])).toBeNull();
+      expect(availableAverage([10, null, undefined, NaN, Infinity, -Infinity, 20])).toBe(15);
+    });
+
+    it('distinguishes measured zero and preserves signed and fractional arithmetic', () => {
+      expect(availableAverage([0])).toBe(0);
+      expect(availableAverage([-10, 10])).toBe(0);
+      expect(availableAverage([-1.25, 0, 2])).toBe(0.25);
+    });
+  });
+
+  describe('crossesSocWindow', () => {
+    it('requires finite recorded SOC bounds rather than coercing missing readings', () => {
+      for (const value of [null, undefined, NaN, Infinity, -Infinity]) {
+        const missingStart = makeSession();
+        Object.assign(missingStart, { start_soc_pct: value });
+        expect(crossesSocWindow(missingStart, 10)).toBe(false);
+        expect(crossesSocWindow(makeSession({ end_soc_pct: value }), 20)).toBe(false);
+      }
+    });
+
+    it('preserves accepted zero, signed and fractional threshold comparisons', () => {
+      expect(crossesSocWindow(makeSession({ start_soc_pct: 0 }), 10)).toBe(true);
+      expect(crossesSocWindow(makeSession({ start_soc_pct: -0.5, end_soc_pct: 80.5 }), 10)).toBe(true);
+      expect(crossesSocWindow(makeSession({ start_soc_pct: 10.5 }), 10)).toBe(false);
+      expect(crossesSocWindow(makeSession({ start_soc_pct: 10.5 }), 20)).toBe(true);
+    });
   });
 
   it('returns 0 for an empty or nullish array instead of NaN/throwing', () => {

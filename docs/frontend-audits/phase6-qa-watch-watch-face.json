@@ -1,0 +1,1446 @@
+{
+  "item": "phase6-qa-watch-watch-face",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA",
+  "page": "web/src/features/watch/pages/WatchFacePage.tsx",
+  "routes": [
+    "/watch"
+  ],
+  "nativeAcceptance": "NOTRUN",
+  "applicationAcceptance": "NOTRUN",
+  "timing": {
+    "reservation": "2026-10-14T02:53:30.443Z",
+    "return": "2026-10-14T03:13:30.443Z",
+    "hard": "2026-10-14T03:18:30.443Z",
+    "reset": false,
+    "earlierCreation": "Both artifacts absent02:59:11Z; original reservation controls"
+  },
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-watch-watch-face.json",
+    "web/logs/phase6-qa-watch-watch-face.log"
+  ],
+  "objectiveCheck": {
+    "queueItem": "phase6-qa-watch-watch-face [~] attempt1, line191",
+    "dependency": "phase5-page-watch-watch-face [x], source-only acceptance",
+    "duplicates": "No completed duplicate Phase6 page QA objective found. audit-page-241 Phase0, phase5-page-watch-watch-face migration, phase6-watch-query-signal-audit cancellation and phase3-aiwatch-face-nlresponse shared source are distinct; not redispatched.",
+    "queueEdits": false
+  },
+  "authority": {
+    "orchestrator": "docs/orchestrator-loop.md FULL",
+    "mission": "docs/frontend-mission.md FULL; relevant0-2,5-10,15-16,19,21-26,29-37,43-45",
+    "design": "docs/frontend-design-contract.md core1-654 FULL; remaining addenda keyword-reviewed for watch/OLED/SI/retention; unrelated geometry not watch mandates",
+    "inventory": "Authority/preservation plus exact mounted row292/audit-page-241.json FULL",
+    "handoff": "Current1-106/conventions2320-2351",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "SI": "Canonical SI supersedes obsolete legacy examples; actual RatedRange conversion traced; TimeToFullCharge UnitKindNone passthrough does not establish seconds"
+  },
+  "preservation": {
+    "sourceSha256": "A5491C1068D4B0DCEED2AD7518370D2AA643491E647CC4FE432FC0391E2565AF",
+    "lines": 491,
+    "historicalLines": 425,
+    "sectionCount": 7,
+    "sections": [
+      {
+        "name": "Vehicle identity/access/cache/read-only",
+        "line": 151
+      },
+      {
+        "name": "Battery/range ring",
+        "line": 177
+      },
+      {
+        "name": "Charging countdown",
+        "line": 184
+      },
+      {
+        "name": "State badge",
+        "line": 201
+      },
+      {
+        "name": "Lock/climate commands and sentry status",
+        "line": 211
+      },
+      {
+        "name": "Last updated",
+        "line": 257
+      },
+      {
+        "name": "Optional narrator",
+        "line": 282
+      }
+    ],
+    "sectionMethod": "6 deterministic content regions plus1 opt-in narrator; recovery alternatives/meta side effect not extra regions",
+    "componentCounts": {
+      "BatteryGauge": 1,
+      "StatusIcon": 3,
+      "commandControls": 2,
+      "AIWatchFaceNLResponse": 1,
+      "WatchPWAMeta": 1,
+      "GlassPanel": 0,
+      "ChartContainer": 0
+    },
+    "lexicalException": "Narrator regex2 includes JSDoc; actual JSX1",
+    "actionCount": 6,
+    "actions": [
+      "lock/unlock toggle",
+      "climate toggle",
+      "summary retry initial/retained",
+      "local capability recheck",
+      "/api-keys navigation",
+      "Ask Helix question/default empty"
+    ],
+    "actionMethod": "Distinct intents; repeated retry placements one intent; noninteractive sentry/cleanup not actions",
+    "preserve": [
+      "All sections/actions/module exports/original declarations",
+      "query keys/cancellation/polling/stale/retry/enablement",
+      "raw SI and preferences",
+      "X-API-Key/skipAuthRefresh/live-only request guard/server permissions",
+      "unknown versus real0/false",
+      "retained data and own retries",
+      "AI-off absence/stream/error/empty/paused-confirm/unmount cancellation",
+      "PWA metadata restore/manifest path"
+    ],
+    "unusedNotLoss": "charge_rate/outside_temp_c/complication not historical rendered regions; no chart/table/download/export/confirmation workflow invented"
+  },
+  "dataSources": [
+    {
+      "hook": "useWatchSummary(vehicleId)",
+      "file": "web/src/api/hooks/useWatch.ts",
+      "line": 185,
+      "endpoint": "GET /api/v1/watch/summary?vehicle_id=N",
+      "routeFile": "internal/api/router.go",
+      "routeLine": 5135,
+      "policy": "Configured local key; AbortSignal; vehicle-scoped key;30s polling/moderate stale/retry below2 excluding prerequisite failures"
+    },
+    {
+      "hook": "useWatchCommand",
+      "file": "web/src/api/hooks/useWatch.ts",
+      "line": 225,
+      "endpoint": "POST /api/v1/watch/command",
+      "routeFile": "internal/api/router.go",
+      "routeLine": 5137,
+      "policy": "vehicle_id/command; requiresLiveMode/networkMode always; success:false and transport toasts; canWrite/pending guard; backend perms/suspension/token/allowlist/5 per minute",
+      "execution": "NOTRUN"
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "line": 47,
+      "endpoint": "GET /api/v1/vehicles normal client",
+      "policy": "URL/store/first vehicle; no duplicate selector; key-only fleet auth NOTRUN"
+    },
+    {
+      "hook": "useUnits/useOperationalMode",
+      "file": "web/src/hooks/useUnits.ts",
+      "line": 118,
+      "policy": "Preferences reactive; SI display boundary; offline/as-of blocks commands; summary still current"
+    },
+    {
+      "hook": "AIWatchFaceNLResponse/useAiStream",
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+      "line": 120,
+      "endpoint": "POST /api/v1/ai/watch/respond",
+      "policy": "Opt-in gate, optional trimmed message, shared output/stream, no vehicle command/apply tool; source scopeF05"
+    }
+  ],
+  "coverage": {
+    "null": "Finite battery/range/temp guards, ETA unknown versus real0; backend availability lostF02",
+    "loading": "Contextual status/busy skeleton only initial loading, retained content preserved",
+    "fatal": "Own retry present, raw technical textF08",
+    "empty": "No vehicle found branch; backend normally400/404, null success not proven",
+    "paused": "Retained paused cached badge; initial paused misclassifiedF06",
+    "retained": "Refresh error retains face and own retry; local prerequisite notice/recheck distinct; no server failure invented for pause",
+    "commands": "Two44px action cells, pending aria-busy and guard, live-only defense, server permission checks; never executed",
+    "hostDevice": "Lazy /watch outside Layout, PWA start_url, mobile phone/tablet manifests, ServerGate and NativeDeepLinks inspected; actual wearable/native acceptanceNOTRUN",
+    "SI": "Canonical meters violatedF01; Celsius converted correctly; duration uncertaintyC05",
+    "preferences": "Distance/temp preferences reactive; numeral/grouping policy bypassF07; saved IDs untouched",
+    "workspace": "URL/store vehicle scope, no duplicate controls; /watch range disabled; vehicle=true helper does not create absent standalone header; narration mismatchF05",
+    "mobile": "h-dvh/overflow-y-auto/shrink-0/min-w-0/flex-wrap replace obsolete clipping;44px cells and gaps/padding172px fit180px width; full vertical content intentionally scrolls; recovery minimumsF10",
+    "a11y": "main/h1/title/named ring/translated actions, decorative icons hidden, sentry noninteractive, pending ARIA and visible described reasons; actual focus/keyboard/contrast NOTRUN",
+    "i18n": "26 unique static keys PRESENT canonical English;4 relative-time and4 known-state keys inspected. Generated catalogs/RTL/plurals runtimeNOTRUN; numericF07,UnicodeF09",
+    "ai": "Settings unresolved/off returns null; empty default allowed; double-submit/streaming/paused-confirm guards; retained failed-stream text, done-empty fallback, unmount cancellation. No selected-vehicle scopeKeyF05",
+    "architecture": "491-line page has public local adapters/helpers; preserve exports during any later decomposition, no new global library"
+  },
+  "sourceConfirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "MDC-045-si-canonical",
+      "priority": "P1",
+      "count": 2,
+      "file": "internal/api/watch/handler.go",
+      "line": 290,
+      "detail": "Canonical RatedRange meters treated as legacy miles; handler multiplies1.60934, page multiplies1000 then converts meters. Normalized50000m yields80467km, not50km. Narrator also labels raw meters RangeMi and derives RangeKm with same legacy factor.",
+      "sites": [
+        {
+          "file": "internal/api/watch/handler.go",
+          "line": 290,
+          "snippet": "rangeKm := ratedRange * 1.60934"
+        },
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 430,
+          "endLine": 431,
+          "snippet": "env.RangeMi = v"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/tesla/units/units.go",
+          "line": 70,
+          "endLine": 78,
+          "snippet": "return raw * 1609.344, nil"
+        },
+        {
+          "file": "internal/tesla/protomodel/signal_metadata_gen.go",
+          "line": 1440,
+          "snippet": "UnitKind: UnitKindDistance"
+        },
+        {
+          "file": "internal/tesla/normalize/normalize.go",
+          "line": 148,
+          "endLine": 166,
+          "snippet": "atomic.Value = siValue"
+        },
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 143,
+          "endLine": 144,
+          "snippet": "convertDistanceFromSI(data.range_km * 1000, unitPrefs.distance)"
+        }
+      ],
+      "fix": "Coupled existing handler/hook/narration DTO migration to raw range_m and display-only conversion; verify producers, no isolated factor/legacy dual shape",
+      "ownerNeed": "N1",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future isolated normalized50000m fixture should display50km/31mi, not80467km or raw meters as miles. Only local arithmetic evaluated, no app/test/API."
+    },
+    {
+      "id": "F02",
+      "rule": "MDC-026-unknown-state",
+      "priority": "P1",
+      "count": 1,
+      "file": "internal/api/watch/handler.go",
+      "line": 135,
+      "detail": "200 metadata fallback value fields encode absent battery/range/temp/ETA as0, charging/climate/sentry false, assumed locked=true. Successful helpers discard presence too. Finite page checks accept these as measured readings and booleans determine directional command labels.",
+      "sites": [
+        {
+          "file": "internal/api/watch/handler.go",
+          "line": 135,
+          "endLine": 139,
+          "snippet": "IsLocked:    true"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/api/watch/handler.go",
+          "line": 286,
+          "endLine": 300,
+          "snippet": "batteryLevel, _ := signalInt"
+        },
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 213,
+          "endLine": 219,
+          "snippet": "onClick={() => sendCommand(data.is_locked ? 'unlock' : 'lock')}"
+        }
+      ],
+      "fix": "Nullable/known field semantics and provenance via existing owner; preserve real0/false, avoid action direction from unknown readings",
+      "ownerNeed": "N1",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future isolated missing/error Redis fixture should show unknown, not measured0/assumed unlock. NEVER dispatch a vehicle command."
+    },
+    {
+      "id": "F03",
+      "rule": "MDC-026-observed-freshness",
+      "priority": "P1",
+      "count": 1,
+      "file": "internal/api/watch/handler.go",
+      "line": 352,
+      "detail": "Timestamp-stripping pass-through Redis.GetAll then LastUpdated=time.Now makes old/unknown-age readings look just-now/live on successful HTTP; narrator stamps receipt time too. Client refresh/paused fixes do not establish server observation freshness.",
+      "sites": [
+        {
+          "file": "internal/api/watch/handler.go",
+          "line": 352,
+          "snippet": "LastUpdated:  time.Now().UTC().Format(time.RFC3339)"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/signal/redis_cache.go",
+          "line": 472,
+          "endLine": 488,
+          "snippet": "decodeSignalValue(raw)"
+        },
+        {
+          "file": "internal/signal/redis_cache.go",
+          "line": 38,
+          "endLine": 43,
+          "snippet": "never surface ErrStale"
+        },
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 53,
+          "snippet": "provenance: 'live'"
+        },
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 375,
+          "endLine": 380,
+          "snippet": "LastUpdated: time.Now().UTC().Format(time.RFC3339)"
+        }
+      ],
+      "fix": "Reuse timestamp-aware/fresh cache reads and shared trust; separate observed/received timestamps and honest partial/unavailable age",
+      "ownerNeed": "N1",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future isolated old timestamped signals with successful projection must remain visibly old. No Redis/server action here."
+    },
+    {
+      "id": "F04",
+      "rule": "MDC-025-missing-state",
+      "priority": "P2",
+      "count": 1,
+      "file": "internal/api/watch/handler.go",
+      "line": 341,
+      "detail": "Successful WatchSummary literal never assigns State, despite DTO State field and failure fallback unknown. Successful response leaves state empty, page displays Unknown and complication receives empty state.",
+      "sites": [
+        {
+          "file": "internal/api/watch/handler.go",
+          "line": 341,
+          "endLine": 353,
+          "snippet": "return &WatchSummary{"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 201,
+          "endLine": 208,
+          "snippet": "data.state ? t"
+        }
+      ],
+      "fix": "Resolve actual current state via authoritative existing source; do not infer online/driving from transport success",
+      "ownerNeed": "N1",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future isolated known-state fixture verify actual state in successful returned body; no live action."
+    },
+    {
+      "id": "F05",
+      "rule": "MDC-032-workspace-scope",
+      "priority": "P1",
+      "count": 1,
+      "file": "internal/api/aiwatchnl/handler.go",
+      "line": 375,
+      "detail": "Summary/commands use selected vehicle_id; narration always vehicles[0]. Frontend body only message and stream no scopeKey; selection changes can retain first-vehicle text/in-flight output. Server source resolves prior Phase0 scope uncertainty.",
+      "sites": [
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 375,
+          "snippet": "primary := vehicles[0]"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 49,
+          "endLine": 51,
+          "snippet": "useWatchSummary(vehicleId)"
+        },
+        {
+          "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+          "line": 99,
+          "endLine": 108,
+          "snippet": "message: trimmedMessage.length"
+        },
+        {
+          "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+          "line": 120,
+          "endLine": 122,
+          "snippet": "url: '/ai/watch/respond'"
+        },
+        {
+          "file": "web/src/hooks/useAiStream.ts",
+          "line": 300,
+          "endLine": 321,
+          "snippet": "if (scopeKey === previousScopeKeyRef.current) return"
+        }
+      ],
+      "fix": "Typed authorized identical vehicle scope end-to-end plus existing scopeKey cancellation/reset; no unsupported request field added here",
+      "ownerNeed": "N2",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future synthetic two-vehicle fixture select nonfirst, narrate, switch mid-stream; check same identity and cancel/clear old output. Native/API NOTRUN."
+    },
+    {
+      "id": "F06",
+      "rule": "MDC-026-initial-paused",
+      "priority": "P2",
+      "count": 1,
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 126,
+      "detail": "Configured query no retained data+paused+isLoading false+no error enters !data and says No vehicle found. Pause/offline explanation only populated branch, conflating initial offline with authoritative empty.",
+      "sites": [
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 126,
+          "endLine": 130,
+          "snippet": "source.fatalError || !data"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 195,
+          "endLine": 223,
+          "snippet": "isRefreshBlocked: isPaused"
+        }
+      ],
+      "fix": "Existing source.isRefreshBlocked/operational mode in no-data branch, retain distinct loading/empty/fatal/access states",
+      "ownerNeed": "N3",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future isolated configured+paused+undefined data+notloading+noerror query should explain paused/offline, not No vehicle found."
+    },
+    {
+      "id": "F07",
+      "rule": "MDC-044-numeric-localization",
+      "priority": "P2",
+      "count": 1,
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 309,
+      "detail": "Battery/range/temp/ETA numeric strings use raw interpolation/Math.round rather than locale formatting. useUnits reads locale/precision but page consumes distance/temp converters only. Compact rounding preserved; reactive numerals/grouping bypassed.",
+      "sites": [
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 309,
+          "endLine": 311,
+          "snippet": "`${level}%`"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 227,
+          "snippet": "Math.round(displayInsideTemp)"
+        },
+        {
+          "file": "web/src/hooks/useUnits.ts",
+          "line": 125,
+          "endLine": 140,
+          "snippet": "locale,"
+        }
+      ],
+      "fix": "Reuse existing number/unit formatting with intentional compact precision; preserve raw SI/missing/real0/thresholds",
+      "ownerNeed": "N3",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future locale with non-Latin digits/grouping and huge range should format compact values without changing source."
+    },
+    {
+      "id": "F08",
+      "rule": "MDC-026-friendly-recovery",
+      "priority": "P2",
+      "count": 1,
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 130,
+      "detail": "Initial error String(source.fatalError) shows technical Error prefixes/backend English rather than localized explanation/next step. Own retry now correctly present, not obsolete missing-retry issue.",
+      "sites": [
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 130,
+          "snippet": "String(source.fatalError)"
+        }
+      ],
+      "fix": "Compact translated friendly recovery plus safe optional details, existing retry/feedback and wearable shell",
+      "ownerNeed": "N3",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future non-English initial-error fixture should explain/recover with safe details, no API here."
+    },
+    {
+      "id": "F09",
+      "rule": "MDC-044-unicode-input-cap",
+      "priority": "P2",
+      "count": 1,
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+      "line": 148,
+      "detail": "JavaScript UTF16 length/native maxLength cap1000 differs from Go UTF8-byte len1000.334 CJK chars=334units/1002bytes; frontend permits backend400. Comment that cap prevents parser rejection fails for multilingual input.",
+      "sites": [
+        {
+          "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+          "line": 148,
+          "snippet": "trimmedMessage.length <= MaxMessageChars"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 182,
+          "snippet": "len(m) > maxMessageLen"
+        },
+        {
+          "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+          "line": 172,
+          "snippet": "maxLength={MaxMessageChars}"
+        }
+      ],
+      "fix": "Deliberate one frontend/backend codepoint/byte length policy with safe resource cap and localized feedback",
+      "ownerNeed": "N2",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future isolated CJK/emoji cap fixture. Local string arithmetic checked, no test/stream/API."
+    },
+    {
+      "id": "F10",
+      "rule": "MDC-040-mobile-target",
+      "priority": "P2",
+      "count": 3,
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 78,
+      "detail": "Three recovery buttons use wrapLabel md min40px or sm min36px without page min-h-11, unlike44px action/config/Ask targets. Authored minimum gap, not measured native/WCAG failure; long labels may grow taller.",
+      "sites": [
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 78,
+          "snippet": "<ControlButton wrapLabel variant=\"secondary\" onClick={summaryQuery.recheckAvailability}>"
+        },
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 133,
+          "snippet": "size=\"sm\" onClick={source.retry}"
+        },
+        {
+          "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+          "line": 163,
+          "snippet": "<ControlButton wrapLabel variant=\"secondary\" onClick={source.retry}>"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 45,
+          "endLine": 46,
+          "snippet": "min-h-9"
+        }
+      ],
+      "fix": "Existing Button and page mobile min-h-11; keep wrapping/source-local retry/compact surface",
+      "ownerNeed": "N3",
+      "confidence": "high authored minimums; actual dimensionsNOTRUN",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future authorized narrow recovery states short/long translations measure44px reachable targets/unclipped focus, browser/native NOTRUN."
+    },
+    {
+      "id": "F11",
+      "rule": "bare-panic",
+      "priority": "P3",
+      "count": 5,
+      "file": "internal/api/aiwatchnl/handler.go",
+      "line": 133,
+      "detail": "Five nil-dependency validation branches panic instead of contextual error propagation. Documented fail-fast programmer-precondition constructor guards, NOT observed request crashes/panic(err). Strict no-panic guideline separated from state defects; risk conditional invalid wiring.",
+      "sites": [
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 133,
+          "snippet": "panic(\"aiwatchnl: NewHandler: nil provider.Registry\")"
+        },
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 135,
+          "snippet": "panic(\"aiwatchnl: NewHandler: nil tools.Registry\")"
+        },
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 137,
+          "snippet": "panic(\"aiwatchnl: NewHandler: nil strategy.Strategy\")"
+        },
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 346,
+          "snippet": "panic(\"aiwatchnl: NewContextSource: nil *vehicledb.VehicleRepo\")"
+        },
+        {
+          "file": "internal/api/aiwatchnl/handler.go",
+          "line": 530,
+          "snippet": "panic(\"aiwatchnl: NewAlertHistorySource: nil *dbnotif.NotificationRepo\")"
+        }
+      ],
+      "fix": "Backend boot owner reconcile fail-fast validation with contextual errors; preserve explicit invalid-wiring failure, no signature edit here",
+      "ownerNeed": "N4",
+      "confidence": "high occurrences; runtime conditional",
+      "reproExecution": "NOTRUN",
+      "unexecutedRepro": "Future isolated constructor invalid-input fixture only, no running product changes."
+    }
+  ],
+  "conditionalNativeCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 291,
+      "condition": "Actual wearable/narrow/round-screen/safe-area/200%text/RTL/theme/forced-colors/reduced-motion",
+      "mechanism": "Scrollable h-dvh, fixed128px ring,44px wrapping controls, OLED tokens and narrator sibling",
+      "required": "All regions/actions reachable, focus/contrast/scroll validation at mission widths plus180px wearable; no actual clipping/contrast failure claimed",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 262,
+      "condition": "Cold PWA launch or loading/error/empty/unconfigured state",
+      "mechanism": "Meta component mounts only populated; manifest /watch has no configured URL key",
+      "required": "Existing host owner prove installation/metadata restore/session continuity without new auth capability",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/api/hooks/useWatch.ts",
+      "line": 180,
+      "condition": "Configured status unchanged while key identity changes/invalidates; key-only host",
+      "mechanism": "Cache key scoped vehicle not local key revision, availability local presence not server permission; retained payload survives; server still authorizes",
+      "required": "Auth/cache invalidation review, no raw key storage/logging or privacy/unauthorized command claim",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "file": "apps/mobile/ios/App/App.xcodeproj/project.pbxproj",
+      "line": 361,
+      "condition": "Apple Watch/Wear OS expectations",
+      "mechanism": "iphoneos family1,2 and Android MainActivity/Internet only; NativeDeepLinks allowlist excludes /watch and drops query params",
+      "required": "Clarify declared web/PWA versus native wearable support; no expansion authorized",
+      "execution": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "file": "internal/api/watch/handler.go",
+      "line": 297,
+      "condition": "True TimeToFullCharge vendor/source unit unresolved",
+      "mechanism": "Handler/AI multiply60 into minutes; metadata1451 UnitKindNone, normalize passthrough; canonical SI policy does not justify invented seconds/factor repair",
+      "required": "Existing owners establish canonical duration_s atomically, unknown versus real0 retained",
+      "execution": "NOTRUN"
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "id": "N1",
+      "owner": "Existing watch backend/hook/SI integration",
+      "files": [
+        "internal/api/watch/handler.go",
+        "internal/api/watch/handler_test.go",
+        "web/src/api/hooks/useWatch.ts",
+        "web/src/api/hooks/useWatch.test.tsx",
+        "web/src/features/watch/pages/WatchFacePage.tsx",
+        "internal/api/aiwatchnl/handler.go"
+      ],
+      "findings": [
+        "F01",
+        "F02",
+        "F03",
+        "F04"
+      ],
+      "need": "Coupled raw range/availability/observed freshness/actual state contract, not isolated legacy factor change",
+      "queueDedup": "No matching pending/active exact backend repair found; completed cancellation audit different objective; parent authorize new narrow item, not redispatch completed page"
+    },
+    {
+      "id": "N2",
+      "owner": "Existing narrator/frontend-backend integration",
+      "files": [
+        "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+        "web/src/components/ai/AIWatchFaceNLResponse.test.tsx",
+        "internal/api/aiwatchnl/handler.go",
+        "internal/api/aiwatchnl/handler_test.go"
+      ],
+      "findings": [
+        "F05",
+        "F09"
+      ],
+      "need": "Authorized selected scope + existing scopeKey lifecycle and Unicode cap policy; N1 canonical contract consumed",
+      "queueDedup": "Completed phase3 narrator expressly not workspace alignment approval; no same repair queued. SERIALIZE/MERGE withN1 on shared handler"
+    },
+    {
+      "id": "N3",
+      "owner": "Existing page-only WatchFace followup",
+      "files": [
+        "web/src/features/watch/pages/WatchFacePage.tsx",
+        "web/src/features/watch/pages/WatchFacePage.test.tsx"
+      ],
+      "findings": [
+        "F06",
+        "F07",
+        "F08",
+        "F10"
+      ],
+      "need": "Initial pause, numeric/friendly localization,44px recovery via current APIs",
+      "queueDedup": "Completed migration not redispatched; new narrow objective required; SERIALIZE page writes withN1"
+    },
+    {
+      "id": "N4",
+      "owner": "Backend boot-wiring policy review",
+      "files": [
+        "internal/api/aiwatchnl/handler.go",
+        "internal/api/router.go"
+      ],
+      "findings": [
+        "F11"
+      ],
+      "need": "Strict no-panic guideline versus documented fail-fast constructor preconditions, preserving explicit invalid-wiring failure",
+      "queueDedup": "No constructor repair queued; low priority, SERIALIZE same handler withN1/N2"
+    },
+    {
+      "id": "N5",
+      "owner": "Existing centralized/native/auth QA owners CONDITIONAL",
+      "candidates": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05"
+      ],
+      "need": "Only explicitly authorized existing host/native matrix after source fixes",
+      "queueDedup": "Not five invented repair/native/helper tasks; existing combined gate remains parent-owned, no approval here"
+    }
+  ],
+  "acceptableExceptions": [
+    {
+      "rule": "missing-page-container",
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 289,
+      "detail": "No PageContainer match; explicit chrome-less wearable/main exception mounted outside Layout App566, not duplicate shell"
+    },
+    {
+      "rule": "raw-html",
+      "file": "web/src/components/ui/Button.tsx",
+      "line": 64,
+      "detail": "Shared native button expected; comment22 not rendered. Case-sensitive rerun excludes shared <Button>/<Textarea> false positives"
+    },
+    {
+      "rule": "static-inline-style",
+      "file": "web/src/components/data-display/ProgressRing.tsx",
+      "line": 82,
+      "detail": "Computed prop geometry/custom sizes, not static var inline styles"
+    },
+    {
+      "rule": "fetch-useeffect",
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 390,
+      "detail": "PWA meta effect not data load; other effects sync URL/store/body/cancel. useAiStream349 existing cancellable stream transport, not page ad-hoc fetch"
+    },
+    {
+      "rule": "double-prefix",
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+      "line": 13,
+      "detail": "Prefix comments not request URLs; actual /ai/watch/respond and summary/command URLs unprefixed"
+    },
+    {
+      "rule": "hidden-section",
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "line": 184,
+      "detail": "Charging-specific status and deliberate opt-in AI gate, not missing-data panel suppression"
+    }
+  ],
+  "testDeclarations": {
+    "execution": "NOTRUN",
+    "inspection": "Titles/declarations ONLY, not bodies/fixtures",
+    "frontendDeclaredRecords": 88,
+    "goTopLevelFunctions": 17,
+    "expandedExecutedCases": null,
+    "passedCases": null,
+    "files": [
+      {
+        "file": "web/src/features/watch/pages/WatchFacePage.test.tsx",
+        "records": 32,
+        "parameterized": 0
+      },
+      {
+        "file": "web/src/api/hooks/useWatch.test.tsx",
+        "records": 31,
+        "parameterized": 10
+      },
+      {
+        "file": "web/src/features/watch/__tests__/TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx",
+        "records": 3,
+        "parameterized": 0
+      },
+      {
+        "file": "web/src/features/watch/__tests__/TestWatchFaceNlResponseAIOnWiredCallsRoute.test.tsx",
+        "records": 3,
+        "parameterized": 0
+      },
+      {
+        "file": "web/src/components/ai/AIWatchFaceNLResponse.test.tsx",
+        "records": 19,
+        "parameterized": 0
+      },
+      {
+        "file": "internal/api/watch/handler_test.go",
+        "records": 17,
+        "kind": "Go Test funcs; subcases not counted"
+      }
+    ],
+    "coverage": "Page state/actions/SI/access/retained/pending/PWA/utilities; hooks auth/prerequisite/abort/keys/polling/soft-hard failures; AI gate/body/stream/error/empty/double-submit/paused-confirm/cleanup. Presence/historical receipts not fresh passes"
+  },
+  "scanEvidence": {
+    "rawLog": "web/logs/phase6-qa-watch-watch-face.log",
+    "frontendFiles": 11,
+    "backendFiles": 3,
+    "checks": "12 bounded candidate regex rules plus wrapper/raw-text/export/canonical key/line/count checks",
+    "limitations": "Lexical not AST/lint/fullrepo. No all-guideline0 claim. Raw JSX text candidates were comments/imports/props. DB/cache calls context inspected; no Pool SQL/NewRequest targets found in bounded grep; source checks not runtime"
+  },
+  "evidenceLimits": {
+    "runtimeNative": "NOTRUN tests/lint/build/compiler/helpers/server/browser/network/API/device/vehicle/command actions",
+    "gitAgentsInstalls": "NOTRUN; no source/test/catalog/queue/Git edits",
+    "pinTiming": "Original before02:58:42 after orientation, supplements as scope discovered, some after initial partial reads; not pre-pinned every first read. After checks separate",
+    "repros": "All hypothetical repro procedures NOTRUN; local arithmetic only not app proof",
+    "writeScope": "Only2owned artifacts authored; no Git means no whole-repository cleanliness or attribution of concurrent writers",
+    "failures": "rg unavailable command3361 exit1 stopped following steps; built-in replacements. Large output tool truncations retained raw in log/TEMP, exact mechanisms re-read. Long first JSON write command3419 rejected Windows os206 exit1, NO report written by that command; split into shorter artifact-only writes",
+    "filesRead": "index.css pin only, not substantively inspected, excluded from filesRead; ranges/grep/test declarations, not full bodies"
+  },
+  "priority": {
+    "first": [
+      "F01 SI",
+      "F02 unknown",
+      "F03 freshness",
+      "F05 vehicle scope"
+    ],
+    "then": [
+      "F04 state",
+      "F06 pause",
+      "F07/F08 localization",
+      "F09 Unicode",
+      "F10 recovery targets"
+    ],
+    "lower": "F11 constructor precondition policy; conditional native needs not acceptance"
+  },
+  "validation": {
+    "pins": {
+      "total": 57,
+      "matched": 56,
+      "drift": [
+        "migration-queue.md"
+      ],
+      "meaning": "Concurrent governance/catalog drift not attributed to worker; no clean-tree claim",
+      "applicationSourceDrift": []
+    },
+    "writeScope": "Only2owned artifacts written; no source/test/catalog/queue/Git edits",
+    "citationCount": 39,
+    "counts": "PASS",
+    "json": "PARSED",
+    "citationFailures": [],
+    "citations": "PASS"
+  },
+  "release": {
+    "artifacts": "RELEASE docs/frontend-audits/phase6-qa-watch-watch-face.json and web/logs/phase6-qa-watch-watch-face.log",
+    "nativeAcceptance": "NOTRUN",
+    "source": "NONE/READONLY",
+    "commands": "RELEASE all own commands terminal; no process/server/agent retained"
+  },
+  "inputPins": [
+    {
+      "beforeSha256": "A5491C1068D4B0DCEED2AD7518370D2AA643491E647CC4FE432FC0391E2565AF",
+      "stage": "before-original",
+      "file": "web/src/features/watch/pages/WatchFacePage.tsx",
+      "afterSha256": "A5491C1068D4B0DCEED2AD7518370D2AA643491E647CC4FE432FC0391E2565AF",
+      "matches": true
+    },
+    {
+      "beforeSha256": "70862A1728A706AA551CC56EB07AA0DD28A6A0EAE74AABC11052463FEAC4B6BC",
+      "stage": "before-original",
+      "file": "web/src/features/watch/pages/WatchFacePage.test.tsx",
+      "afterSha256": "70862A1728A706AA551CC56EB07AA0DD28A6A0EAE74AABC11052463FEAC4B6BC",
+      "matches": true
+    },
+    {
+      "beforeSha256": "98F51C76BA441B25ADE848571BD297E9F7378822A6521F86E142F3B7D3889115",
+      "stage": "before-original",
+      "file": "web/src/features/watch/__tests__/TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx",
+      "afterSha256": "98F51C76BA441B25ADE848571BD297E9F7378822A6521F86E142F3B7D3889115",
+      "matches": true
+    },
+    {
+      "beforeSha256": "4BA43F64FB65C50A795F1B8CBA3D05EE580C7C7E7C641321E784B41590C30DB5",
+      "stage": "before-original",
+      "file": "web/src/features/watch/__tests__/TestWatchFaceNlResponseAIOnWiredCallsRoute.test.tsx",
+      "afterSha256": "4BA43F64FB65C50A795F1B8CBA3D05EE580C7C7E7C641321E784B41590C30DB5",
+      "matches": true
+    },
+    {
+      "beforeSha256": "7C9FF7448A5D4825113381F13E1474DA2D47ED7387A20A541DB175FFD326EDC8",
+      "stage": "before-original",
+      "file": "web/src/api/hooks/useWatch.ts",
+      "afterSha256": "7C9FF7448A5D4825113381F13E1474DA2D47ED7387A20A541DB175FFD326EDC8",
+      "matches": true
+    },
+    {
+      "beforeSha256": "AB7B21748D74B88ED701DFEEFCC08D0B6281ECFBC9321EC80A3F15C0EE8B3C0A",
+      "stage": "before-original",
+      "file": "web/src/api/hooks/useWatch.test.tsx",
+      "afterSha256": "AB7B21748D74B88ED701DFEEFCC08D0B6281ECFBC9321EC80A3F15C0EE8B3C0A",
+      "matches": true
+    },
+    {
+      "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "stage": "before-original",
+      "file": "web/src/hooks/useUnits.ts",
+      "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "matches": true
+    },
+    {
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "stage": "before-original",
+      "file": "web/src/api/dataState.ts",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "matches": true
+    },
+    {
+      "beforeSha256": "F56FF714E3AD17B5FEB97E432529C852AC1085605C595CDB93838919E857E93D",
+      "stage": "before-original",
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+      "afterSha256": "F56FF714E3AD17B5FEB97E432529C852AC1085605C595CDB93838919E857E93D",
+      "matches": true
+    },
+    {
+      "beforeSha256": "6C9AFE288838FC2247E383DCBA87E028156135D9B4992E353609494421E74B67",
+      "stage": "before-original",
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.test.tsx",
+      "afterSha256": "6C9AFE288838FC2247E383DCBA87E028156135D9B4992E353609494421E74B67",
+      "matches": true
+    },
+    {
+      "beforeSha256": "31DFF0F8594EE23B8B456A9CA95B4321C72BFA9DB683A858AA6FDD36D926F282",
+      "stage": "before-original",
+      "file": "web/src/components/data-display/ProgressRing.tsx",
+      "afterSha256": "31DFF0F8594EE23B8B456A9CA95B4321C72BFA9DB683A858AA6FDD36D926F282",
+      "matches": true
+    },
+    {
+      "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "stage": "before-original",
+      "file": "web/src/components/ui/Button.tsx",
+      "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "matches": true
+    },
+    {
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "stage": "before-original",
+      "file": "web/src/lib/workspaceScope.ts",
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "matches": true
+    },
+    {
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "stage": "before-original",
+      "file": "web/src/App.tsx",
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "matches": true
+    },
+    {
+      "beforeSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "stage": "before-original",
+      "file": "web/src/i18n/en.json",
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "matches": true
+    },
+    {
+      "beforeSha256": "732869675EE5538B38029967003AB9CED222CDEBB6FC8B764E18FD3012357042",
+      "stage": "before-original",
+      "file": "web/public/watch-manifest.json",
+      "afterSha256": "732869675EE5538B38029967003AB9CED222CDEBB6FC8B764E18FD3012357042",
+      "matches": true
+    },
+    {
+      "beforeSha256": "2B756E11D6EC0629CCA3835671AB0A5A21AD97D18D6AD6A5C5B86C414438FFAB",
+      "stage": "before-original",
+      "file": "internal/api/watch/handler.go",
+      "afterSha256": "2B756E11D6EC0629CCA3835671AB0A5A21AD97D18D6AD6A5C5B86C414438FFAB",
+      "matches": true
+    },
+    {
+      "beforeSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "stage": "before-original",
+      "file": "internal/api/router.go",
+      "afterSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "matches": true
+    },
+    {
+      "beforeSha256": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+      "stage": "before-original",
+      "file": "migration-queue.md",
+      "afterSha256": "9C42263389A0E42D87D945D17F9730C55DD039C99F4FC9A74472AD66E3865333",
+      "matches": false
+    },
+    {
+      "beforeSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+      "stage": "supplemental-030156",
+      "file": "web/src/hooks/useOperationalMode.tsx",
+      "afterSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+      "matches": true
+    },
+    {
+      "beforeSha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "stage": "supplemental-030156",
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "afterSha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "matches": true
+    },
+    {
+      "beforeSha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "stage": "supplemental-030156",
+      "file": "web/src/components/ai/withAiFeature.tsx",
+      "afterSha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "matches": true
+    },
+    {
+      "beforeSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "stage": "supplemental-030156",
+      "file": "web/src/hooks/useAiStream.ts",
+      "afterSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "matches": true
+    },
+    {
+      "beforeSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "stage": "supplemental-030156",
+      "file": "web/src/lib/unitConversion.ts",
+      "afterSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "matches": true
+    },
+    {
+      "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "stage": "supplemental-030156",
+      "file": "web/src/api/client.ts",
+      "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "matches": true
+    },
+    {
+      "beforeSha256": "DD11232A7D6CB103A0656DB6C1E548541A991245C4DF18633A6AC0AC1EB8E037",
+      "stage": "supplemental-030156",
+      "file": "web/src/index.css",
+      "afterSha256": "DD11232A7D6CB103A0656DB6C1E548541A991245C4DF18633A6AC0AC1EB8E037",
+      "matches": true
+    },
+    {
+      "beforeSha256": "FC3BAE7FF71CE0A61AD14E16B9F9A1E1794728398E87AE953359848D614F800A",
+      "stage": "supplemental-030156",
+      "file": "internal/signal/redis_cache.go",
+      "afterSha256": "FC3BAE7FF71CE0A61AD14E16B9F9A1E1794728398E87AE953359848D614F800A",
+      "matches": true
+    },
+    {
+      "beforeSha256": "8413AA7998BDF9EB318769E6B248FFC282CB5EBF5113A658A2BC885D9527DC28",
+      "stage": "supplemental-030156",
+      "file": "internal/tesla/units/units.go",
+      "afterSha256": "8413AA7998BDF9EB318769E6B248FFC282CB5EBF5113A658A2BC885D9527DC28",
+      "matches": true
+    },
+    {
+      "beforeSha256": "C1FC35D2B746B6F1F64048C2E105FCA91A4E81D4DE4ABC90D0883BB0B225BC3B",
+      "stage": "supplemental-030156",
+      "file": "internal/tesla/protomodel/signal_metadata_gen.go",
+      "afterSha256": "C1FC35D2B746B6F1F64048C2E105FCA91A4E81D4DE4ABC90D0883BB0B225BC3B",
+      "matches": true
+    },
+    {
+      "beforeSha256": "2C8A2A44205FB1FAD2AD9D46BB1B7FDCCD9F3394744F38AD83AEDB6232A7EE0C",
+      "stage": "supplemental-030156",
+      "file": "internal/tesla/router/routing.yaml",
+      "afterSha256": "2C8A2A44205FB1FAD2AD9D46BB1B7FDCCD9F3394744F38AD83AEDB6232A7EE0C",
+      "matches": true
+    },
+    {
+      "beforeSha256": "1233516F6E0EAE07D61D23DDE101F44B192D9BE63EF95118BD1A895B932644AA",
+      "stage": "supplemental-030156",
+      "file": "internal/api/aiwatchnl/handler.go",
+      "afterSha256": "1233516F6E0EAE07D61D23DDE101F44B192D9BE63EF95118BD1A895B932644AA",
+      "matches": true
+    },
+    {
+      "beforeSha256": "F0BCBD1B33717F76EFA91855587A239B03E8111956862F4906842251BAAC54B3",
+      "stage": "supplemental-030156",
+      "file": "internal/api/ai_routes.go",
+      "afterSha256": "F0BCBD1B33717F76EFA91855587A239B03E8111956862F4906842251BAAC54B3",
+      "matches": true
+    },
+    {
+      "beforeSha256": "149A2AD8A97B1C929F9DC0E5AC60033CCFD33D34A0987DD5D71CD4A1031B3912",
+      "stage": "supplemental-030156",
+      "file": "internal/api/watch/handler_test.go",
+      "afterSha256": "149A2AD8A97B1C929F9DC0E5AC60033CCFD33D34A0987DD5D71CD4A1031B3912",
+      "matches": true
+    },
+    {
+      "beforeSha256": "5351A667B9CF15BED1C7D4AF875D7CBC25B9A527A4B24FC45C5C2AC3BF7B3F1B",
+      "stage": "supplemental-030156",
+      "file": "apps/mobile/README.md",
+      "afterSha256": "5351A667B9CF15BED1C7D4AF875D7CBC25B9A527A4B24FC45C5C2AC3BF7B3F1B",
+      "matches": true
+    },
+    {
+      "beforeSha256": "565A376871C6565033AF1E829A0319C6DEDE86EE3A340E453AAE9994E1132C8D",
+      "stage": "supplemental-030156",
+      "file": "apps/mobile/capacitor.config.json",
+      "afterSha256": "565A376871C6565033AF1E829A0319C6DEDE86EE3A340E453AAE9994E1132C8D",
+      "matches": true
+    },
+    {
+      "beforeSha256": "97D8C8651AA1A1A3AE1C7DE48511A2BADFFD5B5557F2F21B3AEE5CBBECC89F6F",
+      "stage": "supplemental-030156",
+      "file": "apps/mobile/android/app/src/main/AndroidManifest.xml",
+      "afterSha256": "97D8C8651AA1A1A3AE1C7DE48511A2BADFFD5B5557F2F21B3AEE5CBBECC89F6F",
+      "matches": true
+    },
+    {
+      "beforeSha256": "55211D29B26CDB2331ABC3A12E20662432547B993E2FC4B1F1E087FD90AF3ADE",
+      "stage": "supplemental-030156",
+      "file": "apps/mobile/android/app/build.gradle",
+      "afterSha256": "55211D29B26CDB2331ABC3A12E20662432547B993E2FC4B1F1E087FD90AF3ADE",
+      "matches": true
+    },
+    {
+      "beforeSha256": "AA4C92E82101D8D22530287D02C688E96C917CCF33CC9F396B5C1109D4266F3A",
+      "stage": "supplemental-030156",
+      "file": "apps/mobile/ios/App/App/Info.plist",
+      "afterSha256": "AA4C92E82101D8D22530287D02C688E96C917CCF33CC9F396B5C1109D4266F3A",
+      "matches": true
+    },
+    {
+      "beforeSha256": "AEC60BEE420313B3532C1DBB53904DFFFF7A8D6D76949A1B996B66E3A75EC20F",
+      "stage": "supplemental-030156",
+      "file": "apps/mobile/ios/App/App.xcodeproj/project.pbxproj",
+      "afterSha256": "AEC60BEE420313B3532C1DBB53904DFFFF7A8D6D76949A1B996B66E3A75EC20F",
+      "matches": true
+    },
+    {
+      "beforeSha256": "B2B057ACE50A2E3A2D1FCD58317A541D38A55E267121AA57552A84A177D711C9",
+      "stage": "supplemental-030459",
+      "file": "internal/tesla/normalize/normalize.go",
+      "afterSha256": "B2B057ACE50A2E3A2D1FCD58317A541D38A55E267121AA57552A84A177D711C9",
+      "matches": true
+    },
+    {
+      "beforeSha256": "A01EC2FB9C9141B96BF73FC7FF2DF58E0E66DA4F4A50F99D6089FCAC89CFD9B4",
+      "stage": "supplemental-030459",
+      "file": "internal/tesla/normalize/pipeline.go",
+      "afterSha256": "A01EC2FB9C9141B96BF73FC7FF2DF58E0E66DA4F4A50F99D6089FCAC89CFD9B4",
+      "matches": true
+    },
+    {
+      "beforeSha256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "stage": "supplemental-030459",
+      "file": "web/src/hooks/useAiEnabled.ts",
+      "afterSha256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "matches": true
+    },
+    {
+      "beforeSha256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "stage": "supplemental-030459",
+      "file": "web/src/components/ai/AiOutputPanel.tsx",
+      "afterSha256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "matches": true
+    },
+    {
+      "beforeSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "stage": "supplemental-030459",
+      "file": "web/src/lib/routeLoaders.ts",
+      "afterSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "matches": true
+    },
+    {
+      "beforeSha256": "61F9931804887F0C44FF4863A28B3B714F73EF37DAEDFFAB44A02047487A91EF",
+      "stage": "supplemental-030459",
+      "file": "web/src/features/server/NativeDeepLinks.tsx",
+      "afterSha256": "61F9931804887F0C44FF4863A28B3B714F73EF37DAEDFFAB44A02047487A91EF",
+      "matches": true
+    },
+    {
+      "beforeSha256": "A54E5DE386715FFF4AFE3BE4C7F0D083AE833AAB43638EF6F2A4BB5BEFEE106B",
+      "stage": "supplemental-030459",
+      "file": "web/src/features/server/ServerGate.tsx",
+      "afterSha256": "A54E5DE386715FFF4AFE3BE4C7F0D083AE833AAB43638EF6F2A4BB5BEFEE106B",
+      "matches": true
+    },
+    {
+      "beforeSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "stage": "supplemental-030459",
+      "file": ".github/copilot-instructions.md",
+      "afterSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "matches": true
+    },
+    {
+      "beforeSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "stage": "supplemental-030459",
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "afterSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "matches": true
+    },
+    {
+      "beforeSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "stage": "supplemental-030459",
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "afterSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "matches": true
+    },
+    {
+      "beforeSha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "stage": "supplemental-030459",
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "afterSha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "matches": true
+    },
+    {
+      "beforeSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "stage": "supplemental-030459",
+      "file": "docs/frontend-worker-conventions.md",
+      "afterSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "matches": true
+    },
+    {
+      "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "stage": "before-original",
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "matches": true
+    },
+    {
+      "beforeSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "stage": "before-original-025842",
+      "file": "docs/frontend-mission.md",
+      "afterSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "matches": true
+    },
+    {
+      "beforeSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "stage": "before-original-025842",
+      "file": "docs/frontend-inventory.md",
+      "afterSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "matches": true
+    },
+    {
+      "beforeSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "stage": "before-original-025842",
+      "file": "docs/orchestrator-loop.md",
+      "afterSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "matches": true
+    },
+    {
+      "beforeSha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+      "stage": "before-original-025842",
+      "file": "docs/session-handoff.md",
+      "afterSha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+      "matches": true
+    },
+    {
+      "beforeSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "stage": "before-original-025842",
+      "file": "docs/frontend-design-contract.md",
+      "afterSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "matches": true
+    }
+  ],
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "apps/mobile/android/app/build.gradle",
+    "apps/mobile/android/app/src/main/AndroidManifest.xml",
+    "apps/mobile/capacitor.config.json",
+    "apps/mobile/ios/App/App.xcodeproj/project.pbxproj",
+    "apps/mobile/ios/App/App/Info.plist",
+    "apps/mobile/README.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "internal/api/ai_routes.go",
+    "internal/api/aiwatchnl/handler.go",
+    "internal/api/router.go",
+    "internal/api/watch/handler_test.go",
+    "internal/api/watch/handler.go",
+    "internal/signal/redis_cache.go",
+    "internal/tesla/normalize/normalize.go",
+    "internal/tesla/normalize/pipeline.go",
+    "internal/tesla/protomodel/signal_metadata_gen.go",
+    "internal/tesla/router/routing.yaml",
+    "internal/tesla/units/units.go",
+    "migration-queue.md",
+    "web/public/watch-manifest.json",
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useWatch.test.tsx",
+    "web/src/api/hooks/useWatch.ts",
+    "web/src/App.tsx",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/components/ai/AiOutputPanel.tsx",
+    "web/src/components/ai/AIWatchFaceNLResponse.test.tsx",
+    "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/components/data-display/ProgressRing.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/features/server/NativeDeepLinks.tsx",
+    "web/src/features/server/ServerGate.tsx",
+    "web/src/features/watch/__tests__/TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx",
+    "web/src/features/watch/__tests__/TestWatchFaceNlResponseAIOnWiredCallsRoute.test.tsx",
+    "web/src/features/watch/pages/WatchFacePage.test.tsx",
+    "web/src/features/watch/pages/WatchFacePage.tsx",
+    "web/src/hooks/useAiEnabled.ts",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/hooks/useOperationalMode.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/workspaceScope.ts",
+    "docs/frontend-audits/audit-page-241.json"
+  ],
+  "createdUtc": "2026-10-14T03:10:20.4125005Z",
+  "summary": {
+    "conditionalCandidates": 5,
+    "countedSites": 18.0,
+    "filesWithMostSites": [
+      {
+        "sites": 7,
+        "file": "internal/api/aiwatchnl/handler.go"
+      },
+      {
+        "sites": 6,
+        "file": "web/src/features/watch/pages/WatchFacePage.tsx"
+      },
+      {
+        "sites": 4,
+        "file": "internal/api/watch/handler.go"
+      },
+      {
+        "sites": 1,
+        "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx"
+      }
+    ],
+    "uniqueMechanisms": 11,
+    "ownerNeeds": 5,
+    "countsByRule": [
+      {
+        "rule": "MDC-045-si-canonical",
+        "sites": 2,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-026-unknown-state",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-026-observed-freshness",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-025-missing-state",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-032-workspace-scope",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-026-initial-paused",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-044-numeric-localization",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-026-friendly-recovery",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-044-unicode-input-cap",
+        "sites": 1,
+        "mechanisms": 1
+      },
+      {
+        "rule": "MDC-040-mobile-target",
+        "sites": 3,
+        "mechanisms": 1
+      },
+      {
+        "rule": "bare-panic",
+        "sites": 5,
+        "mechanisms": 1
+      }
+    ]
+  },
+  "completedUtc": "2026-10-14T03:12:36.5207394Z",
+  "pinInputs": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "apps/mobile/android/app/build.gradle",
+    "apps/mobile/android/app/src/main/AndroidManifest.xml",
+    "apps/mobile/capacitor.config.json",
+    "apps/mobile/ios/App/App.xcodeproj/project.pbxproj",
+    "apps/mobile/ios/App/App/Info.plist",
+    "apps/mobile/README.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "internal/api/ai_routes.go",
+    "internal/api/aiwatchnl/handler.go",
+    "internal/api/router.go",
+    "internal/api/watch/handler_test.go",
+    "internal/api/watch/handler.go",
+    "internal/signal/redis_cache.go",
+    "internal/tesla/normalize/normalize.go",
+    "internal/tesla/normalize/pipeline.go",
+    "internal/tesla/protomodel/signal_metadata_gen.go",
+    "internal/tesla/router/routing.yaml",
+    "internal/tesla/units/units.go",
+    "migration-queue.md",
+    "web/public/watch-manifest.json",
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useWatch.test.tsx",
+    "web/src/api/hooks/useWatch.ts",
+    "web/src/App.tsx",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/components/ai/AiOutputPanel.tsx",
+    "web/src/components/ai/AIWatchFaceNLResponse.test.tsx",
+    "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/components/data-display/ProgressRing.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/features/server/NativeDeepLinks.tsx",
+    "web/src/features/server/ServerGate.tsx",
+    "web/src/features/watch/__tests__/TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx",
+    "web/src/features/watch/__tests__/TestWatchFaceNlResponseAIOnWiredCallsRoute.test.tsx",
+    "web/src/features/watch/pages/WatchFacePage.test.tsx",
+    "web/src/features/watch/pages/WatchFacePage.tsx",
+    "web/src/hooks/useAiEnabled.ts",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/hooks/useOperationalMode.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/index.css",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/workspaceScope.ts",
+    "docs/frontend-audits/audit-page-241.json"
+  ]
+}

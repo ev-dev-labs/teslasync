@@ -1,0 +1,473 @@
+{
+  "item": "audit-page-055",
+  "page": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+  "routes": ["/year-review/:year"],
+  "purpose": "Calendar-year vehicle recap combining recorded activity, cost/environment impact, records, comparisons, a screenshot summary and optional Helix narration.",
+  "primaryGoal": "Review a selected vehicle's year, navigate calendar years and understand/share its recorded highlights without losing source context.",
+  "dataSources": [
+    {
+      "name": "useYearReview",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 274,
+      "endpoint": "GET /api/v1/analytics/year-review?year={year}&vehicle_id={vehicleId}",
+      "owner": "Analytics API hook; yearReviewHandler.GetYearReview",
+      "routeEvidence": "internal\\api\\router.go:3899",
+      "behavior": "Key ['year-review', year, vehicleId]; enabled only with vehicleId; STATIC stale time; forwards AbortSignal; snake_case vehicle_id; no duplicate /api/v1 prefix.",
+      "responseEvidence": "web\\src\\api\\types.ts:2835-2918",
+      "limits": "Handler/repository calculations, backend calendar timezone and completeness were not inspected or exercised. Existing type names explicitly carry km, kWh, minutes and Wh/km; do not silently reinterpret the wire/cache as SI base units."
+    },
+    {
+      "name": "useVehicles / useSelectedVehicle",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "owner": "Vehicle hook, selectedVehicle store and shared workspace selection",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "behavior": "FAST stale time, safeArray selection and AbortSignal. Page observes isLoading separately; selection hook uses URL > valid stored id > first fleet vehicle, repairs invalid ids and returns an array.",
+      "selectionEvidence": "web\\src\\hooks\\useSelectedVehicle.ts:53-96,155-188; YearReviewPage.tsx:48-66"
+    },
+    {
+      "name": "AIYearReviewNarration / useAiStream",
+      "file": "web\\src\\components\\ai\\AIYearReviewNarration.tsx",
+      "line": 17,
+      "endpoint": "POST /api/v1/ai/analytics/year-in-review/narrate",
+      "owner": "AIYearReviewNarration, AIFeatureCard, withAiFeature and canonical AI SSE hook",
+      "routeEvidence": "internal\\api\\ai_routes.go:134,172-176; internal\\api\\router.go:1001,5056",
+      "behavior": "Feature gate yir-narration; body vehicle_id and previous calendar year, independent of route year. Positive vehicle id required. Scope key aborts/clears output on vehicle/year identity changes. Generate is an explicit action; no narration request exercised.",
+      "limits": "AI capability/settings providers and SSE implementation beyond the inspected API contract were not fully traced. AI-Off behavior and production authentication are runtime-unverified."
+    },
+    {
+      "name": "Display preferences and metric bridge",
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "line": 45,
+      "endpoint": null,
+      "owner": "useUnits, useFormatting, useNumberFormatting, useOperationalMetrics and existing metric-reference pipeline",
+      "behavior": "Page converts reported km/kWh/kmh into m/Wh/mps only when creating display metrics. CO2 remains kg, temperatures remain Celsius. Child record/pattern/recap components retain their specialist rounding and source-unit labels.",
+      "limits": "These hooks' internal settings endpoints were not inspected; no claim of a complete transitive API audit."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "kind": "shared layout",
+      "evidence": "PageLayout.tsx:5-15; web\\src\\components\\layout\\PageContainer.tsx:50-120,164-225",
+      "contract": "Existing title/subtitle, metadata/context/secondary action slots, query freshness and busy state; full-width min-w-0 container. PageContainer supplies route-focus heading, aria-busy, operational-mode metadata and shared header."
+    },
+    {
+      "name": "Section / CardGrid / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "kind": "shared section/card layout",
+      "evidence": "YearReviewPage.tsx:174-257; CardGrid.tsx:25-43; LayoutCard.tsx:17-66; layoutPolicy.ts:4-47",
+      "contract": "Six named sections; half/third/quarter/full placement, source order retained, allocated-container width and one/six/twelve-column reflow. LayoutCard owns surface/header, wrapping description help and footer."
+    },
+    {
+      "name": "OperationalBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "kind": "shared contextual metrics composite",
+      "evidence": "OperationalBrief.tsx:44-64,118-145; YearReviewPage.tsx:94-131,175-176,230-231",
+      "contract": "Typed metrics, compact/loading, status/scope/provenance/freshness/actions, details drawer; five mounted briefs: highlights, savings, environment, patterns, extremes."
+    },
+    {
+      "name": "YearMonthlyActivity / YearChargingMix",
+      "owner": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+      "kind": "page-specific charts using canonical frames",
+      "evidence": "YearMonthlyActivity.tsx:17-90; YearChargingMix.tsx:10-71; ChartCard.tsx:12-49; EmbeddedChart.tsx:19-43",
+      "contract": "data/loading/error/onRetry/emptyMessage; monthly dual-axis bar/line, legend state, export and energy table column; connector donut, labeled footer and accessible tabular data."
+    },
+    {
+      "name": "YearSavingsBrief / YearEnvironmentBrief / YearPatternsBrief",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearSavingsBrief.tsx",
+      "kind": "page-specific impact composites",
+      "evidence": "YearReviewPage.tsx:18-20,198-210; YearSavingsBrief.tsx:11-44; YearEnvironmentBrief.tsx:10-37; YearPatternsBrief.tsx:12-47",
+      "contract": "data/period/retained; money bars and coffee comparison; CO2 and tree estimate/icons; favorite day, peak hour and weekly/distance/efficiency averages."
+    },
+    {
+      "name": "YearDriveRecord / YearFunFacts / YearRecap",
+      "owner": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearDriveRecord.tsx",
+      "kind": "page-specific presentation",
+      "evidence": "YearDriveRecord.tsx:12-48; YearFunFacts.tsx:7-32; YearRecap.tsx:13-47",
+      "contract": "Record addresses/date/distance/duration/efficiency, optional facts array, recap identity/five metrics/savings/screenshot guidance; existing StatGroup, typography and EmptyState owners."
+    },
+    {
+      "name": "AIYearReviewNarration",
+      "owner": "web\\src\\components\\ai\\AIYearReviewNarration.tsx",
+      "kind": "shared AI domain owner",
+      "evidence": "AIYearReviewNarration.tsx:14-67; withAiFeature.tsx:32-59; AIFeatureCard.tsx:241-315",
+      "contract": "vehicleId prop, sanctioned feature gate, Ask Helix action with localized accessible name, disabled/streaming states and output panel."
+    },
+    {
+      "name": "Button / Text / feedback / FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "kind": "existing primitives",
+      "evidence": "YearReviewPage.tsx:6-12,70-82,133-145,165-171; FadeIn.tsx:22-40",
+      "contract": "Shared Button/Text, skeleton/error/empty/banner; reduced entrance uses initial=false, ignores delay and existing motion preference."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "line": 200,
+      "rule": "MDC-015 / mission 0.6 / restrained single-surface hierarchy",
+      "detail": "Impact LayoutCards repeat the contained OperationalBrief titles and surfaces; all three nested briefs repeat eyebrow/status/scope/provenance and long descriptions. Measured metrics must remain, but chrome need not repeat.",
+      "fix": "Use one existing surface owner for each impact card; retain external bars/icons/day/hour and all evidence/details. Do not replace contextual briefs with an ad hoc KPI grid.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "line": 70,
+      "rule": "MDC-026 / mission 0.5",
+      "detail": "The gate correctly preserves every section shell, but a fatal source failure produces the same QueryError and Retry independently in many cards; resolved empty fleet similarly repeats vehicle-selection recovery.",
+      "fix": "Reuse the existing page/source notice owner for one named recovery action and keep section-specific unavailable placeholders; preserve each source shell and the retained-data case.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "YearReviewPage.tsx:133-145,158: 44px minimum year/back controls and wrapping action container.",
+      "CardGrid.tsx:25-43 and layoutPolicy.ts:4-47: container-based stacking below 640, tablet 640-1023, desktop/wide layouts without source reordering.",
+      "YearMonthlyActivity.tsx:32-33,59-60: 200/240/280px shared plot height.",
+      "YearDriveRecord.tsx:33-47, YearRecap.tsx:24-32 and YearFunFacts.tsx:23-26: min-w-0/break-words identity and address text."
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearChargingMix.tsx",
+        "line": 62,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Donut retains fixed inner/outer radii 52/82 inside a 200px phone plot; long legends and narrow allocated width may constrain readable plot space. Source alone cannot establish clipping.",
+        "fix": "Exercise 320px and narrow-container states with translated labels; retain complete labels/table and use the existing chart-sizing owner only if a real clipping case is reproduced.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "unverified; no viewport, zoom or RTL browser exercise"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "YearReviewPage.tsx:136-142,158-159: localized names on icon controls and aria-hidden decorative icons.",
+      "YearMonthlyActivity.tsx:52,65-71 and YearChargingMix.tsx:36,42-46: chart descriptions and complete supplied data-column alternatives.",
+      "YearFunFacts.tsx:17-26: list/listitem roles and hidden decorative emoji.",
+      "PageContainer.tsx:175-199: shared route-focus heading; FadeIn.tsx:23-39 and chart components honor reduced-motion preference."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\yearReviewPresentation.ts",
+        "line": 23,
+        "rule": "MDC-044 / localized specialist labels",
+        "detail": "recordDuration emits literal h/m suffixes; YearDriveRecord renders drive.date directly and YearPatternsBrief displays server weekday and a forced twelve-hour form. Existing source policy is explicit but locale/date semantics are not uniformly owned.",
+        "fix": "Preserve compact rounding and server calendar meaning; use existing localized formatting owners after contract confirmation, not a new timezone conversion or recased server data.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "keyboard": "unverified",
+    "focus": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified; no measured composed backgrounds",
+    "reducedMotion": "source-supported, runtime-unverified",
+    "forcedColors": "unverified"
+  },
+  "states": {
+    "initialLoading": "YearReviewPage.tsx:66-71,82-83: fleet loading/unresolved selection and review initial loading show section skeletons; chart frames retain shells.",
+    "emptyFleet": "YearReviewPage.tsx:74-80,190-192: localized selection prompt with /vehicles navigation; review query disabled without vehicle.",
+    "emptyActivity": "YearReviewPage.tsx:59,166-171: info banner when both activity counts resolve as zero; other sections remain.",
+    "emptyOptionalData": "YearDriveRecord.tsx:28-31: /drives recovery; YearFunFacts.tsx:11-15: unavailable comparison placeholder; chart row/slice emptiness handled in canonical frame.",
+    "fatalError": "YearReviewPage.tsx:73,84,185-188: QueryError with retry in gated cards and fatal chart errors.",
+    "refreshError": "YearReviewPage.tsx:72,165,201-207: retained data and compact retry survive, impact status becomes retained; chart errors supplied only when no data.",
+    "staleOffline": "YearReviewPage.tsx:162 forwards year query to existing PageContainer/DataFreshnessAuto. No explicit page offline state; freshness renderer and offline behavior not exercised.",
+    "disabled": "YearReviewPage.tsx:140 disables future-year advancement; AIYearReviewNarration.tsx:38-60 and AIFeatureCard.tsx:259-300 disable unresolved/invalid vehicle and active streaming.",
+    "ai": "Optional sanctioned feature gate; idle/streaming/done/error output contract uses existing AI owner. No user-visible cancel control was verified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+        "line": 48,
+        "rule": "MDC-026 / every independent source has actionable failure",
+        "detail": "Page reads only fleet isLoading. With no URL/stored vehicle, a fleet request failure leaves review disabled and gate shows Select a vehicle rather than identifying the failed fleet source; fleet retry/refresh error is not passed into page trust metadata.",
+        "fix": "Expose the fleet query result to the existing named-source/retry pipeline; distinguish unknown fleet failure from confirmed empty fleet and retain usable selection/review data.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+        "line": 40,
+        "rule": "MDC-026 / unknown is not measured zero",
+        "detail": "Chart defaults missing drives/distance/energy to zero; subtitle defaults weekly count to zero. Charging summary defaults missing SOC to 0; recap safeNumber, derived savings/trees and to12Hour similarly synthesize zero/midnight for malformed/partial input. TS fields are required, so actual backend nullability remains unverified.",
+        "fix": "Confirm payload nullability at integration boundary; retain source rows and distinguish missing measurements from real zero. Suppress derived coffee/tree/hour assertions when their prerequisite is unknown.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "all states unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+      "line": 81,
+      "rule": "MDC-010 / MDC-034 / mission 43 restrained accent and shared palette",
+      "detail": "Monthly series use literal purple #a78bfa and bright cyan #22d3ee rather than the existing palette owner; connector slices also define their own amber/indigo/gray colors at YearChargingMix.tsx:23-25. Source bypasses the saved theme/chart palette rather than proving a visual contrast failure.",
+      "fix": "Reuse existing chart-palette/semantic charger colors with stable series/connector identity, preserve legend state and saved palette choices, and measure contrast in all themes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearSavingsBrief.tsx",
+      "line": 35,
+      "rule": "MDC-010 / mission 43 semantic color consistency",
+      "detail": "Cost bars hardcode rose #fb7185 and green #34d399, competing with centralized semantic colors. Retain gas/electric meaning without unnecessary saturation or an invented adverse interpretation.",
+      "fix": "Use existing semantic/palette ownership for cost series; keep labels, values and complete equivalent-cost comparison visible.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 295,
+      "rule": "MDC-010 / mission 43 reduced-noise shared action treatment",
+      "detail": "The shared AI action sets cyan border/background/text/hover/focus classes independently of Button's normal theme treatment. This affects the narration embedded in this page; no actual glow or contrast failure is claimed.",
+      "fix": "Have the shared AI owner review a restrained semantic action treatment across real AI consumers, retaining Helix identity, named action, busy/disabled and output behavior.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearDriveRecord.tsx",
+      "line": 2,
+      "rule": "MDC-002 / category-barrel production imports",
+      "detail": "YearDriveRecord and YearRecap import StatGroup from the stat-reference implementation barrel; YearFunFacts and YearChargingMix import layout-reference, while public category owners already exist. Operational brief feature components also directly use stat-reference helpers.",
+      "fix": "Consume approved public category exports where available; do not introduce wrappers or force an export change without verifying helper ownership.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "line": 42,
+      "rule": "MDC-046 / scope validation",
+      "detail": "Number(yearParam) || currentYear admits fractional, negative and infinite years; navigation and display period then propagate those values. Invalid calendar input is not distinguished from valid business scope.",
+      "fix": "Validate calendar-year shape with the actual backend-supported range; preserve normal prior/next-year behavior and explicit current-year default without inventing bounds.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIYearReviewNarration.tsx",
+      "line": 17,
+      "rule": "MDC-026 / source period truthfulness",
+      "detail": "Narration always requests previous calendar year but says recap from the slide data above at lines 43-46; route year can differ. The page explicitly preserves this independent policy at lines 255-257, so silently changing the request to selected year would change existing behavior.",
+      "fix": "Expose/localize the actual narrated year and independence in the existing AI owner. Any optional explicit-year support needs an integration decision and backward-compatible default; do not silently alter body/scope.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "line": 96,
+      "rule": "MDC-045 / raw contract preservation",
+      "detail": "Page and child components consume derived-unit fields from YearReview, including km/kWh/kmh/min/Wh-per-km. This is a source-confirmed wire-contract exception relative to the canonical SI direction, not authorization for a page-only payload rename.",
+      "fix": "Keep existing wire/cache untouched during presentation work; report coordinated backend/types/hooks cutover to the integration owner, preserving all values and specialist conversions.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium-high",
+    "first": "Fleet failure visibility and truthful independent narration year; source-nullability confirmation before treating unknown data as zero.",
+    "next": "Deduplicate impact chrome, reuse shared palettes/semantic actions and approved import owners.",
+    "acceptance": "Page implementation is not accepted by this source-only audit. Mission 44 runtime/visual/accessibility gates remain pending."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Single-surface OperationalBrief embedding",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "file": "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+      "line": 200,
+      "rule": "MDC-015 / MDC-033",
+      "detail": "Three impact cards currently duplicate outer LayoutCard chrome and contained brief chrome.",
+      "fix": "Prefer composition using one existing surface owner; if shared capability is required, review embedded presentation without changing standalone defaults.",
+      "confidence": "high",
+      "props": ["Existing compact/loading, title/description/statusLabel, scope/provenance, metrics, freshness/actions and details", "Potential opt-in embedded presentation only if composition cannot preserve all ancillary content"],
+      "variants": ["standalone unchanged", "embedded proposal, not an accepted API"],
+      "states": ["loading", "missing/invalid metrics", "retained refresh failure", "details drawer"],
+      "usedBy": ["YearSavingsBrief", "YearEnvironmentBrief", "YearPatternsBrief"],
+      "dependsOn": ["Shared stats/layout owner review", "Preserve gas/electric bars, coffee/tree comparisons and day/hour blocks", "Focused parity and actual narrow-container validation"],
+      "scope": "Proposal only; three consumers are within this page, not evidence of independent-page demand for a new shared composite."
+    },
+    {
+      "name": "Truthful independent AI year context",
+      "owner": "web\\src\\components\\ai\\AIYearReviewNarration.tsx",
+      "file": "web\\src\\components\\ai\\AIYearReviewNarration.tsx",
+      "line": 17,
+      "rule": "MDC-026 / MDC-044",
+      "detail": "Visible context does not identify the previous-year body policy.",
+      "fix": "Label the actual narrated year in existing localized description/context, retaining the current policy.",
+      "confidence": "high",
+      "props": ["vehicleId unchanged", "Existing title/description/emptyHint and localized actual-year context", "Optional year prop only after integration approval; not required for truthful copy"],
+      "variants": ["enabled", "AI-off sanctioned visibility gate"],
+      "states": ["unresolved vehicle", "idle", "streaming", "retained output", "error", "vehicle scope reset"],
+      "usedBy": ["YearReviewPage recap section"],
+      "dependsOn": ["Existing AIFeatureCard and canonical catalog owner", "Preserve body year/default and scopeKey", "Focused request-body and narrative-scope cases"]
+    },
+    {
+      "name": "Reuse existing palette and AI action owners",
+      "owner": "web\\src\\lib\\colors.ts",
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+      "line": 81,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Page-specific charts/bars bypass centralized color ownership; shared AI card has bespoke cyan action chrome.",
+      "fix": "Reuse chart/semantic palette capabilities; shared AI owner handles action styling, not page-local overrides.",
+      "confidence": "high",
+      "props": ["Stable series/connector identity", "Existing color props on Bar/Line/Cell/MetricBar", "Existing Button variant and AI stream/canStart contracts"],
+      "variants": ["saved chart palette preserved", "light/dark/custom theme", "neutral versus meaningful semantic accents"],
+      "states": ["visible/hidden series", "disabled", "busy", "hover/focus", "forced colors"],
+      "usedBy": ["YearMonthlyActivity", "YearChargingMix", "YearSavingsBrief", "AIFeatureCard"],
+      "dependsOn": ["Existing colors.ts and useChartPalette ownership", "Shared AIFeatureCard owner", "Real contrast/CVD/theme review"],
+      "scope": "Reuse/extension review; no new palette engine or speculative shared component."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\year-review-modernization\\index.ts",
+      "line": 3,
+      "rule": "MDC-002 / mission 0.6",
+      "detail": "Barrel exports YearSavings/YearEnvironment/YearPatterns while the mounted page aliases replacement Year*Brief components from operationalbrief-n-z. Inspected older implementations retain parallel calculations and StatGroup presentation.",
+      "fix": "Reconcile ownership and consumers before removing obsolete exports; do not infer global dead code from this page's imports.",
+      "owner": "integration",
+      "confidence": "high",
+      "mounted": ["YearSavingsBrief", "YearEnvironmentBrief", "YearPatternsBrief"],
+      "parallelFiles": ["web\\src\\features\\analytics\\components\\year-review-modernization\\YearSavings.tsx", "web\\src\\features\\analytics\\components\\year-review-modernization\\YearEnvironment.tsx", "web\\src\\features\\analytics\\components\\year-review-modernization\\YearPatterns.tsx"],
+      "limits": "No repository-wide caller search; other consumers and actual tree-shaking remain unknown."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "13a76010933c80357e13178f50d451ba002c56397bafe15747aa71913c76c7a7",
+    "hashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 262,
+    "pageAndMountedFeatureComponentsLineCount": 678,
+    "lineCountScope": "Page plus eight mounted feature component files; excludes shared AI/components and display helper. No original pre-modernization baseline was assigned.",
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Year highlights", "id": "year-review-highlights", "line": 174, "content": ["Distance", "Drives", "Energy", "Charges", "Gas savings", "CO2 offset"], "metricCount": 6},
+      {"name": "Activity", "id": "year-review-activity", "line": 183, "content": ["Monthly activity bar/line with drives/distance and exported energy column", "Charging mix and average starting SOC"], "chartCount": 2},
+      {"name": "Impact", "id": "year-review-impact", "line": 198, "content": ["Savings/electric/gas-equivalent cost bars and coffee comparison", "CO2/tree-equivalent estimate and capped icons with remainder", "Favorite day/peak hour/drives-week/distance-drive/average efficiency"], "cardCount": 3},
+      {"name": "Drives of the year", "id": "year-review-records", "line": 215, "content": ["Longest", "Most efficient", "Shortest", "Least efficient", "Top speed", "Hottest drive", "Coldest drive"], "recordCardCount": 4, "extremeMetricCount": 3},
+      {"name": "Fun facts", "id": "year-review-facts", "line": 238, "content": ["All source comparison labels/values/emoji in source order or explicit empty state"], "cardCount": "dynamic"},
+      {"name": "Recap", "id": "year-review-recap-section", "line": 249, "content": ["Year/vehicle/model", "Drives/distance/energy/charges/CO2", "Positive savings summary", "Screenshot guidance", "Independent optional Helix narration"], "recapMetricCount": 5}
+    ],
+    "counts": {
+      "pageSectionTags": 6,
+      "pageCardGridTags": 4,
+      "pageLayoutCardTags": 9,
+      "pageOperationalBriefTags": 2,
+      "mountedOperationalBriefInstances": 5,
+      "pageGlassPanelOrChartContainerTags": 0,
+      "mountedCanonicalChartFrames": 2,
+      "recordCards": 4,
+      "funFactCards": "one per returned comparison"
+    },
+    "actions": [
+      {"name": "Previous year", "evidence": "YearReviewPage.tsx:55-57,136", "behavior": "Navigate year-1 retaining vehicle_id"},
+      {"name": "Next year", "evidence": "YearReviewPage.tsx:140", "behavior": "Navigate year+1 retaining vehicle_id; disabled at or beyond currentYear"},
+      {"name": "Close", "evidence": "YearReviewPage.tsx:158", "behavior": "navigate(-1)"},
+      {"name": "Retry review", "evidence": "YearReviewPage.tsx:73,165,185-188", "behavior": "refetch at fatal/retained errors"},
+      {"name": "Go to vehicles", "evidence": "YearReviewPage.tsx:77,190-192", "behavior": "/vehicles empty-fleet recovery"},
+      {"name": "View drives", "evidence": "YearDriveRecord.tsx:28-31", "behavior": "/drives when a record is absent; no record drill-through exists here"},
+      {"name": "Monthly legend series visibility", "evidence": "YearMonthlyActivity.tsx:31,71,80-84", "behavior": "Preserve year-monthly-chart identity and drives/distance hidden-series keys"},
+      {"name": "Monthly chart export", "evidence": "YearMonthlyActivity.tsx:62-70; ChartContainer.tsx:130-135", "behavior": "Canonical export owner, year-review-monthly filename and month/drives/distance/energy columns; no runtime export exercised"},
+      {"name": "Operational details", "evidence": "OperationalBrief.tsx:10,16-17,100", "behavior": "Preserve existing evidence details drawer in five briefs; actual drawer interaction unverified"},
+      {"name": "Narration / Ask Helix", "evidence": "AIYearReviewNarration.tsx:22-29,38-60; AIFeatureCard.tsx:280-313", "behavior": "Explicit positive-vehicle action using previous-calendar-year body, busy/disabled and feature gate"},
+      {"name": "Screenshot recap", "evidence": "YearRecap.tsx:12,44", "behavior": "Guidance only; no download/share-button capability to invent"}
+    ],
+    "dataBehavior": [
+      "Preserve calendar-year route scope as independent business date; do not add workspace range picker/bounds to a year-only endpoint.",
+      "Preserve shared selected-vehicle ownership and URL vehicle_id; no duplicate local picker.",
+      "Preserve year/vehicle query key, enablement, stale times, AbortSignal, raw snake_case payload and inherited query policies.",
+      "Keep all section shells and retained measurements on refresh failure; do not gate whole page behind data.",
+      "Preserve monthly source order/rounded distance and energy table, dual axes, hidden-series persistence and connector identity after slice filtering.",
+      "Preserve four optional record identities, start/end addresses, date and compact rounded-minute policy.",
+      "Preserve raw measured values, source-derived cost/tree/coffee semantics, currencies/units and specialist integer rounding; missing-data corrections require contract evidence, not fabricated values.",
+      "Keep server comparisons as source data; do not rewrite user/server labels.",
+      "Preserve CO2 kg, source Celsius and saved display preferences; no wire/cache renaming in page-only presentation work.",
+      "Preserve independent narration previous-year policy and AI-off/auth/read-only boundaries."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 READ-ONLY source audit; only assigned report and heartbeat written",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "viewport": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "tests": "not run",
+    "typescript": "not run; concurrent Phase0 contract forbids project-wide validation",
+    "lintBuildGit": "not run as assigned",
+    "violationsSkill": "Read audit.sh. Its full invocation includes project TypeScript; not executed under this restricted assignment. Equivalent bounded source patterns were executed against the sole page, not the full frontend.",
+    "sourceChecks": [
+      {
+        "command": "Get-FileHash web\\src\\features\\analytics\\pages\\YearReviewPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\analytics\\pages\\YearReviewPage.tsx).Count",
+        "exitCode": 0,
+        "output": "SHA256 13A76010933C80357E13178F50D451BA002C56397BAFE15747AA71913C76C7A7; 262"
+      },
+      {
+        "command": "PowerShell Get-Content -Raw sole page; [regex]::Matches counts for static var(--*) style, raw control elements, direct visualization imports, old API imports, fixed neon/white/gray classes, Section, OperationalBrief and GlassPanel/ChartContainer tags",
+        "exitCode": 0,
+        "output": "TARGETED SOURCE SCAN (not runtime/typecheck)\nstatic inline style: 0\nraw controls: 0\ndirect visualization library: 0\nold API import: 0\nfixed neon/white/gray classes: 0\nSection count: 6\nOperationalBrief count: 2\nGlassPanel/ChartContainer page count: 0",
+        "limits": "Page-only regex counts are not zero whole-feature violations, acceptance or a typecheck."
+      },
+      {
+        "command": "PowerShell Get-Content line counts over sole page and its eight mounted feature presentation files",
+        "exitCode": 0,
+        "output": "YearReviewPage.tsx 262; YearMonthlyActivity.tsx 90; YearChargingMix.tsx 71; YearDriveRecord.tsx 48; YearFunFacts.tsx 32; YearRecap.tsx 47; YearSavingsBrief.tsx 44; YearEnvironmentBrief.tsx 37; YearPatternsBrief.tsx 47; total 678"
+      }
+    ],
+    "backend": "Route registration and TypeScript response declarations only; no SQL/server timezone/nullability/coverage or actual endpoint response verification.",
+    "transitiveDependencies": "Bounded page-specific inspection; full theme, settings, stream providers, metric formatter internals, freshness renderer and canonical catalogs not audited.",
+    "historicalAcceptance": "Not borrowed; existing test files and prior modernization receipts are not executed current evidence.",
+    "ownership": ["docs\\frontend-audits\\audit-page-055.json", ".agent-status\\audit-page-055.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\YearReviewPage.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearChargingMix.tsx",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearDriveRecord.tsx",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearFunFacts.tsx",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearRecap.tsx",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\yearReviewPresentation.ts",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearSavings.tsx",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearEnvironment.tsx",
+    "web\\src\\features\\analytics\\components\\year-review-modernization\\YearPatterns.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearSavingsBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearEnvironmentBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearPatternsBrief.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ai\\AIYearReviewNarration.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\aiyir\\handler.go",
+    "internal\\api\\aiyir\\handler_test.go",
+    "internal\\api\\aiyir\\doc.go"
+  ]
+}

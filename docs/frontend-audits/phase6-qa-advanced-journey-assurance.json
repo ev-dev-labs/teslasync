@@ -1,0 +1,385 @@
+{
+  "item": "phase6-qa-advanced-journey-assurance",
+  "workerRole": "source-only finished-page QA",
+  "status": "DONE_SOURCE_REVIEW_WITH_FINDINGS",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+  "routes": ["/intelligence/journey-assurance"],
+  "purpose": "Assess a user-submitted journey scenario against supported vehicle evidence without navigation, charger reservation, or vehicle commands.",
+  "primaryGoal": "Understand modeled departure readiness, arrival SoC bounds, estimated energy, evidence quality, and explicitly unsupported capabilities.",
+  "acceptance": {
+    "sourceReview": "COMPLETED",
+    "fullPageAcceptance": "NOTRUN",
+    "nativeRuntime": "NOTRUN",
+    "browserRuntime": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "typeScript": "NOTRUN",
+    "lintBuildSuites": "NOTRUN",
+    "visualKeyboardContrastScreenReader": "NOTRUN",
+    "liveActionsAndHttp": "NOTRUN",
+    "reason": "Assignment authorizes bounded source inspection and two evidence files only. No browser, real journey/location/identity, HTTP, mutation, shell command, tests, Git, Docker, install, server, helper, extension, or global gate was executed.",
+    "priorPhase6QaUsed": false,
+    "priorTestReceiptsUsed": false,
+    "claim": "Source-derived mechanisms and repro instructions are not executed reproductions, test passes, or mounted-page acceptance."
+  },
+  "ownership": {
+    "soleWriter": [
+      "docs\\frontend-audits\\phase6-qa-advanced-journey-assurance.json",
+      "logs\\phase6-qa-advanced-journey-assurance.log"
+    ],
+    "sourceTestsSharedTypesCatalogApiBackend": "READ_ONLY",
+    "ignoredLogEvidence": ".gitignore contains logs/.",
+    "backgroundProcessesStarted": 0,
+    "shellCommandsExecuted": 0,
+    "subagentsHelpersExtensionsStarted": 0,
+    "release": "ALL_RELEASE",
+    "postReturnWrites": "NONE"
+  },
+  "authorityRead": [
+    "docs\\frontend-mission.md:0-2,43-44",
+    "docs\\frontend-design-contract.md:MDC-020-026,031-033,040-046,060-070",
+    "docs\\frontend-worker-conventions.md:audit/QA evidence and no-change-worker guidance",
+    "docs\\FORM_GUIDELINES.md:validation and error display",
+    "docs\\I18N_GUIDELINES.md:localization and technical identifier exceptions",
+    "docs\\MOBILE_GUIDELINES.md:responsive/mobile principles",
+    "docs\\A11Y_GUIDELINES.md:forms, focus, targets, live regions",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\SKILL.md",
+    ".github\\prompts\\audit-pages.prompt.md"
+  ],
+  "authorityResolution": "Use the current design contract's restrained design, SI-only display-boundary conversion, and bounded worker rules rather than older neon/source-unit examples. Finished-page QA is reviewed against mission sections 43-44 and MDC-060/070; its runtime gates are not waived.",
+  "scope": {
+    "primarySource": [
+      "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx"
+    ],
+    "contextOnly": "Narrow read-only route, request, wire-type, date-formatter, and Input-sizing citations establish the direct parts' mechanisms. They are not independent audits of shared owners or backend behavior.",
+    "excluded": "Other pages, prior Phase-6 QA reports, test bodies/results, catalogs, real data, authentication, runtime behavior, server calculation internals."
+  },
+  "dataSources": [
+    {
+      "hook": "useRunJourneyAssurance",
+      "pageCitation": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:4,46,67-73",
+      "ownership": "Typed simulation mutation; result publication is delegated to useRetainedMutation with input/result vehicle identity selectors.",
+      "method": "POST",
+      "hookPath": "/advanced-intelligence/journey-assurance/scenarios",
+      "hookEvidence": [
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:29",
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:156-169",
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:180-183"
+      ],
+      "registeredPath": "/api/v1/advanced-intelligence/journey-assurance/scenarios",
+      "routeEvidence": [
+        "internal\\api\\router.go:3210",
+        "internal\\api\\router.go:3960",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:69-78"
+      ],
+      "agreement": "SOURCE_CONFIRMED method/path agreement through router.go's delegated MountRoutes call; the literal endpoint is not written directly in router.go.",
+      "limits": "No HTTP, authorization, response, live-only mutation policy, or server calculation was exercised. Request-client auto-prefix behavior is documented by applicable guidance, not freshly runtime-tested."
+    }
+  ],
+  "components": [
+    "PageLayout, SourceContent, FadeIn",
+    "InsightPanel -> LayoutCard, SourceContent, DataFreshness, StaleRefreshWarning",
+    "AnalysisBrief -> OperationalBrief and useOperationalMetrics",
+    "EvidencePanel -> InsightPanel, KVList, Badge, Text",
+    "SiNumberInput -> shared Input",
+    "MutationError -> AlertBanner",
+    "Shared Button, Input, Icon, Text, Badge, KVList, EmptyState"
+  ],
+  "findings": [
+    {
+      "id": "JA-SOURCE-01",
+      "severity": "P2",
+      "classification": "SOURCE_CONFIRMED_MECHANISM",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "line": 71,
+      "additionalCitations": [
+        "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx:10,71-72,118",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:6,61-62,87-92",
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:42,239",
+        "web\\src\\lib\\dateFormat.ts:29-50,54-58",
+        "web\\src\\hooks\\useDateFormat.ts:74-85,91-94"
+      ],
+      "rule": "MDC-044: preserve effective locale/timezone preferences and coherent timestamp interpretation.",
+      "detail": "The submitted Departure is formatted with useDateFormat, but the direct brief/evidence parts call the pure formatDateTime helper without its options argument. That helper defaults to browser locale/timezone. Observation-window endpoints, generation time, and evidence observations therefore bypass the effective settings used for Departure.",
+      "mechanism": "AnalysisBrief and EvidencePanel import the pure formatter and omit opts; useDateFormat supplies { locale, tz } to that same formatter. This is a direct source distinction, not an inferred backend issue.",
+      "sourceDerivedRepro": [
+        "In an authorized future QA fixture, use a browser timezone different from the effective display timezone and a browser locale different from the saved locale.",
+        "Supply the same synthetic ISO instant, for example 2026-01-15T12:00:00Z, as submitted departure, result generation time, quality-window endpoint, and an evidence observed_at.",
+        "Inspect the settings-aware Departure beside the browser-default brief/evidence dates. With a Los Angeles browser and UTC display preference, the two formatter paths represent noon UTC as different wall-clock times; locale formatting also follows different inputs.",
+        "Do not execute a real scenario POST to obtain this comparison."
+      ],
+      "reproExecuted": false,
+      "fix": "At the existing feature-part owners, use the existing settings-aware formatter or explicitly thread its resolved options. Preserve raw ISO instants, provenance, observation windows, retained results, and null fallbacks.",
+      "owner": "advanced-intelligence feature-parts owner; outside this evidence-only writer",
+      "confidence": "high for source mechanism; runtime manifestation NOTRUN"
+    },
+    {
+      "id": "JA-SOURCE-02",
+      "severity": "P2",
+      "classification": "SOURCE_CONFIRMED_MECHANISM",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 65,
+      "additionalCitations": [
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:33-37,65-72",
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:143-148",
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:42,239"
+      ],
+      "rule": "MDC-044/MDC-032: business dates remain independent, but their timezone semantics must be explicit.",
+      "detail": "Departure input/default use browser-local wall-clock fields and new Date(datetime-local), yet its visible label is only Departure with no browser-zone hint. The submitted instant is subsequently displayed through the effective timezone-aware hook. When effective display timezone differs from browser timezone, the same generically labeled field changes wall-clock interpretation between form and returned-input summary.",
+      "mechanism": "datetime-local carries no offset. The submit handler interprets it with the host Date parser and emits UTC with toISOString; the submitted-input summary uses useDateFormat. The code checks a finite date but supplies no effective timezone to the parse and no zone disclosure on the input.",
+      "sourceDerivedRepro": [
+        "In a future authorized synthetic fixture, set browser timezone to America/Los_Angeles and effective display timezone to UTC.",
+        "Consider the field string 2026-01-15T12:00: the source parses it as browser-local noon, not noon UTC.",
+        "Compare the settings-aware returned Departure for that resulting instant. A user following the displayed UTC convention would have supplied a different intended instant.",
+        "This is source-derived reasoning only; no form interaction, clock change, or POST was performed."
+      ],
+      "reproExecuted": false,
+      "fix": "Make the existing business-date control's timezone contract explicit: either label/hint browser-local entry and preserve that contract, or use the established timezone-aware input/conversion owner for the selected effective zone. Do not add a duplicate workspace range picker or hand-written timezone engine.",
+      "owner": "JourneyAssurancePage owner",
+      "confidence": "high for host-timezone parsing and absent disclosure; user/runtime effect NOTRUN"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "JA-CANDIDATE-01",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 24,
+      "rule": "MDC-025/MDC-026 unknown is not failure",
+      "mechanism": "qualityVariant returns danger for any value other than sufficient/limited, including undefined or a future status; an existing truthy quality object renders the raw status at line 57.",
+      "sourceDerivedRepro": "A future authorized robustness fixture with a truthy quality object but an absent/unrecognized status would take the danger fallback instead of an explicit neutral unknown label.",
+      "classification": "CANDIDATE_OUTSIDE_CURRENT_WIRE_CONTRACT",
+      "constraint": "The inspected QualityStatus union is sufficient | limited | insufficient (web\\src\\types\\advancedIntelligence.ts:9-12). All declared statuses are correctly covered. Missing quality itself has a textual unsupported branch. No current valid-response defect is asserted.",
+      "reproExecuted": false,
+      "owner": "EvidencePanel owner if runtime robustness is separately authorized"
+    },
+    {
+      "id": "JA-CANDIDATE-02",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 144,
+      "additionalCitations": [
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:130-194",
+        "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx:29-38",
+        "web\\src\\components\\ui\\Input.tsx:29-33"
+      ],
+      "rule": "MDC-040: 44px mobile target default",
+      "mechanism": "The submit action explicitly has min-h-11 below md, while the direct numeric/date Input call sites do not specify equivalent sizing. The shared Input sizing map has md min-h-10.",
+      "classification": "CANDIDATE_COMPUTED_GEOMETRY_NOT_MEASURED",
+      "sourceDerivedRepro": "Measure all six fields at default font scale and 320/375/390/430px in the mounted page, including suffix/hint and browser datetime affordances; verify actual target rectangles and non-overlap.",
+      "constraint": "No rendered control dimensions, default-prop execution, inherited styles, hit rectangles, or permitted spacing exception were verified. No mobile accessibility pass/fail is claimed.",
+      "reproExecuted": false,
+      "owner": "Page/input-adoption owner after bounded native/browser proof"
+    },
+    {
+      "id": "JA-CANDIDATE-03",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 263,
+      "additionalCitations": ["web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:57"],
+      "rule": "MDC-044 localized human-readable statuses versus technical-identifier exemption",
+      "mechanism": "Unsupported/empty factor status gets translated text, while other factor statuses and the quality badge render source tokens. AnalysisBrief instead maps declared quality states to localized human-readable labels.",
+      "classification": "CANDIDATE_PRODUCT_LABEL_CLASSIFICATION",
+      "sourceDerivedRepro": "In a future localized synthetic result, inspect the human-facing badges beside the localized brief status and decide whether raw tokens are intentional technical identifiers.",
+      "constraint": "I18N_GUIDELINES rule 7 exempts technical/API enum identifiers. No catalog was read or changed and no missing translation key was alleged. Backend-owned factor/explanation text is not assumed to be client-owned English.",
+      "reproExecuted": false,
+      "owner": "Existing feature/i18n owners if product labels are required"
+    }
+  ],
+  "states": [
+    {
+      "state": "Initial / no selection",
+      "sourceEvidence": "Page:63-64,76-85,201-202,213-231,249-255,277-313; AnalysisBrief:52-53,75-85,121-129",
+      "assessment": "Form, summary, factors, and evidence/quality/limitations shells are composed without a whole-page data gate. Submit is disabled without a vehicle. Summary supplies not-calculated or select-vehicle attention.",
+      "verification": "SOURCE_ONLY"
+    },
+    {
+      "state": "Initial pending / paused",
+      "sourceEvidence": "Page:80-85,201; AnalysisBrief:39-51,58-65,79-85; InsightPanel:43-54",
+      "assessment": "Pending is passed to the action/brief and source state. Paused source text explicitly avoids inferring empty server evidence.",
+      "limits": "Actual mutation-source flags and offline scheduling are owned by unreviewed shared lifecycle policy; no runtime loading/paused proof.",
+      "verification": "SOURCE_ONLY"
+    },
+    {
+      "state": "Initial failure / retry",
+      "sourceEvidence": "Page:79-83,209,251-254,302-305; MutationError:8-21; AnalysisBrief:42,46,97-104; InsightPanel:40,85-87",
+      "assessment": "Failure paths are source-local. MutationError uses an atomic alert. Brief/panel retry is conditional on the existing data-state retry callback.",
+      "limits": "ErrorDisplay focus, announcement deduplication, retry behavior, and server error wording were not exercised.",
+      "verification": "SOURCE_ONLY"
+    },
+    {
+      "state": "Success / modeled trust",
+      "sourceEvidence": "Page:87-101,110-117,213-231,233-244,257-271,283-290",
+      "assessment": "Summary metrics distinguish modeled readiness/arrival/energy from health, confidence, and measured consumption. Published submitted inputs rather than the currently edited form populate the result context. Explicit unsupported traffic/charger availability and vehicle commands remain visible.",
+      "verification": "SOURCE_ONLY"
+    },
+    {
+      "state": "Retained / stale / refresh failure",
+      "sourceEvidence": "Page:47-49,78-83,213-225,277-281; AnalysisBrief:40-45,88-95; InsightPanel:39-47,70-87",
+      "assessment": "Page supplies vehicle identity selectors to existing publication lifecycle, and direct parts preserve retained content with warning/freshness mechanisms rather than treating retained readings as fresh.",
+      "limits": "Vehicle switch, result ownership, failed replacement, and out-of-order race suppression remain shared-hook/runtime obligations. No claim that these races pass.",
+      "verification": "SOURCE_ONLY"
+    },
+    {
+      "state": "Null / empty / unknown / genuine zero",
+      "sourceEvidence": "Page:77,87-101,150-158,238-243,257,268; SiNumberInput:32,40-42; EvidencePanel:35-37,60-66,69-73,95-101,112-126",
+      "assessment": "Null arrays normalize to []; absent optional inputs and factor scores retain em dashes; zero factor scores use != null and remain visible. Raw optional metric values are passed to the existing numeric owner rather than silently replaced by zero. Evidence and quality shells remain present.",
+      "limits": "Malformed array entries, nonfinite response numbers, numeric-owner range validation, and formatted sample-count null behavior were not executed or certified.",
+      "verification": "SOURCE_ONLY"
+    }
+  ],
+  "siAndFormatting": {
+    "request": "Page:67-73 sends canonical route_distance_m, outside_temp_c, average_speed_mps, auxiliary_load_w and UTC departure_at; no page-side conversion rewrites the wire measurements.",
+    "inputs": "Page:130-194 uses SI.distance/temperature/speed/power and useUnits display-equivalent hints. Required distance/reserve and native bounds are preserved; SiNumberInput:40-42 maps blank/nonfinite user input to null.",
+    "submittedInputs": "Page:238-243 intentionally labels the published scenario values canonical SI and uses SI suffixes. These are scenario provenance, not unlabeled user-unit readings.",
+    "results": "Page:87-101 sends raw modeled percent/Wh metrics through AnalysisBrief/useOperationalMetrics. Factor percentages use useNumberFormatting; null is not zero.",
+    "locale": "Number hooks are present; full locale, precision, pluralization, percent conventions, and catalog resolution NOTRUN.",
+    "timezone": "See JA-SOURCE-01 and JA-SOURCE-02.",
+    "legacyHelpers": "No legacy converter caller in the six inspected presentation files was observed. Shared conversion implementation was not audited.",
+    "verification": "SOURCE_ONLY"
+  },
+  "workspaceScope": {
+    "vehicle": "Page:44,47-49,63,71,202,218 consumes shared selected vehicle and tags submission/publication by vehicle. No local vehicle selector appears.",
+    "route": "App.tsx:236 lazily imports JourneyAssurancePage; App.tsx:770 mounts intelligence/journey-assurance.",
+    "scopeSource": "workspaceScope.ts:23-77,96-138,165-179 makes range opt-in and vehicle enabled unless excluded.",
+    "expectedSourceScope": {"range": false, "vehicle": true},
+    "reason": "Journey assurance is a forward-looking scenario form, not a workspace date-filtered historical list. Its Departure is an independent business date. The actual route is not in the range set or vehicle-disable sets/prefixes.",
+    "limits": "getWorkspaceRouteScope was inspected but not executed. Header/mobile selector visibility, selected-vehicle persistence, and result-reset behavior NOTRUN."
+  },
+  "actions": [
+    {
+      "name": "Run confirmed readiness assessment",
+      "source": "Page:60-74,197-206",
+      "guards": "preventDefault; require vehicle; block while pending; require distance/reserve; native reportValidity; finite departure timestamp",
+      "effect": "Calls existing simulation mutation with confirmed:true and canonical scenario payload.",
+      "trustBoundary": "Planning notice expressly denies reservations, navigation, preconditioning, and vehicle commands.",
+      "limits": "No real/synthetic mutation executed. Server confirmation/auth/capability handling, offline dispatch, keyboard submit, success/failure notifications, and duplicate dispatch prevention NOTRUN."
+    },
+    {
+      "name": "Conditional source retry",
+      "source": "AnalysisBrief:91-94,103; InsightPanel:40,58-60,85-87",
+      "effect": "Uses existing source retry callback when supplied.",
+      "limits": "Availability, reachability, and callback behavior not executed."
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": "Page:128-129,200,233,258-260; EvidencePanel:47,81,119; SiNumberInput:29-43",
+    "mechanisms": "Container-query form/factor grids, min-w-0, wrapping text/items, responsive KVList, full-width wrapping submit, and three-column evidence only at lg preserve narrow-layout intent.",
+    "candidate": "JA-CANDIDATE-02",
+    "notRun": "All mission widths, narrow allocated containers, full-page scroll/reachability, 200% text, long translations/RTL, datetime native UI, safe-area/chrome, dark/light/custom modes, forced colors.",
+    "verdict": "SOURCE_INTENT_REVIEWED_NOT_VISUALLY_ACCEPTED"
+  },
+  "accessibility": {
+    "sourceEvidence": "Page:143-158,197-205,233,260,300-309; EvidencePanel:48,75,104; MutationError:14-15; InsightPanel:49-54",
+    "mechanisms": "Localized field labels and native required/min/max/step constraints; textual statuses, semantic article/headings/sections; error role=alert; unresolved/empty status text; shared controls and Icon boundary.",
+    "limits": "Label/control association at runtime, field group semantics, keyboard/focus order, focus clipping/restoration, announcement duplication, color contrast, OS forced colors, touch rectangles, reduced motion and screen-reader output NOTRUN.",
+    "verdict": "SOURCE_INTENT_REVIEWED_NOT_A11Y_ACCEPTED"
+  },
+  "preservation": {
+    "sourceHashes": "NOTRUN: no shell/hash helper authorized; report cites the inspected live sources without claiming pinned SHA-256.",
+    "currentLineCounts": {
+      "JourneyAssurancePage.tsx": 319,
+      "EvidencePanel.tsx": 132,
+      "InsightPanel.tsx": 95,
+      "MutationError.tsx": 23,
+      "SiNumberInput.tsx": 46,
+      "operationalbrief-all\\AnalysisBrief.tsx": 164,
+      "totalInspectedPresentationLines": 779
+    },
+    "lineCountEvidence": "Actual rg(pattern='^', output_mode='count') output retained in the ignored log.",
+    "originalComparison": "NOTRUN: no prior Phase-6 QA, Git history, or preservation baseline was read. No >=70% historical-preservation claim.",
+    "majorSections": [
+      "Planning estimate notice",
+      "Journey scenario form: all six fields and run/error feedback",
+      "Readiness and arrival range: four metrics and published-input context",
+      "Readiness factors",
+      "Evidence, quality, and limitations: all three subsections and unsupported capabilities"
+    ],
+    "majorSectionCount": 5,
+    "directGlassPanelChartContainerCount": 0,
+    "componentFrameMechanism": "The accepted page uses InsightPanel/LayoutCard and AnalysisBrief/OperationalBrief rather than literal GlassPanel or ChartContainer. Zero literal matches is not missing-section evidence.",
+    "pageBranches": "Three literal InsightPanel openings include the empty-evidence alternative; one AnalysisBrief and one EvidencePanel branch. Four FadeIn groups plus the planning notice. The submitted-context subsection is conditional on published inputs, not a whole-page data gate.",
+    "sourceChangesMade": false,
+    "runtimeSectionRendering": "NOTRUN"
+  },
+  "staticAudit": {
+    "tool": "functions.rg on exactly six production presentation files",
+    "primaryPattern": "style=\\{\\{|<(button|input|textarea|select|table)\\b|from ['\"](recharts|react-leaflet|framer-motion|\\.\\./api|\\.\\./\\.\\./api)['\"]|/api/v1/|[?&](vehicleId|driveId|sessionId|chargingId)=|\\bany\\b|fetch\\(|new EventSource|useEffect\\(",
+    "rawOutput": "No matches found.",
+    "literalMatchCount": 0,
+    "interpretation": "No matches for the stated prohibited-pattern regex within these six files. This is not zero total quality findings, an AST contract scan, a TypeScript pass, or full-page acceptance.",
+    "script": "NOTRUN: audit.sh invokes shell helpers and global npx tsc --noEmit; those are prohibited for this worker.",
+    "apiVerifier": "NOTRUN: no verification script/helper command; the single endpoint was checked by exact source citations.",
+    "otherRawScan": "A separate component-root regex matched valid category barrels (ui/layout/feedback/data-display/motion); these matches were inspected and not counted as root-import violations.",
+    "runtimeAssertions": "NONE"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Use existing effective date-format preferences at direct feature-part owners",
+      "ownerFiles": [
+        "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx"
+      ],
+      "usedBy": ["JourneyAssurancePage directly", "Other consumers not enumerated in this bounded audit"],
+      "dependsOn": "Assigned source owner and existing useDateFormat/options contract",
+      "newSharedApiNeeded": false,
+      "evidence": "JA-SOURCE-01"
+    }
+  ],
+  "duplicatedPatterns": "Date formatting follows two inconsistent existing call paths; reuse the existing settings-aware owner rather than adding a formatter. No independent duplicate widget family established.",
+  "competingImplementations": "No new implementation created by this worker.",
+  "priority": "P2 source-derived timezone consistency followup; candidates require separate classification/proof.",
+  "evidenceLimits": [
+    "Only source mechanisms and static regex/count outputs are fresh evidence.",
+    "All repros are synthetic instructions derived from source, not browser or test reproductions.",
+    "No prior Phase-6 QA or test pass was imported as authority.",
+    "Contract/route context reads are narrow and read-only; backend units, estimates, quality guarantees, auth and lifecycle execution are not accepted.",
+    "No real journey, location, identity, browser session, HTTP request, vehicle command, or mutation was accessed.",
+    "No shell, Git, Docker, install, server, subagent, helper, extension, global TypeScript, lint/build/test suite, or post-return write."
+  ],
+  "filesRead": {
+    "primaryFullPresentation": [
+      "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx"
+    ],
+    "boundedContextRangesOrGrep": [
+      "web\\src\\App.tsx",
+      "web\\src\\lib\\workspaceScope.ts",
+      "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "web\\src\\types\\advancedIntelligence.ts",
+      "web\\src\\lib\\dateFormat.ts",
+      "web\\src\\hooks\\useDateFormat.ts",
+      "web\\src\\components\\ui\\Input.tsx",
+      "internal\\api\\router.go",
+      "internal\\handler\\v1\\advancedintelligence\\handler.go",
+      ".gitignore"
+    ],
+    "guidance": [
+      "docs\\frontend-mission.md",
+      "docs\\frontend-design-contract.md",
+      "docs\\frontend-worker-conventions.md",
+      "docs\\FORM_GUIDELINES.md",
+      "docs\\I18N_GUIDELINES.md",
+      "docs\\MOBILE_GUIDELINES.md",
+      "docs\\A11Y_GUIDELINES.md",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\skills\\audit-violations\\audit.sh",
+      ".github\\skills\\verify-api-hooks\\SKILL.md",
+      ".github\\prompts\\audit-pages.prompt.md"
+    ],
+    "searchScopeDisclosure": "A page-name search returned test-file reference lines while locating the page/route. No test body or prior QA report was read or used as proof."
+  }
+}

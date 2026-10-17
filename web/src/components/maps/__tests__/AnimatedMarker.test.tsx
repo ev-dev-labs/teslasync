@@ -12,6 +12,8 @@
  * A hoisted cell (`h`) is the shared channel between the mock factories and the
  * test bodies (per vitest hoisting semantics).
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { render, cleanup } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
@@ -100,17 +102,16 @@ describe('AnimatedMarker', () => {
   beforeEach(() => h.reset());
   afterEach(() => cleanup());
 
-  it('renders a Marker whose icon embeds the default color and the replay-pulse keyframes', () => {
+  it('uses the default color and bundled replay keyframes without injecting styles', () => {
     render(<AnimatedMarker position={[37.7749, -122.4194]} />);
 
     const icon = h.icons[0];
     expect(icon).toBeDefined();
     // Default color from the component's default prop.
     expect(icon.html).toContain('#00b4d8');
-    // Regression guard: the pulse animation is referenced but was never
-    // declared globally — the keyframes MUST ship inside the icon markup.
     expect(icon.html).toContain('animation:replay-pulse');
-    expect(icon.html).toContain('@keyframes replay-pulse');
+    expect(icon.html).not.toContain('<style');
+    expect(readFileSync(join('src', 'index.css'), 'utf8')).toContain('@keyframes replay-pulse');
     // Icon geometry is preserved.
     expect(icon.iconSize).toEqual([24, 24]);
     expect(icon.iconAnchor).toEqual([12, 12]);

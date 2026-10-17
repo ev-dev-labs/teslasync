@@ -1,0 +1,599 @@
+{
+  "item": "phase6-qa-admin-api-playground",
+  "phase": 6,
+  "status": "SOURCE_ONLY_REVIEW_COMPLETED_WITH_CONFIRMED_FINDINGS",
+  "fullQA": "NOT ACCEPTED",
+  "page": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+  "route": "/api-playground",
+  "purpose": "Bounded read-only finished-page review of the accepted specification-driven request explorer and raw response inspector.",
+  "authority": {
+    "queueRow": "migration-queue.md:177",
+    "acceptedSourceRow": "migration-queue.md:1487",
+    "acceptedSourceCommitFromQueue": "1af8dfd577bb57e1a640ab9fcf68c5cd394a2e53",
+    "acceptanceLimit": "Phase5 explicitly accepted source only; lint exit 0, style exit 1 with three inherited geometry candidates, Vitest startup exit 1 with zero cases and capture exit 2 are historical receipts, not fresh passes.",
+    "writableVersionedFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-api-playground.json"
+    ],
+    "ignoredLog": "web\\logs\\phase6-qa-admin-api-playground.log",
+    "applicationFiles": "READ ONLY; no source, tests, catalogs, configuration or orchestrator files changed.",
+    "browserGrant": false,
+    "apiCallsExecuted": 0,
+    "gitCommandsExecuted": 0,
+    "subagentsLaunched": 0,
+    "dependenciesInstalled": 0,
+    "serversStarted": 0,
+    "dockerCommandsExecuted": 0,
+    "customHelpersCreatedOrExecuted": 0,
+    "native": "NOTRUN"
+  },
+  "timebox": {
+    "workerCreationAt": "2026-10-13T09:11:04.866-07:00",
+    "creationEvidence": "Timestamp accompanying the actual task dispatch; not a queue reservation timestamp.",
+    "firstActualClockReadAt": "2026-10-13T09:11:13.8914921-07:00",
+    "softDeadlineAt": "2026-10-13T09:31:04.866-07:00",
+    "hardDeadlineAt": "2026-10-13T09:36:04.866-07:00",
+    "sourceReviewLastClockReadAt": "2026-10-13T09:17:25.8709152-07:00",
+    "sourceReviewElapsedSecondsFromCreation": 381.005,
+    "lastDocumentValidationClockReadAt": "2026-10-13T09:22:15.3345245-07:00",
+    "elapsedSecondsAtThatRead": 670.482,
+    "boundedCommands": "All own commands completed synchronously; none exceeded the eight-minute command ceiling. No spawn or timeout wrappers.",
+    "stopHandling": "On STOP, return immediately with retained report/WIP and release all ownership; no post-return writes."
+  },
+  "acceptanceMeaning": {
+    "PASS": "Only the specifically named inspected-source or executed-document check is proven. It does not certify native behavior.",
+    "FAIL": "A source-proven behavior or contract gap, with exact mechanism and deterministic source-derived reproduction. No live reproduction was executed.",
+    "NOTRUN": "No applicable execution evidence; absence of authorization, not a pass or failed native test.",
+    "sourceOnlyDoesNotCertify": [
+      "Mounted application acceptance",
+      "Real authentication, authorization, sudo challenges or paid upstream effects",
+      "Visual, mobile, keyboard, contrast or screen-reader acceptance",
+      "Successful TypeScript, lint, build or test gates"
+    ]
+  },
+  "checkSummary": {
+    "scope": "Root individual checks only; excludes the seven separately listed endpoint agreements.",
+    "total": 35,
+    "PASS": 16,
+    "FAIL": 9,
+    "NOTRUN": 10,
+    "confirmedFindings": 9,
+    "nativeAcceptance": "NOTRUN"
+  },
+  "checks": [
+    {
+      "id": "P01",
+      "status": "PASS",
+      "name": "Existing item and source-only predecessor authority",
+      "evidence": ["migration-queue.md:177", "migration-queue.md:1487"],
+      "detail": "Reviewed the existing exact report-only item and accepted Phase5 row. No predecessor redispatch, implementation or completion-gate claim."
+    },
+    {
+      "id": "P02",
+      "status": "PASS",
+      "name": "Actual route and shared scope ownership",
+      "evidence": ["web\\src\\App.tsx:267,729", "web\\src\\lib\\routeLoaders.ts:103", "web\\src\\lib\\workspaceScope.ts:110-114"],
+      "detail": "Lazy SafeRoute mount is /api-playground. Header vehicle selection is intentionally disabled. Page has no competing workspace date/vehicle selector; endpoint parameters are independent request inputs."
+    },
+    {
+      "id": "P03",
+      "status": "PASS",
+      "name": "Specification request route, cancellation and client prefix",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:33-42", "web\\src\\api\\client.ts:79-96", "internal\\api\\router.go:3210,4395,4440"],
+      "detail": "GET /system/openapi is registered under /api/v1/system. The text/YAML request omits the client prefix, forwards the query cancellation signal and preserves the existing key and infinite staleTime."
+    },
+    {
+      "id": "P04",
+      "status": "PASS",
+      "name": "Explorer parsing, search and selection do not execute requests",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts:59-90", "web\\src\\features\\admin\\components\\EndpointSidebar.tsx:144-207", "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:46-49,76-82"],
+      "detail": "Five supported methods, local parameter/schema references, first-tag grouping, defaults/examples and sorted operations remain. Search uses path/summary/operationId; selection and replay only select/clear response, never call executeRequest."
+    },
+    {
+      "id": "P05",
+      "status": "PASS",
+      "name": "Initial, fatal, authoritative empty and no-selection source branches",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:44,97-104,136-156", "web\\src\\api\\dataState.ts:180-222"],
+      "detail": "Source-shaped skeletons, fatal-only QueryError/retry, successful no-endpoint EmptyState/reload and workspace selection prompt exist. Unknown specification metrics are undefined; valid empty specification counts are zero, not invented measurements."
+    },
+    {
+      "id": "P06",
+      "status": "PASS",
+      "name": "Retained and offline specification source handling",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:114-124,136-144", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-15", "web\\src\\components\\layout\\PageContainer.tsx:243-255", "web\\src\\components\\feedback\\DataSourceNotice.tsx:76-133,194-240"],
+      "detail": "The page does not pass a global loading/error replacement. Retained endpoints remain after refresh failure; deriveDataState marks stale and the shared nonblocking source notice distinguishes refresh failure from paused/offline with retry. Independent history summary stays mounted."
+    },
+    {
+      "id": "P07",
+      "status": "PASS",
+      "name": "Specification and local history trust are not conflated",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:83-104,118-130", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx:19-44"],
+      "detail": "Two independent OperationalBrief summaries explain source/scope. No server-wide traffic or observation timestamp is invented. Empty local history has known count zero and missing average latency; latency milliseconds are divided by 1000 only at the metric display boundary."
+    },
+    {
+      "id": "P08",
+      "status": "PASS",
+      "name": "Deliberate method-level confirmation and local optional API key",
+      "evidence": ["web\\src\\features\\admin\\components\\RequestBuilder.tsx:59-78,105-124,199-217", "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts:10-19"],
+      "detail": "Every supported non-GET opens an explicit Yes/Cancel alert before onSend. Key is password-input/component state and only an explicit X-API-Key header; existing authHeaders is reused. This proves confirmation presence, not live-mode safety, authorization or paid-operation protection; see AP003/N07."
+    },
+    {
+      "id": "P09",
+      "status": "PASS",
+      "name": "Raw HTTP errors and malformed/non-JSON responses remain inspectable",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts:20-43", "web\\src\\features\\admin\\components\\ResponseViewer.tsx:73-85,293-345"],
+      "detail": "Non-2xx HTTP responses are returned rather than replaced by thrown status errors. Response status/text, exposed headers, raw text, JSON/null/false/zero payloads and byte size remain. Invalid JSON falls back to original text. Duration measures time to response headers, not full body download."
+    },
+    {
+      "id": "P10",
+      "status": "PASS",
+      "name": "Raw SI inspector and existing presentation preferences",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts:24-42", "web\\src\\features\\admin\\components\\ResponseViewer.tsx:73-85,294", "web\\src\\hooks\\useOperationalMetrics.tsx:11-24", "web\\src\\hooks\\useNumberFormatting.ts:19-55"],
+      "detail": "The JSON inspector preserves wire field names and raw SI values, rather than silently converting payloads or invoking deprecated unit helpers. Operational metrics use existing preference-aware display formatting. Network-error synthetic zero metadata is separately flagged AP005."
+    },
+    {
+      "id": "P11",
+      "status": "PASS",
+      "name": "Metadata-only history cap and non-executing template replay",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:56-63,76-82", "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts:4-20,23-46"],
+      "detail": "New saved entries contain method, query-stripped path, HTTP status, duration and timestamp only; no API key, request body or response payload. Save caps at 20. Replay prefers exact same-method route then nonempty template match and never auto-sends. Loading persisted metadata still needs validation, AP006."
+    },
+    {
+      "id": "P12",
+      "status": "PASS",
+      "name": "Seven bounded source-pattern checks",
+      "evidence": ["web\\logs\\phase6-qa-admin-api-playground.log"],
+      "detail": "Corrected case-sensitive raw controls 0; inline style openings 0; direct recharts/react-leaflet/framer-motion imports 0; old API imports 0; request/apiUrl double-prefix literals 0; four prohibited camelCase query assignments 0; neon/glow patterns 0 across seven exact production files. These narrow regex results are not a complete styling or dynamic-URL audit."
+    },
+    {
+      "id": "P13",
+      "status": "PASS",
+      "name": "Canonical English static translation-key existence",
+      "evidence": ["web\\logs\\phase6-qa-admin-api-playground.log", "web\\src\\i18n\\en.json:10379-10436"],
+      "detail": "Executed lookup of 56 unique static t keys across the seven exact production files and AdminSummary: missing 0. This does not certify cold namespace loading, every prose string, plurals, every locale, RTL or text overflow; auxiliary literals remain C05."
+    },
+    {
+      "id": "P14",
+      "status": "PASS",
+      "name": "Current line and capability preservation against recorded original",
+      "evidence": ["docs\\frontend-audits\\audit-page-004.json:235-270", "migration-queue.md:1487", "web\\logs\\phase6-qa-admin-api-playground.log"],
+      "detail": "Measured current page 188 versus recorded original 190; page plus EndpointSidebar/RequestBuilder/ResponseViewer 972 versus recorded original 974, both above 70%. All eight named capabilities remain. Current and recorded original GlassPanel/ChartContainer openings are page 0, composed 6; four page section openings, two summaries, one Card and one selection-prompt LayoutCard remain. Historical original counts were not regenerated."
+    },
+    {
+      "id": "P15",
+      "status": "PASS",
+      "name": "Localized busy regions and explicit field associations where supplied",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:110-112,159,173", "web\\src\\features\\admin\\components\\RequestBuilder.tsx:141-149,164-174,205-214", "web\\src\\features\\admin\\components\\EndpointSidebar.tsx:96,179-182", "web\\src\\features\\admin\\components\\ResponseViewer.tsx:162,177,225,333-334"],
+      "detail": "Reload uses shared loading/aria-busy and mobile minimum 44px. Request/response regions now expose aria-busy. Search, path/query/key fields have names; disclosures expose expanded state, snippet formats pressed state, and response body a labelled region. Body textarea and selected endpoint state fail separately AP007/AP008. Prior audit cancellation and missing-region-busy findings are not carried forward."
+    },
+    {
+      "id": "P16",
+      "status": "PASS",
+      "name": "Existing motion, focus and source-notice primitives reused",
+      "evidence": ["web\\src\\components\\motion\\FadeIn.tsx:24-38", "web\\src\\hooks\\useMotionPreference.ts:44-48", "web\\src\\components\\ui\\Button.tsx:28-32,65-97"],
+      "detail": "Shared FadeIn disables entrance/delay under OS reduced motion or low bandwidth. Buttons retain shared focus/disabled semantics. No new RUM bootstrap, status registry, theme engine or page data-loading effect was introduced. Actual OS/focus acceptance remains NOTRUN."
+    },
+    {"id": "F01", "status": "FAIL", "name": "Required/schema request validation and feedback", "finding": "AP001"},
+    {"id": "F02", "status": "FAIL", "name": "Path parameter URI construction", "finding": "AP002"},
+    {"id": "F03", "status": "FAIL", "name": "Live-only operational write boundary", "finding": "AP003"},
+    {"id": "F04", "status": "FAIL", "name": "Response attribution after selection changes", "finding": "AP004"},
+    {"id": "F05", "status": "FAIL", "name": "Network failure status presentation", "finding": "AP005"},
+    {"id": "F06", "status": "FAIL", "name": "Persisted history shape trust", "finding": "AP006"},
+    {"id": "F07", "status": "FAIL", "name": "Request-body textarea accessible name", "finding": "AP007"},
+    {"id": "F08", "status": "FAIL", "name": "Selected endpoint state semantics", "finding": "AP008"},
+    {"id": "F09", "status": "FAIL", "name": "Python snippet JSON literal handling", "finding": "AP009"},
+    {
+      "id": "N01",
+      "status": "NOTRUN",
+      "name": "Mounted native/application request-selection and state QA",
+      "reason": "No browser grant. No route mount, DOM interaction, screenshot or real application response was obtained."
+    },
+    {
+      "id": "N02",
+      "status": "NOTRUN",
+      "name": "Responsive widths and allocated containers",
+      "widthsPx": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "reason": "No captures, pixel bounds or overflow measurement. Source reflow and C01-C04 cannot establish mobile acceptance."
+    },
+    {
+      "id": "N03",
+      "status": "NOTRUN",
+      "name": "Dark/light/saved-custom themes, composed contrast and OS forced colors",
+      "reason": "Source CSS is not measured 4.5:1 text/3:1 UI contrast, selected/focus styling or forced-color rendering evidence."
+    },
+    {
+      "id": "N04",
+      "status": "NOTRUN",
+      "name": "Keyboard, focus restoration, screen reader and outcome announcements",
+      "reason": "No native or browser interactions. Busy/name/disclosure source attributes are not sufficient for a complete accessibility pass."
+    },
+    {
+      "id": "N05",
+      "status": "NOTRUN",
+      "name": "Cold i18n namespaces, non-English/RTL, long labels and 200% text",
+      "reason": "Only canonical English static-key existence was checked; no runtime catalog/locale or visual layout was exercised."
+    },
+    {
+      "id": "N06",
+      "status": "NOTRUN",
+      "name": "Actual reduced-motion and low-bandwidth behavior",
+      "reason": "Shared source integration inspected only; no OS/media/browser behavior measured."
+    },
+    {
+      "id": "N07",
+      "status": "NOTRUN",
+      "name": "Actual transport, role/capability, sudo, read/write effects and paid API boundaries",
+      "reason": "All API calls prohibited. No GET was assumed safe by method alone; no send, confirmation, wake, command, authorization attempt or copied snippet execution occurred. Backend middleware remains intact; no exploit or successful unsafe operation is alleged."
+    },
+    {
+      "id": "N08",
+      "status": "NOTRUN",
+      "name": "Existing focused tests",
+      "reason": "No source/tests changed; unchanged passing tests may not be rerun. Test source inspected as context only. Historical zero-case startup failure is not a fresh failure.",
+      "sourceItDeclarations": 21,
+      "discovered": null,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "parameterizedCaseCount": "NOTRUN; declaration count is not runner discovery"
+    },
+    {
+      "id": "N09",
+      "status": "NOTRUN",
+      "name": "npx tsc --noEmit",
+      "reason": "Unassigned full-project gate is not run for this report-only worker. No clean TypeScript claim."
+    },
+    {
+      "id": "N10",
+      "status": "NOTRUN",
+      "name": "Lint, build and complete violations/preservation gates",
+      "reason": "No full suites or custom helper execution authorized. audit.sh was read, not executed, because it invokes project TypeScript; API verifier helper was not executed. Exact source-pattern searches and manual scoped router comparison were used without creating tooling. No clean style/preservation-gate claim."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "AP001",
+      "classification": "SOURCE_PROVEN_CONTRACT_GAP",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+      "line": 61,
+      "related": ["web\\src\\features\\admin\\components\\RequestBuilder.tsx:42-55,71,144-150,167-175,189-196", "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts:25-35,41-56", "docs\\public\\openapi.yaml:596-598,651-664,5342-5348"],
+      "rule": "MDC-021; mission forms and request validation",
+      "mechanism": "required is used only for a visual query asterisk; neither field required/error props nor any validation branch precede onSend. Blank path values retain braces, parameter type is only a placeholder, and arbitrary body text is passed through without JSON/schema feedback. Parsed body schema exists but requestBody.required and scalar bounds/enum constraints are not retained for validation.",
+      "deterministicRepro": "In a network-free RequestBuilder harness with onSend as a spy, supply the real GET /vehicles/{vehicleID}/state schema, leave vehicleID blank and invoke Send: the callback receives /vehicles/{vehicleID}/state. For a JSON-body POST endpoint, body text '{' still reaches the callback after confirmation. No actual Send or harness was run.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "limit": "Proves absent frontend validation/feedback, not backend acceptance of invalid input. The playground may deliberately support negative-response inspection; preserve that purpose instead of imposing an unrequested blanket ban.",
+      "parentNeed": "A narrow claimed followup should resolve intentional-invalid-request policy and expose accessible schema/validation feedback without removing raw HTTP inspection.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP002",
+      "classification": "SOURCE_PROVEN_ISSUE",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+      "line": 49,
+      "rule": "MDC-045 endpoint agreement and request-value preservation",
+      "mechanism": "Path values are inserted verbatim; only query values use encodeURIComponent. '/', '?' and '#' can change URI structure rather than represent one parameter value. The replacer-function dollar-token fix does not encode URI delimiters.",
+      "deterministicRepro": "For /vehicles/{vehicleID}/state, enter the synthetic value 7?debug=1. URL construction yields /vehicles/7?debug=1/state, not a state endpoint with a single encoded parameter. Entering a/b creates an extra route segment. This is a source-derived string result, not a network response.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "parentNeed": "Claim the existing URL builder/tests and preserve literal-dollar behavior while defining single-segment encoding and valid parameter constraints.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP003",
+      "classification": "SOURCE_PROVEN_CONTRACT_GAP",
+      "severity": "high",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts",
+      "line": 20,
+      "related": ["web\\src\\features\\admin\\components\\RequestBuilder.tsx:59-71,96", "web\\src\\api\\client.ts:378-392", "web\\src\\lib\\operationalMode.ts:39-46,63-75", "web\\src\\api\\hooks\\useVehicles.ts:301-307,351-358", "internal\\api\\router.go:3377-3378"],
+      "rule": "MDC-046: commands/mutations remain live-only, not enabled in historical/offline views",
+      "mechanism": "Interactive raw fetch never invokes the existing operational-mode/offline write guards. RequestBuilder gates only on method confirmation and loading. Unlike useWakeVehicle's requiresLiveMode:true, the same POST /vehicles/{vehicleID}/wake selected in this page is not rejected for an as_of URL or offline mode before transport.",
+      "deterministicRepro": "In a network-free harness, give the window an as_of timestamp, select POST /vehicles/{vehicleID}/wake with a synthetic ID, and use a mocked fetch that records but never sends. After Yes, the transport would be reached instead of throwing OperationalModeWriteError. Offline mode likewise has no preflight guard. No harness, wake or other mutation was executed.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "limit": "This is a frontend live-only boundary gap, not proof of a server authorization bypass, successful mutation, fee, offline queue or disabled backend middleware.",
+      "parentNeed": "A narrow transport/operational-mode followup must preserve raw non-JSON/error inspection while applying existing live-only guards before unsafe sends.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP004",
+      "classification": "SOURCE_PROVEN_ISSUE",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+      "line": 55,
+      "related": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:46-55,67-80,144,159-178", "web\\src\\features\\admin\\components\\EndpointSidebar.tsx:119-120", "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts:9-20"],
+      "rule": "MDC-026 and MDC-046 source scope/cancellation",
+      "mechanism": "Selection and replay remain enabled during a request, clear response and change the request endpoint, but do not invalidate the in-flight response generation or cancel it. The pending handleSend later unconditionally writes result/error and clears loading. ResponseViewer has no request identity. Snippet uses the old lastRequestRef while RequestBuilder shows the new selection.",
+      "deterministicRepro": "With executeRequest deferred by a network-free mock: select A, Send A, select B before resolving A, then resolve A with distinctive payload. B's workspace receives A's status/body and A's snippet because handleSelect did not retire A and setResponse has no identity check. Replaying B during A has the same mechanism.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "parentNeed": "Claim the page/transport tests for a selection/request-generation or explicit attributed-response policy; preserve network-free selection/replay and raw response history.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP005",
+      "classification": "SOURCE_PROVEN_ISSUE",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+      "line": 52,
+      "related": ["web\\src\\features\\admin\\components\\ResponseViewer.tsx:58,319-328", "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:65-70"],
+      "rule": "MDC-025/MDC-026: only confirmed success uses success semantics; unknown is not measured zero",
+      "mechanism": "A rejected transport creates status 0 plus Network error, duration 0 and size 0. Both statusColor and statusBg classify every value below 300 as green success, so the network error is green and its unavailable metadata is rendered as measured 0ms/0 B.",
+      "deterministicRepro": "Feed ResponseViewer the exact page catch-path ApiResponse with status:0/statusText:'Network error'. Its status bar uses text-green-400 and green background/border; duration and size format as zero. Equivalently a mocked rejected transport enters this branch. No live network failure was induced.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "parentNeed": "Claim response metadata/presentation tests; distinguish transport failure from HTTP status ranges and unknown metadata from real zero.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP006",
+      "classification": "SOURCE_PROVEN_ISSUE",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts",
+      "line": 10,
+      "related": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:30,92-94", "web\\src\\features\\admin\\components\\ResponseViewer.tsx:248-259"],
+      "rule": "MDC-026/MDC-046 persisted source trust and null safety",
+      "mechanism": "Syntactically valid stored JSON is asserted to HistoryEntry[] without array/entry validation or a load-time cap. The try/catch catches parse failure, not valid wrong shapes. Null causes history.length to throw; an object causes history.reduce to throw before the page returns its content. Arrays with invalid entries can also fail aggregation/rendering.",
+      "deterministicRepro": "In isolated synthetic session storage, put 'null' or '{}' at teslasync-api-playground-history and mount the page with API reads mocked. loadHistory returns the wrong shape, and historyStats fails at .length or .reduce. Storage and mount were not touched during this review.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "parentNeed": "Claim the existing persistence helper/tests; validate/filter bounded metadata at load while preserving key, order, metadata-only privacy and exact/template replay.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP007",
+      "classification": "SOURCE_PROVEN_ACCESSIBILITY_GAP",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+      "line": 189,
+      "related": ["web\\src\\features\\admin\\components\\RequestBuilder.tsx:182-196", "web\\src\\components\\ui\\Textarea.tsx:36-61,81-110"],
+      "rule": "MDC-021/MDC-040 named, associated form fields",
+      "mechanism": "UiTextarea receives no label, aria-label, aria-labelledby or associated explicit ID. Its preceding request-body h4 does not label the generated textarea ID. The primitive only renders an associated label when label is supplied.",
+      "deterministicRepro": "Render RequestBuilder for a body-bearing endpoint without any network activity. The textarea cannot be located by the visible localized Request body label; the generated textarea has no explicit label association. The JSON placeholder does not associate the visible heading or satisfy the visible-label contract.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "parentNeed": "Claim RequestBuilder/tests; use the existing Textarea label/name API and retain body/content-type context.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP008",
+      "classification": "SOURCE_PROVEN_ACCESSIBILITY_GAP",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\EndpointSidebar.tsx",
+      "line": 125,
+      "related": ["web\\src\\features\\admin\\components\\EndpointSidebar.tsx:114-134"],
+      "rule": "MDC-040 selected state must not be conveyed only through visual color",
+      "mechanism": "isSelected changes only background/border classes. Endpoint buttons expose neither aria-pressed/current/selected nor textual selected state. Group expanded state is correctly exposed, but that does not communicate which operation is selected.",
+      "deterministicRepro": "Render two endpoint buttons, select one, and inspect their props/accessibility state in a network-free harness: method/path names persist but only CSS distinguishes the selected endpoint. This inspection was source-only, not a screen-reader run.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "parentNeed": "Claim endpoint selector/tests; expose appropriate selected semantics without inventing a new picker or auto-sending.",
+      "confidence": "high"
+    },
+    {
+      "id": "AP009",
+      "classification": "SOURCE_PROVEN_ISSUE",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+      "line": 123,
+      "rule": "Preserve useful, correct four-format generated snippets",
+      "mechanism": "The Python branch inserts raw JSON body text directly after json=. Valid JSON true/false/null are not Python True/False/None, so ordinary valid JSON bodies produce undefined Python names before the HTTP call.",
+      "deterministicRepro": "Given synthetic body {\"enabled\":true,\"optional\":null}, Python snippet text contains json={\"enabled\":true,\"optional\":null}. Evaluating the keyword argument would raise NameError for true rather than issue a request. Only source/string reasoning was used; no generated snippet was executed.",
+      "reproStatus": "SOURCE_DERIVED_NOT_EXECUTED",
+      "parentNeed": "Claim the existing snippet generator/tests for JSON-safe Python rendering, retaining all four formats, raw values and secret exclusion.",
+      "confidence": "high"
+    }
+  ],
+  "scopedEndpointAgreement": {
+    "method": "Manual exact source comparison, not a dynamic OpenAPI contract sweep or network check.",
+    "knownSpecSource": {
+      "file": "docs\\public\\openapi.yaml",
+      "startupReference": "internal\\app\\new.go:1793-1802",
+      "handlerReference": "internal\\api\\openapi\\handler.go:39-49",
+      "limit": "App attempts to load this file at startup; the deployed served bytes were not fetched. Missing file/spec can produce 404, which the initial QueryError branch handles."
+    },
+    "agreements": [
+      {"status": "PASS", "method": "GET", "path": "/system/openapi", "frontend": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:36", "router": "internal\\api\\router.go:3210,4395,4440"},
+      {"status": "PASS", "method": "GET", "path": "/vehicles", "spec": "docs\\public\\openapi.yaml:246-250", "router": "internal\\api\\router.go:3362-3363"},
+      {"status": "PASS", "method": "GET", "path": "/vehicles/{vehicleID}/state", "spec": "docs\\public\\openapi.yaml:590-598", "router": "internal\\api\\router.go:3370,3376"},
+      {"status": "PASS", "method": "POST", "path": "/vehicles/{vehicleID}/wake", "spec": "docs\\public\\openapi.yaml:617-624", "router": "internal\\api\\router.go:3370,3377", "execution": "NOTRUN"},
+      {"status": "PASS", "method": "POST", "path": "/vehicles/{vehicleID}/command", "spec": "docs\\public\\openapi.yaml:645-665", "router": "internal\\api\\router.go:3370,3378", "execution": "NOTRUN"},
+      {"status": "PASS", "method": "DELETE", "path": "/vehicles/{vehicleID}", "spec": "docs\\public\\openapi.yaml:513", "router": "internal\\api\\router.go:3370,3374", "execution": "NOTRUN; sudo middleware remains registered"},
+      {"status": "PASS", "method": "GET", "path": "/alerts", "spec": "docs\\public\\openapi.yaml:1259", "router": "internal\\api\\router.go:3808-3809"}
+    ],
+    "queryNames": "The builder uses original spec parameter names, not camelCase rewriting. Sample spec list filters use vehicle_id/limit/offset; vehicleID is a path placeholder, not a query naming violation.",
+    "notClaimed": "No exhaustive dynamic endpoint agreement, deployed spec parity, fee classification, actual server semantics, scope bounds or authorization certification. AP001/AP002 can construct invalid/different URLs even when the template route agrees."
+  },
+  "preservation": {
+    "historicalOriginal": {
+      "source": "docs\\frontend-audits\\audit-page-004.json and accepted Phase5 queue row; no Git used",
+      "pageLines": 190,
+      "pageAndThreePresentationDependencyLines": 974,
+      "capabilityCount": 8,
+      "pageGlassPanelChartContainerOpenings": 0,
+      "composedGlassPanelChartContainerOpenings": 6
+    },
+    "current": {
+      "pageLines": 188,
+      "pageAndThreePresentationDependencyLines": 972,
+      "pagePercentOfRecordedOriginal": 98.947,
+      "composedPercentOfRecordedOriginal": 99.795,
+      "atLeast70Percent": true,
+      "capabilityCount": 8,
+      "pageGlassPanelChartContainerOpenings": 0,
+      "composedGlassPanelChartContainerOpenings": 6,
+      "scope": "Composed comparison uses exactly page plus EndpointSidebar, RequestBuilder and ResponseViewer, matching the recorded original, not all admin feature components."
+    },
+    "capabilities": [
+      {"name": "API specification summary", "evidence": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:119-124", "state": "Always mounted; source trust and unknown/loaded metrics"},
+      {"name": "Recent local requests summary", "evidence": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:125-130", "state": "Always mounted independently of specification"},
+      {"name": "Endpoint explorer", "evidence": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:134-145", "state": "Always mounted source shell; skeleton/fatal/empty/searchable list"},
+      {"name": "Request workspace / selection prompt", "evidence": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:147-156", "state": "Always mounted; intentional selection prerequisite"},
+      {"name": "Request builder", "evidence": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:159-164", "state": "Reachable after user selection; preserves URL/send, confirmation, docs, path/query, body/media and optional auth"},
+      {"name": "Code snippet", "evidence": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:165-171", "state": "Intentionally response-dependent; four formats/copy/disclosure retained, AP009"},
+      {"name": "Response inspector", "evidence": "web\\src\\features\\admin\\components\\ResponseViewer.tsx:301-345", "state": "Selected-workspace shell with pending skeleton, no-response prompt, raw success/error body and headers"},
+      {"name": "Recent request history", "evidence": "web\\src\\features\\admin\\components\\ResponseViewer.tsx:247-287,350", "state": "Reachable after selection when history exists; local overview remains for empty history"}
+    ],
+    "countingLimit": "Eight named capabilities are not eight simultaneous panels. Conditional snippets/parameter panels/history are contextual UI, not evidence of missing all-page data gates.",
+    "sourceSnapshots": [
+      {"file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "lines": 188, "sha256": "B5AEA353BE184D0BFC805A1A809E313E93A829F7D32B7EE5B23DF4DFBF444996"},
+      {"file": "web\\src\\features\\admin\\components\\EndpointSidebar.tsx", "lines": 211, "sha256": "16901BB5CD4547B1A4105CECE9C709F16FDC9D4B4736DF67307EE14F1AF90033"},
+      {"file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx", "lines": 221, "sha256": "FF01EF08A1616A5892BA1F0A6AD7F4AE8E4CA0DC5CA9BE3C140D8E95B24D9977"},
+      {"file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "lines": 352, "sha256": "F1AE23F047AD81C3152A338A97D249B24882AF2454155B77A3180E46D8AA88CE"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts", "lines": 90, "sha256": "EE97562FB1AABEFC64893AC7F845589D67367CC46E5A434F84BE7C7BA1EEB1FB"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts", "lines": 44, "sha256": "FA75A1E705A12E18B2C2D1DF6DC2557C110D9B9457D6CFACAE18F77922886E48"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts", "lines": 46, "sha256": "0E8A492D7C25B2A10DB58F9426F1AF0BA723B6479A068A92917EC3CE355E087B"}
+    ],
+    "snapshotLimit": "Seven hashes were unchanged between audit and end-of-source-review reads. This is scoped identity evidence, not a repository diff or a frozen full application."
+  },
+  "candidatesNotNativeFailures": [
+    {"id": "C01", "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx", "line": 106, "detail": "Nonwrapping confirmation row combines explanation and two actions; fixed w-28 parameter/auth labels share rows with inputs. Narrow width, long translation and 200% text can squeeze controls; actual clipping/overflow NOTRUN."},
+    {"id": "C02", "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "line": 170, "detail": "Four snippet-format controls plus Copy are in one nonwrapping toolbar. Mobile/large-text fit and all-format reachability NOTRUN."},
+    {"id": "C03", "file": "web\\src\\features\\admin\\components\\EndpointSidebar.tsx", "line": 123, "detail": "Explorer and snippet/header/history controls override Button height/padding with !h-auto and compact classes. Actual 44px mobile target bounds and any spacing exceptions NOTRUN."},
+    {"id": "C04", "file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "line": 133, "related": ["web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx:135"], "detail": "Three inherited arbitrary geometry utilities remain on two matching lines: xl:grid-cols-[20rem_minmax(0,1fr)], h-[26rem], xl:h-[calc(100vh-13rem)]. They remain unaccepted candidates from Phase5 style exit 1, not scanner exemptions or native failures. No new scanner run."},
+    {"id": "C05", "file": "web\\src\\features\\admin\\components\\RequestBuilder.tsx", "line": 172, "related": ["web\\src\\features\\admin\\components\\ResponseViewer.tsx:102,114,120,127,132", "web\\src\\features\\admin\\components\\EndpointSidebar.tsx:168"], "detail": "Auxiliary default-parameter hint, generated authentication comments and fallback Other are literal English. Static t-key existence does not cover these strings. Confirm localization policy for technical generated-code comments and exercise actual non-English endpoints before claiming full localization."},
+    {"id": "C06", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts", "line": 12, "detail": "Raw inspector does not attach the shared cached sudo token or invoke the client challenge flow. Backend sudo remains enforced at registered routes; actual auth mode/challenge behavior NOTRUN. Do not equate this source observation with authorization bypass."},
+    {"id": "C07", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts", "line": 66, "related": ["web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts:44-49", "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts:14"], "detail": "Parser uses operation parameters only and transport forces application/json for bodies. Path-level inherited parameters/non-JSON request bodies require a concrete supported endpoint before raising an additional product defect; no speculative form/upload implementation requested."},
+    {"id": "C08", "file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "line": 105, "detail": "Other snippet branches insert URL/body literals without language-specific escaping. Concrete quote/backtick edge cases and copied-command correctness were not executed; never run a generated command against production as QA."}
+  ],
+  "commands": [
+    {
+      "id": "clock-and-contract-read",
+      "shellId": "4479",
+      "command": "Get-Date -Format o; Get-ChildItem -LiteralPath '..\\docs' -Name | Select-String -Pattern 'orchestrator|frontend|queue'; Get-ChildItem -LiteralPath '..' -Name | Select-String -Pattern 'frontend|queue'; Get-Content -LiteralPath '..\\docs\\orchestrator-loop.md' -TotalCount 240",
+      "exitCode": 0,
+      "rawClockOutput": "2026-10-13T09:11:13.8914921-07:00"
+    },
+    {
+      "id": "native-rg-attempt",
+      "shellId": "4491",
+      "command": "rg -n -- 'style=\\{\\{' $files",
+      "scope": "$files are the seven exact production file arguments listed in the next command. This first iteration failed before the remaining patterns/count/hash operations.",
+      "exitCode": 1,
+      "status": "TOOLING_FAILURE_RESOLVED_BY_NATIVE_SELECT_STRING",
+      "rawOutput": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "limit": "Do not treat this as a product finding or a successful scan. No installation attempted."
+    },
+    {
+      "id": "native-scoped-source-audit",
+      "shellId": "4492",
+      "command": "Select-String -LiteralPath $files -Pattern $scan.Value; Get-Content -LiteralPath $file; Get-FileHash -LiteralPath $file -Algorithm SHA256",
+      "exactFileArguments": [
+        "src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+        "src\\features\\admin\\components\\EndpointSidebar.tsx",
+        "src\\features\\admin\\components\\RequestBuilder.tsx",
+        "src\\features\\admin\\components\\ResponseViewer.tsx",
+        "src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts",
+        "src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts",
+        "src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts"
+      ],
+      "patterns": {
+        "inline_styles": "style=\\{\\{",
+        "raw_controls": "<(button|input|textarea|select|table)\\b",
+        "direct_vendor_imports": "from ['\\\"](recharts|react-leaflet|framer-motion)['\\\"]",
+        "old_api_imports": "from ['\\\"]\\.\\./(\\.\\./)?api['\\\"]",
+        "double_prefix_requests": "(request|apiUrl)\\([^\\r\\n]*['\\\"]/api/v1/",
+        "camelcase_query_assignment": "[?&](vehicleId|driveId|sessionId|chargingId)=",
+        "neon_glow_classes": "text-neon-|animate-glow|shadow-neon|drop-shadow-neon"
+      },
+      "exitCode": 0,
+      "rawCounts": "inline_styles=0; raw_controls=1 case-insensitive match of shared <Button>; direct_vendor_imports=0; old_api_imports=0; double_prefix_requests=0; camelcase_query_assignment=0; neon_glow_classes=0",
+      "correction": "Case-insensitive raw-control result is a false positive. The next case-sensitive command is authoritative.",
+      "pageFrameSearch": "Select-String -LiteralPath src\\features\\admin\\pages\\ApiPlaygroundPage.tsx -Pattern 'AdminSummary|<Card|<LayoutCard|<section|<aside|GlassPanel|ChartContainer'",
+      "pageFrameMatchingLines": 10,
+      "receipt": "web\\logs\\phase6-qa-admin-api-playground.log"
+    },
+    {
+      "id": "case-correction-catalog-and-counts",
+      "shellId": "4494",
+      "command": "Select-String -LiteralPath $files -CaseSensitive -Pattern '<(button|input|textarea|select|table)\\b'; Get-Content -LiteralPath src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; Select-String -LiteralPath ($files + src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx) -CaseSensitive -Pattern '\\bt\\(''([^'']+)''' -AllMatches; traverse each distinct dotted key in the parsed catalog; Select-String -LiteralPath $files[0..3] -CaseSensitive -Pattern '<(?:GlassPanel|ChartContainer)\\b'; Select-String -LiteralPath src\\features\\admin\\pages\\ApiPlaygroundPage.test.tsx -CaseSensitive -Pattern '^\\s*it(?:\\.each)?\\('",
+      "exitCode": 0,
+      "rawOutput": [
+        "CORRECTION: Select-String default case-insensitive first scan matched shared <Button>; -CaseSensitive raw_controls matching_lines=0; violation_count=0",
+        "CATALOG static_t_keys=56 missing=0",
+        "FRAME GlassPanel/ChartContainer page=0 page-plus-3-direct-components=6",
+        "TEST DECLARATIONS source-only=21 executed=0 passed=0 failed=0 skipped=0 NOTRUN; parameterized cases not counted as discovered",
+        "2026-10-13T09:15:43.9672894-07:00"
+      ],
+      "receipt": "web\\logs\\phase6-qa-admin-api-playground.log"
+    },
+    {
+      "id": "end-source-identity",
+      "shellId": "4500",
+      "command": "Get-Date -Format o; Get-FileHash -LiteralPath $refs -Algorithm SHA256; Select-String -LiteralPath '..\\docs\\public\\openapi.yaml' -CaseSensitive -Pattern '^    vehicleID:|^      name: vehicleID|^      in: path|^  /vehicles:|^  /vehicles/\\{vehicleID\\}:|^  /alerts:|^  /auth/refresh:'",
+      "exitCode": 0,
+      "scope": "$refs are the same seven exact production files above.",
+      "result": "All seven SHA-256 values equal the first recorded source snapshot.",
+      "rawClockOutput": "2026-10-13T09:17:25.8709152-07:00"
+    }
+  ],
+  "documentValidation": {
+    "status": "PASS",
+    "shellId": "4537",
+    "command": "$report=Get-Content -LiteralPath '..\\docs\\frontend-audits\\phase6-qa-admin-api-playground.json' -Raw | ConvertFrom-Json -AsHashtable; if($report.item -ne 'phase6-qa-admin-api-playground'){throw 'Wrong item'}; $invalid=@($report.checks | Where-Object { $_.status -notin @('PASS','FAIL','NOTRUN') }); if($invalid.Count){throw 'Invalid check statuses'}; $ids=@($report.confirmedIssues | ForEach-Object { $_.id }); foreach($check in $report.checks){ if($check.status -eq 'FAIL' -and $check.finding -notin $ids){throw 'Missing finding reference'} }; if($report.authority.writableVersionedFiles.Count -ne 1 -or $report.authority.writableVersionedFiles[0] -ne 'docs\\frontend-audits\\phase6-qa-admin-api-playground.json'){throw 'Wrong write authority'}; $drift=@(); foreach($snapshot in $report.preservation.sourceSnapshots){$disk=Join-Path '..' $snapshot.file; $hash=(Get-FileHash -LiteralPath $disk -Algorithm SHA256).Hash; if($hash -ne $snapshot.sha256){$drift+=$snapshot.file}}; if($drift.Count){throw ('Source drift: '+($drift -join ', '))}",
+    "exitCode": 0,
+    "rawOutput": "JSON VALIDATION item=phase6-qa-admin-api-playground checks=35 PASS=16 FAIL=9 NOTRUN=10 findings=9 source_hashes_unchanged=7 versioned_authority=1 exit=0",
+    "receipt": "web\\logs\\phase6-qa-admin-api-playground.log"
+  },
+  "evidenceLimits": [
+    "Source-derived deterministic reproductions were not executed; no mocked run is represented as live acceptance.",
+    "Historical audit and accepted Phase5 receipts were used only for provenance and original counts; current findings were checked against actual source.",
+    "All source snapshots are scoped; no Git, full-repository scan or claim about unrelated dirty files.",
+    "No paid/write/destructive operation, server request, browser lock or native capture.",
+    "Report documents narrow issues and candidates only; no new security campaign, product implementation or queue edit.",
+    "Applicable SI cutover/current design-contract rules take precedence over older legacy-unit or neon examples in inherited frontend instruction files."
+  ],
+  "filesRead": [
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\session-handoff.md",
+    "migration-queue.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-004.json",
+    "docs\\frontend-audits\\phase6-qa-action-center.json",
+    "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+    "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.test.tsx",
+    "web\\src\\features\\admin\\components\\EndpointSidebar.tsx",
+    "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+    "web\\src\\features\\admin\\components\\ResponseViewer.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundSpec.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundHistory.ts",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Textarea.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useMotionPreference.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\lib\\serverConnection.ts",
+    "web\\src\\lib\\operationalMode.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\routeLoaders.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\i18n\\en.json",
+    "docs\\public\\openapi.yaml",
+    "internal\\api\\router.go",
+    "internal\\api\\openapi\\handler.go",
+    "internal\\app\\new.go"
+  ],
+  "needs": [
+    "Parent accepts/commits only the exact JSON report; no source patch was made.",
+    "If triaged as work, create/claim narrow existing-owner followups for AP001-AP009; prioritize AP003 live-only boundary, AP004 attribution and AP005 failure truth.",
+    "Do not merge this source-only report into complete native QA. Native/mobile/accessibility/theme/i18n/transport gates remain NOTRUN and require explicit future authorization."
+  ],
+  "ownershipRelease": {
+    "effective": "On this worker's terminal return; no post-return writes.",
+    "source": "RELEASED; never held source-write ownership.",
+    "report": "RELEASED on return; no continuing report writer.",
+    "command": "RELEASED on return; only synchronous completed commands, no background process.",
+    "browser": "RELEASED; no browser grant, lock, page or browser command acquired.",
+    "all": "ALL source/report/command/browser ownership explicitly released on terminal return."
+  }
+}

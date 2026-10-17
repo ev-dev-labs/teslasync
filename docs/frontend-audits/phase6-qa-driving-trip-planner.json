@@ -1,0 +1,1028 @@
+{
+  "item": "phase6-qa-driving-trip-planner",
+  "attempt": 1,
+  "status": "REPORT_COMPLETE_WITH_SOURCE_FINDINGS",
+  "started_at": "2026-10-14T01:43:45.4490057Z",
+  "return_deadline": "2026-10-14T01:59:44.162Z",
+  "hard_deadline": "2026-10-14T02:04:44.162Z",
+  "pins_before": {
+    "web/src/features/driving/pages/TripPlannerPage.tsx": "b8c4e35e84326fefeda1e55bcc9c5bc24ada9071d735523be5e688e68457e63a",
+    "web/src/features/driving/pages/TripPlannerPage.test.tsx": "4dc7797a7be155d53d7bbdc94ef4d26c61eb06a9acd03f7d400c823e1a59e667",
+    "web/src/features/driving/components/AddressInput.tsx": "5ab70defe3603764bbf41b0e916be34a77e12bba7742d92ad4f27ee6809f17cb",
+    "web/src/features/driving/components/AddressInput.test.tsx": "acfff22a1fcf81d0cc0e979bb6d6e72e3d4f74fb19f2ed644fb1692cd478dc93",
+    "web/src/features/driving/components/SOCRouteChart.tsx": "7e7c3380bbe234a6cc2a56fd8970776556b2dab0566a5a70812ecf0a98b22245",
+    "web/src/features/driving/components/SOCRouteChart.test.tsx": "f60e4b1efbc6e3dff99680d8c1486c2be51517db5b95d1c054371a8974331da1",
+    "web/src/features/driving/components/TripCopilotCard.tsx": "707934305befd7c1b5d6581be1a15ff4ce3df304e56b4284568810a26e8dc2b2",
+    "web/src/features/driving/components/TripCopilotCard.test.tsx": "2092e6191a8643a448d66bd5c55b3a55cb36bc1665900f901847298373964eeb",
+    "web/src/features/driving/components/TripLegList.tsx": "88730187cd68b921c82700363e9ed1fe6329a7c8078f41f41b3b9d4a73e85a3d",
+    "web/src/features/driving/components/TripLegList.test.tsx": "d8429df5bf2e884978620344eede879f28e2ef0bff87f9158f5cfeaf29d5c31d",
+    "web/src/features/driving/components/TripPlannerMap.tsx": "fec543f1e0ca20817553e97de89977d399ce066ee4e554271541acacda2b58e2",
+    "web/src/features/driving/components/TripPlannerMap.test.tsx": "6960e6edd5f019c9d339ccd97c0a9dcb17da9587fcd579797aa0a5e294cdae5f",
+    "web/src/features/driving/components/TripShareImportBanner.tsx": "3b02b3ef8161ee2da03a3805a9688fff590fa66bbae76a6aa6a9fc0c52dbad9f",
+    "web/src/features/driving/hooks/useTripShareTarget.ts": "b14d2f18ccb88c3156f40dd1116880a31a8f4685eb7ef798cd8424b312666d85",
+    "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx": "bcb8c5bb0646613a424b14c4a22b04b456a7507195ff2b4e4bd5c45be5948060",
+    "web/src/features/driving/components/operationalbrief-n-z/TripCostBrief.tsx": "dba9f354e8edc71905edb2bb9a07ce8f81becf4c29ab2212aab14fc3b13c1120",
+    "web/src/features/driving/__tests__/TestTripPlannerAIOffUsesHeuristicPlanner.test.tsx": "94239f451ba16c8318c3e14b75cbf6658f27302046a6b61e788ed9b3300a8332",
+    "web/src/components/ai/AITripPlannerLLMAgent.tsx": "56f3e7d23ef694b6ce21b150dc44a00aae928e270ba07022e3e5cd3488625e55",
+    "web/src/components/ai/AITripPlannerLLMAgent.test.tsx": "1d52985ce6d8b85fcf345641f5ee00ed95687bea94e51b704cd5ae4af7369b50",
+    "web/src/api/hooks/useDriving.ts": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+    "web/src/api/hooks/useVehicleCommand.ts": "22de3c31c59f4c2fc5af6f3e0415123b6818a6e09d327d798d52022aba736df7",
+    "web/src/types/driving.ts": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+    "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+    "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+    "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+    "web/src/hooks/useFormatting.ts": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+    "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+    "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+    "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+    "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+    "web/src/lib/unitConversion.ts": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+    "web/src/lib/tripShareTarget.ts": "4ae7f4e38afb113c8df9c57e45fcb91fdcead45593d7c5b237065ea97b540145",
+    "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+    "web/src/components/ui/Slider.tsx": "05f761492b7bb4d9f3ebd188f30840ac77e538fc3967c6f24c5daf44925d83b8",
+    "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+    "web/src/components/forms/Combobox.tsx": "5451eacfaaa7098e1f248bf894cd706a77d7f1657b675df025592bf705424265",
+    "web/src/components/maps/MapTileLayer.tsx": "9f63c7228617637cd37a2c02d9fb1420c67a3fd5826a32a93f39cb60b37f5b44",
+    "internal/api/tripplanner/confidence.go": "50052dcf8b5ffe4a0d0088fe49f925b992ac857c4a1c1a64d3b2d2b225f1aa34",
+    "internal/api/tripplanner/dtos.go": "3051f933753bc453b482f46d75b5722cfda1b1acd68e716128374db7ea0b31c7",
+    "internal/api/tripplanner/handler.go": "82c1a263b458b6590153f9113056afc501eafafe9cf800ef2946f3588b8be029",
+    "internal/api/tripplanner/compute.go": "8093fae50022d5e0e62badbc0b9bc7d15ef9a29871d908fd9e3f3c8bcd3e54c3",
+    "web/src/lib/metric-reference/formatMetric.ts": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+    "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+    "web/src/i18n/en.json": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07"
+  },
+  "pins_at": "2026-10-14T01:46:26.100837+00:00",
+  "writable_files": [
+    "docs\\frontend-audits\\phase6-qa-driving-trip-planner.json",
+    "web\\logs\\phase6-qa-driving-trip-planner.log"
+  ],
+  "catalog_read": {
+    "path": "web/src/i18n/en.json",
+    "distinct_single_line_keys": 95,
+    "missing_single_line_keys": [
+      "tripPlanner.insights.weatherUnavailable"
+    ],
+    "limit": "static literal calls including multiline; read-only canonical presence, NOT generator or namespace gate",
+    "all_static_occurrences": 111,
+    "all_distinct_static_keys": 105,
+    "missing_static_keys": [
+      "tripPlanner.insights.weatherUnavailable"
+    ]
+  },
+  "confirmed_findings": [
+    {
+      "id": "TP01",
+      "rule": "computed-scope",
+      "severity": "high",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 153,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx:63-70,111-113,345-350,359,410-414"
+      ],
+      "mechanism": "Stored request protects map/floor/Send, but visible scope lists only returned endpoint names, not submitted vehicle/SOC/speed or changed-input qualification.",
+      "static_repro": "Plan for vehicle1/SOC80/floor20/speed1; switch to vehicle2/SOC10 without recomputing. Old feasible result remains unqualified beside changed controls; Send is correctly disabled.",
+      "fix": "Expose original submitted scenario and changed-input state without deleting retained evidence or claiming current telemetry.",
+      "need": "N01",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP02",
+      "rule": "retry-gating",
+      "severity": "medium",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 138,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx:94-95",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:95-104"
+      ],
+      "mechanism": "Retained warning Refresh calls current handlePlan but disables only while refreshing. Missing current coordinates make its callback silently return.",
+      "static_repro": "After success then failed recomputation, edit destination text so destination=null. Warning Refresh remains enabled but line95 returns without a request.",
+      "fix": "Use an identified captured retry or explicit validated replan with prerequisite feedback, not an enabled no-op.",
+      "need": "N01",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP03",
+      "rule": "retained-source-status",
+      "severity": "medium",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 349,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx:465",
+        "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx:28-34",
+        "web/src/api/dataState.ts:234-241"
+      ],
+      "mechanism": "Both briefs receive retained only from isRefreshBlocked, not refreshError/stale. Failed recomputation with retained data still labels Source available.",
+      "static_repro": "Success followed by rejected recomputation with isPaused=false retains plan/warning but both brief retained props remain false.",
+      "fix": "Qualify source status for actual refresh failure as well as pause, preserving all usable data.",
+      "need": "N01",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP04",
+      "rule": "model-observation",
+      "severity": "high",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 448,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx:428-450",
+        "internal/api/tripplanner/compute.go:355-366"
+      ],
+      "mechanism": "No observed temperature yields factor1 and backend note No recent temperature data available; neutral UI discards that note and asserts No significant weather impact expected.",
+      "static_repro": "Actual supported shape {avg_temp_c:null,efficiency_factor:1,note:\"No recent temperature data available\"} takes the benign expected-weather branch.",
+      "fix": "Distinguish missing temperature evidence from neutral model factor; disclose historical temperature is not departure forecast.",
+      "need": "N01",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP05",
+      "rule": "zero-unknown",
+      "severity": "medium",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 197,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.test.tsx:624-631",
+        "internal/api/tripplanner/compute.go:40-43,82"
+      ],
+      "mechanism": "Legitimate charging_duration_s=0 renders the same em-dash as missing measurement. Existing source test explicitly encodes this collapse.",
+      "static_repro": "Feasible route with no charging stops returns charging_duration_s=0; charging KPI becomes unknown-looking dash.",
+      "fix": "Render zero/no planned charging distinctly from unknown; preserve raw zero and original test intent with explicit contract correction.",
+      "need": "N01",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP06",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 487,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx:488,185,191,197"
+      ],
+      "mechanism": "Two raw h/m duration return literals use JS interpolation, bypassing localized duration/number display. Counted as one formatter mechanism, two literal sites.",
+      "static_repro": "A valid7200s total under non-English locale still follows string 2h 0m without saved number/locale preferences.",
+      "fix": "Use existing localized duration support with equivalent whole-minute rollover and explicit negative/nonfinite/zero handling.",
+      "need": "N01",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP07",
+      "rule": "geocode-source-state",
+      "severity": "medium",
+      "file": "web/src/features/driving/components/AddressInput.tsx",
+      "line": 40,
+      "related_sites": [
+        "web/src/features/driving/components/AddressInput.tsx:60-65,103",
+        "web/src/api/hooks/useDriving.ts:376-383"
+      ],
+      "mechanism": "Only data/isLoading consumed; failed geocode and successful empty both options=[] with no error/retry or retained-source qualification.",
+      "static_repro": "Three-character query fails with no data/isLoading=false: the same no-results presentation as success[]. No request was executed here.",
+      "fix": "Use existing source-state feedback, retain usable suggestions, debounce/cancellation and explicit geocoded selection.",
+      "need": "N02",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP08",
+      "rule": "model-provenance",
+      "severity": "high",
+      "file": "web/src/features/driving/components/TripCopilotCard.tsx",
+      "line": 78,
+      "related_sites": [
+        "web/src/features/driving/components/TripCopilotCard.tsx:19,65",
+        "web/src/types/driving.ts:388-405",
+        "internal/api/tripplanner/confidence.go:19-26,49-59"
+      ],
+      "mechanism": "Live arrival verdict/You will make it is generic manual model: request has no vehicle, capacity, efficiency, or weather factor; backend defaults supply calibration.",
+      "static_repro": "Same manual SOC/floor/remaining_km for different selected vehicles yields the same request without vehicle_id.",
+      "fix": "Label manual scenario/default assumptions and unknown observations; preserve existing km/kWh wire until coordinated end-to-end SI/model change.",
+      "need": "N03",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP09",
+      "rule": "confidence-scope",
+      "severity": "high",
+      "file": "web/src/features/driving/components/TripCopilotCard.tsx",
+      "line": 36,
+      "related_sites": [
+        "web/src/features/driving/components/TripCopilotCard.tsx:34,48-51,61-65,82-87",
+        "web/src/features/driving/pages/TripPlannerPage.tsx:462"
+      ],
+      "mechanism": "Confidence response/badge not bound to submitted SOC/floor/distance; edited inputs still display old assurance unqualified.",
+      "static_repro": "Check SOC80/floor20/100km then edit distance500km or parent SOC10 without Check: mutation.data and old badge still render.",
+      "fix": "Retain response with captured scenario and explicit changed-input qualification; no silent evidence deletion.",
+      "need": "N03",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP10",
+      "rule": "retained-content-loss",
+      "severity": "high",
+      "file": "web/src/features/driving/components/TripCopilotCard.tsx",
+      "line": 71,
+      "related_sites": [
+        "web/src/features/driving/components/TripCopilotCard.tsx:36,48-52,71-89"
+      ],
+      "mechanism": "Pending Skeleton and error ErrorText replace prior confidence body before retained result is considered; no independently retained successful data.",
+      "static_repro": "Successful check followed by pending/rejected check cannot preserve arrival detail through unconditional branches; a retained-data/error seam can keep badge but replace body.",
+      "fix": "Retain last successful scenario/result with nonblocking source-specific error/retry/paused feedback; replace only initial fatal body.",
+      "need": "N03",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP11",
+      "rule": "mobile-target-declaration",
+      "severity": "medium",
+      "file": "web/src/features/driving/components/TripCopilotCard.tsx",
+      "line": 65,
+      "related_sites": [
+        "web/src/components/ui/Button.tsx:35-38,61-71"
+      ],
+      "mechanism": "Check Button has default md h-10,40px at16px root; no caller mobile44 override. Source-declared deficit, not measured rectangle.",
+      "static_repro": "Inspect card props and shared default: size md and h-10, no min-h-11 override.",
+      "fix": "Use existing mobile44/wrapping roles at caller with explicit desktop restoration; measure later.",
+      "need": "N03",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP12",
+      "rule": "preference-bypass",
+      "severity": "medium",
+      "file": "web/src/features/driving/components/SOCRouteChart.tsx",
+      "line": 46,
+      "related_sites": [
+        "web/src/features/driving/components/SOCRouteChart.tsx:28-29,47,65-67,126-127",
+        "web/src/hooks/useUnits.ts:125-138"
+      ],
+      "mechanism": "Points/stop markers round to1decimal regardless saved precision; tooltip uses raw templates instead of locale number formatting.",
+      "static_repro": "Saved precision3/locale de-DE with valid fractional distance/SOC still loses precision before plot/table and uses dot-decimal tooltip.",
+      "fix": "Retain raw geometry; apply saved precision/locale consistently at axis/table/tooltip display boundary.",
+      "need": "N04",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP13",
+      "rule": "chart-theme",
+      "severity": "medium",
+      "file": "web/src/features/driving/components/SOCRouteChart.tsx",
+      "line": 108,
+      "related_sites": [
+        "web/src/features/driving/components/SOCRouteChart.tsx:109-110,117,122,125,132-149"
+      ],
+      "mechanism": "Literal green/yellow/red rainbow area at40/20/10% opacity, fixed paint and dark/white-alpha labels/tooltip violate restrained chart/theme decisions and <=8% area target.",
+      "static_repro": "Every nonempty curve reaches these declarations independent of light/dark/custom theme. No composed contrast failure claimed.",
+      "fix": "Reuse canonical palette/text/tooltip and restrained tint; preserve all series/thresholds/markers/table/export/fullscreen.",
+      "need": "N04",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP14",
+      "rule": "map-theme",
+      "severity": "medium",
+      "file": "web/src/features/driving/components/TripPlannerMap.tsx",
+      "line": 27,
+      "related_sites": [
+        "web/src/features/driving/components/TripPlannerMap.tsx:28-30,138",
+        "web/src/components/maps/MapTileLayer.tsx:17-23,54,84-87"
+      ],
+      "mechanism": "Literal blue/green/red marker/path colors and fixed style=dark bypass application presentation; actual tile owner applies dark OSM filter.",
+      "static_repro": "Valid endpoints in light theme still receive dark tile style and literal path paint; no actual tiles loaded.",
+      "fix": "Reuse existing restrained renderer roles/tile policy without changing real coordinates/guards/labels; later SVG/Canvas/tile proof.",
+      "need": "N05",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP15",
+      "rule": "ai-capability-copy",
+      "severity": "medium",
+      "file": "web/src/components/ai/AITripPlannerLLMAgent.tsx",
+      "line": 117,
+      "related_sites": [
+        "web/src/components/ai/AITripPlannerLLMAgent.tsx:75-85,113-124",
+        "web/src/features/driving/pages/TripPlannerPage.tsx:94-116",
+        "web/src/i18n/en.json:tripPlanner.aiAgent.description"
+      ],
+      "mechanism": "Canonical copy says Plan saves proposed AI plan, but AI has no apply callback; deterministic Plan posts independent form and retains response only in component state.",
+      "static_repro": "AI output never calls parent state setters; Plan serializes local form, not proposed draft. No durable save established.",
+      "fix": "Align copy with separate drafting/computation; do not invent apply/save capability.",
+      "need": "N06",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP16",
+      "rule": "disabled-prerequisite",
+      "severity": "low",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 280,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx:73,229-307",
+        "web/src/components/ai/AITripPlannerLLMAgent.tsx:93-110"
+      ],
+      "mechanism": "Canonical Plan disables for missing vehicle/unresolved coordinates without associated prerequisite explanation; optional AI hints cannot cover AI-off.",
+      "static_repro": "AI off plus absent vehicle or unconfirmed endpoint leaves disabled Plan without specific adjacent/associated reason.",
+      "fix": "Add localized associated prerequisite hint without duplicate workspace controls or loosened coordinate gating.",
+      "need": "N01",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP17",
+      "rule": "missing-canonical-key",
+      "severity": "medium",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 450,
+      "related_sites": [
+        "web/src/i18n/en.json:tripPlanner.insights.weatherUnavailable"
+      ],
+      "mechanism": "Static unavailable-weather t key absent in canonical catalog; source correction remains fallback-only. 111static calls/105distinct keys read, exactly1missing.",
+      "static_repro": "Read-only traversal of exact key gives missing while page calls English fallback. No generator/namespace gate executed.",
+      "fix": "Separately serialize exact leaf/default after current canonical lease releases; preserve guards/baselines/normal projections.",
+      "need": "N07",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    },
+    {
+      "id": "TP18",
+      "rule": "model-copy-i18n",
+      "severity": "medium",
+      "file": "web/src/features/driving/components/TripCopilotCard.tsx",
+      "line": 82,
+      "related_sites": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx:436",
+        "internal/api/tripplanner/confidence.go:81-95",
+        "internal/api/tripplanner/compute.go:376-391"
+      ],
+      "mechanism": "Backend-generated English confidence/weather prose rendered verbatim; weather embeds Celsius and confidence km/h/kWh without saved locale/unit display. These are model templates, not user address data.",
+      "static_repro": "Tight response includes English110km/h advice; cold model note includes degreesC. Non-English/F preferences do not alter rendered source prose.",
+      "fix": "Coordinate structured model-message/assumption localization with existing backend/DTO/caller owners; retain raw SI/signs and user-authored names, no frontend-only wire rename.",
+      "need": "N08",
+      "evidence_level": "Confirmed source mechanism; NOT mounted/live acceptance",
+      "repro_status": "Source trace only; no inputs/actions executed"
+    }
+  ],
+  "schemaVersion": 1,
+  "mode": "readonly-source-QA/attempt1/no-remigration",
+  "page": "web/src/features/driving/pages/TripPlannerPage.tsx",
+  "routes": [
+    "/trip-planner"
+  ],
+  "conditional_native_candidates": [
+    {
+      "id": "TC01",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 347,
+      "mechanism": "Initial-paused/no plan remains Planning/loading; shared warning exits !hasData.",
+      "unconfirmed_condition": "Production queryClient.ts:64-74 mutation networkMode=always means normal pause is not established. Adapter correctly forwards isPaused.",
+      "needs": "N01/N10",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC02",
+      "file": "web/src/features/driving/components/SOCRouteChart.tsx",
+      "line": 38,
+      "mechanism": "Missing point/SOC and invalid floor become zero, explicitly demanded by tests331/344.",
+      "unconfirmed_condition": "Current numeric DTO is nonnullable; defensive malformed/null branches, not proven API occurrence. Preserve gaps/unknown if contract supports them.",
+      "needs": "N04",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC03",
+      "file": "web/src/features/driving/components/TripLegList.tsx",
+      "line": 18,
+      "mechanism": "finiteOrZero and distance/duration/stop-cost defaults turn missing values into measured zeros.",
+      "unconfirmed_condition": "Current DTO is nonnullable; tests240/263 exercise defensive undefined, not a live payload. Valid negative arrival SOC remains signed.",
+      "needs": "N09",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC04",
+      "file": "web/src/features/driving/components/TripPlannerMap.tsx",
+      "line": 188,
+      "mechanism": "Null popup SOC/duration becomes0/0/0; rounding/plain interpolation bypass precision/locale.",
+      "unconfirmed_condition": "Null violates current DTO; test358 establishes defensive behavior only. Native popup and actual preference effect NOTRUN.",
+      "needs": "N05",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC05",
+      "file": "web/src/features/driving/pages/TripPlannerPage.tsx",
+      "line": 209,
+      "mechanism": "Negative estimated_cost becomes Free.",
+      "unconfirmed_condition": "Current backend estimated cost is nonnegative charging-stop sum; negative credit payload not established. Signed comparison savings correctly preserve sign.",
+      "needs": "N01",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC06",
+      "file": "web/src/features/driving/components/TripLegList.tsx",
+      "line": 51,
+      "mechanism": "No legs hides supplied stops; surplus stops omitted. Map hasData ignores stop-only geometry at TripPlannerMap.tsx122.",
+      "unconfirmed_condition": "Requires partial/surplus/stop-only arrays; current planner builds matched arrays. No actual payload proving this shape.",
+      "needs": "N09/N05",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC07",
+      "file": "web/src/features/driving/components/TripPlannerMap.tsx",
+      "line": 89,
+      "mechanism": "Only first leg.from plus each leg.to creates invented bridges across discontinuities/removed legs.",
+      "unconfirmed_condition": "Requires partial/disjoint geometry; backend emits contiguous model route. No mounted/invalid API exercised.",
+      "needs": "N05",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC08",
+      "file": "web/src/features/driving/components/SOCRouteChart.tsx",
+      "line": 59,
+      "mechanism": "Stop markers guessed by first onward SOC within5; unmatched omitted and survivors can renumber stops.",
+      "unconfirmed_condition": "Requires nonunique/unmatched SOC and authoritative correspondence; response lacks explicit stop-distance ID. Do not invent distance/ordinal evidence.",
+      "needs": "N04",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC09",
+      "file": "web/src/features/driving/components/TripPlannerMap.tsx",
+      "line": 132,
+      "mechanism": "Updating center/zoom props alone may not refit mounted React-Leaflet camera.",
+      "unconfirmed_condition": "Mounted library camera behavior not exercised; browser/location/tile/API actions prohibited.",
+      "needs": "N10",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC10",
+      "file": "web/src/features/driving/components/TripLegList.tsx",
+      "line": 81,
+      "mechanism": "Truncated names/physical margins, fixed400map/300chart and open controls require mobile/RTL/AT review.",
+      "unconfirmed_condition": "Actual clipping, targets, keyboard/focus, text200%, contrast, forced colors, safe areas/native effects require mounted proof.",
+      "needs": "N10",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC11",
+      "file": "web/src/features/driving/components/operationalbrief-n-z/TripCostBrief.tsx",
+      "line": 21,
+      "mechanism": "Source $/gal/mpg detail and saved currency-symbol metrics lack explicit denomination/FX/liter contract.",
+      "unconfirmed_condition": "No ISO/FX source given; preserving original source assumptions is not permission to invent currency conversion or declare a conversion defect.",
+      "needs": "N08",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    },
+    {
+      "id": "TC12",
+      "file": "web/src/features/driving/components/TripCopilotCard.tsx",
+      "line": 22,
+      "mechanism": "Unknown verdict defaults to Charge first/danger.",
+      "unconfirmed_condition": "Current Go emits only comfortable/tight/charge_now; unknown/missing enum is unproved malformed/forward-version payload.",
+      "needs": "N03",
+      "status": "CONDITIONAL/NATIVE; excluded from confirmed total",
+      "repro_status": "NOTRUN source scenario only"
+    }
+  ],
+  "sections": [
+    {
+      "id": "ai",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:220",
+      "preserved": "opt-in absence intentional; separate draft"
+    },
+    {
+      "id": "share-import",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:225",
+      "preserved": "idle absent intentional; loading/coordinates/text/error and cancellation preserved"
+    },
+    {
+      "id": "form",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:229",
+      "preserved": "resolved endpoints/manual SOC/speed/gating/commands preserved"
+    },
+    {
+      "id": "map",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:325",
+      "preserved": "always-mounted frame; submitted endpoints pinned; geometric guards/popups"
+    },
+    {
+      "id": "summary",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:337",
+      "preserved": "six raw metrics; initial skeleton; retained calculation"
+    },
+    {
+      "id": "soc-chart",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:372",
+      "preserved": "always-mounted frame/table; submitted floor; SI display conversion"
+    },
+    {
+      "id": "insights",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:379",
+      "preserved": "always-mounted LayoutCard; empty/feasibility/estimate/weather branches"
+    },
+    {
+      "id": "copilot",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:462",
+      "preserved": "independent remaining-distance scenario/check/detail"
+    },
+    {
+      "id": "cost",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:463",
+      "preserved": "three signed raw currency metrics and source gas assumptions"
+    },
+    {
+      "id": "legs",
+      "site": "web/src/features/driving/pages/TripPlannerPage.tsx:471",
+      "preserved": "always-mounted shell; all normal leg/stop detail"
+    }
+  ],
+  "conditional_business_alert": {
+    "site": "web/src/features/driving/pages/TripPlannerPage.tsx:356-367",
+    "meaning": "Infeasibility alert is business conditional, not hidden-section violation"
+  },
+  "actions": [
+    {
+      "id": "origin-edit-pick",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:84-87,235-242",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "destination-edit-pick",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:89-92,243-250",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "current-soc",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:254-261",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "minimum-arrival-soc",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:263-270",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "speed",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:142-147,271-277",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "plan-trip",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:94-116,279-288",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "send-to-car",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:120-130,289-303",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "retained-source-retry",
+      "source": "web/src/features/driving/pages/TripPlannerPage.tsx:138,335",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "confidence-input-check",
+      "source": "web/src/features/driving/components/TripCopilotCard.tsx:55-67",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "ai-draft-stream",
+      "source": "web/src/components/ai/AITripPlannerLLMAgent.tsx:75-124",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "share-import",
+      "source": "web/src/features/driving/hooks/useTripShareTarget.ts:23-71",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "chart-table-export-fullscreen",
+      "source": "web/src/features/driving/components/SOCRouteChart.tsx:88-103 canonical ChartContainer owner",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "map-pan-zoom-popups",
+      "source": "web/src/features/driving/components/TripPlannerMap.tsx:132-197",
+      "runtime": "NOTRUN; preserved source declaration only"
+    },
+    {
+      "id": "brief-details",
+      "source": "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx:36-50 OperationalBrief owner",
+      "runtime": "NOTRUN; preserved source declaration only"
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "files": [
+        "web/src/features/driving/pages/TripPlannerPage.tsx",
+        "web/src/features/driving/pages/TripPlannerPage.test.tsx"
+      ],
+      "findings": [
+        "TP01",
+        "TP02",
+        "TP03",
+        "TP04",
+        "TP05",
+        "TP06",
+        "TP16"
+      ],
+      "request": "New narrow page repair, never redispatch accepted Phase5; serialize overlapping slices.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N02",
+      "files": [
+        "web/src/features/driving/components/AddressInput.tsx",
+        "web/src/features/driving/components/AddressInput.test.tsx"
+      ],
+      "findings": [
+        "TP07"
+      ],
+      "request": "New adapter source-state repair; shared query/Combobox unchanged.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N03",
+      "files": [
+        "web/src/features/driving/components/TripCopilotCard.tsx",
+        "web/src/features/driving/components/TripCopilotCard.test.tsx"
+      ],
+      "findings": [
+        "TP08",
+        "TP09",
+        "TP10",
+        "TP11"
+      ],
+      "request": "Scenario/trust/mobile caller repair; do not rename legacy wire independently.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N04",
+      "files": [
+        "web/src/features/driving/components/SOCRouteChart.tsx",
+        "web/src/features/driving/components/SOCRouteChart.test.tsx"
+      ],
+      "findings": [
+        "TP12",
+        "TP13"
+      ],
+      "request": "Chart presentation preferences/roles; malformed point/marker candidates stay conditional.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N05",
+      "files": [
+        "web/src/features/driving/components/TripPlannerMap.tsx",
+        "web/src/features/driving/components/TripPlannerMap.test.tsx"
+      ],
+      "findings": [
+        "TP14"
+      ],
+      "request": "Map renderer roles; no invented geometry; native candidates distinct.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N06",
+      "files": [
+        "web/src/components/ai/AITripPlannerLLMAgent.tsx",
+        "web/src/components/ai/AITripPlannerLLMAgent.test.tsx"
+      ],
+      "findings": [
+        "TP15"
+      ],
+      "request": "Align draft/computation copy with separately serialized catalog; do not invent apply/save.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N07",
+      "files": [
+        "web/src/i18n/en.json",
+        "normal generated projections only after exact reservation"
+      ],
+      "findings": [
+        "TP17"
+      ],
+      "request": "Exact missing leaf tripPlanner.insights.weatherUnavailable = Weather impact is unavailable for this plan. Current [~] phase6-fix-charger-milestone-canonical-leaves row92 holds catalog for OTHER keys: do not enlarge/duplicate its claim. Orchestrator reserves this distinct need after release.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N08",
+      "files": [
+        "internal/api/tripplanner/confidence.go",
+        "internal/api/tripplanner/compute.go",
+        "internal/api/tripplanner/dtos.go",
+        "web/src/types/driving.ts",
+        "web/src/api/hooks/useDriving.ts"
+      ],
+      "findings": [
+        "TP18"
+      ],
+      "request": "Separately authorized model-provenance/message localization integration; preserve raw signs/units/wire/user labels, no fake FX/calibration/departure forecast.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N09",
+      "files": [
+        "web/src/features/driving/components/TripLegList.tsx",
+        "web/src/features/driving/components/TripLegList.test.tsx"
+      ],
+      "findings": [],
+      "request": "Conditional partial/missing data investigation TC03/TC06; establish contract before repair; no test weakening.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    },
+    {
+      "id": "N10",
+      "files": [
+        "future separately assigned evidence artifacts only"
+      ],
+      "findings": [],
+      "request": "Mounted/native matrix for TC01/TC09/TC10 only after authorized safe environment/locks; this task grants none.",
+      "queue_owner_dedup": "No exact open TripPlanner source/integration repair found by file/item/note search; no queue writes or dispatch done"
+    }
+  ],
+  "authority": {
+    "reservation_row": 65,
+    "accepted_row": 1939,
+    "predecessor": "phase5-page-driving-trip-planner",
+    "accepted_commit": "d779dcc8f6efae2e7705edeaa508ead57a8ec0fe",
+    "inventory_row": 179,
+    "original_audit": "docs/frontend-audits/audit-page-128.json",
+    "actor": "current caller; runtime actor ID not exposed/not invented",
+    "full_reads": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "relevant_reads": [
+      "mission principles/design and43-46",
+      "current handoff new-machine block/TripPlanner references",
+      "inventory TripPlanner179",
+      "exact queue65/1939/current owner dedup"
+    ],
+    "historical_limit": "Accepted Phase5 source-only with external startup0executed tests preserved. Historical phase5 page log absent on host. No passing rerun or native acceptance promoted.",
+    "clocks_reset": false
+  },
+  "business_dates_workspace": {
+    "range": false,
+    "vehicle": true,
+    "source": "web/src/lib/workspaceScope.ts:23-77,155-168",
+    "reason": "Forward scenario, not header analysis-window query; no duplicate workspace/date controls.",
+    "planned_business_dates": "Optional departure_time at types/driving.ts321/dtos.go26; no date editor or submitted departure in current page, and inspected compute does not consume it. No existing date action found to preserve; no new capability or missing-range defect invented.",
+    "history": "Backend recent90-day efficiency and recent7-day temperature assumptions are independent model inputs, not header bounds or observed departure weather.",
+    "date_preferences": "No date-only/absolute business timestamp rendered. Date.now() at page113 is completion/fetch, not observation; brief says observation time not provided. Saved date/timezone/12-24h display is N/A here, not reset/tested."
+  },
+  "state_matrix": {
+    "idle": "Ten section families retained; intentional AI/share absence and conditional feasibility alert",
+    "loading": "Plan disabled/Planning; initial main/cost skeleton; other shells present",
+    "fatal": "Only fatal plan error in form; no neighbors erased",
+    "retained": "Local successful plan/map/floor remain through recomputation/error; warnings exist; TP02/TP03",
+    "initial-paused": "Adapter supports isPaused; no-data pause TC01 conditional because actual global mutation networkMode=always",
+    "unknown_zero": "Missing/nonfinite raw summary validated; zero charging TP05; nullable temperature gap TP04; malformed nonnullable chart/leg/map candidates TC02-04",
+    "command": "submitted vehicle/destination guards, live-only/always hook and success=false rejection retained; no command/auth replay executed",
+    "independent_confidence": "TP08-11; never blanket selected-vehicle live assurance"
+  },
+  "SI_preferences_signs": {
+    "raw": "Main route/leg meters/seconds/Wh preserved; display-only helpers. SOC/speed dimensionless. Hooks/caches untouched; geocode cancellation/queryKey/staleTime/enablement preserved.",
+    "legacy_confidence": "Actual km/kWh DTO and backend defaults, not canonical SI or selected-vehicle calibration; coordinate end-to-end change only.",
+    "signs": "Signed negative savings and confidence arrival/margin preserve sign; estimated-cost-negative Free only TC05 because backend nonnegative sum. Invalid durations guarded; real charging0 TP05.",
+    "saved_preferences": "Distance/energy/currency hooks carry units/precision/locale; duration TP06/chart TP12/model English-unit copy TP18. Gas assumptions original gal/mpg preserved; no FX assumed. No settings writes/interactions.",
+    "a11y_mobile_declarations": "Shared labelled form/native Slider useId/mobile44; Plan/Send min-h-11 wrapLabel; decorative icons hidden; chart label/dataColumns; localized map region; shared PageLayout->PageContainer. Copilot default40 TP11 is source declaration, not browser rectangle."
+  },
+  "NOTRUN": {
+    "tests": "No fresh Vitest/Playwright/discovery/execution/passing rerun",
+    "typescript": "npx tsc --noEmit explicitly prohibited/NOTRUN",
+    "lint_build": "NOTRUN, explicitly prohibited",
+    "helpers_servers_installs_subagents": "None created/run",
+    "browser_API_locations": "No URL/route/browser/API/tile/geocode/vehicle/cache/native action",
+    "catalog_gates": "No generator/namespace guard run; read-only key-presence check only",
+    "matrix_widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "matrix_other": [
+      "narrow allocated containers",
+      "RTL/long labels/200% text",
+      "dark/light/custom/forced-colors composed contrast",
+      "keyboard/focus/AT/screen reader",
+      "actual touch rectangles/safe areas/native host",
+      "reduced motion/low bandwidth mounted behavior",
+      "open map/chart/table/export/fullscreen",
+      "mounted camera/route gap proof"
+    ]
+  },
+  "pattern_audit": {
+    "scope": "11production files page+direct supports including AI; hook requests traced separately; readonly tests are declaration evidence not production violations",
+    "raw_regex_matches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 1,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidates": 3,
+      "page-wrapper": 1,
+      "fetch-useeffect": 2
+    },
+    "exceptions": [
+      "AI /api/v1 only comment; actual stream path unprefixed",
+      "PageLayout directly delegates PageContainer",
+      "AddressInput effect debounces typed query, no fetch",
+      "Share effect existing local CacheStorage consumer, no ad-hoc API fetching",
+      "Coordinate pair interpolation is numeric data not English copy",
+      "Conditional AI/share/feasibility/Send are intentional policy",
+      "Shared maps/UI building blocks vendor imports/raw HTML expected",
+      "Recharts API props exempt static-inline rule, not theme decision TP13"
+    ],
+    "standard_confirmed_rule_mechanisms": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 1,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0
+    },
+    "duration_literal_sites": 2,
+    "backend_limit": "Only four contract files traced, not full internal Go audit; fmt.Sprintf explanatory text not SQL, inspected Pool.QueryRow calls ctx/parameterized."
+  },
+  "checks": {
+    "fresh_runtime_tests_executed": 0,
+    "fresh_test_discovery": 0,
+    "fresh_passed": 0,
+    "fresh_failed": 0,
+    "fresh_skipped": 0,
+    "readonly_test_files": 8,
+    "readonly_literal_test_declarations": 113,
+    "commands": "Actual inline source-read/regex/catalog/hash/artifact commands/raw outputs/numeric exits in assigned log; tool views are read-only and have no process exit",
+    "failures": [
+      {
+        "shell": "1550",
+        "exit": 1,
+        "failure": "rg unavailable discovery"
+      },
+      {
+        "shell": "1572",
+        "exit": 1,
+        "failure": "cp1252 UnicodeEncodeError; corrected UTF8 reads only"
+      },
+      {
+        "shell": "1847",
+        "exit": 1,
+        "failure": "Windows command-length os206 before execution; split authorized artifact composition, not passing validation rerun"
+      }
+    ],
+    "missing_locator": "definitions.ts absent; explicitly reported, actual formatMetric.ts read",
+    "historical_log": "web/logs/phase5-page-driving-trip-planner.log absent; accepted queue receipt preserved, not invented fresh evidence"
+  },
+  "counts": {
+    "confirmed_source_mechanisms": 18,
+    "conditional_native_candidates": 12,
+    "needs_groups": 10,
+    "section_families": 10,
+    "conditional_business_alerts": 1,
+    "action_families": 14,
+    "production_source_files": 11,
+    "page_lines": 489,
+    "direct_support_lines": 1068,
+    "source_pins": 44,
+    "by_rule": {
+      "computed-scope": 1,
+      "retry-gating": 1,
+      "retained-source-status": 1,
+      "model-observation": 1,
+      "zero-unknown": 1,
+      "hardcoded-string": 1,
+      "geocode-source-state": 1,
+      "model-provenance": 1,
+      "confidence-scope": 1,
+      "retained-content-loss": 1,
+      "mobile-target-declaration": 1,
+      "preference-bypass": 1,
+      "chart-theme": 1,
+      "map-theme": 1,
+      "ai-capability-copy": 1,
+      "disabled-prerequisite": 1,
+      "missing-canonical-key": 1,
+      "model-copy-i18n": 1
+    },
+    "by_primary_file": {
+      "web/src/features/driving/pages/TripPlannerPage.tsx": 8,
+      "web/src/features/driving/components/AddressInput.tsx": 1,
+      "web/src/features/driving/components/TripCopilotCard.tsx": 5,
+      "web/src/features/driving/components/SOCRouteChart.tsx": 2,
+      "web/src/features/driving/components/TripPlannerMap.tsx": 1,
+      "web/src/components/ai/AITripPlannerLLMAgent.tsx": 1
+    },
+    "by_severity": {
+      "high": 5,
+      "medium": 12,
+      "low": 1
+    },
+    "definition": "One independently repairable mechanism per finding; related citations not extra violations. Duration has2literal sites. Conditional/native candidates excluded; no live occurrence/runtime pass claimed."
+  },
+  "completed_at": "2026-10-14T01:59:08.954251+00:00",
+  "release": {
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-driving-trip-planner.json",
+      "web/logs/phase6-qa-driving-trip-planner.log"
+    ],
+    "source_tests_catalog_queue_git_writes": false,
+    "subagents_installs_servers_helpers": false,
+    "own_commands_running": 0,
+    "source_write_claims_retained": false,
+    "pending": null,
+    "released_at": "2026-10-14T01:59:34.485571+00:00",
+    "final_json_reparse": "PASS after final serialization",
+    "pin_check": "PASS",
+    "command_exit_limit": "All own commands completed; no async/detached process started. Only JSON/log writes; initial read-only Git status was reconnaissance, no Git writes."
+  },
+  "pins_after": {
+    "web/src/features/driving/pages/TripPlannerPage.tsx": "b8c4e35e84326fefeda1e55bcc9c5bc24ada9071d735523be5e688e68457e63a",
+    "web/src/features/driving/pages/TripPlannerPage.test.tsx": "4dc7797a7be155d53d7bbdc94ef4d26c61eb06a9acd03f7d400c823e1a59e667",
+    "web/src/features/driving/components/AddressInput.tsx": "5ab70defe3603764bbf41b0e916be34a77e12bba7742d92ad4f27ee6809f17cb",
+    "web/src/features/driving/components/AddressInput.test.tsx": "acfff22a1fcf81d0cc0e979bb6d6e72e3d4f74fb19f2ed644fb1692cd478dc93",
+    "web/src/features/driving/components/SOCRouteChart.tsx": "7e7c3380bbe234a6cc2a56fd8970776556b2dab0566a5a70812ecf0a98b22245",
+    "web/src/features/driving/components/SOCRouteChart.test.tsx": "f60e4b1efbc6e3dff99680d8c1486c2be51517db5b95d1c054371a8974331da1",
+    "web/src/features/driving/components/TripCopilotCard.tsx": "707934305befd7c1b5d6581be1a15ff4ce3df304e56b4284568810a26e8dc2b2",
+    "web/src/features/driving/components/TripCopilotCard.test.tsx": "2092e6191a8643a448d66bd5c55b3a55cb36bc1665900f901847298373964eeb",
+    "web/src/features/driving/components/TripLegList.tsx": "88730187cd68b921c82700363e9ed1fe6329a7c8078f41f41b3b9d4a73e85a3d",
+    "web/src/features/driving/components/TripLegList.test.tsx": "d8429df5bf2e884978620344eede879f28e2ef0bff87f9158f5cfeaf29d5c31d",
+    "web/src/features/driving/components/TripPlannerMap.tsx": "fec543f1e0ca20817553e97de89977d399ce066ee4e554271541acacda2b58e2",
+    "web/src/features/driving/components/TripPlannerMap.test.tsx": "6960e6edd5f019c9d339ccd97c0a9dcb17da9587fcd579797aa0a5e294cdae5f",
+    "web/src/features/driving/components/TripShareImportBanner.tsx": "3b02b3ef8161ee2da03a3805a9688fff590fa66bbae76a6aa6a9fc0c52dbad9f",
+    "web/src/features/driving/hooks/useTripShareTarget.ts": "b14d2f18ccb88c3156f40dd1116880a31a8f4685eb7ef798cd8424b312666d85",
+    "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx": "bcb8c5bb0646613a424b14c4a22b04b456a7507195ff2b4e4bd5c45be5948060",
+    "web/src/features/driving/components/operationalbrief-n-z/TripCostBrief.tsx": "dba9f354e8edc71905edb2bb9a07ce8f81becf4c29ab2212aab14fc3b13c1120",
+    "web/src/features/driving/__tests__/TestTripPlannerAIOffUsesHeuristicPlanner.test.tsx": "94239f451ba16c8318c3e14b75cbf6658f27302046a6b61e788ed9b3300a8332",
+    "web/src/components/ai/AITripPlannerLLMAgent.tsx": "56f3e7d23ef694b6ce21b150dc44a00aae928e270ba07022e3e5cd3488625e55",
+    "web/src/components/ai/AITripPlannerLLMAgent.test.tsx": "1d52985ce6d8b85fcf345641f5ee00ed95687bea94e51b704cd5ae4af7369b50",
+    "web/src/api/hooks/useDriving.ts": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+    "web/src/api/hooks/useVehicleCommand.ts": "22de3c31c59f4c2fc5af6f3e0415123b6818a6e09d327d798d52022aba736df7",
+    "web/src/types/driving.ts": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+    "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+    "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+    "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+    "web/src/hooks/useFormatting.ts": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+    "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+    "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+    "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+    "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+    "web/src/lib/unitConversion.ts": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+    "web/src/lib/tripShareTarget.ts": "4ae7f4e38afb113c8df9c57e45fcb91fdcead45593d7c5b237065ea97b540145",
+    "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+    "web/src/components/ui/Slider.tsx": "05f761492b7bb4d9f3ebd188f30840ac77e538fc3967c6f24c5daf44925d83b8",
+    "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+    "web/src/components/forms/Combobox.tsx": "5451eacfaaa7098e1f248bf894cd706a77d7f1657b675df025592bf705424265",
+    "web/src/components/maps/MapTileLayer.tsx": "9f63c7228617637cd37a2c02d9fb1420c67a3fd5826a32a93f39cb60b37f5b44",
+    "internal/api/tripplanner/confidence.go": "50052dcf8b5ffe4a0d0088fe49f925b992ac857c4a1c1a64d3b2d2b225f1aa34",
+    "internal/api/tripplanner/dtos.go": "3051f933753bc453b482f46d75b5722cfda1b1acd68e716128374db7ea0b31c7",
+    "internal/api/tripplanner/handler.go": "82c1a263b458b6590153f9113056afc501eafafe9cf800ef2946f3588b8be029",
+    "internal/api/tripplanner/compute.go": "8093fae50022d5e0e62badbc0b9bc7d15ef9a29871d908fd9e3f3c8bcd3e54c3",
+    "web/src/lib/metric-reference/formatMetric.ts": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+    "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+    "web/src/i18n/en.json": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07"
+  },
+  "pin_verification": {
+    "UTC": "2026-10-14T01:59:34.485571+00:00",
+    "checked": 44,
+    "matched": 44,
+    "drift": [],
+    "accepted_page_match": true
+  }
+}

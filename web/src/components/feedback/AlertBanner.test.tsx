@@ -9,7 +9,7 @@
  * Coverage:
  *   1. Title + body render.
  *   2. Body-only (no title paragraph emitted).
- *   3. Every variant maps to its themed border + toned title colour.
+ *   3. Every variant maps to subdued semantic chrome with neutral content.
  *   4. Leading icon renders and is hidden from assistive tech.
  *   5. No dismiss button unless `onClose` is provided.
  *   6. Dismiss button fires `onClose`, is a non-submit button, and carries an
@@ -22,8 +22,10 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { createRef } from 'react'
 import '@/i18n'
 import { Bell } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { AlertBanner, type AlertVariant } from './AlertBanner'
 
 describe('AlertBanner', () => {
@@ -47,24 +49,23 @@ describe('AlertBanner', () => {
   })
 
   it('maps each variant to theme-safe border, title, and body colours', () => {
-    const cases: Array<[AlertVariant, RegExp, string, string, string, string]> = [
-      ['info', /border-neon-cyan/, 'text-cyan-900', 'dark:text-cyan-200', 'text-cyan-800', 'dark:text-cyan-100'],
-      ['success', /border-neon-green/, 'text-emerald-900', 'dark:text-emerald-200', 'text-emerald-800', 'dark:text-emerald-100'],
-      ['warning', /border-neon-amber/, 'text-amber-900', 'dark:text-amber-200', 'text-amber-800', 'dark:text-amber-100'],
-      ['danger', /border-neon-red/, 'text-rose-900', 'dark:text-rose-200', 'text-rose-800', 'dark:text-rose-100'],
+    const cases: Array<[AlertVariant, string]> = [
+      ['info', 'info'],
+      ['success', 'success'],
+      ['warning', 'warning'],
+      ['danger', 'danger'],
     ]
-    for (const [variant, borderRe, lightTitle, darkTitle, lightBody, darkBody] of cases) {
+    for (const [variant, tone] of cases) {
       const { container, unmount } = render(
         <AlertBanner variant={variant} title="T">
           body
         </AlertBanner>,
       )
       const banner = container.firstElementChild as HTMLElement
-      expect(banner.className).toMatch(borderRe)
-      expect(screen.getByText('T').className).toContain(lightTitle)
-      expect(screen.getByText('T').className).toContain(darkTitle)
-      expect(screen.getByText('body').className).toContain(lightBody)
-      expect(screen.getByText('body').className).toContain(darkBody)
+      expect(banner).toHaveClass(`border-[var(--semantic-${tone}-border)]`, `bg-[var(--semantic-${tone}-bg)]`)
+      expect(screen.getByText('T')).toHaveClass('text-[var(--text-primary)]', 'font-semibold')
+      expect(screen.getByText('body')).toHaveClass('text-[var(--text-primary)]')
+      expect(banner.className).not.toMatch(/neon|backdrop-blur|shadow-e/)
       unmount()
     }
   })
@@ -137,7 +138,7 @@ describe('AlertBanner', () => {
   })
 
   it('falls back to info styling for an unknown variant instead of crashing', () => {
-    const bogus = 'nope' as unknown as AlertVariant
+    const bogus = 'nope' as AlertVariant
     const { container } = render(
       <AlertBanner variant={bogus} title="T">
         resilient body
@@ -145,7 +146,102 @@ describe('AlertBanner', () => {
     )
     expect(screen.getByText('resilient body')).toBeInTheDocument()
     const banner = container.firstElementChild as HTMLElement
-    // Fallback is the `info` variant → neon-cyan border.
-    expect(banner.className).toMatch(/border-neon-cyan/)
+    expect(banner).toHaveClass('border-[var(--semantic-info-border)]')
+  })
+
+  it('keeps static notices quiet without inventing live-region severity', () => {
+    const { container } = render(<AlertBanner variant="danger">Static notice</AlertBanner>)
+    expect(container.firstElementChild).not.toHaveAttribute('role')
+    expect(container.firstElementChild).not.toHaveAttribute('aria-live')
+  })
+
+  it('preserves native attributes, explicit announcement policy, and caller events', () => {
+    const onClick = vi.fn()
+    render(
+      <AlertBanner variant="warning" id="retained-warning" dir="rtl" role="status"
+        aria-live="polite" aria-atomic="false" aria-describedby="context"
+        tabIndex={0} data-source="retained" onClick={onClick} style={{ marginTop: 12 }}>
+        Retained data <a href="/recovery">Recover</a>
+      </AlertBanner>,
+    )
+    const banner = screen.getByRole('status')
+    expect(banner).toHaveAttribute('id', 'retained-warning')
+    expect(banner).toHaveAttribute('dir', 'rtl')
+    expect(banner).toHaveAttribute('aria-live', 'polite')
+    expect(banner).toHaveAttribute('aria-atomic', 'false')
+    expect(banner).toHaveAttribute('aria-describedby', 'context')
+    expect(banner).toHaveAttribute('tabindex', '0')
+    expect(banner).toHaveAttribute('data-source', 'retained')
+    expect(banner).toHaveStyle({ marginTop: '12px' })
+    expect(screen.getByRole('link', { name: 'Recover' })).toHaveAttribute('href', '/recovery')
+    fireEvent.click(banner)
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('contains long rich content and retains visible keyboard dismissal', () => {
+    const longTitle = 'LongUnbrokenWarning'.repeat(30)
+    render(
+      <AlertBanner variant="warning" title={longTitle} onClose={vi.fn()}>
+        <p>Persistent context</p><a href="/details">All details</a>
+      </AlertBanner>,
+    )
+    expect(screen.getByText(longTitle).parentElement).toHaveClass('min-w-0', 'break-words')
+    expect(screen.getByText('Persistent context')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'All details' })).toBeInTheDocument()
+    const dismiss = screen.getByRole('button', { name: 'Dismiss' })
+    expect(dismiss).toHaveClass('h-11', 'w-11', 'md:h-8', 'md:w-8', 'focus-visible:outline-2')
+    dismiss.focus()
+    expect(dismiss).toHaveFocus()
+  })
+
+  it('retains an explicitly empty dismiss label', () => {
+    render(<AlertBanner variant="info" closeLabel="" onClose={vi.fn()}>body</AlertBanner>)
+    expect(screen.getByRole('button')).toHaveAttribute('aria-label', '')
+  })
+
+  it('preserves retained facts and independent actions when severity changes', () => {
+    const retry = vi.fn()
+    const dismiss = vi.fn()
+    const actionRef = createRef<HTMLButtonElement>()
+    const content = (
+      <>
+        <p>Last successful reading: 0; current reading: unknown</p>
+        <Button ref={actionRef} type="button" onClick={retry}>Retry this source</Button>
+      </>
+    )
+    const { rerender } = render(
+      <AlertBanner variant="warning" onClose={dismiss}>{content}</AlertBanner>,
+    )
+    const action = screen.getByRole('button', { name: 'Retry this source' })
+    expect(actionRef.current).toBe(action)
+    rerender(<AlertBanner variant="danger" onClose={dismiss}>{content}</AlertBanner>)
+    expect(screen.getByText('Last successful reading: 0; current reading: unknown')).toBeVisible()
+    expect(actionRef.current).toBe(action)
+    fireEvent.click(action)
+    expect(retry).toHaveBeenCalledTimes(1)
+    expect(dismiss).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(dismiss).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Last successful reading: 0; current reading: unknown')).toBeVisible()
+  })
+
+  it('retains keyboard handlers and focus order without adding dismissal shortcuts', () => {
+    const onKeyDown = vi.fn()
+    const dismiss = vi.fn()
+    render(
+      <AlertBanner variant="warning" onKeyDown={onKeyDown} onClose={dismiss} dir="rtl">
+        <a href="/recovery">Recover first</a>
+      </AlertBanner>,
+    )
+    const link = screen.getByRole('link', { name: 'Recover first' })
+    const close = screen.getByRole('button', { name: 'Dismiss' })
+    expect(link.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    link.focus()
+    expect(link).toHaveFocus()
+    fireEvent.keyDown(link, { key: 'Escape' })
+    expect(onKeyDown).toHaveBeenCalledTimes(1)
+    expect(dismiss).not.toHaveBeenCalled()
+    close.focus()
+    expect(close).toHaveFocus()
   })
 })

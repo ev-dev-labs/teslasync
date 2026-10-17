@@ -22,6 +22,43 @@ TeslaSync does not accept arbitrary JavaScript or JSONPath for rule conditions. 
 
 In Alert Studio, **Templates** opens the searchable rule gallery. The category filters show the number of templates in each category and wrap on narrow screens; selecting a category narrows the gallery without changing any saved rule.
 
+### Message formatting
+
+Message placeholder examples, preset examples, live previews, Test Message, and
+delivered rule notifications use the same server-side renderer and persisted
+Settings preferences: decimal precision, locale (language fallback), distance,
+temperature, pressure, currency symbol, and timezone. Changing preferences
+refreshes editor examples and previews; it does not rewrite saved templates.
+
+Telemetry measurements and rule thresholds remain raw SI. Conversion happens
+only when rendering message text, using signal metadata (including Pa pressure,
+boolean HVAC state, and range-added-per-hour semantics). Computed metrics retain
+their existing registry unit contracts and are converted at this same display
+boundary; this does not change metric API values or comparisons.
+
+Bare measurement placeholders include the selected display unit. A compatible
+literal unit in a custom template, such as `{{Value}} km/h` or `{{Soc}}%`, owns
+that unit: the value is rendered in it without adding another suffix. Numeric
+text, booleans, identifiers, and unknown placeholders are preserved. Null or
+nonfinite measurements render as `—`, not zero. `{{Now}}` retains its RFC3339
+representation in the chosen timezone; `{{NowRFC3339}}` explicitly provides the raw
+UTC instant. Use `{{NowDisplay}}` to honor Settings' relative/absolute timestamp
+preference. `{{NowAbsolute}}`, `{{NowRelative}}`, `{{NowDate}}`,
+`{{NowDateShort}}`, and `{{NowTime}}` explicitly select the corresponding existing
+date presentation without inventing additional persisted settings.
+
+Display dates use the seven locale choices offered by General Settings, including
+their month names, field order, and 12/24-hour cycle. Relative timestamps use the
+same minute/hour/day thresholds and seven-day date fallback as the shared frontend
+formatter. Display timezone resolution uses vehicle timezone (including event
+dispatch's vehicle lookup), configured user timezone as fallback, or explicit UTC.
+IANA timezone rules handle DST. Unknown/invalid timezone data falls back to UTC;
+browser-only timezone detection is not available to background workers, so select
+a persisted user timezone for consistent browser/worker output.
+
+The canonical notification title remains nonempty even when **Include title**
+is off; that toggle only suppresses the separate header on supporting transports.
+
 Why this matters:
 
 - A typed rule **can** be evaluated against the live signal store with millisecond latency

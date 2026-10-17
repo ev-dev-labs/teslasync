@@ -1,0 +1,142 @@
+{
+  "item": "phase6-proof-status-api-response-contract",
+  "status": "DONE",
+  "kind": "actual-unexecuted-covering-proof",
+  "sourceItem": "phase6-fix-status-api-response-contract",
+  "assignedSourceRevision": "9e64b3af03d71085428a8004d1fa39648177957d",
+  "revisionEvidence": "Revision supplied by the assignment, not independently verified with Git. Current source and fixture SHA-256 pins were measured before and after execution.",
+  "alreadyDoneCheck": {
+    "reportExisted": false,
+    "logExisted": false,
+    "result": "Missing covering proof; existing corrected source and tests retained without edits."
+  },
+  "runtime": {
+    "node": "v26.8.1",
+    "vitest": "4.1.11",
+    "supportedNode": true
+  },
+  "execution": {
+    "cwd": "D:\\repos\\teslasync\\web",
+    "command": "npx --no-install vitest run src\\features\\system\\pages\\StatusApiDocsPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose -t 'SAD01\u201303 actual response contracts|surfaces query-string hints|retains the complete example response for /api/v1/status(?:/incidents|/live)?$'",
+    "environment": {
+      "VITE_GIT_SHA": "9e64b3af03d71085428a8004d1fa39648177957d"
+    },
+    "environmentReason": "Explicit test build identity prevents the existing Vite config from invoking its Git fallback. Normal Vite configuration, catalog startup guards, setup and real page/shared components remain enabled.",
+    "startedAtUtc": "2026-10-14T15:08:27.8336621Z",
+    "endedAtUtc": "2026-10-14T15:15:07.6166502Z",
+    "exitCode": 0,
+    "testFilesPassed": 1,
+    "testFilesFailed": 0,
+    "testsCollected": 23,
+    "testsSelected": 8,
+    "testsExecuted": 8,
+    "testsPassed": 8,
+    "testsFailed": 0,
+    "testsSkipped": 15,
+    "vitestReportedDurationSeconds": 91.36,
+    "rawOutput": "web\\logs\\phase6-proof-status-api-response-contract.log",
+    "rawSummary": [
+      "Test Files  1 passed (1)",
+      "Tests  8 passed | 15 skipped (23)",
+      "EXIT_CODE 0"
+    ]
+  },
+  "coveringCases": [
+    {
+      "name": "surfaces query-string hints only for endpoints that accept them",
+      "covers": ["SAD03"],
+      "result": "PASS"
+    },
+    {
+      "name": "retains the complete example response for /api/v1/status",
+      "covers": ["SAD02"],
+      "result": "PASS"
+    },
+    {
+      "name": "retains the complete example response for /api/v1/status/incidents",
+      "covers": ["SAD02"],
+      "result": "PASS"
+    },
+    {
+      "name": "retains the complete example response for /api/v1/status/live",
+      "covers": ["SAD01", "SAD02"],
+      "result": "PASS"
+    },
+    {
+      "name": "distinguishes REST JSON from SSE without changing authentication or issuing a request",
+      "covers": ["SAD01"],
+      "result": "PASS"
+    },
+    {
+      "name": "renders genuine SSE status and heartbeat frames with the complete REST snapshot as JSON data",
+      "covers": ["SAD01", "SAD02"],
+      "result": "PASS"
+    },
+    {
+      "name": "matches required Go JSON fields, retaining empty snapshot incidents and distinct snapshot/list ID types",
+      "covers": ["SAD02"],
+      "result": "PASS"
+    },
+    {
+      "name": "documents the unfiltered incident default, composable active filter and exact limit fallback",
+      "covers": ["SAD03"],
+      "result": "PASS"
+    }
+  ],
+  "contractAuthority": {
+    "fixture": "web\\src\\features\\system\\pages\\StatusApiDocsPage.test.tsx",
+    "backendFilesReadByExistingFixture": [
+      "internal\\api\\status\\v1.go",
+      "internal\\api\\status\\incidents.go",
+      "internal\\database\\observability\\status_incidents_repo.go",
+      "internal\\api\\router.go"
+    ],
+    "method": "Existing fixture mounts the real page, expands response examples, compares required Go JSON fields, pins SSE framing/timing, and checks the mounted incident handler/filter/limit contract. Navigation, translations and settings use the fixture's unchanged mocks."
+  },
+  "readonlyPins": [
+    {
+      "path": "web\\src\\features\\system\\pages\\StatusApiDocsPage.tsx",
+      "sha256": "DD1AF544128CEFE870C5F9A213C34A46B2D6F7FE8F0BB8A202E568805AA1001A",
+      "unchangedAfterExecution": true
+    },
+    {
+      "path": "web\\src\\features\\system\\pages\\StatusApiDocsPage.test.tsx",
+      "sha256": "89F1275B9C8D9528227FA9A784CE2F6578FDE5C3A17CF481C5DCD46DED0EE9EF",
+      "unchangedAfterExecution": true
+    },
+    {
+      "path": "web\\src\\features\\system\\components\\StatusApiEndpointCard.tsx",
+      "sha256": "5643BC273CD2B8F247D623D2F26F410A896413C1FD9C4890CAC502919D65F28C",
+      "unchangedAfterExecution": true
+    }
+  ],
+  "accounting": {
+    "assignedAttemptsUsedBefore": 0,
+    "coveringExecutionsThisItem": 1,
+    "catalogOnlyStartupFailuresThisItem": 0,
+    "ownedCorrectionsThisItem": 0,
+    "preservation": "Prior discovery-zero/catalog startup failures remain NOTRUN and uncharged, not passing evidence. No original/helper/native budget was renewed. Fifteen unaffected cases were skipped; historical genuine passes were not rerun or newly credited."
+  },
+  "startupObservations": [
+    "Normal catalog split guard reported OK: 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys.",
+    "Normal namespace audit retained its output: 2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved, and baseline entries no longer referenced. No baseline/catalog edits or clean-global-catalog claim."
+  ],
+  "reportValidation": {
+    "firstExitCode": 1,
+    "firstFailure": "Literal summary comparison encountered ANSI terminal formatting in raw output.",
+    "secondExitCode": 0,
+    "resolution": "Display-only ANSI normalization matched all eight unique passed case names and the 8 passed / 15 skipped / 23 collected summary. Raw log preserved; no test rerun, fixture change or oracle alteration.",
+    "releaseAtUtc": "2026-10-14T15:18:01.9045234Z"
+  },
+  "evidenceLimits": [
+    "Scoped mounted Vitest response-contract proof only; no full-file, whole-page, browser, visual, keyboard, native, deployment or global phase-gate approval.",
+    "No live backend response, API/network request, authentication flow, browser, dev server, Docker rebuild, dependency installation or production mutation.",
+    "Full TypeScript, build, lint and unrelated audits were not run: this assignment authorizes only scoped existing covering checks and prohibits source/fixture/canonical changes.",
+    "No source changes; page line-count, section-preservation and hooks audits were not rerun or claimed. Existing real-component fixture cases provide only the named response-contract evidence.",
+    "No Git commands, catalog bypass, alternate config, helper fixture, source correction or weakened oracle."
+  ],
+  "filesChanged": [
+    "docs\\frontend-audits\\phase6-proof-status-api-response-contract.json",
+    "web\\logs\\phase6-proof-status-api-response-contract.log"
+  ]
+}

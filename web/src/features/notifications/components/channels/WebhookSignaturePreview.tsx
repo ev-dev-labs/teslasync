@@ -15,12 +15,14 @@ export function WebhookSignaturePreview({ secret }: { secret: string }) {
   const preview = useWebhookSignaturePreview();
   const [signature, setSignature] = useState('');
   const [error, setError] = useState('');
+  const [copyFailed, setCopyFailed] = useState(false);
   const mutate = useRef(preview.mutateAsync);
   mutate.current = preview.mutateAsync;
 
   useEffect(() => {
     setSignature('');
     setError('');
+    setCopyFailed(false);
     if (!secret.trim()) return;
     let active = true;
     const timer = window.setTimeout(() => {
@@ -43,9 +45,15 @@ export function WebhookSignaturePreview({ secret }: { secret: string }) {
         : signature ? (
           <div className="flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded bg-[var(--surface-2)] px-2 py-1 text-xs">{signature}</code>
-            <CopyButton text={signature} iconOnly />
+            <CopyButton
+              text={signature}
+              iconOnly
+              onCopy={() => setCopyFailed(false)}
+              onCopyError={() => setCopyFailed(true)}
+            />
           </div>
         ) : <Text variant="bodySm">{t('webhookChannels.signature.loading', 'Computing signature…')}</Text>}
+      {copyFailed && <HelperText role="alert">{t('common.copyButton.errorToast', 'Failed to copy')}</HelperText>}
       <HelperText>{t('webhookChannels.signature.help', 'Send this header value with every webhook so receivers can verify authenticity.')}</HelperText>
     </div>
   );

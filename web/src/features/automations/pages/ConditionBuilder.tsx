@@ -6,11 +6,16 @@ import {
   Button as UiButton,
   GlassPanel,
   Text,
+  Icon,
 } from '@/components/ui';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { useGeofences } from '@/api/hooks/useLocations';
+import { useDataState } from '@/hooks/useDataState';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
-import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS, unitKindForSignal } from '@/lib/signals';
+import { UnitInput, UnitListInput, WeekdaySelect } from '@/components/forms';
+import { useSettings } from '@/hooks/useSettings';
 import type {
   AutomationConditionKind,
   AutomationConditionSignalOp,
@@ -29,22 +34,22 @@ export const CONDITION_TYPES: ConditionKindOption[] = [
   {
     value: 'condition_signal',
     labelKey: 'automations.conditions.signal',
-    fallback: 'Signal Check',
+    fallback: 'Signal check',
   },
   {
     value: 'condition_time_window',
     labelKey: 'automations.conditions.timeWindow',
-    fallback: 'Time Window',
+    fallback: 'Time window',
   },
   {
     value: 'condition_geofence',
     labelKey: 'automations.conditions.geofence',
-    fallback: 'Geofence State',
+    fallback: 'Geofence state',
   },
   {
     value: 'condition_other_automation',
     labelKey: 'automations.conditions.otherAutomation',
-    fallback: 'Other Automation',
+    fallback: 'Other automation',
   },
 ];
 
@@ -80,7 +85,7 @@ const OTHER_AUTOMATION_STATES: {
   {
     value: 'recently_triggered',
     labelKey: 'automations.otherAutomation.recentlyTriggered',
-    fallback: 'Recently Triggered',
+    fallback: 'Recently triggered',
   },
 ];
 
@@ -125,6 +130,9 @@ function conditionValueFromInput(
   value: string,
 ): AutomationConditionStepInput {
   if (BOOL_FIELD_KEYS.has(condition.signal)) {
+    if (condition.op === 'in') {
+      return { kind: 'condition_signal', signal: condition.signal, op: condition.op, value_text: value };
+    }
     return {
       kind: 'condition_signal',
       signal: condition.signal,
@@ -144,17 +152,15 @@ function conditionValueFromInput(
     kind: 'condition_signal',
     signal: condition.signal,
     op: condition.op,
-    value_num: Number.parseFloat(value) || 0,
+    value_num: value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : undefined,
   };
-}
-
-function numericValue(value: number | null | undefined, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps) {
   const { t } = useTranslation();
-  const { data: geofences } = useGeofences();
+  const geofencesQuery = useGeofences();
+  const { data: geofences } = geofencesQuery;
+  const geofencesState = useDataState(geofencesQuery);
 
   const geofenceOptions = useMemo(
     () => [
@@ -191,23 +197,59 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
   );
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
+      {conditions.some((condition) => condition.kind === 'condition_geofence') && (
+        <div>
+          <StaleRefreshWarning
+            state={geofencesState}
+            label={t('automations.builder.geofence', 'Geofence')}
+          />
+          {geofencesState.fatalError ? (
+            <AlertBanner
+              variant="danger"
+              role="alert"
+              title={t('automations.builder.geofenceError', 'Could not load geofences')}
+            >
+              {geofencesState.retry && (
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  wrapLabel
+                  className="min-h-11 md:min-h-9"
+                  onClick={geofencesState.retry}
+                >
+                  {t('automations.builder.retryGeofences', 'Retry loading places')}
+                </UiButton>
+              )}
+            </AlertBanner>
+          ) : geofencesState.status === 'initial' ? (
+            <Text as="p" variant="bodySm" color="secondary" role="status">
+              {geofencesQuery.isFetching
+                ? t('automations.builder.geofenceLoading', 'Loading geofences…')
+                : t('common.unknown', 'Unknown')}
+            </Text>
+          ) : geofencesState.status === 'ok' && geofences?.length === 0 ? (
+            <Text as="p" variant="bodySm" color="secondary" role="status">
+              {t('automations.builder.geofenceEmpty', 'No geofences configured yet')}
+            </Text>
+          ) : null}
+        </div>
+      )}
       {conditions.map((condition, index) => (
-        <GlassPanel key={`${condition.kind}-${index}`} className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex-1 space-y-3">
-              <div className="flex flex-wrap items-end gap-3">
+        <GlassPanel key={`${condition.kind}-${index}`} className="@container/condition p-4">
+          <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-start">
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="min-w-0 space-y-3">
                 <UiSelect
-                  label={index === 0
-                    ? t('automations.builder.conditionType', 'Condition Type')
-                    : undefined}
+                  label={t('automations.builder.conditionType', 'Condition type')}
                   options={conditionTypeOptions}
                   value={condition.kind}
                   onChange={(event) => replaceCondition(
                     index,
                     createDefaultCondition(event.target.value as AutomationConditionKind),
                   )}
-                  className="w-56"
+                  className="w-full"
                 />
                 <ConditionFields
                   condition={condition}
@@ -222,17 +264,17 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
               size="sm"
               onClick={() => removeCondition(index)}
               aria-label={t('automations.builder.removeCondition', 'Remove condition')}
-              className="mt-6 text-red-400 hover:text-red-300"
+              className="min-h-11 min-w-11 self-end text-red-400 hover:text-red-300 md:mt-6 md:min-h-9 md:min-w-9 md:self-start"
             >
-              <Trash2 className="h-4 w-4" />
+              <Icon icon={Trash2} />
             </UiButton>
           </div>
         </GlassPanel>
       ))}
 
-      <UiButton type="button" variant="ghost" size="sm" onClick={addCondition}>
-        <Plus className="mr-1 h-4 w-4" />
-        {t('automations.builder.addCondition', 'Add Condition')}
+      <UiButton type="button" variant="ghost" size="sm" wrapLabel className="min-h-11 md:min-h-9" onClick={addCondition}>
+        <Icon icon={Plus} className="me-1" />
+        {t('automations.builder.addCondition', 'Add condition')}
       </UiButton>
     </div>
   );
@@ -240,8 +282,9 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
 
 function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFieldsProps) {
   const { t } = useTranslation();
+  const { settings } = useSettings();
 
-  const signalOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+  const signalOptions = useMemo(() => buildSignalFieldOptions(t, settings), [t, settings]);
 
   const operatorOptions = useMemo(() => {
     const isBool = condition.kind === 'condition_signal' && BOOL_FIELD_KEYS.has(condition.signal);
@@ -266,13 +309,15 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
       const isBool = BOOL_FIELD_KEYS.has(condition.signal);
       const isRange = condition.op === 'between';
       const value = isBool
-        ? String(condition.value_bool ?? true)
+        ? condition.op === 'in'
+          ? condition.value_text ?? String(condition.value_bool ?? true)
+          : String(condition.value_bool ?? (condition.value_text === 'false' ? false : true))
         : condition.signal === 'state' || condition.op === 'in'
           ? (condition.value_text ?? '')
-          : String(condition.value_num ?? 20);
+          : String(condition.value_num ?? condition.value_min ?? '');
 
       return (
-        <div className="flex flex-1 flex-wrap items-end gap-3">
+        <div className="grid min-w-0 grid-cols-1 items-end gap-3 @sm/condition:grid-cols-2 @2xl/condition:grid-cols-4">
           <UiSelect
             label={t('automations.builder.signal', 'Signal')}
             help={{
@@ -290,7 +335,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
                   : { kind: 'condition_signal', signal, op: '<', value_num: 20 };
               onChange(nextCondition);
             }}
-            className="w-44"
+            className="w-full"
           />
           <UiSelect
             label={t('automations.builder.operator', 'Operator')}
@@ -307,36 +352,40 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
                   kind: 'condition_signal',
                   signal: condition.signal,
                   op,
-                  value_min: numericValue(condition.value_min ?? condition.value_num, 0),
-                  value_max: numericValue(condition.value_max, 100),
+                  value_min: condition.value_min ?? condition.value_num,
+                  value_max: condition.value_max,
                 });
                 return;
               }
               onChange(conditionValueFromInput({ ...condition, op }, value));
             }}
-            className="w-36"
+            className="w-full"
           />
           {isRange ? (
             <>
-              <UiInput
+              <UnitInput
+                key={`${condition.signal}-min`}
                 label={t('automations.builder.minValue', 'Min')}
-                type="number"
-                value={numericValue(condition.value_min, 0)}
-                onChange={(event) => onChange({
+                unit={unitKindForSignal(condition.signal)}
+                value={condition.value_min ?? null}
+                commitOnChange
+                onChange={(next) => onChange({
                   ...condition,
-                  value_min: Number.parseFloat(event.target.value) || 0,
+                  value_min: next ?? undefined,
                 })}
-                className="w-28"
+                className="min-h-11 w-full md:min-h-10"
               />
-              <UiInput
+              <UnitInput
+                key={`${condition.signal}-max`}
                 label={t('automations.builder.maxValue', 'Max')}
-                type="number"
-                value={numericValue(condition.value_max, 100)}
-                onChange={(event) => onChange({
+                unit={unitKindForSignal(condition.signal)}
+                value={condition.value_max ?? null}
+                commitOnChange
+                onChange={(next) => onChange({
                   ...condition,
-                  value_max: Number.parseFloat(event.target.value) || 0,
+                  value_max: next ?? undefined,
                 })}
-                className="w-28"
+                className="min-h-11 w-full md:min-h-10"
               />
             </>
           ) : isBool ? (
@@ -345,21 +394,55 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               options={[
                 { value: 'true', label: t('common.true', 'True') },
                 { value: 'false', label: t('common.false', 'False') },
+                ...(condition.op === 'in' ? [{
+                  value: 'true,false',
+                  label: `${t('common.true', 'True')} / ${t('common.false', 'False')}`,
+                }] : []),
               ]}
               value={value}
               onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
-              className="w-28"
+              className="w-full"
             />
-          ) : (
+          ) : condition.op === 'in' && condition.signal !== 'state' ? (
+            <UnitListInput
+              key={`${condition.signal}-list`}
+              label={t('automations.builder.value', 'Value')}
+              unit={unitKindForSignal(condition.signal)}
+              values={(condition.value_text ?? '').split(',').filter(part => part.trim()).map(Number)}
+              onChange={(next) => onChange({
+                kind: 'condition_signal',
+                signal: condition.signal,
+                op: condition.op,
+                value_text: next?.length ? next.join(',') : undefined,
+              })}
+              className="min-h-11 w-full md:min-h-10"
+            />
+          ) : condition.signal === 'state' ? (
             <UiInput
               label={t('automations.builder.value', 'Value')}
-              type={condition.signal === 'state' || condition.op === 'in' ? 'text' : 'number'}
+              type="text"
               value={value}
               onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
               placeholder={condition.signal === 'state'
                 ? t('automations.builder.statePlaceholder', 'online')
                 : undefined}
-              className="w-40"
+              className="min-h-11 w-full md:min-h-10"
+            />
+          ) : (
+            <UnitInput
+              key={condition.signal}
+              label={t('automations.builder.value', 'Value')}
+              unit={unitKindForSignal(condition.signal)}
+              value={condition.value_num ?? null}
+              commitOnChange
+              onChange={(next) => onChange({
+                kind: 'condition_signal',
+                signal: condition.signal,
+                op: condition.op,
+                value_num: next ?? undefined,
+              })}
+              className="min-h-11 w-full md:min-h-10"
+              required
             />
           )}
         </div>
@@ -369,20 +452,20 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
     case 'condition_time_window': {
       const selectedDays = condition.days_of_week ?? [];
       return (
-        <div className="flex flex-1 flex-wrap items-end gap-3">
+        <div className="grid min-w-0 grid-cols-1 items-end gap-3 @sm/condition:grid-cols-2 @2xl/condition:grid-cols-3">
           <UiInput
             label={t('automations.builder.startTime', 'Start')}
             type="time"
             value={condition.start_time}
             onChange={(event) => onChange({ ...condition, start_time: event.target.value })}
-            className="w-32"
+            className="min-h-11 w-full md:min-h-10"
           />
           <UiInput
             label={t('automations.builder.endTime', 'End')}
             type="time"
             value={condition.end_time}
             onChange={(event) => onChange({ ...condition, end_time: event.target.value })}
-            className="w-32"
+            className="min-h-11 w-full md:min-h-10"
           />
           <UiSelect
             label={t('automations.builder.timezone', 'Timezone')}
@@ -393,39 +476,26 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             options={timezoneOptions}
             value={condition.timezone}
             onChange={(event) => onChange({ ...condition, timezone: event.target.value })}
-            className="w-44"
+            className="w-full"
           />
-          <div>
+          <div className="min-w-0 @sm/condition:col-span-2 @2xl/condition:col-span-3">
             <Text as="span" variant="subhead">
               {t('automations.builder.days', 'Days')}
             </Text>
-            <div className="mt-1 flex gap-1">
-              {DAYS.map((label, day) => {
-                const active = selectedDays.includes(day);
-                return (
-                  <UiButton
-                    key={label}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-pressed={active}
-                    className={`!h-9 !w-9 !rounded !p-0 text-xs font-medium ${
-                      active
-                        ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                        : '!bg-white/[0.03] text-[var(--text-muted)] hover:!bg-white/[0.06]'
-                    }`}
-                    onClick={() => {
-                      const days = active
-                        ? selectedDays.filter((currentDay) => currentDay !== day)
-                        : [...selectedDays, day].sort((a, b) => a - b);
-                      onChange({ ...condition, days_of_week: days });
-                    }}
-                  >
-                    {t(`common.days.short.${day}`, label)}
-                  </UiButton>
-                );
+            <WeekdaySelect
+              className="mt-1"
+              ariaLabel={t('automations.builder.days', 'Days')}
+              options={DAYS.map((label, id) => ({
+                id,
+                label: t(`common.days.short.${id}`, label),
+                ariaLabel: t(`common.days.short.${id}`, label),
+              }))}
+              selectedIds={selectedDays}
+              onChange={(days) => onChange({
+                ...condition,
+                days_of_week: days.length > selectedDays.length ? days.sort((a, b) => a - b) : days,
               })}
-            </div>
+            />
           </div>
         </div>
       );
@@ -433,20 +503,22 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
 
     case 'condition_geofence':
       return (
-        <div className="flex flex-1 flex-wrap items-end gap-3">
+        <div className="grid min-w-0 grid-cols-1 items-end gap-3 @sm/condition:grid-cols-2">
           <UiSelect
             label={t('automations.builder.geofence', 'Geofence')}
             help={{
               i18nKey: 'help.fields.automations.geofence',
               content: 'The named place this condition checks. Define new places under Settings → Locations.',
             }}
-            options={geofenceOptions}
+            options={condition.place_id > 0 && !geofenceOptions.some((option) => option.value === String(condition.place_id))
+              ? [...geofenceOptions, { value: String(condition.place_id), label: t('common.unknown', 'Unknown') }]
+              : geofenceOptions}
             value={condition.place_id > 0 ? String(condition.place_id) : ''}
             onChange={(event) => onChange({
               ...condition,
               place_id: event.target.value ? Number(event.target.value) : 0,
             })}
-            className="w-52"
+            className="w-full"
           />
           <UiSelect
             label={t('automations.builder.state', 'State')}
@@ -459,14 +531,14 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               ...condition,
               state: event.target.value as AutomationGeofenceState,
             })}
-            className="w-32"
+            className="w-full"
           />
         </div>
       );
 
     case 'condition_other_automation':
       return (
-        <div className="flex flex-1 flex-wrap items-end gap-3">
+        <div className="grid min-w-0 grid-cols-1 items-end gap-3 @sm/condition:grid-cols-2">
           <UiInput
             label={t('automations.builder.otherAutomationId', 'Automation ID')}
             help={{
@@ -480,7 +552,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               ...condition,
               other_automation_id: Number.parseInt(event.target.value, 10) || 0,
             })}
-            className="w-40"
+            className="min-h-11 w-full md:min-h-10"
           />
           <UiSelect
             label={t('automations.builder.state', 'State')}
@@ -493,7 +565,7 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               ...condition,
               state: event.target.value as AutomationOtherAutomationState,
             })}
-            className="w-48"
+            className="w-full"
           />
         </div>
       );

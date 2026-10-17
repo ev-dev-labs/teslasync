@@ -91,7 +91,7 @@ export function useInstallAlertPack() {
   return useMutation({
     mutationFn: ({ pack_id, ...body }: InstallPackInput) =>
       request<PackInstallation>(`/alerts/packs/${encodeURIComponent(pack_id)}/install`, {
-        method: 'POST', body: JSON.stringify(body),
+        method: 'POST', body: JSON.stringify(body), requiresLiveMode: true,
       }),
     onSuccess: () => {
       invalidateAndBroadcast(client, { queryKey: notificationKeys.alertRules })
@@ -105,7 +105,7 @@ export function useRemoveAlertPack() {
   return useMutation({
     mutationFn: ({ id, delete_rule_ids }: { id: number; delete_rule_ids: number[] }) =>
       request<{ status: string }>(`/alerts/pack-installations/${id}/remove`, {
-        method: 'POST', body: JSON.stringify({ delete_rule_ids }),
+        method: 'POST', body: JSON.stringify({ delete_rule_ids }), requiresLiveMode: true,
       }),
     onSuccess: () => {
       invalidateAndBroadcast(client, { queryKey: notificationKeys.alertRules })

@@ -16,14 +16,17 @@ import {
 
 import { useSettings } from '@/api/hooks/useSettings'
 import { useFont } from '@/components/ui/FontProvider'
-import { PageContainer } from '@/components/layout'
-import { Button, SectionTitle, Text } from '@/components/ui'
-import { StatCard } from '@/components/data-display'
+import { PageLayout } from '@/components/layout'
+import { Button, Icon, SectionTitle, Text } from '@/components/ui'
+import type { StatMetric } from '@/components/data-display'
+import { SettingsSummaryBrief, type SettingsSummaryMetric } from '../components/operationalbrief-all/SettingsSummaryBrief'
 import { FadeIn } from '@/components/motion'
-import { EditConflictBanner } from '@/components/feedback'
+import { DataStateNotice, EditConflictBanner, QueryError } from '@/components/feedback'
+import { deriveDataState } from '@/api/dataState'
 import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useEditLease } from '@/hooks/useEditLease'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry'
 import { restartChecklist } from '@/features/onboarding/checklist'
 
@@ -40,6 +43,7 @@ import { ResetSection } from '../components/ResetSection'
 import { ServerSection } from '../components/ServerSection'
 import { SettingsNavigation, type SettingsSection } from '../components/SettingsNavigation'
 import { SANS_LABELS } from '../components/fontChoices'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // The Tesla integration redirect cluster (Tesla Account, Feature Flags,
 // Region & API, Active Orders, Gas Price Auto-Poll), the Fleet API link
@@ -61,29 +65,35 @@ const LANGUAGE_LABELS: Record<string, string> = {
 interface OverviewCard {
   icon: ReactNode
   label: string
-  value: string
+  value: string | number | null | undefined
   sublabel?: string
+  metricId?: StatMetric['metricId']
+  display?: StatMetric['display']
+  loading?: boolean
 }
 
 /**
  * Coalesce a unit string to an em-dash when it is null, undefined, or blank.
  * The KPI band must never render an empty value cell — an absent/blank unit
  * shows "—" exactly like the loading / no-settings placeholder instead of a
- * visually empty StatCard.
+ * visually empty summary value.
  */
 function orDash(value: string | null | undefined): string {
   return value && value.trim() !== '' ? value : '—'
 }
 
 export default function SettingsPage() {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('settings')
-  usePageTitle(t('title', 'Settings'))
+  usePageTitle(t('settings.title', 'Settings'))
   const settingsQuery = useSettings()
+  const settingsState = deriveDataState(settingsQuery)
   const { data: settings, isLoading } = settingsQuery
   const { prefs: fontPrefs } = useFont()
   const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
+  const { reduce: reduceMotion } = useMotionPreference()
   const sections: SettingsSection[] = [
     { id: 'overview', title: t('settings.organization.overview', 'Overview'), description: t('settings.organization.overviewDescription', 'Current preferences and useful shortcuts') },
     { id: 'general', title: t('settings.organization.general', 'Units, language & costs'), description: t('settings.organization.generalDescription', 'Measurements, regional formats and comparison costs') },
@@ -130,10 +140,10 @@ export default function SettingsPage() {
     // Small delay so lazy-loaded sections + i18n have a chance to mount.
     const timer = window.setTimeout(() => {
       const el = document.getElementById(id)
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (el) el.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth', block: 'start' })
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [location.hash])
+  }, [location.hash, reduceMotion])
 
   // ── Derived "preferences at a glance" cards (null-safe, display only) ──
   // Memoised so the seven KPI cards + their icon nodes are only rebuilt when
@@ -151,60 +161,74 @@ export default function SettingsPage() {
 
     return [
       {
-        icon: <Ruler className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Ruler} size="lg" />,
         label: t('overview.distance', 'Distance'),
         value: orDash(settings?.unit_of_length),
         sublabel: rangeLabel,
       },
       {
-        icon: <Thermometer className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Thermometer} size="lg" />,
         label: t('overview.temperature', 'Temperature'),
         value: settings ? (settings.unit_of_temp === 'F' ? '°F' : '°C') : '—',
       },
       {
-        icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Gauge} size="lg" />,
         label: t('overview.pressure', 'Pressure'),
         value: orDash(settings?.unit_of_pressure),
       },
       {
-        icon: <Languages className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Languages} size="lg" />,
         label: t('overview.language', 'Language'),
         value: languageCode,
         sublabel: languageName,
       },
       {
-        icon: <CircleDollarSign className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={CircleDollarSign} size="lg" />,
         label: t('overview.currency', 'Currency'),
         value: settings ? currencySymbol : '—',
       },
       {
-        icon: <Zap className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Zap} size="lg" />,
         label: t('overview.energyCost', 'Energy cost'),
-        value: settings ? `${currencySymbol}${(settings.base_cost_per_kwh ?? 0).toFixed(2)}` : '—',
+        value: settings?.base_cost_per_kwh,
+        metricId: 'rate',
+        display: { formatter: raw => ({ value: `${currencySymbol}${fmtNumber(raw)}`, unit: '' }) },
         sublabel: t('overview.perKwh', 'per kWh'),
       },
       {
-        icon: <Type className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Type} size="lg" />,
         label: t('overview.typography', 'Typography'),
         value: SANS_LABELS[fontPrefs.sans] ?? fontPrefs.sans,
         sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
+        loading: false,
       },
     ]
-  }, [settings, fontPrefs, t])
+  }, [settings, fontPrefs, t, displayPrecision, displayLocale, fmtNumber])
+  const overviewMetrics: readonly SettingsSummaryMetric[] = overviewCards.map((card, index) => ({
+    metricId: card.metricId ?? 'text',
+    occurrenceId: `settings-preference-${index}`,
+    label: card.label,
+    rawValue: card.value === '—' ? null : card.value,
+    display: card.display,
+    context: <>{card.icon}{card.sublabel}</>,
+    loading: card.loading,
+  }))
 
   return (
-    <PageContainer
-      title={t('title', 'Settings')}
+    <PageLayout
+      title={t('settings.title', 'Settings')}
       subtitle={t('settings.organization.subtitle', 'Find a category, adjust your preferences, and keep TeslaSync working your way.')}
-      actions={<SettingsSearch className="w-full sm:w-72" />}
+      contextActions={<SettingsSearch className="w-full sm:w-72" />}
       query={settingsQuery}
     >
+      {settingsState.fatalError && <QueryError error={settingsState.fatalError} onRetry={() => void settingsQuery.refetch()} />}
+      {settingsState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       <EditConflictBanner
         resourceKey={settingsLeaseKey}
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
       />
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-settings-navigation">
         <SettingsNavigation sections={sections} activeSection={activeSection.id}
           onSelect={id => navigate({ pathname: location.pathname, search: location.search, hash: `#${id}` }, { replace: true })} />
         <div className="min-w-0 space-y-5">
@@ -218,31 +242,26 @@ export default function SettingsPage() {
               <FadeIn>
                 <section
                   aria-label={t('overview.aria', 'Current preferences overview')}
-                  className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3"
                 >
-                  {overviewCards.map((card) => (
-                    <StatCard
-                      key={card.label}
-                      className="min-w-0 [overflow-wrap:anywhere]"
-                      label={card.label}
-                      value={card.value}
-                      sublabel={card.sublabel}
-                      icon={card.icon}
-                      loading={isLoading}
-                    />
-                  ))}
+                  <SettingsSummaryBrief title={t('overview.brief.title', 'Preferences at a glance')}
+                    description={t('overview.brief.description', 'Current measurement, language, currency, comparison-cost and typography preferences. These are configuration choices, not vehicle measurements.')}
+                    source={t('overview.brief.source', 'Saved settings and browser font preferences')}
+                    scope={t('overview.brief.scope', 'Latest saved configuration · browser typography has an independent local source')}
+                    metrics={overviewMetrics} loading={isLoading && !settings}
+                    unavailable={!settings && !isLoading} retained={settingsState.status === 'stale'}
+                    testId="settings-preferences-summary" />
                 </section>
               </FadeIn>
 
               <FadeIn delay={0.1}>
                 <section aria-label={t('quickActions.aria', 'Settings shortcuts')} className="space-y-3">
                   <SectionTitle>{t('quickActions.title', 'Quick actions')}</SectionTitle>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+                  <div className="grid grid-cols-settings-shortcuts gap-4">
                     <SettingsActionCard
                       href="/data-export"
                       iconColor="green"
-                      icon={<Download className="h-5 w-5" aria-hidden="true" />}
-                      title={t('export.title', 'Data Export')}
+                      icon={<Icon icon={Download} size="lg" />}
+                      title={t('export.title', 'Data export')}
                       description={t(
                         'export.subtitle',
                         'Export drives, charging, analytics, or full backup as CSV/JSON',
@@ -251,20 +270,20 @@ export default function SettingsPage() {
                     <SettingsActionCard
                       dataTour="settings-tour"
                       iconColor="cyan"
-                      icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
-                      title={t('tour.title', 'Onboarding Tour')}
+                      icon={<Icon icon={PlayCircle} size="lg" />}
+                      title={t('tour.title', 'Onboarding tour')}
                       description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
                       action={
-                        <Button variant="ghost" className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
-                          <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {t('tour.restart', 'Open Tour Launcher')}
+                        <Button variant="ghost" wrapLabel className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
+                          <Icon icon={PlayCircle} className="mr-2" />
+                          {t('tour.openLauncher', 'Show tours')}
                         </Button>
                       }
                     />
                     <SettingsActionCard
                       iconColor="cyan"
-                      icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
-                      title={t('checklist.settings.title', 'Setup Checklist')}
+                      icon={<Icon icon={Rocket} size="lg" />}
+                      title={t('checklist.settings.title', 'Setup checklist')}
                       description={t(
                         'checklist.settings.description',
                         'Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.',
@@ -272,6 +291,7 @@ export default function SettingsPage() {
                       action={
                         <Button
                           variant="ghost"
+                          wrapLabel
                           className="h-auto min-h-11 w-full whitespace-normal"
                           onClick={() => {
                             restartChecklist()
@@ -283,8 +303,8 @@ export default function SettingsPage() {
                             )
                           }}
                         >
-                          <Rocket className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {t('checklist.settings.restart', 'Restart Checklist')}
+                          <Icon icon={Rocket} className="mr-2" />
+                          {t('checklist.settings.restart', 'Restart checklist')}
                         </Button>
                       }
                     />
@@ -305,6 +325,6 @@ export default function SettingsPage() {
           ))}
         </div>
       </div>
-    </PageContainer>
+    </PageLayout>
   )
 }

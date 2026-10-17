@@ -27,6 +27,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 
 // Deterministic i18n: return the English fallback so assertions read the copy
 // users actually see. importActual keeps every other react-i18next export
@@ -130,16 +131,15 @@ describe('RecentActivityFeed — empty / null-safety branches', () => {
   });
 
   it('does not throw and shows the empty state when entries is undefined', () => {
-    // The prop is typed as an array, but a query can hand us undefined before it
-    // resolves — this must not blow up on `.length` / `.map`.
+    // An unresolved query must not blow up on `.length` / `.map`.
     expect(() =>
-      renderFeed({ entries: undefined as unknown as UserActivityEntry[] }),
+      renderFeed({ entries: undefined }),
     ).not.toThrow();
     expect(screen.getByText('No recent activity in this window.')).toBeInTheDocument();
   });
 
   it('does not throw and shows the empty state when entries is null', () => {
-    expect(() => renderFeed({ entries: null as unknown as UserActivityEntry[] })).not.toThrow();
+    expect(() => renderFeed({ entries: null })).not.toThrow();
     expect(screen.getByText('No recent activity in this window.')).toBeInTheDocument();
   });
 });
@@ -233,13 +233,13 @@ describe('RecentActivityFeed — accessibility + accent colour', () => {
   });
 
   it("tints the icon with the action's registry accent colour", () => {
-    // auth.login -> text-emerald-300; vehicle.command.wake -> text-amber-300.
+    // auth.login -> semantic-success; vehicle.command.wake -> semantic-warning.
     const emerald = renderFeed({ entries: [makeEntry({ action: 'auth.login' })] });
-    expect(emerald.container.querySelector('svg')?.classList.contains('text-emerald-300')).toBe(true);
+    expect(emerald.container.querySelector('svg')?.classList.contains('text-[var(--semantic-success)]')).toBe(true);
     emerald.unmount();
 
     const amber = renderFeed({ entries: [makeEntry({ action: 'vehicle.command.wake' })] });
-    expect(amber.container.querySelector('svg')?.classList.contains('text-amber-300')).toBe(true);
+    expect(amber.container.querySelector('svg')?.classList.contains('text-[var(--semantic-warning)]')).toBe(true);
   });
 
   it('exposes the click-through link with an accessible name matching its title', () => {
@@ -264,4 +264,80 @@ describe('RecentActivityFeed — className forwarding', () => {
     renderFeed({ entries: [], className: 'custom-empty' });
     expect(screen.getByRole('status')).toHaveClass('custom-empty');
   });
+});
+
+describe('RecentActivityFeed — preservation and restrained navigation', () => {
+      it('keeps supplied chronology rather than sorting by timestamp or id', () => {
+        const { container } = renderFeed({
+          entries: [
+            makeEntry({ id: 9, action: 'auth.logout', ts: '2025-01-01T00:00:00Z' }),
+            makeEntry({ id: 0, action: 'auth.login', ts: '2026-01-01T00:00:00Z' }),
+            makeEntry({ id: 3, action: 'settings.update', ts: 'not-a-real-date' }),
+          ],
+        });
+        const rows = container.querySelectorAll('li');
+        expect(rows).toHaveLength(3);
+        expect(rows[0]).toHaveTextContent('Signed out');
+        expect(rows[1]).toHaveTextContent('Signed in');
+        expect(rows[2]).toHaveTextContent('Settings updated');
+        expect(rows[2]).toHaveTextContent('—');
+      });
+
+      it('keeps a measured zero entity identifier linked and visible', () => {
+        const { container } = renderFeed({
+          entries: [makeEntry({ entity_type: 'vehicle', entity_id: '0', detail: '0' })],
+        });
+        expect(screen.getByRole('link')).toHaveAttribute('href', '/vehicles/0');
+        expect(container).toHaveTextContent('vehicle · 0 — 0');
+      });
+
+      it('keeps complete long RTL content and escapes supplied detail', () => {
+        const detail = 'تفاصيل النشاط '.repeat(40) + '<script>alert("activity")</script>';
+        const { container } = renderFeed({
+          entries: [makeEntry({ entity_type: 'vehicle', entity_id: 'سيارة'.repeat(30), detail })],
+        });
+        expect(container.querySelector('p')?.textContent).toContain(detail);
+        expect(container.querySelector('script')).toBeNull();
+        expect(screen.getByRole('link')).toHaveClass('break-words');
+        expect(container.querySelector('p')).toHaveClass('break-words', 'whitespace-pre-wrap');
+      });
+
+      it('uses semantic link and visible keyboard focus roles without adding motion', async () => {
+        const user = userEvent.setup();
+        renderFeed({ entries: [makeEntry({ entity_type: 'vehicle', entity_id: '7' })] });
+        const link = screen.getByRole('link', { name: 'Signed in' });
+        await user.tab();
+        expect(link).toHaveFocus();
+        expect(link).toHaveClass(
+          'text-[var(--semantic-info)]',
+          'underline',
+          'focus-visible:outline-2',
+          'focus-visible:outline-offset-2',
+          'focus-visible:outline-[var(--focus-ring)]',
+          'forced-colors:text-[LinkText]',
+          'forced-colors:focus-visible:outline-[Highlight]',
+        );
+        expect(link.className).not.toMatch(/animate-|transition-|focus:outline-none/);
+      });
+
+      it('updates caller-supplied rows without inventing a source status or changing entries', () => {
+        const entries = [makeEntry({ action: 'auth.login', detail: 'retained entry' })];
+        const original = structuredClone(entries);
+        const { rerender } = renderFeed({ entries });
+        rerender(
+          <MemoryRouter>
+            <RecentActivityFeed entries={entries} />
+          </MemoryRouter>,
+        );
+        expect(screen.getByText('Signed in')).toBeInTheDocument();
+        expect(screen.getByText('retained entry')).toBeInTheDocument();
+        expect(entries).toEqual(original);
+        expect(screen.queryByRole('status')).toBeNull();
+        rerender(
+          <MemoryRouter>
+            <RecentActivityFeed entries={[]} />
+          </MemoryRouter>,
+        );
+        expect(screen.getByRole('status')).toHaveTextContent('No recent activity in this window.');
+      });
 });

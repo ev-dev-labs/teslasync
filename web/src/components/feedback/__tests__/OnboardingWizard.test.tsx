@@ -195,6 +195,43 @@ describe('OnboardingWizard — modal focus containment', () => {
 })
 
 describe('OnboardingWizard — step navigation', () => {
+  it('keeps every full description and progress position without completing early', () => {
+    const { onClose } = renderWizard()
+    const descriptions = [
+      'Your all-in-one Tesla fleet management dashboard. Track drives, monitor battery health, analyze energy usage, and control your vehicles — all in one place.',
+      'Head to Settings and link your Tesla account via OAuth. TeslaSync will securely poll your vehicle data and keep everything in sync automatically.',
+      'Customize your polling interval, distance units, energy cost per kWh, notification preferences, and MQTT integration to match your setup.',
+      'Your dashboard is ready. Explore drives, charging sessions, efficiency analytics, and more. You can always revisit settings to fine-tune your experience.',
+    ]
+
+    descriptions.forEach((description, index) => {
+      expect(screen.getByText(description)).toHaveAttribute('id', 'onboarding-desc')
+      expect(screen.getByRole('group', { name: `Step ${index + 1} of 4` })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Skip' })).toHaveAttribute('type', 'button')
+      expect(onClose).not.toHaveBeenCalled()
+      expect(isOnboardingCompleted()).toBe(false)
+      expect(broadcastSpy).not.toHaveBeenCalled()
+      if (index < descriptions.length - 1) {
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+      }
+    })
+    expect(screen.getByRole('button', { name: 'Get Started' })).toHaveAttribute('type', 'button')
+  })
+
+  it('uses neutral dialog chrome and reachable shared actions', () => {
+    renderWizard()
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveClass('bg-[var(--surface-1)]', 'shadow-e3')
+    expect(dialog).not.toHaveAttribute('style')
+    screen.getAllByRole('button').forEach((button) => {
+      expect(button).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-[var(--focus-ring)]', 'motion-reduce:transition-none')
+      expect(button).not.toHaveAttribute('style')
+    })
+    expect(screen.getByRole('button', { name: 'Close and skip introduction' })).toHaveClass('h-11', 'w-11')
+    expect(screen.getByRole('button', { name: 'Next' })).toHaveClass('min-h-11')
+    expect(screen.getByRole('button', { name: 'Skip' })).toHaveClass('min-h-11')
+  })
+
   it('advances through every step, swapping the CTA on the final slide', () => {
     renderWizard()
     expect(screen.getByText('Welcome to TeslaSync')).toBeInTheDocument()

@@ -55,7 +55,7 @@ export function HashCalculatorTool() {
   }, [inputVal, t])
 
   return (
-    <ToolCard icon={Hash} color="red" title={t('devtools.utils.hash', 'Hash Calculator')} description={t('devtools.utils.hashDesc', 'Hash Calculator Desc')}>
+    <ToolCard icon={Hash} color="red" title={t('devtools.utils.hash', 'Hash calculator')} description={t('devtools.utils.hashDesc', 'Hash calculator desc')}>
       <div className="space-y-3">
         <Textarea
           id={HASH_INPUT_ID}
@@ -78,7 +78,7 @@ export function HashCalculatorTool() {
           onClick={() => void compute()}
           icon={<Hash className="h-3.5 w-3.5" />}
         >
-          {t('devtools.utils.computeSha256', 'Compute Sha256')}
+          {t('devtools.utils.computeSha256', 'Compute SHA256')}
         </Button>
         {errorMsg && (
           <p role="alert" className="text-sm text-rose-300">

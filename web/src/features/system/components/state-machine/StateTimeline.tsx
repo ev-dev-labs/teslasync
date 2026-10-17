@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 import { cn } from '@/lib/cn';
 import { getStateColor } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
 import { Tooltip, Button } from '@/components/ui';
-import { formatRelative } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * horizontal mini-timeline of FSM transitions.
@@ -31,6 +30,8 @@ export interface StateTimelineProps {
   fsmType: string;
   /** Currently selected transition id, if any. Highlighted on the timeline. */
   selectedId?: number | null;
+  /** ID of the caller's persistent transition detail region. */
+  detailId?: string;
   /** Selection callback — receives the transition row. */
   onSelect?: (transition: FSMTransition) => void;
   /** Window length in minutes — defaults to 10. Only used for the axis labels. */
@@ -52,16 +53,11 @@ export interface StateTimelineProps {
   className?: string;
 }
 
-function presetLabel(min: number, t: TFunction): string {
-  if (min < 60) return t('debugger.window.minutes', '{{n}} min', { n: min });
-  if (min < 1440) return t('debugger.window.hours', '{{n}} h', { n: Math.round(min / 60) });
-  return t('debugger.window.day', '24 h');
-}
-
 export function StateTimeline({
   transitions,
   fsmType,
   selectedId,
+  detailId,
   onSelect,
   windowMinutes = 10,
   anchor,
@@ -72,13 +68,14 @@ export function StateTimeline({
   className,
 }: StateTimelineProps) {
   const { t } = useTranslation();
-  const { formatTime } = useDateFormat();
+  const { formatTime, formatDateShort, formatDate, formatRelative } = useDateFormat();
+  const { formatDurationMsCompact } = useNumberFormatting();
 
   const { ticks, end, start } = useMemo(() => {
     const endTs = (anchor ?? new Date()).getTime();
     const startTs = endTs - windowMinutes * 60_000;
     const span = endTs - startTs || 1;
-    const sorted = [...transitions].sort(
+    const sorted = transitions.filter(tr => Number.isFinite(Date.parse(tr.ts)) && Number.isFinite(endTs)).sort(
       (a, b) => new Date(a.ts).getTime() - new Date(b.ts).getTime(),
     );
     return {
@@ -99,7 +96,7 @@ export function StateTimeline({
       <div
         data-testid="state-timeline-empty"
         className={cn(
-          'rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-xs text-[var(--text-muted)]',
+          'rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-4 py-3 text-xs text-[var(--text-muted)]',
           'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
           className,
         )}
@@ -127,7 +124,7 @@ export function StateTimeline({
                 data-testid="state-timeline-widen"
               >
                 {t('debugger.timeline.widenTo', 'Widen window to {{label}}', {
-                  label: presetLabel(widerPreset!, t),
+                  label: formatDurationMsCompact(widerPreset! * 60_000),
                 })}
               </Button>
             ) : null}
@@ -150,14 +147,14 @@ export function StateTimeline({
   return (
     <div
       data-testid="state-timeline"
-      className={cn('rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3', className)}
+      className={cn('rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-4 py-3', className)}
     >
-      <div className="mb-2 flex items-center justify-between text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-        <span>{formatTime(start)}</span>
+      <div className="mb-2 flex items-center justify-between text-2xs tracking-wider text-[var(--text-muted)]">
+        <span>{formatDate(start) !== formatDate(end) ? `${formatDateShort(start)} ` : ''}{formatTime(start)}</span>
         <span>
-          {t('debugger.timeline.windowLabel', 'Window: {{minutes}} min', { minutes: windowMinutes })}
+          {t('debugger.controls.window', 'Window')}: {formatDurationMsCompact(windowMinutes * 60_000)}
         </span>
-        <span>{formatTime(end)}</span>
+        <span>{formatDate(start) !== formatDate(end) ? `${formatDateShort(end)} ` : ''}{formatTime(end)}</span>
       </div>
       <div className="relative h-10">
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--surface-2)]" />
@@ -167,12 +164,14 @@ export function StateTimeline({
           return (
             <Tooltip
               key={tr.id}
-              content={`${tr.from_state} → ${tr.to_state} · ${formatTime(new Date(tr.ts))}`}
+              content={`${tr.from_state} → ${tr.to_state} · ${formatDateShort(tr.ts)} ${formatTime(tr.ts)}`}
             >
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                aria-pressed={isSelected}
+                aria-controls={detailId}
                 onClick={(e) => {
                   e.preventDefault();
                   onSelect?.(tr);
@@ -180,7 +179,7 @@ export function StateTimeline({
                 className={cn(
                   'touch-target-overlay absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border p-0 transition-all',
                   isSelected
-                    ? 'h-4 w-4 border-[var(--border-strong)] ring-2 ring-white/30'
+                    ? 'h-4 w-4 border-[var(--border-strong)] ring-2 ring-[var(--border-strong)]'
                     : 'h-2.5 w-2.5 border-transparent hover:h-3.5 hover:w-3.5',
                   color.dot,
                 )}

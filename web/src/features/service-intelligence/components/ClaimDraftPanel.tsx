@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 import {
-  GlassPanel, PanelTitle, Badge, Text, Caption, Button, Input, CopyButton,
+  Badge, Text, Caption, Button, Input, CopyButton,
 } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { useClaimDraft, type ClaimDraft } from '@/api/hooks/useServiceIntelligence';
 import { useDataState } from '@/hooks/useDataState';
 import { PanelState } from './PanelState';
@@ -51,6 +53,7 @@ function DraftBody({ draft }: { draft: ClaimDraft }) {
       )}
       <CopyButton
         text={draft.body}
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
         withToast
         label={t('serviceIntelligence.claim.copy', 'Copy ticket text')}
       />
@@ -65,34 +68,35 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
   const [submitted, setSubmitted] = useState<string | null>(null);
   const query = useClaimDraft(vehicleId, submitted);
   const draftState = useDataState(query);
+  const draftRequested = submitted != null || query.isLoading || query.isFetching || draftState.isRefreshBlocked;
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Icons.fileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('serviceIntelligence.claim.title', 'Warranty claim draft')}
-      </PanelTitle>
+    <LayoutCard title={t('serviceIntelligence.claim.title', 'Warranty claim draft')}
+      actions={<Icons.fileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
         <Input
           value={issue}
           onChange={(e) => setIssue(e.target.value)}
           placeholder={t('serviceIntelligence.claim.placeholder', 'Describe the issue (e.g. charge rate drops after 60%)')}
           aria-label={t('serviceIntelligence.claim.issueLabel', 'Issue description')}
-          className="flex-1"
+          className="flex-1 min-h-11 md:min-h-10"
         />
         <Button
+          wrapLabel
           onClick={() => setSubmitted(issue)}
           disabled={vehicleId == null || query.isFetching}
           loading={query.isFetching}
           icon={<Icons.fileText className="h-4 w-4" aria-hidden="true" />}
-          className="gap-2"
+          className="gap-2 min-h-11 min-w-11 md:min-h-10 md:min-w-0"
         >
           {t('serviceIntelligence.claim.generate', 'Draft ticket')}
         </Button>
       </div>
+      <StaleRefreshWarning state={draftState} label={t('serviceIntelligence.claim.title', 'Warranty claim draft')} />
       <PanelState
+        source={draftRequested || draftState.hasData || draftState.fatalError != null ? draftState : null}
         selected={vehicleId != null}
-        loading={query.isLoading || query.isFetching}
+        loading={!draftState.hasData && (query.isLoading || query.isFetching)}
         error={draftState.fatalError}
         empty={query.data == null}
         icon={<Icons.fileText className="h-9 w-9" />}
@@ -107,6 +111,6 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
       >
         {query.data && <DraftBody draft={query.data} />}
       </PanelState>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

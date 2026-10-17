@@ -209,3 +209,97 @@ describe('NotFoundPage — escape hatches', () => {
     window.removeEventListener('toggle-command-palette', handler)
   })
 })
+
+
+// Additive Phase5 coverage: the original contract and assertions above stay intact.
+describe('NotFoundPage — restrained recovery adoption', () => {
+  it.each(['Go back', 'Go to dashboard', 'Open command palette'])(
+    'keeps "%s" reachable with a wrapping label and mobile target',
+    (name) => {
+      renderPage('/')
+
+      const button = screen.getByRole('button', { name })
+      expect(button).toBeEnabled()
+      expect(button).toHaveClass(
+        'min-h-11', 'w-full', 'sm:w-auto', 'max-w-full', 'whitespace-normal',
+      )
+      expect(button.querySelector('span.min-w-0')).toHaveTextContent(name)
+      expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    },
+  )
+
+  it('uses shared visible focus and neutral theme tokens for suggested links', () => {
+    renderPage('/vehicless')
+
+    const link = screen.getByRole('link', { name: /vehicles/i })
+    expect(link).toHaveClass(
+      'min-h-11', 'max-w-full', 'flex-wrap', 'text-[var(--text-primary)]',
+      'focus-visible:outline-2', 'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'forced-colors:focus-visible:outline-[Highlight]',
+      'forced-colors:text-[LinkText]', 'hover:underline',
+    )
+    expect(link.className).not.toMatch(/(?:text|ring)-cyan-/)
+    expect(link.querySelector('span')).toHaveClass('max-w-full', 'break-all')
+    expect(link.querySelector('span')).toHaveTextContent('/vehicles')
+  })
+
+  it('retains the five-suggestion limit and navigable path metadata', () => {
+    renderPage('/vehicless')
+
+    const nav = screen.getByRole('navigation', { name: 'Suggested pages' })
+    const links = nav.querySelectorAll('a')
+    expect(links.length).toBeGreaterThan(0)
+    expect(links.length).toBeLessThanOrEqual(5)
+    for (const link of links) {
+      const href = link.getAttribute('href')
+      expect(href).toMatch(/^\//)
+      expect(href).not.toContain(':')
+      expect(link.querySelector('span')).toHaveTextContent(href ?? '')
+    }
+  })
+
+  it('retains the explanation and all recovery actions without suggestions', () => {
+    renderPage('/')
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+      "We couldn't find that page",
+    )
+    expect(screen.getByText("/ doesn't match any route.")).toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+    expect(screen.queryByRole('navigation', { name: 'Suggested pages' })).toBeNull()
+  })
+
+  it('contains a long unmatched pathname and keeps query values out of body copy', () => {
+    const path = `/${'unmatched-segment'.repeat(20)}`
+    renderPage(`${path}?context=synthetic`)
+
+    const body = screen.getByText(`${path} doesn't match any route.`)
+    expect(body).toHaveClass('break-all')
+    expect(body).not.toHaveTextContent('context=synthetic')
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+  })
+
+  it('suppresses URL diagnostics in production without hiding recovery content', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.stubEnv('DEV', false)
+    try {
+      renderPage('/unknown?context=synthetic')
+
+      expect(warnSpy).not.toHaveBeenCalled()
+      expect(screen.getByRole('heading', { level: 2 })).toBeInTheDocument()
+      expect(screen.getAllByRole('button')).toHaveLength(3)
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('restores the previous document title when the recovery page unmounts', () => {
+    const previousTitle = document.title
+    const { unmount } = renderPage()
+    expect(document.title).toContain('Page not found')
+
+    unmount()
+    expect(document.title).toBe(previousTitle)
+  })
+})

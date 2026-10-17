@@ -1,0 +1,417 @@
+{
+  "item": "audit-page-117",
+  "page": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx",
+  "routes": ["/explorer"],
+  "purpose": "Explain observed roaming from the selected vehicle's bounded drive-history arrivals, without presenting the inferred base as a verified home or the returned history as lifetime coverage.",
+  "primaryGoal": "Inspect destinations, new versus repeat arrivals, monthly discovery, base-relative distances, rankings and the evidence limits behind those findings.",
+  "dataSources": [
+    {
+      "name": "useDriveHistory",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<encoded selected ID>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "consumerEvidence": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx:42-53",
+      "behavior": "Enabled only with a vehicle ID; history key ['drives', vehicleId, 'history', limit] is isolated from list/calendar queries; bounded 1-1000 limit, MODERATE staleTime, safeArray selection, AbortSignal forwarded. No date bounds or offset are passed.",
+      "backendLimits": "Hook documentation describes a 1000-row API cap. Handler/repository behavior, ordering, actual completeness and server filtering were not exercised or inspected; do not infer lifetime coverage."
+    },
+    {
+      "name": "useSelectedVehicle / useVehicles",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "hookEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-76",
+      "behavior": "URL vehicle_id/path takes precedence over persisted selection, then first known fleet vehicle. The page consumes the workspace owner and renders no competing local selector."
+    },
+    {
+      "name": "summarizeExplorer",
+      "owner": "web\\src\\features\\driving\\lib\\explorer.ts",
+      "file": "web\\src\\features\\driving\\lib\\explorer.ts",
+      "line": 468,
+      "endpoint": null,
+      "behavior": "Pure client-side model: valid end coordinates, preferred valid end timestamp with start timestamp fallback; exclusive timestamp-first exclusion accounting; coarse 0.01-degree cells, centroid Haversine meters, visit-weighted P90, stable base tie-breaking, UTC monthly discovery, top-five farthest/rare lists and evidence thresholds. Coordinates do not leave the model. Arrival/coverage/cadence semantics must not change.",
+      "evidence": ["web\\src\\features\\driving\\lib\\explorer.ts:10-20", "web\\src\\features\\driving\\lib\\explorer.ts:241-298", "web\\src\\features\\driving\\lib\\explorer.ts:459-628", "web\\src\\features\\driving\\lib\\explorer.ts:630-720"]
+    },
+    {
+      "name": "Display and trust adapters",
+      "owner": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx",
+      "file": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx",
+      "line": 41,
+      "endpoint": null,
+      "behavior": "useUnits.formatDistance converts source meters at render time; useDataState marks provenance historical and separates fatal failure from retained refresh failure. useNumberFormatting formats coverage/percent values; formatDate is used for destination dates; OperationalBrief metrics use useOperationalMetrics. Their transitive settings queries and actual persisted preference behavior were not exhaustively traced."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / Grid",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "props": ["title", "subtitle", "query", "children", "Grid.cols", "Grid.gap"],
+      "evidence": ["web\\src\\features\\driving\\pages\\ExplorerPage.tsx:31-32", "web\\src\\features\\driving\\pages\\ExplorerPage.tsx:72-137", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16"],
+      "role": "Full allocated-width orchestration; freshness metadata, route focus heading, subtitle help and inherited error boundary stay with the existing layout owner."
+    },
+    {
+      "name": "Explorer domain sections",
+      "owner": "web\\src\\features\\driving\\components\\explorer\\index.ts",
+      "props": ["summary: ExplorerSummary", "state: ExplorerSectionState", "formatDistance", "className", "ExplorerKpis.retained"],
+      "evidence": ["web\\src\\features\\driving\\components\\explorer\\index.ts:1-12", "web\\src\\features\\driving\\components\\explorer\\types.ts:1-11"],
+      "role": "Eight exported, named sections; CoverageMetrics, ExclusionAccounting and DiscoveryCadenceSummary are nested evidence subcomponents. ExplorerSectionBody owns local skeleton/fatal error/retry presentation."
+    },
+    {
+      "name": "DrivingSummaryBrief / NestedDrivingBrief / OperationalBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "adapters": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx"],
+      "props": ["metrics", "scope", "provenance", "loading", "statusLabel", "statusTone", "compact", "retained on adapters", "period on nested adapter"],
+      "evidence": ["web\\src\\features\\driving\\components\\explorer\\ExplorerKpis.tsx:34-88", "web\\src\\components\\data-display\\OperationalBrief.tsx:45-62", "web\\src\\components\\data-display\\OperationalBrief.tsx:151-163"],
+      "role": "Existing summary and specialist formatter pipeline; each rendered brief exposes Review details through the canonical Drawer. Do not replace it with a new KPI card engine."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "props": ["tableId", "columns", "data", "keyExtractor", "enableValueFilters", "mobileColumns", "pagination", "caption", "mobilePresentation"],
+      "evidence": ["web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx:47-135", "web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx:183-192", "web\\src\\components\\ui\\DataTable.tsx:236-299"],
+      "role": "Sorting, value filters, column preferences, pagination and loaded-row exports are shared-owned; mobile table currently prioritizes label/visits. No page-owned selection, row navigation or full-history export is configured."
+    },
+    {
+      "name": "ChartContainer and category chart primitives",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "props": ["title", "subtitle", "ariaLabel", "loading", "chartKey", "exportable", "exportFilename", "exportData", "data", "dataColumns", "children(hiddenSeries)", "height", "mobileHeight", "size"],
+      "evidence": ["web\\src\\features\\driving\\components\\explorer\\MonthlyExplorationChart.tsx:48-160", "web\\src\\features\\driving\\components\\explorer\\DistanceBandsChart.tsx:89-191", "web\\src\\components\\charts\\ChartContainer.tsx:79-118"],
+      "role": "Preserve persisted series toggles, chart image/CSV actions and screen-reader/forced-colors data alternatives. Neither page chart explicitly enables fullscreen or zoom."
+    },
+    {
+      "name": "Feedback, surfaces, typography and help",
+      "owner": "web\\src\\features\\driving\\components\\explorer\\ExplorerSectionBody.tsx",
+      "sharedOwners": ["web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "web\\src\\components\\data-display\\MetricBar.tsx", "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"],
+      "props": ["state/error/onRetry", "EmptyState.actionTo", "MetricBar.value/max/color/fill", "GlassPanel.className", "PanelTitle", "Text", "Badge.variant", "HelpTooltip.i18nKey/ariaLabel"],
+      "evidence": ["web\\src\\features\\driving\\components\\explorer\\ExplorerSectionBody.tsx:21-46", "web\\src\\features\\driving\\pages\\ExplorerPage.tsx:55-80", "web\\src\\components\\data-display\\MetricBar.tsx:8-26"],
+      "role": "Reuse current feedback and semantic tokens rather than inventing loading/status/surface systems."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "props": ["children", "delay"],
+      "evidence": ["web\\src\\features\\driving\\pages\\ExplorerPage.tsx:81-130", "web\\src\\components\\motion\\FadeIn.tsx:23-36"],
+      "role": "Six entry groups use the existing reduced-motion/low-bandwidth preference adapter; actual motion acceptance is unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\explorer\\DestinationRankings.tsx",
+      "line": 77,
+      "rule": "MDC-002 / mission 0.5",
+      "detail": "Farthest and rare lists repeat bordered ordinal/name/detail row markup at lines 78-119 and 143-182.",
+      "fix": "A local typed ranking-row renderer can deduplicate the two lists, retaining distinct distance/arrival/date details. Do not propose a global composite without another independently inspected consumer.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\explorer\\ExplorerSectionBody.tsx",
+      "line": 23,
+      "rule": "MDC-026 / mission 0.5",
+      "detail": "Fatal error/retry is rendered independently in section bodies and both chart function children. The current repetition also repeats a single source failure across all sections.",
+      "fix": "Prefer existing ChartContainer error/onRetry props for chart-local failure; preserve all section shells and individual retry reachability. Reuse ExplorerSectionBody for non-chart sections; do not create another global async wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": "Page grids stack below xl; primary split is 3/2 at xl and bands/rankings split 1/1. Evidence and rankings nest lg two-column grids; coverage bars use md two columns. Directory shows label/visits on mobile. PageLayout keeps min-w-0, w-full and container composition.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\explorer\\ExplorerMethodology.tsx",
+        "line": 149,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Three threshold tiles are fixed grid-cols-3 below lg despite long localized labels, panel padding and enlarged text; narrow-container clipping is a source-supported risk, not an observed failure.",
+        "fix": "Use one column at the smallest allocated widths and three only when space supports full labels; preserve all thresholds and ranking explanation.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx",
+        "line": 190,
+        "rule": "MDC-023 / MDC-043",
+        "detail": "mobileColumns keeps only place/visits; repeat arrivals, base distance and first visit have no caller-configured mobile details renderer. The shared column menu may offer recovery, but mounted accessibility/reachability was not exercised.",
+        "fix": "Adopt the existing DataTable mobilePresentation contract or prove shared column-menu recovery for every hidden field; preserve sort/filter/export and stable table ID.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\explorer\\DistanceBandsChart.tsx",
+        "line": 151,
+        "rule": "MDC-034 / MDC-043",
+        "detail": "All four unit-dependent band labels are forced visible (interval=0) with no caller mobileHeight/size adaptation. Long translated range labels may collide in narrow containers; no viewport was tested.",
+        "fix": "Exercise narrow chart and fallback table; use existing ChartContainer responsive size props and preserve all four bands/series rather than dropping labels or data.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": "Named section landmarks, decorative aria-hidden icons, localized help, loading role=status, chart ariaLabel/dataColumns alternatives, shared keyboard-capable controls and native ordered lists are present. FadeIn delegates reduced motion.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx",
+        "line": 185,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "No localized caption/name is passed; DataTable falls back to the persistence identifier driving:explorer-destinations (DataTable.tsx:930), not the human section title.",
+        "fix": "Pass a localized destination-directory caption through the existing DataTable prop without changing tableId.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\explorer\\DestinationRankings.tsx",
+        "line": 95,
+        "rule": "MDC-040 / preservation",
+        "detail": "Both ranking destination names are truncate with no title or full-name disclosure at lines 95-96 and 160-163. Directory provides title but that alone is not touch/keyboard proof.",
+        "fix": "Allow wrapping or an existing accessible full-label disclosure; keep complete source names available on touch, keyboard and large-text layouts.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx",
+        "line": 78,
+        "rule": "MDC-026 / MDC-040",
+        "detail": "query populates freshness, but loading/busy are not supplied. PageContainer's aria-busy and load announcements derive from explicit loading/busy/error rather than query (PageContainer.tsx:137-142,174). Section skeletons provide local loading announcements; page completion announcement is not wired.",
+        "fix": "Pass source-state busy and ensure the canonical announcer covers completion without replacing all content with a page loading scaffold.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard/focus", "drawer focus restoration", "screen reader output", "composed contrast", "forced colors", "touch targets", "RTL", "200% text", "reduced-motion runtime"]
+  },
+  "states": {
+    "initialLoading": "ExplorerSectionBody renders labeled skeletons; ChartContainer receives loading; summary brief receives loading and null numeric operands. Section shells remain mounted.",
+    "empty": "No returned drives: summary offers /drives. Destination directory has no-coordinate/no-non-base distinction and /drives action; behavior/monthly/bands/rankings/coverage have independent EmptyState or evidence-needed text. Methodology remains explanatory after a successful empty response.",
+    "error": "Only sourceState.fatalError is forwarded, preventing retained-history removal on background failure. Section retry invokes historyQuery.refetch. Chart errors are custom QueryError children.",
+    "staleOffline": "StaleRefreshWarning beside retained content distinguishes blocked/offline refresh and supplies retry. ExplorerKpis receives retained; historical provenance and page freshness are preserved.",
+    "partialUnavailable": "Single drive-history source; eligibility/exclusions and base/behavior/ranking/cadence thresholds disclose limited evidence. No synthetic partial endpoint is invented.",
+    "noVehicle": "NoVehicleSelected replaces the page when vehicleId is null and links to governed onboarding action. The selection hook does not expose fleet query loading/error, so a transient unresolved fleet can look like no selection; this shared boundary is not runtime-tested.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx",
+        "line": 63,
+        "rule": "MDC-026",
+        "detail": "ExplorerSectionState carries loading/error/retry only. NestedDrivingBrief supports retained but behavior/coverage/cadence callers omit it, so retained history can show Returned evidence in nested briefs while the top summary shows Retained evidence.",
+        "fix": "Forward retained trust through the existing section state and nested brief props; keep successful data visible and preserve global warning/freshness.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\explorer\\DestinationRankings.tsx",
+        "line": 43,
+        "rule": "MDC-026 / MDC-025",
+        "detail": "Evidence badges outside state body also render during initial loading or fatal failure, using the empty-derived summary (rankings, behavior, coverage and methodology). They can claim Two destinations required or below row cap before evidence has returned.",
+        "fix": "Use existing neutral pending/unavailable badge states while loading/fatal; distinguish unknown from insufficient measured evidence. Retain the evidence thresholds once data resolves.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\explorer\\CoverageMetrics.tsx",
+      "line": 44,
+      "rule": "MDC-010 / mission 43",
+      "detail": "Coverage and new/repeat MetricBars omit fill, inheriting gradient. MetricBar.tsx:44 and 96 already support solid rendering. These are decorative gradients rather than a necessary domain encoding.",
+      "fix": "Use fill='solid' with restrained current semantic/theme colors; preserve percentages, labels and unknown handling.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\explorer\\ExplorerMethodology.tsx",
+      "line": 136,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Fixed cyan/purple/amber/emerald text decorates section icons, method icons and rank ordinals across the feature. These are toned colors, not neon violations, but many do not encode a domain severity and lack theme-specific mapping.",
+      "fix": "Use neutral token roles for decorative structure; reserve semantic color for actual evidence warnings/status and intentional chart series. Measure composed light/dark contrast before claiming compliance.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\explorer\\NewRepeatBehavior.tsx",
+      "line": 96,
+      "rule": "MDC-015 / MDC-031 / mission 43",
+      "detail": "OperationalBrief panels inside GlassPanel, plus repeated bordered explanation/threshold boxes, layer chrome and repeated source/status descriptions in already dense evidence sections. No content removal is authorized.",
+      "fix": "Review hierarchy using existing compact brief and shared surfaces; simplify local borders/spacing and keep descriptions/provenance/detail actions fully available. Do not create a replacement summary component.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\explorer\\ExplorerKpis.tsx",
+      "line": 4,
+      "rule": "MDC-002 category production imports",
+      "detail": "Feature imports StatMetric through the implementation-specific data-display/stat-reference barrel; same pattern occurs in coverage/behavior/cadence and driving brief adapters. Existing production guidance favors category ownership; type re-export availability at category root was not inspected.",
+      "fix": "Have the shared data-display export owner confirm the supported public type path before changing consumers; do not add local parallel metric types.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": "Preserve trust in retained/pending states and full mobile directory/long-label access, then reduce decorative gradients/color/chrome.",
+    "reason": "The page already has strong decomposition, SI display boundaries, isolated history query and substantial source explanations; modernization is not a restoration or permission to delete complex sections."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Selection prerequisite trust exposure",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "existingOwnerFile": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "props": ["Existing vehicleId/vehicle/vehicles/setVehicleId remain unchanged; if confirmed necessary, expose additive fleet loading/fatal/retained trust from the existing useVehicles query"],
+      "variants": ["unresolved fleet", "resolved empty fleet", "fatal fleet load", "retained fleet"],
+      "states": ["initial", "empty", "error", "retained"],
+      "usedBy": ["web\\src\\features\\driving\\pages\\ExplorerPage.tsx", "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"],
+      "dependsOn": ["useVehicles source-state ownership", "NoVehicleSelected/onboarding boundary", "Shared-owner inspection of other callers before an API change"],
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "rule": "MDC-026",
+      "detail": "Selection output does not expose fleet-query trust. Avoid making an unresolved vehicle list indistinguishable from setup absence.",
+      "fix": "Shared owner should verify boundary behavior and extend the existing contract only if needed; no page-owned duplicate vehicles query or new selector.",
+      "ownerScope": "shared",
+      "confidence": "medium"
+    },
+    {
+      "name": "Canonical metric type export confirmation",
+      "owner": "web\\src\\components\\data-display\\index.ts",
+      "existingOwnerFile": "web\\src\\components\\data-display\\index.ts",
+      "props": ["StatMetric", "StatPeriod; preserve formatter/rawValue/occurrenceId contracts"],
+      "variants": ["type-only category export"],
+      "states": ["source-only API compatibility"],
+      "usedBy": ["ExplorerKpis", "CoverageMetrics", "DiscoveryCadenceSummary", "NewRepeatBehavior", "DrivingSummaryBrief", "NestedDrivingBrief"],
+      "dependsOn": ["Existing stat-reference type declarations", "Category export owner's confirmation; root export was not inspected"],
+      "file": "web\\src\\features\\driving\\components\\explorer\\ExplorerKpis.tsx",
+      "line": 4,
+      "rule": "MDC-002",
+      "detail": "Confirm supported type import ownership rather than creating competing metric types.",
+      "fix": "Reuse a confirmed existing category export or have its sole owner provide a compatible type-only export.",
+      "ownerScope": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "No competing page data/store/selector system found in inspected Explorer sources",
+      "evidence": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx:4-53",
+      "decision": "Keep useDriveHistory, workspace vehicle owner, pure model, shared trust/layout/summary/table/chart owners. Do not add a new explorer API, map/geofence engine or UI library."
+    },
+    {
+      "name": "Bounded history is not workspace date scope",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-77", "web\\src\\api\\hooks\\useDriving.ts:140-152"],
+      "decision": "/explorer is not range-enabled and does not consume useRangeState. Preserve current observed-history scope and cap disclosure; adding a date scope is a separately coordinated integration change, not an audit-assumed defect."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "4EA97EB8150F5B713CD4E9BF38BCEF9E39CCBA2D30C3D31A12577A5850179609",
+    "hashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 140,
+    "pageSpecificComponentLineCount": 1597,
+    "pagePlusComponentLineCount": 1737,
+    "lineCountBasis": "Page plus all 14 files in components\\explorer, including barrel/types; operational brief adapters and pure model excluded from this count and independently cited.",
+    "sectionCount": 8,
+    "sectionNames": [
+      "Explorer summary metrics",
+      "Observed destination directory",
+      "New versus repeat destination behavior",
+      "Monthly exploration and discovery trend",
+      "Base-relative distance and radius bands",
+      "Farthest and rarely observed destination rankings",
+      "Location coverage, exclusions, and discovery cadence",
+      "Explorer methodology and evidence thresholds"
+    ],
+    "sections": [
+      {"name": "Summary", "file": "web\\src\\features\\driving\\components\\explorer\\ExplorerKpis.tsx", "line": 34, "inventory": ["observed destination count with eligible-arrival context", "P90 radius", "farthest distance/name", "inferred base/name/visits, not verified home", "scope/provenance/retained status", "Review details", "empty browse-drives CTA"]},
+      {"name": "Directory", "file": "web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx", "line": 47, "inventory": ["place/unnamed ordinal", "visits", "repeat arrivals", "from-base distance/unknown dash", "first visit", "clustering help", "base evidence warning", "value filters", "numeric/date sorting", "pagination", "column preferences", "loaded-row exports"]},
+      {"name": "New/repeat", "file": "web\\src\\features\\driving\\components\\explorer\\NewRepeatBehavior.tsx", "line": 37, "inventory": ["destination/first/return arrival counts", "two share bars/readouts", "evidence badge", "chronological definition", "brief details"]},
+      {"name": "Monthly", "file": "web\\src\\features\\driving\\components\\explorer\\MonthlyExplorationChart.tsx", "line": 48, "inventory": ["UTC month", "stacked new places/repeat arrivals", "cumulative places line", "legend visibility persistence", "tooltip", "image/copy/CSV exports", "accessible data columns"]},
+      {"name": "Distance bands", "file": "web\\src\\features\\driving\\components\\explorer\\DistanceBandsChart.tsx", "line": 37, "inventory": ["under 5000m, 5000-25000m, 25000-100000m, 100000m+ source bands", "display-unit labels", "destinations/arrivals series", "P90 subtitle", "minimum-base explanation", "legend visibility", "image/copy/CSV exports", "accessible data columns"]},
+      {"name": "Rankings", "file": "web\\src\\features\\driving\\components\\explorer\\DestinationRankings.tsx", "line": 68, "inventory": ["top-five farthest destinations/distance/arrivals", "top-five rare destinations/arrival count/first observed date", "ordinal", "evidence threshold", "no-rare explanation"]},
+      {"name": "Coverage", "file": "web\\src\\features\\driving\\components\\explorer\\EvidenceCoverage.tsx", "line": 75, "inventory": ["eligible/observed denominator", "usable-coordinate rows", "start-time proxies", "coordinate/time share bars", "missing/invalid timestamp exclusions", "missing/nonfinite/out-of-range coordinate exclusions", "discovery count", "median/longest/latest discovery gaps", "three-discovery minimum", "cap/window disclosure", "nested brief details"]},
+      {"name": "Methodology", "file": "web\\src\\features\\driving\\components\\explorer\\ExplorerMethodology.tsx", "line": 46, "inventory": ["six full clustering/base/behavior/distance/time/window explanations", "located arrivals threshold 3", "base visits threshold 2", "cadence discoveries threshold 3", "rankings need 2 non-base destinations", "base evidence badge"]}
+    ],
+    "actions": [
+      {"name": "Select vehicle via workspace header/URL/persisted store", "evidence": "web\\src\\hooks\\useSelectedVehicle.ts:47-76"},
+      {"name": "Retry/refetch source and retained refresh warning", "evidence": "web\\src\\features\\driving\\pages\\ExplorerPage.tsx:66-68; web\\src\\components\\feedback\\StaleRefreshWarning.tsx:97-114"},
+      {"name": "Browse /drives from empty summary/directory", "evidence": "web\\src\\features\\driving\\components\\explorer\\ExplorerKpis.tsx:90-97; DestinationDirectory.tsx:168-171"},
+      {"name": "Open clustering and subtitle help", "evidence": "web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx:150-160; web\\src\\components\\layout\\PageContainer.tsx:205-220"},
+      {"name": "Sort/filter/page/customize columns and export loaded destination rows", "evidence": "web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx:47-135,183-192; web\\src\\components\\ui\\DataTable.tsx:361-379"},
+      {"name": "Toggle persisted chart series and chart image/copy/CSV export", "evidence": "web\\src\\features\\driving\\components\\explorer\\MonthlyExplorationChart.tsx:62-66,123-156; DistanceBandsChart.tsx:104-108,177-187"},
+      {"name": "Open/close summary, behavior, coverage and sufficient-cadence Review details drawers", "evidence": "web\\src\\components\\data-display\\OperationalBrief.tsx:151-163,233-240"},
+      {"name": "Setup/onboarding from no-selected-vehicle guidance", "evidence": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:65-72"}
+    ],
+    "dataBehavior": [
+      "Preserve encoded vehicle_id, enabled guard, history query key/limit/staleTime/safeArray and AbortSignal; do not silently switch to default list-page history.",
+      "Preserve model thresholds: 3 base arrivals, 2 repeated base visits, 3 behavior arrivals, 2 destinations for ranking and 3 discoveries for cadence.",
+      "Do not treat unknown distance/cadence/coverage as measured zero; guarded percent fallbacks currently execute only inside nonempty sections.",
+      "Keep SI meters and raw operands in cache/model; formatDistance only at display. Cadence days are internal derived intervals adapted to duration seconds in the presentation formatter.",
+      "Keep base exclusion only after sufficient evidence, stable chronological/tie ordering, centroid distances, visit-weighted P90, UTC monthly aggregation and top-five rare/farthest rules.",
+      "Preserve privacy boundary: no raw coordinate values exported from the model, no fabricated geofence/home identification.",
+      "Keep all eight sections during successful empty/insufficient states, independent retry surfaces and retained data after refresh failure.",
+      "Preserve tableId driving:explorer-destinations, chartKey/export filenames explorer-monthly-discovery and explorer-distance-bands; do not reset saved preferences or legend state."
+    ],
+    "sourcePatternCounts": {"staticInline": 0, "rawControls": 0, "directLibraries": 0, "oldApi": 0, "neon": 0, "sectionElements": 8, "GlassPanelElements": 5, "ChartContainerElements": 2},
+    "sourcePatternScope": "ExplorerPage.tsx and components\\explorer\\*.tsx only; line-oriented pattern counts are not a complete AST/whole-app audit."
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "not run",
+    "typescript": "not run: project-wide validation is centralized and prohibited by this assignment",
+    "lintBuild": "not run: full lint/build prohibited",
+    "auditSkill": "Read audit.sh; did not execute because its final step runs project TypeScript. Scoped read-only patterns were executed instead.",
+    "commands": [
+      {"command": "Get-FileHash 'web\\src\\features\\driving\\pages\\ExplorerPage.tsx' -Algorithm SHA256; (Get-Content same page).Count", "exitCode": 0, "output": "140\n4EA97EB8150F5B713CD4E9BF38BCEF9E39CCBA2D30C3D31A12577A5850179609"},
+      {"command": "Select-String scoped Explorer page and explorer component TSX paths for inline styles, raw controls, direct libraries, old API, neon, sections, GlassPanel and ChartContainer", "exitCode": 0, "output": "staticInline=0\nrawControls=0\ndirectLibraries=0\noldApi=0\nneon=0\nsections=8\nGlassPanel=5\nChartContainer=2"}
+    ],
+    "unknowns": ["Backend history sorting/completeness/server cap enforcement and response shape were not executed.", "No ten-width/theme/mobile/RTL/long-content review.", "Shared dependencies were inspected only at relevant contracts; no application-wide foundation audit or proof of all consumers.", "Read citations describe current source snapshot and may drift under concurrent workers.", "Source-level chart/table actions do not establish browser download/clipboard/legend success.", "Large batched dependency output was tool-truncated; individual bounded files were subsequently inspected directly."]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\ExplorerPage.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\CoverageMetrics.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\DestinationRankings.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\DiscoveryCadenceSummary.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\DistanceBandsChart.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\EvidenceCoverage.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\ExclusionAccounting.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\ExplorerKpis.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\ExplorerMethodology.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\ExplorerSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\MonthlyExplorationChart.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\NewRepeatBehavior.tsx",
+    "web\\src\\features\\driving\\components\\explorer\\index.ts",
+    "web\\src\\features\\driving\\components\\explorer\\types.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\lib\\explorer.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

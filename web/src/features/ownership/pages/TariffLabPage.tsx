@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Plug, Plus, Trash2, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,18 +21,20 @@ import {
   axisTick,
   chartGrid,
   chartMargin,
+  useThemeChartPalette,
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   Tariff,
   TariffRate,
@@ -43,22 +45,24 @@ import {
   EvidencePanel,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatPct, formatPricePerEnergy } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STRUCTURES: TariffStructure[] = ['flat', 'tou', 'tiered', 'real_time', 'demand'];
 const ALL_DAYS = 127;
 
 /** A fresh band spanning the whole week and the whole day. */
-function newRate(): TariffRate {
+function newRate(): Omit<TariffRate, 'end_minute'> & { endClock: string } {
   return {
     id: 0,
     label: 'Standard',
     day_mask: ALL_DAYS,
     start_minute: 0,
-    end_minute: 1440,
+    endClock: '24:00',
     price_minor_per_wh: 0.015,
     tier_upper_wh: null,
     season_start_month: 1,
@@ -80,13 +84,17 @@ function clockToMinutes(value: string): number {
 }
 
 export default function TariffLabPage() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
+  const palette = useThemeChartPalette();
   const [windowDays, setWindowDays] = useState(90);
   const [shiftablePct, setShiftablePct] = useState(35);
   const [switchFeeMinor, setSwitchFeeMinor] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
+  const [planPage, setPlanPage] = useState(1);
+  const [planPageSize, setPlanPageSize] = useState(100);
   const [formOpen, setFormOpen] = useState(false);
   const [draft, setDraft] = useState({
     name: '',
@@ -100,12 +108,15 @@ export default function TariffLabPage() {
     rates: [newRate()],
   });
 
-  usePageTitle(t('ownership.tariff.title', 'Utility Tariff Arbitrage Lab'));
+  usePageTitle(t('ownership.tariff.title', 'Utility tariff arbitrage lab'));
 
-  const tariffQuery = useTariffs(100, 0);
+  const tariffQuery = useTariffs(planPageSize, (planPage - 1) * planPageSize);
   const create = useCreateTariff();
   const remove = useDeleteTariff();
   const simulate = useSimulateTariffs();
+  const publication = useRetainedMutation(simulate, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const { confirm, dialogProps } = useConfirm();
 
   const handleRemove = async (row: Tariff) => {
@@ -119,21 +130,40 @@ export default function TariffLabPage() {
       variant: 'danger',
       confirmLabel: t('common.delete', 'Delete'),
     });
-    if (ok) remove.mutate(row.id);
+    if (ok) {
+      remove.mutate(row.id, {
+        onSuccess: () => {
+          setSelected((current) => current.filter((id) => id !== row.id));
+        },
+      });
+    }
   };
 
   const tariffs = useMemo(() => tariffQuery.data?.items ?? [], [tariffQuery.data?.items]);
-  const result = simulate.data;
+  const planTotal = tariffQuery.data?.total;
+  const hasPlanTotal = planTotal != null && Number.isSafeInteger(planTotal) && planTotal >= 0;
+  useEffect(() => {
+    if (hasPlanTotal) {
+      const lastPage = Math.max(1, Math.ceil(planTotal / planPageSize));
+      setPlanPage((current) => Math.min(current, lastPage));
+    }
+  }, [hasPlanTotal, planTotal, planPageSize]);
+  const result = publication.result;
+  const replaySourceEnabled = vehicleId != null
+    && (publication.pending || result != null || publication.error != null);
   const results = useMemo(() => result?.results ?? [], [result?.results]);
-  const currency = results[0]?.currency ?? draft.currency;
-  const money = (minor: number | null | undefined) =>
-    formatCurrencyMinor(minor, currency, units.unitPrefs.locale);
+  const currency = results[0]?.currency;
+  const money = (minor: number | null | undefined, denomination: string | null | undefined) =>
+    formatCurrencyMinor(minor, denomination, units.unitPrefs.locale);
+  const chartCostLabel = t('fleetOps.workOrderDialog.costMinor', 'Cost (minor units)');
+  const chartCurrencies = [...new Set(results.map((row) => row.currency).filter(Boolean))].join(', ');
 
   const chartData = useMemo(
     () =>
       results.map((row) => ({
         name: row.name,
-        annual: row.annual_cost_minor / 100,
+        annual: row.annual_cost_minor,
+        currency: row.currency,
         isBest: row.rank === 1,
         isCurrent: row.is_current,
       })),
@@ -144,14 +174,16 @@ export default function TariffLabPage() {
     () =>
       results.map((row) => ({
         name: row.name,
-        annual: row.annual_cost_minor / 100,
+        annual: row.annual_cost_minor,
+        annualDisplay: formatCurrencyMinor(row.annual_cost_minor, row.currency, units.unitPrefs.locale),
+        currency: row.currency || '—',
         status: row.is_current
           ? t('ownership.tariff.chart.statusCurrent', 'Current plan')
           : row.rank === 1
             ? t('ownership.tariff.chart.statusBest', 'Cheapest')
             : t('ownership.tariff.chart.statusAlt', 'Alternative'),
       })),
-    [results, t],
+    [results, t, units.unitPrefs.locale],
   );
 
   const toggleSelected = (id: number) => {
@@ -174,7 +206,13 @@ export default function TariffLabPage() {
 
   const submitTariff = (event: FormEvent) => {
     event.preventDefault();
-    create.mutate(draft, {
+    create.mutate({
+      ...draft,
+      rates: draft.rates.map(({ endClock, ...rate }) => ({
+        ...rate,
+        end_minute: clockToMinutes(endClock),
+      })),
+    }, {
       onSuccess: () => {
         setFormOpen(false);
         setDraft((current) => ({ ...current, name: '', provider: '', rates: [newRate()] }));
@@ -189,6 +227,7 @@ export default function TariffLabPage() {
       render: (row) => (
         <Toggle
           label=""
+          aria-label={t('ownership.tariff.plan.compareNamed', 'Compare {{name}}', { name: row.name })}
           checked={selected.includes(row.id)}
           onChange={() => toggleSelected(row.id)}
         />
@@ -215,11 +254,13 @@ export default function TariffLabPage() {
     },
     {
       key: 'bands',
+      align: 'right',
       header: t('ownership.tariff.plan.bands', 'Price bands'),
       render: (row) => <span className="tabular-nums">{(row.rates ?? []).length}</span>,
     },
     {
       key: 'standing',
+      align: 'right',
       header: t('ownership.tariff.plan.standing', 'Standing charge'),
       render: (row) => (
         <span className="tabular-nums">
@@ -234,10 +275,11 @@ export default function TariffLabPage() {
     },
     {
       key: 'demand',
+      align: 'right',
       header: t('ownership.tariff.plan.demand', 'Demand charge'),
       render: (row) => (
         <span className="tabular-nums">
-          {row.demand_charge_minor_per_w > 0
+          {row.demand_charge_minor_per_w != null && Number.isFinite(row.demand_charge_minor_per_w)
             ? `${formatCurrencyMinor(row.demand_charge_minor_per_w * 1000, row.currency, units.unitPrefs.locale)}/kW`
             : '—'}
         </span>
@@ -261,15 +303,8 @@ export default function TariffLabPage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          loading={remove.isPending && remove.variables === row.id}
-          onClick={() => void handleRemove(row)}
-        >
-          {t('ownership.action.remove', 'Remove')}
-        </Button>
+        /* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */
+        <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={remove.isPending && remove.variables === row.id} />
       ),
     },
   ];
@@ -277,9 +312,10 @@ export default function TariffLabPage() {
   const resultColumns: Column<TariffSimulationResult>[] = [
     {
       key: 'rank',
+      align: 'right',
       header: t('ownership.tariff.result.rank', 'Rank'),
       render: (row) => (
-        <span className={`tabular-nums ${row.rank === 1 ? 'text-emerald-300' : ''}`}>
+        <span className={`tabular-nums ${row.rank === 1 ? 'text-[var(--text-secondary)]' : ''}`}>
           #{row.rank}
         </span>
       ),
@@ -301,24 +337,27 @@ export default function TariffLabPage() {
     },
     {
       key: 'annual',
+      align: 'right',
       header: t('ownership.tariff.result.annual', 'Annualised cost'),
-      render: (row) => <span className="tabular-nums">{money(row.annual_cost_minor)}</span>,
+      render: (row) => <span className="tabular-nums">{money(row.annual_cost_minor, row.currency)}</span>,
       sortable: true,
     },
     {
       key: 'delta',
+      align: 'right',
       header: t('ownership.tariff.result.delta', 'vs current'),
       render: (row) => (
         <span
-          className={`tabular-nums ${(row.delta_vs_current_minor ?? 0) < 0 ? 'text-emerald-300' : (row.delta_vs_current_minor ?? 0) > 0 ? 'text-rose-300' : ''}`}
+          className={`tabular-nums ${(row.delta_vs_current_minor ?? 0) < 0 ? 'text-[var(--text-secondary)]' : (row.delta_vs_current_minor ?? 0) > 0 ? 'text-[var(--text-secondary)]' : ''}`}
         >
-          {money(row.delta_vs_current_minor)}
+          {money(row.delta_vs_current_minor, row.currency)}
         </span>
       ),
       sortable: true,
     },
     {
       key: 'effective',
+      align: 'right',
       header: t('ownership.tariff.result.effective', 'Effective price'),
       render: (row) => (
         <span className="tabular-nums">
@@ -333,15 +372,17 @@ export default function TariffLabPage() {
     },
     {
       key: 'shift',
+      align: 'right',
       header: t('ownership.tariff.result.shift', 'Load-shift upside'),
       render: (row) => (
-        <span className="tabular-nums text-emerald-300">
-          {row.load_shift_saving_minor > 0 ? money(row.load_shift_saving_minor) : '—'}
+        <span className="tabular-nums text-[var(--text-secondary)]">
+          {money(row.load_shift_saving_minor, row.currency)}
         </span>
       ),
     },
     {
       key: 'breakeven',
+      align: 'right',
       header: t('ownership.tariff.result.breakEven', 'Break-even'),
       render: (row) =>
         row.break_even_days != null
@@ -350,6 +391,7 @@ export default function TariffLabPage() {
     },
     {
       key: 'peak',
+      align: 'right',
       header: t('ownership.tariff.result.peak', 'Peak demand'),
       render: (row) =>
         row.peak_demand_w != null ? units.formatPower(row.peak_demand_w) : '—',
@@ -359,8 +401,8 @@ export default function TariffLabPage() {
       header: t('ownership.tariff.result.breakdown', 'Energy / standing / demand'),
       render: (row) => (
         <Text as="span" variant="caption">
-          {money(row.energy_cost_minor)} · {money(row.standing_cost_minor)} ·{' '}
-          {money(row.demand_cost_minor)}
+          {money(row.energy_cost_minor, row.currency)} · {money(row.standing_cost_minor, row.currency)} ·{' '}
+          {money(row.demand_cost_minor, row.currency)}
         </Text>
       ),
     },
@@ -369,14 +411,13 @@ export default function TariffLabPage() {
   const bestResult = results.find((row) => row.rank === 1) ?? null;
 
   return (
-    <PageContainer
-      title={t('ownership.tariff.title', 'Utility Tariff Arbitrage Lab')}
+    <PageLayout
+      title={t('ownership.tariff.title', 'Utility tariff arbitrage lab')}
       subtitle={t(
         'ownership.tariff.subtitle',
         'Replay your real measured charging load against every rate plan you can author — flat, time-of-use, tiered, real-time, and demand — then rank them on annualised cost.',
       )}
-      loading={tariffQuery.isLoading}
-      error={tariffQuery.error as Error | null}
+      query={tariffQuery}
     >
       <AlertBanner
         variant="info"
@@ -424,8 +465,8 @@ export default function TariffLabPage() {
             <div className="flex items-end">
               <Button
                 onClick={runSimulation}
-                loading={simulate.isPending}
-                disabled={vehicleId == null || simulate.isPending}
+                loading={publication.pending}
+                disabled={vehicleId == null || publication.pending}
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
               >
                 {t('ownership.tariff.controls.run', 'Replay load against plans')}
@@ -442,45 +483,81 @@ export default function TariffLabPage() {
                   'No plans selected — every stored plan will be evaluated.',
                 )}
           </Text>
-          <MutationError error={simulate.error} />
+          {selected.length > 0 ? (
+            <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
+              {t('bulk.clear', 'Clear selection')}
+            </Button>
+          ) : null}
+          <MutationError error={publication.error} />
         </OwnershipPanel>
       </FadeIn>
 
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.tariff.summary.title', 'Arbitrage summary')}
+          source={publication.source}
+          sourceEnabled={replaySourceEnabled}
           empty={!result}
+          preserveSummary
           emptyMessage={t(
             'ownership.tariff.summary.empty',
             'Run a replay to see how much your plan choice is worth.',
           )}
         >
-          <StatGrid
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.tariff.brief.title', 'Returned tariff replay comparison')}
+            description={t('ownership.tariff.brief.description', 'Annualised savings and shiftable share are modelled replay results, not a bill or a completed charging action.')}
+            scope={<>
+              <span>{t('ownership.tariff.brief.scope', 'Latest replay selection and model assumptions; source coverage remains in the evidence')}</span>
+              {publication.published?.inputs && <span>{t(
+                'ownership.tariff.brief.submittedScope',
+                'Submitted replay: vehicle #{{vehicle}}, {{days}} days, shiftable {{shift}}%, switching fee {{fee}} minor units, tariff IDs {{plans}}',
+                {
+                  vehicle: publication.published.inputs.vehicle_id,
+                  days: publication.published.inputs.window_days,
+                  shift: publication.published.inputs.shiftable_pct,
+                  fee: publication.published.inputs.switch_fee_minor,
+                  plans: publication.published.inputs.tariff_ids.length > 0
+                    ? publication.published.inputs.tariff_ids.join(', ')
+                    : t('ownership.tariff.controls.all', 'No plans selected — every stored plan will be evaluated.'),
+                },
+              )}</span>}
+            </>}
+            source={publication.source}
+            enabled={vehicleId != null}
+            window={result?.window}
+            metrics={[
               {
-                key: 'saving',
+                occurrenceId: 'saving', metricId: 'currency',
                 label: t('ownership.tariff.stat.saving', 'Best-case annual saving'),
-                value: money(result?.max_saving_minor),
+                rawValue: currency == null ? null : result?.max_saving_minor,
+                missingReason: currency == null && result?.max_saving_minor != null
+                  ? t('ownership.tariff.brief.currencyUnknown', 'Replay currency not supplied; the tariff editor currency is not a result denomination.')
+                  : undefined,
+                display: specialistDisplay((minor) => money(minor, currency)),
                 tone: (result?.max_saving_minor ?? 0) > 0 ? 'positive' : 'default',
-                hint: bestResult?.name,
+                context: bestResult?.name,
               },
               {
-                key: 'observed',
+                occurrenceId: 'observed', metricId: 'energy',
                 label: t('ownership.tariff.stat.observed', 'Observed energy'),
-                value: units.formatEnergy(result?.observed_energy_wh ?? 0),
-                hint: t('ownership.tariff.stat.sessions', '{{count}} sessions', {
-                  count: result?.session_count ?? 0,
+                rawValue: result?.observed_energy_wh,
+                display: specialistDisplay(units.formatEnergy),
+                context: result?.session_count == null ? '—' : t('ownership.tariff.stat.sessions', '{{count}} sessions', {
+                  count: result.session_count,
                 }),
               },
               {
-                key: 'plans',
+                occurrenceId: 'plans', metricId: 'count',
                 label: t('ownership.tariff.stat.plans', 'Plans evaluated'),
-                value: fmtNumber(results.length, 0),
+                rawValue: result ? results.length : null,
+                display: specialistDisplay(fmtInt),
               },
               {
-                key: 'shift',
+                occurrenceId: 'shift', metricId: 'percent',
                 label: t('ownership.tariff.stat.shift', 'Shiftable share modelled'),
-                value: formatPct(result?.shiftable_pct, 0),
+                rawValue: result?.shiftable_pct,
+                display: specialistDisplay(formatPct),
                 tone: 'accent',
               },
             ]}
@@ -491,6 +568,8 @@ export default function TariffLabPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.tariff.chart.title', 'Annualised cost by plan')}
+          source={publication.source}
+          sourceEnabled={replaySourceEnabled}
           description={t(
             'ownership.tariff.chart.subtitle',
             'Green is the cheapest ranked plan; grey bars are the alternatives you would be paying instead.',
@@ -509,10 +588,11 @@ export default function TariffLabPage() {
             dataColumns={[
               { key: 'name', label: t('ownership.tariff.chart.col.plan', 'Plan') },
               {
-                key: 'annual',
+                key: 'annualDisplay',
                 label: t('ownership.tariff.chart.cost', 'Annual cost'),
-                format: (v) => fmtNumber(v as number, 2),
               },
+              { key: 'currency', label: t('ownership.form.currency', 'ISO currency code') },
+              { key: 'annual', label: chartCostLabel },
               { key: 'status', label: t('ownership.tariff.chart.col.status', 'Status') },
             ]}
           >
@@ -520,13 +600,23 @@ export default function TariffLabPage() {
               <BarChart data={chartData} margin={chartMargin}>
                 <CartesianGrid {...chartGrid} />
                 <XAxis dataKey="name" tick={axisTick} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
+                <YAxis
+                  tick={axisTick}
+                  tickFormatter={(value: number) => fmtNumber(value)}
+                  label={{ value: `${chartCostLabel}${chartCurrencies ? ` (${chartCurrencies})` : ''}`, angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip
+                  content={<ChartTooltip />}
+                  formatter={(value, name, entry) => [
+                    money(typeof value === 'number' ? value : null, entry.payload?.currency),
+                    `${name}${entry.payload?.currency ? ` (${entry.payload.currency})` : ''}`,
+                  ]}
+                />
                 <Bar dataKey="annual" name={t('ownership.tariff.chart.cost', 'Annual cost')}>
                   {chartData.map((entry) => (
                     <Cell
                       key={entry.name}
-                      fill={entry.isBest ? '#34d399' : entry.isCurrent ? '#22d3ee' : '#64748b'}
+                      fill={entry.isBest ? palette.positive : entry.isCurrent ? palette.primary : palette.neutral}
                     />
                   ))}
                 </Bar>
@@ -539,6 +629,8 @@ export default function TariffLabPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.tariff.results.title', 'Ranked plan economics')}
+          source={publication.source}
+          sourceEnabled={replaySourceEnabled}
           empty={results.length === 0}
           emptyMessage={t(
             'ownership.tariff.results.empty',
@@ -547,9 +639,18 @@ export default function TariffLabPage() {
         >
           <DataTable
             columns={resultColumns}
-            mobileColumns={['name', 'annual', 'delta']}
+            mobilePresentation={{
+              roles: { name: 'title', annual: 'primary', delta: 'meta' },
+              displayValue: (row, key) => {
+                if (key === 'name') return row.name;
+                if (key === 'annual') return money(row.annual_cost_minor, row.currency);
+                if (key === 'delta') return money(row.delta_vs_current_minor, row.currency);
+                return null;
+              },
+            }}
             data={results}
             keyExtractor={(row) => row.tariff_id}
+            rowLabel={(row) => row.name}
             tableId="ownership-tariff-results"
           />
           {results.some((row) => (row.warnings ?? []).length > 0) ? (
@@ -569,6 +670,8 @@ export default function TariffLabPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.tariff.bands.title', 'Where your energy actually landed')}
+          source={publication.source}
+          sourceEnabled={replaySourceEnabled}
           description={t(
             'ownership.tariff.bands.subtitle',
             'Band occupancy for each plan — this is the mechanism behind the ranking, not a projection.',
@@ -580,7 +683,7 @@ export default function TariffLabPage() {
             {results.map((row) => (
               <article
                 key={row.tariff_id}
-                className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
+                className="min-w-0 rounded-[var(--panel-radius)] border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <Text as="h3" variant="subhead">
@@ -599,12 +702,20 @@ export default function TariffLabPage() {
                         <div className="flex justify-between gap-3 text-sm">
                           <span>{band.label}</span>
                           <span className="tabular-nums text-[var(--text-muted)]">
-                            {units.formatEnergy(band.energy_wh)} · {money(band.cost_minor)}
+                            {units.formatEnergy(band.energy_wh)} · {money(band.cost_minor, row.currency)}
                           </span>
                         </div>
-                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+                        <div
+                          role="meter"
+                          aria-label={band.label}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={Math.min(100, Math.max(0, band.share_pct))}
+                          aria-valuetext={formatPct(band.share_pct)}
+                          className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
+                        >
                           <div
-                            className="h-full rounded-full bg-cyan-400/70"
+                            className="h-full rounded-full bg-[var(--text-secondary)]"
                             style={{ width: `${Math.min(100, Math.max(0, band.share_pct))}%` }}
                           />
                         </div>
@@ -625,11 +736,13 @@ export default function TariffLabPage() {
       <FadeIn delay={0.25}>
         <OwnershipPanel
           title={t('ownership.tariff.plans.title', 'Your rate plan library')}
+          source={tariffQuery}
+          editing={formOpen}
           description={t(
             'ownership.tariff.plans.subtitle',
             'Author any plan your utility offers. Prices are stored per watt-hour in currency minor units so exotic structures stay exact.',
           )}
-          empty={tariffs.length === 0 && !formOpen}
+          empty={tariffs.length === 0 && !formOpen && planPage === 1 && !(hasPlanTotal && planTotal > 0)}
           emptyMessage={t(
             'ownership.tariff.plans.empty',
             'No plans yet — add the plan you are on today plus any you are considering.',
@@ -764,7 +877,7 @@ export default function TariffLabPage() {
                 {draft.rates.map((rate, index) => (
                   <div
                     key={index}
-                    className="grid gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 md:grid-cols-2 xl:grid-cols-5"
+                    className="grid min-w-0 gap-3 rounded-[var(--panel-radius)] border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 md:grid-cols-2 xl:grid-cols-5"
                   >
                     <Input
                       label={t('ownership.tariff.form.bandLabel', 'Label')}
@@ -794,15 +907,18 @@ export default function TariffLabPage() {
                       }
                     />
                     <Input
-                      type="time"
+                      type="text"
                       label={t('ownership.tariff.form.bandEnd', 'Ends')}
-                      value={minutesToClock(rate.end_minute)}
+                      required
+                      pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
+                      placeholder="24:00"
+                      value={rate.endClock}
                       onChange={(event) =>
                         setDraft((current) => ({
                           ...current,
                           rates: current.rates.map((item, itemIndex) =>
                             itemIndex === index
-                              ? { ...item, end_minute: clockToMinutes(event.target.value) }
+                              ? { ...item, endClock: event.target.value }
                               : item,
                           ),
                         }))
@@ -826,21 +942,12 @@ export default function TariffLabPage() {
                       }
                     />
                     <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-                        disabled={draft.rates.length <= 1}
-                        onClick={() =>
+                      <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} label={t('ownership.action.remove', 'Remove')} onClick={() =>
                           setDraft((current) => ({
                             ...current,
                             rates: current.rates.filter((_, itemIndex) => itemIndex !== index),
                           }))
-                        }
-                      >
-                        {t('ownership.action.remove', 'Remove')}
-                      </Button>
+                        } disabled={draft.rates.length <= 1} confirm={{ title: t('confirm.removeDraftRate.title', 'Remove this rate?'), message: t('confirm.removeDraftRate.message', 'The rate row is removed from the draft rate plan.') }} />
                     </div>
                   </div>
                 ))}
@@ -857,12 +964,43 @@ export default function TariffLabPage() {
             </form>
           ) : null}
 
+          <Text as="p" variant="caption" className="mb-3" role="status">
+            {t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
+              filtered: tariffs.length,
+              loaded: tariffs.length,
+            })}
+          </Text>
           <DataTable
             columns={planColumns}
-            mobileColumns={['name', 'structure', 'current']}
+            mobilePresentation={{
+              roles: { name: 'title', structure: 'meta', current: 'badge' },
+              displayValue: (row, key) => {
+                if (key === 'name') return row.name;
+                if (key === 'structure') return row.structure.replace(/_/g, ' ');
+                if (key === 'current') return row.is_current
+                  ? t('ownership.tariff.plan.onPlan', 'On plan') : '—';
+                return null;
+              },
+              inlineActions: (row) => <>
+                {planColumns.find((column) => column.key === 'select')?.render(row)}
+                {planColumns.find((column) => column.key === 'actions')?.render(row)}
+              </>,
+            }}
             data={tariffs}
             keyExtractor={(row) => row.id}
+            rowLabel={(row) => row.name}
             tableId="ownership-tariff-plans"
+            paginationControls={{
+              page: planPage,
+              pageSize: planPageSize,
+              total: hasPlanTotal ? planTotal : tariffs.length,
+              totalKind: hasPlanTotal ? 'exact' : 'loaded',
+              onPageChange: setPlanPage,
+              onPageSizeChange: (size) => {
+                setPlanPageSize(size);
+                setPlanPage(1);
+              },
+            }}
             emptyMessage={t(
               'ownership.tariff.plans.empty',
               'No plans yet — add the plan you are on today plus any you are considering.',
@@ -874,6 +1012,8 @@ export default function TariffLabPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={publication.source}
+          sourceEnabled={replaySourceEnabled}
           quality={result?.quality}
           evidence={result?.evidence}
           unsupported={[
@@ -889,6 +1029,6 @@ export default function TariffLabPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

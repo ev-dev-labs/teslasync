@@ -5,7 +5,8 @@ import { Clock, Hash } from 'lucide-react'
 import { Input, Button } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
 import { getRelativeTime } from '../helpers'
-import { formatDateTime } from '@/lib/dateFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
 /** Result of parsing a user-entered field: a valid Date, or an invalid flag. */
 type Parsed = { date: Date | null; invalid: boolean }
@@ -52,6 +53,8 @@ function ConversionRow({ label, value }: { label: string; value: string }) {
 
 export function TimestampTool() {
   const { t } = useTranslation()
+  const { formatDateTime, opts } = useDateFormat()
+  const { fmtInt } = useNumberFormatting()
   const [unix, setUnix] = useState('')
   const [iso, setIso] = useState('')
   const [now, setNow] = useState<Date>(() => new Date())
@@ -104,7 +107,7 @@ export function TimestampTool() {
         >
           <Clock className="h-4 w-4 text-neon-green" aria-hidden="true" />
           <div className="text-sm">
-            <span className="font-mono text-[var(--text-primary)]">{nowUnix}</span>
+            <span className="font-mono text-[var(--text-primary)]">{fmtInt(nowUnix)}</span>
             <span className="mx-2 text-[var(--text-muted)]" aria-hidden="true">|</span>
             <span className="font-mono text-[var(--text-secondary)]">{nowIso}</span>
           </div>
@@ -121,7 +124,7 @@ export function TimestampTool() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Input
-              label={t('devtools.utils.timestampUnixLabel', 'Unix Timestamp')}
+              label={t('devtools.utils.timestampUnixLabel', 'Unix timestamp')}
               placeholder="1700000000"
               value={unix}
               onChange={handleUnixChange}
@@ -132,7 +135,7 @@ export function TimestampTool() {
               <div className="mt-1 space-y-0.5">
                 <ConversionRow label={isoLabel} value={fromUnix.date.toISOString()} />
                 <ConversionRow label={localLabel} value={formatDateTime(fromUnix.date)} />
-                <ConversionRow label={relativeLabel} value={getRelativeTime(fromUnix.date)} />
+                <ConversionRow label={relativeLabel} value={getRelativeTime(fromUnix.date, opts)} />
               </div>
             )}
             {fromUnix.invalid && (
@@ -143,7 +146,7 @@ export function TimestampTool() {
           </div>
           <div>
             <Input
-              label={t('devtools.utils.timestampIsoLabel', 'ISO Timestamp')}
+              label={t('devtools.utils.timestampIsoLabel', 'ISO timestamp')}
               placeholder="2024-01-01T00:00:00Z"
               value={iso}
               onChange={handleIsoChange}
@@ -151,9 +154,9 @@ export function TimestampTool() {
             />
             {fromIso.date && (
               <div className="mt-1 space-y-0.5">
-                <ConversionRow label={unixLabel} value={String(Math.floor(fromIso.date.getTime() / 1000))} />
+                <ConversionRow label={unixLabel} value={fmtInt(Math.floor(fromIso.date.getTime() / 1000))} />
                 <ConversionRow label={localLabel} value={formatDateTime(fromIso.date)} />
-                <ConversionRow label={relativeLabel} value={getRelativeTime(fromIso.date)} />
+                <ConversionRow label={relativeLabel} value={getRelativeTime(fromIso.date, opts)} />
               </div>
             )}
             {fromIso.invalid && (

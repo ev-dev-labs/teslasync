@@ -25,13 +25,15 @@
 //
 // Conventions mirror AICostForecastNarration.test.tsx: react-i18next is
 // NOT mounted, so t(key, default) returns the English default (2nd
-// arg) — assertions match that copy. @testing-library/user-event is
-// intentionally not a dependency of this repo, so interactions are
-// driven with fireEvent. No network is touched: the stream handle is a
+// arg) — assertions match that copy. Native form interactions use
+// user-event; other focused interactions use fireEvent. No network is
+// touched: the stream handle is a
 // plain stub with a vi.fn() start().
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { Button } from '@/components/ui/Button'
 
 import {
   AIBadge,
@@ -72,6 +74,8 @@ describe('AIBadge', () => {
     // The mark is purely decorative — the pill text carries the meaning.
     const icon = badge.querySelector('svg')
     expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(badge).toHaveClass('text-[var(--text-secondary)]', 'bg-[var(--surface-2)]')
+    expect(badge.className).not.toMatch(/cyan|neon|glow/)
   })
 
   it('honours a custom label override while keeping the Helix accessible name', () => {
@@ -204,8 +208,10 @@ describe('AIFeatureCard — action button (idle)', () => {
     expect(button).toHaveAttribute('title', 'Summarize')
     expect(button).toBeEnabled()
     expect(button).toHaveAttribute('aria-disabled', 'false')
-    expect(button.className).toContain('text-cyan-800')
-    expect(button.className).toContain('dark:text-cyan-100')
+    expect(button).toHaveClass('text-[var(--text-primary)]', 'border-[var(--control-border)]')
+    expect(button.className).not.toMatch(/cyan|neon|glow/)
+    expect(button).toHaveClass('min-h-11', 'md:min-h-9')
+    expect(button).toHaveClass('focus-visible:outline-[var(--focus-ring)]')
     // Idle: no busy state announced.
     expect(button).not.toHaveAttribute('aria-busy')
   })
@@ -277,6 +283,8 @@ describe('AIFeatureCard — disabled + streaming state machine', () => {
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-disabled', 'true')
     expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(button.querySelector('svg')?.getAttribute('class')).not.toContain('animate-pulse')
   })
 })
 
@@ -349,7 +357,132 @@ describe('AIFeatureCard — interactions', () => {
   })
 })
 
+describe('AIFeatureCard — enclosing native form', () => {
+  it.each([
+    ['inline', 'mouse'],
+    ['inline', 'Enter'],
+    ['inline', 'Space'],
+    ['below', 'mouse'],
+    ['below', 'Enter'],
+    ['below', 'Space'],
+  ] as const)('starts once without submitting or losing focus (%s, %s)', async (placement, activation) => {
+    const user = userEvent.setup()
+    const start = vi.fn()
+    const onSubmit = vi.fn()
+    render(
+      <form onSubmit={(event) => { event.preventDefault(); onSubmit() }}>
+        <AIFeatureCard
+          title="T"
+          description="D"
+          buttonLabel="Summarize"
+          buttonPlacement={placement}
+          canStart
+          stream={makeStream({ start })}
+        />
+        <Button type="submit">Save</Button>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Ask Helix · Summarize' })
+    expect(button).toHaveAttribute('type', 'button')
+    await user.tab()
+    expect(button).toHaveFocus()
+    if (activation === 'mouse') await user.click(button)
+    else await user.keyboard(activation === 'Enter' ? '{Enter}' : ' ')
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(button).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it('retains the action override and blocks unavailable and streaming repeats inside a form', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn()
+    const onAction = vi.fn()
+    const onSubmit = vi.fn()
+    const form = (canStart: boolean, state: AIFeatureStream['state']) => (
+      <form onSubmit={(event) => { event.preventDefault(); onSubmit() }}>
+        <AIFeatureCard
+          title="T"
+          description="D"
+          buttonLabel="Detect conflicts"
+          canStart={canStart}
+          stream={makeStream({ start, state })}
+          onAction={onAction}
+        />
+        <Button type="submit">Save</Button>
+      </form>
+    )
+    const { rerender } = render(form(false, 'idle'))
+    const button = screen.getByRole('button', { name: 'Ask Helix · Detect conflicts' })
+    expect(button).toBeDisabled()
+    await user.click(button)
+    expect(onAction).not.toHaveBeenCalled()
+    expect(start).not.toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    rerender(form(true, 'idle'))
+    await user.click(button)
+    expect(button).toHaveFocus()
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(start).not.toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    rerender(form(true, 'streaming'))
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toHaveTextContent('Helix is thinking…')
+    await user.dblClick(button)
+    await user.keyboard('{Enter} ')
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(start).not.toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
 describe('AIFeatureCard — placement + slots', () => {
+  it('allows the existing inline action and title to wrap without hiding card content', () => {
+    render(
+      <AIFeatureCard
+        title="A long specialist title with complete evidence"
+        description="All specialist context remains reachable."
+        buttonLabel="Explain complete evidence"
+        canStart
+        stream={makeStream()}
+      />,
+    )
+    const heading = screen.getByRole('heading', { level: 3, name: 'A long specialist title with complete evidence' })
+    const button = screen.getByRole('button', { name: 'Ask Helix · Explain complete evidence' })
+    expect(button).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal')
+    expect(button).not.toHaveClass('whitespace-nowrap')
+    expect(button.parentElement).toHaveClass('flex-wrap', 'min-w-0')
+    expect(button.parentElement).toContainElement(heading)
+    expect(screen.getByText('All specialist context remains reachable.')).toBeVisible()
+  })
+
+  it('retains streaming state and accessible action identity with an adaptive label', () => {
+    const start = vi.fn()
+    render(
+      <AIFeatureCard
+        title="Evidence"
+        description="Complete context"
+        buttonLabel="Explain evidence"
+        canStart
+        stream={makeStream({ state: 'streaming', start })}
+      />,
+    )
+    const button = screen.getByRole('button', { name: 'Ask Helix · Explain evidence' })
+    expect(button).toHaveClass('h-auto', 'whitespace-normal')
+    expect(button).toHaveTextContent('Helix is thinking')
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+    expect(start).not.toHaveBeenCalled()
+  })
+
   it('coerces the button below and after the inputSlot even when placement is inline', () => {
     render(
       <AIFeatureCard
@@ -430,6 +563,60 @@ describe('AIFeatureCard — placement + slots', () => {
 })
 
 describe('AIFeatureCard — output panel wiring', () => {
+  it('keeps the header, input and domain content through paused, failed and done-empty streams', () => {
+    const inputSlot = <div data-testid="retained-input">Complete prompt context</div>
+    const content = <div data-testid="retained-content">Unknown is not zero</div>
+    const { rerender } = render(
+      <AIFeatureCard
+        title="Evidence"
+        description="Complete source context"
+        buttonLabel="Explain evidence"
+        canStart
+        inputSlot={inputSlot}
+        stream={makeStream({ state: 'paused-confirm', text: 'Retained evidence' })}
+      >
+        {content}
+      </AIFeatureCard>,
+    )
+    expect(screen.getByRole('button', { name: 'Ask Helix · Explain evidence' })).toBeEnabled()
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Retained evidence')
+
+    rerender(
+      <AIFeatureCard
+        title="Evidence"
+        description="Complete source context"
+        buttonLabel="Explain evidence"
+        canStart
+        inputSlot={inputSlot}
+        stream={makeStream({ state: 'error', text: 'Retained evidence', error: 'Failed refresh' })}
+      >
+        {content}
+      </AIFeatureCard>,
+    )
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Failed refresh')
+    expect(screen.getByRole('heading', { level: 3, name: 'Evidence' })).toBeVisible()
+    expect(screen.getByTestId('retained-input')).toBeVisible()
+    expect(screen.getByTestId('retained-content')).toBeVisible()
+
+    rerender(
+      <AIFeatureCard
+        title="Evidence"
+        description="Complete source context"
+        buttonLabel="Explain evidence"
+        canStart
+        inputSlot={inputSlot}
+        stream={makeStream({ state: 'done', text: '' })}
+      >
+        {content}
+      </AIFeatureCard>,
+    )
+    expect(screen.getByRole('heading', { level: 3, name: 'Evidence' })).toBeVisible()
+    expect(screen.getByText('Complete source context')).toBeVisible()
+    expect(screen.getByTestId('retained-input')).toBeVisible()
+    expect(screen.getByTestId('retained-content')).toHaveTextContent('Unknown is not zero')
+    expect(screen.getByRole('button', { name: 'Ask Helix · Explain evidence' })).toBeEnabled()
+  })
+
   it('renders no output panel while idle with no accumulated text', () => {
     render(
       <AIFeatureCard

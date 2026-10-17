@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { Wifi, Activity, BookOpen, ScrollText } from 'lucide-react';
+import { Radio, Activity, BookOpen, ScrollText } from 'lucide-react';
 import type { WidgetDef } from '../types';
 
 export const TELEMETRY_WIDGETS: WidgetDef[] = [
@@ -7,7 +7,7 @@ export const TELEMETRY_WIDGETS: WidgetDef[] = [
     id: 'live-signals',
     name: 'Live Signals',
     description: 'Real-time signal values with sparklines',
-    icon: Wifi,
+    icon: Radio,
     category: 'telemetry',
     defaultSize: { cols: 2, rows: 4 },
     minSize: { cols: 2, rows: 2 },

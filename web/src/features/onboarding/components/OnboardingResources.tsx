@@ -13,7 +13,7 @@ import {
 import { GlassPanel, IconBox, PanelTitle, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import { cn } from '@/lib/cn';
-import { type NeonColor } from '@/lib/tokens';
+import { neonColorMap, typography, type NeonColor } from '@/lib/tokens';
 
 interface ResourceLink {
   key: string;
@@ -28,9 +28,9 @@ interface ResourceLink {
 }
 
 const rowClasses = cn(
-  'group flex min-h-[44px] items-center gap-3 rounded-xl border border-[var(--border-subtle)]',
-  'bg-white/[0.02] p-3 transition-colors hover:border-cyan-400/30 hover:bg-white/[0.04]',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50',
+  'group flex min-h-11 min-w-0 items-center gap-3 rounded-shape-sm border border-[var(--border-subtle)]',
+  'bg-[var(--surface-1)] p-3 transition-colors duration-fast hover:border-[var(--border-default)] hover:bg-[var(--control-bg-hover)]',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)]',
 );
 
 /**
@@ -49,7 +49,7 @@ export function OnboardingResources({ className }: { className?: string }) {
     {
       key: 'account',
       icon: <KeyRound className="h-4 w-4" aria-hidden="true" />,
-      color: 'cyan',
+      color: 'neutral',
       title: t('onboarding.resources.account.title', 'Tesla account'),
       desc: t('onboarding.resources.account.desc', 'Connect or manage your Fleet API access.'),
       to: '/tesla-account',
@@ -57,7 +57,7 @@ export function OnboardingResources({ className }: { className?: string }) {
     {
       key: 'guide',
       icon: <Radio className="h-4 w-4" aria-hidden="true" />,
-      color: 'green',
+      color: 'neutral',
       title: t('onboarding.resources.guide.title', 'Fleet Telemetry setup guide'),
       desc: t('onboarding.resources.guide.desc', 'Configure streaming so live data starts arriving.'),
       href: '/docs/fleet-telemetry-setup',
@@ -65,7 +65,7 @@ export function OnboardingResources({ className }: { className?: string }) {
     {
       key: 'docs',
       icon: <BookOpen className="h-4 w-4" aria-hidden="true" />,
-      color: 'purple',
+      color: 'neutral',
       title: t('onboarding.resources.docs.title', 'Documentation'),
       desc: t('onboarding.resources.docs.desc', 'Guides, reference, and troubleshooting.'),
       href: '/docs/',
@@ -89,10 +89,10 @@ export function OnboardingResources({ className }: { className?: string }) {
                   {link.icon}
                 </IconBox>
                 <span className="min-w-0 flex-1">
-                  <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">
+                  <Text as="span" size="sm" weight="medium" color="primary" className="block whitespace-normal break-words">
                     {link.title}
                   </Text>
-                  <Text variant="caption" as="span" className="block">
+                  <Text variant="caption" as="span" className="block break-words">
                     {link.desc}
                   </Text>
                 </span>
@@ -100,7 +100,7 @@ export function OnboardingResources({ className }: { className?: string }) {
                   <>
                     <ExternalLink
                       aria-hidden="true"
-                      className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-cyan-300"
+                      className={cn('h-4 w-4 shrink-0 transition-colors group-hover:text-[var(--text-secondary)]', typography.color.muted)}
                     />
                     <VisuallyHidden>
                       {t('onboarding.resources.newTab', '(opens in a new tab)')}
@@ -109,7 +109,7 @@ export function OnboardingResources({ className }: { className?: string }) {
                 ) : (
                   <ChevronRight
                     aria-hidden="true"
-                    className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-cyan-300"
+                    className={cn('h-4 w-4 shrink-0 transition-colors group-hover:text-[var(--text-secondary)]', typography.color.muted)}
                   />
                 )}
               </>
@@ -137,8 +137,8 @@ export function OnboardingResources({ className }: { className?: string }) {
         </ul>
       </nav>
 
-      <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+      <div className={cn('mt-4 flex items-start gap-2.5 rounded-shape-sm border p-3', neonColorMap.green.border, neonColorMap.green.bg)}>
+        <ShieldCheck className={cn('mt-0.5 h-4 w-4 shrink-0', neonColorMap.green.text)} aria-hidden="true" />
         <Text variant="caption" as="p">
           {t(
             'onboarding.resources.privacy',

@@ -167,7 +167,7 @@ describe('TemperatureGauges — loading branch', () => {
     const { container } = renderGauges({ sensors: fourSensors(), loading: true });
 
     // A pulsing placeholder stands in for the gauges…
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     // …and none of the sensor content renders yet.
     expect(screen.queryByText('Front Motor')).toBeNull();
     expect(container.querySelectorAll('circle')).toHaveLength(0);
@@ -203,19 +203,19 @@ describe('TemperatureGauges — populated (metric / °C)', () => {
 
     // Each gauge states its own scale, so the ceiling is visible rather than
     // implicit in the arc — printed as an SI-converted range in the active unit.
-    expect(screen.getByText('0 – 150°C')).toBeInTheDocument();
-    expect(screen.getByText('0 – 120°C')).toBeInTheDocument();
-    expect(screen.getByText('0 – 60°C')).toBeInTheDocument();
-    expect(screen.getByText('0 – 100°C')).toBeInTheDocument();
+    expect(screen.getByText('0.00 – 150.00°C')).toBeInTheDocument();
+    expect(screen.getByText('0.00 – 120.00°C')).toBeInTheDocument();
+    expect(screen.getByText('0.00 – 60.00°C')).toBeInTheDocument();
+    expect(screen.getByText('0.00 – 100.00°C')).toBeInTheDocument();
   });
 
   it('shows a live reading (unit-converted) and zeroes a null reading', () => {
     renderGauges({ sensors: fourSensors() });
 
     // Battery reads 55°C under metric preferences (identity conversion)…
-    expect(screen.getByText('55')).toBeInTheDocument();
+    expect(screen.getByText('55.00')).toBeInTheDocument();
     // …and the null rear-motor reading is rendered as a zeroed gauge, not "NaN".
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
   });
 
@@ -237,12 +237,12 @@ describe('TemperatureGauges — Fahrenheit boundary', () => {
 
     // Scale captions swap to Fahrenheit at BOTH ends — the floor is 0 °C, which
     // is 32 °F, not zero. Converting only the ceiling would misreport the range.
-    expect(screen.getByText('32 – 302°F')).toBeInTheDocument();
-    expect(screen.getByText('32 – 140°F')).toBeInTheDocument();
-    expect(screen.queryByText('0 – 60°C')).toBeNull();
+    expect(screen.getByText('32.00 – 302.00°F')).toBeInTheDocument();
+    expect(screen.getByText('32.00 – 140.00°F')).toBeInTheDocument();
+    expect(screen.queryByText('0.00 – 60.00°C')).toBeNull();
 
     // The battery reading converts 55°C → 131°F at the render boundary.
-    expect(screen.getByText('131')).toBeInTheDocument();
+    expect(screen.getByText('131.00')).toBeInTheDocument();
 
     // Severity is computed on the SI values, so the battery arc stays critical.
     expect(circleStrokes(container)).toContain('#ef4444');
@@ -264,8 +264,8 @@ describe('TemperatureGauges — null safety', () => {
       sensors: [sensor({ key: 'solo', value: null, maxTemp: 60 })],
     });
 
-    expect(screen.getByText('0 – 60°C')).toBeInTheDocument();
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('0.00 – 60.00°C')).toBeInTheDocument();
+    expect(screen.getByText('0.00')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
     expect(circleStrokes(container)).toContain('#6b7280');
   });

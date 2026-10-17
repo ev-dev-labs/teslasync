@@ -1,0 +1,384 @@
+{
+  "item": "phase6-qa-admin-fleet-api",
+  "reportType": "read-only-finished-page-source-QA",
+  "result": "FAIL",
+  "reportDelivery": "DONE",
+  "pageAcceptance": "NOTRUN",
+  "nativeAcceptance": "NOTRUN",
+  "startedAt": "2026-10-13T16:20:09.768Z",
+  "lastSourceEvidenceAt": "2026-10-13T16:28:41.1234810Z",
+  "returnDeadline": "2026-10-13T16:40:09.768Z",
+  "hardDeadline": "2026-10-13T16:45:09.768Z",
+  "route": "/fleet-api",
+  "page": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx",
+  "log": "web\\logs\\phase6-qa-admin-fleet-api.log",
+  "limits": {
+    "applicationFiles": "READ-ONLY",
+    "authorizedWrites": [
+      "docs\\frontend-audits\\phase6-qa-admin-fleet-api.json",
+      "web\\logs\\phase6-qa-admin-fleet-api.log"
+    ],
+    "prohibitedOperationsPerformed": [],
+    "browserRuns": 0,
+    "apiRequests": 0,
+    "mutations": 0,
+    "gitCommands": 0,
+    "subagents": 0,
+    "installs": 0,
+    "helpersCreatedOrExecuted": 0,
+    "serversStarted": 0,
+    "fullSuites": 0,
+    "credentialsOrRealIdentitiesRead": false,
+    "acceptanceMeaning": "PASS below means the named source property was inspected, not that a native, browser, network or full-page test passed."
+  },
+  "authorityRead": [
+    "migration-queue.md:153-183 rolling finished-page QA contract; :200 assigned row; :1528 accepted Phase5 source-only receipt",
+    "docs\\orchestrator-loop.md:1-292",
+    "docs\\frontend-design-contract.md:1-602, especially MDC-002/020/026/040/043/044/045/060",
+    "docs\\frontend-mission.md:19-237,529-780,921-941,1416-1515",
+    "docs\\session-handoff.md relevant current QA/lifecycle passages",
+    "docs\\frontend-inventory.md:68; docs\\frontend-audits\\audit-page-013.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh"
+  ],
+  "checks": [
+    {
+      "id": "route-and-composition",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\lib\\routeRegistry.ts:132", "web\\src\\lib\\routeLoaders.ts:100", "web\\src\\lib\\routePrefetch.ts:86", "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:10-31"],
+      "observation": "Existing route identity, lazy loader and four unconditional section calls are retained; runtime mounting was not attempted."
+    },
+    {
+      "id": "independent-source-loading",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:24-30", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:39-44", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIEndpointControls.tsx:36-43", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx:27-34", "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:151"],
+      "observation": "Each source has its own initial skeleton; PageLayout does not receive a whole-page loading/error/empty gate. A resolved polling source remains usable while settings or version is unresolved."
+    },
+    {
+      "id": "initial-error-and-retry",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\api\\dataState.ts:198-220", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:41-55", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIEndpointControls.tsx:41-42", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx:32-33"],
+      "observation": "Only fatalError without retained payload replaces the relevant section content, with its own refetch callback."
+    },
+    {
+      "id": "retained-refresh-failure",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\api\\dataState.ts:223-242", "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:22-42", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\FleetAPIBrief.tsx:29-31", "web\\src\\components\\layout\\PageContainer.tsx:253-254", "web\\src\\components\\feedback\\DataSourceNotice.tsx:76-124,258-270"],
+      "observation": "Refresh failure retains data, marks the summary retained, and passes all three named queries to nonfatal source notices with individual retry. Freshness is not asserted to be a common observation timestamp."
+    },
+    {
+      "id": "paused-network-source",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\api\\dataState.ts:245-252", "web\\src\\components\\feedback\\DataSourceNotice.tsx:79-81,105-124,167-170", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\FleetAPIBrief.tsx:29-31"],
+      "observation": "Paused fetches are distinguished from failures; retained payload remains visible and named source badges say Paused offline. Real offline transitions are NOTRUN."
+    },
+    {
+      "id": "authoritative-empty-and-filtered-empty",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIEndpointControls.tsx:43-50", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx:34-47", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:69-75"],
+      "observation": "Missing route catalog explains update/restart and retry; missing deployment metadata explains configuration/restart; filtered no-match offers Clear search. Alternate-catalog recovery is separately a candidate, not a current-server failure."
+    },
+    {
+      "id": "unknown-versus-zero-summary",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\operationalbrief-a-g\\FleetAPIBrief.tsx:9-23", "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:144-162"],
+      "observation": "Absent required sources produce undefined metric inputs rather than fabricated zero/active values. Real zero enabled/selected counts remain numbers when a catalog/config exists; full-catalog totals do not follow table filters."
+    },
+    {
+      "id": "current-server-null-contract",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:51,169-170", "internal\\api\\settings\\handler.go:294-306", "internal\\api\\system\\handler.go:89-100"],
+      "observation": "Catalog/endpoints default to empty collections before iteration. Current backend builds nonnull access/auto maps and a concrete catalog; malformed or legacy null map entries are not runtime-tested and are not certified safe."
+    },
+    {
+      "id": "SI-and-display-boundary",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:1-7,144-148", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\FleetAPIBrief.tsx:19-23", "web\\src\\hooks\\useNumberFormatting.ts:28-39"],
+      "observation": "This page displays dimensionless configuration counts and version/URL metadata, not vehicle physical measurements. Counts use the existing locale-aware formatter. No SI conversion, legacy converter, new unit field or raw-measurement rewrite is present in the scoped feature files."
+    },
+    {
+      "id": "scheduler-selection-and-suspension",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:101-141", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:31-35,45-64", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteActions.tsx:42-49", "web\\src\\features\\admin\\components\\FleetEndpointTable.tsx:65-71"],
+      "observation": "Master polling only changes auto_polling_enabled. Pausing preserves selections and disables editing auto participation; access remains independent. Disabling an allowed pollable endpoint clears its auto selection. Resume sends false, not a paid Fleet command."
+    },
+    {
+      "id": "request-serialization-validation",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\api\\pollingConfigUpdate.ts:3-43", "web\\src\\api\\hooks\\useSettings.ts:330-338", "internal\\api\\settings\\handler.go:313-346", "web\\src\\api\\hooks\\useSettings.ts:264-270", "internal\\api\\settings\\handler.go:247-255"],
+      "observation": "Polling PUT omits response-only catalog and filters map aliases to catalog/pollable keys. Server bounds body size, rejects unknown fields/keys and invalid auto enrollment. Resume boolean JSON agrees with the handler. No request was sent."
+    },
+    {
+      "id": "live-only-write-boundary",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:267,335", "web\\src\\api\\client.ts:378-392", "web\\src\\lib\\operationalMode.ts:45-48,66-76"],
+      "observation": "Both mutations opt into requiresLiveMode; client rejects historical/offline writes before network. Visible controls only disable for pending/business eligibility, so stale-snapshot concurrency policy remains a candidate rather than proof that an offline mutation reaches the server."
+    },
+    {
+      "id": "action-feedback-and-cache",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:272-279,340-346", "web\\src\\api\\hooks\\_toastHelpers.ts:85-111", "web\\src\\i18n\\en.json:8127-8133"],
+      "observation": "Success-only lifecycle callbacks update/invalidate polling cache or invalidate/broadcast settings and emit localized success/error toast feedback. Mounted toast announcement and pending visuals are NOTRUN."
+    },
+    {
+      "id": "read-query-cancellation",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:27-30,319-324,364-370"],
+      "observation": "All three reads forward TanStack AbortSignal; existing keys/stale-time/optional interval are unchanged."
+    },
+    {
+      "id": "literal-i18n-key-coverage",
+      "status": "PASS",
+      "mode": "executed-static-check",
+      "evidence": ["web\\logs\\phase6-qa-admin-fleet-api.log", "web\\src\\i18n\\en\\locale-admin.json:1717-1804"],
+      "observation": "Actual canonical-English lookup: 80 distinct literal t() keys from the ten explicitly scanned feature files, zero missing. Dynamic categories and mutation toast strings were inspected separately. This is not acceptance of translation rendering or every locale."
+    },
+    {
+      "id": "category-region-localization",
+      "status": "FAIL",
+      "mode": "source",
+      "finding": "F2",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:77-80"]
+    },
+    {
+      "id": "switch-semantic-names-and-mobile-source-sizing",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\FleetEndpointTable.tsx:53,71", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:33", "web\\src\\components\\ui\\Toggle.tsx:92-113"],
+      "observation": "Real switch button receives role/aria-checked and localized names. Current Toggle has h-11/min-w-11 below md, so the historical small-track-equals-small-hitbox finding is not carried forward as a current source failure. Native hit geometry remains NOTRUN."
+    },
+    {
+      "id": "non-switch-mobile-button-source-sizing",
+      "status": "FAIL",
+      "mode": "source",
+      "finding": "F3",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:20,25,45", "web\\src\\components\\ui\\Button.tsx:36-39"]
+    },
+    {
+      "id": "export-access-auto-fidelity",
+      "status": "FAIL",
+      "mode": "source",
+      "finding": "F1",
+      "evidence": ["web\\src\\features\\admin\\components\\FleetEndpointTable.tsx:41-72", "web\\src\\components\\ui\\DataTable.tsx:872-892"]
+    },
+    {
+      "id": "layout-and-table-containment-source",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteActions.tsx:14,32,52-56", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:30,53-63", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx:54-58", "web\\src\\components\\ui\\DataTable.tsx:237-242,1197-1203"],
+      "observation": "Toolbars wrap, search uses min-w-0, endpoint URLs break, metadata grid stacks. All five table columns remain available through shared contained-scroll fallback; no mobile adapter is supplied. This proves source strategy only, not absence of page overflow."
+    },
+    {
+      "id": "frontend-observability-boundary",
+      "status": "PASS",
+      "mode": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:10-31", "web\\logs\\phase6-qa-admin-fleet-api.log"],
+      "observation": "Scoped feature files contain no manual fetch/EventSource or page-owned RUM bootstrap. Polling backend spans were observed at handler.go:277-284,311-312,348-349; broader backend tracing acceptance is not claimed."
+    },
+    {
+      "id": "eligible-lexical-guideline-scans",
+      "status": "PASS",
+      "mode": "executed-static-check",
+      "evidence": ["web\\logs\\phase6-qa-admin-fleet-api.log"],
+      "observation": "Corrected source counts: static-inline CSS-var 0; case-sensitive raw controls 0; direct chart/map/motion imports 0; old API imports 0; typed any 0; neon body classes 0; manual fetch/EventSource 0; scoped hook double prefix 0; camelCase query params 0. Shared styles, semantic/translation defects and native acceptance are separate."
+    },
+    {
+      "id": "source-preservation",
+      "status": "PASS",
+      "mode": "executed-static-check",
+      "evidence": ["web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:27-30", "migration-queue.md:1528", "web\\logs\\phase6-qa-admin-fleet-api.log"],
+      "observation": "Page SHA256 matches the historical inventory pin. Correct composition remains 692 page-specific lines and four root sections; historical 792 arithmetic error is not reused."
+    }
+  ],
+  "endpointAgreement": [
+    {"hook": "useSettings", "method": "GET", "path": "/settings", "status": "PASS", "evidence": ["web\\src\\api\\hooks\\useSettings.ts:30", "internal\\api\\router.go:3210,3702"]},
+    {"hook": "usePollingConfig", "method": "GET", "path": "/settings/polling-config", "status": "PASS", "evidence": ["web\\src\\api\\hooks\\useSettings.ts:322", "internal\\api\\router.go:3210,3705"]},
+    {"hook": "useVersionInfo", "method": "GET", "path": "/system/version", "status": "PASS", "evidence": ["web\\src\\api\\hooks\\useSettings.ts:367", "internal\\api\\router.go:3210,4395,4436"]},
+    {"hook": "useUpdatePollingConfig", "method": "PUT", "path": "/settings/polling-config", "status": "PASS", "evidence": ["web\\src\\api\\hooks\\useSettings.ts:333-334", "internal\\api\\router.go:3210,3706"]},
+    {"hook": "useToggleAPISuspend", "method": "POST", "path": "/settings/suspend-api", "status": "PASS", "evidence": ["web\\src\\api\\hooks\\useSettings.ts:265-266", "internal\\api\\router.go:3210,3704"]}
+  ],
+  "endpointLimits": "Method/path source agreement only. Client prefixes /api/v1 at web\\src\\api\\client.ts:90-93. Displayed /api/1/vehicles catalog paths are Tesla upstream metadata, not SPA hook routes; no request, authorization, paid command, token refresh or endpoint execution was performed.",
+  "findings": [
+    {
+      "id": "F1",
+      "status": "FAIL",
+      "severity": "medium",
+      "classification": "source-proven",
+      "title": "Endpoint CSV/JSON exports lose access and auto-poll configuration",
+      "primaryEvidence": "web\\src\\features\\admin\\components\\FleetEndpointTable.tsx:41-72",
+      "supportingEvidence": ["web\\src\\api\\hooks\\useSettings.ts:311-316", "web\\src\\components\\ui\\DataTable.tsx:82-107,872-904,908-915", "web\\src\\lib\\csvExport.ts:25-26,143"],
+      "mechanism": "FleetEndpoint descriptor rows have no access/auto properties. These columns read separate maps in their renderers, but provide no exportValue. DataTable export reads row[column.key] and extractRenderedText(renderer); a Toggle element has no children, so both fields serialize as null (blank CSV). Nonpollable dash does not recover actual configuration. Local exports are enabled by default for this unpaginated table.",
+      "sourceRepro": "Use a synthetic existing descriptor with access=true and auto=true, or access=false and auto=false. Follow DataTable.handleExport for visible access/auto columns: undefined row properties plus childless Toggle become null in JSON and blank CSV regardless of the displayed switch state. Download was NOTRUN.",
+      "expected": "Export current known access/effective auto booleans, keeping unknown/not-scheduled distinct from false.",
+      "narrowFixNeed": "Existing FleetEndpointTable owner adds explicit exportValue callbacks for access/auto and focused export regression cases; consider preserving raw operation identity through exportValue at :29-32. Do not create another table/export system.",
+      "history": "Previously recorded in audit-page-013 architectureIssues; current source mechanism remains present. This report does not redispatch or repair the accepted page."
+    },
+    {
+      "id": "F2",
+      "status": "FAIL",
+      "severity": "low",
+      "classification": "source-proven",
+      "title": "Category region accessible name bypasses localization",
+      "primaryEvidence": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:77",
+      "supportingEvidence": ["web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:64,80", "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:97-99", "web\\src\\i18n\\en\\locale-admin.json:1779-1787", "internal\\tesla\\fleet_endpoint_catalog.go:22-35"],
+      "mechanism": "Visible headings/navigation call groupLabel(group), which translates category labels. The named section uses raw backend group text as aria-label. A translated category therefore leaves its region name in backend English. HTTP-method identity labels are not the problem.",
+      "sourceRepro": "In category mode, resolve fleetApi.categories.vehicledata to a non-English translated label. Heading/nav use that result; the section's aria-label remains Vehicle data because it receives group, not groupLabel(group). Locale switching and screen-reader execution were NOTRUN.",
+      "expected": "Region accessible name agrees with the localized visible heading while raw group/table identities remain stable.",
+      "narrowFixNeed": "FleetAPIRouteCatalog owner uses groupLabel(group) for the name or associates the localized heading through a stable ID; add a focused translated-label regression.",
+      "history": "Same bounded source finding exists in audit-page-013; no new locale campaign is authorized."
+    },
+    {
+      "id": "F3",
+      "status": "FAIL",
+      "severity": "medium",
+      "classification": "source-proven CSS contract mismatch; native measurement NOTRUN",
+      "title": "Grouping and sort-direction buttons retain compact desktop height on mobile",
+      "primaryEvidence": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:20,25,45",
+      "supportingEvidence": ["web\\src\\components\\ui\\Button.tsx:36-39,67-76", "docs\\frontend-design-contract.md:521-526", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:61"],
+      "mechanism": "Category, HTTP method and icon-only sort-direction actions pass size=sm with no mobile height override. Shared sm supplies h-9 (2.25rem, 36px at default 16px root) at every breakpoint, below the contract's default 44px below-md target. The sort icon button also has no declared 44px minimum width. Resume uses the same compact size. Native spacing exceptions, actual hit rectangles and zoom were not measured.",
+      "sourceRepro": "At the contract's default root size and viewport below md, inspect the declared size resolution for these unwrapped buttons: h-9 still applies, unlike the corrected Toggle h-11 mobile button. No browser or hit-testing command was executed.",
+      "expected": "Provide 44px mobile action targets through existing shared controls or document an actually measured valid exception; retain desktop density and all actions.",
+      "narrowFixNeed": "Page/domain owner applies scoped mobile target classes to the existing actions, preserving compact desktop sizes; parent assigns direct-import ownership if required, then validates native rectangles/focus/spacing.",
+      "history": "Do not revive the historical Toggle track-size finding: current Toggle source already declares mobile 44px hit targets."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C1",
+      "classification": "candidate, not a demonstrated lost update",
+      "status": "NOTRUN",
+      "title": "Retained whole-config writes may overwrite newer settings from another operator",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:32-34", "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:101-141", "web\\src\\api\\hooks\\useSettings.ts:333-338", "internal\\api\\settings\\handler.go:347-353"],
+      "observation": "Controls only guard pending/business eligibility and submit the retained full map. Live-mode protection does not imply freshness/concurrency protection. Repository concurrency semantics and a two-operator scenario were not fully reviewed/executed; do not invent ETag/partial-update capability.",
+      "nextEvidence": "Existing integration owner defines a stale/config-write policy and uses a safe scoped regression or source trace before creating a source-proven lost-update fix."
+    },
+    {
+      "id": "C2",
+      "classification": "alternate-server candidate, not a current catalog failure",
+      "status": "NOTRUN",
+      "title": "Hardcoded initial group can yield a no-match state for a catalog without Vehicle data",
+      "evidence": ["web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:15,57-59", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:69-75", "internal\\tesla\\fleet_endpoint_catalog.go:22-35"],
+      "observation": "Clear search does not reset a nonexistent selected group, but the current backend catalog explicitly contains Vehicle data. All routes remains an available recovery. Do not label the current application broken using a fabricated incompatible catalog."
+    },
+    {
+      "id": "C3",
+      "classification": "alternate/malformed metadata candidate, not a current extra-key failure",
+      "status": "NOTRUN",
+      "title": "Any-key metadata predicate versus four rendered deployment slots",
+      "evidence": ["web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:169-170", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx:54-59", "internal\\api\\system\\handler.go:89-100"],
+      "observation": "Only unrecognized keys or recognized empty strings could select a populated branch with no cards. Current server emits exactly the four recognized keys, so the old arbitrary extra-key scenario is not confirmed product behavior."
+    },
+    {
+      "id": "C4",
+      "classification": "native/interaction candidate",
+      "status": "NOTRUN",
+      "title": "Contained five-column table and compact sort selector need narrow-width acceptance",
+      "evidence": ["web\\src\\features\\admin\\components\\FleetEndpointTable.tsx:79-88", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx:30-43", "web\\src\\components\\ui\\DataTable.tsx:237-242,1197-1203"],
+      "observation": "Source retains all fields/actions through shared horizontal scrolling. No measured overflow, unreachable action, clipping or selector hit-target result exists; mobile fallback is not automatically a FAIL."
+    }
+  ],
+  "incidentalBackendObservation": {
+    "classification": "source observation outside frontend acceptance; no backend repair scope granted",
+    "evidence": ["internal\\api\\settings\\handler.go:246-271", ".github\\instructions\\observability.instructions.md:10-17"],
+    "observation": "The directly relevant legacy resume handler lacks the span/trace_id pattern that polling GET/PUT handlers use. This is not a frontend action failure, and no backend-wide audit, mutation or code edit was undertaken."
+  },
+  "nativeChecks": [
+    {"id": "real-route-mount-and-auth", "status": "NOTRUN", "reason": "No browser/API grant; identity/privacy restriction."},
+    {"id": "loading-error-empty-retained-paused-transitions", "status": "NOTRUN", "reason": "Source review only, no mounted synthetic/native scenario."},
+    {"id": "action-pending-success-error-toast", "status": "NOTRUN", "reason": "No mutation/request execution authorized."},
+    {"id": "CSV-JSON-download", "status": "NOTRUN", "reason": "Source-proven serialization issue; browser download not exercised."},
+    {"id": "320px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "375px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "390px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "430px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "768px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "1024px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "1280px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "1440px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "1920px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "2560px", "status": "NOTRUN", "reason": "No native/browser run."},
+    {"id": "narrow-allocated-container-table-scroll", "status": "NOTRUN", "reason": "No measured container/scroll geometry."},
+    {"id": "touch-rectangles-and-hit-testing", "status": "NOTRUN", "reason": "Declared CSS target findings are not actual rectangle measurements."},
+    {"id": "keyboard-tab-focus-restoration", "status": "NOTRUN", "reason": "Shared semantic source is not keyboard execution."},
+    {"id": "screen-reader-announcements", "status": "NOTRUN", "reason": "No assistive-technology/native run."},
+    {"id": "light-dark-custom-composed-contrast", "status": "NOTRUN", "reason": "No composed visual/contrast measurement."},
+    {"id": "forced-colors-open-controls", "status": "NOTRUN", "reason": "No native OS/open-state run."},
+    {"id": "RTL-long-labels-200-percent-text", "status": "NOTRUN", "reason": "No rendered translated/scaled run."},
+    {"id": "reduced-motion-low-bandwidth", "status": "NOTRUN", "reason": "No native motion/network preference run."}
+  ],
+  "preservation": {
+    "pageLines": 33,
+    "controllerLines": 177,
+    "pageSpecificCompositionLines": 692,
+    "sharedAdminSummaryLines": 44,
+    "compositionIncludingSharedAdapterLines": 736,
+    "priorAcceptedCompositionLines": 692,
+    "ratioToCorrectPriorComposition": 1,
+    "historicalArithmeticError": "audit-page-013 pageSpecificLineCount=792 is explicitly corrected in accepted queue receipt; do not treat it as a genuine 100-line deletion.",
+    "rootSectionCount": 4,
+    "sections": ["FleetAPIBrief", "FleetAPIPolling", "FleetAPIEndpointControls", "FleetAPIConfiguredEndpoints"],
+    "rootSectionEvidence": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:27-30",
+    "lexicalFrames": {"GlassPanel": 2, "LayoutCard": 2, "ChartContainer": 0},
+    "frameLimit": "One GlassPanel repeats for configured endpoint slots; dynamic route groups and runtime panel counts were not measured.",
+    "pageSha256": "EC2C34487D7D95F8EFC0BFCC89287A42750425A2777B05720B22C20236AC02E6",
+    "historicalPageSha256Matches": true,
+    "testSha256": "5F47BB09AE810AF265596C13FBB6990F6B7E8ED0EE008870E59368D6B90F7181",
+    "testHashLimit": "Read-only current pin, not an independently captured pre-assignment test baseline.",
+    "noSourceChangesByThisWorker": true
+  },
+  "verificationReceipts": [
+    {"tool": "PowerShell", "shellId": "4508", "exitCode": 0, "command": "Get-Date -Format o; Get-ChildItem relevant .github contract filenames and existing assigned report", "result": "Timestamp acquired; initial ordinary hidden-directory lookup returned no contract matches."},
+    {"tool": "PowerShell", "shellId": "4523", "exitCode": 1, "command": "Set-Location D:\\repos\\teslasync; rg --files --hidden relevant .github/docs contract names", "result": "rg executable unavailable in this shell. Used built-in glob/rg/view tools; no installation or workaround helper."},
+    {"tool": "PowerShell", "shellId": "4574", "exitCode": 1, "command": "Select-String over ten exact feature files for lexical audits; Get-Content line/frame counts; inspect root and optional web .gitignore", "result": "Scans completed; final optional absent web\\.gitignore caused shell exit 1. Initial rawHTML=8 was case-insensitive shared-component false positives; anyType=1 was English prose. Raw output retained, not presented as product failures or an all-green script."},
+    {"tool": "PowerShell", "shellId": "4609", "exitCode": 0, "command": "Select-String -CaseSensitive corrected raw controls/typed-any over ten exact files; scoped settings-hook request-path checks; canonical en.json lookup of literal t() keys", "result": "Corrected rawHTML=0, typedAny=0, hook doublePrefix=0, camelCaseQuery=0; LITERAL_KEYS=80 MISSING=0. Only flawed/uncovered checks rerun, not unchanged passing test files. Initial version range missed /system/version and was completed separately."},
+    {"tool": "PowerShell", "shellId": "4642", "exitCode": 0, "command": "Get-Content useSettings.ts lines364-370; Select-String -SimpleMatch exact five router operations and /api/v1,/system parents; Get-FileHash SHA256 page/test pair", "result": "Version request and all five method/path registrations recorded; current page hash equals historical pin."}
+  ],
+  "unrunCommands": [
+    {"command": "npx tsc --noEmit", "status": "NOTRUN", "reason": "Read-only report item and no unchanged passing gate rerun; parent owns full/cadence gates. Historical accepted source/gate receipts are not represented as fresh."},
+    {"command": "audit-violations audit.sh", "status": "NOTRUN", "reason": "Mandatory unconditional full-project TypeScript step conflicts with scoped report/no unchanged gate reruns. Skill and script read; real bounded lexical scans recorded instead."},
+    {"command": "verify-api-hooks verify.sh", "status": "NOTRUN", "reason": "Runs helper and whole hook-file route extraction beyond five assigned operations; manual exact method/path source agreement recorded instead."},
+    {"command": "Vitest FleetAPIPage.test.tsx", "status": "NOTRUN", "reason": "Accepted unchanged 18/18 historical receipt preserved; no test edits or unchanged passing rerun."},
+    {"command": "npm run lint / npm run build / full suites / Docker", "status": "NOTRUN", "reason": "Not authorized for this worker."}
+  ],
+  "freshTestExecution": {
+    "status": "NOTRUN",
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "note": "Zero execution is not a passing run. Test bodies were read only for preservation context, including retained-source, loading, suspension, serializer-alias, filtering/sorting and missing-version cases."
+  },
+  "needs": [
+    "Parent may queue one bounded FleetEndpointTable export-fidelity fix for F1 with exact direct-import ownership.",
+    "Parent may queue one bounded FleetAPIRouteCatalog localized-region-name fix for F2.",
+    "Parent may queue one bounded existing-action mobile-target fix for F3; do not change shared density globally or reopen corrected Toggle source.",
+    "After actual ownership/grant and safe synthetic scope are available, native QA must cover the individually NOTRUN checks. Source report delivery is not page/application acceptance."
+  ],
+  "ownershipRelease": {
+    "sourceWriteOwnership": "Never acquired; all application files stayed read-only.",
+    "reportAndLog": "Released on this terminal return after persistence validation.",
+    "commands": "Only bounded synchronous sessions; no active command is retained on return.",
+    "browser": "Never acquired.",
+    "servers": "None started or acquired.",
+    "postReturnWrites": "None authorized or planned."
+  }
+}

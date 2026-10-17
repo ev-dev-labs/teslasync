@@ -1,0 +1,560 @@
+{
+  "item": "phase6-qa-advanced-emergency-resilience",
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS",
+  "acceptance": "SOURCE_ONLY; NOT FULL-PAGE OR RUNTIME ACCEPTANCE",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+  "routes": ["/intelligence/emergency-resilience"],
+  "purpose": "Bounded read-only QA of the accepted page and its direct presentation parts, not a new risk model, migration, repair, experiment or command evaluation.",
+  "ownership": {
+    "soleWriter": true,
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-advanced-emergency-resilience.json",
+      "logs\\phase6-qa-advanced-emergency-resilience.log"
+    ],
+    "logIgnoredBy": ".gitignore:80 (logs/)",
+    "allSourceTestsSharedTypesCatalogsApiBackend": "READONLY",
+    "previousPhase6QaReportContents": "NOT READ",
+    "postReturnWrites": "NONE AUTHORIZED"
+  },
+  "guidanceRead": [
+    {
+      "file": "docs\\frontend-mission.md",
+      "lines": "1410-1570",
+      "purpose": "Finished-page visual QA and page/application definitions of done, especially sections 43-45. Those acceptance requirements are not claimed satisfied by this source-only assignment."
+    },
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "lines": "1-260,419-605",
+      "purpose": "Ownership, existing architecture, asynchronous trust, numeric presentation, SI/localization/privacy, mobile/a11y and evidence-strength rules."
+    },
+    {
+      "file": "docs\\frontend-worker-conventions.md",
+      "lines": "entire file",
+      "purpose": "Audit ownership, source evidence limits, bounded work, no-change workers not starting tests, ignored command receipts."
+    },
+    {
+      "file": ".github\\instructions\\react-frontend.instructions.md",
+      "lines": "entire file via bounded range reads",
+      "purpose": "Workspace ownership, shared components, null safety, i18n, states, responsive/a11y and architecture."
+    },
+    {
+      "file": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "purpose": "Canonical SI and display-boundary conversion; no legacy compatibility helpers."
+    },
+    {
+      "file": ".github\\instructions\\observability.instructions.md",
+      "purpose": "No page-specific RUM initialization or observability changes."
+    },
+    {
+      "file": ".github\\instructions\\unit-conversion.instructions.md",
+      "purpose": "Read as applicable historical guidance; current SI cutover/design authority takes precedence over its legacy source-unit examples."
+    },
+    {
+      "file": ".github\\prompts\\audit-pages.prompt.md",
+      "lines": "1-220",
+      "purpose": "Source-backed audit guidance, not permission to execute its whole-repository migration/build/test commands."
+    },
+    {
+      "file": ".github\\skills\\audit-violations\\audit.sh",
+      "purpose": "Audit categories inspected; script NOT RUN because it unconditionally performs forbidden global TypeScript."
+    },
+    {
+      "file": ".github\\skills\\verify-api-hooks\\verify.sh",
+      "purpose": "Endpoint agreement guidance inspected; script NOT RUN because it invokes helper extraction across all mounted backend routes. Only this page's four endpoint contracts were inspected manually."
+    }
+  ],
+  "summary": {
+    "confirmedSourceIssues": 7,
+    "candidates": 4,
+    "sourceHookEndpointContractsInspected": 4,
+    "sourceHookEndpointMismatchesConfirmed": 0,
+    "runtimeNativeFreshTestsFullPage": "NOTRUN",
+    "sourceChanged": false,
+    "repairsPerformed": false,
+    "overallInterpretation": "Seven source-confirmed mechanisms warrant separately owned followups. Conditional unknown/paused/scope-change mechanisms are not claims that production returned those inputs or that a live mutation occurred."
+  },
+  "findings": [
+    {
+      "id": "ER-F01",
+      "classification": "CONFIRMED_SOURCE_ISSUE",
+      "priority": "high",
+      "area": "workspace scope / draft ownership",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "line": 51,
+      "relatedLines": [48, 56, 58, 63, 66],
+      "rule": "MDC-026/MDC-046: scope changes must not relabel one source's state as another vehicle's state.",
+      "mechanism": "Configuration hydration runs only while the component-lifetime hydrated flag is false. The effect does not reset that flag or the enabled/coordinate/target drafts when vehicleId changes. EmergencyResiliencePage:112 mounts the same unkeyed StormGuardPanel and passes the current selected vehicle. After one vehicle's configuration hydrates, another selected vehicle's stored configuration cannot hydrate the draft, while handleSave binds the unchanged draft to the new vehicle_id.",
+      "impact": "A retained draft can represent a different vehicle than the selected workspace and status query; a subsequent user save would use the current vehicle ID with the previous draft.",
+      "evidenceLimit": "Static component/effect/mutation-argument trace only. No real identity, coordinate, vehicle switch, save, command or backend behavior was exercised.",
+      "followupOwner": "direct component owner",
+      "suggestedFollowup": "Separately lease vehicle-scoped draft/hydration lifecycle handling that preserves deliberate unsaved edits within their original scope and rejects old-scope hydration; do not change source in this QA item.",
+      "confidence": "high"
+    },
+    {
+      "id": "ER-F02",
+      "classification": "CONFIRMED_SOURCE_ISSUE",
+      "priority": "medium",
+      "area": "locale / timezone / dates",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 62,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "lines": "6,90-92"},
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx", "lines": "10,71-72,118"},
+        {"file": "web\\src\\lib\\dateFormat.ts", "lines": "36-60"},
+        {"file": "web\\src\\hooks\\useDateFormat.ts", "lines": "74-85"},
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx", "lines": "12,49"}
+      ],
+      "rule": "MDC-044: locale and saved timezone drive date presentation.",
+      "mechanism": "Evidence observation windows, evidence observation timestamps and the modeled result's generation timestamp call the unbound lib formatDateTime with no options. That helper only receives locale/timezone through its optional options argument and otherwise uses browser defaults. The neighboring StormGuardActivity instead binds useDateFormat to saved locale/timezone.",
+      "impact": "A saved timezone/locale that differs from browser defaults affects activity dates but not the plan's quality/evidence/generation dates, producing inconsistent date presentation on one page.",
+      "evidenceLimit": "No browser date output or clock preference was exercised. This confirms missing preference propagation, not any particular observed timestamp discrepancy or 12/24-hour implementation claim.",
+      "followupOwner": "EvidencePanel and AnalysisBrief direct presentation owners",
+      "suggestedFollowup": "Use the existing preference-bound date formatter at these direct rendering owners in a separately leased change.",
+      "confidence": "high"
+    },
+    {
+      "id": "ER-F03",
+      "classification": "CONFIRMED_SOURCE_ISSUE",
+      "priority": "medium",
+      "area": "initial paused / unresolved trust",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "line": 104,
+      "relatedLines": [102, 108],
+      "relatedLocations": [
+        {"file": "web\\src\\api\\dataState.ts", "lines": "195-228"}
+      ],
+      "rule": "MDC-026: paused/unresolved sources are not invented server failures.",
+      "mechanism": "The initial branch only distinguishes statusQuery.isLoading without retained data. If the query has no assessment and isLoading is false, it renders ErrorText 'Weather assessment unavailable.' even when fatalError is null. The source trust derivation explicitly represents no-data paused sources as initial, unknown provenance, isRefreshBlocked true and no fatal error; the panel does not consult that pause distinction.",
+      "impact": "An initial paused/no-data query-like state follows the unavailable/error-looking branch instead of communicating that the assessment has not resolved.",
+      "evidenceLimit": "The branch is source-confirmed for a no-data, nonloading, paused state. No offline/paused query was produced, and no native appearance or screen-reader announcement was observed.",
+      "followupOwner": "StormGuardPanel source-state owner",
+      "suggestedFollowup": "Adopt the existing initial/paused trust distinction without erasing independent recent activity.",
+      "confidence": "high"
+    },
+    {
+      "id": "ER-F04",
+      "classification": "CONFIRMED_SOURCE_ISSUE",
+      "priority": "medium",
+      "area": "localized source-status presentation",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 57,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx", "lines": "45-51"}
+      ],
+      "rule": "MDC-044 / frontend i18n: user-facing status labels are localized; source identifiers are not substitutes for labels.",
+      "mechanism": "The data-quality badge renders quality.status verbatim, whereas AnalysisBrief maps supported quality statuses to localized labels. Even fully supported statuses appear as raw wire enums in the evidence panel.",
+      "impact": "The same page has a translated quality summary but an untranslated quality-status badge.",
+      "evidenceLimit": "Catalog completeness and actual non-English rendering NOTRUN/NOT INSPECTED. This identifies the unlocalized source interpolation only.",
+      "followupOwner": "EvidencePanel presentation owner; serialized catalog owner only if missing copy is confirmed separately",
+      "suggestedFollowup": "Reuse canonical localized quality status labels with a distinct unsupported/unknown fallback; preserve raw status in data.",
+      "confidence": "high"
+    },
+    {
+      "id": "ER-F05",
+      "classification": "CONFIRMED_SOURCE_ISSUE",
+      "priority": "medium",
+      "area": "unknown weather severity / trust",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\stormguardPresentation.ts",
+      "line": 10,
+      "relatedLines": [5, 7, 16, 18, 21],
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx", "lines": "85-93"},
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx", "lines": "42-43"},
+        {"file": "web\\src\\api\\hooks\\useStormguard.ts", "lines": "22,74,85-91"}
+      ],
+      "rule": "MDC-026: unknown is a missing fact, not source-confirmed success or clear conditions.",
+      "mechanism": "Both presentation helpers handle warning and watch explicitly, then use their default branch for Clear/success. The default includes the intended none state but also any unsupported or absent runtime level. Neither direct rendering caller distinguishes an unsupported level before invoking these helpers. Upstream payload-validation guarantees were not established by this bounded review.",
+      "impact": "If an unknown/missing level reaches the component, it is presented as source-confirmed clear/success rather than unknown.",
+      "evidenceLimit": "Conditional unsupported-input mechanism only. No malformed response was fabricated, no experiment was run, and no assertion that the backend currently emits an unsupported level is made.",
+      "followupOwner": "stormguardPresentation direct helper owner",
+      "suggestedFollowup": "Handle none explicitly and keep unknown/unsupported levels neutral and labeled distinctly in a separate source change.",
+      "confidence": "high"
+    },
+    {
+      "id": "ER-F06",
+      "classification": "CONFIRMED_SOURCE_ISSUE",
+      "priority": "medium",
+      "area": "draft validation / action arguments",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "line": 68,
+      "relatedLines": [63, 64, 69, 136, 143, 159],
+      "rule": "MDC-046 / frontend validation: unknown or invalid user input must not silently become a valid-looking action argument.",
+      "mechanism": "The coordinate Inputs are text drafts with inputMode only. The Save button calls handleSave outside a validating form, and handleSave guards only vehicle selection before calling Number(lat)/Number(lng). Blank/whitespace drafts are consequently coerced to zero; nonnumeric drafts become NaN. No required, finite or coordinate-bound check intervenes before mutation invocation.",
+      "impact": "A cleared draft loses its unknown state and produces a numeric zero action argument; invalid text can reach mutation serialization rather than receiving client validation.",
+      "evidenceLimit": "JavaScript coercion and source argument trace only. No real location was accessed or recorded, no mutation/serialization experiment was executed, and no claim that the backend accepts the request is made.",
+      "followupOwner": "StormGuardPanel draft validation owner",
+      "suggestedFollowup": "Separately lease explicit empty/finite/bounds validation and localized field feedback while preserving pending/error and selected-vehicle checks.",
+      "confidence": "high"
+    },
+    {
+      "id": "ER-F07",
+      "classification": "CONFIRMED_SOURCE_ISSUE",
+      "priority": "medium",
+      "area": "display preferences / units",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "line": 118,
+      "relatedLines": [119],
+      "rule": "MDC-045: convert only at the display boundary and retain the user's unit preference.",
+      "mechanism": "The gust caption always supplies the label m/s and passes assessment.peak_gust_ms through fmtNumber only. StormGuardPanel does not consume useUnits or a speed conversion, unlike the parent page's energy/duration scenario display. Therefore the gust caption cannot follow a different selected speed display unit.",
+      "impact": "The storm caption remains fixed-unit while the modeled outage inputs/outputs are preference-aware.",
+      "evidenceLimit": "This is a source presentation preference gap, not a wire-unit corruption finding. Backend measurement semantics and actual rendered unit preference changes were not exercised.",
+      "followupOwner": "StormGuardPanel measurement presentation owner",
+      "suggestedFollowup": "Verify the existing source-unit contract and use the existing SI-to-display speed formatter at the caption boundary in a separate change; do not rename API fields here.",
+      "confidence": "high"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "ER-C01",
+      "classification": "CANDIDATE_NOT_CONFIRMED_RUNTIME_ISSUE",
+      "area": "mobile / long labels / text scaling",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "line": 135,
+      "mechanism": "The coordinate group uses an unconditional two-column grid rather than a narrow-container single-column branch. The parent scenario form uses container breakpoints and explicit min-w-0.",
+      "whyCandidate": "Two columns alone do not prove clipping, target overlap or failure of shared Input sizing. Actual allocated width, long translations, RTL and 200% text were NOTRUN.",
+      "requiredEvidence": "Separately authorized composed mobile/narrow-container QA; no capture is authorized by this worker."
+    },
+    {
+      "id": "ER-C02",
+      "classification": "CANDIDATE_NOT_CONFIRMED_RUNTIME_ISSUE",
+      "area": "mobile activity row",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx",
+      "line": 48,
+      "mechanism": "The event timestamp is shrink-0; the reason/badge row has min-w-0 and the outer row wraps.",
+      "whyCandidate": "A long localized date plus acted label could require a narrow-container check, but existing flex-wrap may be sufficient. Overflow and screen-reader ordering were not measured.",
+      "requiredEvidence": "Actual narrow-container/RTL/large-text layout and announcement review."
+    },
+    {
+      "id": "ER-C03",
+      "classification": "CANDIDATE_NOT_CONFIRMED_RUNTIME_ISSUE",
+      "area": "chart / null-invalid numeric presentation / locale",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "line": 84,
+      "relatedLines": [248, 249, 265, 266],
+      "mechanism": "Every returned timeline element is mapped to display time/energy without a local finite-point filter. Axes carry units but do not receive the page's fmtNumber tick formatter; the tooltip's time label does receive fmtNumber.",
+      "whyCandidate": "No malformed timeline was injected and the shared chart/vendor formatter behavior was not traced or rendered. This does not establish a crash, false zero, raw NaN display or locale mismatch.",
+      "requiredEvidence": "Separately owned validation of the supported response shape and composed shared-chart formatting/unknown behavior. No new risk-model calculation is requested."
+    },
+    {
+      "id": "ER-C04",
+      "classification": "CANDIDATE_NOT_CONFIRMED_RUNTIME_ISSUE",
+      "area": "advisory versus configured automation wording",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "line": 104,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx", "lines": "131-133"}
+      ],
+      "mechanism": "The page-level advisory says TeslaSync does not execute emergency commands, while an adjacent Storm guardian configuration labels an auto pre-charge option. Other page copy explicitly separates modeled outage results from storm forecast/activity.",
+      "whyCandidate": "The existing separation may adequately communicate the boundary. No automation evaluator, authorization, weather provider or command behavior was inspected or exercised, so this is not a confirmed command-capability contradiction.",
+      "requiredEvidence": "Source-owner review of the advisory's intended scope; no live command or experiment."
+    }
+  ],
+  "sourceStateReview": [
+    {
+      "section": "Modeled outage form",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "lines": "40-63,116-209",
+      "observed": "Nullable drafts; required/min constraints on canonical SI fields; restoration percentage has min/max; submit rejects null/nonfinite values and invalid native form validity; selected-vehicle and pending guards; pending loading/disabled state; MutationError after the form.",
+      "limits": "No submission, validation interaction, field association, error announcement or mutation execution tested."
+    },
+    {
+      "section": "Retained modeled result / scope",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "lines": "37-39,65-82,214-229",
+      "observed": "useRetainedMutation scopes response and submitted inputs by vehicle_id. The directly inspected shared hook retains the last successful raw response/inputs, clears publication on scope change, resets the mutation observer and blocks old-scope data. AnalysisBrief distinguishes missing vehicle, no result, pending, paused, retained and fatal failure using that source.",
+      "limits": "This is a source trace, not race/runtime proof or a shared-hook acceptance gate. It does not repair StormGuardPanel's independent draft scope issue."
+    },
+    {
+      "section": "Risk timeline",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "lines": "84-88,233-282",
+      "observed": "The chart shell exists without a result. SourceContent receives initial/ready/retained/error state and paused/no-plan text. A returned timeline with fewer than two points uses an explicit EmptyState. Time and energy are converted at the display boundary. The plotted series is remaining energy; time, energy and risk remain exposed to the chart data/export columns.",
+      "limits": "No chart controls, export, tooltip, fullscreen, keyboard alternative or actual numeric rendering exercised."
+    },
+    {
+      "section": "Priorities and recommendations",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "lines": "285-311",
+      "observed": "The panel is mounted independently; load_priorities and recommendations use nullish array fallbacks and each child has an empty presentation. Returned load/action/recommendation text stays source text rather than being recased.",
+      "limits": "No extreme payload, mobile wrapping or screen-reader sequence rendered."
+    },
+    {
+      "section": "Evidence / explicit unsupported capabilities",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+      "lines": "314-339",
+      "observed": "Evidence remains a mounted section with explicit no-result content. Both no-result and result branches retain the unsupported automatic dispatch/load-shedding and assumed vehicle-to-home statements. EvidencePanel keeps quality/evidence/limitations subdivisions and safe nullish array fallbacks.",
+      "limits": "Source issue F02 affects dates and F04 affects localized quality labels. Full result/error/offline layout was not rendered."
+    },
+    {
+      "section": "Storm assessment/configuration",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+      "lines": "34-173",
+      "observed": "Vehicle-scoped status and independent event queries; no-vehicle prompt; initial-loading skeleton; fatal status retry; stored draft hydration; pending save disable/loading; error text; stale retained assessment notice.",
+      "limits": "F01, F03, F06 and F07 remain confirmed source gaps. A generic stale notice is present, but source-specific last-success time, failed-refresh retry wording, offline save resumption, native focus and notifications are not independently accepted."
+    },
+    {
+      "section": "Storm recent activity",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx",
+      "lines": "9-59",
+      "observed": "The event section remains mounted for a selected vehicle even if the assessment/config source fails. Its own data state controls error/retry, loading, retained, authoritative empty and unresolved text. Events use query.data ?? [], a bounded first-five list and preference-bound date formatting.",
+      "limits": "No null element/malformed-object payload, runtime event ordering, keyboard or live announcement acceptance. Conditional unknown-severity handling is covered by F05."
+    }
+  ],
+  "workspaceScope": {
+    "routeEvidence": "web\\src\\App.tsx:239,773",
+    "ownerEvidence": "web\\src\\lib\\workspaceScope.ts:23-77,94-138,166-184",
+    "sourceConclusion": {
+      "vehicle": "Header-owned vehicle selection is enabled for this route; page consumes useSelectedVehicle and passes vehicleId to both modeled publication and StormGuardPanel.",
+      "range": "This route is not in RANGE_ENABLED_PATHS. It is a submitted outage-duration scenario plus current assessment and recent activity, not a range-owning history page. No duplicate range/vehicle picker is rendered.",
+      "businessDuration": "outage_duration_s is a scenario input, not a second workspace date picker.",
+      "gap": "F01: StormGuardPanel's local drafts do not follow vehicle-scope changes even though its query keys do."
+    },
+    "runtimeHeaderAndMobileDrawer": "NOTRUN",
+    "rangeRegistrationChange": "NOT REQUESTED OR PERFORMED"
+  },
+  "siFormattingLocale": {
+    "sourceSupported": [
+      "The scenario form retains raw Wh/W/s inputs and nullable drafts; display equivalents use useUnits without altering request data.",
+      "Timeline energy and elapsed duration use current SI-to-display converters only at render transformation.",
+      "Summary metrics pass raw duration/count through existing operational metrics instead of manufacturing formatted source values.",
+      "The risk checkpoint count is explicitly explained as modeled checkpoints, not observed storms.",
+      "Evidence sample/coverage values use existing number formatters.",
+      "Storm event timestamps use useDateFormat."
+    ],
+    "sourceGaps": ["ER-F02", "ER-F04", "ER-F07"],
+    "additionalLimits": [
+      "Current battery percentage, slider percentages and priority numbers are interpolated directly; a full source-backed specialist-precision/locale agreement was not established.",
+      "Canonical catalogs were not read or modified; fallback presence does not prove translated catalog coverage.",
+      "No saved locale, units, timezone, 12/24-hour, RTL or currency settings were changed or rendered.",
+      "No legacy unit converter was introduced, no SI field renamed and no backend unit assumption repaired."
+    ]
+  },
+  "actionsReview": {
+    "sourceOnly": true,
+    "actionsPreservedInSource": [
+      "Create confirmed outage plan: submit user-entered canonical scenario fields with the currently selected vehicle ID.",
+      "Configure Storm guardian enabled state and pre-storm target, then Save guard through the existing mutation hook.",
+      "Status retry and independent recent-activity retry through existing query source callbacks.",
+      "Chart toolbar/exportable data configuration through the existing ChartCard."
+    ],
+    "importantSourceChecks": [
+      "Main plan submission guards missing selected vehicle, pending publication, null/nonfinite drafts and reportValidity.",
+      "The page sends confirmed:true; it does not implement an additional confirmation dialog in this source. This report does not redefine required backend confirmation or treat a calculation as a real command.",
+      "Storm save only guards vehicle selection in its handler; draft-validation and scope defects are F06/F01.",
+      "No success completion is fabricated in the page source: hooks expose existing success/error toast callbacks."
+    ],
+    "notEstablished": [
+      "Backend auth/capability/confirmation validation or durable plan semantics.",
+      "Actual vehicle-to-home capability, storage dispatch, automatic weather action or emergency command behavior.",
+      "Offline command/mutation resumption safety.",
+      "Successful export content, complete large timelines or chart-table keyboard support."
+    ],
+    "actionsExecuted": 0
+  },
+  "sourceEndpointAgreement": {
+    "mode": "READONLY_SOURCE; NO API REQUEST",
+    "clientEvidence": "web\\src\\api\\client.ts:75-94,381-397: canonical request paths are normalized and receive /api/v1 at the client boundary.",
+    "agreements": [
+      {
+        "hook": "useCreateResiliencePlan",
+        "method": "POST",
+        "clientPath": "/advanced-intelligence/resilience/plans",
+        "hookEvidence": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:29,156-171,192-196",
+        "routeEvidence": "internal\\api\\router.go:3960 mounts internal\\handler\\v1\\advancedintelligence\\handler.go:71,82",
+        "requestScope": "vehicle_id in submitted body at EmergencyResiliencePage.tsx:62",
+        "result": "SOURCE METHOD/PATH AGREEMENT"
+      },
+      {
+        "hook": "useStormguardStatus",
+        "method": "GET",
+        "clientPath": "/stormguard/status",
+        "queryKeys": ["vehicle_id"],
+        "hookEvidence": "web\\src\\api\\hooks\\useStormguard.ts:70-77",
+        "routeEvidence": "internal\\api\\router.go:4010-4011",
+        "result": "SOURCE METHOD/PATH AGREEMENT"
+      },
+      {
+        "hook": "useStormguardEvents",
+        "method": "GET",
+        "clientPath": "/stormguard/events",
+        "queryKeys": ["vehicle_id", "limit"],
+        "hookEvidence": "web\\src\\api\\hooks\\useStormguard.ts:81-92",
+        "routeEvidence": "internal\\api\\router.go:4010,4013",
+        "result": "SOURCE METHOD/PATH AGREEMENT"
+      },
+      {
+        "hook": "useSaveStormguardConfig",
+        "method": "PUT",
+        "clientPath": "/stormguard/config",
+        "hookEvidence": "web\\src\\api\\hooks\\useStormguard.ts:95-111",
+        "routeEvidence": "internal\\api\\router.go:4010,4012",
+        "requestScope": "vehicle_id in submitted body at StormGuardPanel.tsx:66",
+        "result": "SOURCE METHOD/PATH AGREEMENT"
+      }
+    ],
+    "queryParameterEvidence": "web\\src\\api\\scope.ts:112-141 emits vehicle_id and normalizes filter keys via put/toSnakeCase. vehicleId is the helper's typed option, not a camelCase wire query key.",
+    "limits": "Agreement covers method, mounted path and source query-key construction only. Handler parameter parsing, response JSON validation, authorization, service calculations, risk models, live availability and weather provider behavior were NOT inspected or executed."
+  },
+  "mobileA11ySourceReview": {
+    "present": [
+      "Parent scenario uses an @container responsive grid, min-w-0, wrapped full-width mobile submit label and min-h-11 below md.",
+      "Priorities/recommendations/evidence use bounded columns and break-words/min-w-0.",
+      "Forms use shared labeled Input and SiNumberInput; raw button/input/select/table/textarea elements were absent in the explicit scoped pattern scan.",
+      "The timeline provides a localized ariaLabel and configured data columns through existing ChartCard.",
+      "Evidence subdivisions and recent activity have localized section labels; priority item titles use h3.",
+      "MutationError explicitly uses alert/aria-atomic; unresolved activity/source text uses status; storm decorative icons are aria-hidden.",
+      "The activity row wraps, with remaining geometry questions retained as candidates."
+    ],
+    "notClaimed": [
+      "Actual implicit Input label/hint associations or complete accessibility-tree semantics.",
+      "Tab order, visible/unclipped focus, form validation focus, chart alternative keyboard reachability or export focus restoration.",
+      "Touch target measurements or WCAG exception compliance for existing shared controls.",
+      "Light/dark/custom-theme contrast, forced-colors, reduced motion, 200% scaling or screen-reader announcements.",
+      "Any viewport/mobile/native-host rendering or clipping result."
+    ],
+    "candidates": ["ER-C01", "ER-C02", "ER-C03"]
+  },
+  "preservation": {
+    "sourceBaseline": "Current accepted working-tree source, not a historic QA report, Git baseline or remigration.",
+    "sourceSnapshots": [
+      {"file": "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx", "lineCount": 342, "sha256": "CBE5DA01807655FEB1DE26864B9E3332770EC4575FE07BD7A41D6BE25EE6462D"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx", "lineCount": 173, "sha256": "7377F85CB5D2F843920599D3EE2E9136CA7A58DB935F796849B106F706255C84"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx", "lineCount": 59, "sha256": "F171FBFC464F8E876EF83EEA46B3A549B8DA86E346EAC065CC774D700F5391DB"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\stormguardPresentation.ts", "lineCount": 23, "sha256": "2D3720C9FB7F485AD6C4A943096C234304B42EE64AB7941520DE7AF95C6617DB"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "lineCount": 132, "sha256": "68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "lineCount": 95, "sha256": "9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx", "lineCount": 23, "sha256": "0B5533452EFAF607E34E1BACECD17AABFAB92CAD791EF2F8B951B377B1D505A8"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx", "lineCount": 46, "sha256": "DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx", "lineCount": 164, "sha256": "364BEA64B11056A55E689D4D2DEBDBC0FF101C7BB8201EAFB1402C534A5185A6"}
+    ],
+    "pagePlusInspectedDirectPartsLines": 1057,
+    "pageTopLevelSectionCount": 7,
+    "sections": [
+      {"name": "Advisory plan notice", "pageLine": 97},
+      {"name": "Storm guardian / independent recent activity", "pageLine": 112},
+      {"name": "Outage plan scenario", "pageLine": 116},
+      {"name": "Survival horizon operational brief", "pageLine": 214},
+      {"name": "Outage risk timeline", "pageLine": 234},
+      {"name": "Load priorities and recommendations", "pageLine": 286},
+      {"name": "Evidence, quality, limitations and explicitly unsupported capabilities", "pageLine": 315}
+    ],
+    "pageLiteralComponentCounts": {
+      "InsightPanelOpeningTags": 3,
+      "ChartCardOpeningTags": 1,
+      "StormGuardPanelOpeningTags": 1,
+      "AnalysisBriefOpeningTags": 1,
+      "EvidencePanelOpeningTags": 1,
+      "AlertBannerOpeningTags": 1
+    },
+    "countInterpretation": "Literal source counts are not runtime rendered-section counts; the third InsightPanel is the no-result evidence branch. EvidencePanel has its own InsightPanel.",
+    "historicalLineCountRatio": "NOT COMPUTED: no historic baseline or prior Phase6 QA was read; no source changed.",
+    "mustPreserve": [
+      "Every existing top-level section and evidence subsection.",
+      "Distinct modeled plan versus weather status/events provenance.",
+      "Canonical scenario request fields and display-only conversions.",
+      "Scoped retained results and submitted-input ownership.",
+      "All priorities/recommendations/evidence/limitations and unsupported capability text.",
+      "Existing chart data/export columns, with risk retained even though energy is the plotted line.",
+      "Existing configuration controls, pending/error/retry behavior, independent sources and shared workspace owner."
+    ]
+  },
+  "verification": {
+    "log": "logs\\phase6-qa-advanced-emergency-resilience.log",
+    "performed": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 and Get-Content line counts on nine explicit current page/direct-source files",
+        "result": "EXIT 0; exact hashes and line counts recorded in ignored log and preservation.sourceSnapshots"
+      },
+      {
+        "command": "Native rg -n --glob *.{ts,tsx} style=\\{\\{.*var\\(-- on nine explicit direct-source files",
+        "result": "FAILED, tool exit 1: native rg executable not found",
+        "rawOutput": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program."
+      },
+      {
+        "command": "Select-String -LiteralPath <nine explicit direct-source files> -Pattern <eight scoped prohibition patterns>",
+        "result": "EXIT 0; completed native PowerShell replacement scan",
+        "rawCountOutput": [
+          "static-inline-var | matched-lines=0 | command-completed",
+          "raw-controls | matched-lines=0 | command-completed",
+          "direct-libraries | matched-lines=0 | command-completed",
+          "old-api-import | matched-lines=0 | command-completed",
+          "direct-fetch | matched-lines=0 | command-completed",
+          "any-type | matched-lines=0 | command-completed",
+          "double-prefix-literal | matched-lines=0 | command-completed",
+          "camel-query-literal | matched-lines=0 | command-completed"
+        ],
+        "limits": "Matched-line counts on these exact source files only, not whole-feature/library/catalog cleanliness. Prefix/query scans on component files alone do not establish hook contracts; separate source endpoint agreement above covers the four inspected hooks."
+      },
+      {
+        "command": "Select-String on explicit source citation patterns and the page's hook/router registrations",
+        "result": "EXIT 0; file/line/matched-source receipts retained in the ignored log",
+        "limits": "No contract helper execution, HTTP request or backend calculation."
+      }
+    ],
+    "notRun": [
+      {"check": "Native/browser/mobile/runtime/full-page QA", "status": "NOTRUN", "reason": "Explicitly unauthorized for this source-only worker."},
+      {"check": "Fresh targeted tests or any test suite", "status": "NOTRUN", "reason": "No tests or production code changed; fresh tests and suites explicitly excluded."},
+      {"check": "npx tsc --noEmit / global TypeScript", "status": "NOTRUN", "reason": "Explicitly excluded; no clean compilation claim."},
+      {"check": "Build / lint / full audit scripts", "status": "NOTRUN", "reason": "Outside assigned bounded source/report scope."},
+      {"check": "Supported Node/runtime verification", "status": "NOTRUN", "reason": "No runtime gate or helper execution in this assignment."},
+      {"check": "Risk model, command, experiment, repair", "status": "NOTRUN", "reason": "Explicitly prohibited."},
+      {"check": "API request, real identity/location, browser/capture", "status": "NOTRUN", "reason": "Explicitly prohibited; no real records read."},
+      {"check": "Git / Docker / install / server / subagents / extensions", "status": "NOTRUN", "reason": "Explicitly prohibited."}
+    ],
+    "reportValidation": "Bounded ConvertFrom-Json, finding count/ID/path checks and nine unchanged source hash checks are the final authorized command; exact results are retained in the ignored log.",
+    "allChecksPassClaim": false
+  },
+  "evidenceLimits": [
+    "This is current source QA, not acceptance of a whole page, native host, fresh tests, runtime, browser, visual design, accessibility or backend behavior.",
+    "No previous Phase6 QA report contents were read or used as evidence. Existing item row was read only to confirm assignment and ownership.",
+    "No production/API/browser record, identity, coordinates, authentication state or capture was accessed. Static coordinate defaults were not reproduced in this report.",
+    "Source-confirmed issue means an exact visible source mechanism. Conditional input/state findings do not claim that a production source actually reached that condition.",
+    "The shared type, catalogue, API and backend files remain read-only. Backend reads were limited to source route registration, not command or risk-model implementations.",
+    "No source or tests were modified; no repair, migration or new helper was attempted.",
+    "No current or historical all-checks-pass claim is made. The unavailable native rg attempt remains a failed receipt rather than being hidden by the successful scoped replacement scan.",
+    "Runtime/native/mobile/fresh-tests/full-page checks are expressly NOTRUN, not deferred passes."
+  ],
+  "filesRead": [
+    "docs\\frontend-mission.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\prompts\\audit-pages.prompt.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "migration-queue.md (assignment row/source-location matching only; never modified)",
+    ".gitignore (ignored log rules only)",
+    "web\\src\\features\\advanced-intelligence\\pages\\EmergencyResiliencePage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\StormGuardPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\StormGuardActivity.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\stormguardPresentation.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+    "web\\src\\hooks\\useRetainedMutation.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\lib\\dateFormat.ts (bounded formatter definitions)",
+    "web\\src\\api\\dataState.ts:120-232",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts (bounded path/factory/resilience hook)",
+    "web\\src\\api\\hooks\\useStormguard.ts",
+    "web\\src\\api\\scope.ts:1-155",
+    "web\\src\\api\\client.ts (prefix/request normalization source matches only)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx (page mount/source matches only)",
+    "internal\\api\\router.go (page endpoint mount/source matches only)",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go:42-83 (route mount only)",
+    "logs\\phase6-qa-advanced-emergency-resilience.log (this worker's current receipts)"
+  ],
+  "release": {
+    "state": "RELEASED_AFTER_FINAL_REPORT_VALIDATION_COMMAND",
+    "scope": "Both assigned report/log artifacts and all worker commands.",
+    "noBackgroundWork": true,
+    "noParentLoopFollowup": true,
+    "noPostReturnWrites": true
+  }
+}

@@ -72,7 +72,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-muted)]">
-                {t('telemetry.driverSetpoint', 'Driver Setpoint')}
+                {t('telemetry.driverSetpoint', 'Driver setpoint')}
               </span>
               <span className="text-sm font-mono text-[var(--text-primary)]">
                 {formatTemperature(climateData.driver_setpoint_c)}
@@ -80,7 +80,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-muted)]">
-                {t('telemetry.passengerSetpoint', 'Passenger Setpoint')}
+                {t('telemetry.passengerSetpoint', 'Passenger setpoint')}
               </span>
               <span className="text-sm font-mono text-[var(--text-primary)]">
                 {formatTemperature(climateData.passenger_setpoint_c)}
@@ -91,7 +91,7 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
           {/* HVAC State */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.hvacState', 'HVAC State')}
+              {t('telemetry.hvacState', 'HVAC state')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {hvacState}
@@ -101,12 +101,12 @@ export function ClimatePanel({ climateData }: ClimatePanelProps) {
           {/* Fan Speed */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-              <Fan aria-hidden="true" className="h-3 w-3" /> {t('telemetry.fanSpeed', 'Fan Speed')}
+              <Fan aria-hidden="true" className="h-3 w-3" /> {t('telemetry.fanSpeed', 'Fan speed')}
             </span>
             <div className="flex items-center gap-1">
               <div
                 role="meter"
-                aria-label={t('telemetry.fanSpeed', 'Fan Speed')}
+                aria-label={t('telemetry.fanSpeed', 'Fan speed')}
                 aria-valuemin={0}
                 aria-valuemax={FAN_MAX}
                 aria-valuenow={fanForMeter}

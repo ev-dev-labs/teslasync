@@ -1,0 +1,811 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-settings-safety",
+  "phase": 6,
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS_NOT_RUNTIME_ACCEPTANCE",
+  "page": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+  "routes": [
+    "/settings/safety"
+  ],
+  "purpose": "Read-only install notification safeguards and Fleet API configuration explanation, with opt-in narration.",
+  "startedAt": "2026-10-14T01:54:57.09Z",
+  "reservedAt": "2026-10-14T01:47:59.989Z",
+  "returnDeadline": "2026-10-14T02:07:59.989Z",
+  "hardDeadline": "2026-10-14T02:12:59.989Z",
+  "authoredAt": "2026-10-14T02:04:26.5913676Z",
+  "scope": "READONLY SafetyPage and direct supports/tests; only this JSON and assigned log writable",
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-qa-settings-safety.json",
+    "web\\logs\\phase6-qa-settings-safety.log"
+  ],
+  "sourceWriteRelease": true,
+  "commandRelease": true,
+  "queue": {
+    "notSameOwner": "phase6-rescue-vehicle-systems-safety-settings and phase5-page-vehicle-systems-safety-settings concern a different SafetySettingsPage; do not assign these findings there.",
+    "status": "[~]",
+    "dependency": "phase5-page-settings-safety [x]",
+    "line": 69,
+    "row": "SafetyPage/direct supports; UI source-only, no commands/device/safety-setting/network actions.",
+    "attempt": 1
+  },
+  "counts": {
+    "sourceAndTestPins": 27,
+    "testDeclarationSites": 87,
+    "testsDiscovered": "NOTRUN",
+    "testsPassed": "NOTRUN",
+    "testsExecuted": 0,
+    "deduplicatedOwnerNeeds": 5,
+    "allPins": 29,
+    "testsSkipped": "NOTRUN",
+    "unprovedCandidates": 5,
+    "testsFailed": "NOTRUN",
+    "confirmedFindings": 6,
+    "commandFailures": 1
+  },
+  "confirmedFindings": [
+    {
+      "id": "SS-001",
+      "file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "line": 150,
+      "relatedLines": [
+        "151",
+        "247-251",
+        "356-364"
+      ],
+      "rule": "unknown-as-configured-default",
+      "contract": "MDC-025/MDC-026",
+      "priority": "medium",
+      "confidence": "source-confirmed",
+      "detail": "A blank or whitespace alert_digest_mode is counted as a known string, then coalesceBlank replaces it with instant. The row displays instant with an info badge and the summary displays Instant. No source value establishes that cadence.",
+      "mechanism": "typeof blank string is string; row.hasValue passes; fallback instant is used by both row and KPI.",
+      "repro": "Source-only scenario, NOTRUN: retain a settings object with alert_digest_mode empty or whitespace and settingsUnavailable false. Observe the two render branches producing instant/Instant rather than Unknown.",
+      "tests": {
+        "lines": [
+          291,
+          449
+        ],
+        "file": "web\\src\\features\\settings\\pages\\SafetyPage.test.tsx",
+        "declaration": "Existing tests explicitly expect the invented blank-to-Instant fallback; assertions were read, not executed."
+      },
+      "fix": "Keep blank digest unknown in row and KPI. Preserve valid canonical enum display and known false/zero neighboring settings. Reconcile the two existing assertions rather than weakening other unknown-field cases.",
+      "ownerNeed": "N1",
+      "priorEvidence": "Overlaps unknown-value objective in audit-page-174; prior boolean/null defects are now fixed. Count this residual digest mechanism once, not once per rendered location."
+    },
+    {
+      "id": "SS-002",
+      "file": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "line": 118,
+      "relatedLines": [
+        "SafetyPage.tsx:380-383",
+        "web\\src\\i18n\\en.json:28787"
+      ],
+      "rule": "inaccurate-capability-guidance",
+      "contract": "MDC-044/MDC-046",
+      "priority": "medium",
+      "confidence": "source-and-canonical-copy-confirmed",
+      "detail": "The narrator says Use the controls below to update a value yourself, but this host only provides explanatory cards/documentation links. Its footer explicitly says changes belong on the main Settings page.",
+      "mechanism": "The same inaccurate sentence exists in fallback and canonical safetySettings.aiExplainer.description; canonical lookup therefore does not fix it.",
+      "repro": "Source-only scenario, NOTRUN: cloud or local mode plus safety-setting-explainer true renders this translated description above the read-only listing. There are no update inputs or Apply action on SafetyPage.",
+      "fix": "Update the existing canonical description and matching fallback to direct users to main Settings, preserving read-only/no-PII narrator qualifications without adding mutation controls.",
+      "ownerNeed": "N2",
+      "priorEvidence": "Same copy candidate reported in audit-page-174; now canonical English inspected and confirmed, not a second distinct defect."
+    },
+    {
+      "id": "SS-003",
+      "file": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "line": 125,
+      "relatedLines": [
+        "74-76",
+        "100-108",
+        "useAiStream.ts:435-438",
+        "AiOutputPanel.tsx:73-79",
+        "AIFeatureCard.tsx:257-259"
+      ],
+      "rule": "confirmation-paused-without-recovery",
+      "contract": "MDC-026/MDC-044/MDC-046",
+      "priority": "medium",
+      "confidence": "conditional-source-confirmed; live server emission UNPROVED",
+      "detail": "A confirm_request leaves the narrative surface paused-confirm. The action becomes disabled, the no-op event handler neither explains nor rejects the request, and an empty output panel disappears. No confirmation, cancel, retry, or unsupported-state explanation is supplied.",
+      "mechanism": "Hook changes state to paused-confirm. canStart becomes false. AIFeatureCard has no emptyHint here. AiOutputPanel excludes empty paused-confirm from hasAnything. Feature cancellation is only on unmount.",
+      "repro": "Source-only synthetic event scenario, NOTRUN: enable feature, then supply a valid lone confirm_request and end the stream before any delta. The declared component test at line459 expects disabled CTA plus absent output. This does not prove production route emits confirmation events.",
+      "tests": {
+        "declaration": "Pins the dead-end rendered state; not executed.",
+        "file": "web\\src\\components\\ai\\AISafetySettingExplainer.test.tsx",
+        "line": 459
+      },
+      "fix": "Fail closed on unsupported confirmation for this read-only narrator, give localized explanation and safe recovery. Do not invent continuation approval, setting mutations, or command capability.",
+      "ownerNeed": "N3"
+    },
+    {
+      "id": "SS-004",
+      "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "line": 93,
+      "relatedLines": [
+        "useAiStream.ts:365-366",
+        "AISafetySettingExplainer.test.tsx:393-422"
+      ],
+      "rule": "unlocalized-error-feedback",
+      "contract": "MDC-026/MDC-044; mission24",
+      "priority": "medium",
+      "confidence": "source-confirmed",
+      "detail": "Known transport failures are presented as technical stream_http_404 or stream_no_body/incomplete strings after a translated Helix error prefix. No localized human-readable cause/recovery is mapped at this boundary. A terminal provider_unavailable example is likewise asserted as raw text.",
+      "mechanism": "Hook synthesizes diagnostic code as stream.error; panel directly interpolates error. Prefix translation is not a translation of the error or an explanation of the failed operation.",
+      "repro": "Source-only scenario, NOTRUN: synthetic HTTP404 sets stream.error to stream_http_404 and state error. Panel renders Helix error: stream_http_404; existing test at393 declares that expectation.",
+      "fix": "At the existing shared error-presentation owner, map known stream failures to localized cause/retry guidance while retaining truthful error state and partial text. Retain unknown/server diagnostics as supplemental evidence, never turn failure into success.",
+      "ownerNeed": "N4",
+      "counting": "One error presentation mechanism; not one finding per status/code. This is not counted as hardcoded English in the ten-rule grep."
+    },
+    {
+      "id": "SS-005",
+      "file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+      "line": 60,
+      "rule": "fixed-white-surface-chrome",
+      "contract": "MDC-010/MDC-012/MDC-015",
+      "priority": "low",
+      "confidence": "source-declaration-confirmed",
+      "detail": "Tile fill and hover border still use bg-white/[0.02] and hover:border-white/[0.08] instead of existing mode-aware surface/border roles. The page now supplies neutral topic accents, but these fixed paints bypass that correction.",
+      "mechanism": "Literal white-alpha classes are unconditional on every setting tile.",
+      "repro": "Source-only declaration review, NOTRUN visually: inspect the li class for any settings state; both fixed white paints are always requested. No measured contrast or visual failure is asserted.",
+      "fix": "Use existing neutral surface and hover-border roles without changing card values, docs destinations, semantic badges, or saved themes.",
+      "ownerNeed": "N5",
+      "priorEvidence": "Same retained card source hash and surface mechanism as audit-page-174; report as residual known debt, not new remigration."
+    },
+    {
+      "id": "SS-006",
+      "file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+      "line": 101,
+      "rule": "fixed-focus-paint",
+      "contract": "MDC-020/MDC-040/MDC-041",
+      "priority": "low",
+      "confidence": "source-declaration-confirmed; composed contrast UNPROVED",
+      "detail": "Documentation focus suppresses the native outline and requests a fixed translucent cyan-400/40 ring rather than the established focus role. The declaration is not theme-aware; actual contrast/visibility is unmeasured.",
+      "mechanism": "focus-visible:outline-none plus focus-visible:ring-cyan-400/40 is applied to all seven links. No focus offset is requested locally.",
+      "repro": "Source-only declaration review, NOTRUN keyboard: inspect the docs anchor classes; source test at170 pins the cyan ring class but establishes no browser contrast.",
+      "fix": "Adopt existing theme/system focus role with required offset and preserve native link focus/navigation. Validate composed dark/light/custom and forced-colors focus separately.",
+      "ownerNeed": "N5"
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "id": "C1",
+      "file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+      "line": 98,
+      "topic": "mobile documentation targets",
+      "source": "Inline-flex xs label plus 14px icon has no local padding/min-h/min-w target declaration.",
+      "unproved": "Actual bounding rectangles, global styles, spacing exceptions, zoom and target overlap.",
+      "next": "Measure all seven links below md at mission widths and long RTL labels; preserve destinations. Reuse N5 owner if a caller defect is confirmed.",
+      "prior": "audit-page-174 mobile-target candidate; not a new duplicate repair."
+    },
+    {
+      "id": "C2",
+      "file": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "line": 78,
+      "topic": "narration/configuration and identity freshness",
+      "source": "Empty body with no scopeKey or settings revision; completed text persists until a new start or unmount, while useSettings may refetch on broadcast.",
+      "unproved": "Whether same-mounted settings or authenticated install identity can change; expected narrative snapshot policy, route/server identity ownership and cache invalidation.",
+      "next": "Safely prove old narration versus updated deterministic settings and route/user teardown using separately authorized source fixtures. Do not claim another-user leakage from this trace."
+    },
+    {
+      "id": "C3",
+      "file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "line": 104,
+      "related": [
+        "166",
+        "178",
+        "191",
+        "AISafetySettingExplainer.tsx:118"
+      ],
+      "topic": "capability/privacy promises",
+      "source": "Copy asserts critical alerts always delivered, reduced-motion honor, unread favicon/title behavior, Fleet API suspension with telemetry continuing, and typed-envelope-only/no-PII narration.",
+      "unproved": "Actual backend/device/notification behavior, server guards, provider readiness, PII filtering and absence of backend mutation.",
+      "next": "Existing backend/capability/privacy owners must prove or qualify these claims; this audit executes no requests and does not label them false."
+    },
+    {
+      "id": "C4",
+      "file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "line": 124,
+      "related": [
+        "137",
+        "150",
+        "250"
+      ],
+      "topic": "malformed time/enum robustness",
+      "source": "Nonblank time strings are displayed without HH:MM validation; unknown enum strings are shown verbatim and DIGEST_LABELS lookup is not own-key guarded.",
+      "unproved": "Wire constraints and occurrence of invalid times/prototype-like enum names; precise i18next behavior for inherited map entries.",
+      "next": "Boundary owner to verify contract and safe unknown handling. No assumed backend unit/default/enum capability."
+    },
+    {
+      "id": "C5",
+      "file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "line": 317,
+      "related": [
+        "useSettings.ts:90",
+        "api/dataState.ts:189-200",
+        "DataFreshness.tsx:149-158"
+      ],
+      "topic": "query age versus freshness claim",
+      "source": "Page derives isStale from settingsState.status; deriveDataState does not use query.isStale and useSettings supplies no maxAgeMs. Last-success timestamp is available, but Up to date can remain selected absent error/paused.",
+      "unproved": "Live cache-age/refetch lifecycle and whether current configuration guarantee is intended by source label.",
+      "next": "Shared trust/settings owner should qualify fetch freshness with real age/query policy before any current/live assurance. Do not replace fetch timestamp with observation time."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N1",
+      "issues": [
+        "SS-001"
+      ],
+      "owner": "page/local",
+      "existingFile": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "coveringTest": "web\\src\\features\\settings\\pages\\SafetyPage.test.tsx",
+      "queueOwner": "No active repair row found; phase5-page-settings-safety is [x]. Parent must reserve a narrow successor, not reopen migration."
+    },
+    {
+      "id": "N2",
+      "issues": [
+        "SS-002"
+      ],
+      "owner": "feature plus serialized canonical-copy integration",
+      "existingFile": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "catalogKey": "safetySettings.aiExplainer.description",
+      "catalogOwner": "web\\src\\i18n\\en.json, normal derived outputs established by parent-owned generation",
+      "queueOwner": "No repair lease found. phase6-qa-settings-helix is [~] read-only QA, not a writer. Coordinate shared-copy intake to avoid duplicate roots."
+    },
+    {
+      "id": "N3",
+      "issues": [
+        "SS-003"
+      ],
+      "owner": "existing narrative feature lifecycle",
+      "existingFile": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "coveringTest": "web\\src\\components\\ai\\AISafetySettingExplainer.test.tsx",
+      "queueOwner": "No active repair row found. Conditional source defect is separate from proving backend confirmation emission."
+    },
+    {
+      "id": "N4",
+      "issues": [
+        "SS-004"
+      ],
+      "owner": "shared AI output/error presentation",
+      "existingFile": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "support": "web\\src\\hooks\\useAiStream.ts",
+      "queueOwner": "Coordinate with phase6-qa-settings-helix findings before parent reserves one shared error/copy root; QA row does not release source-write authority."
+    },
+    {
+      "id": "N5",
+      "issues": [
+        "SS-005",
+        "SS-006"
+      ],
+      "candidate": "C1",
+      "owner": "existing settings-domain card",
+      "existingFile": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+      "coveringTest": "web\\src\\features\\settings\\components\\SafetySettingCard.test.tsx",
+      "queueOwner": "No active card repair found. One deduplicated card adoption for two confirmed paint mechanisms and separately measured target candidate. Preserve all original cases."
+    }
+  ],
+  "summaryByRule": [
+    {
+      "rule": "",
+      "count": 6
+    }
+  ],
+  "filesWithMostIssues": [
+    {
+      "file": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "count": 2
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+      "count": 2
+    }
+  ],
+  "priorityFixes": [
+    "SS-001 unknown digest honesty",
+    "SS-003 safe narrator recovery",
+    "SS-002 and SS-004 truthful localized guidance",
+    "SS-005/006 role adoption with separate mobile/contrast proof"
+  ],
+  "dataSources": [
+    {
+      "sourceOnly": "useQuery getSettings; queryKey settings, staleTime five minutes, retry1, refetchOnMount always and settings-change broadcast",
+      "identity": "Installation-wide, not selected vehicle or history range",
+      "endpoint": "GET /api/v1/settings from inventory, not freshly verified against backend",
+      "owner": "web\\src\\hooks\\useSettings.ts",
+      "name": "Install settings"
+    },
+    {
+      "sourceOnly": "useAiStream path /ai/settings/safety/explain, body empty object; start only from explicit CTA; standard auth/cancellation/SSE infrastructure",
+      "endpoint": "POST /api/v1/ai/settings/safety/explain is source-declared, not called",
+      "owner": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "name": "Opt-in narration"
+    }
+  ],
+  "sections": [
+    {
+      "actions": [
+        "Review details opens existing OperationalBrief Drawer; Close/Escape owned by shared Drawer"
+      ],
+      "name": "Safety posture / configuration summary",
+      "metrics": 4,
+      "content": "Safeguards count out of3, quiet window, cadence, Fleet API configuration"
+    },
+    {
+      "actions": [
+        "Ask Helix / Explain my settings; no Apply or setting-change action"
+      ],
+      "name": "Helix narrator",
+      "optional": "aiEnabled gates whole section and withAiFeature gate; absent AI-off by source"
+    },
+    {
+      "actions": [
+        "Seven contextual docs links, four unique literal destinations; external new-tab noreferrer"
+      ],
+      "rows": 7,
+      "name": "Deterministic settings listing"
+    }
+  ],
+  "actionReadiness": {
+    "confirmation": "No safety-setting/command confirmation is appropriate because page contains no such mutation. Unsupported stream confirmation rendering is SS-003.",
+    "settingsRetry": "Only fatal initial or retained stale state renders Retry; void refetch existing settings read, no mutation/success toast. Initial loading/paused does not auto-retry from page.",
+    "docs": "Native anchors preserve href, noreferrer, new tab and contextual localized aria-label; destinations not opened.",
+    "narrator": "Feature opt-in plus computed streaming/paused disable and synchronous runningRef coalescer. Unknown provider readiness/auth/capability remains unproved. No start-on-mount.",
+    "feedback": "Retained settings preserved; partial stream text preserved on error; no fake successful save. SS-004 error code lacks user guidance.",
+    "reviewDetails": "Pure UI disclosure remains available even when source unavailable; no data/network action in click handler."
+  },
+  "stateReview": {
+    "unknown": "Boolean typeof checks preserve unknown vs real false; missing/null payload guarded; times blank dash; digest blank residual SS-001.",
+    "fatal": "fatalError renders QueryError/Retry without removing explanations/docs or changing settings.",
+    "loading": "Initial localized role=status; Brief skeleton/aria-busy and seven neutral unknown row values; no defaults promoted.",
+    "independence": "Narrator is optional; deterministic summary/listing do not depend on generated output.",
+    "retainedPaused": "Refresh paused plus stale warning and cached values; no invented server error.",
+    "initialPaused": "Refresh paused role=status without invented offline cause or fatal alert; Summary remains initial/loading.",
+    "retained": "DataStateNotice stale, preserveSeverity, Retry, retained label and last-success fetch freshness; values remain."
+  },
+  "scopeIdentityPreferences": {
+    "si": "No physical SI measurement conversion or unit preference change is applicable.",
+    "identity": "No user/VIN/vehicle/location logged or inspected. Auth/session/server switching not exercised. C2 remains unproved.",
+    "scope": "Install latest configuration, three notification safeguards, no historical window; no duplicate workspace vehicle/date controls.",
+    "i18n": "Page and row metadata use t keys/fallbacks; canonical safety leaf inspected only. SS-002 fallback and canonical match. SSE code feedback SS-004 needs localized explanation.",
+    "preferences": "No preference writes/resets. Stable settings keys/test IDs retained. Canonical HH:MM configuration text intentionally not a converted measurement; raw enum listing is technical identifier, not untranslated prose."
+  },
+  "responsiveAndAccessibilityDeclarations": {
+    "semantics": "Page/section/panel headings, localized named regions, ul/li settings, text badges alongside colors, hidden decorative icons, contextual link names, busy status and error alert declarations.",
+    "layout": "PageLayout wraps PageContainer; allocated min-w-0 container. Card listing auto-fit min(min100%,17rem), all rows retained; headings/value wrap.",
+    "nativeMatrix": "NOTRUN: 320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers, long translations/RTL,200% text, dark/light/custom/forced-colors, reduced motion, keyboard/screen reader/focus/scroll/safe-area/overlay restoration and contrast.",
+    "mobile": "Page Retry, shared narrator CTA and Review details declare min-h-11 md:min-h-9 with wrapLabel. C1 docs target actual sizes NOTRUN.",
+    "motion": "FadeIn uses existing useMotionPreference; reduced initial false/delay0 by source. OS/low-bandwidth behavior not executed."
+  },
+  "preservation": {
+    "rowCount": 7,
+    "summaryLineCount": 50,
+    "uniqueDocsDestinations": [
+      "/docs/notifications/quiet-hours.md",
+      "/docs/notifications/digest.md",
+      "/docs/notifications/tab-signalling.md",
+      "/docs/operations/api-suspended.md"
+    ],
+    "sectionCount": 3,
+    "unchanged": "Only source/test hash comparison is fresh preservation proof. No history extraction or preservation helper executed.",
+    "docsLinkCount": 7,
+    "pageLineCount": 390,
+    "localCardLineCount": 110,
+    "metricCount": 4,
+    "narratorLineCount": 146,
+    "testIds": [
+      "safety-settings-summary",
+      "safety-settings-listing",
+      "safety-settings-rows",
+      "safety-settings-row-<unchanged titleKey>",
+      "safety-settings-value-<unchanged titleKey>",
+      "ai-feature-safety-setting-explainer-root",
+      "ai-feature-safety-setting-explainer-suggest"
+    ]
+  },
+  "tests": {
+    "missing": "No useAiStream.test.tsx file in direct hooks directory; no test was created or run.",
+    "coverageDeclared": "Page headings, four metrics, all seven rows/docs, real false/zero, null/missing/nonboolean flags, loading/fatal/retained/initial-paused/retained-paused/retry, canonical card copy, AI-off/on, exact synthetic route body, streaming/error/double-start, narrative-only and cancel-on-unmount.",
+    "files": [
+      {
+        "file": "web\\src\\features\\settings\\pages\\SafetyPage.test.tsx",
+        "declarationSites": 37
+      },
+      {
+        "file": "web\\src\\features\\settings\\pages\\SafetyPage.catalogCopy.test.tsx",
+        "declarationSites": 3
+      },
+      {
+        "file": "web\\src\\components\\ai\\AISafetySettingExplainer.test.tsx",
+        "declarationSites": 14
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\SafetySettingCard.test.tsx",
+        "declarationSites": 12
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.test.tsx",
+        "declarationSites": 9
+      },
+      {
+        "file": "web\\src\\features\\settings\\__tests__\\TestSafetySettingExplainerAIOffShowsStaticHelpOnly.test.tsx",
+        "declarationSites": 3
+      },
+      {
+        "file": "web\\src\\features\\settings\\__tests__\\TestSafetySettingExplainerAIOnWiredCallsRoute.test.tsx",
+        "declarationSites": 2
+      },
+      {
+        "file": "web\\src\\hooks\\useAiEnabled.test.tsx",
+        "declarationSites": 7
+      }
+    ],
+    "gaps": "Declarations do not prove runtime; several tests pin flawed blank/paused/error/focus behaviors. One it.each has four written cases but no expanded discovery count claimed. Summary test file also covers other settings consumers; those sibling sources are not audited.",
+    "mode": "READONLY declarations; not fresh Vitest discovery/execution"
+  },
+  "guidelineChecks": {
+    "supplementalPresentationFiles": 7,
+    "backendRules11to14": "NOT APPLICABLE: no internal Go files in scope",
+    "noGlobalCleanClaim": true,
+    "mode": "Native Select-String grep plus source classification, not lint or audit helper",
+    "correctedExact": {
+      "staticInlineStyleCaseSensitive": 0,
+      "rawHtmlCaseSensitive": 0
+    },
+    "mainProductionFiles": 10,
+    "mainRawMatchLines": {
+      "doublePrefix": 3,
+      "pageWrapper": 1,
+      "hiddenSection": 6,
+      "rawHtmlCaseInsensitive": 1,
+      "fetchUseEffect": 20,
+      "camelcaseParam": 0,
+      "oldApi": 0,
+      "staticInlineBroad": 3,
+      "hardcodedStringBroad": 26,
+      "directLibrary": 0
+    },
+    "exceptions": [
+      "CSS vars in className are not static inline styles. Initial rawHTML match was shared Button due case-insensitive search; case-sensitive correction recorded.",
+      "PageLayout directly composes PageContainer; not missing wrapper.",
+      "Whole optional AI section may be hidden by explicit opt-in; this is not hiding a null-data section. Status/placement branches are not section-data gates.",
+      "Title/description fallbacks reach t; raw canonical database enum values are technical identifiers under i18n guideline7.",
+      "AI stream central client constructs prefix once; three /api/v1/ matches are comments; feature passes unprefixed path.",
+      "useSettings uses TanStack Query; effects sync formatting and broadcast refetch, not ad-hoc data loading. Narrator effect cancels on unmount. Canonical SSE fetch is the documented shared owner, not a page fetch.",
+      "FadeIn direct framer-motion import is inside the shared motion boundary, an expected building-block import. DataFreshness effect ticks relative time, not data loading.",
+      "Synthetic test strings/request interceptors are test declarations, not production English/network behavior."
+    ]
+  },
+  "hashes": {
+    "capturedAfter": "2026-10-14T02:04:26.6088656Z",
+    "capturedBefore": "Page initial hash at01:55:33Z; direct source/tests batch baseline shell1817; extra presentation supports before inspection shell1913. Catalog first hash in failed shell1876 then successful bounded parse.",
+    "pins": [
+      {
+        "file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+        "before": "A4D21D3C5D80C4F7319BCD6BC9C4410A106DED14F710B75F1B4415EA08976E0E",
+        "after": "A4D21D3C5D80C4F7319BCD6BC9C4410A106DED14F710B75F1B4415EA08976E0E",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\pages\\SafetyPage.test.tsx",
+        "before": "4DD292C1E94EB91FC382017BFC5B7E9B906AEBB578F07BF97DB088610229991C",
+        "after": "4DD292C1E94EB91FC382017BFC5B7E9B906AEBB578F07BF97DB088610229991C",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\pages\\SafetyPage.catalogCopy.test.tsx",
+        "before": "B5AD6589ECD9FDAB2B686E40D7DF3D6DFDAED250D85D81D09FEFB991621A7C87",
+        "after": "B5AD6589ECD9FDAB2B686E40D7DF3D6DFDAED250D85D81D09FEFB991621A7C87",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+        "before": "F281943501BB4B4214AB9BDCE8B9ACCDAC99D3EB21C6E22A129FA35AED365A06",
+        "after": "F281943501BB4B4214AB9BDCE8B9ACCDAC99D3EB21C6E22A129FA35AED365A06",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\SafetySettingCard.test.tsx",
+        "before": "8EB8237F9BE3D6CDEEF44160E68187F41CDDD561FDDA0FA733DC8620AD566FCD",
+        "after": "8EB8237F9BE3D6CDEEF44160E68187F41CDDD561FDDA0FA733DC8620AD566FCD",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+        "before": "9075A1BB2C766E225462EE1EAAB67E67293F1B97D052E58C1A48E12EB3A07595",
+        "after": "9075A1BB2C766E225462EE1EAAB67E67293F1B97D052E58C1A48E12EB3A07595",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.test.tsx",
+        "before": "D809C7DC23CC2DABD3413CA4BE9A73A02EEE9506D9DB7D79F0D9453A3425F006",
+        "after": "D809C7DC23CC2DABD3413CA4BE9A73A02EEE9506D9DB7D79F0D9453A3425F006",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\__tests__\\TestSafetySettingExplainerAIOffShowsStaticHelpOnly.test.tsx",
+        "before": "1BD8EBA2003C741FD40A1D68CA4BAC812E490F8DCE6E2808B0CEBF83BBF260B6",
+        "after": "1BD8EBA2003C741FD40A1D68CA4BAC812E490F8DCE6E2808B0CEBF83BBF260B6",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\features\\settings\\__tests__\\TestSafetySettingExplainerAIOnWiredCallsRoute.test.tsx",
+        "before": "EE5BA5B198822E8629A0F478319125740F845B26A3B5BCDB9D9D0053462BE4FC",
+        "after": "EE5BA5B198822E8629A0F478319125740F845B26A3B5BCDB9D9D0053462BE4FC",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+        "before": "CC4924B4D7C5FAE6D9A3045EA6AF0B80DD801A2DF0EED03F570568B65409D9F9",
+        "after": "CC4924B4D7C5FAE6D9A3045EA6AF0B80DD801A2DF0EED03F570568B65409D9F9",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\ai\\AISafetySettingExplainer.test.tsx",
+        "before": "F50AA05DB849DA0D6749E2AE5DED74CB5FD0E9DAE61A327473DD6D1315394B5D",
+        "after": "F50AA05DB849DA0D6749E2AE5DED74CB5FD0E9DAE61A327473DD6D1315394B5D",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\hooks\\useSettings.ts",
+        "before": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+        "after": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\hooks\\useAiEnabled.ts",
+        "before": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+        "after": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\hooks\\useAiEnabled.test.tsx",
+        "before": "7376A394BFFF7C938A706CDD251A90B11C68C3A0CD371DCCD5AD7A87AB923497",
+        "after": "7376A394BFFF7C938A706CDD251A90B11C68C3A0CD371DCCD5AD7A87AB923497",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\hooks\\useAiStream.ts",
+        "before": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+        "after": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+        "before": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+        "after": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\ai\\withAiFeature.tsx",
+        "before": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+        "after": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+        "before": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+        "after": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\hooks\\useDataState.ts",
+        "before": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "after": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\api\\dataState.ts",
+        "before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "after": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\i18n\\en.json",
+        "before": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "after": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "after": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "before": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+        "after": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\data-display\\DataFreshness.tsx",
+        "before": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+        "after": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\feedback\\QueryError.tsx",
+        "before": "5DC7D6A24694C2F34411D8B042864C94A630BE9FC0A516586C2596172F19E48A",
+        "after": "5DC7D6A24694C2F34411D8B042864C94A630BE9FC0A516586C2596172F19E48A",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\feedback\\DataStateNotice.tsx",
+        "before": "D96D4E5BC8C1B8CCBDDCE808BFC31A277DAD60B82399D14431B7185E94BEA4C6",
+        "after": "D96D4E5BC8C1B8CCBDDCE808BFC31A277DAD60B82399D14431B7185E94BEA4C6",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\components\\motion\\FadeIn.tsx",
+        "before": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "after": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "unchanged": true
+      },
+      {
+        "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+        "before": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "after": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "unchanged": true
+      },
+      {
+        "file": "docs\\frontend-audits\\audit-page-174.json",
+        "before": "9896F8687D6F7D7A96189F82C4A264199083A946857DECF8F4E69890026C5B52",
+        "after": "9896F8687D6F7D7A96189F82C4A264199083A946857DECF8F4E69890026C5B52",
+        "unchanged": true
+      }
+    ],
+    "changedPins": 0,
+    "algorithm": "SHA256"
+  },
+  "commandReceipts": [
+    {
+      "shell": "1735",
+      "exit": 0,
+      "kind": "startup time, Git read-only status, root/docs listing; pre-log receipt noted"
+    },
+    {
+      "shell": "1764",
+      "exit": 0,
+      "kind": "instruction/document discovery; pre-log receipt noted"
+    },
+    {
+      "shell": "1784",
+      "exit": 0,
+      "kind": "broad queue/handoff read; tool truncation not clean evidence"
+    },
+    {
+      "shell": "1783",
+      "exit": 0,
+      "kind": "logged instruction/discovery/page hash"
+    },
+    {
+      "shell": "1803",
+      "exit": 0,
+      "kind": "logged queue/index; tool-truncated raw retained"
+    },
+    {
+      "shell": "1817",
+      "exit": 0,
+      "kind": "20 source/test pins and exact queue row"
+    },
+    {
+      "shell": "1843",
+      "exit": 0,
+      "kind": "broad owner/index; tool-truncated raw retained"
+    },
+    {
+      "shell": "1855",
+      "exit": 0,
+      "kind": "precise queue field filter/document bounds"
+    },
+    {
+      "shell": "1876",
+      "exit": 1,
+      "kind": "canonical ConvertFrom-Json duplicate-case-key failure; misleading printed0 corrected"
+    },
+    {
+      "shell": "1896",
+      "exit": 0,
+      "kind": "corrected read-only -AsHashtable parse and precise inventory"
+    },
+    {
+      "shell": "1913",
+      "exit": 0,
+      "kind": "extra baseline pins and ten-rule grep"
+    },
+    {
+      "shell": "1931",
+      "exit": 0,
+      "kind": "numbered mechanisms and case-sensitive grep correction"
+    },
+    {
+      "shell": "1949",
+      "exit": 0,
+      "kind": "canonical key and exact declaration names"
+    },
+    {
+      "shell": "2016",
+      "exit": 0,
+      "kind": "source declaration counts, command/failure/NOTRUN ledger"
+    },
+    {
+      "shell": "2052",
+      "exit": 0,
+      "kind": "supplemental grep and Summary declaration count"
+    },
+    {
+      "commandId": "final-json-parse-pin-release",
+      "exit": 0,
+      "kind": "Final exact-line correction, written-artifact JSON reparse/count, owner references,29 immutable pins and artifact hash; raw actual result in assigned log"
+    }
+  ],
+  "evidenceLimits": [
+    "No fresh tests/lint/build/global TSC/helpers/preservation runs, passing reruns, package installs, servers, subagents, code/tests/catalog/Git writes.",
+    "No app commands, device/safety-setting/auth/network/API/browser access. Source-declared request behavior is not execution.",
+    "Backend routes/capabilities/privacy promises and docs destinations were not freshly verified; historical audit only deduplicates needs.",
+    "One startup Git read-only status was run before worker convention was read; disclosed, never repeated. All unrelated inherited dirty changes left untouched.",
+    "Native/mobile/composed/contrast/keyboard/accessibility evidence is NOTRUN, not green.",
+    "Source/test unchanged pins do not establish application acceptance."
+  ],
+  "documentsRead": {
+    "inventory": "docs\\frontend-inventory.md authority and exact Safety row225, G173/P322 and competing-owner entries",
+    "orchestrator": "docs\\orchestrator-loop.md fully",
+    "agents": "No AGENTS.md found in explicitly checked ancestor paths",
+    "designContract": "docs\\frontend-design-contract.md lines1-2539 fully, continued after initial tool truncation",
+    "mission": "docs\\frontend-mission.md relevant principles/architecture, responsive/mobile, loading/empty/error/offline, accessibility/motion and43-45",
+    "queue": "migration-queue.md exact row69 and precise support/owner fields",
+    "instructions": [
+      "docs\\frontend-worker-conventions.md",
+      "docs\\CONTRIBUTING.md",
+      "docs\\I18N_GUIDELINES.md relevant rules",
+      " .github\\copilot-instructions.md applicable frontend sections1-500",
+      " .github\\instructions\\react-frontend.instructions.md fully",
+      " .github\\instructions\\frontend-si-cutover.instructions.md fully"
+    ],
+    "handoff": "docs\\session-handoff.md current1-110, phase6QA504-563 and conventions2148-2270; historical indexes, not whole history claimed"
+  },
+  "filesRead": [
+    "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+    "web\\src\\features\\settings\\pages\\SafetyPage.test.tsx",
+    "web\\src\\features\\settings\\pages\\SafetyPage.catalogCopy.test.tsx",
+    "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+    "web\\src\\features\\settings\\components\\SafetySettingCard.test.tsx",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.test.tsx",
+    "web\\src\\features\\settings\\__tests__\\TestSafetySettingExplainerAIOffShowsStaticHelpOnly.test.tsx",
+    "web\\src\\features\\settings\\__tests__\\TestSafetySettingExplainerAIOnWiredCallsRoute.test.tsx",
+    "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+    "web\\src\\components\\ai\\AISafetySettingExplainer.test.tsx",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useAiEnabled.test.tsx",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\i18n\\en.json",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\feedback\\QueryError.tsx",
+    "web\\src\\components\\feedback\\DataStateNotice.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "docs\\frontend-audits\\audit-page-174.json"
+  ],
+  "release": {
+    "ongoingCommands": "NONE",
+    "writableArtifactsOnly": [
+      "docs\\frontend-audits\\phase6-qa-settings-safety.json",
+      "web\\logs\\phase6-qa-settings-safety.log"
+    ],
+    "finalParseAndPinCheck": "PASS: final artifact reparse/count/owner-reference assertions and all29 SHA256 pins checked in final command; no runtime acceptance",
+    "sourceWriteClaim": "RELEASED/no source writes authorized",
+    "sourceTestsCatalogWrites": "NONE",
+    "deadline": "Return before02:07:59.989Z; hard02:12:59.989Z",
+    "releasedAt": "2026-10-14T02:05:11.1454958Z"
+  }
+}

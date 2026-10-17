@@ -22,8 +22,9 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * slice tests.
  */
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -96,6 +97,41 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+// ── framer-motion: strip animation props, keep motion.div + useReducedMotion. ──
+vi.mock('framer-motion', () => {
+  const motionProxy: Record<string, unknown> = new Proxy(
+    {},
+    {
+      get:
+        () =>
+        ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+          const safe: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(rest)) {
+            if (
+              k === 'animate' ||
+              k === 'initial' ||
+              k === 'exit' ||
+              k === 'transition' ||
+              k === 'whileHover' ||
+              k === 'whileTap' ||
+              k === 'whileInView' ||
+              k === 'viewport' ||
+              k === 'variants'
+            )
+              continue;
+            safe[k] = v;
+          }
+          return <div {...(safe as Record<string, unknown>)}>{children}</div>;
+        },
+    },
+  );
+  return {
+    motion: motionProxy,
+    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    useReducedMotion: () => true,
+  };
+});
+
 vi.mock('@/api/hooks/useEnergy', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useEnergy')>('@/api/hooks/useEnergy');
   return {
@@ -147,8 +183,9 @@ import BatteryHealthPage, {
   buildRecommendations,
   computeEnergyBreakdown,
 } from './BatteryHealthPage';
+import { hasHealthMeasurement } from '../components/battery-health/helpers';
 import { CHART_COLORS } from '@/components/charts';
-import { gaugeTone, severityTokens } from '@/lib/tokens';
+import { gaugeTone, severityTokens, typography } from '@/lib/tokens';
 import type { BatteryChargingAnalysis, BatteryHealthAnalytics } from '@/types/energy';
 
 const t = tImpl as unknown as TFunction;
@@ -277,14 +314,31 @@ function renderPage() {
   );
 }
 
-/** Read a MetricCard's value text by its (unique) label. */
-function metricCardValue(label: string): string {
-  const labelSpan = screen.getByText(label);
-  const container = labelSpan.closest('.flex-1');
-  // MetricCard exposes stable `data-role` hooks; the old `p.text-xl` selector
-  // pinned the value to a typography class that the shared card no longer uses.
-  const valueEl = container?.querySelector('[data-role="metric-value"]');
-  return valueEl?.textContent ?? '';
+/** Read the canonical summary by named region, source label and stat value. */
+function summaryMetricValue(label: string): string {
+  const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
+  const labelElement = within(summary).getByText(label);
+  const stat = labelElement.closest('[data-operational-metric]');
+  if (!(stat instanceof HTMLElement)) {
+    throw new Error(`Summary metric "${label}" has no canonical stat tile`);
+  }
+  const value = stat.querySelector('[data-operational-value]');
+  if (!value) throw new Error(`Summary metric "${label}" has no canonical stat value`);
+  return value.textContent ?? '';
+}
+
+/** Thermal cards remain specialist displays; use their public identity hooks,
+ * scoped to the independent thermal/comparison region, not a typography class. */
+function thermalMetricValue(label: string): string {
+  const thermal = screen.getByRole('region', { name: 'Thermal monitoring and capacity comparison' });
+  const labelElement = within(thermal).getByText(label);
+  const card = labelElement.closest('[data-role="metric-card"]');
+  if (!(card instanceof HTMLElement)) {
+    throw new Error(`Thermal metric "${label}" has no specialist metric card`);
+  }
+  const value = card.querySelector('[data-role="metric-value"]');
+  if (!value) throw new Error(`Thermal metric "${label}" has no specialist value`);
+  return value.textContent ?? '';
 }
 
 function operationalMetric(label: string): HTMLElement {
@@ -312,6 +366,29 @@ beforeEach(() => {
 /* ── Pure helpers ─────────────────────────────────────────────────── */
 
 describe('BatteryHealthPage · pure helpers', () => {
+  it('distinguishes absent health/capacity measurements from measured zero health', () => {
+    const missing = makeHealth({ current_soh: 0, estimated_capacity_wh: 0, history: [] });
+    expect(hasHealthMeasurement(missing)).toBe(false);
+    expect(buildInsights(missing, null, t).map((item) => item.title)).not.toContain('Health Concern');
+    expect(buildRecommendations(missing, t)).not.toContain('Your battery health looks great — keep up the good habits!');
+    const measuredZero = makeHealth({ current_soh: 0, estimated_capacity_wh: 1000 });
+    expect(hasHealthMeasurement(measuredZero)).toBe(true);
+    expect(buildInsights(measuredZero, null, t).map((item) => item.title)).toContain('Health Concern');
+    expect(hasHealthMeasurement(makeHealth({ current_soh: NaN }))).toBe(false);
+  });
+
+  it('retains fractional charging energy for display-boundary formatting rather than rounding pie slices early', () => {
+    const analysis = {
+      ...EMPTY_CHARGING_ANALYSIS, total_sessions: 2,
+      ac_energy_wh: 33333.333, dc_energy_wh: 66666.667,
+    };
+    const result = computeEnergyBreakdown(analysis);
+    expect(result?.pieData[0].value).toBe(analysis.ac_energy_wh / 1000);
+    expect(result?.pieData[1].value).toBe(analysis.dc_energy_wh / 1000);
+    expect(result?.totalEnergy).toBe(100);
+    expect(analysis.ac_energy_wh).toBe(33333.333);
+  });
+
   it('gaugeColor maps SoH bands to the CB-safe palette buckets', () => {
     expect(gaugeColor(95)).toBe(CHART_COLORS[1]);
     expect(gaugeColor(90)).toBe(CHART_COLORS[1]);
@@ -427,14 +504,44 @@ describe('BatteryHealthPage · states', () => {
     expect(healthMock).toHaveBeenCalledWith(null);
   });
 
-  it('shows the loading skeleton while the health query is in flight', () => {
+  it('keeps named evidence sections and live BMS content while the health query is in flight', () => {
     healthMock.mockReturnValue(makeQuery({ isLoading: true }));
-    renderPage();
+    chargingLiveMock.mockReturnValue(makeQuery({
+      data: {
+        module_temp_max: 32, module_temp_min: 28, num_module_temp_max: 3,
+        battery_heater_on: false, bms_fullcharge_complete: true,
+      },
+    }));
+    const { container } = renderPage();
 
-    expect(screen.getByTestId('battery-health-skeleton')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeInTheDocument();
+    const outline = screen.getByTestId('battery-health-unavailable-outline');
+    expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeVisible();
+    for (const name of [
+      'Health score and capacity', 'Capacity and range trends',
+      'Thermal monitoring and capacity comparison', 'Charging energy analysis',
+      'Related pages and recommendations',
+    ]) expect(within(outline).getByRole('region', { name })).toBeVisible();
+    for (const name of [
+      'Health Overview', 'Capacity & Wear', 'Capacity Trend & Prediction',
+      'Estimated Range Over Time', 'Thermal Monitoring', 'Capacity & Range: New vs Now',
+      'Smart Insights', 'Charge Level Distribution', 'AC / DC Energy Breakdown',
+      'Charging Statistics', 'Explore More', 'Recommendations',
+    ]) expect(within(outline).getByRole('heading', { name })).toBeVisible();
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
+    const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
+    assertOperationalMetricUnavailable(summary, 'State of Health');
+    assertOperationalMetricUnavailable(summary, 'Current Capacity');
+    expect(summaryMetricValue('Full Charge Complete')).toBe('Yes');
+    expect(thermalMetricValue('Module Temp (Max)')).toContain('32');
+    expect(thermalMetricValue('Module Temp (Max)')).toContain('°C');
+    expect(thermalMetricValue('Temperature Spread')).toContain('4');
+    expect(thermalMetricValue('Battery Heater')).toBe('Off');
+    expect(within(outline).getByText('Module #3')).toBeVisible();
+    expect(within(outline).getByRole('link', { name: 'Battery Cells' })).toBeVisible();
+    expect(within(outline).getByRole('link', { name: 'Battery Cells' })).toHaveAttribute('href', '/battery-cells');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    expect(screen.queryByText('State of Health')).not.toBeInTheDocument();
+    expect(healthMock).toHaveBeenCalledWith('42');
+    expect(chargingLiveMock).toHaveBeenCalledWith(42);
   });
 
   it('shows an empty state (never a blank panel) when the health payload is missing', () => {
@@ -442,13 +549,59 @@ describe('BatteryHealthPage · states', () => {
     renderPage();
 
     expect(screen.getByText('No battery health data available yet.')).toBeInTheDocument();
-    expect(screen.queryByText('State of Health')).not.toBeInTheDocument();
+    const outline = screen.getByTestId('battery-health-unavailable-outline');
+    const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
+    assertOperationalMetricUnavailable(summary, 'State of Health');
+    assertOperationalMetricUnavailable(summary, 'Full Charge Complete');
+    expect(thermalMetricValue('Module Temp (Max)')).toBe('—');
+    expect(screen.queryByText('Degraded')).not.toBeInTheDocument();
+    for (const name of [
+      'Health Overview', 'Capacity & Wear', 'Capacity Trend & Prediction',
+      'Estimated Range Over Time', 'Thermal Monitoring', 'Capacity & Range: New vs Now',
+      'Smart Insights', 'Charge Level Distribution', 'AC / DC Energy Breakdown',
+      'Charging Statistics', 'Explore More', 'Recommendations',
+    ]) expect(within(outline).getByRole('heading', { name })).toBeVisible();
+    expect(within(outline).getByText('Not enough snapshots for trend analysis')).toBeVisible();
+    expect(within(outline).getByText('No range data yet')).toBeVisible();
+    expect(within(outline).getByText('No charging session data yet')).toBeVisible();
+    expect(within(outline).getByText('No charging data for breakdown')).toBeVisible();
+    expect(within(outline).getByText('No charging statistics yet')).toBeVisible();
+    expect(within(outline).getByRole('link', { name: 'Battery Cells' })).toHaveAttribute('href', '/battery-cells');
+    const comparison = within(outline).getByRole('region', { name: 'Capacity and range evidence' });
+    expect(comparison.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Capacity When New', 'Capacity Now', 'Range When New', 'Range Now']) {
+      assertOperationalMetricUnavailable(comparison, label);
+    }
+    const brief = within(outline).getByTestId('battery-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Pack score', 'Degradation pace', 'Range confidence', 'Charging stress', 'Thermal impact', 'Cycle exposure']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    fireEvent.click(within(comparison).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Capacity When New')).toBeVisible();
+    expect(within(drawer).getAllByText('Capacity measurements are not available yet; battery health cannot be assessed.').length).toBeGreaterThan(0);
   });
 });
 
 /* ── Component: happy-path render ─────────────────────────────────── */
 
 describe('BatteryHealthPage · dashboard render', () => {
+  it('does not turn missing capacity measurements into a zero-health service warning', () => {
+    healthMock.mockReturnValue(makeQuery({
+      data: makeHealth({ current_soh: 0, estimated_capacity_wh: 0, history: [] }),
+    }));
+    renderPage();
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Battery health summary metrics' }),
+      'State of Health',
+    );
+    expect(screen.queryByText('Degraded')).toBeNull();
+    expect(screen.queryByText('Health Concern')).toBeNull();
+    expect(screen.queryByText('Your battery health looks great — keep up the good habits!')).toBeNull();
+    expect(screen.getAllByText('Capacity measurements are not available yet; battery health cannot be assessed.').length).toBeGreaterThan(0);
+  });
+
   it('renders the full dashboard for a healthy battery and wires hooks with the selected vehicle', async () => {
     healthMock.mockReturnValue(makeQuery({
       data: makeHealth({ charging_analysis: MIXED_CHARGING_ANALYSIS }),
@@ -461,25 +614,28 @@ describe('BatteryHealthPage · dashboard render', () => {
 
     // KPI values (precision-tolerant). "Original Capacity" is the unique kWh
     // KPI label ("Current Capacity" is shared with the wear MetricBar below).
-    expect(metricCardValue('State of Health')).toContain('96');
-    expect(metricCardValue('Original Capacity')).toContain('kWh');
-    expect(metricCardValue('Total Cycles')).toContain('320');
-    expect(metricCardValue('Battery Age')).toContain('18');
+    expect(summaryMetricValue('State of Health')).toContain('96');
+    expect(summaryMetricValue('Original Capacity')).toContain('kWh');
+    expect(summaryMetricValue('Total Cycles')).toContain('320');
+    expect(summaryMetricValue('Battery Age')).toContain('18');
 
     // Decision-first posture makes confidence and risk explicit instead of
     // requiring operators to infer them from the charts below.
     expect(within(operationalMetric('Range confidence')).getByText('High')).toBeInTheDocument();
     expect(within(operationalMetric('Charging stress')).getByText('Low')).toBeInTheDocument();
     expect(within(operationalMetric('Thermal impact')).getByText('90 / 100')).toBeInTheDocument();
+    const postureBrief = screen.getByTestId('battery-operational-brief');
+    fireEvent.click(within(postureBrief).getByRole('button', { name: 'Review details' }));
+    const postureDialog = screen.getByRole('dialog');
     expect(
-      within(screen.getByTestId('battery-operational-brief')).getByRole('button', {
-        name: /Source: Battery analytics/,
-      }),
+      within(postureDialog).getByRole('button', { name: /Source: Battery analytics/ }),
     ).toBeInTheDocument();
+    fireEvent.keyDown(postureDialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     // Health verdict badge + a11y years-to-80 hero value.
     expect(screen.getByText('Excellent')).toBeInTheDocument();
-    expect(screen.getByText('8.5')).toBeInTheDocument();
+    expect(screen.getByText('8.50')).toBeInTheDocument();
 
     // Every chart section title is present (no gutted panels).
     expect(
@@ -586,12 +742,12 @@ describe('BatteryHealthPage · branches & resilience', () => {
     );
     renderPage();
 
-    expect(metricCardValue('Module Temp (Max)')).toContain('32');
-    expect(metricCardValue('Module Temp (Max)')).toContain('°C');
-    expect(metricCardValue('Full Charge Complete')).toBe('Yes');
-    expect(metricCardValue('Battery Heater')).toBe('Off');
+    expect(thermalMetricValue('Module Temp (Max)')).toContain('32');
+    expect(thermalMetricValue('Module Temp (Max)')).toContain('°C');
+    expect(summaryMetricValue('Full Charge Complete')).toBe('Yes');
+    expect(thermalMetricValue('Battery Heater')).toBe('Off');
     // Spread = 32 − 28 = 4 °C.
-    expect(metricCardValue('Temperature Spread')).toContain('4');
+    expect(thermalMetricValue('Temperature Spread')).toContain('4');
     expect(screen.getByText('Module #3')).toBeInTheDocument();
   });
 
@@ -599,9 +755,12 @@ describe('BatteryHealthPage · branches & resilience', () => {
     chargingLiveMock.mockReturnValue(makeQuery({ data: null }));
     renderPage();
 
-    expect(metricCardValue('Full Charge Complete')).toBe('—');
-    expect(metricCardValue('Battery Heater')).toBe('—');
-    expect(metricCardValue('Module Temp (Max)')).toBe('—');
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Battery health summary metrics' }),
+      'Full Charge Complete',
+    );
+    expect(thermalMetricValue('Battery Heater')).toBe('—');
+    expect(thermalMetricValue('Module Temp (Max)')).toBe('—');
   });
 
   it('does not crash and keeps the "New vs Now" panel when the history array is missing', () => {
@@ -612,7 +771,10 @@ describe('BatteryHealthPage · branches & resilience', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeInTheDocument();
-    expect(screen.getByText('Range When New')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Capacity and range evidence' }),
+      'Range When New',
+    );
     expect(screen.queryByText('Capacity & range comparison failed to load')).not.toBeInTheDocument();
   });
 
@@ -644,7 +806,7 @@ describe('BatteryHealthPage · branches & resilience', () => {
     renderPage();
 
     expect(screen.getByText('Years to 80%')).toBeInTheDocument();
-    expect(screen.queryByText('8.5')).not.toBeInTheDocument();
+    expect(screen.queryByText('8.50')).not.toBeInTheDocument();
   });
 
   it('mounts the live indicator without duplicating the header vehicle picker', () => {
@@ -690,7 +852,12 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(healthTone(soh)).toBe(expected);
     }
     for (const pct of [0, 5, 5.1, 15, 15.1, 40]) {
-      expect(gaugeTone[degradationTone(pct)]).toBe(degradationColor(pct));
+      const expected = degradationColor(pct) === '#10b981'
+        ? gaugeTone.success
+        : degradationColor(pct) === '#f59e0b'
+          ? gaugeTone.warning
+          : gaugeTone.danger;
+      expect(gaugeTone[degradationTone(pct)]).toBe(expected);
     }
   });
 
@@ -703,11 +870,188 @@ describe('BatteryHealthPage · design-system consistency', () => {
     // Excellent health + healthy habits ⇒ a success-severity insight.
     const good = insightCard('Excellent Health');
     expect(good).toHaveAttribute('data-severity', 'success');
-    expect(good.className).toContain(severityTokens.success.bg);
-    expect(good.className).toContain(severityTokens.success.border);
+    expect(good.className).not.toContain(severityTokens.success.bg);
+    expect(good.className).not.toContain(severityTokens.success.border);
+    expect(good.querySelector('svg')?.parentElement).toHaveClass(typography.color.muted);
+    expect(good).toHaveTextContent('Excellent Health');
 
     // The neon surface fills the insights used to carry are gone for good.
     expect(container.querySelector('[class*="bg-neon-"]')).toBeNull();
+  });
+
+  describe('BatteryHealthPage scoped modernization', () => {
+    it('does not claim full-charge evidence from a resolved telemetry object that lacks the BMS flag', () => {
+      chargingLiveMock.mockReturnValue({
+        ...makeQuery({ data: { module_temp_max: 0, bms_fullcharge_complete: null } }),
+        isSuccess: true,
+      });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Source readings unavailable')).toBeVisible();
+      expect(within(source).queryByText('Available source readings')).not.toBeInTheDocument();
+      expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'unavailable');
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'Full Charge Complete',
+      );
+      expect(thermalMetricValue('Module Temp (Max)')).toContain('0');
+      expect(summaryMetricValue('State of Health')).toContain('96');
+    });
+
+    it('marks a successfully empty BMS source unavailable without manufacturing health or a false full-charge flag', () => {
+      chargingLiveMock.mockReturnValue({ ...makeQuery({ data: null }), isSuccess: true });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Source readings unavailable')).toBeVisible();
+      expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'unavailable');
+      expect(within(source).queryByText('Live')).not.toBeInTheDocument();
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'Full Charge Complete',
+      );
+      expect(summaryMetricValue('State of Health')).toContain('96');
+      expect(thermalMetricValue('Battery Heater')).toBe('—');
+    });
+
+    it('keeps a pending BMS source distinct from resolved absence while modeled neighbors remain visible', () => {
+      chargingLiveMock.mockReturnValue({ ...makeQuery({ isLoading: true }), isSuccess: false });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Loading source evidence')).toBeVisible();
+      expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'initial');
+      expect(within(source).queryByText('Source readings unavailable')).not.toBeInTheDocument();
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'Full Charge Complete',
+      );
+      expect(summaryMetricValue('Current Capacity')).toContain('72.50');
+    });
+
+    it('retains the full-charge value and its source timestamp through BMS refresh failure without marking model neighbors stale', () => {
+      const query = {
+        ...makeQuery({
+          data: { bms_fullcharge_complete: true, module_temp_max: 32, module_temp_min: 28 },
+          error: new Error('BMS refresh failed'),
+        }),
+        dataUpdatedAt: Date.parse('2026-10-11T12:00:00Z'),
+        isSuccess: false,
+      };
+      chargingLiveMock.mockReturnValue(query);
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Retained source evidence')).toBeVisible();
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale');
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute(
+        'title', expect.stringContaining('Last updated: Oct 11, 2026, 12:00:00 PM (UTC)'),
+      );
+      expect(summaryMetricValue('Full Charge Complete')).toBe('Yes');
+      expect(summaryMetricValue('State of Health')).toContain('96');
+      const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
+      assertOperationalBriefDisclosure(summary, 'Retained source evidence', { absent: true });
+      expect(thermalMetricValue('Module Temp (Max)')).toContain('32');
+      const thermal = screen.getByRole('region', { name: 'Thermal monitoring and capacity comparison' });
+      fireEvent.click(within(thermal).getByRole('button', { name: 'Refresh' }));
+      expect(query.refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('retains measured false when BMS refresh is paused without presenting it as fresh or offline', () => {
+      chargingLiveMock.mockReturnValue({
+        ...makeQuery({ data: { bms_fullcharge_complete: false, battery_heater_on: false } }),
+        fetchStatus: 'paused',
+      });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(source).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(within(source).getByText('Retained source evidence')).toBeVisible();
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale');
+      expect(source).not.toHaveTextContent(/up to date|offline/i);
+      expect(summaryMetricValue('Full Charge Complete')).toBe('No');
+      expect(thermalMetricValue('Battery Heater')).toBe('Off');
+      expect(summaryMetricValue('State of Health')).toContain('96');
+    });
+
+    it('keeps independent BMS evidence beside the summary when the health model fails initially', () => {
+      healthMock.mockReturnValue(makeQuery({ error: new Error('Model unavailable') }));
+      chargingLiveMock.mockReturnValue({
+        ...makeQuery({ data: { bms_fullcharge_complete: false, module_temp_max: 0 } }),
+        isSuccess: true,
+      });
+      renderPage();
+
+      expect(screen.getByTestId('battery-health-unavailable-outline')).toBeVisible();
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'State of Health',
+      );
+      expect(summaryMetricValue('Full Charge Complete')).toBe('No');
+      expect(thermalMetricValue('Module Temp (Max)')).toContain('0');
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Available source readings')).toBeVisible();
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute('data-data-status', 'ok');
+    });
+
+    it('preserves positive capacity and range changes as signed SI-derived evidence rather than double negatives or clamped loss', () => {
+      const health = makeHealth({
+        estimated_capacity_wh: 78_000,
+        history: [
+          HEALTH_DEFAULTS.history[0],
+          { ...HEALTH_DEFAULTS.history[2], range_m: 550_000 },
+        ],
+      });
+      healthMock.mockReturnValue(makeQuery({ data: health }));
+      renderPage();
+
+      const comparison = screen.getByRole('region', { name: 'Capacity and range evidence' });
+      fireEvent.click(within(comparison).getByRole('button', { name: 'Review details' }));
+      const deltaDialog = screen.getByRole('dialog');
+      expect(within(deltaDialog).getByRole('group', { name: 'Capacity Now' })).toHaveTextContent('Δ +3.00 kWh');
+      expect(within(deltaDialog).getByRole('group', { name: 'Range Now' })).toHaveTextContent('Δ +50 km');
+      fireEvent.keyDown(deltaDialog, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(comparison).not.toHaveTextContent('--');
+      expect(health.estimated_capacity_wh).toBe(78_000);
+      expect(health.history[1].range_m).toBe(550_000);
+    });
+
+    it('preserves declining capacity and range evidence with one signed delta and the original source-scope caveat', () => {
+      renderPage();
+      const comparison = screen.getByRole('region', { name: 'Capacity and range evidence' });
+      fireEvent.click(within(comparison).getByRole('button', { name: 'Review details' }));
+      const deltaDialog = screen.getByRole('dialog');
+      expect(within(deltaDialog).getByRole('group', { name: 'Capacity Now' })).toHaveTextContent('Δ -2.50 kWh');
+      expect(within(deltaDialog).getByRole('group', { name: 'Range Now' })).toHaveTextContent('Δ -30 km');
+      fireEvent.keyDown(deltaDialog, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      assertOperationalBriefDisclosure(comparison, 'not a controlled capacity test', { contains: true });
+      expect(comparison).not.toHaveTextContent('--');
+    });
+
+    it('keeps warning and critical insight meaning on bounded cues while recommendations and section identity stay neutral', () => {
+      healthMock.mockReturnValue(makeQuery({
+        data: makeHealth({ current_soh: 60, fast_charge_pct: 60 }),
+      }));
+      renderPage();
+
+      for (const [title, severity] of [
+        ['Health Concern', 'critical'], ['High Fast-Charge Usage', 'warn'],
+      ] as const) {
+        const card = screen.getByText(title).closest('[data-severity]');
+        expect(card).toHaveAttribute('data-severity', severity);
+        expect(card).not.toHaveClass(severityTokens[severity].bg);
+        expect(card).not.toHaveClass(severityTokens[severity].border);
+        expect(card?.querySelector('svg')?.parentElement).toHaveClass(severityTokens[severity].fg);
+      }
+      for (const title of ['Health Overview', 'Capacity & Wear', 'Capacity & Range: New vs Now', 'Smart Insights', 'Recommendations']) {
+        const heading = screen.getByRole('heading', { name: title });
+        expect(heading.querySelector('svg')).toHaveClass(typography.color.muted);
+        expect(heading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      }
+    });
   });
 
   it('escalates the insight severity with the battery condition', () => {
@@ -733,5 +1077,18 @@ describe('BatteryHealthPage · design-system consistency', () => {
 
     // The standalone insights section keeps its section-level h2.
     expect(screen.getByRole('heading', { level: 2, name: 'Smart Insights' })).toBeInTheDocument();
+  });
+
+  it('gives thermal metrics enough width and wrapping labels to distinguish max from min', () => {
+    renderPage();
+
+    for (const label of ['Module Temp (Max)', 'Module Temp (Min)', 'Battery Heater', 'Temperature Spread']) {
+      const text = screen.getByText(label);
+      expect(text).toHaveClass('line-clamp-2');
+      expect(text.closest('[data-role="metric-label"]')).not.toHaveClass('truncate');
+      expect(text.closest('[data-role="metric-card"]')?.parentElement).toHaveClass(
+        '[grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr))]',
+      );
+    }
   });
 });

@@ -22,8 +22,7 @@ import {
   CopyButton,
   GlassPanel,
   PanelTitle,
-  Text,
-} from '@/components/ui';
+  Text, IconButton } from '@/components/ui';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import type {
@@ -44,17 +43,15 @@ interface BatteryPassportMastheadProps {
 function gradeClass(grade: string): string {
   switch (grade.trim().toUpperCase()) {
     case 'A':
-      return 'text-emerald-300';
+      return 'text-[var(--semantic-success)]';
     case 'B':
-      return 'text-cyan-300';
     case 'C':
-      return 'text-blue-300';
+      return 'text-[var(--semantic-info)]';
     case 'D':
-      return 'text-amber-300';
     case 'E':
-      return 'text-orange-300';
+      return 'text-[var(--semantic-warning)]';
     case 'F':
-      return 'text-rose-300';
+      return 'text-[var(--semantic-danger)]';
     default:
       return 'text-[var(--text-muted)]';
   }
@@ -145,13 +142,12 @@ export function BatteryPassportMasthead({
         'Certificate identity and controls',
       )}
     >
-      <GlassPanel className="relative overflow-hidden p-4 sm:p-5">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400/70 via-cyan-400/60 to-purple-400/70" />
+      <GlassPanel className="p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <PanelTitle className="flex items-center gap-2">
               <FileCheck2
-                className="h-4 w-4 text-cyan-300"
+                className="h-4 w-4 text-[var(--text-secondary)]"
                 aria-hidden="true"
               />
               {t(
@@ -167,19 +163,10 @@ export function BatteryPassportMasthead({
             </Text>
           </div>
           <div className="flex flex-wrap items-end justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              icon={<Download className="h-4 w-4" />}
-              onClick={onExport}
-              disabled={!passport}
-            >
-              {t(
+            <IconButton icon={<Download className="h-4 w-4" />} label={t(
                 'batteryPassport.actions.export',
                 'Export certificate',
-              )}
-            </Button>
+              )} onClick={onExport} disabled={!passport} />
           </div>
         </div>
 
@@ -217,9 +204,9 @@ export function BatteryPassportMasthead({
           <div className="space-y-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-cyan-300">
+                <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                   <Award className="h-4 w-4" aria-hidden="true" />
-                  <Caption className="uppercase tracking-wide">
+                  <Caption>
                     {t(
                       'batteryPassport.masthead.eyebrow',
                       'Battery evidence certificate',
@@ -345,12 +332,17 @@ export function BatteryPassportMasthead({
                 role="alert"
                 icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
               >
-                <Text as="p" variant="caption">
-                  {t(
-                    'batteryPassport.states.refreshError',
-                    'Certificate refresh failed. Showing the most recently loaded certificate without changing its facts.',
-                  )}
-                </Text>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Text as="p" variant="caption">
+                    {t(
+                      'batteryPassport.states.refreshError',
+                      'Certificate refresh failed. Showing the most recently loaded certificate without changing its facts.',
+                    )}
+                  </Text>
+                  <Button type="button" variant="ghost" size="sm" onClick={state.onRetry}>
+                    {t('common.retry', 'Retry')}
+                  </Button>
+                </div>
               </AlertBanner>
             ) : null}
           </div>

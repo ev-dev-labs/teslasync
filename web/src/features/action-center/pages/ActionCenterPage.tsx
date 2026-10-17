@@ -1,19 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   useActionCenter,
   useApplyActionCenterAction,
 } from '@/api/hooks/useActionCenter';
-import { useToast } from '@/components/feedback';
-import { PageContainer } from '@/components/layout';
+import { StaleRefreshWarning, useToast } from '@/components/feedback';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button, Pagination } from '@/components/ui';
+import { Pagination, IconButton } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useUrlBatch, useUrlEnum, useUrlState, useUrlString } from '@/hooks/useUrlState';
 import { Icons } from '@/lib/icons';
 import type {
   ActionCenterFilter,
@@ -31,38 +32,70 @@ import {
 
 const initialFilter: ActionCenterFilter = { state: 'open', limit: 50, offset: 0 };
 
+function parseBoundedInteger(raw: string, min: number, max: number): number | undefined {
+  if (!/^\d+$/.test(raw)) return undefined;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value >= min && value <= max ? value : undefined;
+}
+
 export default function ActionCenterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
   const operationalMode = useOperationalMode();
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
-  const [filter, setFilter] = useState<ActionCenterFilter>(() => ({
-    ...initialFilter,
-    vehicle_id: vehicleId ?? undefined,
-  }));
+  const { vehicleId, vehicles } = useSelectedVehicle();
+  // Fleet is page-local: removing vehicle_id alone would restore the workspace vehicle.
+  const [vehicleScope] = useUrlEnum('vehicle_scope', ['selected', 'fleet'], 'selected');
+  const [urlVehicle] = useUrlString('vehicle_id');
+  const [priority] = useUrlEnum('priority', ['', 'critical', 'high', 'medium', 'low'], '');
+  const [source] = useUrlEnum('source_feature', [
+    '', 'active_alerts', 'advanced_intelligence', 'battery_health',
+    'charging_reliability', 'drive_efficiency', 'fleet_maintenance',
+    'signal_health', 'system_health', 'vehicle_readiness',
+  ], '');
+  const [state] = useUrlEnum('state', ['all', 'open', 'acknowledged', 'snoozed', 'dismissed'], 'open');
+  const [limit] = useUrlState({
+    key: 'limit', defaultValue: 50, parse: (raw) => parseBoundedInteger(raw, 1, 100),
+  });
+  const [offset] = useUrlState({
+    key: 'offset', defaultValue: 0, parse: (raw) => parseBoundedInteger(raw, 0, 100000),
+  });
+  const setUrl = useUrlBatch();
+  const filter = useMemo<ActionCenterFilter>(() => ({
+    vehicle_id: vehicleScope === 'fleet' ? undefined : vehicleId ?? undefined,
+    priority: priority || undefined,
+    source_feature: source || undefined,
+    state: state === 'all' ? undefined : state,
+    limit,
+    offset,
+  }), [vehicleScope, vehicleId, priority, source, state, limit, offset]);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const query = useActionCenter(filter);
   const actionCenterState = useDataState(query, { provenance: 'inferred' });
   const applyAction = useApplyActionCenterAction();
-  usePageTitle(t('actionCenter.page.title', 'Action Center'));
+  usePageTitle(t('actionCenter.page.title', 'Action center'));
 
   useEffect(() => {
-    setFilter((current) =>
-      current.vehicle_id === (vehicleId ?? undefined)
-        ? current
-        : { ...current, vehicle_id: vehicleId ?? undefined, offset: 0 },
-    );
-  }, [vehicleId]);
+    // Materialize inherited or rejected URL scope so Copy link uses the effective selection.
+    // Numeric comparison preserves valid URL IDs; intentional fleet scope stays page-local.
+    if (vehicleScope !== 'fleet' && vehicleId != null && Number(urlVehicle) !== vehicleId) {
+      setUrl({ vehicle_id: String(vehicleId) });
+    }
+  }, [vehicleScope, urlVehicle, vehicleId, setUrl]);
 
   const handleFilterChange = useCallback(
     (next: ActionCenterFilter) => {
-      setFilter(next);
-      if (next.vehicle_id != null && next.vehicle_id !== vehicleId) {
-        setVehicleId(next.vehicle_id);
-      }
+      setUrl({
+        vehicle_scope: next.vehicle_id == null ? 'fleet' : null,
+        vehicle_id: next.vehicle_id == null ? null : String(next.vehicle_id),
+        priority: next.priority,
+        source_feature: next.source_feature,
+        state: next.state === 'open' ? null : next.state ?? 'all',
+        limit: next.limit === 50 ? null : String(next.limit ?? 50),
+        offset: !next.offset ? null : String(Math.min(next.offset, 100000)),
+      });
     },
-    [setVehicleId, vehicleId],
+    [setUrl],
   );
 
   const handleAction = useCallback(
@@ -162,6 +195,8 @@ export default function ActionCenterPage() {
 
   const pageSize = filter.limit ?? 50;
   const page = Math.floor((filter.offset ?? 0) / pageSize) + 1;
+  const total = query.data?.total;
+  const hasKnownTotal = total != null && Number.isSafeInteger(total) && total >= 0;
   const RefreshIcon = Icons.refresh;
   const refreshAction = (
     <div className="flex flex-wrap items-center gap-2">
@@ -170,21 +205,13 @@ export default function ActionCenterPage() {
         status={actionCenterState.status}
         updatedAt={actionCenterState.updatedAt}
       />
-      <Button
-        type="button"
-        variant="secondary"
-        icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />}
-        onClick={() => void query.refetch()}
-        loading={query.isFetching}
-      >
-        {t('actionCenter.actions.refresh', 'Refresh evidence')}
-      </Button>
+      <IconButton icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />} label={t('actionCenter.actions.refresh', 'Refresh evidence')} onClick={() => void query.refetch()} busy={query.isFetching} />
     </div>
   );
 
   return (
-    <PageContainer
-      title={t('actionCenter.page.title', 'Action Center')}
+    <PageLayout
+      title={t('actionCenter.page.title', 'Action center')}
       subtitle={t(
         'actionCenter.page.subtitle',
         'A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard.',
@@ -193,10 +220,19 @@ export default function ActionCenterPage() {
       query={query}
       copyLink
     >
+      <StaleRefreshWarning state={actionCenterState} label={t('actionCenter.page.title', 'Action center')} />
       <FadeIn>
         <ActionCenterSummary
           summary={query.data?.summary ?? null}
-          loading={query.isLoading}
+          loading={!actionCenterState.hasData && query.isLoading}
+          status={actionCenterState.status}
+          provenance={actionCenterState.provenance}
+          generatedAt={query.data?.generated_at ?? null}
+          vehicleName={filter.vehicle_id == null
+            ? null
+            : vehicles.find((vehicle) => vehicle.id === filter.vehicle_id)?.display_name
+              ?? t('actionCenter.summary.vehicleId', 'Vehicle {{id}}', { id: filter.vehicle_id })}
+          providers={query.data?.provider_status ?? []}
         />
       </FadeIn>
       <FadeIn delay={0.04}>
@@ -209,32 +245,33 @@ export default function ActionCenterPage() {
       <FadeIn delay={0.08}>
         <ProviderStatusPanel
           providers={query.data?.provider_status ?? []}
-          loading={query.isLoading}
+          loading={!actionCenterState.hasData && query.isLoading}
         />
       </FadeIn>
       <FadeIn delay={0.12}>
         <RecommendationList
           items={query.data?.items ?? []}
-          loading={query.isLoading}
-          error={query.error}
+          loading={!actionCenterState.hasData && query.isLoading}
+          error={actionCenterState.fatalError}
           onRetry={() => void query.refetch()}
           onAction={handleAction}
           actionsDisabled={!operationalMode.canWrite}
           actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
-          onClearFilters={() => setFilter(initialFilter)}
+          onClearFilters={() => handleFilterChange(initialFilter)}
         />
         <Pagination
           page={page}
           pageSize={pageSize}
-          total={query.data?.total ?? 0}
+          total={total ?? 0}
+          totalKind={hasKnownTotal ? 'exact' : 'unknown'}
           onPageChange={(nextPage) =>
-            setFilter((current) => ({
-              ...current,
+            handleFilterChange({
+              ...filter,
               offset: (nextPage - 1) * pageSize,
-            }))
+            })
           }
           onPageSizeChange={(size) =>
-            setFilter((current) => ({ ...current, limit: size, offset: 0 }))
+            handleFilterChange({ ...filter, limit: size, offset: 0 })
           }
           pageSizeOptions={[25, 50, 100]}
         />
@@ -245,6 +282,6 @@ export default function ActionCenterPage() {
         onConfirm={() => void confirmAction()}
         onCancel={() => setPending(null)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

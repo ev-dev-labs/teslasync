@@ -1,0 +1,1666 @@
+{
+  "item": "phase6-qa-trips-journeys",
+  "attempt": 1,
+  "status": "DONE",
+  "acceptance": "Bounded source-only report delivery complete; no runtime/native/page/application PASS",
+  "page": "web/src/features/trips/pages/JourneysPage.tsx",
+  "routes": [
+    {
+      "path": "/journeys",
+      "file": "web/src/App.tsx",
+      "line": 679,
+      "importLine": 67
+    }
+  ],
+  "distinctFrom": "advanced JourneyAssurancePage at /intelligence/journey-assurance (App.tsx:770)",
+  "clock": {
+    "reserved": "2026-10-14T02:53:30.443Z",
+    "returnBy": "2026-10-14T03:13:30.443Z",
+    "hardBy": "2026-10-14T03:18:30.443Z",
+    "policy": "Earlier creation+20/+25 wins; no renewal",
+    "artifactFinalizedAt": "2026-10-14T03:11:42.5177322Z"
+  },
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-trips-journeys.json",
+    "web/logs/phase6-qa-trips-journeys.log"
+  ],
+  "alreadyMetObjective": {
+    "met": false,
+    "evidence": "Target report initially absent; exact queue [~] attempt1. Phase0/advanced QA are different objectives; accepted Phase5 no-change page shell is not complete Phase6 QA.",
+    "historicalPhase5": "0184013041757c5930891381b012f14ecbcb98e7;14 historical scoped passes, not fresh proof",
+    "alreadySatisfied": "Completed phase4-stop-score-canonical-energy-repair: current40000 Wh draft and unchanged direct energy_wh payload; DO NOT duplicate. Existing PageLayout forwards PageContainer."
+  },
+  "authority": {
+    "read": "Entire orchestrator-loop and design contract; relevant mission0-3,15-26,30-37,43-45; inventory authority,/journeys row264 and full prior audit-page-213; current handoff1-148 and2320-2443; exact/relevant queue; worker conventions; full applicable .github copilot/react-frontend/frontend-si-cutover/unit-conversion instructions; docs CONTRIBUTING",
+    "precedence": "Explicit two-artifact source-only assignment and canonical SI override obsolete legacy-unit, neon/glass/white, heartbeat/Git/test/server examples. Unknown is not zero.",
+    "instructionsSearch": "Recursive AGENTS.md excluding node_modules/.git returned no files; .github instructions inspected",
+    "queueWrites": "NONE"
+  },
+  "summary": {
+    "confirmedSourceMechanisms": 9,
+    "countedSourceOccurrences": 40,
+    "occurrenceDefinition": "Two result consumers, one draft flow, two mobile allow-lists, eight date calls plus one report scope, two trust mappings, one severity title,21 missing canonical leaves, one queue acknowledgement, one catalog description; not estimated runtime failures.",
+    "byRule": {
+      "session-result-scope": 2,
+      "vehicle-draft-scope": 1,
+      "mobile-field-action-loss": 2,
+      "date-preferences": 9,
+      "retained-trust": 2,
+      "hardcoded-string": 1,
+      "missing-canonical-key": 21,
+      "outbox-acknowledgement": 1,
+      "catalog-domain-semantics": 1
+    },
+    "conditionalCandidates": 4,
+    "nativeOnlyCandidates": 1,
+    "presentationFiles": 13,
+    "presentationPhysicalLines": 1729,
+    "pagePhysicalLines": 35,
+    "domainPanelIdentities": 10,
+    "literalLayoutCardOpenings": 12,
+    "sourceContentOpenings": 10,
+    "dataTableOpenings": 2,
+    "reportMetrics": 7,
+    "testFilesInspected": 13,
+    "testDeclarations": 83,
+    "staticallyExpandedKnownCases": 87,
+    "runnerDiscovery": "NOTRUN:83 declarations, one literal five-row it.each, not runner discovery",
+    "highestIssueOwners": "JourneyPanel (scope,mobile,dates,trust); mutation result callers; serialized canonical catalog",
+    "priority": "Wrong-session/vehicle attribution and false queue acknowledgement first; mobile/trust then date/copy. No remigration."
+  },
+  "findings": [
+    {
+      "id": "JQA-01",
+      "rule": "session-result-scope",
+      "severity": "high",
+      "classification": "confirmed source mechanism;runtime NOTRUN",
+      "occurrences": 2,
+      "file": "web/src/features/trips/components/StopScorePanel.tsx",
+      "line": 44,
+      "citations": [
+        {
+          "file": "web/src/features/trips/components/StopScorePanel.tsx",
+          "line": 44,
+          "needle": "const result = score.data ?? null"
+        },
+        {
+          "file": "web/src/features/trips/components/ReplanPanel.tsx",
+          "line": 60,
+          "needle": "const result = replan.data ?? null"
+        },
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 379,
+          "needle": "<StopScorePanel session={detail.session}"
+        },
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 386,
+          "needle": "<ReplanPanel session={detail.session}"
+        }
+      ],
+      "mechanism": "Same-type unkeyed children persist across opening another same-lifecycle session. Local nomination/arrival/energy and mutation winner/version survive; result.session_id is never compared with current session.id. Query cache identity does not scope these mutation results.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Synthetic A score/replan result; rerender existing child with B of same lifecycle; trace A winner/ranking under B. Repeat delayed A settlement after switch; no actual request."
+      },
+      "fix": "Existing JourneyPanel/StopScorePanel/ReplanPanel owners bind draft/result/settlement to session identity; preserve same-session retention, direct SI and unrelated outbox entries.",
+      "ownerNeed": "N01"
+    },
+    {
+      "id": "JQA-02",
+      "rule": "vehicle-draft-scope",
+      "severity": "high",
+      "classification": "confirmed source mechanism;runtime NOTRUN",
+      "occurrences": 1,
+      "file": "web/src/features/trips/components/JourneyPanel.tsx",
+      "line": 111,
+      "citations": [
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 111,
+          "needle": "const [draft, setDraft] = useState"
+        },
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 137,
+          "needle": "vehicle_id: vehicleId"
+        },
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 143,
+          "needle": "onSuccess: (session)"
+        },
+        {
+          "file": "web/src/features/trips/pages/JourneysPage.tsx",
+          "line": 31,
+          "needle": "<JourneyPanel vehicleId={vehicleId}"
+        }
+      ],
+      "mechanism": "Draft has no captured vehicle identity or scope reset/disclosure. Header selection changes retain fields but submit latest vehicleId. Earlier create success unconditionally closes/clears current draft and selects returned session.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Synthetic A draft; rerender B; trace payload vehicle_id=B with A fields. Trace A completion after B/new draft: unconditional close/clear/select."
+      },
+      "fix": "Explicit vehicle-bound draft and settlement authority or deliberate scope reset/disclosure; preserve rejected drafts and success-only transitions, no silent retargeting.",
+      "ownerNeed": "N02"
+    },
+    {
+      "id": "JQA-03",
+      "rule": "mobile-field-action-loss",
+      "severity": "high",
+      "classification": "confirmed source CSS mechanism;native reachability NOTRUN",
+      "occurrences": 2,
+      "file": "web/src/features/trips/components/JourneyPanel.tsx",
+      "line": 299,
+      "citations": [
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 299,
+          "needle": "mobileColumns={['journey', 'status', 'updated']}"
+        },
+        {
+          "file": "web/src/features/trips/components/StopScoreTable.tsx",
+          "line": 122,
+          "needle": "mobileColumns={['stop', 'score', 'wait']}"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 742,
+          "endLine": 744,
+          "needle": "hidden md:table-cell"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 506,
+          "needle": "mobilePresentation != null"
+        }
+      ],
+      "mechanism": "Session plan/Open and ranking price/health/corridor CSS-hidden below md. No mobilePresentation/expansion/alternate row-open supplied; column visibility cannot override mobile allow-list. Open is explicit session selector.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Trace omitted keys through mobileSet/colHiddenClass below768. No supplied mobilePresentation activates full-detail/onOpenRow adapter. Future synthetic mounted proof must reach second session/plan/all six score columns at320-430 and767/768."
+      },
+      "fix": "Existing DataTable mobilePresentation.onOpenRow/inlineActions/full-details caller adoption; keep IDs/order/columns/raw filters/prefs/desktop. No shared replacement.",
+      "ownerNeed": "N03"
+    },
+    {
+      "id": "JQA-04",
+      "rule": "date-preferences",
+      "severity": "medium",
+      "classification": "confirmed source preference bypass;native NOTRUN",
+      "occurrences": 9,
+      "file": "web/src/features/trips/components/JourneyPanel.tsx",
+      "line": 190,
+      "citations": [
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 190,
+          "needle": "formatDateTime(row.updated_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 372,
+          "needle": "formatDateTime(plan.created_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/DeparturePanel.tsx",
+          "line": 100,
+          "needle": "formatTime(advice.recommended_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/DeparturePanel.tsx",
+          "line": 129,
+          "needle": "formatTime(slot.depart_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/ChecklistPanel.tsx",
+          "line": 128,
+          "needle": "formatDateTime(run.run_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/LiveTripPanel.tsx",
+          "line": 179,
+          "needle": "formatTime(view.latest.recorded_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/ArrivalPanel.tsx",
+          "line": 80,
+          "needle": "formatTime(arrival.eta_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/NudgePanel.tsx",
+          "line": 74,
+          "needle": "formatDateTime(nudge.slot_at)"
+        },
+        {
+          "file": "web/src/features/trips/components/ReportPanel.tsx",
+          "line": 30,
+          "endLine": 32,
+          "needle": "start: report?.started_at ?? session.started_at ?? session.created_at"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 44,
+          "endLine": 50,
+          "needle": "return undefined"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 85,
+          "needle": "({ locale, tz })"
+        }
+      ],
+      "mechanism": "Eight pure helper calls omit effective locale/timezone options and render browser defaults; report scope renders raw ISO instants. Numeric/SI preference hooks are reactive but these dates bypass them.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Synthetic UTC date-boundary instant, browser zone/locale != saved effective zone/locale; trace absent opts and raw report interpolation. Future preference/DST regressions preserve raw instants/null."
+      },
+      "fix": "Existing useDateFormat/opts adoption at seven feature owners, including report scope. No shared formatter/store writes. Explicit hour-cycle behavior beyond current API unverified.",
+      "ownerNeed": "N04"
+    },
+    {
+      "id": "JQA-05",
+      "rule": "retained-trust",
+      "severity": "medium",
+      "classification": "confirmed source mapping/recovery mechanism;runtime NOTRUN",
+      "occurrences": 2,
+      "file": "web/src/features/trips/components/JourneyPanel.tsx",
+      "line": 275,
+      "citations": [
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 275,
+          "needle": "listState.refreshError ? 'retained' : 'ready'"
+        },
+        {
+          "file": "web/src/features/trips/components/JourneyPanel.tsx",
+          "line": 310,
+          "needle": "detailState.refreshError ? 'retained' : 'ready'"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 244,
+          "endLine": 250,
+          "needle": "refreshError: null"
+        },
+        {
+          "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+          "line": 62,
+          "endLine": 67,
+          "needle": "errorRecovery?.onRetry"
+        }
+      ],
+      "mechanism": "Retained+paused derives stale/isRefreshBlocked with refreshError=null, mapped ready here. Even retained refresh errors lack supplied errorRecovery.onRetry. Initial paused list can look empty when isLoading=false; other initial-paused panels require separate source/native review, not assumed accepted.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Synthetic retained list/detail, fetchStatus=paused,error=null; trace stale->ready/no notice. Then retained refreshError: notice but no retry prop. Fatal-without-data still uses QueryError retry."
+      },
+      "fix": "Full existing DataState/blocked mapping and retained recovery at JourneyPanel; retain payload, distinguish unresolved from authoritative empty, never infer vehicle offline.",
+      "ownerNeed": "N05"
+    },
+    {
+      "id": "JQA-06",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "classification": "confirmed source localization mechanism;native announcement NOTRUN",
+      "occurrences": 1,
+      "file": "web/src/features/trips/components/DeparturePanel.tsx",
+      "line": 122,
+      "citations": [
+        {
+          "file": "web/src/features/trips/components/DeparturePanel.tsx",
+          "line": 122,
+          "needle": "title={slot.level}"
+        },
+        {
+          "file": "web/src/features/trips/components/DeparturePanel.tsx",
+          "line": 129,
+          "needle": "<Badge variant={levelVariant(slot.level)}>{formatTime(slot.depart_at)}</Badge>"
+        }
+      ],
+      "mechanism": "Raw English wire enum none/watch/warning appears in native title; badge body time only. Severity relies on hue/hover rather than localized visible/accessible text. Horizon names/pressed states already localized.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Trace watch/warning slot in another locale: raw title persists, visible time only. Future touch/keyboard/SR proof must expose severity without hover/color."
+      },
+      "fix": "Existing Text/Badge localized severity; preserve source enum/recommendation. Exact missing severity keys require separate parent copy lease, no fallback-only permission.",
+      "ownerNeed": "N06"
+    },
+    {
+      "id": "JQA-07",
+      "rule": "missing-canonical-key",
+      "severity": "medium",
+      "classification": "confirmed canonical source absence;translation/loader/runtime NOTRUN",
+      "occurrences": 21,
+      "file": "web/src/features/trips/components/ArrivalPanel.tsx",
+      "line": 15,
+      "citations": [
+        {
+          "file": "web/src/features/trips/components/ArrivalPanel.tsx",
+          "line": 15,
+          "needle": "journey.arrival.verdict.ok"
+        },
+        {
+          "file": "web/src/features/trips/components/LiveTripPanel.tsx",
+          "line": 20,
+          "needle": "journey.live.verdict.ok"
+        },
+        {
+          "file": "web/src/features/trips/components/NudgePanel.tsx",
+          "line": 13,
+          "needle": "journey.nudge.verdict.leave_now"
+        },
+        {
+          "file": "web/src/features/trips/components/ReplanPanel.tsx",
+          "line": 18,
+          "needle": "journey.replan.verdict.on_track"
+        },
+        {
+          "file": "web/src/api/hooks/useJourney.ts",
+          "line": 428,
+          "needle": "toast.journey.checkin.success"
+        },
+        {
+          "file": "web/src/api/hooks/useJourney.ts",
+          "line": 464,
+          "endLine": 466,
+          "needle": "toast.journey.replan.success"
+        },
+        {
+          "file": "web/src/features/trips/hooks/useQueuedCheckIn.ts",
+          "line": 35,
+          "needle": "toast.journey.checkin.queued"
+        }
+      ],
+      "mechanism": "187 scoped literal keys checked;21 missing canonical leaves verified again with flattened paths, not merely nested lookup. Missing-key allowlist empty. Six extra keys missing ONLY from trips split can belong to shell/other chunks and are not promoted.",
+      "missingDefaults": {
+        "journey.arrival.verdict.ok": "Arrive with buffer",
+        "journey.arrival.verdict.attention": "Arrive tight",
+        "journey.arrival.verdict.action": "Top up en route",
+        "journey.arrival.verdict.unknown": "Unknown",
+        "journey.live.verdict.ok": "On energy",
+        "journey.live.verdict.attention": "Tight",
+        "journey.live.verdict.action": "Charge soon",
+        "journey.live.verdict.unknown": "Unknown",
+        "journey.nudge.verdict.leave_now": "Leave now",
+        "journey.nudge.verdict.wait": "Wait",
+        "journey.nudge.verdict.delay": "Delay",
+        "journey.nudge.verdict.unknown": "Unknown",
+        "journey.replan.verdict.on_track": "On track",
+        "journey.replan.verdict.drifted": "Drifting",
+        "journey.replan.verdict.off_route": "Off route",
+        "journey.replan.verdict.unknown": "Unknown",
+        "toast.journey.checkin.error": "Check-in failed",
+        "toast.journey.checkin.queued": "Offline — check-in queued",
+        "toast.journey.checkin.success": "Checked in",
+        "toast.journey.replan.error": "Replan failed",
+        "toast.journey.replan.success": "Replanned — {{winner}} wins"
+      },
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Read key/default maps and toast declarations; inspect exact dotted canonical leaf membership. Absence persists after flat-property check; fallback is not translated-runtime proof."
+      },
+      "fix": "Serialized parent canonical owner adds ONLY21 existing declared defaults and reserves normal exact generated outputs/manifest closure. Preserve prior leaves/guards/empty missing baseline; no generated hand edits or broad translation campaign.",
+      "ownerNeed": "N07"
+    },
+    {
+      "id": "JQA-08",
+      "rule": "outbox-acknowledgement",
+      "severity": "high",
+      "classification": "confirmed storage-failure branch;actual browser storage NOTRUN",
+      "occurrences": 1,
+      "file": "web/src/features/trips/lib/checkInOutbox.ts",
+      "line": 39,
+      "citations": [
+        {
+          "file": "web/src/features/trips/lib/checkInOutbox.ts",
+          "line": 39,
+          "endLine": 45,
+          "needle": "Storage full or unavailable"
+        },
+        {
+          "file": "web/src/features/trips/hooks/useQueuedCheckIn.ts",
+          "line": 33,
+          "endLine": 35,
+          "needle": "enqueueCheckIn({ session_id: sessionId"
+        },
+        {
+          "file": "web/src/features/trips/hooks/useQueuedCheckIn.ts",
+          "line": 29,
+          "needle": "setQueued(outboxFor(sessionId).length)"
+        }
+      ],
+      "mechanism": "setItem failure swallowed while comment promises memory queue, but no memory entries exist. Hook ignores returned array, refresh rereads storage, unconditional warning says queued. Failed write loses newly tapped entry, potentially count0.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Future pure storage stub: setItem throws, empty readable storage. Trace ignored enqueue result->refresh empty->queued warning. Repeat denied getItem. Never invoke journey API."
+      },
+      "fix": "Existing outbox/hook expose truthful persistence outcome or bounded explicit in-memory fallback with limited lifetime. Keep session identity/original instant/order/dedupe/cap/HTTP-error rules.",
+      "ownerNeed": "N08"
+    },
+    {
+      "id": "JQA-09",
+      "rule": "catalog-domain-semantics",
+      "severity": "low",
+      "classification": "confirmed source description mismatch;rendered Explore NOTRUN",
+      "occurrences": 1,
+      "file": "web/src/features/explore/featureCatalog.ts",
+      "line": 100,
+      "citations": [
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 100,
+          "needle": "Named journeys stitched from consecutive drives."
+        },
+        {
+          "file": "web/src/features/trips/pages/JourneysPage.tsx",
+          "line": 10,
+          "endLine": 14,
+          "needle": "Journey Autopilot"
+        }
+      ],
+      "mechanism": "Explore /journeys describes stitched recorded drives, mounted page describes named planning/live/debrief session lifecycle. /trips and advanced JourneyAssurance are separate domains.",
+      "sourceRepro": {
+        "execution": "NOTRUN",
+        "steps": "Compare exact description with mounted page/hook domain; do not infer route equivalence."
+      },
+      "fix": "Existing orchestrator catalog integration owner reconciles only this description and any proven copy consumer; no route/source remigration.",
+      "ownerNeed": "N09"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/trips/components/StopScorePanel.tsx",
+      "line": 16,
+      "endLine": 24,
+      "rule": "business-input-timezone",
+      "condition": "datetime-local generation/Date.parse are browser-local, label has no explicit zone; browser/effective display zone may differ",
+      "sourceRepro": "NOTRUN: synthetic mismatched zones; trace ISO conversion, no score POST",
+      "disposition": "Input semantics may be intentional; only clarify/disclose if contract requires. Not advanced departure-zone fix."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/trips/components/StopScoreTable.tsx",
+      "line": 83,
+      "endLine": 87,
+      "rule": "price-basis-currency",
+      "condition": "Header $/kWh versus preference currency formatter; unit_price basis/currency metadata not inspected",
+      "sourceRepro": "NOTRUN: non-$ preference, compare label/cells; establish authoritative currency/basis before conversion",
+      "disposition": "Backend currency/energy denominator UNKNOWN; do not infer USD/Wh or introduce FX."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/trips/components/DeparturePanel.tsx",
+      "line": 37,
+      "endLine": 40,
+      "rule": "forecast-window-age",
+      "condition": "Window memo freezes until horizon change; operational query does not poll. Ambient-tick comments are not source observation guarantee",
+      "sourceRepro": "NOTRUN: synthetic mounted age past horizon; inspect bounds and intended fixed-vs-rolling contract",
+      "disposition": "No invented timer or forecast refresh policy."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/trips/hooks/useQueuedCheckIn.ts",
+      "line": 61,
+      "endLine": 69,
+      "rule": "automatic-flush-retry-lifecycle",
+      "condition": "flush depends on whole mutation result; effect invokes flush, state changes rerender, failed entries remain. Repeat-loop outcome depends on mutation-result identity/runtime lifecycle not verified",
+      "sourceRepro": "NOTRUN: synthetic rejection/ref-identity/effect re-entry without network",
+      "disposition": "Candidate only; exact hook/test proof may be separately leased, not bundled as confirmed fix."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "NATIVE01",
+      "status": "NOTRUN",
+      "file": "web/src/components/ui/Button.tsx",
+      "line": 36,
+      "endLine": 49,
+      "rule": "mounted-mobile-a11y-theme-preferences",
+      "source": "Small Button h-9/min-h-9 and defaultmd h-10 lack general mobile44 override. Rem36/40 arithmetic is not measured hit rectangle. Long labels, clipping, root overflow, actual focus/contrast/safe areas/RTL/timezone/hour-cycle behavior remain unverified.",
+      "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560;767/768;narrow containers;dark/light/custom/forced-colors;RTL/200%text/long names/evidence;OS reduced-motion and low-bandwidth;loading/error/empty/paused/retained;form/table controls/report drawer",
+      "visualCandidates": "StopScoreTable:53 and LiveTripPanel:128 emerald bar fallbacks; DeparturePanel:125 duplicate recommendation emphasis; source candidates only, not measured neon/contrast failures",
+      "disposition": "No browser/native/network/auth lock granted; separate safe synthetic read-only mounted owner required."
+    }
+  ],
+  "sectionActionStateMatrix": [
+    {
+      "section": "Page shell",
+      "file": "web/src/features/trips/pages/JourneysPage.tsx",
+      "line": 23,
+      "actions": "Localized document/title/subtitle; PageLayout->PageContainer; selected vehicle; FadeIn",
+      "states": "No competing vehicle/range picker; FadeIn/shared motion respects OS reduction or low bandwidth; native NOTRUN"
+    },
+    {
+      "section": "List/create",
+      "file": "web/src/features/trips/components/JourneyPanel.tsx",
+      "line": 207,
+      "actions": "All five statuses+All; Plan/Cancel; required trimmed name200, origin/destination300; Create; Open",
+      "states": "Initial skeleton/fatal retry/empty Plan/retained rows. Null vehicle disables submit; fleet loading/failure/no-vehicle reason not exposed. JQA02/03/05"
+    },
+    {
+      "section": "Detail/lifecycle/versions",
+      "file": "web/src/features/trips/components/JourneyPanel.tsx",
+      "line": 308,
+      "actions": "Only server next_statuses start/pause/resume/complete/abort; plan version/notes/instants",
+      "states": "Fatal retry/initial skeleton/selection-empty/retained detail. Lifecycle applicability gates intentional; no nonexistent-session mutation. JQA04/05"
+    },
+    {
+      "section": "Score stops",
+      "file": "web/src/features/trips/components/StopScorePanel.tsx",
+      "line": 96,
+      "actions": "First20 sites/max10 nominations; browser-local arrival; canonicalWh demand; Score; charging history empty link",
+      "states": "Coordinate prerequisite shell; site initial/fatal/empty/retained and retry; mutation pending keeps ranking, inline failure separate; safeArray;40000Wh/direct payload accepted. JQA01; C01"
+    },
+    {
+      "section": "Departure",
+      "file": "web/src/features/trips/components/DeparturePanel.tsx",
+      "line": 65,
+      "actions": "Independent12/24/48h horizon; recommendation/hourly slots/SOC/evidence",
+      "states": "No-origin shell; initial/fatal retry/empty coverage/retained; nullable recommendation/SOC, valid0. JQA04/06; C03"
+    },
+    {
+      "section": "Checklist",
+      "file": "web/src/features/trips/components/ChecklistPanel.tsx",
+      "line": 93,
+      "actions": "Run/Re-check; known item labels/statuses/details/checked instant",
+      "states": "Latest404 never-run empty action; non404 fatal retry; retained404 not never-run; pending keeps snapshot; mutation error separate; unknown neutral. JQA04"
+    },
+    {
+      "section": "Nudge planned-only",
+      "file": "web/src/features/trips/components/NudgePanel.tsx",
+      "line": 54,
+      "actions": "Verdict/calm slot/all blockers/evidence",
+      "states": "Applicable panel initial/fatal/empty/retained/retry; unknown distinct. JQA04/07"
+    },
+    {
+      "section": "Live active/paused",
+      "file": "web/src/features/trips/components/LiveTripPanel.tsx",
+      "line": 78,
+      "actions": "Check in/queued count; progress/remaining; range/have/need; next stop/wait; last fix/trail/evidence",
+      "states": "No fix empty action; first pending skeleton; loaded payload retained; null progress/range numbers distinct, valid0 retained; visualpct clamp only. Existing queue JQA08/C04; no real replay"
+    },
+    {
+      "section": "Replan active/paused",
+      "file": "web/src/features/trips/components/ReplanPanel.tsx",
+      "line": 63,
+      "actions": "Rescore from latest fix; corridor verdict/deviation/evidence; winner/version/all six ranking columns",
+      "states": "No fix disables; assessment initial/fatal/empty/retained and retry independent of pending/error mutation result. JQA01/03/07"
+    },
+    {
+      "section": "Arrival active/paused",
+      "file": "web/src/features/trips/components/ArrivalPanel.tsx",
+      "line": 57,
+      "actions": "Destination/ETA/moving/parked/pace/left; energy verdict/shortfall; route factor/trip support/evidence",
+      "states": "Initial/fatal/empty/retained/retry; null ETA dash; nullablepace/left/shortfall/factor guarded; valid0; SI formatting. pace_ms authoritative backend meaning not inferred. JQA04/07"
+    },
+    {
+      "section": "Report completed/aborted",
+      "file": "web/src/features/trips/components/ReportPanel.tsx",
+      "line": 66,
+      "actions": "Seven raw numeric metrics: distance,time,detour,fixes,replans-of-plans,usual-factor-over-route-trips,ready-of-check-total; OperationalBrief review drawer/evidence",
+      "states": "Same report DataState initial suppression/provenance/freshness; independent initial/fatal/empty/retained/retry. Rawnull stays unknown, valid0 numeric, denominators distinct; raw ISO scope JQA04. Malformed nullable denominators beyond declared DTO UNKNOWN, not fabricated0"
+    }
+  ],
+  "paginationTrustScopeSI": {
+    "pagination": "Journey hook sends vehicle_id/status and returns plain array, no cursor/offset/limit/total. Caller omits DataTable pagination (opt-in !!pagination). All LOADED rows render, not proven complete server result. Backend truncation/totals UNKNOWN; no invented pagination. Sites slice0..20 and max10 nominations are explicit existing behavior.",
+    "tables": "Stable journey-sessions/journey-stop-scores/journey-replan-scores IDs; ranked value filters use raw numeric fields and display labels; order/preferences/complete data preserved. No score truncation/paging added.",
+    "trust": "Nine journey read hooks forward AbortSignal. Independent sources retained through refresh failures. Seven advice/live/checklist/report callers plus site map stale->retained/retry; JourneyPanel JQA05 differs. Fetch time is not source observation/vehicle online proof. Initial-paused/no-data is not certified empty.",
+    "scope": "/journeys range is not enabled; header vehicle selection is enabled; URL/store/fleet precedence shared. Independent departure/arrival business dates are not workspace analysis range. Session read keys isolate cache; local mutation/draft JQA01/02 separate.",
+    "routes": "Router Route('/journey')4031-4051 declares20 journey routes:19 consumed by current hook paths. SavePlan exists but no current hook/action; not invented UI work. WaitOracle sites4026 separate. Declarations not auth/backend/response proof.",
+    "actions": "Existing create/server transitions/score/checklist/checkpoint/replan TanStack hooks retain success invalidation/broadcast/deferred toasts; NO actual journey/location/vehicle/network actions.",
+    "si": "Wh energy, meters distance/progress/deviation, seconds wait/duration; percent/dimensionless factors unchanged; raw wire/cache. UnitInput value/onChange canonicalWh and score payload unchanged. useUnits converts display only; no legacy source-unit compatibility helper.",
+    "preferences": "Reactive numberFormatting/Formatting locale/precision/currency and Units saved length/temp/pressure with centralized energy/duration defaults. Dates JQA04, business input C01. No assertion of explicit12/24 option not supported by inspected API.",
+    "null": "safeArray nullable arrays; known unknown enums neutral/text distinct from0/offline. Optional numbers guarded/formatter dashes, valid0 survives. Visualscore/progress clamp only. Negative/huge invalid physical values and unexpected DTO nullability require existing shared/source contract evidence, not coerced measurements.",
+    "privacy": "No real identifiers/coordinates/location/VIN/token/auth payload; only read-only source and synthetic UNEXECUTED scenarios."
+  },
+  "ownerNeeds": [
+    {
+      "id": "N01",
+      "need": "Session-local draft/result/settlement isolation",
+      "files": [
+        "web/src/features/trips/components/JourneyPanel.tsx",
+        "web/src/features/trips/components/StopScorePanel.tsx",
+        "web/src/features/trips/components/ReplanPanel.tsx"
+      ],
+      "queueDedup": "No exact current narrow repair found; Phase0 risk not completed repair; parent splits/serializes exact source/test pairs."
+    },
+    {
+      "id": "N02",
+      "need": "Vehicle-bound create draft/settlement",
+      "files": [
+        "web/src/features/trips/components/JourneyPanel.tsx"
+      ],
+      "queueDedup": "No exact narrow owner found; serialize overlapping JourneyPanelN01/N03/N04/N05, no parallel writers."
+    },
+    {
+      "id": "N03",
+      "need": "Mobile session Open/plan and all score details",
+      "files": [
+        "web/src/features/trips/components/JourneyPanel.tsx",
+        "web/src/features/trips/components/StopScoreTable.tsx"
+      ],
+      "existingAPI": "DataTable.mobilePresentation.onOpenRow/inlineActions/details",
+      "queueDedup": "No exact owner found; not advancedJourney or exhausted trip-list rescue; no shared table redesign."
+    },
+    {
+      "id": "N04",
+      "need": "Eight date calls plus raw report scope preferences",
+      "files": [
+        "web/src/features/trips/components/JourneyPanel.tsx",
+        "web/src/features/trips/components/DeparturePanel.tsx",
+        "web/src/features/trips/components/ChecklistPanel.tsx",
+        "web/src/features/trips/components/LiveTripPanel.tsx",
+        "web/src/features/trips/components/ArrivalPanel.tsx",
+        "web/src/features/trips/components/NudgePanel.tsx",
+        "web/src/features/trips/components/ReportPanel.tsx"
+      ],
+      "existingAPI": "useDateFormat/opts; no shared formatter/store write",
+      "queueDedup": "Accepted phase6-fix-advanced-evidence-date-preferences owns different advanced files, not duplicate. Exact released pairs independently leased."
+    },
+    {
+      "id": "N05",
+      "need": "Full list/detail paused-retained trust/retry",
+      "files": [
+        "web/src/features/trips/components/JourneyPanel.tsx"
+      ],
+      "existingAPI": "DataState/SourceContent recovery and retainedMessage",
+      "queueDedup": "No exact owner; serialize same pair; no new trust framework."
+    },
+    {
+      "id": "N06",
+      "need": "Localized departure-slot source severity",
+      "files": [
+        "web/src/features/trips/components/DeparturePanel.tsx"
+      ],
+      "copyDependency": "Only exact labels/keys separately approved by parent if absent; no speculative keys",
+      "queueDedup": "No exact owner; advanced departure-zone fix is different page/input."
+    },
+    {
+      "id": "N07",
+      "need": "Exact21 existing label/toast defaults JQA07",
+      "files": [
+        "web/src/i18n/en.json"
+      ],
+      "derivedOutputs": "Normal exact generated outputs/manifests reserved by parent after final source closure, no guessed directory lease",
+      "queueDedup": "Six exact key-family searches each0 queue matches; active admin caller catalog is different copy. Parent may explicitly absorb these leaves into serialized catalog root; no duplicate writers."
+    },
+    {
+      "id": "N08",
+      "need": "Truthful failed-storage check-in acknowledgement",
+      "files": [
+        "web/src/features/trips/lib/checkInOutbox.ts",
+        "web/src/features/trips/hooks/useQueuedCheckIn.ts"
+      ],
+      "queueDedup": "No exact owner found; C04 remains candidate proof only, not bundled confirmed fix."
+    },
+    {
+      "id": "N09",
+      "need": "Single /journeys Explore description",
+      "files": [
+        "web/src/features/explore/featureCatalog.ts"
+      ],
+      "queueDedup": "Exact featureCatalog.ts queue search0; orchestrator-only integration lease, no route rewrite."
+    }
+  ],
+  "ruleScan": {
+    "scope": "16 exact production sources:13 page/presentation and journey API/queue hook/outbox; no whole-repository audit",
+    "matches": {
+      "static-inline-style": 0,
+      "raw-html-case-sensitive": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param-case-sensitive": 0,
+      "fetch": 0,
+      "legacy-SI": 0,
+      "date-call-lines": 8,
+      "raw-severity-title-lines": 1,
+      "visual-candidate-lines": 3
+    },
+    "exceptions": "PageLayout trace proves PageContainer. Status/lifecycle/prerequisite gates intentional, empty evidence listnull not hidden panel. Session selection effect not data-fetch; preexisting explicitly queued check-in lifecycle considered C04, not arbitrary fetch. Shared primitive rawHTML/vendor wrapper imports not violations in this narrow audit.",
+    "corrections": "Default case-insensitive grep returned14 uppercase shared-control false positives and one snake_case comment; corrected0. Split-line EOF count corrected physical1729. Two absolute router greps0 due relative Route grouping, actual block read confirms declarations, not missing endpoints.",
+    "backendRules": "SQL/fmt/panic/context out of frontend scope; router declarations read only, no backend zero-violation claim"
+  },
+  "execution": {
+    "application": "NOTRUN",
+    "tests": "NOTRUN",
+    "discovery": "NOTRUN",
+    "executedTestCases": 0,
+    "passedTestCases": null,
+    "failedTestCases": null,
+    "skippedTestCases": null,
+    "lint": "NOTRUN",
+    "compiler": "NOTRUN (npx tsc --noEmit prohibited)",
+    "build": "NOTRUN",
+    "helpers": "NOTRUN",
+    "server": "NOTRUN",
+    "browser": "NOTRUN",
+    "networkAPI": "NOTRUN",
+    "realJourneyVehicleLocationActions": "NONE",
+    "declarations": "PackageNode>=26/test,Playwright,Vite/tsconfig declarations only. JourneysPage.test.tsx absent;13 direct component/hook/outbox files,83 declarations,87 statically expanded cases NOTRUN. No runner/import of app/source repro.",
+    "commands": "Only local PowerShell file reads/Select-String/Get-FileHash/sourceJSON parsing and authorized artifact writing/validation. No Git/agents/install/helpers."
+  },
+  "limitations": [
+    "DONE=source report delivery, not runtime/native/page/application acceptance.",
+    "All source reproductions UNEXECUTED; no actual business actions or fresh test/compiler/lint passes.",
+    "Pins only certify inspected files, not all-repository change attribution; queue/catalog may drift due other owners.",
+    "Initial absent target views failed; mistaken lib/featureCatalog path nonterminating diagnostic despite wrapperexit0 corrected; uppercase grep/EOF/router matcher corrections retained.",
+    "Complete-report transport shell3412 failed before execution (Windows filename/command length error206,exit1); recovery bounded report fragments, no helper/source writes.",
+    "Source test declarations/literal parameter rows are not runner discovery/coverage/passes; historical receipts remain historical.",
+    "Observed queue drift: worker never wrote queue; author attribution unknown. Exact item and narrow needs rechecked, only completed energy repair matches. Finalizer shell3435 parser error before execution retained and corrected; not app/compiler/test failure."
+  ],
+  "preservation": {
+    "sourceSha256": "3FCD28103CDAF4DDAFDEAE512D49F94B623F048C096684EE89F2FB9364DB2AD8",
+    "noSourceEdits": true,
+    "pageLines": 35,
+    "pagePlus12PresentationFilesLines": 1729,
+    "domainSections": 10,
+    "retain": "All source sections/actions/status gates/fields/order/evidence, original tests, three tableIDs/preferences, physical signs, validzero/null/unknown, SIwire/cache, timestamps/scope/privacy and query/mutation/outbox semantics; not exercised"
+  },
+  "inputPins": [
+    {
+      "path": "docs/orchestrator-loop.md",
+      "beforeSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "beforeBytes": 16978,
+      "beforeLines": 296,
+      "afterSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "beforeSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "beforeBytes": 182554,
+      "beforeLines": 2539,
+      "afterSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "beforeSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "beforeBytes": 31079,
+      "beforeLines": 1593,
+      "afterSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-inventory.md",
+      "beforeSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "beforeBytes": 1743758,
+      "beforeLines": 1460,
+      "afterSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "unchanged": true
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "beforeSha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+      "beforeBytes": 170173,
+      "beforeLines": 2561,
+      "afterSha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-worker-conventions.md",
+      "beforeSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "beforeBytes": 8608,
+      "beforeLines": 152,
+      "afterSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "unchanged": true
+    },
+    {
+      "path": "migration-queue.md",
+      "beforeSha256": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+      "beforeBytes": 2613693,
+      "beforeLines": 2418,
+      "afterSha256": "9C42263389A0E42D87D945D17F9730C55DD039C99F4FC9A74472AD66E3865333",
+      "unchanged": false
+    },
+    {
+      "path": "docs/frontend-audits/audit-page-213.json",
+      "beforeSha256": "C0A03D94B3CDFD1B95630E1F136851109CB63DFB51560CD8BD09EDD6CCF52334",
+      "beforeBytes": 31707,
+      "beforeLines": 378,
+      "afterSha256": "C0A03D94B3CDFD1B95630E1F136851109CB63DFB51560CD8BD09EDD6CCF52334",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/pages/JourneysPage.tsx",
+      "beforeSha256": "3FCD28103CDAF4DDAFDEAE512D49F94B623F048C096684EE89F2FB9364DB2AD8",
+      "beforeBytes": 1150,
+      "beforeLines": 35,
+      "afterSha256": "3FCD28103CDAF4DDAFDEAE512D49F94B623F048C096684EE89F2FB9364DB2AD8",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useJourney.ts",
+      "beforeSha256": "03AA14E8C596996123FD2920694DED89B67A6460261DB37EB01915B9AE57F25B",
+      "beforeBytes": 17046,
+      "beforeLines": 527,
+      "afterSha256": "03AA14E8C596996123FD2920694DED89B67A6460261DB37EB01915B9AE57F25B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ArrivalPanel.test.tsx",
+      "beforeSha256": "82E65BF25BE3EB38EFAB022CF4217F8D96AC19202425AAA4E78D5BD5D11F8E23",
+      "beforeBytes": 6217,
+      "beforeLines": 168,
+      "afterSha256": "82E65BF25BE3EB38EFAB022CF4217F8D96AC19202425AAA4E78D5BD5D11F8E23",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ArrivalPanel.tsx",
+      "beforeSha256": "B812236500153A3DD8A37D2806637DAD6C25B8093B83DDE529C4B8C39AFEDF1C",
+      "beforeBytes": 4902,
+      "beforeLines": 120,
+      "afterSha256": "B812236500153A3DD8A37D2806637DAD6C25B8093B83DDE529C4B8C39AFEDF1C",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ChecklistPanel.test.tsx",
+      "beforeSha256": "FBC59FD29FFAC2C6741CA899729AA88981277FD7EC7A038A3B67E2B01DC9BDC2",
+      "beforeBytes": 7026,
+      "beforeLines": 175,
+      "afterSha256": "FBC59FD29FFAC2C6741CA899729AA88981277FD7EC7A038A3B67E2B01DC9BDC2",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ChecklistPanel.tsx",
+      "beforeSha256": "F52CD0BE9812B7C3C0077E32396EBA3589B38EABC3DB139784BDD86D893A6F47",
+      "beforeBytes": 5525,
+      "beforeLines": 160,
+      "afterSha256": "F52CD0BE9812B7C3C0077E32396EBA3589B38EABC3DB139784BDD86D893A6F47",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/DeparturePanel.test.tsx",
+      "beforeSha256": "5B239E78074E8E1D2FF0C78C0F4B44F09A6E32417CEF71024684A1169CA83EEF",
+      "beforeBytes": 6364,
+      "beforeLines": 156,
+      "afterSha256": "5B239E78074E8E1D2FF0C78C0F4B44F09A6E32417CEF71024684A1169CA83EEF",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/DeparturePanel.tsx",
+      "beforeSha256": "A42356F2D3AB48B6F23C41E6690ABCD7891298F2457D4D521DA1F99457720EB5",
+      "beforeBytes": 5486,
+      "beforeLines": 143,
+      "afterSha256": "A42356F2D3AB48B6F23C41E6690ABCD7891298F2457D4D521DA1F99457720EB5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/JourneyPanel.test.tsx",
+      "beforeSha256": "906296FFEAB85925D3EA3171606D87A93E3C835457790FF6F311735440BB9EC0",
+      "beforeBytes": 13079,
+      "beforeLines": 324,
+      "afterSha256": "906296FFEAB85925D3EA3171606D87A93E3C835457790FF6F311735440BB9EC0",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/JourneyPanel.tsx",
+      "beforeSha256": "62F1BFAE53770CD2EABF38095C30C2F4B8FB8B8E40B275DF351F78623474D563",
+      "beforeBytes": 15389,
+      "beforeLines": 408,
+      "afterSha256": "62F1BFAE53770CD2EABF38095C30C2F4B8FB8B8E40B275DF351F78623474D563",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/LiveTripPanel.test.tsx",
+      "beforeSha256": "6160A2696B9A1C8C71D062E93F56CCAC5ACDD34309C46622D5B5832E89DDC208",
+      "beforeBytes": 8797,
+      "beforeLines": 228,
+      "afterSha256": "6160A2696B9A1C8C71D062E93F56CCAC5ACDD34309C46622D5B5832E89DDC208",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/LiveTripPanel.tsx",
+      "beforeSha256": "25C241A0F2946CDE619292AD8EE47D20CEE55CDA35C736D84252CD5EEEDA6CC5",
+      "beforeBytes": 7215,
+      "beforeLines": 190,
+      "afterSha256": "25C241A0F2946CDE619292AD8EE47D20CEE55CDA35C736D84252CD5EEEDA6CC5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/NudgePanel.test.tsx",
+      "beforeSha256": "E5177A9B52DC4FF638CAA0520E4809E09FE5D4C80F1E3DD7E646E6C534D060C2",
+      "beforeBytes": 5366,
+      "beforeLines": 140,
+      "afterSha256": "E5177A9B52DC4FF638CAA0520E4809E09FE5D4C80F1E3DD7E646E6C534D060C2",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/NudgePanel.tsx",
+      "beforeSha256": "6ECFA789358E0EA703ACEE9ADAC69E339A74F5E99199F32502B38491FED5DE7E",
+      "beforeBytes": 3726,
+      "beforeLines": 99,
+      "afterSha256": "6ECFA789358E0EA703ACEE9ADAC69E339A74F5E99199F32502B38491FED5DE7E",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ReplanPanel.test.tsx",
+      "beforeSha256": "0F3AA7C5451BDEA4CAC642B18B7F0EEC17E89A90CC84D1239FB2BB60BABE518B",
+      "beforeBytes": 7291,
+      "beforeLines": 194,
+      "afterSha256": "0F3AA7C5451BDEA4CAC642B18B7F0EEC17E89A90CC84D1239FB2BB60BABE518B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ReplanPanel.tsx",
+      "beforeSha256": "886F0240F4A59CB6B6BD2157FC8CCBCF25999914E04BA0FA7E983E1BAAA93AE5",
+      "beforeBytes": 5037,
+      "beforeLines": 132,
+      "afterSha256": "886F0240F4A59CB6B6BD2157FC8CCBCF25999914E04BA0FA7E983E1BAAA93AE5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ReportPanel.test.tsx",
+      "beforeSha256": "937F9832BFB6BDABB80DEDC73363233CF95AC0CCFEAC45C4151D3DEBA57CCC89",
+      "beforeBytes": 7539,
+      "beforeLines": 192,
+      "afterSha256": "937F9832BFB6BDABB80DEDC73363233CF95AC0CCFEAC45C4151D3DEBA57CCC89",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/ReportPanel.tsx",
+      "beforeSha256": "204771EF5BC380C1DC492A202B0840134B4E366965BFB14BDE6CA598A84F2F6E",
+      "beforeBytes": 5592,
+      "beforeLines": 93,
+      "afterSha256": "204771EF5BC380C1DC492A202B0840134B4E366965BFB14BDE6CA598A84F2F6E",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/StopScorePanel.test.tsx",
+      "beforeSha256": "3EB6680F117C0299844E8E0183778FE1A5EFC13E7FE4E0BD79E635CAC0D65CB4",
+      "beforeBytes": 11358,
+      "beforeLines": 279,
+      "afterSha256": "3EB6680F117C0299844E8E0183778FE1A5EFC13E7FE4E0BD79E635CAC0D65CB4",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/StopScorePanel.tsx",
+      "beforeSha256": "30E848984B053EA05A013360C28B8E17FB4DC604F87ECFF8E7C3DE23922F0E8C",
+      "beforeBytes": 7114,
+      "beforeLines": 171,
+      "afterSha256": "30E848984B053EA05A013360C28B8E17FB4DC604F87ECFF8E7C3DE23922F0E8C",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/StopScoreTable.test.tsx",
+      "beforeSha256": "FCBA8EA28613465CB3027207BF613463A0C2BFA1DAA1C33755FD82D3E4D11DF6",
+      "beforeBytes": 2691,
+      "beforeLines": 58,
+      "afterSha256": "FCBA8EA28613465CB3027207BF613463A0C2BFA1DAA1C33755FD82D3E4D11DF6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/StopScoreTable.tsx",
+      "beforeSha256": "C28271A233FCA1C79EA11BA5952C7FD0A44893B5C6D59427890547E0CC06723F",
+      "beforeBytes": 4232,
+      "beforeLines": 128,
+      "afterSha256": "C28271A233FCA1C79EA11BA5952C7FD0A44893B5C6D59427890547E0CC06723F",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/continuation-mobility-trips-watch/JourneyEvidenceList.test.tsx",
+      "beforeSha256": "948FE29FD60AA3905C4AA28EEE14686A0CCD970555535B5DD8786F8D81E866E9",
+      "beforeBytes": 956,
+      "beforeLines": 21,
+      "afterSha256": "948FE29FD60AA3905C4AA28EEE14686A0CCD970555535B5DD8786F8D81E866E9",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/continuation-mobility-trips-watch/JourneyEvidenceList.tsx",
+      "beforeSha256": "DD587DD0E318185A6FBF8F2F3AA03486BA5D9F85ABFB18CBFFC172B69234F20A",
+      "beforeBytes": 415,
+      "beforeLines": 15,
+      "afterSha256": "DD587DD0E318185A6FBF8F2F3AA03486BA5D9F85ABFB18CBFFC172B69234F20A",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/hooks/useQueuedCheckIn.ts",
+      "beforeSha256": "DE72E70F4AE18993D7440A6D4322929B8AA127C94426C06E2907674E7B0192F0",
+      "beforeBytes": 3030,
+      "beforeLines": 92,
+      "afterSha256": "DE72E70F4AE18993D7440A6D4322929B8AA127C94426C06E2907674E7B0192F0",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/hooks/useQueuedCheckIn.test.tsx",
+      "beforeSha256": "FAD66F8B8FB1792FB93CF85B9112A87BD1D7E45A1BB145DDE9A3F473B9B35759",
+      "beforeBytes": 6877,
+      "beforeLines": 183,
+      "afterSha256": "FAD66F8B8FB1792FB93CF85B9112A87BD1D7E45A1BB145DDE9A3F473B9B35759",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/lib/checkInOutbox.ts",
+      "beforeSha256": "886E7497B8FC89C66C24702F2BFAEF06275287137ECA24816C98887E93AE15FE",
+      "beforeBytes": 2431,
+      "beforeLines": 77,
+      "afterSha256": "886E7497B8FC89C66C24702F2BFAEF06275287137ECA24816C98887E93AE15FE",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/lib/checkInOutbox.test.ts",
+      "beforeSha256": "5FD01B8A3491D76452C55B6D30F64F540E020AEAB1824530F6E9E25B2999B2B3",
+      "beforeBytes": 1883,
+      "beforeLines": 55,
+      "afterSha256": "5FD01B8A3491D76452C55B6D30F64F540E020AEAB1824530F6E9E25B2999B2B3",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/trips/components/operationalbrief-all/TripOperationalBrief.tsx",
+      "beforeSha256": "FFEC36CA316960B657A5C35C89A75A8C42E856F2D3B80347D28E8356D5976C0E",
+      "beforeBytes": 1687,
+      "beforeLines": 35,
+      "afterSha256": "FFEC36CA316960B657A5C35C89A75A8C42E856F2D3B80347D28E8356D5976C0E",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "beforeBytes": 2035,
+      "beforeLines": 65,
+      "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "beforeBytes": 15482,
+      "beforeLines": 434,
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "beforeSha256": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "beforeBytes": 11340,
+      "beforeLines": 294,
+      "afterSha256": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/scope.ts",
+      "beforeSha256": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+      "beforeBytes": 14732,
+      "beforeLines": 372,
+      "afterSha256": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "beforeBytes": 6593,
+      "beforeLines": 174,
+      "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "beforeSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "beforeBytes": 5230,
+      "beforeLines": 148,
+      "afterSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "beforeBytes": 18863,
+      "beforeLines": 462,
+      "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "beforeBytes": 6545,
+      "beforeLines": 194,
+      "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "beforeSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "beforeBytes": 4608,
+      "beforeLines": 106,
+      "afterSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "beforeBytes": 2095,
+      "beforeLines": 47,
+      "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "beforeBytes": 4411,
+      "beforeLines": 168,
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/forms/UnitInput.tsx",
+      "beforeSha256": "B40549F1B8028537AED5365497B2C7D84F653CB53980960B7BB9AD95F68B56D2",
+      "beforeBytes": 7010,
+      "beforeLines": 220,
+      "afterSha256": "B40549F1B8028537AED5365497B2C7D84F653CB53980960B7BB9AD95F68B56D2",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "beforeSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "beforeBytes": 77157,
+      "beforeLines": 1707,
+      "afterSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "beforeSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "beforeBytes": 9039,
+      "beforeLines": 165,
+      "afterSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "beforeBytes": 5174,
+      "beforeLines": 93,
+      "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "beforeSha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "beforeBytes": 3322,
+      "beforeLines": 74,
+      "afterSha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "beforeBytes": 658,
+      "beforeLines": 17,
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "beforeSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "beforeBytes": 1493,
+      "beforeLines": 39,
+      "afterSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/App.tsx",
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "beforeBytes": 68125,
+      "beforeLines": 919,
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "beforeSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "beforeBytes": 1846735,
+      "beforeLines": 39035,
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/en/locale-trips.json",
+      "beforeSha256": "FB8D100807B2751143A6F8340FFA9169F36BE7F218EC43B6C17F2BE1CEECF037",
+      "beforeBytes": 88894,
+      "beforeLines": 2177,
+      "afterSha256": "FB8D100807B2751143A6F8340FFA9169F36BE7F218EC43B6C17F2BE1CEECF037",
+      "unchanged": true
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "beforeSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "beforeBytes": 37483,
+      "beforeLines": 707,
+      "afterSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "beforeSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "beforeBytes": 22645,
+      "beforeLines": 629,
+      "afterSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "beforeSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "beforeBytes": 3585,
+      "beforeLines": 94,
+      "afterSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "beforeSha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "beforeBytes": 6501,
+      "beforeLines": 221,
+      "afterSha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "unchanged": true
+    },
+    {
+      "path": "docs/CONTRIBUTING.md",
+      "beforeSha256": "6AC302D828F961845A40205ABCF4B162E62C90228136345043E7FAF8E86F3A8C",
+      "beforeBytes": 13700,
+      "beforeLines": 286,
+      "afterSha256": "6AC302D828F961845A40205ABCF4B162E62C90228136345043E7FAF8E86F3A8C",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/explore/featureCatalog.ts",
+      "beforeSha256": "44F7AF4C21610C280A22BD0CCC6F6AB365E802B473B4C7CB1CBC242DE42A1C13",
+      "beforeBytes": 25761,
+      "beforeLines": 376,
+      "afterSha256": "44F7AF4C21610C280A22BD0CCC6F6AB365E802B473B4C7CB1CBC242DE42A1C13",
+      "unchanged": true
+    },
+    {
+      "path": "internal/api/router.go",
+      "beforeSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "beforeBytes": 260353,
+      "beforeLines": 5363,
+      "afterSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useCharging.ts",
+      "beforeSha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+      "beforeBytes": 22262,
+      "beforeLines": 643,
+      "afterSha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+      "unchanged": true
+    },
+    {
+      "path": "web/package.json",
+      "beforeSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "beforeBytes": 10780,
+      "beforeLines": 189,
+      "afterSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "unchanged": true
+    },
+    {
+      "path": "web/playwright.config.ts",
+      "beforeSha256": "A5D99FFBC3C7BB4BF615E5FA70884F0BC19E13FE7D304F11A79F19000A676000",
+      "beforeBytes": 3835,
+      "beforeLines": 107,
+      "afterSha256": "A5D99FFBC3C7BB4BF615E5FA70884F0BC19E13FE7D304F11A79F19000A676000",
+      "unchanged": true
+    },
+    {
+      "path": "web/vite.config.ts",
+      "beforeSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "beforeBytes": 19987,
+      "beforeLines": 434,
+      "afterSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "unchanged": true
+    },
+    {
+      "path": "web/tsconfig.json",
+      "beforeSha256": "61EF8E4417DE2E1F2D10A7F6C8BCAC3B1D9ACBD66D50685BB0E0F411452AA657",
+      "beforeBytes": 807,
+      "beforeLines": 33,
+      "afterSha256": "61EF8E4417DE2E1F2D10A7F6C8BCAC3B1D9ACBD66D50685BB0E0F411452AA657",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/index.ts",
+      "beforeSha256": "8804718879D0CCB02C876B64B139DA56E67B7D117E34E5DE914904242DE3EC17",
+      "beforeBytes": 12773,
+      "beforeLines": 333,
+      "afterSha256": "8804718879D0CCB02C876B64B139DA56E67B7D117E34E5DE914904242DE3EC17",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/known-missing-keys.json",
+      "beforeSha256": "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+      "beforeBytes": 3,
+      "beforeLines": 1,
+      "afterSha256": "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "beforeSha256": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+      "beforeBytes": 1157,
+      "beforeLines": 30,
+      "afterSha256": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "beforeSha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "beforeBytes": 2081,
+      "beforeLines": 49,
+      "afterSha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "unchanged": true
+    }
+  ],
+  "filesRead": [
+    {
+      "path": "docs/orchestrator-loop.md",
+      "scope": "Full"
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "scope": "Full"
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "scope": "Relevant0-3,15-26,30-37,43-45"
+    },
+    {
+      "path": "docs/frontend-inventory.md",
+      "scope": "Authority,/journeys row264,reconciliation"
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "scope": "1-148,2320-2443"
+    },
+    {
+      "path": "docs/frontend-worker-conventions.md",
+      "scope": "Full"
+    },
+    {
+      "path": "migration-queue.md",
+      "scope": "Exact claim/prerequisite/narrow owner dedup; not full historical multi-MB queue"
+    },
+    {
+      "path": "docs/frontend-audits/audit-page-213.json",
+      "scope": "Full"
+    },
+    {
+      "path": "web/src/features/trips/pages/JourneysPage.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/api/hooks/useJourney.ts",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/ArrivalPanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/ArrivalPanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/ChecklistPanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/ChecklistPanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/DeparturePanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/DeparturePanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/JourneyPanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/JourneyPanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/LiveTripPanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/LiveTripPanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/NudgePanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/NudgePanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/ReplanPanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/ReplanPanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/ReportPanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/ReportPanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/StopScorePanel.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/StopScorePanel.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/StopScoreTable.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/StopScoreTable.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/components/continuation-mobility-trips-watch/JourneyEvidenceList.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/continuation-mobility-trips-watch/JourneyEvidenceList.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/hooks/useQueuedCheckIn.ts",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/hooks/useQueuedCheckIn.test.tsx",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/lib/checkInOutbox.ts",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/features/trips/lib/checkInOutbox.test.ts",
+      "scope": "Declarations/literal parameter rows; NOTRUN"
+    },
+    {
+      "path": "web/src/features/trips/components/operationalbrief-all/TripOperationalBrief.tsx",
+      "scope": "Full production source"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/api/scope.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/forms/UnitInput.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "scope": "Source JSON parsing/literal key membership/targeted branches"
+    },
+    {
+      "path": "web/src/i18n/en/locale-trips.json",
+      "scope": "Source JSON parsing/literal key membership/targeted branches"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "scope": "Full"
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "scope": "Full"
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "scope": "Full"
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "scope": "Full"
+    },
+    {
+      "path": "docs/CONTRIBUTING.md",
+      "scope": "Full"
+    },
+    {
+      "path": "web/src/features/explore/featureCatalog.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "internal/api/router.go",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/api/hooks/useCharging.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/package.json",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/playwright.config.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/tsconfig.json",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/i18n/index.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/i18n/known-missing-keys.json",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "scope": "Narrow relevant shared/config/route declarations and ranges"
+    }
+  ],
+  "artifactChecks": {
+    "jsonParse": "PASS local document parse",
+    "citations": "PASS41/41 after two off-by-one citation corrections",
+    "counts": "PASS9 mechanisms/40 occurrences/21 keys/4 conditional/1 native;13presentation1729physical lines/12LayoutCards/10SourceContent/7reportmetrics;13testfiles83declarations87statically-expanded NOTRUN",
+    "inputPinComparison": "74pins:73unchanged,queue drift only; source/test/hooks/routes/catalog unchanged"
+  },
+  "release": {
+    "artifacts": "RELEASE: only docs/frontend-audits/phase6-qa-trips-journeys.json and web/logs/phase6-qa-trips-journeys.log, after final bounded verifier",
+    "commands": "RELEASE: no long-running processes/agents/browser/server/actions launched; bounded final verifier releases on exit",
+    "sourceTestCatalogQueueGit": "Never claimed writable; no edits"
+  }
+}

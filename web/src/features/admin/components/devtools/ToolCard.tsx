@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { GlassPanel } from '@/components/ui'
+import { GlassPanel, PanelTitle, HelperText } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ICON_COLOR_MAP } from './constants'
 
@@ -22,8 +22,8 @@ export function ToolCard({ icon: Icon, color, title, description, children }: To
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h3>
-          <p className="text-xs text-[var(--text-secondary)]">{description}</p>
+          <PanelTitle>{title}</PanelTitle>
+          <HelperText>{description}</HelperText>
         </div>
       </div>
       {children}

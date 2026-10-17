@@ -1,0 +1,232 @@
+{
+  "item": "audit-page-225",
+  "phase": 0,
+  "mode": "read-only-source-audit",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx",
+  "routes": ["/safety-settings"],
+  "identity": {
+    "repositoryRoot": "F:\\github\\TeslaSync",
+    "rootSource": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx",
+    "rootSourceSha256": "7b355caade2dbd366d1af5128ce3c0398f5a7da0b512ed8f010d7384d6b5de6e",
+    "routeEvidence": {"file": "web\\src\\App.tsx", "line": 825, "detail": "SafeRoute named SafetySettings mounts the lazy vehicle-systems page; /settings/safety is a different page and excluded."},
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-225.json", ".agent-status\\audit-page-225.txt"],
+    "runtime": "unverified"
+  },
+  "purpose": "Read reported vehicle driver-assistance configuration, independent security/occupant state, distance counters and recorded configuration history. Despite its name, this is not an editable settings form.",
+  "primaryGoal": "Understand which of nine reported settings are enabled, disabled or unknown, inspect four security/occupant signals, and review historical changes without implying verified intervention or a driving safety rating.",
+  "dataSources": [
+    {
+      "hook": "useSafety(activeId)",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 132,
+      "endpoint": "/safety/latest?vehicle_id=<id>",
+      "actualApiEndpoint": "/api/v1/safety/latest?vehicle_id=<id>",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4154},
+      "sourceOwner": "internal\\api\\safety\\handler.go:82-108; signal.LiveStateReader",
+      "behavior": "Vehicle-keyed ['safety', vehicleId]; enabled only with a vehicle; STANDARD polling; forwards AbortSignal. Handler returns available mapped live values verbatim, not a timestamped SafetySnapshot object.",
+      "units": "Counter fields keep historical miles_* names, but handler performs no conversion and reads signal values directly. Their actual upstream SI guarantees were not inspected; do not infer miles from identifiers or add a compensating conversion."
+    },
+    {
+      "hook": "useSafetyHistory(activeId)",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 141,
+      "endpoint": "/safety?vehicle_id=<id>",
+      "actualApiEndpoint": "/api/v1/safety?vehicle_id=<id>",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4153, "detail": "List is registered as / within the /safety group; hook uses the group path without terminal slash. Redirect behavior was not exercised."},
+      "sourceOwner": "internal\\api\\safety\\handler.go:48-79; signal.StateReader.Timeline",
+      "behavior": "Vehicle-keyed ['safety', 'history', vehicleId]; enabled only with a vehicle; safeArray selection; forwards AbortSignal. Backend defaults to seven days, accepts ParseDateRange, forward-folds states, creates per-response row IDs and created_at from timeline ts."
+    },
+    {
+      "hook": "useSecurityLatest(Number(activeId) || 0, 15000)",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 443,
+      "endpoint": "/security/latest?vehicle_id=<id>",
+      "actualApiEndpoint": "/api/v1/security/latest?vehicle_id=<id>",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4124},
+      "sourceOwner": "internal\\api\\router.go:1011 instantiates SecurityHandler with stateReader/liveStateReader; handler internals not inspected",
+      "behavior": "Vehicle-keyed ['security-latest', vehicleId]; gated vehicleId > 0; 15-second polling; forwards AbortSignal. Page displays ts and nullable belt, occupancy and lock booleans independently of configuration."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "endpoint": "Indirect useVehicles query; endpoint definition not inspected in this bounded audit",
+      "sourceOwner": "Shared selected-vehicle hook/store and workspace shell",
+      "behavior": "URL vehicle_id, valid stored selection and first fleet vehicle determine the effective selection. Page does not add a competing picker. /safety-settings is vehicle-enabled but not range-enabled in workspaceScope."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "Forwards PageContainer props, retains shell-owned title/actions/source trust and full-width min-w-0 container; no new layout engine."},
+    {"name": "LayoutCard / CardGrid", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "relatedOwner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx", "contract": "Named persistent cards with semantic headings and container-based placements; description help retains full text. SafetyPanelGrid composes two source-independent panels."},
+    {"name": "VehicleSourceContent / SourceContent", "owner": "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx", "relatedOwner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "contract": "Only fatal errors replace children; retained refresh failures/paused work show source-specific warning and retry without hiding usable data. Caller owns prerequisite/loading/empty content."},
+    {"name": "VehicleOperationalBrief", "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx", "contract": "Uses existing OperationalBrief/useOperationalMetrics, explicit raw metrics, source period/provenance and unknown/retained state. Shared renderer/metric bridge internals not inspected."},
+    {"name": "SignalCard / SafetyCard", "owner": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "contract": "Local renderers reuse KVList/Badge and LayoutCard; preserve four signal identities and all nine feature definitions."},
+    {"name": "LinearGauge / EmbeddedChart", "owner": "web\\src\\components\\charts\\LinearGauge.tsx", "relatedOwner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "contract": "Gauge has semantic tone and count/scale accessibility contracts. EmbeddedChart forwards children to canonical ChartContainer with persistent chartKey; chart controller internals uninspected."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "contract": "Existing pagination, persisted tableId, value filters, optional controlled sorting and optional mobilePresentation. No replacement table pipeline."},
+    {"name": "Typography / feedback / motion", "owner": "Existing @/components/ui, @/components/feedback, @/components/motion category barrels", "contract": "Page uses Text/Caption/PanelTitle, Button/Icon, Skeleton/EmptyState/QueryError, FadeIn, TimeStamp/DataFreshnessAuto. Their full implementation behavior was not audited."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 500, "rule": "MDC-002/MDC-026", "detail": "Repeated vehicle/loading/fatal/empty branches across seven persistent panels. VehicleSourceContent already centralizes retained/fatal trust; do not introduce a parallel universal state wrapper.", "fix": "Reuse existing SourceContent loadingContent/emptyContent only where it preserves source-local prerequisite copy and geometry. Keep specialized content when equivalence is unproved.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 577, "rule": "MDC-033/mission-visual-intensity", "detail": "Enabled-feature share and nine-setting counts appear both in the summary and in a second gauge/badge panel. This is existing functionality, not authorization to remove either.", "fix": "Retain both presentations but reduce duplicate heading/semantic emphasis and distinguish count detail from the summary using existing layout/typography.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "status": "source-inspected; all viewport behavior unverified",
+    "strengths": ["PageLayout preserves allocated width/min-w-0.", "SafetyPanelGrid delegates measured-width packing to CardGrid.", "Feature and signal grids use container-query reflow; refresh and FSD link have 44px minimum height.", "History chart has bounded responsive heights."],
+    "issues": [
+      {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 947, "rule": "MDC-023/MDC-043/no-data-loss", "detail": "History mobileColumns exposes only time, AEB and FCW. DataTable.tsx:725 hides all seven other columns below md; this caller supplies neither mobilePresentation nor expanded detail. Source shows mobile users lose BSC, BSCW, LDA, CFD, SLW, ELDA and PIN states, also weakening the chart's stated accessible-table alternative for BSCW/ELDA.", "fix": "Use DataTable's existing opt-in mobilePresentation with three summary fields and all ten columns reachable in detail, or preserve full columns in a bounded table scroller. Retain filtering, pagination, ordering and tableId.", "owner": "page", "confidence": "high"}
+    ],
+    "requiredRuntimeWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "status": "keyboard, screen reader, composed contrast, forced colors, long labels and reduced-motion behavior unverified",
+    "strengths": ["Refresh has a localized aria-label, aria-busy and minimum 44px target.", "Sections/card headings carry names; SignalCard's decorative icon span is aria-hidden.", "Gauge has shared meter semantics; unknown share uses a status text instead of a false numeric zero.", "History chart supplies localized title/name/description and uses step states, null gaps and disabled line animation.", "FSD link has visible focus-ring classes."],
+    "issues": [],
+    "relatedFinding": "responsive.issues[0]: the mobile table hides two plotted state series and therefore also compromises the chart's accessible-table alternative. Resolve once through the existing table pipeline; do not build a second chart/table alternative."
+  },
+  "states": {
+    "initialLoading": "Independent geometry: five KPI skeletons, gauge skeleton, four security tiles, six feature placeholders, two counter placeholders, chart and table blocks. Six placeholders precede nine feature cards; geometry match is not runtime verified.",
+    "empty": "Vehicle prerequisite supplies /vehicles navigation in every relevant panel; latest absence and empty history have localized explanations. Security null renders four unknown em-dash tiles, not false/unlocked/zero.",
+    "error": "Each source uses deriveDataState/VehicleSourceContent; fatal failure replaces only its content and exposes retry. Neighboring source panels persist.",
+    "retained": "Refresh errors and paused refresh preserve payloads with warning/retry; operational briefs label retained evidence.",
+    "unknownPartial": "Boolean/enum absence is counted separately; enabled percentage is null if any setting is unknown. Individual features and distance counters remain visible. Explicit DataState partial coverage is not configured.",
+    "offlineStale": "Paused work is treated as retained. No age threshold is passed to deriveDataState; timestamp widgets are present but source observation time may be missing.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 543, "rule": "MDC-026/MDC-045/trust-provenance", "detail": "Both snapshot briefs and the summary footer read latest.created_at, but SafetyHandler.Latest:100-107 returns only mapped settings/counters and none of those mappings is created_at. The existing brief correctly falls back to 'Observation time unavailable'; query freshness must not be promoted into observed vehicle freshness.", "fix": "Keep explicit unknown observation time and distinguish request freshness from signal observation. If verified timestamps are required, coordinate a typed source-envelope change with the backend owner; never substitute dataUpdatedAt or Date.now as vehicle observation time.", "owner": "integration", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 122, "rule": "MDC-010/MDC-011/MDC-025/MDC-033", "detail": "scoreColor supplies fixed #10b981/#f59e0b/#ef4444 and scoreBadgeVariant judges configuration share as success/warning/danger at 80/50%. These are page-defined thresholds without demonstrated safety meaning; LinearGauge already supports theme-resolved tone. No neon classes were found.", "fix": "Present the reported count/share with restrained neutral or existing theme tone, preserving all raw values and unknown handling. Do not imply safety/health quality from configuration share; do not reset saved theme or chart colors.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 577, "rule": "MDC-026/MDC-033/trust-language", "detail": "PanelTitle still says 'Safety score', and subtitle at 484 repeats that phrase, even though neighboring explanation correctly says the value is a configuration count, not a driving safety rating. The inconsistent prominent language competes with the disclaimer.", "fix": "Reuse the existing localized enabled-share/configuration-coverage wording in prominent headings/subtitle. Keep the no-intervention disclaimer and nine-setting count semantics.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 423, "rule": "MDC-032/workspace-date-owner", "detail": "History is time-scoped but does not consume useRangeState, and /safety-settings is absent from RANGE_ENABLED_PATHS. useSafetyHistory sends vehicle_id only. SafetyHandler.List:55-62 supports date input and silently defaults to seven days, while the page calls the table 'full history'.", "fix": "Coordinate route registration and typed history-hook range parameters with shared/integration owners; page consumes startInstant/endInstantExclusive from the one header View settings owner, passing both bounds to server history and chart. Until integrated, label the returned seven-day/default window accurately without inventing a local date picker.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 326, "rule": "MDC-023/preserve-table-interactions", "detail": "Time column declares sortable:true, but the DataTable call at 943-952 supplies no onSort/sortKey/sortDir. DataTable.tsx:1556 only renders a sorting button when onSort exists; the page always pre-sorts descending.", "fix": "Either wire existing controlled sorting to a created_at accessor while retaining default descending order, or explicitly present fixed newest-first ordering rather than advertising sorting capability. Do not change source row timestamps/order accidentally.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 226, "rule": "MDC-044/localized-enum-display", "detail": "Only On/Off enum strings are localized; other cleanSafetyEnum outputs are returned verbatim in feature cards and table cells (315-319), such as stripped vendor enum suffixes. Source identities must survive, but display localization is incomplete.", "fix": "Use a bounded display-only label map for known values with localized labels and preserve raw unknown values as fallback. Do not recase wire values, change classifiers or introduce another catalog.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "line": 792, "rule": "MDC-045/SI-contract-verification", "detail": "Distance counters named miles_since_reset/self_driving_miles_since_reset go directly through useUnits.formatDistance, whose lib formatter explicitly expects SI meters. Safety handler maps signal values verbatim. This is a verification dependency, NOT a proven unit-conversion defect: upstream normalization metadata was not inspected.", "fix": "Before any counter/unit modification, verify the authoritative SI source metadata and preserve existing raw payload/cache values. If names misrepresent proven SI, coordinate the canonical API/type rename as one owned cutover, not a page-local multiply/divide adapter.", "owner": "integration", "confidence": "medium"}
+  ],
+  "priority": {
+    "overall": "high",
+    "first": ["Restore complete mobile history accessibility using the existing table pipeline.", "Remove safety-rating implications from configuration coverage while preserving counts."],
+    "next": ["Integrate shared history date bounds and accurate period labels.", "Keep observation-time unknowns explicit.", "Clarify sorting capability and localize known enum display labels."],
+    "verificationDependency": "Counter unit provenance must be confirmed before changing unit fields or formatter inputs."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse existing DataTable mobilePresentation, not a new mobile table",
+      "existingOwner": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Existing mobilePresentation summary/detail adapter plus stable tableId, all ten history columns, value filters and pagination; preserve loading/empty/fatal/retained source shells and row identity.",
+      "usedBy": ["/safety-settings history table and chart alternative"],
+      "dependsOn": ["Page-owned history presentation adapter and scoped responsive/accessibility acceptance"],
+      "changeNeeded": "No shared API change proved; page adoption required."
+    },
+    {
+      "name": "Shared workspace history range integration",
+      "existingOwner": "web\\src\\lib\\workspaceScope.ts; web\\src\\api\\hooks\\useVehicleSystems.ts; internal\\api\\safety\\handler.go",
+      "propsVariantsStates": "Register /safety-settings for header range; extend useSafetyHistory with typed start/end instants in query key and snake_case request parameters accepted by existing ParseDateRange. Preserve enablement, signal cancellation, safeArray, history provenance, retry and rolling/custom/timezone semantics.",
+      "usedBy": ["/safety-settings history chart", "/safety-settings history table"],
+      "dependsOn": ["Verify ParseDateRange accepted parameter names and bound semantics", "Coordinate other useSafetyHistory consumers without rebuilding unrelated inventory", "Shared owner assignment"],
+      "changeNeeded": "Integration/shared changes needed; read-only audit does not implement them."
+    },
+    {
+      "name": "Configuration observation-time contract",
+      "existingOwner": "internal\\api\\safety\\handler.go; web\\src\\types\\vehicle-systems.ts",
+      "propsVariantsStates": "If a trustworthy observation timestamp can be obtained, specify its meaning and optional field in one typed source envelope. Retain unknown time for absent/mixed-age signals; never equate HTTP fetch time with vehicle observation.",
+      "usedBy": ["/safety-settings summary freshness", "/safety-settings driving-counter provenance"],
+      "dependsOn": ["Source owner establishes timestamp availability and mixed-signal freshness semantics"],
+      "changeNeeded": "Optional integration improvement, not a blocker to honest unknown-time display; no invented capability."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "detail": "No alternative theme, table, chart, overlay, date picker or vehicle selector is introduced by this page. SafetyPanelGrid, VehicleSourceContent and VehicleOperationalBrief compose current owners. Local hex/score thresholds compete with existing gauge tone semantics; this is captured in visualIssues, not a request for a new shared component.",
+    "scopeLimit": "Other pages and independent consumers were not semantically audited."
+  },
+  "preservation": {
+    "sourceSha256": "7b355caade2dbd366d1af5128ce3c0398f5a7da0b512ed8f010d7384d6b5de6e",
+    "currentLineCount": 959,
+    "explicitPageDependencyLines": 134,
+    "pagePlusInspectedFeatureComponentsLineCount": 1093,
+    "sectionCount": 7,
+    "sectionNames": ["Safety summary", "Configuration coverage", "Live safety signals", "ADAS features", "Driving statistics", "Safety states over time", "Safety settings history"],
+    "sectionCounts": {"summaryBands": 1, "pairedPanelGroups": 2, "historyPanels": 2, "topLevelLayoutCards": 7, "featureCards": 9, "signalCards": 4, "summaryMetrics": 5, "drivingMetrics": 2, "historyColumns": 10, "chartSeries": 3},
+    "sourceTagCounts": {"LayoutCard": 8, "GlassPanel": 0, "ChartContainer": 0, "EmbeddedChart": 1, "SafetyPanelGrid": 2, "VehicleOperationalBrief": 2, "VehicleSourceContent": 7},
+    "tagCountExplanation": "The eighth LayoutCard source tag is the SafetyCard renderer invoked for nine features; source counts are not mounted counts. GlassPanel/ChartContainer zero does not mean sections are absent.",
+    "actions": ["Refresh all three independent queries", "Source-local retry on fatal/retained failure", "Go to vehicles when no selection", "Open /fsd for daily trend/data confidence", "History value filters", "History pagination and persisted table presentation", "Shared chart hidden-series control, subject to controller runtime verification"],
+    "dataBehavior": ["Global selected vehicle scopes every source; no local picker or settings mutation.", "Nine features include inverted automatic_emergency_braking_off logic and four unknown-safe enum classifiers.", "Missing fields stay unknown, not disabled or zero; percentage is unavailable if any setting is unknown.", "Counter raw values remain untouched and display passes through saved useUnits/number precision.", "Chart sorts chronological, preserves nullable AEB/BSCW/ELDA values, uses stepAfter and connectNulls=false.", "Table keeps descending source timestamps and ten complete columns; stable tableId vehicle-systems:safety-history and chartKey safety-states-history survive.", "Retained refresh payloads remain usable; sources fail independently.", "History is returned forward-folded configuration, not interventions or full lifetime coverage.", "Read-only reported configuration disclaimers and specialist feature descriptions survive."],
+    "unchangedSourceRequired": true,
+    "originalBaselineComparison": "Current source was hashed, not compared to a historical Git baseline; no Git operations performed."
+  },
+  "evidenceLimits": {
+    "acceptance": "SOURCE ONLY. Runtime, visual, keyboard, contrast, viewport, localization and network/redirect acceptance are unverified.",
+    "checks": [
+      {"command": "$p='web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx'; $text=[IO.File]::ReadAllText((Join-Path (Get-Location) $p)); foreach($check in @(@{name='static_inline_styles';pattern='style=\\{\\{[^\\r\\n]*var\\(--'},@{name='raw_controls';pattern='<(button|input|textarea|select|table)\\b'},@{name='direct_visual_library_imports';pattern='from [''\\\"](recharts|react-leaflet|framer-motion)[''\\\"]'},@{name='old_api_imports';pattern='from [''\\\"]\\.\\./(?:\\.\\./)?api[''\\\"]'},@{name='neon_classes';pattern='(?:text|bg|border|shadow)-neon'},@{name='glasspanel_chartcontainer_tags';pattern='<(GlassPanel|ChartContainer)\\b'},@{name='layoutcard_tags';pattern='<LayoutCard\\b'})){ $count=[regex]::Matches($text,$check.pattern).Count; Write-Output ($check.name+': '+$count) }; Write-Output ('sha256: '+(Get-FileHash $p -Algorithm SHA256).Hash.ToLower()); Write-Output ('lines: '+[IO.File]::ReadAllLines((Join-Path (Get-Location) $p)).Length)", "exitCode": 0, "output": "static_inline_styles: 0\nraw_controls: 0\ndirect_visual_library_imports: 0\nold_api_imports: 0\nneon_classes: 0\nglasspanel_chartcontainer_tags: 0\nlayoutcard_tags: 8\nsha256: 7b355caade2dbd366d1af5128ce3c0398f5a7da0b512ed8f010d7384d6b5de6e\nlines: 959"},
+      {"tool": "functions.rg", "arguments": {"pattern": "useSafety|useSafetyHistory|safety|useSecurityLatest|security/latest", "paths": ["F:\\github\\TeslaSync\\web\\src\\api\\hooks\\useVehicleSystems.ts", "F:\\github\\TeslaSync\\web\\src\\api\\hooks\\useVehicles.ts", "F:\\github\\TeslaSync\\internal\\api\\router.go"], "output_mode": "content", "-n": true, "head_limit": 75}, "result": "Tool succeeded; exact line citations retained in dataSources. Subsequent securityHandler|/security search located router.go:4122-4124.", "command": null, "exitCode": null, "output": "Source inspection, not an executed API request: useSafety -> /safety/latest?vehicle_id=; useSafetyHistory -> /safety?vehicle_id=; useSecurityLatest -> /security/latest?vehicle_id=. Router registers /safety GET / and /latest and /security GET /latest. Definitions forward signal and gate by vehicle."},
+      {"command": "bash .github\\skills\\audit-violations\\audit.sh <assigned-page>", "exitCode": null, "output": "NOT RUN: script unconditionally executes full frontend TypeScript; assignment prohibits full gates. Script inspected and bounded source counts executed instead."},
+      {"command": "cd web; npx tsc --noEmit", "exitCode": null, "output": "NOT RUN: full gates explicitly prohibited by this Phase 0 assignment."},
+      {"command": "lint/build/tests/browser QA", "exitCode": null, "output": "NOT RUN: source-only audit; no validation baton or runtime exercise."}
+    ],
+    "unknowns": ["Upstream normalized counter metadata/physical units", "Security handler payload freshness behavior", "ParseDateRange exact parameter names and bound semantics", "Shared ChartContainer and OperationalBrief full controller/render behavior", "DataTable mobilePresentation adapter full accessibility behavior", "Mounted route/auth/data behavior", "Effective theme contrast and forced colors", "All ten viewport widths and 200% text/RTL", "Historical feature equivalence and source drift outside recorded snapshot"],
+    "policy": "No source/shared/queue edits, Git, full gates, production commands or setting mutations. Only assigned report and heartbeat written. Historical source or tests are not current runtime proof.",
+    "readCoverage": "Root page and three direct feature component dependencies fully read. Remaining dependencies inspected only at cited/ranged source boundaries; hashes identify whole files without claiming whole-file semantic review."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\safety-settings-modernization\\SafetyPanelGrid.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\types\\vehicle-systems.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\safetyEnum.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\charts\\LinearGauge.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\safety\\handler.go",
+    "web\\src\\App.tsx"
+  ],
+  "sourceInventory": [
+    {"file": "web\\src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx", "lines": 959, "sha256": "7b355caade2dbd366d1af5128ce3c0398f5a7da0b512ed8f010d7384d6b5de6e", "coverage": "full"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx", "lines": 32, "sha256": "5c2b70575adbfb361351c0a075ed15165cdfd36894c7a009454c1fd55990379d", "coverage": "full"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\safety-settings-modernization\\SafetyPanelGrid.tsx", "lines": 29, "sha256": "351313d412c075b2d430a3bf6cf01d64529f8b6303533e3e477bffa08827a598", "coverage": "full"},
+    {"file": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx", "lines": 73, "sha256": "563533fb54b38e658e80cbc494990fc9ea91f57db57cf4bdc1b96e08f9a5b0c4", "coverage": "full"},
+    {"file": "web\\src\\api\\hooks\\useVehicleSystems.ts", "lines": 176, "sha256": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d", "coverage": "120-160 and hook/key search matches"},
+    {"file": "web\\src\\api\\hooks\\useVehicles.ts", "lines": 1898, "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b", "coverage": "435-455 and safety/security search matches"},
+    {"file": "web\\src\\types\\vehicle-systems.ts", "lines": 154, "sha256": "85b58a61a9a5d8824b77a9ffcbb29c97ae2ae3aec3237c3b3395624a06c9a0f8", "coverage": "SafetySnapshot and context via rg"},
+    {"file": "web\\src\\api\\types.ts", "lines": 4194, "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b", "coverage": "SafetySnapshot and context via rg; page uses domain type, not this narrower duplicate"},
+    {"file": "web\\src\\api\\dataState.ts", "lines": 434, "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761", "coverage": "180-272 and state search matches"},
+    {"file": "web\\src\\lib\\safetyEnum.ts", "lines": 70, "sha256": "f3d3168225907f9e1a070dd43a6622aaf66cbd7dc96d61443e4e04f89776c4c3", "coverage": "full"},
+    {"file": "web\\src\\lib\\workspaceScope.ts", "lines": 168, "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7", "coverage": "1-160"},
+    {"file": "web\\src\\lib\\unitConversion.ts", "lines": 500, "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce", "coverage": "350-390 and formatDistance match"},
+    {"file": "web\\src\\hooks\\useUnits.ts", "lines": 194, "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14", "coverage": "128-151 and formatDistance matches"},
+    {"file": "web\\src\\hooks\\useSelectedVehicle.ts", "lines": 174, "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3", "coverage": "1-170"},
+    {"file": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx", "lines": 44, "sha256": "dd3123e4931e8d5b921f807d374dde293b89e08a5f509d1b9e26e05ab76961b8", "coverage": "full"},
+    {"file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "lines": 64, "sha256": "1fedeb6b5cf17436d31cb0f19dac09ee1c6591d1866b09ed511387bd110e7d9a", "coverage": "full"},
+    {"file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "lines": 17, "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6", "coverage": "full"},
+    {"file": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "lines": 72, "sha256": "283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43", "coverage": "full"},
+    {"file": "web\\src\\components\\charts\\LinearGauge.tsx", "lines": 251, "sha256": "f02c0cff30b5a3e8a4016235c73f23d482ece9ef7e15566c3e62308250fe2e7a", "coverage": "1-180"},
+    {"file": "web\\src\\components\\charts\\EmbeddedChart.tsx", "lines": 42, "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721", "coverage": "full"},
+    {"file": "web\\src\\components\\ui\\DataTable.tsx", "lines": 1687, "sha256": "92e3a46f15e401b57303823693aac8825693b4edc2b04cfe289663d8e1386438", "coverage": "620-730,1500-1585 and targeted mobile/sort search matches"},
+    {"file": "internal\\api\\router.go", "lines": 5366, "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750", "coverage": "safety/security registration and constructor search matches only"},
+    {"file": "internal\\api\\safety\\handler.go", "lines": 118, "sha256": "05c12f1392eac0a9b1c874216e54043e9b368363c8e397e19df1b58894379ab4", "coverage": "full"},
+    {"file": "web\\src\\App.tsx", "lines": 918, "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3", "coverage": "SafetySettings route/lazy import search matches only"},
+    {"file": "docs\\frontend-design-contract.md", "lines": 394, "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255", "coverage": "1-394"},
+    {"file": "docs\\frontend-worker-conventions.md", "lines": 80, "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3", "coverage": "full"},
+    {"file": "docs\\frontend-mission.md", "lines": 1593, "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f", "coverage": "1-260,237-422,529-811,920-1090; relevant headings search"},
+    {"file": ".github\\skills\\audit-violations\\audit.sh", "lines": 141, "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46", "coverage": "full; deliberately not executed because it runs full TypeScript"}
+  ]
+}

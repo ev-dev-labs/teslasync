@@ -84,6 +84,7 @@ vi.mock('@/hooks/useChartExport', () => ({
 }));
 
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),

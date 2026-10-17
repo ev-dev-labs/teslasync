@@ -1,12 +1,169 @@
 package activity
 
 import (
+	"context"
+	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	activitymodel "github.com/ev-dev-labs/teslasync/internal/models/activity"
+	"github.com/jackc/pgx/v5"
 )
+
+type activityTestRows struct {
+	pgx.Rows
+	values  [][]any
+	index   int
+	closed  bool
+	err     error
+	scanErr error
+}
+
+func (r *activityTestRows) Next() bool {
+	if r.index >= len(r.values) {
+		r.Close()
+		return false
+	}
+	r.index++
+	return true
+}
+
+func (r *activityTestRows) Close()     { r.closed = true }
+func (r *activityTestRows) Err() error { return r.err }
+func (r *activityTestRows) Scan(dest ...any) error {
+	if r.scanErr != nil {
+		return r.scanErr
+	}
+	for i, value := range r.values[r.index-1] {
+		target := reflect.ValueOf(dest[i]).Elem()
+		if value == nil {
+			target.SetZero()
+		} else {
+			target.Set(reflect.ValueOf(value))
+		}
+	}
+	return nil
+}
+
+type activityCountRow struct {
+	total int64
+	err   error
+}
+
+func (r activityCountRow) Scan(dest ...any) error {
+	if r.err != nil {
+		return r.err
+	}
+	*dest[0].(*int64) = r.total
+	return nil
+}
+
+type activityTestPool struct {
+	t          *testing.T
+	rows       *activityTestRows
+	queryErr   error
+	count      activityCountRow
+	countCalls int
+	countSQL   string
+	countArgs  []any
+}
+
+func (p *activityTestPool) Query(context.Context, string, ...any) (pgx.Rows, error) {
+	return p.rows, p.queryErr
+}
+
+func (p *activityTestPool) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
+	if !p.rows.closed {
+		p.t.Error("page rows must be closed before the count query")
+	}
+	p.countCalls++
+	p.countSQL = sql
+	p.countArgs = args
+	return p.count
+}
+
+func TestListEmptyPageReturnsAuthoritativeScopedTotal(t *testing.T) {
+	t.Parallel()
+	vehicleID := int64(42)
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+	for _, tc := range []struct {
+		name   string
+		offset int
+		total  int64
+	}{
+		{"offset beyond results", 100, 23},
+		{"scoped recovery offset", 50, 3},
+		{"empty scope", 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := Filters{
+				VehicleID: &vehicleID, Start: start, End: end,
+				Kinds: []activitymodel.Kind{activitymodel.KindDrive, activitymodel.KindAnnotation},
+				Limit: 10, Offset: tc.offset,
+			}
+			pool := &activityTestPool{t: t, rows: &activityTestRows{}, count: activityCountRow{total: tc.total}}
+			items, total, err := (&Repo{pool: pool}).List(context.Background(), f)
+			if err != nil || items == nil || len(items) != 0 || total != tc.total {
+				t.Fatalf("List() = %#v, %d, %v; want non-nil empty items and total %d", items, total, err, tc.total)
+			}
+			cte, args := buildActivityCTE(f)
+			if pool.countCalls != 1 || pool.countSQL != cte+"\nSELECT count(*) FROM activity" {
+				t.Fatalf("count must query the identical filtered activity CTE: %q", pool.countSQL)
+			}
+			if !reflect.DeepEqual(pool.countArgs, args) || len(pool.countArgs) != 3 {
+				t.Fatalf("count args = %#v, want scoped args %#v without pagination", pool.countArgs, args)
+			}
+			if strings.Contains(pool.countSQL, "LIMIT") || strings.Contains(pool.countSQL, "OFFSET") {
+				t.Fatal("authoritative count must not be paginated")
+			}
+		})
+	}
+}
+
+func TestListPopulatedPagePreservesWindowCountAndItem(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	pool := &activityTestPool{t: t, rows: &activityTestRows{values: [][]any{{
+		"drives", int64(7), activitymodel.KindDrive, at, nil,
+		"", "", nil, "completed", nil, nil, nil, nil, nil, nil, int64(23),
+	}}}}
+	items, total, err := (&Repo{pool: pool}).List(context.Background(), Filters{Offset: 10})
+	if err != nil || len(items) != 1 || total != 23 {
+		t.Fatalf("List() = %#v, %d, %v", items, total, err)
+	}
+	if items[0].ID != "drives:7" || !items[0].OccurredAt.Equal(at) || items[0].Status != "completed" {
+		t.Fatalf("populated activity changed: %#v", items[0])
+	}
+	if pool.countCalls != 0 {
+		t.Fatal("populated pages must use the window count without a second query")
+	}
+}
+
+func TestListDatabaseErrorsAreNotSuccessfulEmptyPages(t *testing.T) {
+	t.Parallel()
+	boom := errors.New("database failure")
+	for _, tc := range []struct {
+		name       string
+		pool       *activityTestPool
+		countCalls int
+	}{
+		{"query", &activityTestPool{queryErr: boom}, 0},
+		{"iteration", &activityTestPool{rows: &activityTestRows{err: boom}}, 0},
+		{"scan", &activityTestPool{rows: &activityTestRows{values: [][]any{{}}, scanErr: boom}}, 0},
+		{"count", &activityTestPool{rows: &activityTestRows{}, count: activityCountRow{err: boom}}, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.pool.t = t
+			items, total, err := (&Repo{pool: tc.pool}).List(context.Background(), Filters{Offset: 100})
+			if !errors.Is(err, boom) || items != nil || total != 0 || tc.pool.countCalls != tc.countCalls {
+				t.Fatalf("List() = %#v, %d, %v; count calls = %d", items, total, err, tc.pool.countCalls)
+			}
+		})
+	}
+}
 
 // TestBuildQuery_AllKindsByDefault pins the default (no kind filter) shape:
 // every domain's UNION ALL branch is present, in the fixed order AllKinds
@@ -107,8 +264,80 @@ func TestBuildQuery_VehicleAndDateArgsPropagate(t *testing.T) {
 	if gotStart.Location() != time.UTC {
 		t.Errorf("expected start arg normalized to UTC, got location %v", gotStart.Location())
 	}
+	gotEnd, ok := args[2].(time.Time)
+	if !ok || gotEnd != end.UTC() {
+		t.Errorf("expected exact exclusive end arg %v, got %v", end.UTC(), args[2])
+	}
 	if args[3] != 10 || args[4] != 5 {
 		t.Errorf("expected limit=10 offset=5, got %v / %v", args[3], args[4])
+	}
+}
+
+func TestBuildQuery_HalfOpenRangeAcrossAllKinds(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		kind activitymodel.Kind
+		at   string
+	}{
+		{activitymodel.KindDrive, "d.started_at"},
+		{activitymodel.KindCharging, "c.started_at"},
+		{activitymodel.KindAlert, "nl.created_at"},
+		{activitymodel.KindSoftwareUpdate, "COALESCE(su.installed_at, su.scheduled_at, su.created_at)"},
+		{activitymodel.KindAnnotation, "ca.occurred_at"},
+	} {
+		t.Run(string(tc.kind), func(t *testing.T) {
+			query, _ := buildQuery(Filters{Kinds: []activitymodel.Kind{tc.kind}})
+			for _, predicate := range []string{
+				"($2::timestamptz IS NULL OR " + tc.at + " >= $2::timestamptz)",
+				"($3::timestamptz IS NULL OR " + tc.at + " < $3::timestamptz)",
+			} {
+				if !strings.Contains(query, predicate) {
+					t.Errorf("missing half-open range predicate %q", predicate)
+				}
+			}
+			if strings.Contains(query, "<= $3::timestamptz") {
+				t.Fatal("an event at the exact upper bound must be excluded")
+			}
+		})
+	}
+}
+
+func TestBuildQuery_PreservesExactRangeInstants(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		start string
+		end   string
+	}{
+		{"rolling 24 hours", "2026-10-13T13:28:00.123456789-07:00", "2026-10-14T13:28:00.123456789-07:00"},
+		{"custom spring DST day", "2026-03-08T00:00:00-05:00", "2026-03-09T00:00:00-04:00"},
+		{"custom fall DST day", "2026-11-01T00:00:00-04:00", "2026-11-02T00:00:00-05:00"},
+		{"custom fractional offset", "2026-10-01T00:00:00+05:45", "2026-10-15T00:00:00+05:45"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			start, err := time.Parse(time.RFC3339Nano, tc.start)
+			if err != nil {
+				t.Fatal(err)
+			}
+			end, err := time.Parse(time.RFC3339Nano, tc.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			f := Filters{Start: start, End: end}
+			_, args := buildQuery(f)
+			_, countArgs := buildActivityCTE(f)
+			if args[1] != start.UTC() || args[2] != end.UTC() {
+				t.Fatalf("range args = %v / %v; want exact UTC instants %v / %v", args[1], args[2], start.UTC(), end.UTC())
+			}
+			if !reflect.DeepEqual(args[:3], countArgs) {
+				t.Fatalf("page and total bounds differ: %v / %v", args[:3], countArgs)
+			}
+			_, changedStartArgs := buildQuery(Filters{Start: start.Add(time.Second), End: end})
+			_, changedEndArgs := buildQuery(Filters{Start: start, End: end.Add(time.Second)})
+			if reflect.DeepEqual(args, changedStartArgs) || reflect.DeepEqual(args, changedEndArgs) {
+				t.Fatal("changing either range bound must change the query arguments")
+			}
+		})
 	}
 }
 

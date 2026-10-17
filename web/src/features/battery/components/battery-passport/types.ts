@@ -2,6 +2,7 @@ import type {
   BatteryPassport,
   BatteryPassportVerifyResponse,
 } from '@/api/hooks/useBatteryPassport';
+import type { FormatOptions } from '@/lib/dateFormat';
 
 export interface BatteryPassportQueryState {
   vehicleSelected: boolean;
@@ -11,6 +12,7 @@ export interface BatteryPassportQueryState {
   initialError: unknown;
   refreshError: unknown;
   onRetry: () => void;
+  timestampContext?: FormatOptions;
 }
 
 export type BatteryPassportVerificationStatus =
@@ -22,6 +24,9 @@ export type BatteryPassportVerificationStatus =
   | 'valid';
 
 export interface BatteryPassportVerificationState {
+  onRetry: () => void;
+  isPaused: boolean;
+  isRetrying: boolean;
   status: BatteryPassportVerificationStatus;
   data: BatteryPassportVerifyResponse | null;
   error: unknown;

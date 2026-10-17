@@ -3,6 +3,10 @@ import type { CarbonIntelligenceAnalysis } from '../../lib/carbonIntelligence';
 export interface CarbonQueryState {
   enabled: boolean;
   hasData: boolean;
+  /** Authoritative last successful query update in epoch ms; never synthesized. */
+  dataUpdatedAt?: number;
+  /** Query-owned staleness, independent of retained refresh failure or pause. */
+  isStale?: boolean;
   isLoading: boolean;
   isResolved: boolean;
   isFetching: boolean;

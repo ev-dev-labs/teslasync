@@ -7,13 +7,30 @@
  */
 
 import { z } from 'zod'
+import i18n from 'i18next'
 import { GEOFENCE_CATEGORY_VALUES } from '../geofenceCategories'
 
-const numericString = (label: string, opts: { min: number; max: number }) =>
+interface NumericBounds {
+  min: number
+  max: number
+}
+
+interface NumericMessages {
+  required: () => string
+  number: () => string
+  range: (bounds: NumericBounds) => string
+}
+
+// Resolve messages during parsing, not module loading, so language changes apply.
+const numericString = (messages: NumericMessages, opts: NumericBounds) =>
   z
-    .string()
+    .string({
+      errorMap: (issue, ctx) => ({
+        message: issue.code === z.ZodIssueCode.too_small ? messages.required() : ctx.defaultError,
+      }),
+    })
     .trim()
-    .min(1, `${label} is required`)
+    .min(1)
     // A single superRefine (rather than two chained `.refine`s) so the range
     // check never runs on a non-numeric value: `Number('abc')` is `NaN` and
     // `Number('1e400')` is `Infinity`, both of which would otherwise slip past
@@ -23,13 +40,13 @@ const numericString = (label: string, opts: { min: number; max: number }) =>
     .superRefine((value, ctx) => {
       const n = Number(value)
       if (!Number.isFinite(n)) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${label} must be a number` })
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: messages.number() })
         return
       }
       if (n < opts.min || n > opts.max) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `${label} must be between ${opts.min} and ${opts.max}`,
+          message: messages.range(opts),
         })
       }
     })
@@ -41,13 +58,39 @@ const numericString = (label: string, opts: { min: number; max: number }) =>
  */
 export const geofenceFormSchema = z.object({
   name: z
-    .string()
+    .string({
+      errorMap: (issue, ctx) => ({
+        message: issue.code === z.ZodIssueCode.too_small
+          ? i18n.t('geofences.validation.nameRequired', 'Name is required')
+          : issue.code === z.ZodIssueCode.too_big
+            ? i18n.t('geofences.validation.nameMaxLength', 'Name must be {{max}} characters or fewer', { max: 120 })
+            : ctx.defaultError,
+      }),
+    })
     .trim()
-    .min(1, 'Name is required')
-    .max(120, 'Name must be 120 characters or fewer'),
-  latitude: numericString('Latitude', { min: -90, max: 90 }),
-  longitude: numericString('Longitude', { min: -180, max: 180 }),
-  radius: numericString('Radius', { min: 10, max: 50000 }),
+    .min(1)
+    .max(120),
+  latitude: numericString({
+    required: () => i18n.t('geofences.validation.latitudeRequired', 'Latitude is required'),
+    number: () => i18n.t('geofences.validation.latitudeNumber', 'Latitude must be a number'),
+    range: ({ min, max }) => i18n.t(
+      'geofences.validation.latitudeRange', 'Latitude must be between {{min}} and {{max}}', { min, max },
+    ),
+  }, { min: -90, max: 90 }),
+  longitude: numericString({
+    required: () => i18n.t('geofences.validation.longitudeRequired', 'Longitude is required'),
+    number: () => i18n.t('geofences.validation.longitudeNumber', 'Longitude must be a number'),
+    range: ({ min, max }) => i18n.t(
+      'geofences.validation.longitudeRange', 'Longitude must be between {{min}} and {{max}}', { min, max },
+    ),
+  }, { min: -180, max: 180 }),
+  radius: numericString({
+    required: () => i18n.t('geofences.validation.radiusRequired', 'Radius is required'),
+    number: () => i18n.t('geofences.validation.radiusNumber', 'Radius must be a number'),
+    range: ({ min, max }) => i18n.t(
+      'geofences.validation.radiusRange', 'Radius must be between {{min}} and {{max}}', { min, max },
+    ),
+  }, { min: 10, max: 50000 }),
   category: z.enum(GEOFENCE_CATEGORY_VALUES),
 })
 

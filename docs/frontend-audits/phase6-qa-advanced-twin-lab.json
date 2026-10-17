@@ -1,0 +1,1260 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-advanced-twin-lab",
+  "terminal": "DONE",
+  "receipt": "SOURCE_ONLY_SNAPSHOT_WITH_FINDINGS_AND_FINAL_SUPPORT_DRIFT",
+  "wholepagePASS": false,
+  "page": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+  "report": "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-advanced-twin-lab.json",
+  "raw_ignored_log": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log",
+  "branch": "fix/dashboard-followups",
+  "branch_evidence": "Get-Content .git/HEAD -> ref: refs/heads/fix/dashboard-followups; no Git command",
+  "started_at": "2026-10-13T19:41:58.767Z",
+  "completed_at": "2026-10-13T19:59:14.3423572Z",
+  "deadline": {
+    "return_utc": "2026-10-13T20:00:00Z",
+    "max_command_seconds": 480,
+    "hard_stop_utc": "2026-10-13T20:05:00Z"
+  },
+  "scope": "Accepted TwinLabPage/direct needed support, readonly sourceQA. No remigration or parent health/rolling dispatch.",
+  "ownership": {
+    "source_test_backend_config_catalog_queue_handoff_writes": 0,
+    "installs": 0,
+    "git_commands": 0,
+    "private_data_read": false,
+    "writable_ignored": [
+      "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    ],
+    "servers": 0,
+    "helpers_created": 0,
+    "writable_versioned": [
+      "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-advanced-twin-lab.json"
+    ],
+    "agents": 0,
+    "release": "RELEASED",
+    "post_return_writes": "NONE",
+    "browser_api_requests": 0
+  },
+  "contracts_read": [
+    "D:\\repos\\teslasync\\migration-queue.md exact task and accepted rows",
+    "D:\\repos\\teslasync\\agent-loop-playbook.md sole loop contract; no parent lifecycle/health followed",
+    "D:\\repos\\teslasync\\shared-library-loop.md source-first/ownership/evidence",
+    "D:\\repos\\teslasync\\docs\\frontend-worker-conventions.md",
+    "D:\\repos\\teslasync\\docs\\frontend-design-contract.md MDC001/002,010-016,020-034,040-046,060-070",
+    "D:\\repos\\teslasync\\docs\\frontend-mission.md sections0/1/3/14-16/22-28/30-37",
+    "D:\\repos\\teslasync\\.github\\instructions\\react-frontend.instructions.md",
+    "D:\\repos\\teslasync\\.github\\instructions\\frontend-si-cutover.instructions.md",
+    "D:\\repos\\teslasync\\.github\\instructions\\unit-conversion.instructions.md (legacy shape guidance not applied to declared SI wire)",
+    "D:\\repos\\teslasync\\.github\\instructions\\observability.instructions.md"
+  ],
+  "reference_only": [
+    {
+      "file": "D:\\repos\\teslasync\\docs\\frontend-audits\\audit-page-039.json",
+      "purpose": "Original237-line/6-section metadata only",
+      "read": true
+    },
+    {
+      "reference": "Accepted row parent-retained historical proof",
+      "fresh_run": false,
+      "file_read": false
+    }
+  ],
+  "NOTRUN": [
+    "native/browser",
+    "geometry/contrast",
+    "visual/mobile/theme/forced-colors/RTL/zoom",
+    "keyboard/focus/screenreader",
+    "performance/bundle",
+    "real API/auth/backend incident verification",
+    "React runtime/concurrency",
+    "fullpage",
+    "Vitest/Playwright/existing tests",
+    "global TypeScript npx tsc --noEmit",
+    "scoped compiler/lint",
+    "build",
+    "full suites",
+    "catalog completeness",
+    "old custom audit/helper campaigns"
+  ],
+  "release": {
+    "report": "RELEASED",
+    "no_post_return_writes": true,
+    "ignored_log": "RELEASED",
+    "ongoing_work": 0,
+    "commands": "RELEASED"
+  },
+  "exactrow": {
+    "raw": "| [ ] | 6 | phase6-qa-advanced-twin-lab | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-advanced-twin-lab.json | phase5-page-advanced-intelligence-twin-lab | 0 | - | - | Userauthorized nextfinishedpageQA; exactacceptedTwinLabPage/directsupport only. Readonlysource/state/scope/SI/preferences/scenario-vs-observation/action/section contracts, source-backed findings separatefromcandidates; no guessedunit/wire adapters or newcode/helper. Sole report/ignoredlog writable; native/runtime/API/visual/fullsuite NOTRUN, nevercallreportdelivery wholepagePASS. |",
+    "initial_discovery_line": 272,
+    "item": "phase6-qa-advanced-twin-lab",
+    "line": 272,
+    "status": "readonly current item-column identity"
+  },
+  "acceptedrow": {
+    "raw": "| [x] | 5 | phase5-page-advanced-intelligence-twin-lab | original-page-migration | web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx; web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx | - | 1 | parent retained read-only proof completed, no actor | 99cc15ce6eccd3d469c38c68f374bf7253db054d | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/intelligence/twin-lab; audit=docs\\frontend-audits\\audit-page-039.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Thirteenth existing-root NORMAL actual BEFORE1/GENERATE0/AFTER0/knownmissing0 confirmed3490. Genuine ready exclusive scope reserved for rolling refill, not delivered/runtime-count/native acceptance. Exact named test extension approved; old assertions/data behavior preserved. Actual launch or same-owner steering pending, refuses consume no attempt; no invented revalidation/helper/capture campaign. Actual fresh actor=1c1b97ad-d790-4322-a7ab-74bf72ef1086 successfully launched for exact existing scope; not delivered/tested/native accepted. original-fresh-page. Consumed actual terminal delivery; WIP ONLY, not source/QA acceptance; no capture/helper reset; Actual NEWterminal0 ownFIRSTfailure notexternalcatalog. ExactTwinLab/testpair WIP all6sections/source260of237. OwnONEVitest1 DISCOVERY16/PASS14/FAIL2/SKIP0; pausedsource/disclosureselectorcorrectionsAFTERrun NOTRERUNone-runbound. FinalESLint0/styleSCAN0 TOKENREVIEWS2explicitnotzerofindings. Rawnames/output logs phase5-page-advanced-intelligence-twin-lab.log. Exactunownedneeds TwinScenarioForm surfaces/removallabels-targets/empty-numberdrafts requireprecisequeue scope; parentonlyexistingcatalogrefclosure. Pending1boundedSAMEownerretryeligible/no16pass/source-fullnativeacceptance/automatichelper reset.; commit=99cc15ce6eccd3d469c38c68f374bf7253db054d; pushed. Actual first failure/source WIP consumed once; bounded SAME retained-owner attempt2 reserved, not restart or new wholepage objective. Exact old assertions and exclusive scope intact; steering pending. If harness refuses return pending1 without fabricated attempt/turn. Actual SAME retained-owner attempt2 steering DELIVERED=1c1b97ad-d790-4322-a7ab-74bf72ef1086; await NEWterminal1. No source acceptance/behavioral pass or healthy ongoing actor inferred from delivery; old assertions and exact exclusive claim preserved. reset after stall. Explicit latest user infrastructure-stall exception: actual manual cancellation confirmed, exact disk delta NONE. Attempts reset0, retained source/WIP 99cc15ce6eccd3d469c38c68f374bf7253db054d and historical test/failure notes preserved; no item-failure charge or code discarded. Previous actor retired; next worker must continue from preserved work, not remodernize. Exact exclusive reservation for supported fresh task start; real actor metadata follows, not a running-count projection. Actualfreshactor=6f06ea91-5275-4d84-b3c4-39c31326bde6; harddeadline=2026-10-13T05:29:53.791Z; attempt=1; continue retained WIP/no remigration; previous owner archived; lastConsumed=-1. Restart killed all workers; runtime list empty. Exact disk scope and existing receipt checked; preserved work is incomplete/unproven, NOT a pass. Reset pending with attempts UNCHANGED (restart or false heartbeat stop, not failure). Continue retained source and covering proof, never remodernize. Necessary owned reruns allowed; old unknown startup timeouts are not catalog diagnoses. Fresh continuation must retain this same attempt. No new product delta; prior WIP/history preserved. Built-in-only fresh continuation after user restart; same retained attempt unchanged; reservation is NOT an actor/count. No custom tools/status-file enforcement/external messages.20min return/25min hard limit, bounded commands under15min; actual actor metadata follows launch. Fresh built-in actor c50cf26f-c18f-4b96-8513-6b84d30c5a38 ACTUALLY failed400 internalservererror at0turns63s; result collected immediately, no source execution/no attempt charge, claim released. Prior WIP preserved; different independent ready item fills slot.  Currentcatalogroot=7bb37b585f644cd26c1ee11c7a840d24fc7b460a coherent, allsourceownersactuallyreleased. Parent existing scoped read-only proof only, NO zero-output actor relaunch/source remodernization. Retainedattempt1unchanged afterrestart/external400zero-turn; explicit currenttwofile readonly reservation. Native JSON/raw480bound and scopechecks, own failed case would consume this actualattempt, no sourceacceptancebeforeproof. NOTa runningworker. Actual parent guarded retained proof EXIT0/166.199s,16discovered/executed/passed,0failed/skipped/missing raw names. Both owned source hashes unchanged; exact pair ESLint0,owned semantic diagnostics0 with1unowned context diagnostic (NOTglobalcompiler pass),9scoped scanner counts0.260source lines vs237audited original,all6equivalent shells retained;3intentional colorblind chart series identities reviewed,notzero color candidates. Exact Twin POST matches ROOT/hook factory and actual mounted backend route; no API/source/payload changes. Original post-run corrections are now actually covered, not merely presumed fixed. Raw/native logs phase5-page-advanced-intelligence-twin-lab-parent-retained.log/.json. Old missing historical log not reconstructed. Retainedattempt1accepted/source claim released; no product delta/new actor/ThemeProvider patch/helper/native/fullgate/Docker acceptance. |",
+    "fresh_proof": "NOTRUN reference-only acceptance",
+    "item": "phase5-page-advanced-intelligence-twin-lab",
+    "line": 1653,
+    "commit": "99cc15ce6eccd3d469c38c68f374bf7253db054d"
+  },
+  "sourcepins": [
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "final_sha256": "5EA493D59F137E43E293B1241EB62E2006084A8501D6B7D96FF1532943DDB41A",
+      "lines": 260,
+      "before_sha256": "5EA493D59F137E43E293B1241EB62E2006084A8501D6B7D96FF1532943DDB41A",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx",
+      "final_sha256": "CFAE4190B5BDB41BB02FCAC9129A30B6A2F2413A12C1284789736C988B42CB41",
+      "lines": 309,
+      "before_sha256": "CFAE4190B5BDB41BB02FCAC9129A30B6A2F2413A12C1284789736C988B42CB41",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\advancedIntelligenceClosure.fixtures.ts",
+      "final_sha256": "3346DD121BEF190DE2F542C27A10B4AB62F03AD6BBDED3FBD67C3B9080A04411",
+      "lines": 201,
+      "before_sha256": "3346DD121BEF190DE2F542C27A10B4AB62F03AD6BBDED3FBD67C3B9080A04411",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "final_sha256": "7EFED47A9AD451E7840700A58601897D9A6BC546AC64BCCFFF39EA10DF1E0E52",
+      "lines": 150,
+      "before_sha256": "7EFED47A9AD451E7840700A58601897D9A6BC546AC64BCCFFF39EA10DF1E0E52",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "final_sha256": "DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24",
+      "lines": 46,
+      "before_sha256": "DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "final_sha256": "9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE",
+      "lines": 95,
+      "before_sha256": "9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "final_sha256": "68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4",
+      "lines": 132,
+      "before_sha256": "68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "final_sha256": "0B5533452EFAF607E34E1BACECD17AABFAB92CAD791EF2F8B951B377B1D505A8",
+      "lines": 23,
+      "before_sha256": "0B5533452EFAF607E34E1BACECD17AABFAB92CAD791EF2F8B951B377B1D505A8",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "final_sha256": "364BEA64B11056A55E689D4D2DEBDBC0FF101C7BB8201EAFB1402C534A5185A6",
+      "lines": 164,
+      "before_sha256": "364BEA64B11056A55E689D4D2DEBDBC0FF101C7BB8201EAFB1402C534A5185A6",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+      "final_sha256": "04A7DB2F8B03374D3353618653FE8D2E8BCD108A6FA5EA4D87267D956C9D0280",
+      "lines": 44,
+      "before_sha256": "04A7DB2F8B03374D3353618653FE8D2E8BCD108A6FA5EA4D87267D956C9D0280",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useRetainedMutation.ts",
+      "final_sha256": "66A0A02B03B82FA84BDDCB8770ED076150476FB5B5D9219298E61C62B748B64F",
+      "lines": 96,
+      "before_sha256": "66A0A02B03B82FA84BDDCB8770ED076150476FB5B5D9219298E61C62B748B64F",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useSelectedVehicle.ts",
+      "final_sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lines": 174,
+      "before_sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useUnits.ts",
+      "final_sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lines": 194,
+      "before_sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useDataState.ts",
+      "final_sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lines": 65,
+      "before_sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useNumberFormatting.ts",
+      "final_sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "lines": 47,
+      "before_sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "final_sha256": "DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067",
+      "lines": 251,
+      "before_sha256": "DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\client.ts",
+      "final_sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "lines": 491,
+      "before_sha256": "D00D444062AEC360EB3C89798938BE7D11B0C0CCAEFA89683AE3F725C89C3E0B",
+      "unchanged": false
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\dataState.ts",
+      "final_sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lines": 434,
+      "before_sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\workspaceScope.ts",
+      "final_sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168,
+      "before_sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\unitConversion.ts",
+      "final_sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "lines": 500,
+      "before_sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\numberFormat.ts",
+      "final_sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "lines": 172,
+      "before_sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\operationalMode.ts",
+      "final_sha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+      "lines": 89,
+      "before_sha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "final_sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17,
+      "before_sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "final_sha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "lines": 48,
+      "before_sha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\charts\\ChartContainer.tsx",
+      "final_sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "lines": 1006,
+      "before_sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\ui\\Button.tsx",
+      "final_sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "lines": 93,
+      "before_sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\ui\\Input.tsx",
+      "final_sha256": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "lines": 116,
+      "before_sha256": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\App.tsx",
+      "final_sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919,
+      "before_sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\api\\router.go",
+      "final_sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "lines": 5363,
+      "before_sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\handler\\v1\\advancedintelligence\\handler.go",
+      "final_sha256": "5717254A401F668DBB29F6B1A7826AEA19888C7789E2C20D9EBB6CD850BE4F66",
+      "lines": 460,
+      "before_sha256": "5717254A401F668DBB29F6B1A7826AEA19888C7789E2C20D9EBB6CD850BE4F66",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\domain\\advancedintelligence\\twin_firmware.go",
+      "final_sha256": "772C6C9FD3B51CFBF109869D15C429C5215E8286CD7B6AEA9A7A6C946B4959DA",
+      "lines": 113,
+      "before_sha256": "772C6C9FD3B51CFBF109869D15C429C5215E8286CD7B6AEA9A7A6C946B4959DA",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\app\\advancedintelligencesvc\\twin_firmware.go",
+      "final_sha256": "09B3456E4E3A6B157D3C13AB5DC2A61F204C274AF71B16D1D45B59A676CDA75E",
+      "lines": 381,
+      "before_sha256": "09B3456E4E3A6B157D3C13AB5DC2A61F204C274AF71B16D1D45B59A676CDA75E",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\app\\advancedintelligencesvc\\service.go",
+      "final_sha256": "1600B1A214A0E6E0E01A53267A4235C3C7D48EA38ED0B417F35F3813F23510C2",
+      "lines": 124,
+      "before_sha256": "1600B1A214A0E6E0E01A53267A4235C3C7D48EA38ED0B417F35F3813F23510C2",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\types\\advancedIntelligence.ts",
+      "final_sha256": "CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13",
+      "lines": 431,
+      "before_sha256": "CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13",
+      "unchanged": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts",
+      "final_sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "lines": 1898,
+      "before_sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "unchanged": true
+    }
+  ],
+  "reviewed_files": [
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "scope": "Full accepted page 1-260",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx",
+      "scope": "Full readonly existing test 1-309, NOTRUN",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\advancedIntelligenceClosure.fixtures.ts",
+      "scope": "Twin fixture104-132 only relevant; readonly/no app injection",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useRetainedMutation.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useSelectedVehicle.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useUnits.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useDataState.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useNumberFormatting.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\client.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\dataState.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\workspaceScope.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\unitConversion.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\numberFormat.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\lib\\operationalMode.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\charts\\ChartContainer.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\ui\\Button.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\components\\ui\\Input.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\App.tsx",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\api\\router.go",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\handler\\v1\\advancedintelligence\\handler.go",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\domain\\advancedintelligence\\twin_firmware.go",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\app\\advancedintelligencesvc\\twin_firmware.go",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\internal\\app\\advancedintelligencesvc\\service.go",
+      "scope": "Preservation pin only",
+      "reviewed": false
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\types\\advancedIntelligence.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    },
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts",
+      "scope": "Direct needed slices only, not whole-file/global audit",
+      "reviewed": true
+    }
+  ],
+  "preservation": {
+    "changed_pinned_files": 1,
+    "pin_verification": "C17 observed35 unchanged; C26 final hashes reveal actual drift, no stable final-source pass",
+    "current_lines": 260,
+    "nested_evidence_sections": 3,
+    "minimum_lines": 166,
+    "pinned_files": 35,
+    "line_threshold_met": true,
+    "section_shells": 6,
+    "limitation": "Original237 count and sections from audit-page-039 reference only, not fresh original-content diff. Most support pins C11 after reading; accepted page/form/test also match earlier hashes. Scoped observed preservation, not whole-repository preservation.",
+    "original_reference_lines": 237,
+    "hash_algorithm": "SHA256"
+  },
+  "sections": [
+    {
+      "lines": [
+        100,
+        108
+      ],
+      "name": "Simulation-only notice",
+      "behavior": "Unconditional info banner, calibration/counterfactual disclosure, no actuation guarantee"
+    },
+    {
+      "lines": [
+        110,
+        137
+      ],
+      "name": "Calibrated scenarios/mutation feedback",
+      "behavior": "Unconditional form shell; six SI fields; add/remove; confirmed run; error feedback"
+    },
+    {
+      "lines": [
+        139,
+        160
+      ],
+      "name": "Calibrated baseline",
+      "behavior": "Unconditional four raw operational metrics; details/scope/time/evidence"
+    },
+    {
+      "lines": [
+        162,
+        213
+      ],
+      "name": "Range-effect uncertainty comparison",
+      "behavior": "Unconditional shell; signed low/estimate/high; toolbar/export/table. F03 unsupported-row predicate"
+    },
+    {
+      "lines": [
+        215,
+        245
+      ],
+      "name": "Sensitivity drivers",
+      "behavior": "Unconditional shell, every scenario/driver, per-scenario empty fallback"
+    },
+    {
+      "lines": [
+        247,
+        257
+      ],
+      "name": "Evidence/quality/limitations",
+      "behavior": "Unconditional shell; three named nested sections; unsupported commands/guarantees"
+    }
+  ],
+  "actions": [
+    {
+      "behavior": "Header owns URL/store/fleet selection; no duplicate picker; null vehicle blocks only submit",
+      "name": "Workspace vehicle selection",
+      "evidence": "Page39; useSelectedVehicle48-76,87-96,143-173"
+    },
+    {
+      "behavior": "name, distance_m, speed_mps, horizon_s, nullable outside_temp_c, auxiliary_load_w; SI wire untouched; preferred display hints",
+      "name": "Edit six fields",
+      "evidence": "Page51-54,118-122; TwinScenarioForm54-126"
+    },
+    {
+      "behavior": "1-12 scenario bounds; default-name collision F01",
+      "name": "Add/remove scenarios",
+      "evidence": "Page123-132; form42-48,130-137"
+    },
+    {
+      "behavior": "confirmed:true; pending/vehicle guards; existing toast/errors; no simulation on mount",
+      "name": "Explicit Run/current-draft resubmit",
+      "evidence": "Page56-60,133-135; form139-147; hook156-177"
+    },
+    {
+      "behavior": "Declared OperationalBrief drawer/scope/confidence/evidence/limitations; never opened",
+      "name": "Baseline Review details/close",
+      "evidence": "AnalysisBrief105-162; existing test206-219 readonly"
+    },
+    {
+      "behavior": "Canonical PNG/SVG/copy image and accessible table; no exportData CSV added, no new fullscreen claimed, no exports executed",
+      "name": "Chart toolbar/export/table",
+      "evidence": "Page164-208; ChartCard27-44; ChartContainer790-949"
+    }
+  ],
+  "existing_tests": {
+    "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx",
+    "declared_cases": 16,
+    "status": "NOTRUN",
+    "static_each_cases": 3,
+    "plain_it_declarations": 13,
+    "check": "C18",
+    "historical_proof": "Accepted row prior parent16-case proof is reference-only, not current test/native acceptance",
+    "executed_cases": 0,
+    "coverage_declared": [
+      "six shells/unknown",
+      "SI/null/zero/limits",
+      "no vehicle",
+      "initial pending/paused/failure",
+      "signed uncertainty/raw retention",
+      "details/export",
+      "long/repeated labels",
+      "retained pending/failed/paused",
+      "old scope/late response",
+      "single scenario",
+      "resolved no scenarios"
+    ],
+    "it_each_declarations": 1
+  },
+  "confirmed_findings": [
+    {
+      "id": "F01",
+      "rule": "default-scenario-name-collision",
+      "severity": "medium",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 129,
+      "related": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:123-132",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx:47-48",
+        "D:\\repos\\teslasync\\internal\\app\\advancedintelligencesvc\\twin_firmware.go:37-45"
+      ],
+      "mechanism": "Generated default name uses current length+1, not surviving names. Removing first of initial Scenario1/Scenario2 leaves Scenario2; Add creates another Scenario2. Existing backend validator rejects duplicate normalized names.",
+      "repro": "Source-traced: initial defaults -> remove first -> Add -> Run. Names both Scenario2; existing validator would reject. No app interaction/backend incident claimed.",
+      "suggested_scope": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx"
+      ],
+      "needs": "Future explicit page/test lease: generate unused default name without renaming edited survivors; preserve SI defaults/limits. No backend change.",
+      "confirmation": "source-backed declared mechanism, not native repro"
+    },
+    {
+      "id": "F02",
+      "rule": "numeric-draft-integrity",
+      "severity": "medium",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "line": 66,
+      "sites": [
+        66,
+        79,
+        93,
+        118
+      ],
+      "related": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx:33,41-43",
+        "D:\\repos\\teslasync\\web\\src\\types\\advancedIntelligence.ts:34-40"
+      ],
+      "mechanism": "SiNumberInput returns null on empty; four parent handlers immediately coerce null to 0, fed back as controlled value. Empty numeric draft is erased. Auxiliary min0/not required allows cleared field to become valid0W instead of deliberate numeric entry; required other fields become range-invalid zero.",
+      "repro": "Source-traced event value empty -> null -> value??0 -> controlled zero for distance/speed/horizon/auxiliary. Temperature preserves null. Native/React typing NOTRUN.",
+      "suggested_scope": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx"
+      ],
+      "needs": "Future exact form/input lease: retain transient empty draft and native validity, commit validated existing numeric SI shape only, distinguish explicit auxiliary zero. No nullable-wire migration/dual-shape adapter.",
+      "confirmation": "source-backed declared mechanism, not native repro"
+    },
+    {
+      "id": "F03",
+      "rule": "unsupported-chart-empty-state",
+      "severity": "medium",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 177,
+      "related": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:82-90,177-182,198-211",
+        "D:\\repos\\teslasync\\internal\\app\\advancedintelligencesvc\\twin_firmware.go:75-87,115-128"
+      ],
+      "mechanism": "Chart empty/body conditions test raw row count>=2, not numeric support. Builder explicitly returns named all-null outputs when calibration absent/insufficient. Two all-null rows select chart/export-ready branch despite no plotted low/estimate/high and guidance requiring supported results.",
+      "repro": "Trace declared missing-calibration branch for two requested scenarios: all range values null -> chartData length2 -> empty false/BarChart branch. No response injected/no actual missing-calibration incident alleged.",
+      "suggested_scope": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx"
+      ],
+      "needs": "Future page/test lease: derive supported/empty guidance from finite modeled values, retain all raw rows/null gaps/partial estimates/signed zero, align supported-count wording. No zero substitution or discarded evidence.",
+      "confirmation": "source-backed declared mechanism, not native repro"
+    },
+    {
+      "id": "F04",
+      "rule": "nonsemantic-fixed-white-form-chrome",
+      "severity": "low",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "line": 35,
+      "related": [
+        "D:\\repos\\teslasync\\docs\\frontend-design-contract.md:80-143,214-237"
+      ],
+      "mechanism": "Scenario wrapper hardcodes border-white/[0.08], bg-white/[0.025] and rounded-xl rather than accepted semantic panel surface/border/radius. Fixed theme-token bypass confirmed; contrast/theme appearance unmeasured.",
+      "repro": "Literal classes on each mapped wrapper; no conditional/theme-token background or border.",
+      "suggested_scope": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx"
+      ],
+      "needs": "Future form owner: adopt existing semantic panel classes, no token/config changes and no unmeasured contrast claim.",
+      "confirmation": "source-backed declared mechanism, not native repro"
+    },
+    {
+      "id": "F05",
+      "rule": "declared-mobile-target-below-contract",
+      "severity": "medium",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "line": 45,
+      "related": [
+        "D:\\repos\\teslasync\\web\\src\\components\\ui\\Button.tsx:35-42,61-77",
+        "D:\\repos\\teslasync\\docs\\frontend-design-contract.md:525-533"
+      ],
+      "mechanism": "Remove size sm maps to h-9 (36px nominal), no caller below-md44x44 expansion. Add/Run default md maps h-10 (40px nominal). Declared CSS is below mobile contract; actual browser geometry NOTRUN.",
+      "repro": "Static prop/class resolution only: sm->h-9, md->h-10, no responsive caller target override. No native dimensions measured.",
+      "suggested_scope": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx"
+      ],
+      "needs": "Future exact caller scope: contract-compliant below-md targets without altering shared desktop/density defaults. Native reachability/geometry later, not proved by CSS.",
+      "confirmation": "source-backed declared mechanism, not native repro"
+    },
+    {
+      "id": "F06",
+      "rule": "unlocalized-quality-enum-label",
+      "severity": "low",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 57,
+      "related": [
+        "D:\\repos\\teslasync\\web\\src\\types\\advancedIntelligence.ts:9",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx:45-51"
+      ],
+      "mechanism": "Badge prints closed sufficient/limited/insufficient wire enum verbatim, not a user-authored evidence string. English enum survives locale change while adjacent AnalysisBrief already localizes corresponding meaning.",
+      "repro": "Quality status limited -> badge limited without t lookup. Non-English rendering NOTRUN.",
+      "suggested_scope": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx"
+      ],
+      "needs": "Future evidence-panel lease: reuse existing translated quality labels for three statuses, preserve raw enum/tone/unknown fallback. No catalog/translation campaign.",
+      "confirmation": "source-backed declared mechanism, not native repro"
+    },
+    {
+      "id": "F07",
+      "rule": "accessible-chart-table-preference-bypass",
+      "severity": "medium",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 193,
+      "related": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:191-196,203",
+        "D:\\repos\\teslasync\\web\\src\\components\\charts\\ChartContainer.tsx:927-933"
+      ],
+      "mechanism": "Three numeric dataColumns lack kind/format; shared fallback table chooses String(raw), unlike axis fmtNumber. Accessible/forced-colors table bypasses display locale and decimal precision; mile conversion can expose binary precision.",
+      "repro": "Source branch: numeric cell+undefined kind/format -> String(raw), dot/unrounded regardless of preferences. No browser or fake dataset used.",
+      "suggested_scope": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx"
+      ],
+      "needs": "Future page owner: use existing numeric data-column kind/formatter for three distance columns, preserve null em dash and signed zero. No shared table rewrite.",
+      "confirmation": "source-backed declared mechanism, not native repro"
+    }
+  ],
+  "unpromoted_candidates": [
+    {
+      "id": "C01",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "line": 46,
+      "candidate": "Identical Remove scenario labels omit scenario-specific context.",
+      "unpromoted_reason": "Localized accessible name exists and headings can supply context; no native/screenreader ambiguity or WCAG failure established. Exact form owner review only."
+    },
+    {
+      "id": "C02",
+      "file": "D:\\repos\\teslasync\\web\\src\\hooks\\useRetainedMutation.ts",
+      "line": 86,
+      "candidate": "Publication source has no refetch/retry; individual affected chart/brief/sensitivity retry absent.",
+      "unpromoted_reason": "Run form remains manual current-draft recovery; only one simulation source. Need explicit policy for saved submitted-input retry vs edited draft before any shared extension; do not blindly replay POST."
+    },
+    {
+      "id": "C03",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 62,
+      "candidate": "published.inputs retained by hook but not displayed as submitted summary or draft/result divergence notice.",
+      "unpromoted_reason": "Returned names/time already identify result; no observed misattribution. Product/native review needed, no speculative shared API extension."
+    },
+    {
+      "id": "C04",
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 39,
+      "candidate": "Only vehicleId consumed; unresolved/failed fleet lookup may resemble missing selection.",
+      "unpromoted_reason": "Existing URL/store can supply ID during load; header/fleet owns source feedback. Entire header failure UX/real fleet NOTRUN; keep with actual owner."
+    }
+  ],
+  "summary": {
+    "by_rule": [
+      {
+        "count": 1,
+        "rule": "accessible-chart-table-preference-bypass"
+      },
+      {
+        "count": 1,
+        "rule": "declared-mobile-target-below-contract"
+      },
+      {
+        "count": 1,
+        "rule": "default-scenario-name-collision"
+      },
+      {
+        "count": 1,
+        "rule": "nonsemantic-fixed-white-form-chrome"
+      },
+      {
+        "count": 1,
+        "rule": "numeric-draft-integrity"
+      },
+      {
+        "count": 1,
+        "rule": "unlocalized-quality-enum-label"
+      },
+      {
+        "count": 1,
+        "rule": "unsupported-chart-empty-state"
+      }
+    ],
+    "unpromoted_candidates": 4,
+    "files_with_most_issues": [
+      {
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+        "count": 3
+      },
+      {
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "count": 3
+      },
+      {
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "count": 1
+      }
+    ],
+    "wholepagePASS": false,
+    "confirmed_findings": 7
+  },
+  "needs": [
+    "Priority exact page/test lease F01 default naming, direct form/input lease F02 numeric drafts, page/test lease F03 unsupported chart state.",
+    "Then exact form owner F04 semantic chrome/F05 mobile declared targets with future native geometry QA.",
+    "EvidencePanel owner F06 existing-label enum localization; page owner F07 numeric table formatter. No catalog campaign.",
+    "C01-C04 remain candidates; source-only receipt does not authorize fixes. Parent-owned native/technical gates NOTRUN.",
+    "Final source drift: D:\\repos\\teslasync\\web\\src\\api\\client.ts. Exact dependency owner must reconcile the changed support contract against this reviewed snapshot; no fixes or reruns authorized here."
+  ],
+  "states": [
+    {
+      "behavior": "No simulation on mount; missing metrics/guidance; six shells",
+      "state": "initial/not calculated",
+      "evidence": "Page42,62-64; retained37-40,86-93; AnalysisBrief52-83"
+    },
+    {
+      "behavior": "No fake result; guarded submission/contextual loading",
+      "state": "initial pending",
+      "evidence": "retained84-92; Page178; AnalysisBrief42-44"
+    },
+    {
+      "behavior": "Only affected content replacement; draft/evidence shells remain; Run manual recovery, dedicated retry candidate",
+      "state": "fatal initial error",
+      "evidence": "Page135,179,218-220; AnalysisBrief96-102"
+    },
+    {
+      "behavior": "Same-scope result stays visible; updating/retained labels; no React race execution",
+      "state": "retained refresh/failure",
+      "evidence": "retained65-81,84-95; AnalysisBrief40-41,54-65; InsightPanel70-84"
+    },
+    {
+      "behavior": "Paused not server failure; initial loading suppressed; retained payload/warnings remain",
+      "state": "paused initial/retained",
+      "evidence": "Page64,178-182,219; retained91-92; AnalysisBrief39-44,59-60"
+    },
+    {
+      "behavior": "Empty scenarios/missing drivers handled; two all-null rows wrongly ready F03",
+      "state": "resolved empty/unsupported",
+      "evidence": "Page177,221,231-240; service75-87,115-128"
+    },
+    {
+      "behavior": "Result null/signed/zero preserved; form draft-zero defect separate F02",
+      "state": "unknown/zero",
+      "evidence": "Page69-80,84-89,235; SiNumberInput33,41-43"
+    },
+    {
+      "behavior": "Render guard clears view, reset detaches; input/output scopes checked; static only",
+      "state": "vehicle switch/late old result",
+      "evidence": "retained44-58,60-81; Page42-44"
+    }
+  ],
+  "wire_router_scope": {
+    "frontend": "App230,764 lazy /intelligence/twin-lab",
+    "header": {
+      "bounds": "No header analysis range owns this route; horizon_s independent duration. Service20-22 uses declared now-180d calibration; no guessed start/end params",
+      "range": false,
+      "actual_function_check": "C12 getWorkspaceRouteScope",
+      "vehicle": true
+    },
+    "observability": "Twin handler89-106 starts api span from r.Context, defers End, vehicle attribute, ctx passed to calibration service. No page RUM. No telemetry queried.",
+    "simulation": {
+      "query_params": [],
+      "router": "internal/api/router.go3210,3960; handler69-72,89-106",
+      "body": [
+        "vehicle_id",
+        "confirmed",
+        "scenarios"
+      ],
+      "request_path": "/advanced-intelligence/twin-lab/scenarios",
+      "cancellation": "Mutation no AbortSignal; old scope publication guarded, cancellation not invented",
+      "route": "/api/v1/advanced-intelligence/twin-lab/scenarios",
+      "hook": "useAdvancedIntelligence29,156-177",
+      "method": "POST"
+    },
+    "preview": "Factory POST omits requiresLiveMode; reviewed TwinLab service reads calibration and calls pure builder, no actuation/durable write observed on this path. Declared non-actuating calculation preview, not proof of historical/as_of correctness, live authorization, offline/network safety. No API executed.",
+    "fleet": {
+      "hook": "useVehicles73-79",
+      "policy": "vehicleKeys.all; signal forwarded; FAST stale time; safeArray",
+      "method": "GET",
+      "request_path": "/vehicles",
+      "router": "router3210,3362-3363"
+    }
+  },
+  "physical_si_preferences": {
+    "evidence": "Go domain19-75 and web types34-88; SI unitConversion46-54; Page27-34,69-90; form62-126; formatter10-18",
+    "pure_local_check": {
+      "scope": "Actual existing unitConversion/deriveDataState/workspaceScope require(.ts); no React, appdata, network, fixture injection, loader, helper or installs",
+      "runtime": "existing Node v26.11.1",
+      "id": "C12",
+      "assertions": 13,
+      "exit_code": 0
+    },
+    "display": "useUnits reads preferences/locale/precision and central kWh/h/kW defaults; convert only derived chart/hints/metrics. Efficiency Wh/m times meters per display distance then converted energy. Raw cache untouched. Axis/effect reactive formatters, accessible numeric table exception F07.",
+    "unvisualized": "Ambient baseline and battery/thermal/wear/horizon outputs retained raw; not original visible UI fields per reference mapping, no invented missing sections.",
+    "canonical": {
+      "battery": "Wh",
+      "efficiency": "Wh/m",
+      "auxiliary": "W",
+      "temperature": "degrees C",
+      "speed": "m/s",
+      "driver_effect": "source percent",
+      "range_delta": "m",
+      "distance": "m",
+      "horizon": "s"
+    },
+    "signs": "Service battery delta=scenario minus baseline energy; range delta=scenario range minus baseline range, extra consumption reduces range. Absolute spread only for uncertainty; no abs/zero clamp on signed plotted range."
+  },
+  "rule_scans": {
+    "raw_html_corrected_case_sensitive_lines": 0,
+    "direct_library_import_lines": 0,
+    "hidden_section_pattern_lines": 0,
+    "camelcase_initial_lines": 1,
+    "raw_html_exception": "Initial Button/Input matches are shared-component false positives, corrected scan zero raw lowercase elements",
+    "hardcoded_limit": "Regex misses finite enum labels, manual F06 stands; catalog/cold-i18n NOTRUN",
+    "fixed_white": {
+      "occurrences": 2,
+      "lines": 1,
+      "finding": "F04 one composite issue"
+    },
+    "camelcase_corrected_url_lines": 0,
+    "hardcoded_JSX_literal_lines": 0,
+    "page_container": "Page93 PageLayout -> PageLayout11-15 PageContainer, accepted wrapper",
+    "camelcase_exception": "vehicleId JSX prop not URL query",
+    "old_api_import_lines": 0,
+    "double_prefix_lines": 0,
+    "backend": {
+      "fmt_log_println_lines": 0,
+      "context": "Twin ctx forwarded to calibration. Constructor panic handler58 outside request slice not concealed as whole-file zero",
+      "scope": "Twin handler89-107/service1-246 only, not full files/backend audit",
+      "panic_lines": 0,
+      "sql_interpolation_lines": 0,
+      "pool_query_http_newrequest_lines": 0
+    },
+    "any_ignore_lines": 0,
+    "raw_html_initial_case_insensitive_lines": 6,
+    "scope": "Page plus seven direct feature presentation/formatter files. Pattern counts not exhaustive AST/lint.",
+    "effect_exceptions": "Shared retained/reset, selection sync and chart lifecycle effects not page data fetch; approved client fetch exempt",
+    "style_exceptions": "Tailwind var classes not inline styles; CHART_COLORS are interval data identities, no palette/contrast native acceptance; shared raw/vendor boundaries expected",
+    "fetch_useeffect_feature_lines": 0,
+    "command_ids": [
+      "C10",
+      "C11",
+      "C13",
+      "C14",
+      "C18"
+    ],
+    "static_inline_style_lines": 0
+  },
+  "checks": [
+    {
+      "exit_code": 0,
+      "name": "branch/queue/loop contracts",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C01",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "worker/design/mission exact rows",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C02",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "source/test/retained hash reads",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C03",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "contract index/hook/wire/router discovery",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C04",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 1,
+      "name": "missing routes.tsx route discovery",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C05",
+      "status": "failed, retained honestly",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "actual App/mount/pins",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C06",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "route/client/control source",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C07",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "simulator/unit/chart trace",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C08",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "math/historical reference",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C09",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "Select-String rule/section/test scans",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C10",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "SHA256 pins/corrected scans/Node --version",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C11",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "Node actual pure13 assertions",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C12",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "exact finding lines/direct Twin backend scans",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C13",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "ownership/recovery/ignore rule",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C14",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "worker contract/reference preservation",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C15",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "fleet route/original sections",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C16",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "35 source pin comparisons",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C17",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "declared test/draft counts",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C18",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 1,
+      "name": "report command tool launch failure",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C19",
+      "status": "failed, retained honestly",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "builtin JSON base write",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C20",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "exit_code": 0,
+      "name": "builtin finding records/counts write",
+      "command": "Set-Location D:\\repos\\teslasync\\web; actual builtin command body/parameters in same-ID raw log and executed tool transcript",
+      "id": "C21",
+      "status": "executed",
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log"
+    },
+    {
+      "command": "Set-Location D:\\repos\\teslasync\\web; Get-Content absent assigned report; Get-Command rg,node",
+      "id": "discovery5326",
+      "raw_output": "Tool transcript; absence recorded log",
+      "exit_code": 1,
+      "note": "report absent; rg unavailable, used builtin Select-String"
+    },
+    {
+      "command": "Set-Location D:\\repos\\teslasync\\web; Get-ChildItem/Get-Content loop/queue contracts",
+      "id": "discovery5330",
+      "raw_output": "tool transcript; full discovery output tool artifact",
+      "exit_code": 0
+    },
+    {
+      "command": "Set-Location D:\\repos\\teslasync\\web; Get-FileHash/Get-Content page/.gitignore",
+      "id": "discovery5331",
+      "raw_output": "tool transcript",
+      "exit_code": 0
+    },
+    {
+      "failure": "Exact row identity mismatch, stale offset",
+      "id": "C23",
+      "command": "Set-Location D:\\repos\\teslasync\\web; bounded report row/hash validation in raw tool transcript",
+      "exit_code": 1,
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log",
+      "report_write": "None from failed attempt"
+    },
+    {
+      "failure": "Exact task rows not unique, dependency-column matches",
+      "id": "C24",
+      "command": "Set-Location D:\\repos\\teslasync\\web; bounded report row/hash validation in raw tool transcript",
+      "exit_code": 1,
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log",
+      "report_write": "None from failed attempt"
+    },
+    {
+      "failure": "Source drift detected",
+      "id": "C25",
+      "command": "Set-Location D:\\repos\\teslasync\\web; bounded report row/hash validation in raw tool transcript",
+      "exit_code": 1,
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log",
+      "report_write": "None from failed attempt"
+    },
+    {
+      "exit_code": 0,
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log",
+      "id": "C22",
+      "command": "Set-Location D:\\repos\\teslasync\\web; builtin JSON state/SI/check receipts write"
+    },
+    {
+      "exit_code": 0,
+      "counts": {
+        "sections": 6,
+        "confirmed": 7,
+        "pins": 35,
+        "accepted_rows": 1,
+        "task_rows": 1,
+        "changed_pins": 1,
+        "candidates": 4
+      },
+      "raw_output": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-twin-lab.log",
+      "id": "C26",
+      "command": "Set-Location D:\\repos\\teslasync\\web; exact third-item-column Select-String; Get-FileHash35 pins; builtin JSON/count validation and drift-honest assigned report write"
+    }
+  ],
+  "evidence_limits": [
+    "SOURCE_ONLY with exact declared mechanisms and separately unpromoted candidates; not wholepagePASS, percentage, native proof or repaired implementation.",
+    "13 pure local assertions actual existing functions only, no React mounts/custom helpers/adapters/data injection.",
+    "No guessed SI/wire capabilities; declared backend branches are not actual incidents.",
+    "Source pins cover observed scoped windows, no Git/status/diff/global change claim.",
+    "Old audits/prior tests reference-only; tests/globalTSC/native/geometry/performance NOTRUN.",
+    "Discovery5326 absent report/rg and C05 nonexistent routes.tsx failed; direct App route later inspected. C19 command launch failed os206 before execution; split authorized JSON writes, no helpers.",
+    "Raw log contains actual check bodies/output; C01-C03 preliminary read descriptors plus transcript. Large tool artifacts are tool-managed transient output aids, not repo helpers.",
+    "C23/C24 row-validation attempts failed, exact current item columns now recorded. Queue/source never edited.",
+    "C25 final preservation check failed on actual source drift. C26 preserves before/after hashes and affected files; findings cite reviewed snapshot, not universal current-source acceptance."
+  ],
+  "source_drift": [
+    {
+      "file": "D:\\repos\\teslasync\\web\\src\\api\\client.ts",
+      "mechanism": "External concurrent file changed after C17 stable pin comparison; this worker made no source write",
+      "before_sha256": "D00D444062AEC360EB3C89798938BE7D11B0C0CCAEFA89683AE3F725C89C3E0B",
+      "final_sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5"
+    }
+  ],
+  "final_validation_evidence": "Ignored log C27 final artifact JSON/count/release receipt"
+}

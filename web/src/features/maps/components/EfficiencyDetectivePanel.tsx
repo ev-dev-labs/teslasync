@@ -1,10 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { Lightbulb } from 'lucide-react';
 
-import { GlassPanel, Badge, PanelTitle, Text, Caption } from '@/components/ui';
-import { Skeleton, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+import { Badge, Button, Icon, Text, Caption } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
+import { Skeleton } from '@/components/feedback';
+
 import { useEfficiencyShift } from '@/api/hooks/useAnalytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { typography } from '@/lib/tokens';
+import { MapsOperationalBrief } from './operationalbrief-all/MapsOperationalBrief';
 
 interface EfficiencyDetectivePanelProps {
   vehicleId: string;
@@ -30,47 +35,85 @@ function verdictBadge(verdict: string, t: (k: string, d: string) => string): { l
  * attribution. Mounted on TemperatureImpactPage below the KPI band.
  */
 export function EfficiencyDetectivePanel({ vehicleId }: EfficiencyDetectivePanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const { data, isLoading, isError, error, refetch } = useEfficiencyShift(vehicleId);
+  const query = useEfficiencyShift(vehicleId);
+  const { data, isLoading, refetch } = query;
+  const state = deriveDataState({ ...query, data: data ?? undefined });
+  const noVehicle = !vehicleId;
+  const unresolved = !noVehicle && !state.hasData && !query.isSuccess;
+  const initialBlocked = unresolved && state.isRefreshBlocked;
+  const emptyMessage = noVehicle
+    ? t('tempImpact.detective.noData', 'Select a vehicle to diagnose efficiency shifts.')
+    : initialBlocked
+      ? t('system.outage.pausedSource', 'Waiting for a connection before this source can load. Missing evidence remains unknown.')
+      : unresolved
+        ? t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')
+        : t('efficiency.noStats', 'No efficiency data available yet');
+  const scope = t('tempImpact.detective.brief.scope', 'Selected vehicle · {{latest}} versus {{prior}} · independent server diagnosis.', {
+    latest: data?.latest_month ?? '—', prior: data?.prior_month ?? '—',
+  });
+  const detail = t(
+    'tempImpact.detective.detail',
+    '{{delta}}% vs prior month · {{attributed}}% temperature-attributed · {{temp}}°C shift',
+    {
+      delta: data?.efficiency_delta_pct == null ? '—' : fmtNumber(data.efficiency_delta_pct),
+      attributed: data?.temp_attributed_pct == null ? '—' : fmtNumber(data.temp_attributed_pct),
+      temp: data?.temp_delta_c == null ? '—' : fmtNumber(data.temp_delta_c),
+    },
+  );
+  const metrics = [
+    { metricId: 'percent', occurrenceId: 'detective-delta', rawValue: data?.efficiency_delta_pct, label: t('tempImpact.detective.brief.delta', 'Efficiency change'), description: scope, display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'detective-attributed', rawValue: data?.temp_attributed_pct, label: t('tempImpact.detective.brief.attributed', 'Temperature attribution'), description: scope, display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+    { metricId: 'number', occurrenceId: 'detective-temperature', rawValue: data?.temp_delta_c, label: t('tempImpact.detective.brief.temperature', 'Temperature shift'), description: t('tempImpact.detective.brief.temperatureDescription', 'Temperature difference in source degrees Celsius, not an absolute temperature conversion.'), display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}°C`, unit: '' }) } },
+  ] as const;
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <PanelTitle className="flex items-center gap-2">
-          <Lightbulb className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('tempImpact.detective.title', 'Efficiency Detective')}
-        </PanelTitle>
-        {data && (
+    <LayoutCard
+      title={t('tempImpact.detective.title', 'Efficiency detective')}
+      actions={<><Icon icon={Lightbulb} className={typography.color.muted} aria-hidden={true} />{data && (
           <Badge variant={verdictBadge(data.verdict, t).variant} size="sm">
             {verdictBadge(data.verdict, t).label}
           </Badge>
-        )}
-      </div>
-
-      {isLoading ? (
-        <Skeleton height={96} />
-      ) : isError ? (
-        <QueryError error={error} onRetry={() => refetch()} />
-      ) : !data ? (
-        <Caption>{t('tempImpact.detective.noData', 'Select a vehicle to diagnose efficiency shifts.')}</Caption>
-      ) : (
+        )}</>}
+    >
+      <SourceContent
+        state={state.fatalError ? 'error' : state.status === 'stale' ? 'retained' : !noVehicle && !initialBlocked && isLoading && !state.hasData ? 'loading' : !data ? 'empty' : 'ready'}
+        label={t('tempImpact.detective.title', 'Efficiency detective')}
+        error={state.fatalError}
+        errorRecovery={{ onRetry: () => void refetch() }}
+        errorMessage={t('tempImpact.detective.loadFailed', 'Efficiency diagnosis could not be loaded.')}
+        emptyMessage={emptyMessage}
+        emptyContent={
+          <div className="min-w-0 space-y-2 break-words">
+            <Caption role={unresolved ? 'status' : undefined} aria-live={unresolved ? 'polite' : undefined}>{emptyMessage}</Caption>
+            {!noVehicle && (
+              <Button type="button" variant="secondary" size="sm" wrapLabel
+                className="max-w-full min-h-11 md:min-h-9" onClick={() => void refetch()}>
+                {t('error.retry', 'Retry')}
+              </Button>
+            )}
+          </div>
+        }
+        loadingContent={<Skeleton height={96} />}
+      >
+      {data && (
         <div className="space-y-2">
           <Text as="p" variant="bodySm">{data.explanation}</Text>
           {data.verdict !== 'insufficient_data' && (
-            <Text as="p" variant="caption" className="tabular-nums">
-              {t(
-                'tempImpact.detective.detail',
-                '{{delta}}% vs prior month · {{attributed}}% temperature-attributed · {{temp}}°C shift',
-                {
-                  delta: fmtNumber(data.efficiency_delta_pct, 1),
-                  attributed: fmtNumber(data.temp_attributed_pct, 1),
-                  temp: fmtNumber(data.temp_delta_c, 1),
-                },
-              )}
-            </Text>
+            <>
+              <MapsOperationalBrief variant="embedded"
+                title={t('tempImpact.detective.brief.title', 'Month-over-month diagnosis')}
+                description={detail}
+                scope={scope}
+                metrics={metrics}
+                sources={[{ label: t('tempImpact.detective.title', 'Efficiency detective'), state }]}
+              />
+            </>
           )}
         </div>
       )}
-    </GlassPanel>
+      </SourceContent>
+    </LayoutCard>
   );
 }

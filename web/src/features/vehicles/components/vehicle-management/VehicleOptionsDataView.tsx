@@ -14,7 +14,9 @@ export function VehicleOptionsDataView({
 }: VehicleOptionsDataViewProps) {
   const { t } = useTranslation()
   const options = parseVehicleOptions(data)
-  const activeCount = options.filter((option) => option.isActive === true).length
+  const activeCount = options.some((option) => option.isActive === null)
+    ? null
+    : options.filter((option) => option.isActive === true).length
 
   if (options.length === 0) {
     return (
@@ -42,7 +44,10 @@ export function VehicleOptionsDataView({
           {t(
             'vehicleManagement.options.resultSummary',
             '{{active}} active of {{total}} options returned',
-            { active: activeCount, total: options.length },
+            {
+              active: activeCount ?? t('common.unknown', 'Unknown'),
+              total: options.length,
+            },
           )}
         </Text>
         <Badge variant="success" dot>
@@ -74,13 +79,7 @@ export function VehicleOptionsDataView({
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
             >
               <div className="flex items-start gap-3">
-                <div
-                  className={
-                    option.isActive === true
-                      ? 'rounded-lg bg-emerald-500/10 p-2 text-emerald-300'
-                      : 'rounded-lg bg-[var(--control-bg)] p-2 text-[var(--text-muted)]'
-                  }
-                >
+                <div className="rounded-lg bg-[var(--control-bg)] p-2 text-[var(--text-secondary)]">
                   {option.isActive === false ? (
                     <Icons.close className="h-4 w-4" aria-hidden="true" />
                   ) : option.isActive === true ? (

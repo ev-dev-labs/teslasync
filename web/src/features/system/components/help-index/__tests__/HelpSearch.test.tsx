@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import '@/i18n'
 
@@ -164,5 +164,93 @@ describe('HelpSearch — no network', () => {
     fireEvent.change(screen.getByTestId('help-search-input'), { target: { value: 'battery' } })
     expect(fetchSpy).not.toHaveBeenCalled()
     fetchSpy.mockRestore()
+  })
+})
+
+describe('HelpSearch — informational results and empty-result reset', () => {
+  it('renders filter_scope as readable information without a navigation affordance', () => {
+    renderSearch()
+    const input = screen.getByTestId('help-search-input')
+    fireEvent.change(input, { target: { value: 'filter scope' } })
+
+    const option = screen.getByRole('option')
+    expect(option).toHaveAttribute('data-help-entry-id', 'troubleshooting:unavailable:filter_scope')
+    expect(option).toHaveAttribute('aria-disabled', 'true')
+    expect(option).not.toHaveClass('cursor-pointer')
+    expect(within(option).getByText(
+      'The query succeeded and returned zero rows for the selected vehicle, date range and filters.',
+    )).toBeInTheDocument()
+    expect(within(option).getByText(
+      'Widen the date range or clear filters before concluding that the data is missing.',
+    )).toBeInTheDocument()
+
+    fireEvent.click(option)
+    expect(screen.getByTestId('help-search')).toBeInTheDocument()
+    expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(true)
+    expect(screen.getByTestId('help-search')).toBeInTheDocument()
+    expect(input).toHaveValue('filter scope')
+  })
+
+  it('keeps registered page destinations navigable', () => {
+    renderSearch()
+    fireEvent.change(screen.getByTestId('help-search-input'), {
+      target: { value: 'battery' },
+    })
+    const option = screen.getAllByRole('option').find(
+      (result) => result.getAttribute('data-help-entry-id') === 'page:/battery',
+    )
+    expect(option).toBeDefined()
+    expect(option).not.toHaveAttribute('aria-disabled')
+    expect(option).toHaveClass('cursor-pointer')
+    fireEvent.click(option!)
+    expect(screen.getByTestId('battery-page')).toBeInTheDocument()
+  })
+
+  it('clears an unmatched query on Escape and restores the first route suggestion and focus', () => {
+    renderSearch()
+    const input = screen.getByTestId('help-search-input')
+    const firstId = screen.getAllByRole('option')[0].getAttribute('data-help-entry-id')
+    input.focus()
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    fireEvent.change(input, { target: { value: 'zzzzqqqqxxxx' } })
+    expect(screen.queryAllByRole('option')).toHaveLength(0)
+    expect(input).toHaveAttribute('aria-expanded', 'false')
+    expect(input).not.toHaveAttribute('aria-activedescendant')
+
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false)
+    expect(input).toHaveValue('')
+    expect(screen.queryByTestId('help-search-empty')).not.toBeInTheDocument()
+    expect(screen.getByTestId('help-search-status')).toHaveTextContent(/relevant to this page/i)
+    const first = screen.getAllByRole('option')[0]
+    expect(first).toHaveAttribute('data-help-entry-id', firstId)
+    expect(first).toHaveAttribute('aria-selected', 'true')
+    expect(input).toHaveAttribute('aria-activedescendant', first.id)
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('clears an unmatched query on Escape even when the route has no suggestions', () => {
+    renderSearch('/not-a-registered-route')
+    const input = screen.getByTestId('help-search-input')
+    fireEvent.change(input, { target: { value: 'zzzzqqqqxxxx' } })
+
+    expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false)
+    expect(input).toHaveValue('')
+    expect(screen.queryAllByRole('option')).toHaveLength(0)
+    expect(input).not.toHaveAttribute('aria-activedescendant')
+    expect(screen.queryByTestId('help-search-empty')).not.toBeInTheDocument()
+  })
+
+  it('leaves unmatched queries and focus intact for navigation keys', () => {
+    renderSearch()
+    const input = screen.getByTestId('help-search-input')
+    input.focus()
+    fireEvent.change(input, { target: { value: 'zzzzqqqqxxxx' } })
+
+    for (const key of ['ArrowDown', 'ArrowUp', 'Enter']) {
+      expect(fireEvent.keyDown(input, { key })).toBe(true)
+      expect(input).toHaveValue('zzzzqqqqxxxx')
+      expect(input).not.toHaveAttribute('aria-activedescendant')
+      expect(document.activeElement).toBe(input)
+    }
   })
 })

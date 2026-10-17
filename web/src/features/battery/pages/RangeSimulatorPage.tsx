@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dices, BatteryMedium, Gauge, ShieldCheck } from 'lucide-react';
+import { Dices } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Slider, HelpTooltip } from '@/components/ui';
-import { VehicleSelect } from '@/components/forms';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { PageLayout, LayoutCard, ChartCard, CardGrid } from '@/components/layout';
+import { Text, Slider, HelpTooltip, Badge } from '@/components/ui';
+import { type StatMetric } from '@/components/data-display';
+import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
+import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
-  ChartContainer, ChartTooltip,
+  ChartTooltip,
   BarChart, Bar, Cell, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -19,6 +19,7 @@ import { useDrives } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
 
@@ -36,6 +37,7 @@ export default function RangeSimulatorPage() {
   const { formatDistance, formatEnergy, unitPrefs } = useUnits();
 
   const drivesQuery = useDrives(vehicleIdStr);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
 
   const isMiles = unitPrefs.distance === 'mi';
   const distUnit = isMiles ? t('rangeSim.mi', 'mi') : t('rangeSim.km', 'km');
@@ -68,83 +70,73 @@ export default function RangeSimulatorPage() {
     return <NoVehicleSelected pageTitle={t('rangeSim.title', 'Range Simulator')} />;
   }
 
-  const isLoading = drivesQuery.isLoading;
-  const isError = drivesQuery.isError;
+  const isLoading = !drivesState.hasData && drivesQuery.isLoading;
+  const isError = drivesState.fatalError != null;
+  const summaryMetrics: StatMetric[] = [
+    {
+      metricId: 'percent', occurrenceId: 'sim-arrival-odds',
+      label: t('rangeSim.odds', 'Arrival Odds'),
+      rawValue: successPct,
+      display: { precision: 0 },
+      context: <Badge variant={successPct == null ? 'neutral' : successPct >= 95 ? 'success' : successPct >= 70 ? 'warning' : 'danger'}>
+        {t('rangeSim.oddsHint', 'arrive with ≥{{pct}}% battery', { pct: SIM_RESERVE_PCT })}
+      </Badge>,
+    },
+    {
+      metricId: 'percent', occurrenceId: 'sim-median',
+      label: t('rangeSim.median', 'Median Arrival'),
+      rawValue: result.p50,
+      display: { formatter: raw => ({ value: `${raw}%`, unit: '' }) },
+      context: result.p10 != null && result.p90 != null
+        ? t('rangeSim.band', 'P10 {{p10}}% · P90 {{p90}}%', { p10: result.p10, p90: result.p90 })
+        : undefined,
+    },
+    {
+      metricId: 'energy', occurrenceId: 'sim-pack',
+      label: t('rangeSim.pack', 'Self-Measured Pack'),
+      rawValue: result.packWhEstimate,
+      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
+      context: t('rangeSim.packHint', 'median implied usable capacity'),
+    },
+    {
+      metricId: 'count', occurrenceId: 'sim-trials',
+      label: t('rangeSim.trials', 'Simulated Trips'),
+      rawValue: result.p50 != null ? result.trials : null,
+      display: { formatter: raw => ({ value: String(raw), unit: '' }) },
+      context: t('rangeSim.fromDrives', 'from {{count}} real drives', { count: result.sampleSize }),
+    },
+  ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('rangeSim.title', 'Range Simulator')}
       subtitle={t('rangeSim.subtitle', 'Monte Carlo trip odds from your own driving history')}
       query={drivesQuery}
-      actions={<VehicleSelect />}
     >
+      <StaleRefreshWarning state={drivesState} label={t('rangeSim.title', 'Range Simulator')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('rangeSim.kpis', 'Simulation summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('rangeSim.odds', 'Arrival Odds')}
-                value={successPct != null ? `${successPct}%` : '—'}
-                subtitle={t('rangeSim.oddsHint', 'arrive with ≥{{pct}}% battery', { pct: SIM_RESERVE_PCT })}
-                icon={<ShieldCheck className="h-5 w-5" />}
-                color={successPct == null ? 'cyan' : successPct >= 95 ? 'green' : successPct >= 70 ? 'amber' : 'red'}
-              />
-              <MetricCard
-                label={t('rangeSim.median', 'Median Arrival')}
-                value={result.p50 != null ? `${result.p50}%` : '—'}
-                subtitle={
-                  result.p10 != null && result.p90 != null
-                    ? t('rangeSim.band', 'P10 {{p10}}% · P90 {{p90}}%', { p10: result.p10, p90: result.p90 })
-                    : undefined
-                }
-                icon={<BatteryMedium className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('rangeSim.pack', 'Self-Measured Pack')}
-                value={result.packWhEstimate != null ? formatEnergy(result.packWhEstimate, { precision: 1 }) : '—'}
-                subtitle={t('rangeSim.packHint', 'median implied usable capacity')}
-                icon={<Gauge className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('rangeSim.trials', 'Simulated Trips')}
-                value={result.p50 != null ? result.trials : '—'}
-                subtitle={t('rangeSim.fromDrives', 'from {{count}} real drives', { count: result.sampleSize })}
-                icon={<Dices className="h-5 w-5" />}
-                color="amber"
-              />
-            </>
-          )}
+        <section>
+        <BatteryEvidenceBrief title={t('rangeSim.kpis', 'Simulation summary metrics')}
+          metrics={summaryMetrics} loading={isLoading} retained={drivesState.status === 'stale'}
+          period={{ kind: 'unknown', label: t('rangeSim.subtitle', 'Monte Carlo trip odds from your own driving history'),
+            reason: t('rangeSim.summaryScope', 'Simulation calibrated from returned drive history; no complete-history interval is supplied.') }} />
+        {isError && <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} />}
         </section>
       </FadeIn>
 
       {/* 2 — Knobs (1/3) + arrival distribution (2/3) */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-            <PanelTitle className="mb-4 flex items-center gap-2">
-              <Dices className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('rangeSim.plan', 'Trip Plan')}
+        <CardGrid label={t('rangeSim.plan', 'Trip Plan')} items={[
+          { id: 'range-simulator-plan', size: 'third', content: (
+          <LayoutCard title={t('rangeSim.plan', 'Trip Plan')} actions={
               <HelpTooltip
                 size="sm"
                 i18nKey="help.rangeSimulator.body"
                 defaultValue="Each of 2,000 simulated trips assembles your route from randomly drawn real drives (weighted by distance) and spends their actual consumption against a pack size self-measured from your own SoC data. The result is a distribution, not a guess."
                 ariaLabel={t('help.rangeSimulator.iconLabel', 'More info about the simulation')}
               />
-            </PanelTitle>
+            }>
 
             <div className="flex flex-col gap-6">
               <Slider
@@ -171,7 +163,7 @@ export default function RangeSimulatorPage() {
                       'rangeSim.takeaway',
                       'A {{dist}} trip starting at {{soc}}% typically lands at {{p50}}% — and {{odds}}% of simulated runs keep at least the {{reserve}}% reserve.',
                       {
-                        dist: formatDistance(tripKm * 1000, { precision: 0 }),
+                        dist: formatDistance(tripKm * 1000),
                         soc: startSoc,
                         p50: result.p50,
                         odds: successPct,
@@ -181,22 +173,24 @@ export default function RangeSimulatorPage() {
                   : t('rangeSim.needHistory', 'The simulator needs 8+ drives with energy data plus SoC history to calibrate your pack.')}
               </Text>
             </div>
-          </GlassPanel>
+          </LayoutCard>
+          ) },
 
-          {!isLoading && !isError && result.p50 == null ? (
-            <GlassPanel className="flex items-center justify-center p-4 sm:p-5 xl:col-span-2">
+          { id: 'range-simulator-distribution', size: 'half', content: !isLoading && !isError && result.p50 == null ? (
+            <LayoutCard title={t('rangeSim.histogram', 'Arrival Battery Distribution')}>
               <EmptyState /* no-action: fills in automatically once enough drive+SoC history exists to calibrate. */
                 icon={<Dices className="h-8 w-8" />}
                 message={t('rangeSim.noData', 'Not enough history yet — the simulator calibrates itself from your drives.')}
               />
-            </GlassPanel>
+            </LayoutCard>
           ) : (
-            <ChartContainer
-              className="xl:col-span-2"
+            <ChartCard toolbar exportable size="standard"
               title={t('rangeSim.histogram', 'Arrival Battery Distribution')}
               subtitle={t('rangeSim.histogramHint', '2,000 simulated arrivals; the dashed line is the {{pct}}% reserve', { pct: SIM_RESERVE_PCT })}
-              ariaLabel={t('rangeSim.histogram.aria', 'Histogram of simulated arrival battery percentages for the planned trip')}
+              ariaLabel={t('rangeSim.histogramAria', 'Histogram of simulated arrival battery percentages for the planned trip')}
               loading={isLoading}
+              error={drivesState.fatalError}
+              onRetry={() => { void drivesQuery.refetch(); }}
               empty={histogramData.length === 0}
               height={340}
               data={histogramData}
@@ -234,10 +228,10 @@ export default function RangeSimulatorPage() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </ChartContainer>
-          )}
-        </section>
+            </ChartCard>
+          ) },
+        ]} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -10,6 +10,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { formatTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ ...actual.useSettings(), locale: datePreferences.locale }) };
+});
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return { ...actual, useTimezone: () => datePreferences.tz };
+});
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -88,11 +99,21 @@ function renderPanel(s: JourneySession = session) {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
   vi.clearAllMocks();
   mockDeparture.mockReturnValue(idle({ data: advice }));
 });
 
 describe('DeparturePanel', () => {
+  it('formats the recommendation and every slot in the selected locale and timezone', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    renderPanel();
+    expect(screen.getByText(`Leave ${formatTime(advice.recommended_at, datePreferences)}`)).toBeInTheDocument();
+    for (const slot of advice.slots) {
+      expect(screen.getByText(formatTime(slot.depart_at, datePreferences))).toBeInTheDocument();
+    }
+  });
+
   it('asks for an origin when the session has none', () => {
     renderPanel({ ...session, origin_lat: null });
     expect(screen.getByText(/Add an origin to advise/)).toBeInTheDocument();
@@ -102,7 +123,7 @@ describe('DeparturePanel', () => {
   it('recommends the calm slot with charge context and evidence', () => {
     renderPanel();
     expect(screen.getByText(/Leave /)).toBeInTheDocument();
-    expect(screen.getByText('Battery 82% now')).toBeInTheDocument();
+    expect(screen.getByText('Battery 82.00% now')).toBeInTheDocument();
     expect(screen.getByText(/6 slots scored, 2 warning, 1 watch/)).toBeInTheDocument();
   });
 
@@ -127,5 +148,30 @@ describe('DeparturePanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('retains every hourly slot, charge context and evidence after a failed refresh', () => {
+    mockDeparture.mockReturnValue(idle({
+      data: advice, error: new Error('forecast refresh failed'), isError: true, isFetching: true,
+    }));
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'When to leave' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Departure hours' }).children).toHaveLength(advice.slots.length);
+    expect(screen.getByText('Battery 82.00% now')).toBeInTheDocument();
+    expect(screen.getByText(/6 slots scored, 2 warning, 1 watch/)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '12h' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: '48h' }));
+    expect(screen.getByRole('button', { name: '48h' })).toHaveAttribute('aria-pressed', 'true');
+    const [, from, to] = mockDeparture.mock.lastCall as [number, string, string];
+    expect(new Date(to).getTime() - new Date(from).getTime()).toBe(48 * 3600_000);
+  });
+
+  it('preserves the forecast shell and all business horizon controls when coverage is empty', () => {
+    mockDeparture.mockReturnValue(idle({ data: { ...advice, slots: [] } }));
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'When to leave' })).toBeInTheDocument();
+    expect(screen.getByText('The forecast covers none of this window.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '24h' })).toBeEnabled();
   });
 });

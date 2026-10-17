@@ -16,7 +16,7 @@ import { Icons } from '@/lib/icons';
 export interface ActivityVisual {
   /** Icon to render in the timeline dot. */
   icon: LucideIcon;
-  /** Tailwind text/border color class, e.g. `text-cyan-300`. */
+  /** Tailwind text/border color class, e.g. `text-[var(--semantic-info)]`. */
   color: string;
   /** i18n key (no namespace) used to look up a translated label. */
   i18nKey: string;
@@ -28,49 +28,49 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── Vehicle commands ──────────────────────────────────────────────────────
   'vehicle.command': {
     icon: Icons.gamepad,
-    color: 'text-fuchsia-400',
+    color: 'text-[var(--text-secondary)]',
     i18nKey: 'activity.action.vehicleCommand',
     fallback: 'Vehicle command',
   },
   'vehicle.command.wake': {
     icon: Icons.power,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.vehicleCommandWake',
     fallback: 'Wake vehicle',
   },
   'vehicle.command.honk': {
     icon: Icons.notificationsActive,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.vehicleCommandHonk',
     fallback: 'Honk horn',
   },
   'vehicle.command.flash': {
     icon: Icons.power,
-    color: 'text-yellow-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.vehicleCommandFlash',
     fallback: 'Flash lights',
   },
   'vehicle.command.lock': {
     icon: Icons.locked,
-    color: 'text-emerald-300',
+    color: 'text-[var(--semantic-success)]',
     i18nKey: 'activity.action.vehicleCommandLock',
     fallback: 'Lock vehicle',
   },
   'vehicle.command.unlock': {
     icon: Icons.unlocked,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.vehicleCommandUnlock',
     fallback: 'Unlock vehicle',
   },
   'vehicle.command.climate': {
     icon: Icons.climate,
-    color: 'text-sky-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.vehicleCommandClimate',
     fallback: 'Climate command',
   },
   'vehicle.command.charge': {
     icon: Icons.bolt,
-    color: 'text-emerald-300',
+    color: 'text-[var(--semantic-success)]',
     i18nKey: 'activity.action.vehicleCommandCharge',
     fallback: 'Charging command',
   },
@@ -78,13 +78,13 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── Settings / preferences ────────────────────────────────────────────────
   'settings.update': {
     icon: Icons.settings,
-    color: 'text-indigo-300',
+    color: 'text-[var(--text-secondary)]',
     i18nKey: 'activity.action.settingsUpdate',
     fallback: 'Settings updated',
   },
   'settings': {
     icon: Icons.settings,
-    color: 'text-indigo-300',
+    color: 'text-[var(--text-secondary)]',
     i18nKey: 'activity.action.settings',
     fallback: 'Settings change',
   },
@@ -92,25 +92,25 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── Alerts ────────────────────────────────────────────────────────────────
   'alert.rule.create': {
     icon: Icons.notificationsAdd,
-    color: 'text-rose-300',
+    color: 'text-[var(--semantic-danger)]',
     i18nKey: 'activity.action.alertRuleCreate',
     fallback: 'Alert rule created',
   },
   'alert.rule.update': {
     icon: Icons.notifications,
-    color: 'text-rose-300',
+    color: 'text-[var(--semantic-danger)]',
     i18nKey: 'activity.action.alertRuleUpdate',
     fallback: 'Alert rule updated',
   },
   'alert.rule.delete': {
     icon: Icons.notificationsMuted,
-    color: 'text-rose-300',
+    color: 'text-[var(--semantic-danger)]',
     i18nKey: 'activity.action.alertRuleDelete',
     fallback: 'Alert rule deleted',
   },
   'alert': {
     icon: Icons.notifications,
-    color: 'text-rose-300',
+    color: 'text-[var(--semantic-danger)]',
     i18nKey: 'activity.action.alert',
     fallback: 'Alert change',
   },
@@ -118,19 +118,19 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── Automations ───────────────────────────────────────────────────────────
   'automation.create': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationCreate',
     fallback: 'Automation created',
   },
   'automation.update': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationUpdate',
     fallback: 'Automation updated',
   },
   'automation.delete': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationDelete',
     fallback: 'Automation deleted',
   },
@@ -142,25 +142,25 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // domain-level `automation` entry via the prefix walk.
   'automation.created': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationCreated',
     fallback: 'Automation created',
   },
   'automation.updated': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationUpdated',
     fallback: 'Automation updated',
   },
   'automation.deleted': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationDeleted',
     fallback: 'Automation deleted',
   },
   'automation.enabled': {
     icon: Icons.workflow,
-    color: 'text-emerald-300',
+    color: 'text-[var(--semantic-success)]',
     i18nKey: 'activity.action.automationEnabled',
     fallback: 'Automation enabled',
   },
@@ -172,55 +172,55 @@ const REGISTRY: Record<string, ActivityVisual> = {
   },
   'automation.re_enabled': {
     icon: Icons.workflow,
-    color: 'text-emerald-300',
+    color: 'text-[var(--semantic-success)]',
     i18nKey: 'activity.action.automationReEnabled',
     fallback: 'Automation re-enabled',
   },
   'automation.test_run': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationTestRun',
     fallback: 'Automation test run',
   },
   'automation.undo': {
     icon: Icons.undo,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.automationUndo',
     fallback: 'Automation undone',
   },
   'automation.imported': {
     icon: Icons.download,
-    color: 'text-teal-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationImported',
     fallback: 'Automations imported',
   },
   'automation.exported': {
     icon: Icons.upload,
-    color: 'text-teal-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationExported',
     fallback: 'Automations exported',
   },
   'automation.executed': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automationExecuted',
     fallback: 'Automation ran',
   },
   'automation.failed': {
     icon: Icons.error,
-    color: 'text-rose-300',
+    color: 'text-[var(--semantic-danger)]',
     i18nKey: 'activity.action.automationFailed',
     fallback: 'Automation failed',
   },
   'automation.auto_disabled': {
     icon: Icons.workflow,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.automationAutoDisabled',
     fallback: 'Automation auto-disabled',
   },
   'automation': {
     icon: Icons.workflow,
-    color: 'text-cyan-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.automation',
     fallback: 'Automation change',
   },
@@ -228,13 +228,13 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── Dashboard / layout ────────────────────────────────────────────────────
   'dashboard.layout.save': {
     icon: Icons.layoutGrid,
-    color: 'text-violet-300',
+    color: 'text-[var(--text-secondary)]',
     i18nKey: 'activity.action.dashboardLayoutSave',
     fallback: 'Dashboard layout saved',
   },
   'dashboard': {
     icon: Icons.layoutDashboard,
-    color: 'text-violet-300',
+    color: 'text-[var(--text-secondary)]',
     i18nKey: 'activity.action.dashboard',
     fallback: 'Dashboard change',
   },
@@ -242,13 +242,13 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── Data exports ──────────────────────────────────────────────────────────
   'data_export.create': {
     icon: Icons.download,
-    color: 'text-teal-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.dataExportCreate',
     fallback: 'Data export requested',
   },
   'data_export': {
     icon: Icons.download,
-    color: 'text-teal-300',
+    color: 'text-[var(--semantic-info)]',
     i18nKey: 'activity.action.dataExport',
     fallback: 'Data export',
   },
@@ -256,25 +256,25 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── API keys ──────────────────────────────────────────────────────────────
   'api_key.create': {
     icon: Icons.key,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.apiKeyCreate',
     fallback: 'API key created',
   },
   'api_key.update': {
     icon: Icons.key,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.apiKeyUpdate',
     fallback: 'API key updated',
   },
   'api_key.delete': {
     icon: Icons.key,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.apiKeyDelete',
     fallback: 'API key revoked',
   },
   'api_key': {
     icon: Icons.key,
-    color: 'text-amber-300',
+    color: 'text-[var(--semantic-warning)]',
     i18nKey: 'activity.action.apiKey',
     fallback: 'API key change',
   },
@@ -282,7 +282,7 @@ const REGISTRY: Record<string, ActivityVisual> = {
   // ── Auth ──────────────────────────────────────────────────────────────────
   'auth.login': {
     icon: Icons.user,
-    color: 'text-emerald-300',
+    color: 'text-[var(--semantic-success)]',
     i18nKey: 'activity.action.authLogin',
     fallback: 'Signed in',
   },

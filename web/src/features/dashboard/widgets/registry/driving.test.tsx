@@ -266,7 +266,7 @@ describe('DRIVING_WIDGETS — via <WidgetPicker>', () => {
     renderPicker();
     filterToDriving();
 
-    const regenCard = screen.getByRole('button', { name: /Regen Braking/i });
+    const regenCard = screen.getByRole('button', { name: /Regen braking/i });
     expect(within(regenCard).getByText(REGEN_DESC)).toBeInTheDocument();
     // defaultSize {cols:1, rows:2} is surfaced verbatim on the card.
     expect(within(regenCard).getByText('1×2 grid')).toBeInTheDocument();
@@ -278,7 +278,7 @@ describe('DRIVING_WIDGETS — via <WidgetPicker>', () => {
     const { onAddWidgets, onClose } = renderPicker();
     filterToDriving();
 
-    fireEvent.click(screen.getByRole('button', { name: /Regen Braking/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Regen braking/i }));
 
     expect(onAddWidgets).toHaveBeenCalledTimes(1);
     expect(onAddWidgets).toHaveBeenCalledWith(['regen-efficiency']);

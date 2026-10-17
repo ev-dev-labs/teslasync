@@ -41,30 +41,30 @@ import {
   cleanup,
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { Mock } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import '@/i18n';
 
 import type { VersionInfo, UpdateCheckResult } from '@/api/types';
-import type { UseChangelogResult } from '@/hooks/useChangelog';
+import type { UseChangelogStatusResult } from '@/hooks/useChangelogStatus';
 
 // ── Mocks (hoisted by vitest above the imports below) ─────────────────
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
 }));
 
-vi.mock('@/hooks/useChangelog', () => ({
-  useChangelog: vi.fn(),
+vi.mock('@/hooks/useChangelogStatus', () => ({
+  useChangelogStatus: vi.fn(),
   openChangelogModal: vi.fn(),
 }));
 
 import { request } from '@/api/client';
-import { useChangelog, openChangelogModal } from '@/hooks/useChangelog';
+import { useChangelogStatus, openChangelogModal } from '@/hooks/useChangelogStatus';
 import { VersionSegment } from './VersionSegment';
 
-const mockRequest = request as unknown as Mock;
-const mockUseChangelog = useChangelog as unknown as Mock;
-const mockOpenChangelog = openChangelogModal as unknown as Mock;
+const mockRequest = vi.mocked(request);
+const mockUseChangelog = vi.mocked(useChangelogStatus);
+const mockOpenChangelog = vi.mocked(openChangelogModal);
 
 // The same Vite `define` that injects these build constants into the
 // component also rewrites them in this test module, so reading them here keeps
@@ -102,30 +102,19 @@ function makeUpdateCheck(
 }
 
 function makeChangelog(
-  overrides: Partial<UseChangelogResult> = {},
-): UseChangelogResult {
+  overrides: Partial<UseChangelogStatusResult> = {},
+): UseChangelogStatusResult {
   return {
-    entries: [],
     latestVersion: '2.3.4',
     seenVersion: '2.3.4',
     hasUnseen: false,
-    newEntries: [],
+    unseenCount: 0,
     markSeen: vi.fn(),
     stampShown: vi.fn(),
     canAutoShow: false,
     hasCompletedOnboarding: true,
     ...overrides,
   };
-}
-
-// `newEntries` is only read for its `.length` (the "{{count}} new release(s)"
-// interpolation), so shape-cast N stand-in entries.
-function entriesOfLength(n: number): UseChangelogResult['newEntries'] {
-  return Array.from({ length: n }, (_, i) => ({
-    version: `9.9.${i}`,
-    date: '2024-01-01',
-    title: `Release ${i}`,
-  })) as unknown as UseChangelogResult['newEntries'];
 }
 
 // Route the mocked request() by URL so BOTH queries resolve deterministically.
@@ -188,6 +177,65 @@ afterEach(() => {
 
 // ── Trigger chip ──────────────────────────────────────────────────────
 describe('VersionSegment — trigger chip', () => {
+  it('retains native keyboard activation and externally managed About state', async () => {
+    const user = userEvent.setup();
+    const onOpenAbout = vi.fn();
+    renderSegment(
+      <VersionSegment variant="menu" aboutOpen onOpenAbout={onOpenAbout} />,
+    );
+    const trigger = await screen.findByTestId('status-bar-about-trigger');
+    await waitFor(() => expect(trigger).toHaveTextContent('v2.3.4'));
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    expect(onOpenAbout).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('keeps full long metadata and logical menu spacing in RTL', async () => {
+    const version = `2.3.4-${'release'.repeat(40)}`;
+    wireRequests({ version: makeVersionInfo({ app_version: version }) });
+    renderSegment(<div dir="rtl"><VersionSegment variant="menu" /></div>);
+    const trigger = await screen.findByTestId('status-bar-about-trigger');
+    await waitFor(() => expect(trigger).toHaveTextContent(`v${version}`));
+    expect(trigger).toHaveAccessibleName(`TeslaSync version: v${version}${
+      BUILD_SHA !== 'dev' ? ` (${BUILD_SHA})` : ''
+    }`);
+    expect(within(trigger).getByText(`v${version}`)).toHaveClass('ms-auto', 'break-words');
+    expect(trigger).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(trigger).not.toHaveClass('min-w-0');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
+  it('allocates mobile menu minimums while explicitly restoring md density without fixed height', async () => {
+    renderSegment(<VersionSegment variant="menu" />);
+    const trigger = await screen.findByTestId('status-bar-about-trigger');
+    await waitFor(() => expect(trigger).toHaveTextContent('v2.3.4'));
+    expect(trigger).toHaveClass(
+      'h-auto', 'min-h-11', 'min-w-11', 'w-full', 'justify-start',
+      'px-3', 'py-2', 'md:min-h-9', 'md:min-w-0',
+    );
+    expect(trigger).not.toHaveClass('h-9', 'h-11', 'min-h-9', 'min-w-0', 'truncate');
+    expect(trigger).toHaveAttribute('type', 'button');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveTextContent('About TeslaSync');
+    expect(within(trigger).getByText('v2.3.4')).toHaveClass('ms-auto', 'min-w-0', 'break-words');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
+  it('retains the separate status variant density without mobile menu sizing', async () => {
+    const trigger = await findResolvedTrigger();
+    expect(trigger).toHaveClass('h-5', 'min-h-0', 'gap-1.5', 'rounded', 'px-1.5', 'py-0', 'text-xs');
+    expect(trigger).not.toHaveClass('leading-none', 'text-sm');
+    expect(trigger).not.toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'w-full');
+    expect(trigger).toHaveTextContent('v2.3.4');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
   it('renders the same About dialog from the Help menu variant', async () => {
     renderSegment(<VersionSegment variant="menu" />);
 
@@ -247,7 +295,7 @@ describe('VersionSegment — trigger chip', () => {
   it('iconOnly hides the visible version text + dots but keeps the accessible name', async () => {
     wireRequests({ update: makeUpdateCheck({ update_available: true }) });
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(2) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 2 }),
     );
 
     renderSegment(<VersionSegment iconOnly />);
@@ -258,8 +306,8 @@ describe('VersionSegment — trigger chip', () => {
     await waitFor(() => expect(trigger).toHaveAccessibleName(/v2\.3\.4/));
     // Visible label + indicator dots are suppressed in icon-only mode…
     expect(trigger).not.toHaveTextContent('v2.3.4');
-    expect(trigger.querySelector('.bg-amber-400')).toBeNull();
-    expect(trigger.querySelector('.bg-cyan-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
     // …but the state is still fully described for assistive tech.
     expect(trigger).toHaveAccessibleName(/Update available/i);
     expect(trigger).toHaveAccessibleName(/unseen changelog/i);
@@ -278,7 +326,7 @@ describe('VersionSegment — update + unseen indicators', () => {
       expect(trigger).toHaveAccessibleName(/Update available/i),
     );
 
-    const dot = trigger.querySelector('.bg-amber-400');
+    const dot = trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]');
     expect(dot).not.toBeNull();
     // Dot is purely visual — the state lives in the button's name.
     expect(dot).toHaveAttribute('aria-hidden', 'true');
@@ -286,13 +334,13 @@ describe('VersionSegment — update + unseen indicators', () => {
 
   it('surfaces unseen-changelog and shows a cyan dot when no update is pending', async () => {
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(3) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 3 }),
     );
 
     const trigger = await findResolvedTrigger();
     expect(trigger).toHaveAccessibleName(/unseen changelog/i);
-    expect(trigger.querySelector('.bg-cyan-400')).not.toBeNull();
-    expect(trigger.querySelector('.bg-amber-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).not.toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
   });
 
   it('prefers the amber update dot over the cyan dot while still naming both states', async () => {
@@ -300,7 +348,7 @@ describe('VersionSegment — update + unseen indicators', () => {
       update: makeUpdateCheck({ update_available: true, latest: '3.0.0' }),
     });
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(1) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 1 }),
     );
 
     const trigger = await findResolvedTrigger();
@@ -309,8 +357,8 @@ describe('VersionSegment — update + unseen indicators', () => {
     );
     expect(trigger).toHaveAccessibleName(/unseen changelog/i);
     // Only one dot renders; update wins the visual slot.
-    expect(trigger.querySelector('.bg-amber-400')).not.toBeNull();
-    expect(trigger.querySelector('.bg-cyan-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).not.toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
   });
 
   it('omits both indicators (dots + name clauses) when caught up with no update', async () => {
@@ -318,8 +366,8 @@ describe('VersionSegment — update + unseen indicators', () => {
 
     expect(trigger.getAttribute('aria-label')).not.toMatch(/Update available/i);
     expect(trigger.getAttribute('aria-label')).not.toMatch(/unseen changelog/i);
-    expect(trigger.querySelector('.bg-amber-400')).toBeNull();
-    expect(trigger.querySelector('.bg-cyan-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
   });
 });
 
@@ -327,7 +375,7 @@ describe('VersionSegment — update + unseen indicators', () => {
 describe('VersionSegment — tooltip', () => {
   it('renders a role="tooltip" carrying version, uptime, and the unseen hint', async () => {
     mockUseChangelog.mockReturnValue(
-      makeChangelog({ hasUnseen: true, newEntries: entriesOfLength(3) }),
+      makeChangelog({ hasUnseen: true, unseenCount: 3 }),
     );
 
     renderSegment();

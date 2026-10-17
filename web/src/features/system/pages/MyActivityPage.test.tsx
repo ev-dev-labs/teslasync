@@ -20,9 +20,9 @@
  *   7.  401 hard-gate — sign-in-required notice; sections suppressed.
  *   8.  Non-gate 500 — each section shows an inline error + Retry; the gate
  *       notice is NOT shown, and Retry re-issues the query.
- *   9.  Default window — the request carries a 30-day ISO range + limit=200.
- *   10. URL-driven range — start/end query params flow verbatim into the
- *       request as snake_case params.
+ *   9.  Default window — the request carries precise range instants + limit=200.
+ *   10. URL-driven range — legacy start/end bookmarks migrate to the shared
+ *       range without changing saved preferences.
  *   11. Header range interaction — changing the shared URL window refetches
  *       without a redundant page-level picker.
  *
@@ -32,11 +32,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, useSearchParams } from 'react-router-dom';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
 import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
+import englishCatalog from '@/i18n/en.json';
+import activityCatalog from '@/i18n/en/locale-detail-activity.json';
+import systemCatalog from '@/i18n/en/locale-system.json';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -65,6 +69,10 @@ vi.mock('react-i18next', async () => {
 import { request } from '@/api/client';
 import { ApiError } from '@/lib/resilience';
 import MyActivityPage from './MyActivityPage';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 import type { UserActivityEntry } from '@/types/admin';
 
 const mockedRequest = request as unknown as Mock;
@@ -138,23 +146,25 @@ function routeRequest(url: string, _opts?: ReqOpts): Promise<unknown> {
 }
 
 function HeaderRangeControl() {
-  const [, setParams] = useSearchParams();
-  return <Button type="button" data-testid="header-activity-range" onClick={() => setParams((params) => {
-    const next = new URLSearchParams(params);
-    next.set('start', '2015-01-01');
-    next.set('end', '2026-09-25');
-    return next;
-  })}>Change header range</Button>;
+  const { setRange, setPreset } = useRangeState();
+  const location = useLocation();
+  return <>
+    <Button type="button" data-testid="header-activity-range" onClick={() =>
+      setRange({ start: '2015-01-01', end: '2026-09-25' }, 'custom')
+    }>Change header range</Button>
+    <Button type="button" onClick={() => setPreset('24h')}>Last 24 hours</Button>
+    <output data-testid="activity-url">{location.search}</output>
+  </>;
 }
 
-function renderPage(initialEntry = '/my-activity') {
+function renderPage(initialEntry = '/me/activity', enabled = true) {
   const qc = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: { retry: false, enabled },
       mutations: { retry: false },
     },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[initialEntry]}>
         <MyActivityPage />
@@ -162,17 +172,19 @@ function renderPage(initialEntry = '/my-activity') {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, queryClient: qc };
 }
 
 /** Return the KPI card (`div.flex-1`) that owns a given label so the value
  *  paragraph can be asserted without cross-card collisions. */
 function kpiCard(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('.flex-1');
+  const el = screen.getByText(label).closest('[data-operational-metric]');
   if (!el) throw new Error(`no KPI card for "${label}"`);
   return el as HTMLElement;
 }
 
 beforeEach(() => {
+  onlineManager.setOnline(true);
   activityResult = baseEntries();
   activityError = null;
   pending = false;
@@ -182,30 +194,95 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.restoreAllMocks();
 });
 
 describe('MyActivityPage — Project Apex elevation', () => {
+  it.each(['paused', 'idle'] as const)('keeps initial %s activity unknown with every shell and recovers', async (fetchStatus) => {
+    if (fetchStatus === 'paused') onlineManager.setOnline(false);
+    renderPage('/me/activity', fetchStatus !== 'idle');
+
+    expect(screen.getByText(fetchStatus === 'paused' ? 'Refresh paused' : 'Pending')).toBeInTheDocument();
+    expect(screen.getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    for (const title of ['Activity over time', 'Top actions', 'By category', 'By hour of day', 'Activity feed']) {
+      const panel = screen.getByRole('heading', { name: title }).closest('[data-print-card]');
+      expect(panel).not.toBeNull();
+      expect(within(panel as HTMLElement).getByText('Unknown')).toBeInTheDocument();
+      expect(panel!.querySelector('[aria-busy="true"]')).toBeNull();
+    }
+    expect(screen.getByRole('region', { name: 'Activity summary' })).not.toHaveAttribute('aria-busy', 'true');
+    for (const label of ['Total actions', 'Active days', 'Action types', 'Entities touched', 'Last active']) {
+      expect(within(kpiCard(label)).getByText('—')).toBeInTheDocument();
+      expect(within(kpiCard(label)).queryByText('0')).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/no (recent )?activity|no actions|no categories/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline|service unavailable|server error/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading activity feed' })).not.toBeInTheDocument();
+    expect(activityCalls()).toHaveLength(0);
+
+    if (fetchStatus === 'paused') {
+      act(() => onlineManager.setOnline(true));
+    } else {
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    }
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+  });
+
   it('renders panel shells + skeletons while the feed query is pending', () => {
     pending = true;
-    const { container } = renderPage();
+    renderPage();
 
     // The page header + every panel title mount immediately (never gated on
     // data), while the KPI numbers stay hidden behind their skeletons.
-    expect(screen.getByText('My Activity')).toBeInTheDocument();
+    expect(screen.getByText('My activity')).toBeInTheDocument();
     expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
-    expect(screen.queryByText('Total actions')).toBeNull();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(screen.getByText('Total actions')).toBeInTheDocument();
+    expect(kpiCard('Total actions').querySelector('[data-operational-value]')).toBeNull();
+    const summary = screen.getByRole('region', { name: 'Activity summary' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    const metrics = summary.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--surface-3)]"][class~="h-5"][class~="w-20"]');
+    expect(metrics.length).toBeGreaterThan(0);
+    expect(metrics).toHaveLength(5);
+    expect(summary.querySelector('[data-operational-value]')).toBeNull();
+    for (const title of ['Top actions', 'By category']) {
+      const panel = screen.getByRole('heading', { name: title }).closest('[data-print-card]');
+      expect(panel).not.toBeNull();
+      const pending = panel!.querySelector('[aria-busy="true"]');
+      expect(pending).not.toBeNull();
+      expect(within(pending as HTMLElement).getByRole('status')).toHaveTextContent(/loading/i);
+      const lines = pending!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+      expect(lines).toHaveLength(5);
+      lines.forEach(line => expect(line).toHaveStyle({ height: '28px' }));
+      expect(panel!.querySelector('[data-testid="activity-breakdown-list"]')).toBeNull();
+    }
+    const feed = screen.getByRole('status', { name: 'Loading activity feed' });
+    expect(feed).toHaveAttribute('aria-busy', 'true');
+    const feedLines = feed.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(feedLines).toHaveLength(6);
+    feedLines.forEach(line => expect(line).toHaveStyle({ height: '40px' }));
+    for (const title of ['Activity over time', 'By hour of day']) {
+      const chart = screen.getByRole('figure', { name: title });
+      expect(within(chart).getByRole('heading', { name: title })).toBeInTheDocument();
+      expect(chart).toHaveAttribute('data-chart-state', 'loading');
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      const placeholder = within(chart).getByRole('status', { name: 'Loading chart…' });
+      expect(placeholder.querySelectorAll('[aria-hidden="true"][class~="bg-white/[0.04]"]')).toHaveLength(7);
+      expect(within(chart).queryByRole('img')).not.toBeInTheDocument();
+    }
   });
 
   it('derives the KPI band from the single activity payload', async () => {
     renderPage();
 
-    // Gate on the KPI band leaving its loading skeletons.
+    // Labels persist during loading; await the resolved value in its own card.
     expect(await screen.findByText('Total actions')).toBeInTheDocument();
 
-    expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
     expect(within(kpiCard('Active days')).getByText('3')).toBeInTheDocument();
     expect(within(kpiCard('Action types')).getByText('5')).toBeInTheDocument();
     expect(within(kpiCard('Entities touched')).getByText('4')).toBeInTheDocument();
@@ -224,13 +301,13 @@ describe('MyActivityPage — Project Apex elevation', () => {
     // auth.login is the modal action (2 of 6 = 33%); its i18n label resolves
     // to the English fallback under the stubbed translator.
     const topActions = screen.getByText('Top actions').closest('div')?.parentElement as HTMLElement;
-    expect(within(topActions).getByText('Signed in')).toBeInTheDocument();
+    expect(await within(topActions).findByText('Signed in')).toBeInTheDocument();
     expect(within(topActions).getByText(/33%/)).toBeInTheDocument();
 
     // vehicle dominates the category split (3 of 6 = 50%), humanised from the
     // raw entity_type; the null-entity sentinel renders "System / other".
     expect(screen.getByText('Vehicle')).toBeInTheDocument();
-    expect(screen.getByText(/50%/)).toBeInTheDocument();
+    expect(screen.getByText(/50\.00%/)).toBeInTheDocument();
     expect(screen.getByText('System / other')).toBeInTheDocument();
   });
 
@@ -239,13 +316,14 @@ describe('MyActivityPage — Project Apex elevation', () => {
     await screen.findByText('Total actions');
 
     // Both auth.login rows link to /vehicles/10 (entity_type=vehicle).
-    const vehicleLinks = screen
-      .getAllByRole('link')
+    const feed = screen.getByRole('heading', { name: 'Activity feed' }).closest('[data-print-card]');
+    expect(feed).not.toBeNull();
+    const vehicleLinks = (await within(feed as HTMLElement).findAllByRole('link'))
       .filter((a) => a.getAttribute('href') === '/vehicles/10');
     expect(vehicleLinks).toHaveLength(2);
 
     // The data-export row surfaces its detail in the subtitle.
-    expect(screen.getByText(/drives dataset/)).toBeInTheDocument();
+    expect(within(feed as HTMLElement).getByText(/drives dataset/)).toBeInTheDocument();
   });
 
   it('shows per-section empty states and zeroed KPIs when there is no activity', async () => {
@@ -268,7 +346,12 @@ describe('MyActivityPage — Project Apex elevation', () => {
     renderPage();
 
     expect(await screen.findByText('Activity feed is not supported')).toBeInTheDocument();
-    expect(screen.getByText(/ForwardAuth/)).toBeInTheDocument();
+    const description = 'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure FORWARD_AUTH_HEADER.';
+    expect(screen.getByText(description)).toBeInTheDocument();
+    expect(englishCatalog.activity.myActivity.disabled.description).toBe(description);
+    expect(activityCatalog.activity.myActivity.disabled.description).toBe(description);
+    expect(systemCatalog.activity.myActivity.disabled.description).toBe(description);
+    expect(screen.queryByText(/AUTH_FORWARD_HEADER/)).not.toBeInTheDocument();
 
     // Hard gate replaces the whole bento — no panels, no KPI band.
     expect(screen.queryByText('Activity feed')).toBeNull();
@@ -324,26 +407,74 @@ describe('MyActivityPage — Project Apex elevation', () => {
     });
   });
 
-  it('requests a default 30-day ISO window with limit=200', async () => {
+  it('requests precise default range instants with limit=200', async () => {
     renderPage();
 
     await waitFor(() => {
       expect(activityCalls().length).toBeGreaterThan(0);
     });
-    expect(activityCalls()[0]).toMatch(
-      /^\/users\/me\/activity\?start=\d{4}-\d{2}-\d{2}&end=\d{4}-\d{2}-\d{2}&limit=200$/,
-    );
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(params.get('end')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(Date.parse(params.get('end')!)).toBeGreaterThan(Date.parse(params.get('start')!));
+    expect(params.get('limit')).toBe('200');
   });
 
-  it('forwards start/end URL params verbatim as snake_case query params', async () => {
-    renderPage('/my-activity?start=2024-01-01&end=2024-02-01');
+  it('migrates legacy bookmarks to the shared calendar range and exclusive end without overwriting preferences', async () => {
+    const saved = JSON.stringify({ version: 2, start: '2025-06-01', end: '2025-06-08' });
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, saved);
+    renderPage('/me/activity?start=2024-01-01&end=2024-02-01&filter=auth');
 
     await waitFor(() => {
       expect(activityCalls().length).toBeGreaterThan(0);
     });
-    expect(activityCalls()[0]).toBe(
-      '/users/me/activity?start=2024-01-01&end=2024-02-01&limit=200',
-    );
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(new Date('2024-01-01T00:00:00').toISOString());
+    expect(params.get('end')).toBe(new Date('2024-02-02T00:00:00').toISOString());
+    const url = new URLSearchParams(screen.getByTestId('activity-url').textContent!);
+    expect(url.get('from')).toBe('2024-01-01');
+    expect(url.get('to')).toBe('2024-02-01');
+    expect(url.get('filter')).toBe('auth');
+    expect(url.has('start')).toBe(false);
+    expect(url.has('end')).toBe(false);
+    expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBe(saved);
+  });
+
+  it('prefers canonical header bounds over conflicting legacy bounds', async () => {
+    renderPage('/me/activity?from=2025-06-01&to=2025-06-08&start=2024-01-01&end=2024-02-01');
+    await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00').toISOString());
+    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00').toISOString());
+  });
+
+  it('restores the saved shared range instead of an obsolete page preference', async () => {
+    const saved = JSON.stringify({ version: 2, start: '2025-06-01', end: '2025-06-08' });
+    const pageSaved = JSON.stringify({ version: 2, start: '2024-01-01', end: '2024-02-01' });
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, saved);
+    window.localStorage.setItem('my-activity.range', pageSaved);
+    renderPage();
+    await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
+    const params = new URL(activityCalls()[0], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(new Date('2025-06-01T00:00:00').toISOString());
+    expect(params.get('end')).toBe(new Date('2025-06-09T00:00:00').toISOString());
+    expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBe(saved);
+    expect(window.localStorage.getItem('my-activity.range')).toBe(pageSaved);
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+  });
+
+  it('uses exact rolling instants when the shared header selects 24 hours', async () => {
+    const now = Date.parse('2026-10-14T20:27:46.810Z');
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    renderPage();
+    await waitFor(() => expect(activityCalls().length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole('button', { name: 'Last 24 hours' }));
+    await waitFor(() => {
+      const params = new URL(activityCalls().at(-1)!, 'http://localhost').searchParams;
+      expect(params.get('start')).toBe('2026-10-13T20:27:46.810Z');
+      expect(params.get('end')).toBe('2026-10-14T20:27:46.810Z');
+    });
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
   });
 
   it('refetches when the shared header changes the URL range', async () => {
@@ -357,7 +488,102 @@ describe('MyActivityPage — Project Apex elevation', () => {
     expect(screen.queryByTestId('my-activity-range')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('header-activity-range'));
     await waitFor(() => {
-      expect(activityCalls().some((u) => u.includes('start=2015-01-01'))).toBe(true);
+      expect(activityCalls().some((u) =>
+        new URL(u, 'http://localhost').searchParams.get('start') ===
+          new Date('2015-01-01T00:00:00').toISOString()
+      )).toBe(true);
     });
   });
+
+  it('uses neutral decorative icons without changing section labels', async () => {
+    renderPage();
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+
+    for (const title of ['Top actions', 'By category']) {
+      const heading = screen.getByRole('heading', { name: title });
+      const icon = heading.querySelector('svg');
+      expect(icon).not.toBeNull();
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveClass('text-[var(--text-secondary)]');
+      expect(icon).not.toHaveClass('text-cyan-300');
+    }
+  });
+
+  it('does not present unavailable activity as measured zero after an initial failure', async () => {
+    activityError = new ApiError('activity unavailable', 500);
+    renderPage();
+    await screen.findAllByText('Server error');
+
+    for (const label of ['Total actions', 'Active days', 'Action types', 'Entities touched']) {
+      const metric = kpiCard(label);
+      expect(within(metric).queryByText('0')).not.toBeInTheDocument();
+      expect(within(metric).getByText('—')).toBeInTheDocument();
+    }
+    expect(screen.getByText('Activity feed')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each([500, 503])('retains every populated section after a failed %i refresh and recovers through the shared retry', async (status) => {
+    const { queryClient } = renderPage();
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+    const feed = screen.getByRole('heading', { name: 'Activity feed' }).closest('[data-print-card]');
+    expect(feed).not.toBeNull();
+    const before = activityCalls().length;
+
+    activityError = new ApiError('refresh unavailable', status);
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['users', 'me', 'activity'] });
+    });
+
+    const warning = await screen.findByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toHaveAttribute('aria-live', 'polite');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible');
+    expect(activityCalls().length).toBeGreaterThan(before);
+    expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Top actions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'By category' })).toBeInTheDocument();
+    for (const title of ['Activity over time', 'By hour of day']) {
+      expect(screen.getByRole('figure', { name: title })).toHaveAttribute('data-chart-state', 'ready');
+    }
+    expect(within(feed as HTMLElement).getAllByRole('link').filter(link => link.getAttribute('href') === '/vehicles/10')).toHaveLength(2);
+    expect(screen.queryByText('Server error')).not.toBeInTheDocument();
+    expect(screen.queryByText('Activity feed is not supported')).not.toBeInTheDocument();
+
+    activityError = null;
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
+  });
+
+  it('retains successful empty results and measured zero through a refresh failure and recovery', async () => {
+    activityResult = [];
+    const { queryClient } = renderPage();
+    expect(await screen.findByText('No recent activity in this window.')).toBeInTheDocument();
+    expect(within(kpiCard('Total actions')).getByText('0')).toBeInTheDocument();
+
+    activityError = new ApiError('refresh unavailable', 500);
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['users', 'me', 'activity'] });
+    });
+    const warning = await screen.findByTestId('stale-refresh-warning');
+    expect(within(kpiCard('Total actions')).getByText('0')).toBeInTheDocument();
+    for (const message of [
+      'No activity recorded in this window.', 'No actions in this window.',
+      'No categories to break down yet.', 'No activity to chart by hour yet.',
+      'No recent activity in this window.',
+    ]) {
+      expect(screen.getByText(message)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+    expect(screen.queryByText('Server error')).not.toBeInTheDocument();
+
+    activityError = null;
+    activityResult = baseEntries();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(screen.queryByText('No recent activity in this window.')).not.toBeInTheDocument();
+  });
+
 });

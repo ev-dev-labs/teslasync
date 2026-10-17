@@ -1,0 +1,361 @@
+{
+  "item": "audit-page-161",
+  "phase": 0,
+  "page": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+  "routes": ["/ownership/tariff-lab"],
+  "identity": {
+    "mountedSource": "web\\src\\App.tsx",
+    "line": 776,
+    "mount": "SafeRoute name=TariffLab",
+    "rootSourceSha256": "b2b0553d730092d60fcdef63190d5414005191a04cafb6f5ee87f9a54ceec6a7",
+    "runtimeMountVerified": false
+  },
+  "purpose": "Author utility tariff plans and replay measured vehicle charging load to compare annualised economics, load shifting, band occupancy and source evidence.",
+  "primaryGoal": "Compare current and alternative rate plans using real observed charging sessions, without mistaking modelled replay savings for a bill or forecast.",
+  "dataSources": [
+    {
+      "hook": "useTariffs(100, 0)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 191,
+      "endpoint": "GET /api/v1/tariff-lab/tariffs?limit=100&offset=0",
+      "sourceOwnership": "ownershipKeys.tariffs(limit, offset); account-level library, not selected-vehicle filtered",
+      "routeEvidence": "internal\\api\\router.go:3918 delegates to internal\\handler\\v1\\ownershipintel\\handler.go:120-125",
+      "cancellation": "AbortSignal forwarded at useOwnership.ts:194-195",
+      "unknowns": "Live pagination totals, response validity, authorization and backend computation were not exercised."
+    },
+    {
+      "hook": "useCreateTariff",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 199,
+      "endpoint": "POST /api/v1/tariff-lab/tariffs",
+      "sourceOwnership": "User-authored draft; invalidates ownershipKeys.all on success; localized toast plus inline MutationError",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:122"
+    },
+    {
+      "hook": "useDeleteTariff",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 214,
+      "endpoint": "DELETE /api/v1/tariff-lab/tariffs/{id}",
+      "sourceOwnership": "Library record; shared confirmation; invalidates ownershipKeys.all; per-row pending indicator",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:123"
+    },
+    {
+      "hook": "useSimulateTariffs",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 228,
+      "endpoint": "POST /api/v1/tariff-lab/simulate",
+      "sourceOwnership": "Selected workspace vehicle; explicit submitted window_days, tariff_ids, shiftable_pct, switch_fee_minor and confirmed=true",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:124",
+      "retention": "useRetainedMutation retains successful raw payload plus cloned submitted inputs and suppresses old-vehicle publications.",
+      "wireUnits": ["energy_wh", "peak_demand_w", "price_minor_per_wh", "demand_charge_minor_per_w"],
+      "unknowns": "Backend replay algorithm, currency-comparison policy, meaning of empty tariff_ids and any future bounded-date support remain unverified."
+    },
+    {
+      "hook": "useSelectedVehicle / useUnits / useNumberFormatting",
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 86,
+      "sourceOwnership": "Existing URL/store/fleet workspace vehicle, user unit/locale/number preferences; no second vehicle picker.",
+      "workspace": "workspaceScope.ts exports range opt-in and vehicle exclusions; /ownership/tariff-lab currently resolves range=false, vehicle=true by source inspection."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Existing PageContainer adapter, full allocated width and container context"},
+    {"name": "OwnershipPanel", "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx", "role": "Domain adapter over LayoutCard and SourceContent; persistent panel shell, editing and preserveSummary"},
+    {"name": "OwnershipBrief", "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx", "role": "OperationalBrief/useOperationalMetrics adapter with source state, scope, freshness and specialist formatters"},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx", "role": "Quality, evidence, limitations and explicitly unsupported calculations"},
+    {"name": "MutationError / VerdictBadge", "owner": "web\\src\\features\\ownership\\components", "role": "Existing inline mutation failure and ownership verdict adapters"},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "role": "Two stable table IDs; mobile allow-list, existing column persistence and optional mobile presentation"},
+    {"name": "ChartContainer / chart category barrel", "owner": "web\\src\\components\\charts", "role": "Annual-cost bar chart with labelled data-table alternative; implementation beyond import contract not inspected"},
+    {"name": "Input / Select / Toggle / Button / Badge / Text / ConfirmDialog", "owner": "web\\src\\components\\ui", "role": "Canonical fields, typography, semantics and actions; Toggle implementation inspected"},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "role": "Entrance animation; source respects shared reduced-motion preference"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 628,
+      "rule": "MDC-015/MDC-002",
+      "detail": "Local band-occupancy surfaces and rate-editor surfaces repeat border/background/radius chrome rather than existing surface tokens; EvidencePanel repeats similar chrome.",
+      "fix": "Reuse existing tokenized surface classes or established Card primitive; keep tariff calculations local and do not create another global card engine.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 814,
+      "rule": "MDC-021/MDC-002",
+      "detail": "Repeated immutable rates-map updates and multi-field band rendering dominate the page.",
+      "fix": "Optionally extract a feature-local rate-band editor with typed TariffRate/update/remove props; preserve all existing draft defaults and wire fields.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source-only",
+    "observed": "Parameter/editor grids stack below md, occupancy stacks below lg; PageLayout supplies min-w-0 and full width; tables opt into mobileColumns only.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+        "line": 909,
+        "rule": "MDC-043/MDC-023 preservation",
+        "detail": "Plan mobileColumns includes only name/structure/current, excluding select and actions. DataTable.tsx:723-725 hides excluded cells below md; expandable defaults false at :480 and page supplies no mobilePresentation or expanded detail. Compare-selection and remove actions therefore have no source-defined mobile equivalent. Result table :595 likewise excludes most economics detail.",
+        "fix": "Use existing DataTable mobile presentation/detail contract or retain complete horizontally scrollable rows; expose comparison selection, remove, all result costs, demand, warnings and break-even without discarding metadata.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+        "line": 654,
+        "rule": "MDC-043",
+        "detail": "Band label and energy/cost pair share a flex row without a wrapping/min-width strategy; chart names are unbounded X-axis strings at :567.",
+        "fix": "Allow long labels/value pairs to wrap and check chart tick/table strategy at narrow allocated widths, RTL and enlarged text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "Unverified at 320/375/390/430/768/1024/1280/1440/1920/2560; no browser run."
+  },
+  "accessibility": {
+    "verified": "source-only",
+    "positiveEvidence": ["Shared Text headings and labelled fields", "Decorative page icons use aria-hidden", "Shared ConfirmDialog", "ChartContainer receives ariaLabel and dataColumns", "FadeIn source handles reduced-motion preference"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+        "line": 198,
+        "rule": "MDC-040 accessible names",
+        "detail": "Compare Toggle has label=\"\" and no aria-label/aria-labelledby. Toggle.tsx:95-102 forwards names to its actual switch, but none is supplied here; table header does not automatically name an embedded switch.",
+        "fix": "Supply a localized row-specific accessible name such as Compare {{plan}}; preserve switch state and keyboard behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+        "line": 843,
+        "rule": "MDC-021/MDC-040 form validity",
+        "detail": "Default end_minute=1440 (:65) is formatted as 24:00 (:71-75) and passed to input type=time (:844-846). Native time controls accept hours 00-23; default end-of-day therefore cannot be represented by that control.",
+        "fix": "Provide an explicit end-of-day representation mapped back to the same 1440-minute domain value; do not silently change the tariff interval or SI contract. Validate native browser round-trip.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+        "line": 654,
+        "rule": "MDC-040 text alternatives",
+        "detail": "Band share_pct is shown only as an unlabelled visual width at :664; adjacent text exposes energy and cost but not exact share.",
+        "fix": "Expose the returned percentage as localized text or an appropriately named meter/progress contract alongside existing energy and cost.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "evidenceLimits": "Keyboard/focus order, assistive technology, touch target geometry, contrast, forced colors and motion behavior were not exercised."
+  },
+  "states": {
+    "loading": "Tariff library uses OwnershipPanel source=tariffQuery; replay summary uses OwnershipBrief publication.source and pending run button.",
+    "empty": "Persistent named empty panels; no-result summary preserves unknown metrics; no bands and no evidence have distinct explanatory messages.",
+    "error": "Create/delete/replay inline MutationError; initial library failure isolated by OwnershipPanel; retained mutation success is not discarded on replay failure.",
+    "staleOffline": "OwnershipBrief can label retained replay; library SourceContent retained branch keeps usable rows and source retry. Other replay sections do not receive publication.source.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+        "line": 537,
+        "rule": "MDC-026 asynchronous trust",
+        "detail": "Chart, ranked economics, occupancy and EvidencePanel receive result payloads but no publication.source. Pending, failed-refresh and paused/offline replay state appears only in summary/error near controls; source-independent sections can present retained results without their own trust notice.",
+        "fix": "Thread the existing publication.source into affected OwnershipPanel/EvidencePanel instances, retaining previous successful data; present replay-specific pending/retained context without treating missing values as zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 574,
+      "rule": "MDC-010/MDC-034 restrained palette",
+      "detail": "Chart hardcodes three hex colors including bright cyan; explanatory copy at :541 says alternatives are grey although current non-best is cyan. Local occupancy bars use bg-cyan-400/70 at :663.",
+      "fix": "Use existing semantic/chart tokens with muted current/best/alternative treatments; localize legend/status descriptions and retain all categories and user chart preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 628,
+      "rule": "MDC-010/MDC-015 themes",
+      "detail": "Occupancy article and editor (:814) use fixed white alpha surfaces/borders; EvidencePanel.tsx:139 also uses white alpha chrome. Theme-relative hierarchy is not expressed by canonical surface/border tokens.",
+      "fix": "Reuse neutral surface/border tokens in page-local chrome; shared EvidencePanel change belongs to its owner. Measure effective contrast rather than assuming token substitution proves AA.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 143,
+      "rule": "MDC-044/MDC-045 source denomination",
+      "detail": "Both chartData and accessible chartTableRows divide annual_cost_minor by 100 (:143,:154), whereas formatCurrencyMinor uses the actual ISO-currency fraction digits at formatters.ts:21-30. Chart numeric values can disagree with tables for zero- or three-decimal currencies. Chart axis/tooltip lacks denomination and money() uses only first-result currency across results.",
+      "fix": "Use the existing currency owner for correct minor-to-major display and currency-labelled axis/tooltip/table values; do not assume mixed results are commensurable. Resolve server currency policy before choosing any cross-currency comparison behavior.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 737,
+      "rule": "MDC-044 localization",
+      "detail": "Rate structure options and plan badges (:221) display raw underscore-replaced enum strings; newRate() uses visible English Standard (:61). Day suffix /d (:240) is fixed.",
+      "fix": "Localize enum labels/default draft label and unit-period copy through canonical catalogs while preserving raw enum values and user-authored labels.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+      "line": 109,
+      "rule": "MDC-023/MDC-046 complete library",
+      "detail": "Library fetch fixes limit=100 offset=0 and table supplies no server pagination. Source claims every stored plan will be evaluated when selection is empty (:459) but editing/selection only exposes the first response page.",
+      "fix": "Preserve loaded data and coordinate existing endpoint paging/total contract; provide access to every stored plan without inventing list or full-export behavior.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Mobile action/detail preservation", "Accessible compare names and valid end-of-day editing", "Currency-correct cost comparison", "Replay trust propagation", "Library pagination", "Tokenized restrained palette and localization"],
+    "workspaceDecision": "Keep the global vehicle owner. The route currently has no header range and uses an explicit replay window_days scenario assumption. Whether this is an independent business/model parameter or should migrate to workspace bounds is an integration decision, not proof of a backend range capability; do not add a second picker or silently discard 30/90/180/365-day semantics."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel theme-neutral source evidence surfaces",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 139,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Evidence records use fixed white alpha border/background rather than semantic neutral surfaces.",
+      "fix": "Owner substitutes existing surface and border tokens; retain all provenance rows, quality values, warnings and unknown placeholders.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": "Existing quality/evidence/limitations/unsupported/source/sourceEnabled API; keep initial, ready, retained, empty and error behavior. No new public API required.",
+      "usedBy": ["/ownership/tariff-lab", "Other ownership pages using this domain component; not separately audited"],
+      "dependsOn": ["Existing semantic border/surface tokens", "OwnershipPanel/SourceContent"],
+      "classification": "extend existing owner"
+    },
+    {
+      "name": "Reuse complete DataTable mobile detail/action contract",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Existing mobilePresentation or expandable/renderExpanded, column visibility and mobileColumns; retain stable tableId, ordering, compare switches and destructive confirmation.",
+      "usedBy": ["ownership-tariff-plans", "ownership-tariff-results"],
+      "dependsOn": ["Page-owned typed Tariff and TariffSimulationResult adapters"],
+      "classification": "reuse; shared implementation change not established by this audit"
+    },
+    {
+      "name": "Reuse OwnershipPanel and EvidencePanel source-state contract",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "propsVariantsStates": "source: DataStateSource, sourceEnabled, editing, preserveSummary; fatal/no-payload replaces body, retained data stays visible, independent editor survives first-read failure.",
+      "usedBy": ["Replay chart", "Ranked economics", "Band occupancy", "Evidence trailer"],
+      "dependsOn": ["useRetainedMutation publication.source", "Existing SourceContent"],
+      "classification": "reuse; page wiring only"
+    }
+  ],
+  "competingImplementations": {
+    "observed": ["Local tariff band surfaces compete with canonical surface styling, not a separate theme engine.", "Existing OwnershipBrief and DataTable already own summary/table pipelines; do not replace them."],
+    "notEstablished": ["No confirmed competing query client, workspace selector, unit conversion engine, overlay system or chart library introduced by this page."],
+    "scopeLimit": "No whole-application duplicate-consumer inventory was attempted."
+  },
+  "preservation": {
+    "sourceSha256": "b2b0553d730092d60fcdef63190d5414005191a04cafb6f5ee87f9a54ceec6a7",
+    "currentLineCount": 941,
+    "sections": [
+      {"name": "Replay, not forecast notice", "line": 396},
+      {"name": "Comparison parameters", "line": 408},
+      {"name": "Arbitrage summary", "line": 466},
+      {"name": "Annualised cost by plan", "line": 537},
+      {"name": "Ranked plan economics and returned warnings", "line": 585},
+      {"name": "Where your energy actually landed", "line": 615},
+      {"name": "Your rate plan library and inline authoring editor", "line": 671},
+      {"name": "Evidence, quality, and limitations", "line": 923}
+    ],
+    "sectionCounts": {"namedContentSections": 8, "directOwnershipPanel": 6, "EvidencePanel": 1, "ChartContainer": 1, "DataTable": 2, "OwnershipBrief": 1, "directGlassPanel": 0},
+    "summaryMetrics": ["Best-case annual saving with best plan context", "Observed energy and session count", "Plans evaluated", "Shiftable share modelled"],
+    "resultColumns": ["Rank", "Plan/current", "Annualised cost", "vs current", "Effective price", "Load-shift upside", "Break-even", "Peak demand", "Energy/standing/demand breakdown"],
+    "libraryColumns": ["Compare", "Plan/provider", "Structure", "Price bands", "Standing charge", "Demand charge", "Current", "Remove"],
+    "actions": ["Replay on selected vehicle", "Select/deselect comparison plans", "Empty selection evaluates all according to existing page copy", "Add/cancel inline plan", "Edit plan/provider/currency/structure/standing/demand/export/current", "Add/edit/remove price bands (one minimum)", "Save plan", "Confirm permanent tariff removal", "Shared chart and table affordances remain owned by their existing components"],
+    "dataBehavior": [
+      "Keep 90-day/35-percent/zero-switching-fee defaults, all four window options, five tariff structures and USD draft default.",
+      "Preserve rate day_mask=127, start_minute=0, end_minute=1440, price_minor_per_wh=0.015, tier_upper_wh=null and January-December season defaults.",
+      "Do not add day/season/tier editing capabilities based solely on type fields; they are not existing UI controls.",
+      "Keep raw Wh/W/per-Wh/per-W data in wire/cache; useUnits and existing currency/number formatters convert only for display.",
+      "Keep submitted replay inputs separate from currently edited controls; retain success on refresh failure and clear publication on vehicle change.",
+      "Preserve tariff query key, abort forwarding, create/delete invalidations, inline errors, toasts and confirmation.",
+      "Keep no-data placeholders distinct from measured zero and keep all returned warnings, quality/evidence and explicitly unsupported computations.",
+      "Keep table IDs ownership-tariff-results and ownership-tariff-plans and preserve user persistence.",
+      "No source edits or behavior changes were performed."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Only route registration inspected; no requests, mutations, queries or service implementation execution.",
+    "validation": "No TypeScript, lint, tests, build, full gates, Git or browser commands run. Skill audit.sh was inspected but not executed because it unconditionally invokes full frontend TypeScript, prohibited for this Phase0 assignment.",
+    "scopedCounters": {"staticVariableInlineStyles": 0, "rawControlOrTableElements": 0, "directForbiddenLibraryImports": 0, "scope": "TariffLabPage.tsx only; these limited counters do not imply zero findings."},
+    "commandFailure": "Initial PowerShell evidence probe exited 1 with ParserError: Missing ')' in method call due to quote escaping; corrected read-only probe exited 0.",
+    "sourceConcurrency": "Snapshot evidence only; disjoint workers may change dependencies. Root hash checked again at release.",
+    "ownership": "Only docs\\frontend-audits\\audit-page-161.json and .agent-status\\audit-page-161.txt may be written."
+  },
+  "sourceInventory": [
+    {"path":"docs\\frontend-design-contract.md","sha256":"17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255","lineCount":394,"readScope":"contract"},
+    {"path":"docs\\frontend-worker-conventions.md","sha256":"6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3","lineCount":80,"readScope":"full"},
+    {"path":"docs\\frontend-mission.md","sha256":"2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f","lineCount":1593,"readScope":"sections 0-3, visual 5-9, responsive/state 15-26, chart/accessibility/architecture 27-36"},
+    {"path":".github\\skills\\audit-violations\\audit.sh","sha256":"3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46","lineCount":141,"readScope":"full; not executed"},
+    {"path":"web\\src\\features\\ownership\\pages\\TariffLabPage.tsx","sha256":"b2b0553d730092d60fcdef63190d5414005191a04cafb6f5ee87f9a54ceec6a7","lineCount":941,"readScope":"full"},
+    {"path":"web\\src\\features\\ownership\\components\\OwnershipPanel.tsx","sha256":"dce748f082d1e9543b4edd26315b7b832df13928a2b1c5e8fa93179279c2e793","lineCount":75,"readScope":"full"},
+    {"path":"web\\src\\features\\ownership\\components\\EvidencePanel.tsx","sha256":"52b60ea9e46fba7734f2d09d0609653bfd256ad542639fdd918b6f6dfe14b0ba","lineCount":192,"readScope":"full"},
+    {"path":"web\\src\\features\\ownership\\components\\MutationError.tsx","sha256":"ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81","lineCount":22,"readScope":"full"},
+    {"path":"web\\src\\features\\ownership\\components\\VerdictBadge.tsx","sha256":"98853bb9668e8cdc09083a3158962d97770becc568ebc3930d748a7fca699d3d","lineCount":74,"readScope":"full"},
+    {"path":"web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx","sha256":"a9ec82253358e3b0ff132754d99bc63a15c6058fbd93ce3f9bc0a70e413ebc6f","lineCount":81,"readScope":"full"},
+    {"path":"web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts","sha256":"9ceaafa9ac813f1a1cc58160798fa4c9cf4448b1cf31e23c2418cd85a2752526","lineCount":9,"readScope":"full"},
+    {"path":"web\\src\\features\\ownership\\formatters.ts","sha256":"0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a","lineCount":148,"readScope":"full"},
+    {"path":"web\\src\\api\\hooks\\useOwnership.ts","sha256":"0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af","lineCount":801,"readScope":"1-90 and 185-243"},
+    {"path":"web\\src\\types\\ownership.ts","sha256":"8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab","lineCount":1106,"readScope":"155-258 and matched tariff symbols"},
+    {"path":"web\\src\\hooks\\useRetainedMutation.ts","sha256":"97583a103b7be4430178b1e541bc8384d1d96eb3f0314e7d5f30a034154689a9","lineCount":96,"readScope":"full"},
+    {"path":"web\\src\\hooks\\useSelectedVehicle.ts","sha256":"c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3","lineCount":174,"readScope":"full"},
+    {"path":"web\\src\\lib\\workspaceScope.ts","sha256":"aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7","lineCount":168,"readScope":"full"},
+    {"path":"web\\src\\components\\ui\\Toggle.tsx","sha256":"418d884148c0175a864d09cfe1a0084ea36b716ddf3d1c0ba44f18f7d3a6683a","lineCount":139,"readScope":"full"},
+    {"path":"web\\src\\components\\ui\\DataTable.tsx","sha256":"92e3a46f15e401b57303823693aac8825693b4edc2b04cfe289663d8e1386438","lineCount":1687,"readScope":"440-489, 704-772, 1260-1365 and matched mobile/sort symbols"},
+    {"path":"web\\src\\components\\layout\\layout-reference\\PageLayout.tsx","sha256":"8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6","lineCount":17,"readScope":"full"},
+    {"path":"web\\src\\components\\layout\\layout-reference\\SourceContent.tsx","sha256":"283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43","lineCount":72,"readScope":"full"},
+    {"path":"web\\src\\components\\layout\\PageContainer.tsx","sha256":"0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55","lineCount":259,"readScope":"1-210"},
+    {"path":"web\\src\\components\\motion\\FadeIn.tsx","sha256":"8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f","lineCount":39,"readScope":"full"},
+    {"path":"web\\src\\api\\dataState.ts","sha256":"21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761","lineCount":434,"readScope":"118-205"},
+    {"path":"web\\src\\App.tsx","sha256":"23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3","lineCount":918,"readScope":"matched tariff-lab route line only"},
+    {"path":"internal\\api\\router.go","sha256":"98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750","lineCount":5366,"readScope":"matched ownership composition lines only"},
+    {"path":"internal\\handler\\v1\\ownershipintel\\handler.go","sha256":"2e4621219d010836ea6af00d2aa5e8422a8a61858ab2d1a8d1cb677121e922f9","lineCount":1194,"readScope":"109-133"}
+  ],
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\TariffLabPage.tsx",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\hooks\\useRetainedMutation.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go"
+  ]
+}

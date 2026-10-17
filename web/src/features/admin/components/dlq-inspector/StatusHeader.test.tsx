@@ -175,7 +175,24 @@ describe('StatusHeader', () => {
 
     // StatCard swaps its label/value for skeletons while loading.
     expect(screen.queryByText('Total entries')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const skeletons = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(skeletons).toHaveLength(12);
+    const pendingCards = screen.getAllByRole('status', { name: 'Loading' });
+    expect(pendingCards).toHaveLength(6);
+    for (const card of pendingCards) {
+      expect(card).toHaveAttribute('aria-busy', 'true');
+      expect(card.textContent).toBe('');
+      expect(card.children[0]).toHaveAttribute('aria-hidden', 'true');
+      expect(card.children[0]).toHaveStyle({ width: '60%', height: '16px' });
+      expect(card.children[1]).toHaveAttribute('aria-hidden', 'true');
+      expect(card.children[1]).toHaveStyle({ width: '40%', height: '32px' });
+    }
+    for (const label of ['Replayable', 'Blocked', 'Distinct reasons', 'Total payload', 'Replay mode']) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText('Enabled')).not.toBeInTheDocument();
+    expect(screen.queryByText('Disabled')).not.toBeInTheDocument();
     expect(screen.queryByText('DLQ replay is disabled')).not.toBeInTheDocument();
   });
 

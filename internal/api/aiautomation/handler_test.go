@@ -24,10 +24,92 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	automationtool "github.com/ev-dev-labs/teslasync/internal/ai/tools/automation"
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+func TestCanonicalWaitAndWeekdayToolsUseRealGraphValidator(t *testing.T) {
+	registry := tools.NewRegistry()
+	automationtool.RegisterAutomationBuilderTools(registry, automationtool.AutomationBuilderSources{Validator: NewGraphValidator()})
+	const input = `{"vehicle_id":7,"name":"Welcome Home",
+		"trigger":{"kind":"trigger_geofence","place_id":1,"event":"enter"},
+		"conditions":[{"kind":"condition_time_window","start_time":"00:00","end_time":"00:00","days_of_week":[1,2]}],
+		"actions":[{"kind":"action_command","command_name":"cabin_overheat_protection_on"},
+			{"kind":"action_command","command_name":"hvac_on"},{"kind":"action_wait","duration_s":30}]}`
+	for _, name := range []string{"draft_automation_graph", "validate_automation_graph"} {
+		tool, ok := registry.Get(name)
+		if !ok || tool.Mutates() {
+			t.Fatalf("missing or mutating tool %s", name)
+		}
+		in, err := tool.Validate(json.RawMessage(input))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := tool.Execute(context.Background(), in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, err := json.Marshal(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var result struct {
+			Status string          `json:"status"`
+			Draft  json.RawMessage `json:"draft"`
+		}
+		if err := json.Unmarshal(raw, &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.Status != "ok" {
+			t.Fatalf("real validator rejected %s: %s", name, raw)
+		}
+		if name == "draft_automation_graph" {
+			if err := NewGraphValidator().ValidateAutomationWire(result.Draft); err != nil {
+				t.Fatal(err)
+			}
+			var draft struct {
+				VehicleID int64 `json:"vehicle_id"`
+				Triggers  []struct {
+					PlaceID int64 `json:"place_id"`
+				} `json:"triggers"`
+				Conditions []struct {
+					Timezone string `json:"timezone"`
+					Days     []int  `json:"days_of_week"`
+				} `json:"conditions"`
+				Actions []struct {
+					Kind      string `json:"kind"`
+					Command   string `json:"command_name"`
+					DurationS int    `json:"duration_s"`
+				} `json:"actions"`
+			}
+			if err := json.Unmarshal(result.Draft, &draft); err != nil {
+				t.Fatal(err)
+			}
+			if draft.VehicleID != 7 || len(draft.Triggers) != 1 || draft.Triggers[0].PlaceID != 1 ||
+				len(draft.Conditions) != 1 || draft.Conditions[0].Timezone != "UTC" ||
+				fmt.Sprint(draft.Conditions[0].Days) != "[1 2]" || len(draft.Actions) != 3 ||
+				draft.Actions[0].Command != "cabin_overheat_protection_on" || draft.Actions[1].Command != "hvac_on" ||
+				draft.Actions[2].Kind != "action_wait" || draft.Actions[2].DurationS != 30 {
+				t.Fatalf("tool changed canonical intent: %s", result.Draft)
+			}
+		}
+		bad, err := tool.Validate(json.RawMessage(strings.Replace(input, `"duration_s":30`, `"duration_s":3601`, 1)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err = tool.Execute(context.Background(), bad)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw, _ = json.Marshal(out)
+		if !strings.Contains(string(raw), `"status":"invalid"`) {
+			t.Fatalf("invalid wait accepted: %s", raw)
+		}
+	}
+}
 
 // stubGuardSettings is a minimal in-memory guard.Settings used to
 // drive the off-mode contract test without a real DB.

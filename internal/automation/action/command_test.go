@@ -10,10 +10,42 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/models"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
+
+func TestCanonicalGeofenceCommandNamesUseExistingTeslaCommands(t *testing.T) {
+	v := testVehicle(7, "test-only", "Test")
+	vehicles := &mockVehicleRepo{byID: map[int64]*vehiclemodel.Vehicle{7: v}}
+	logs := &mockCommandLogRepo{}
+	commander := &mockTeslaCommander{hasToken: true}
+	e := NewCommandExecutor(vehicles, logs, &mockSettingsChecker{pollingCfg: defaultPollingConfig()}, commander)
+	vehicleID := int64(7)
+	for _, name := range []string{"cabin_overheat_protection_on", "hvac_on"} {
+		raw, err := e.ExecuteTyped(context.Background(), &vehicleID, &models.AutomationAction{CommandName: name})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var results []CommandResult
+		if err := json.Unmarshal(raw, &results); err != nil {
+			t.Fatal(err)
+		}
+		if len(results) != 1 || !results[0].Success || results[0].Command != name {
+			t.Fatalf("canonical command identity changed: %#v", results)
+		}
+	}
+	if len(commander.calls) != 2 || commander.calls[0].Command != "cop_on" || commander.calls[1].Command != "climate_on" {
+		t.Fatalf("existing Tesla adapter commands = %#v", commander.calls)
+	}
+	if len(logs.logs) != 2 || logs.logs[0].Command != "cabin_overheat_protection_on" || logs.logs[1].Command != "hvac_on" {
+		t.Fatal("canonical command history changed")
+	}
+	if _, err := DecodeTypedCommandSpec(&models.AutomationAction{CommandName: "invented_command"}); err == nil {
+		t.Fatal("unknown command accepted")
+	}
+}
 
 type mockVehicleRepo struct {
 	vehicles []*vehiclemodel.Vehicle

@@ -1,0 +1,801 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-ownership-data-governance",
+  "attempt": 1,
+  "status": "DONE_SOURCE_AUDIT_ONLY",
+  "page": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+  "route": "/ownership/data-governance",
+  "scope": "Read-only page, direct supports and existing tests. Shared hook/type/table implementations inspected at referenced portions, not unrelated features. Only exact report and matching log writable.",
+  "authority": {
+    "orchestrator": "docs/orchestrator-loop.md read fully; supersedes older root playbooks also read",
+    "contract": "docs/frontend-design-contract.md MDC-001/002,010-026,031-046,060/070 relevant sections read; unrelated additive decisions not claimed fully read",
+    "missionRanges": [
+      [
+        1,
+        195
+      ],
+      [
+        529,
+        625
+      ],
+      [
+        704,
+        812
+      ],
+      [
+        921,
+        964
+      ],
+      [
+        1035,
+        1081
+      ],
+      [
+        1416,
+        1515
+      ]
+    ],
+    "inventory": "frontend-inventory original page206, G148/G151/G152, adoption1302-1303 and audit-page-155",
+    "handoff": "session-handoff current recovery/conventions1-180 plus relevant-name search",
+    "queue": "Exact attempt1 row originally113, later130 after concurrent parent edits; accepted Phase5 source row originally2096/later2113. No queue writes.",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md"
+    ],
+    "override": "Caller forbids new tests/lint/build/TSC/helpers/browser/API/business actions; these gates NOTRUN, not waived."
+  },
+  "timing": {
+    "firstObservedUtc": "2026-10-14T02:09:48.3051389Z",
+    "reservationUtc": "2026-10-14T02:04:58.538Z",
+    "returnByUtc": "2026-10-14T02:24:58.538Z",
+    "hardByUtc": "2026-10-14T02:29:58.538Z"
+  },
+  "artifacts": [
+    "docs/frontend-audits/phase6-qa-ownership-data-governance.json",
+    "web/logs/phase6-qa-ownership-data-governance.log"
+  ],
+  "counts": {
+    "confirmed": 8,
+    "conditional": 5,
+    "nativeCandidates": 1,
+    "deduplicatedRepairOwners": 3,
+    "sections": 6,
+    "tables": 4,
+    "summaryMetrics": 9,
+    "pageTestDeclarations": 15,
+    "sourceDeclaredPageCases": 16,
+    "commandFailures": 4
+  },
+  "sections": [
+    {
+      "name": "Storage posture",
+      "lines": [
+        550,
+        599
+      ],
+      "source": "overviewQuery",
+      "data": "total/governed/ungoverned bytes, coverage, holds, plan_only, as_of; five raw metrics",
+      "states": "Persistent preserveSummary shell, initial loading suppresses values, unknowns remain missing, fatal recovery beside unknown summary, retained warning/retry",
+      "actions": "Shared Review details"
+    },
+    {
+      "name": "Dataset inventory",
+      "lines": [
+        602,
+        626
+      ],
+      "source": "overview.inventory",
+      "data": "raw dataset/label, rows, bytes/per-row, span/oldest, governed/hypertable flags",
+      "actions": "Include/In plan with aria-pressed and governed prerequisite; local value filters/shared utilities",
+      "mobile": "Typed summary roles + inline selection; Quick view uses all displayed column renderers"
+    },
+    {
+      "name": "Policies/editor",
+      "lines": [
+        630,
+        743
+      ],
+      "source": "overview.policies plus independent local draft",
+      "data": "dataset, canonical retention_s/downsample seconds, legal_hold/enabled",
+      "actions": "Define/Cancel/Edit; Save PUT success-only closes; Remove danger confirmation then DELETE policy; pending row/save and inline errors",
+      "mobile": "Wrapping min44px caller buttons; md/xl stacked form; edit/remove inline and full displayed-column Quick view"
+    },
+    {
+      "name": "Dry-run impact",
+      "lines": [
+        747,
+        808
+      ],
+      "source": "simulate mutation",
+      "data": "as_of, three computed totals plus non-enforcement status; impacts/retained/downsampled rows/holds/warnings/runway; four metrics",
+      "actions": "Explicit Run sends selected datasets or policy fallback, confirmed:true; never automatic; pending/error declared",
+      "limits": "Real consecutive-mutation retention unproved; response quality/evidence unused"
+    },
+    {
+      "name": "Plan ledger",
+      "lines": [
+        812,
+        838
+      ],
+      "source": "runsQuery(50,(page-1)*50)",
+      "data": "dataset, executed time, mode, expiring rows, reclaimable bytes, fidelity",
+      "actions": "Server pages with safe-integer exact total or truthful loaded fallback; independent retry; matching-loaded/selected CSV/JSON export only, no full-result handler",
+      "mobile": "Typed summary/full displayed-column Quick view; stable table ID"
+    },
+    {
+      "name": "Evidence/quality/limitations",
+      "lines": [
+        843,
+        857
+      ],
+      "source": "overview only",
+      "data": "quality/count/coverage/window/reasons; evidence source/summary/count/time; unsupported items",
+      "limits": "Does not describe simulation result evidence; absent quality has unknown copy and genuine zero counts remain zero"
+    }
+  ],
+  "coverageAndSafety": {
+    "tableIds": [
+      "ownership-governance-inventory",
+      "ownership-governance-policies",
+      "ownership-governance-impact",
+      "ownership-governance-runs"
+    ],
+    "confirmation": "Page61-72 localized dataset-specific danger prompt; useConfirm cannot silence danger; only true invokes mutation. Confirm/Cancel/readiness actions NOTRUN.",
+    "feedback": "useOwnership515-552 success/error toasts, onSuccess-only editor close and MutationError; no fake completion declared. Raw error privacy is conditional, not a demonstrated PII leak.",
+    "readiness": "canSimulate81 checks only lengths; submit109 checks dataset; Include requires governed. Missing live-only contract DG-02. Actual backend auth/capability/enforcement unknown.",
+    "states": "OwnershipPanel/dataState/SourceContent distinguish initial loading, fatal-without-data, retained failure, initial-paused and cached-paused; independent sources stay mounted. Shared source tests declare these. Mutation observer retention remains conditional.",
+    "unknown": "Summary bridge validates unknown/zero and source flag; malformed row numeric fields are conditional DG-C05.",
+    "preferences": "Stable persistence IDs, shared density/columns, numeric locale/precision subscription and binary units retained; timestamp preference gap DG-05. No preferences read/changed in application.",
+    "copy": "No page Copy link prop; shared table exports inspected only. No clipboard/export/download action.",
+    "a11y": "Localized visible labels, useId form/prerequisite IDs, aria-expanded/controls/pressed, editor focus/restore effect, dataset-named action group and shared semantic table/modal controls. Declarations only, no native acceptance."
+  },
+  "confirmedIssues": [
+    {
+      "id": "DG-01",
+      "severity": "high",
+      "rule": "cache-invalidation",
+      "contract": "MDC-026/046",
+      "owner": "ownership-hooks",
+      "file": "web/src/api/hooks/useOwnership.ts",
+      "line": 548,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 56
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 95
+        }
+      ],
+      "mechanism": "Success invalidates governanceRuns(25,0); mounted ledger subscribes governanceRuns(50,offset). Numeric key segments differ, so mounted pages are not targeted.",
+      "repro": "Source comparison ['ownership-intel','governance-runs',50,0] vs invalidation [...,25,0], also nonzero offsets; no simulation run.",
+      "fix": "Invalidate existing governance-runs prefix for all mounted sizes/offsets; preserve keys/cancellation.",
+      "dedup": "Existing inventory G151/P277/audit-page-155 residual. One integration owner, no duplicate new page/remigration ticket; targeted queue search found no exact open hook repair."
+    },
+    {
+      "id": "DG-02",
+      "severity": "high",
+      "rule": "missing-live-only-guard",
+      "contract": "MDC-046",
+      "owner": "ownership-hooks",
+      "file": "web/src/api/hooks/useOwnership.ts",
+      "line": 511,
+      "related": [
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 528
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 543
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 352
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 71
+        },
+        {
+          "file": "web/src/api/offlineCache.ts",
+          "line": 50
+        },
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 81
+        }
+      ],
+      "mechanism": "Policy PUT/DELETE and ledger-writing POST omit requiresLiveMode. Client defaults false; guard returns before historical/offline check when false. Offline unsafe-path list omits data-governance; page handlers and Button do not consume canWrite/block reason.",
+      "repro": "Source trace with hypothetical ?as_of: absent flag -> false -> operationalMode71 early return. Missing client protection confirmed, NOT real server acceptance. Offline TanStack pause/replay/network behavior NOTRUN.",
+      "fix": "Use existing requiresLiveMode and caller canWrite/disabled reason plus handler recheck for all three mutations; keep cached reads, confirmation and backend authority.",
+      "dedup": "Single hook capability owner + narrow page integration; no new auth/offline queue."
+    },
+    {
+      "id": "DG-03",
+      "severity": "medium",
+      "rule": "misleading-read-only-copy",
+      "contract": "MDC-046",
+      "owner": "data-governance-page",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 850,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 536
+        },
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 540
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 512
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 528
+        }
+      ],
+      "mechanism": "Whole-screen deliberately read-only/nothing ever deleted/never issues a delete wording conflicts with policy PUT/DELETE and recorded-plan POST. Non-enforcement of dataset rows is a different claim.",
+      "repro": "Read notice/unsupported copy against Save/Remove hook methods; no actions. Whole-screen wording exists independently of backend acceptance.",
+      "fix": "Explicitly separate no dataset-row deletion/enforcement from actual policy changes and recorded plans.",
+      "dedup": "One page copy defect covering related strings; parent catalog integration only."
+    },
+    {
+      "id": "DG-04",
+      "severity": "medium",
+      "rule": "simulation-evidence-lineage",
+      "contract": "MDC-026/044/046",
+      "owner": "data-governance-page",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 843,
+      "related": [
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 704
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 74
+        }
+      ],
+      "mechanism": "Simulation response quality/evidence never consumed. Sole EvidencePanel gets overview source metadata; dry-run brief says assumptions/limitations are in evidence below, which belongs only to overview.",
+      "repro": "Hypothetical source fixture overview=sufficient/catalog, simulation=limited/estimation: trace footer props, only catalog appears. Fixture/test/application NOTRUN.",
+      "fix": "Keep overview evidence and independently label/surface returned simulation quality/evidence with its source/freshness using existing owner.",
+      "dedup": "Page wiring reuses G148 EvidencePanel, no competing component."
+    },
+    {
+      "id": "DG-05",
+      "severity": "medium",
+      "rule": "date-preferences",
+      "contract": "MDC-044/045",
+      "owner": "data-governance-page",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 431,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 219
+        },
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 504
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 101
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 67
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 55
+        }
+      ],
+      "mechanism": "Timestamp calls omit options; formatDateTime uses browser locale/timezone and exposes no hour-cycle preference. Selected timezone/locale/12-24h settings cannot affect cited call paths; numeric preferences do subscribe.",
+      "repro": "Source trace with hypothetical saved settings different from browser: Date.toLocaleString(undefined,no timeZone/hourCycle). No actual settings access/change.",
+      "fix": "Use existing settings-aware timestamp display path, preserving instants/unknowns; report precise unsupported shared hour-cycle capability.",
+      "dedup": "Ownership domain/page residual; completed advanced-intelligence date-preference owner targets different files."
+    },
+    {
+      "id": "DG-06",
+      "severity": "medium",
+      "rule": "hardcoded-string",
+      "contract": "MDC-044",
+      "owner": "data-governance-page",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 412,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 444
+        },
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 504
+        }
+      ],
+      "mechanism": "Warnings/run mode replace underscores into English-looking labels without t(); known dry_run displays dry run on desktop/mobile regardless of locale. Three presentation occurrences, one grouped defect.",
+      "repro": "Read test fixture source_warning/dry_run then raw replace calls; no locale/browser/test action.",
+      "fix": "Translate known mode/warning codes through existing i18n; retain unknown raw evidence identifiers without inventing meanings.",
+      "dedup": "Page labels; parent owns canonical catalog needs."
+    },
+    {
+      "id": "DG-07",
+      "severity": "medium",
+      "rule": "hardcoded-string",
+      "contract": "MDC-044",
+      "owner": "ownership-evidence",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 72,
+      "mechanism": "Quality badge renders raw sufficient/limited/insufficient enum; limited fixture status is unlocalized English while surrounding labels use t().",
+      "repro": "Source trace page fixture limited -> EvidencePanel72 regardless of translation language.",
+      "fix": "Localize known quality labels at existing shared owner, preserve enum/severity/zero/unknown.",
+      "dedup": "One G148 owner, not per consumer; advanced-intelligence evidence claims are different files."
+    },
+    {
+      "id": "DG-08",
+      "severity": "medium",
+      "rule": "hardcoded-string",
+      "contract": "MDC-024/044",
+      "owner": "data-governance-page",
+      "file": "web/src/components/ui/ConfirmDialog.tsx",
+      "line": 78,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+          "line": 62
+        },
+        {
+          "file": "web/src/hooks/useConfirm.ts",
+          "line": 104
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 177
+        }
+      ],
+      "mechanism": "Page translates confirmLabel but omits cancelLabel; useConfirm forwards undefined, ConfirmDialog defaults literal Cancel then renders without t(). Default Confirm is NOT counted because this page supplies Delete.",
+      "repro": "Read omitted label -> hook -> default Cancel -> footer; non-English UI cannot translate it. No dialog opened.",
+      "fix": "Caller supplies existing t('common.cancel','Cancel'); do not reopen completed primitive-confirm-dialog.",
+      "dedup": "Caller repair grouped with page localization, shared origin cited without duplicate primitive remigration."
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "DG-C01",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.test.tsx",
+      "line": 343,
+      "rule": "real-mutation-retention",
+      "condition": "Second real useMutation begins/fails after successful simulation",
+      "mechanism": "Page consumes simulate.data only; test artificially combines old data/new error rather than exercising actual observer lifecycle. Pending/failed retained result is unproved.",
+      "repro": "Future authorized mocked QueryClient lifecycle, not real simulation",
+      "owner": "hook/page integration"
+    },
+    {
+      "id": "DG-C02",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 290,
+      "rule": "retention-roundtrip",
+      "condition": "Backend returns non-whole-day duration; backend constraints not inspected",
+      "mechanism": "formatters125 rounds secondsToDays; page113 saves daysToSeconds. 90000s ->1day ->86400s loses3600s; same risk downsample_after_s.",
+      "repro": "Arithmetic source example only; future synthetic fixture, no save",
+      "owner": "page/domain formatters"
+    },
+    {
+      "id": "DG-C03",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 185,
+      "rule": "inert-sort-declarations",
+      "condition": "Sorting is intended behavior; original acceptance did not establish expectation",
+      "mechanism": "Six sortable declarations185/194/256/348/368/434 but four tables omit onSort/sortKey/sortDir. DataTable1438/1571 only creates sort controls with onSort.",
+      "repro": "Future synthetic column-header inspection, no data/network action",
+      "owner": "page"
+    },
+    {
+      "id": "DG-C04",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 120,
+      "rule": "concurrent-editor-lifecycle",
+      "condition": "Draft/policy changed while earlier save pending",
+      "mechanism": "Only save button pending; editing/Define/fields remain active; earlier onSuccess unconditionally closes current form. Later unsaved draft may close; actual lifecycle NOTRUN.",
+      "repro": "Future controlled mocked promises/editor events; no real save",
+      "owner": "page"
+    },
+    {
+      "id": "DG-C05",
+      "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+      "line": 184,
+      "rule": "malformed-row-unknown",
+      "condition": "Contract-breaking missing/nonfinite/null row count; actual backend payload not inspected",
+      "mechanism": "Table fmtInt at page184 ultimately uses numberFormat.safeNumber(null/NaN)->0 unlike the validated summary bridge; actual rows follow typed numeric contract, so malformed-payload concern is conditional only.",
+      "repro": "Future authorized synthetic malformed row fixture; no personal data or network",
+      "owner": "page/domain"
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "DG-N01",
+      "status": "NOTRUN",
+      "rule": "mounted-mobile-a11y-matrix",
+      "scope": "Six sections; editor/Quick views/confirmation; Escape, keyboard/focus restore, long localized text/RTL,200% text,dark/light/custom/forced-colors,reduced-motion/low-bandwidth;320/375/390/430/768/1024/1280/1440/1920/2560 and narrow allocated containers",
+      "reason": "Browser/auth/network/actions prohibited. Source ResizeObserver test and styling declarations do not prove native geometry/contrast/focus. No business action acceptance."
+    }
+  ],
+  "engineeringRules": {
+    "scope": "Seven production page/direct-domain files; relevant hook489-554 separately inspected; no app-wide zero claim",
+    "rawMatchLines": {
+      "static-inline-style": 0,
+      "raw-html-initial-case-insensitive": 4,
+      "raw-html-corrected-case-sensitive": 1,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidates": 5,
+      "PageLayout-or-PageContainer": 3,
+      "fetch-or-useEffect": 1
+    },
+    "confirmedOccurrences": {
+      "hardcoded-string": 5,
+      "cache-invalidation": 1,
+      "live-only-mutation-request": 3,
+      "copy": 1,
+      "lineage": 1,
+      "date-preferences": 1
+    },
+    "groupedIssuesByRule": {
+      "hardcoded-string": 3,
+      "cache-invalidation": 1,
+      "missing-live-only-guard": 1,
+      "misleading-read-only-copy": 1,
+      "simulation-evidence-lineage": 1,
+      "date-preferences": 1
+    },
+    "exceptions": [
+      "Uppercase shared Button/Table are not raw HTML; sole case-sensitive input match is formatter comment.",
+      "page85 useEffect only focuses/restores, not data loading.",
+      "PageLayout actually wraps PageContainer at owner11.",
+      "Dialog/editor/details conditional mounting is interaction state, not hidden sections.",
+      "Shared computed column-width inline style is dynamic and acceptable.",
+      "Raw dataset/source identifiers/unknown reason evidence are not automatically hardcoded UI strings; known enums are DG06/07."
+    ],
+    "backend": "Rules11-14 NOT APPLICABLE: no Go source inspected"
+  },
+  "tests": {
+    "page": "14 literal it declarations plus one it.each([true,false]) =>16 source-declared cases, NOT runtime discovery",
+    "declaredCoverage": [
+      "storage zero/unknown/enforcement flag",
+      "four table IDs/desktop/mobile details/actions",
+      "ledger pagination",
+      "editor focus/association/unsaved fields/cancel restore",
+      "mocked retained simulation error/prerequisites",
+      "independent fatal/retained sources/retry",
+      "danger confirm/no direct delete/confirm/cancel/pending row"
+    ],
+    "sharedTestsRead": [
+      "OwnershipPanel.test.tsx including initial/cached paused and independent editor/fatal/retained",
+      "OwnershipBrief.test.tsx numeric bridge,zero/unknown/loading,retained offline,details/invalid rejection"
+    ],
+    "gaps": [
+      "hook invalidation",
+      "real consecutive mutation retention",
+      "live-only readiness",
+      "actual non-English i18n",
+      "timezone/hour-cycle preferences",
+      "simulation evidence",
+      "non-whole-day editing",
+      "native matrix"
+    ],
+    "historical": "Phase5 source accepted; earlier final test external catalog startup1/zero cases preserved in queue, not a fresh failure/pass",
+    "runner": {
+      "status": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    }
+  },
+  "ownerNeeds": [
+    {
+      "owner": "ownership-hooks",
+      "files": [
+        "web/src/api/hooks/useOwnership.ts"
+      ],
+      "issues": [
+        "DG-01",
+        "DG-02"
+      ],
+      "need": "One bounded integration repair with page live-mode wiring/covering synthetic tests after parent assignment; reuse G151/request guard/key owners."
+    },
+    {
+      "owner": "data-governance-page",
+      "files": [
+        "web/src/features/ownership/pages/DataGovernancePage.tsx",
+        "web/src/features/ownership/pages/DataGovernancePage.test.tsx"
+      ],
+      "issues": [
+        "DG-03",
+        "DG-04",
+        "DG-05",
+        "DG-06",
+        "DG-08"
+      ],
+      "need": "Narrow caller copy/evidence/preferences/localization fixes; preserve all sections/actions/IDs; parent alone integrates catalog needs."
+    },
+    {
+      "owner": "ownership-evidence",
+      "files": [
+        "web/src/features/ownership/components/EvidencePanel.tsx"
+      ],
+      "issues": [
+        "DG-07"
+      ],
+      "need": "One shared known-quality-label fix; coordinate domain date preferences with DG05, no duplicate advanced-intelligence owner claim."
+    }
+  ],
+  "commands": {
+    "log": "Raw successful check output and literal later scripts in matching allowed log; initial discovery raw output in tool responses referenced at bootstrap; oversized outputs fully retained in log",
+    "successShells": [
+      "2250",
+      "2258",
+      "2277",
+      "2290",
+      "2296",
+      "2305",
+      "2323",
+      "2333",
+      "2366",
+      "2412",
+      "2418",
+      "2433",
+      "2458"
+    ],
+    "failures": [
+      {
+        "shell": "2265",
+        "exit": 1,
+        "reason": "rg unavailable; subsequent recursive AGENTS probe NOTRUN"
+      },
+      {
+        "shell": "2383",
+        "exit": 1,
+        "reason": "useOperationalMode.ts absent; actual .tsx; buffered output aborted, not accepted receipt"
+      },
+      {
+        "shell": "2394",
+        "exit": 1,
+        "reason": "null Trim in queue summarizer actor row; buffered output aborted, not accepted receipt"
+      },
+      {
+        "shell": "2499",
+        "exit": 1,
+        "reason": "Windows command length os206 before process start; no artifact write"
+      }
+    ],
+    "finalArtifactWrite": "shell2524 exited0",
+    "finalParsePin": "Final ConvertFrom-Json, count/ID/owner/line-anchor checks and all31 fresh disk SHA256 matches; numeric exit logged upon completion"
+  },
+  "notRun": [
+    "fresh tests/focused runner",
+    "lint/build/global npx tsc --noEmit/full gates",
+    "audit/preservation/helpers",
+    "servers/installs/subagents/Git",
+    "browser/auth/API/network",
+    "actual personal data",
+    "policy/retention/export/delete/simulation actions",
+    "clipboard/download/preferences changes",
+    "native/theme/a11y acceptance",
+    "backend routes/auth/enforcement",
+    "unchanged passing reruns"
+  ],
+  "pinVerification": {
+    "algorithm": "SHA256",
+    "count": 31,
+    "allUnchanged": true,
+    "files": [
+      {
+        "file": "web/src/api/client.ts",
+        "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/_toastHelpers.ts",
+        "beforeSha256": "96BC3304B4CD5A9FD4EAD533B10120FBB2EACE1AC162D28B839D3F0843689966",
+        "afterSha256": "96BC3304B4CD5A9FD4EAD533B10120FBB2EACE1AC162D28B839D3F0843689966",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useOwnership.ts",
+        "beforeSha256": "0B8EBF9B896BF06D510EBD95DB56B915D74688E5666A9EFA1FAA55CFB769C8AF",
+        "afterSha256": "0B8EBF9B896BF06D510EBD95DB56B915D74688E5666A9EFA1FAA55CFB769C8AF",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/offlineCache.ts",
+        "beforeSha256": "EDE8370B47BC67BEFD688A6434D6696C1EFDAE22E77BFDCC56C2D11D2857E6CE",
+        "afterSha256": "EDE8370B47BC67BEFD688A6434D6696C1EFDAE22E77BFDCC56C2D11D2857E6CE",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+        "beforeSha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+        "afterSha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "beforeSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "afterSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/ConfirmDialog.tsx",
+        "beforeSha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6",
+        "afterSha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "beforeSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "afterSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+        "beforeSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+        "afterSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+        "beforeSha256": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+        "afterSha256": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "beforeSha256": "14136114508038891D06E3927AC73486C3B7E3A843B1FA8B0B29B1305E77D4B2",
+        "afterSha256": "14136114508038891D06E3927AC73486C3B7E3A843B1FA8B0B29B1305E77D4B2",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/MutationError.tsx",
+        "beforeSha256": "AC90A2F219389A12B7C5F9287513E06E59554E834603AB5A368A3C116C785F81",
+        "afterSha256": "AC90A2F219389A12B7C5F9287513E06E59554E834603AB5A368A3C116C785F81",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+        "beforeSha256": "EC99F6F0AFC52243E9F6AD97F048A832990109CE09502CA97263F9B88437AF01",
+        "afterSha256": "EC99F6F0AFC52243E9F6AD97F048A832990109CE09502CA97263F9B88437AF01",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "beforeSha256": "B81A73E8D47FE507855B5D82D221B309BF2F5DEE847293087652DB6729693384",
+        "afterSha256": "B81A73E8D47FE507855B5D82D221B309BF2F5DEE847293087652DB6729693384",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+        "beforeSha256": "22EB84FC59E0765A5DF43F027DF32A2E9AAFFDB81CBE69B49AC73969AE9389BB",
+        "afterSha256": "22EB84FC59E0765A5DF43F027DF32A2E9AAFFDB81CBE69B49AC73969AE9389BB",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+        "beforeSha256": "42DA86A2C70487DDEBDB3D5213B40EC907B64562264BB24FCC30DCCF8DAD4390",
+        "afterSha256": "42DA86A2C70487DDEBDB3D5213B40EC907B64562264BB24FCC30DCCF8DAD4390",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+        "beforeSha256": "8C408E99AAB7A019EC0D673458895B496DC8EE94BB6BFCBEAB2CD16F91167392",
+        "afterSha256": "8C408E99AAB7A019EC0D673458895B496DC8EE94BB6BFCBEAB2CD16F91167392",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/formatters.ts",
+        "beforeSha256": "0E1110729B6A2B3ACAB5427A06BEF2430773FE8A3164C78B5AA6A9D8762C078A",
+        "afterSha256": "0E1110729B6A2B3ACAB5427A06BEF2430773FE8A3164C78B5AA6A9D8762C078A",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/pages/DataGovernancePage.test.tsx",
+        "beforeSha256": "290F294D2C94B921994A6031C915005B4FA609150A4E44BC011EE4A82DC662C0",
+        "afterSha256": "290F294D2C94B921994A6031C915005B4FA609150A4E44BC011EE4A82DC662C0",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/pages/DataGovernancePage.tsx",
+        "beforeSha256": "2FB43DBA2A208D90F96B6BBD9D8011038F2B3CB0F1A3DC546CE1320DA963CCDD",
+        "afterSha256": "2FB43DBA2A208D90F96B6BBD9D8011038F2B3CB0F1A3DC546CE1320DA963CCDD",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useConfirm.ts",
+        "beforeSha256": "639E5AF08827EA0D0E10C54D3C282356A27CF847FB9247727B8F8C5145496856",
+        "afterSha256": "639E5AF08827EA0D0E10C54D3C282356A27CF847FB9247727B8F8C5145496856",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useOperationalMode.tsx",
+        "beforeSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+        "afterSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/numberFormat.ts",
+        "beforeSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "afterSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/operationalMode.ts",
+        "beforeSha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+        "afterSha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/types/ownership.ts",
+        "beforeSha256": "8AAC4DBB7F1A5239B44A709BF30A38054C1669FF43E64C4F540853EC5B4F6FAB",
+        "afterSha256": "8AAC4DBB7F1A5239B44A709BF30A38054C1669FF43E64C4F540853EC5B4F6FAB",
+        "unchanged": true
+      }
+    ],
+    "baselineReceipt": "Earliest successful BASELINE entries in matching log; primary page and colocated test pinned before review",
+    "timingLimits": "Button initial baseline was buffered in failed shell2383 and not retained; successful logged baseline follows its first detailed read. useFormatting.ts incidental context was unpinned and no stability claim is made for it. Other supports scoped to referenced ranges, not entire unrelated file audits.",
+    "finalDiskRecheck": "completed in this final command after JSON write"
+  },
+  "release": {
+    "sourceWriteAuthority": "none; never acquired",
+    "onlyAllowedArtifactWrites": true,
+    "taskServicesStarted": 0,
+    "status": "RELEASE artifact and command ownership; no source-write ownership acquired; no task services running; source audit only",
+    "utc": "2026-10-14T02:23:46.6802442Z"
+  }
+}

@@ -7,6 +7,10 @@ a new Service Level Objective (SLO). The catalog is the single source of
 truth — Prometheus recording rules, burn-rate alerts, and Grafana
 dashboards are all generated from `slo/catalog.yaml`.
 
+The API Docker image also includes this catalog at `/slo/catalog.yaml` for
+the runtime SLO board. Rebuild the API image after changing the catalog;
+generating Prometheus rules alone does not update an already-running image.
+
 ## When to add an SLO
 
 Add an SLO when:

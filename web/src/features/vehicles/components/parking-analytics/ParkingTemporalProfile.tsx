@@ -6,12 +6,13 @@ import { ChartContainer } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { Subhead } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import { ParkingStartBarChart } from './ParkingStartBarChart';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ParkingTemporalProfileProps {
   summary: ParkingSummary;
@@ -25,17 +26,19 @@ export function ParkingTemporalProfile({
   state,
   className,
 }: ParkingTemporalProfileProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { locale } = useDateFormat();
+  const { locale, formatTime } = useDateFormat();
   const hourRows = useMemo(
     () =>
       summary.hourly.map((bucket) => ({
-        label: t('parking.temporal.hourLabel', '{{hour}}:00', {
-          hour: String(bucket.hour).padStart(2, '0'),
+        // Buckets already represent local wall hours, not UTC instants.
+        label: formatTime(new Date(Date.UTC(2026, 0, 4, bucket.hour)), {
+          tz: 'UTC',
         }),
         stints: bucket.stints,
       })),
-    [summary.hourly, t],
+    [summary.hourly, formatTime],
   );
   const weekdayRows = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(locale, {
@@ -76,7 +79,7 @@ export function ParkingTemporalProfile({
       data-testid="parking-temporal"
     >
       <ChartContainer
-        title={t('parking.temporal.title', 'When Parking Starts')}
+        title={t('parking.temporal.title', 'When parking starts')}
         subtitle={t(
           'parking.temporal.subtitle',
           '{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.',

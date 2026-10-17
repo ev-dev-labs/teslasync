@@ -3,7 +3,7 @@
  *
  * TanStack Query bindings for the typed feature-flag registry mounted
  * under `/api/v1/system/flags*`. Backed by Go handlers in
- * `internal/api/flags_handler.go`.
+ * `internal/api/apiflagsh/handler.go`.
  *
  * Endpoint summary (router.go ~L3540):
  *   GET /system/flags → FeatureFlagsListResponse
@@ -111,6 +111,9 @@ export function useSetFlag() {
     { key: string; value: FeatureFlagValue; reason: string }
   >({
     mutationFn: ({ key, value, reason }) => {
+      if (typeof value !== 'string') {
+        throw new TypeError('Feature flag values must be strings');
+      }
       const body: FeatureFlagSetRequest = { value, reason };
       return request<FeatureFlagWriteResponse>(
         `/system/flags/${encodeURIComponent(key)}`,
@@ -136,29 +139,63 @@ export function useSetFlag() {
 }
 
 /**
+ * `deleted` is omitted for an absent flag by Go's omitempty. Audit ID zero
+ * means the store operation completed without a persisted audit row.
+ */
+export function assertFeatureFlagDeleteResult(
+  result: FeatureFlagWriteResponse | null | undefined,
+  key: string,
+): void {
+  if (
+    !result ||
+    result.key !== key ||
+    (result.deleted !== undefined && typeof result.deleted !== 'boolean') ||
+    !Number.isSafeInteger(result.audit_id) ||
+    result.audit_id < 0
+  ) {
+    throw new Error('The server returned an invalid flag deletion result; deletion and audit persistence could not be confirmed.');
+  }
+  if (result.audit_id === 0) {
+    throw new Error(
+      result.deleted === true
+        ? 'The flag was deleted, but the change was not recorded in the audit feed.'
+        : 'The flag was already absent, but the delete attempt was not recorded in the audit feed.',
+    );
+  }
+}
+
+/**
  * Delete a single flag (sudo-gated). `reason` is required by the
- * backend — the audit row is rejected without it.
+ * backend audit. Only a confirmed, audited outcome resolves the mutation.
  */
 export function useDeleteFlag() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, warning, error } = useMutationToast();
   return useMutation<FeatureFlagWriteResponse, Error, { key: string; reason: string }>({
-    mutationFn: ({ key, reason }) => {
+    mutationFn: async ({ key, reason }) => {
       const qs = new URLSearchParams({ reason }).toString();
-      return request<FeatureFlagWriteResponse>(
+      const result = await request<FeatureFlagWriteResponse>(
         `/system/flags/${encodeURIComponent(key)}?${qs}`,
         { method: 'DELETE', requiresLiveMode: true },
       );
+      assertFeatureFlagDeleteResult(result, key);
+      return result;
     },
-    onSuccess: (_res, vars) => {
+    onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ['system', 'flags'] });
       qc.invalidateQueries({ queryKey: featureFlagKeys.flag(vars.key) });
+      if (res.deleted !== true) {
+        warning('toast.noChanges', 'No changes');
+        return;
+      }
       success('admin.flags.toast.deleteSuccess', 'Flag "{{key}}" deleted', {
         key: vars.key,
       });
     },
     onError: (err) => {
       if (err instanceof SudoCanceledError) return;
+      // The registry may have changed even when audit persistence failed.
+      qc.invalidateQueries({ queryKey: ['system', 'flags'] });
       error(err, 'admin.flags.toast.deleteError', 'Failed to delete flag');
     },
   });

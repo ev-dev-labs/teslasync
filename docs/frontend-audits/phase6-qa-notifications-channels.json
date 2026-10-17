@@ -1,0 +1,1622 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-notifications-channels",
+  "attempt": 1,
+  "actor_id": "e48b6fa4-4091-4447-8493-4ec752c5fcf8",
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS_NATIVE_NOTRUN",
+  "scope": {
+    "page": "web/src/features/notifications/pages/ChannelsPage.tsx",
+    "application_readonly": true,
+    "writable_files": [
+      "docs/frontend-audits/phase6-qa-notifications-channels.json",
+      "web/logs/phase6-qa-notifications-channels.log"
+    ],
+    "routes": [
+      "/notifications/channels",
+      "/notifications/webhooks -> /notifications/channels replace"
+    ],
+    "exact_queue_pin": [
+      {
+        "line": 58,
+        "raw": "| phase6-qa-notifications-channels | e48b6fa4-4091-4447-8493-4ec752c5fcf8 |"
+      },
+      {
+        "line": 90,
+        "raw": "| [~] | 6 | phase6-qa-notifications-channels | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-notifications-channels.json; web\\logs\\phase6-qa-notifications-channels.log | phase5-page-notifications-channels | 1 | reserved01:57:57.687Z; actor pending | - | ChannelsPage/direct supports; source-only, no channel configuration/token/test-message/network actions. |"
+      }
+    ]
+  },
+  "clock": {
+    "reservation": "2026-10-14T01:57:57.687Z",
+    "first_observed": "2026-10-14T02:00:09.7775337Z",
+    "return_by": "2026-10-14T02:17:57.687Z",
+    "hard_by": "2026-10-14T02:22:57.687Z",
+    "composition_started": "2026-10-14T02:15:29.349804+00:00",
+    "return_target_met": false,
+    "deadline_limit": "Return target02:17:57.687Z missed; actual release below remains before hard02:22:57.687Z. Prior failed inspections retained."
+  },
+  "source_test_hashes": [
+    {
+      "file": "web/e2e/operationalbrief-contracts/notifications.fixtures.ts",
+      "sha256_before": "fdf944ac80bbad2c97a1b7419d8b3fa252a5c2a4e3df353097e15dc5831ce506",
+      "sha256_after": "fdf944ac80bbad2c97a1b7419d8b3fa252a5c2a4e3df353097e15dc5831ce506",
+      "unchanged": true
+    },
+    {
+      "file": "web/e2e/operationalbrief-contracts/notifications.smoke.spec.ts",
+      "sha256_before": "d91338bb5db72c9647f0b10041cc9ee159f802ffe4309fcce17206b1ce2d65e6",
+      "sha256_after": "d91338bb5db72c9647f0b10041cc9ee159f802ffe4309fcce17206b1ce2d65e6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256_before": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "sha256_after": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256_before": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "sha256_after": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/__tests__/useNotifications.test.tsx",
+      "sha256_before": "03273d0d1aa44bc44dd342eff2b6bb1b6b16a7489010d83f7f3ea3ddd2a1a2c9",
+      "sha256_after": "03273d0d1aa44bc44dd342eff2b6bb1b6b16a7489010d83f7f3ea3ddd2a1a2c9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useNotificationChannels.test.tsx",
+      "sha256_before": "8931ac1d9a0a612bbb13a08c4130260a431894368196029c4e4018dd593dc309",
+      "sha256_after": "8931ac1d9a0a612bbb13a08c4130260a431894368196029c4e4018dd593dc309",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useNotificationChannels.ts",
+      "sha256_before": "7914f42c440800179be0ac00ab7675ce5e0df9fe933845121a0038148edac1c5",
+      "sha256_after": "7914f42c440800179be0ac00ab7675ce5e0df9fe933845121a0038148edac1c5",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useNotifications.ts",
+      "sha256_before": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "sha256_after": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/usePush.test.tsx",
+      "sha256_before": "291470f2fc4cbb299127cbda41dd0f10c387f0e76a9cb2c2e0627225f14d1a8d",
+      "sha256_after": "291470f2fc4cbb299127cbda41dd0f10c387f0e76a9cb2c2e0627225f14d1a8d",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/usePush.ts",
+      "sha256_before": "315616b972b9bcaf40c0bc283715e744ef3d1a9296e78656ea6ace725d920a06",
+      "sha256_after": "315616b972b9bcaf40c0bc283715e744ef3d1a9296e78656ea6ace725d920a06",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "sha256_before": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "sha256_after": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256_before": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "sha256_after": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/CopyLinkButton.tsx",
+      "sha256_before": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "sha256_after": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256_before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "sha256_after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/CopyButton.tsx",
+      "sha256_before": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+      "sha256_after": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "sha256_before": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "sha256_after": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Modal.tsx",
+      "sha256_before": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+      "sha256_after": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/RadioCard.tsx",
+      "sha256_before": "9d812391716d093946d5659a48447da7abf335632fb7c781c05a5c36e38fd522",
+      "sha256_after": "9d812391716d093946d5659a48447da7abf335632fb7c781c05a5c36e38fd522",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Toggle.tsx",
+      "sha256_before": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "sha256_after": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/BrowserPushChannelCard.test.tsx",
+      "sha256_before": "0470124219bcac4dbfa74c8a4cdf8ba5dcb1da8b617a431188937bb497be1b28",
+      "sha256_after": "0470124219bcac4dbfa74c8a4cdf8ba5dcb1da8b617a431188937bb497be1b28",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+      "sha256_before": "d37ba6b5c3ad7d1db0f2244a9d29c97add61d33dfe7c6f48fc28d352af4897c8",
+      "sha256_after": "d37ba6b5c3ad7d1db0f2244a9d29c97add61d33dfe7c6f48fc28d352af4897c8",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelCard.test.tsx",
+      "sha256_before": "8b8f7277c853996b34c04750a3a82812e2f3d69453d39b8c7a3411fa052057e6",
+      "sha256_after": "8b8f7277c853996b34c04750a3a82812e2f3d69453d39b8c7a3411fa052057e6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+      "sha256_before": "964356fc078290e967e457ef34ca54621e708ecd32bf8d20dd033cb9da700110",
+      "sha256_after": "964356fc078290e967e457ef34ca54621e708ecd32bf8d20dd033cb9da700110",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelFormModal.test.tsx",
+      "sha256_before": "f7fb3cd7b474b13ed430a0ea4cfb40b6879f4318190b6d72ba3131f80cf1911d",
+      "sha256_after": "f7fb3cd7b474b13ed430a0ea4cfb40b6879f4318190b6d72ba3131f80cf1911d",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+      "sha256_before": "54baf1e1bcace190db14b7fc5f337070a40100418a59e87701ce1652d51b99ae",
+      "sha256_after": "54baf1e1bcace190db14b7fc5f337070a40100418a59e87701ce1652d51b99ae",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelProvidersPanel.test.tsx",
+      "sha256_before": "4222d9ed05e981d63a22eb3e358711e9f5b89771e72b147e06fa5f8dc3a7784b",
+      "sha256_after": "4222d9ed05e981d63a22eb3e358711e9f5b89771e72b147e06fa5f8dc3a7784b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelProvidersPanel.tsx",
+      "sha256_before": "3e059eb1c537cd9fde46d2ba3924fdd4aa86d85523178e330751c14f0032efb8",
+      "sha256_after": "3e059eb1c537cd9fde46d2ba3924fdd4aa86d85523178e330751c14f0032efb8",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelStatsBand.test.tsx",
+      "sha256_before": "f4e261af7e94d018b109d5a8c3f477c7ce5e88b6da4a907801dca3d5c928c12e",
+      "sha256_after": "f4e261af7e94d018b109d5a8c3f477c7ce5e88b6da4a907801dca3d5c928c12e",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelStatsBand.tsx",
+      "sha256_before": "fcf9c16023a88a49d5441c6543534c8a17a93f90caf736b994b8c95ad2674de1",
+      "sha256_after": "fcf9c16023a88a49d5441c6543534c8a17a93f90caf736b994b8c95ad2674de1",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelsGrid.test.tsx",
+      "sha256_before": "1c848fd3299f32643b147c7cede21a3c6235426b6aa66c8e6e6aacddc2181d8d",
+      "sha256_after": "1c848fd3299f32643b147c7cede21a3c6235426b6aa66c8e6e6aacddc2181d8d",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/ChannelsGrid.tsx",
+      "sha256_before": "a1defac19f8a42386bfffa97f263abdf9d9b1c20beeb2ba5f8d3f2a06ef36875",
+      "sha256_after": "a1defac19f8a42386bfffa97f263abdf9d9b1c20beeb2ba5f8d3f2a06ef36875",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/WebhookSignaturePreview.tsx",
+      "sha256_before": "ad8337a6fb9e791cd0733df3b72816cc6e015effea2f020116ff181ecc6fd125",
+      "sha256_after": "ad8337a6fb9e791cd0733df3b72816cc6e015effea2f020116ff181ecc6fd125",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/channelMeta.test.ts",
+      "sha256_before": "6510b0753421077e8a039444ff669b2a80434ff62edca49e6d36aa51d77ebb49",
+      "sha256_after": "6510b0753421077e8a039444ff669b2a80434ff62edca49e6d36aa51d77ebb49",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+      "sha256_before": "bbb794b66efb218b1f4d8ff8127c25f1e8581cfd76ed2f50e4684fea12f040e2",
+      "sha256_after": "bbb794b66efb218b1f4d8ff8127c25f1e8581cfd76ed2f50e4684fea12f040e2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/pages/ChannelsPage.test.tsx",
+      "sha256_before": "06677375efc9629478faa59f7ca5420c7b33e46b740227e5759ee0c43ba18e3c",
+      "sha256_after": "06677375efc9629478faa59f7ca5420c7b33e46b740227e5759ee0c43ba18e3c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/notifications/pages/ChannelsPage.tsx",
+      "sha256_before": "59cc4d7e0cf246c253561623b1763a791c3e01f2d3cf399954a285c4ae7dd6e8",
+      "sha256_after": "59cc4d7e0cf246c253561623b1763a791c3e01f2d3cf399954a285c4ae7dd6e8",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/__tests__/useWebPush.test.ts",
+      "sha256_before": "4f7f3468f167bdfef3ab8f0a53a72800858e51c481031d1d2c300fed03e65249",
+      "sha256_after": "4f7f3468f167bdfef3ab8f0a53a72800858e51c481031d1d2c300fed03e65249",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256_before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "sha256_after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDiscardChangesGuard.ts",
+      "sha256_before": "1aead18ecf0fc903ccd4af7a3801cd3f4ca7aa52f0eb6dbd99cc5cd87478e907",
+      "sha256_after": "1aead18ecf0fc903ccd4af7a3801cd3f4ca7aa52f0eb6dbd99cc5cd87478e907",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useWebPush.ts",
+      "sha256_before": "60735e9e3de6e608e1f09a1c524a3d56e9bff96c87a2829e1434c90e220f9d70",
+      "sha256_after": "60735e9e3de6e608e1f09a1c524a3d56e9bff96c87a2829e1434c90e220f9d70",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/types/notifications.ts",
+      "sha256_before": "64dfb2c0fa34661b458f73a633d2a2d49333a35551ca83e37be5370bf4dc5342",
+      "sha256_after": "64dfb2c0fa34661b458f73a633d2a2d49333a35551ca83e37be5370bf4dc5342",
+      "unchanged": true
+    }
+  ],
+  "confirmed_findings": [
+    {
+      "id": "NC001",
+      "rule": "unknown-to-zero",
+      "severity": "high",
+      "title": "Missing statistics publish measured zeros",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelStatsBand.tsx",
+          "line": 31,
+          "exact_source_line": "const enabled = stats?.enabled_channels ?? 0;"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelStatsBand.tsx",
+          "line": 32,
+          "exact_source_line": "const total = stats?.total_channels ?? 0;"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelStatsBand.tsx",
+          "line": 35,
+          "exact_source_line": "metricId: 'count', occurrenceId: 'channels-sent', rawValue: stats?.sent ?? 0,"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelStatsBand.tsx",
+          "line": 40,
+          "exact_source_line": "metricId: 'count', occurrenceId: 'channels-failed', rawValue: stats?.failed ?? 0,"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelStatsBand.tsx",
+          "line": 45,
+          "exact_source_line": "metricId: 'count', occurrenceId: 'channels-pending', rawValue: stats?.pending ?? 0,"
+        }
+      ],
+      "mechanism": "Five defaults feed four metrics before missing-value formatting. Undefined nonloading or partial stats become zeros/0/0 despite no measured payload.",
+      "repro_not_executed": "Synthetic stats=undefined,isLoading=false,error=undefined; or only sent=9. Inspect formatter inputs; no API request.",
+      "recommended_fix": "Pass unknown values/reasons through the existing numeric metric API; preserve all four metrics and explicit unbounded period.",
+      "deduplicated_owner": "Existing audit-page-148 support owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC002",
+      "rule": "derived-source-trust",
+      "severity": "high",
+      "title": "Provider counts erase upstream channel trust",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/pages/ChannelsPage.tsx",
+          "line": 36,
+          "exact_source_line": "const channels: NotificationChannel[] = channelsQuery.data ?? [];"
+        },
+        {
+          "file": "web/src/features/notifications/pages/ChannelsPage.tsx",
+          "line": 142,
+          "exact_source_line": "<ChannelProvidersPanel channels={channels} />"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelProvidersPanel.tsx",
+          "line": 21,
+          "exact_source_line": "// Derive per-kind counts + the number of provider types in use once per"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelProvidersPanel.tsx",
+          "line": 71,
+          "exact_source_line": ": t('notifications.channels.providers.notConfigured', 'Not configured')}"
+        }
+      ],
+      "mechanism": "Absent/fatal/loading/paused channels become [] with no trust prop. Catalog claims zero in use/Not configured before an authoritative result. Retained counts also lack their own derived trust notice.",
+      "repro_not_executed": "Synthetic channels query data=undefined with loading/fatal/paused; compare provider input with successful empty result.",
+      "recommended_fix": "Keep full provider catalog visible; pass source state and distinguish unknown/loading/fatal/retained counts.",
+      "deduplicated_owner": "Existing audit-page-148 support owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC003",
+      "rule": "initial-paused-empty",
+      "severity": "medium",
+      "title": "Initial paused channels appear authoritatively empty",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/pages/ChannelsPage.tsx",
+          "line": 121,
+          "exact_source_line": "isLoading={!channelsState.hasData && channelsQuery.isLoading}"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelsGrid.tsx",
+          "line": 67,
+          "exact_source_line": "title={t('notifications.channels.empty.title', 'No channels configured')}"
+        }
+      ],
+      "mechanism": "Initial paused TanStack state has isPending=true,isLoading=false,fetchStatus=paused and no data. Only isLoading/fatalError is consumed, so grid receives []/false/false and takes empty branch.",
+      "repro_not_executed": "Synthetic query data=undefined,isPending=true,isLoading=false,isError=false,fetchStatus=paused; source-trace grid props only.",
+      "recommended_fix": "Consume initial/blocked state explicitly; preserve neighbor sections and do not invent a server/offline error.",
+      "deduplicated_owner": "New narrow page/grid paused-state need",
+      "previously_reported": false,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC004",
+      "rule": "initial-paused-capability",
+      "severity": "medium",
+      "title": "Paused key lookup is mislabeled unsupported browser",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 60,
+          "exact_source_line": "const keyLoading = keyQuery.isLoading && !keyState.hasData;"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 85,
+          "exact_source_line": "const isCheckingAvailability = notifSupported && keyLoading;"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 99,
+          "exact_source_line": "return t('webpush.unsupported.pushApi', \"This browser doesn't support the Push API.\");"
+        }
+      ],
+      "mechanism": "On a capable browser with unresolved paused key, publicKey is undefined and isPushSupported=false until key exists; isLoading=false bypasses checking and yields unsupported Push API.",
+      "repro_not_executed": "Synthetic Notification/PushManager/serviceWorker-capable state; key data undefined, isPending=true,isLoading=false,fetchStatus=paused; no lookup executed.",
+      "recommended_fix": "Extend existing readiness owner to distinguish unresolved/blocked key from known disabled server and absent browser capability.",
+      "deduplicated_owner": "Existing G138/P261/P263 browser lifecycle owner",
+      "previously_reported": false,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC005",
+      "rule": "subscription-unknown",
+      "severity": "high",
+      "title": "Local lookup unknown/failure becomes Not subscribed",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 42,
+          "exact_source_line": "const [isSubscribed, setIsSubscribed] = useState<boolean>(false)"
+        },
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 68,
+          "exact_source_line": ".catch(() => {"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 17,
+          "exact_source_line": "*   - Not subscribed on this device."
+        }
+      ],
+      "mechanism": "isSubscribed starts false; rejected registration/subscription lookup is swallowed without checking/error/retry output. With loaded key, card claims absence before local truth is established.",
+      "repro_not_executed": "Use only synthetic deferred/rejected getSubscription/getRegistration; inspect output/card branch.",
+      "recommended_fix": "Expose/consume explicit checking, known absent/subscribed, lookup failure and retry in the existing hook/card.",
+      "deduplicated_owner": "Existing G138/P261/P263 browser lifecycle owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC006",
+      "rule": "mutation-false-success",
+      "severity": "high",
+      "title": "Unsubscribe reports completion despite failures",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 210,
+          "exact_source_line": "await unsubscribeMut.mutateAsync(sub.endpoint)"
+        },
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 217,
+          "exact_source_line": "await sub.unsubscribe()"
+        },
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 223,
+          "exact_source_line": "setIsSubscribed(false)"
+        },
+        {
+          "file": "web/src/hooks/useWebPush.ts",
+          "line": 225,
+          "exact_source_line": "return true"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 115,
+          "exact_source_line": "if (!await action()) setActionFailed(true);"
+        }
+      ],
+      "mechanism": "Server DELETE and browser unsubscribe rejections are swallowed; resolved false from browser unsubscribe also ignored. Local state is cleared and true returned, suppressing the card action failure signal.",
+      "repro_not_executed": "Existing synthetic hook setup: reject server/browser operations or resolve browser unsubscribe=false; inspect final return/state. Never unsubscribe a real device.",
+      "recommended_fix": "Keep server-first/best effort but return truthful partial/failure and reconcile actual state.",
+      "deduplicated_owner": "Existing G138/P261/P263 browser lifecycle owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC007",
+      "rule": "hidden-section",
+      "severity": "medium",
+      "title": "Registered devices shell disappears for empty/unresolved rows",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 245,
+          "exact_source_line": "{rows.length > 0 && ("
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 241,
+          "exact_source_line": "{subsQuery.isLoading && !subsState.hasData && <Skeleton className=\"h-20 w-full\" />}"
+        }
+      ],
+      "mechanism": "Heading/list shell are inside positive-length gate. Successful [] has no affirmative empty explanation. Initial paused list has neither heading nor skeleton.",
+      "repro_not_executed": "Synthetic successful [] and initial-paused undefined subscriptions; inspect heading/list branch.",
+      "recommended_fix": "Always retain section shell with known-empty explanation, explicit blocked/loading/fatal and retained states.",
+      "deduplicated_owner": "Existing audit-page-148 support owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC008",
+      "rule": "credential-preview-exposure",
+      "severity": "high",
+      "title": "Credential-bearing webhook URL is not masked",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 47,
+          "exact_source_line": "content: 'Full HTTPS endpoint that receives JSON-formatted alert payloads. Treat as a credential — anyone with this URL can post to your channel.',"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 136,
+          "exact_source_line": "return key.includes('token') || key.includes('key') || key.includes('password');"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 119,
+          "exact_source_line": "{isSecretField(k) ? '••••••••' : (v || '—')}"
+        }
+      ],
+      "mechanism": "Metadata calls Discord/Slack webhook_url a credential, but mask helper checks only token/key/password. Flattening exposes webhook_url and card renders it verbatim. Truncation does not remove DOM value.",
+      "repro_not_executed": "Use only existing synthetic Discord/Slack URL or .invalid credential-shaped string; trace isSecretField(webhook_url)=false. No real URL read/configured.",
+      "recommended_fix": "Use explicit credential classification at existing metadata helper; preserve editing while masking credential-bearing previews.",
+      "deduplicated_owner": "Existing audit-page-148 support owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC009",
+      "rule": "pending-mutation-guard",
+      "severity": "medium",
+      "title": "Channel toggle remains enabled while inversion is pending",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 41,
+          "exact_source_line": "toggleMut.mutate(channel.id, {"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 105,
+          "exact_source_line": "<Toggle"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 107,
+          "exact_source_line": "onChange={handleToggle}"
+        }
+      ],
+      "mechanism": "toggleMut.isPending never reaches Toggle.disabled; handler has no pending latch. Shared Toggle defaults enabled, allowing another inversion dispatch before refetched state.",
+      "repro_not_executed": "Set existing synthetic toggle double isPending=true; inspect props or future mocked repeated activations.",
+      "recommended_fix": "Disable/latch only this mutation switch; preserve independent other channel actions.",
+      "deduplicated_owner": "Existing audit-page-148 support owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC010",
+      "rule": "result-blind-success",
+      "severity": "high",
+      "title": "Generic test hook emits success for success=false",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 1344,
+          "exact_source_line": "onSuccess: () => {"
+        },
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 1345,
+          "exact_source_line": "success('toast.channels.test.success', 'Test notification sent');"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 63,
+          "exact_source_line": "if (data?.success) toast.success(`${channel.name}: ${t('notifications.channels.testSuccessShort', 'Test sent!')}`);"
+        }
+      ],
+      "mechanism": "Hook-level transport onSuccess ignores response.success. Card/modal correctly branch on provider false, creating contradictory success feedback on a fulfilled failure response.",
+      "repro_not_executed": "Use a mocked request fulfilled with {success:false,error:synthetic failure}; source-trace real hook and caller callbacks, never send a message.",
+      "recommended_fix": "Make actual hook result-aware and establish a single feedback owner.",
+      "deduplicated_owner": "Existing G138/P264 channel feedback/cache owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC011",
+      "rule": "duplicate-mutation-feedback",
+      "severity": "medium",
+      "title": "Generic actions have hook and caller toast owners",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 42,
+          "exact_source_line": "onSuccess: () => toast.success(channel.enabled"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 63,
+          "exact_source_line": "if (data?.success) toast.success(`${channel.name}: ${t('notifications.channels.testSuccessShort', 'Test sent!')}`);"
+        },
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 1318,
+          "exact_source_line": "success('toast.channels.delete.success', 'Channel deleted');"
+        },
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 1333,
+          "exact_source_line": "success('toast.channels.toggle.success', 'Channel toggled');"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 119,
+          "exact_source_line": "toast.success(t('notifications.channels.testSuccessShort', 'Test sent!'));"
+        }
+      ],
+      "mechanism": "Card delete/toggle/test and generic modal test toast in caller while generic hooks also toast success/error. Webhook test hook intentionally has no toast and is a distinct acceptable path.",
+      "repro_not_executed": "Inspect real hook callbacks plus mocked request/caller callbacks; source proves duplicate owners, not an observed live toast.",
+      "recommended_fix": "Consolidate at P264 while retaining channel-specific names/reasons and inline results.",
+      "deduplicated_owner": "Existing G138/P264 channel feedback/cache owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC012",
+      "rule": "dependent-cache-invalidation",
+      "severity": "medium",
+      "title": "Save does not invalidate enabled/total statistics",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 1298,
+          "exact_source_line": "invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });"
+        },
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 1317,
+          "exact_source_line": "invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });"
+        }
+      ],
+      "mechanism": "Save success invalidates channels only; delete/toggle invalidate both channels and stats. Creating/editing enabled state leaves stats prior payload until periodic polling.",
+      "repro_not_executed": "Inspect save onSuccess after synthetic fulfilled create/edit; compare invalidation calls with delete/toggle. No real mutation.",
+      "recommended_fix": "Invalidate/broadcast existing stats key after save, preserving keys and polling.",
+      "deduplicated_owner": "Existing G138/P264 channel feedback/cache owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC013",
+      "rule": "radio-keyboard-contract",
+      "severity": "medium",
+      "title": "Provider ARIA radios lack native arrow navigation",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 147,
+          "exact_source_line": "role=\"radiogroup\""
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 159,
+          "exact_source_line": "role=\"radio\""
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 160,
+          "exact_source_line": "aria-checked={selected}"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 22,
+          "exact_source_line": "* `<button>` (EmptyState's `actionTo`), and previously hand-copied these"
+        }
+      ],
+      "mechanism": "Seven native Buttons labeled ARIA radios have no native same-name radio inputs, roving tabIndex or arrow-key handler. ARIA roles alone add no keyboard behavior; each Button remains a separate Tab stop.",
+      "repro_not_executed": "Inspect generated create picker props; future synthetic keyboard check must exercise ArrowRight/selection/focus, not just click/aria-checked.",
+      "recommended_fix": "Reuse existing RadioCard/native radio group; preserve seven provider options and configuration reset.",
+      "deduplicated_owner": "Existing audit-page-148 support owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC014",
+      "rule": "configuration-preservation",
+      "severity": "high",
+      "title": "Edit emits defaults replacing retained provider settings",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 140,
+          "exact_source_line": "export function channelToFormConfig(ch: NotificationChannel): Record<string, string> {"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 190,
+          "exact_source_line": "return { ...idPart, kind: 'discord', name, enabled, webhook_url: config.webhook_url ?? '', username: null, avatar_url: null } as NotificationChannelInput;"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 192,
+          "exact_source_line": "return { ...idPart, kind: 'slack', name, enabled, webhook_url: config.webhook_url ?? '', channel: null, username: null } as NotificationChannelInput;"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 208,
+          "exact_source_line": "use_tls: true,"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 218,
+          "exact_source_line": "headers: {},"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 219,
+          "exact_source_line": "body_template: '',"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 228,
+          "exact_source_line": "priority: 3, username: null, password: null,"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 235,
+          "exact_source_line": "device: null, priority: 0,"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 213,
+          "exact_source_line": "const safeMethod: 'POST' | 'PUT' = method === 'PUT' ? 'PUT' : 'POST';"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 88,
+          "exact_source_line": "const payload = buildChannelPayload(kind, name, enabled, config, isEdit && channel ? channel.id : undefined);"
+        }
+      ],
+      "mechanism": "Edit flattening omits Discord username/avatar, Slack channel/username, Email use_tls, Webhook headers/body_template, ntfy priority/auth, Pushover device/priority. Builder writes defaults/null/true/empty values into PUT. Typed stored Webhook GET becomes POST. Confirmed outgoing payload loss; actual backend persistence is uninspected.",
+      "repro_not_executed": "Typed synthetic channels with non-default fields; inspect buildChannelPayload(kind,name,enabled,channelToFormConfig(channel),id) or mocked no-change Update. Compare outgoing defaults with retained source; do not execute helper/app or API.",
+      "recommended_fix": "Preserve unedited typed config through existing helper/modal edit path without adding unsupported create controls.",
+      "deduplicated_owner": "New narrow retained configuration payload owner",
+      "previously_reported": false,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC015",
+      "rule": "field-type-validation",
+      "severity": "medium",
+      "title": "URL/email field declarations are downgraded to text",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 216,
+          "exact_source_line": "type={f.type === 'password' ? 'password' : 'text'}"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 104,
+          "exact_source_line": "{ key: 'from_address', i18nKey: 'notifications.channels.fields.fromAddress', label: 'From address', placeholder: 'alerts@example.com', type: 'email' },"
+        },
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 106,
+          "exact_source_line": "{...props}"
+        }
+      ],
+      "mechanism": "Metadata defines URL/email types but modal sends text for every non-password. Shared Input forwards that type, losing native typeMismatch validation and mobile email/URL keyboard hints. Only custom-webhook protocol is submit-validated. Backend validation/response is NOTRUN.",
+      "repro_not_executed": "Inspect Email From address/Discord URL Input type versus declared metadata; future malformed synthetic email/URL check must not call real API.",
+      "recommended_fix": "Preserve native metadata field types and scoped provider validation via existing controls.",
+      "deduplicated_owner": "New narrow modal field-type owner",
+      "previously_reported": false,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC016",
+      "rule": "hardcoded-string",
+      "severity": "low",
+      "title": "Three generic English metadata literals bypass i18n",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 99,
+          "exact_source_line": "{ value: 'email', label: 'Email', icon: Mail, color: '#EA4335', fields: ["
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 107,
+          "exact_source_line": "{ value: 'webhook', label: 'Webhook', icon: Webhook, color: '#FF6B35', fields: ["
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 109,
+          "exact_source_line": "{ key: 'bearer_token', i18nKey: 'notifications.channels.fields.signingSecret', label: 'Signing secret', placeholder: 'Optional — used for HMAC signing', type: 'password' },"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 178,
+          "exact_source_line": "{ct.label}"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 222,
+          "exact_source_line": "placeholder={f.placeholder}"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelProvidersPanel.tsx",
+          "line": 67,
+          "exact_source_line": "<Text as=\"p\" variant=\"body\" className=\"truncate\">{p.label}</Text>"
+        }
+      ],
+      "mechanism": "Exactly 3 metadata prose declarations reach visible provider labels/placeholder directly. Proper brands, protocol verbs, address examples, translated fallbacks and help i18nKey content are exceptions, not additional counts.",
+      "repro_not_executed": "Source-trace picker/reference labels under non-English translator and signing-secret placeholder; no catalog or preference write.",
+      "recommended_fix": "Add keys/fallbacks at existing metadata consumers; report serialized canonical catalog needs to parent.",
+      "deduplicated_owner": "New metadata localization caller plus parent catalog integration",
+      "previously_reported": false,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC017",
+      "rule": "copy-error-feedback",
+      "severity": "medium",
+      "title": "Signature Copy lacks visible clipboard failure feedback",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/WebhookSignaturePreview.tsx",
+          "line": 46,
+          "exact_source_line": "<CopyButton text={signature} iconOnly />"
+        },
+        {
+          "file": "web/src/components/ui/CopyButton.tsx",
+          "line": 60,
+          "exact_source_line": "withToast = false,"
+        },
+        {
+          "file": "web/src/components/ui/CopyButton.tsx",
+          "line": 101,
+          "exact_source_line": "console.error('CopyButton: clipboard write failed', err)"
+        },
+        {
+          "file": "web/src/components/ui/CopyButton.tsx",
+          "line": 107,
+          "exact_source_line": "onCopyError?.(err)"
+        }
+      ],
+      "mechanism": "Caller supplies neither withToast nor onCopyError. Shared catch logs failure but renders no error state; Copy remains idle without recovery feedback. Page CopyLinkButton has error toast and is not this issue.",
+      "repro_not_executed": "Future authorized synthetic clipboard rejection while preview signature exists; source-trace catch with absent options. Do not compute/copy any real token/signature.",
+      "recommended_fix": "Use existing copy-error callback/feedback API at this caller; no global helper rewrite.",
+      "deduplicated_owner": "New narrow signature preview feedback caller",
+      "previously_reported": false,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC018",
+      "rule": "device-registration-trust",
+      "severity": "medium",
+      "title": "Remove current device leaves local Active status",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 131,
+          "exact_source_line": "void removeDevice(endpoint).catch(() => {"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 166,
+          "exact_source_line": "<Badge variant=\"success\">{t('webpush.status.subscribed', 'Active on this device')}</Badge>"
+        },
+        {
+          "file": "web/src/api/hooks/usePush.ts",
+          "line": 114,
+          "exact_source_line": "invalidateAndBroadcast(qc, { queryKey: pushKeys.list });"
+        }
+      ],
+      "mechanism": "Per-row remove calls server DELETE/invalidation only. It does not reconcile mounted useWebPush.isSubscribed/currentEndpoint or browser subscription. Current registration row can disappear while Active on this device/Disable remain; server delivery registration was revoked.",
+      "repro_not_executed": "Synthetic local subscribed=true/currentEndpoint=list row; source-trace server-only remove fulfillment and local-state ownership. Do not remove a real device.",
+      "recommended_fix": "Reconcile current-device removal through existing P263 owner; retain other-device server-only revocation.",
+      "deduplicated_owner": "Existing G138/P261/P263 browser lifecycle owner",
+      "previously_reported": false,
+      "runtime_verified": false
+    },
+    {
+      "id": "NC019",
+      "rule": "category-barrel-import",
+      "severity": "low",
+      "title": "Feature imports Toast directly instead of feedback barrel",
+      "status": "CONFIRMED_SOURCE",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 13,
+          "exact_source_line": "import { useToast } from '@/components/feedback/Toast';"
+        }
+      ],
+      "mechanism": "Bypasses required existing category barrel. This is not a direct vendor recharts/react-leaflet/framer-motion import.",
+      "repro_not_executed": "Inspect import line only.",
+      "recommended_fix": "Use unchanged useToast from @/components/feedback.",
+      "deduplicated_owner": "Existing audit-page-148 support owner",
+      "previously_reported": true,
+      "runtime_verified": false
+    }
+  ],
+  "conditional_candidates": [
+    {
+      "id": "C001",
+      "title": "Immediate deletion/revocation without confirmation",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 71,
+          "exact_source_line": "deleteMut.mutate(channel.id, {"
+        },
+        {
+          "file": "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+          "line": 131,
+          "exact_source_line": "void removeDevice(endpoint).catch(() => {"
+        }
+      ],
+      "mechanism": "Destructive callbacks dispatch immediately.",
+      "why_conditional": "Absence is source-proven; contract does not establish a new mandatory confirmation policy for every delete/revoke. Parent confirms product policy before a new fix.",
+      "repro_not_executed": "Read handlers or synthetic mutation doubles only; no actual deletion."
+    },
+    {
+      "id": "C002",
+      "title": "Pending editor dismissal and draft/test-result identity",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 287,
+          "exact_source_line": "<Button type=\"button\" variant=\"ghost\" onClick={requestClose}>{t('common.cancel', 'Cancel')}</Button>"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 115,
+          "exact_source_line": "testMut.mutate(channel.id, {"
+        }
+      ],
+      "mechanism": "Dirty guard is not pending guard; inputs remain editable; test uses saved ID, not draft. Save-then-test hint exists.",
+      "why_conditional": "No proven wrong-context callback/persistence loss; observer disposal/explicit discard may be intentional. Requires deferred synthetic mutation/close/reopen checks.",
+      "repro_not_executed": "Mock delayed promises only; inspect failure retention and saved-versus-draft test copy."
+    },
+    {
+      "id": "C003",
+      "title": "Malformed/unknown channel payload",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelsGrid.tsx",
+          "line": 80,
+          "exact_source_line": "<li key={ch.id} className=\"min-w-0\">"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/channelMeta.ts",
+          "line": 188,
+          "exact_source_line": "switch (kind) {"
+        }
+      ],
+      "mechanism": "Null row may hit ch.id; unsupported runtime kind has no payload-builder default return.",
+      "why_conditional": "Typed API excludes malformed rows; no backend payload/incidence inspected. Not a production crash claim.",
+      "repro_not_executed": "Synthetic malformed props only; use existing kind guard owner."
+    },
+    {
+      "id": "C004",
+      "title": "Effect-driven signing preview utility",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/WebhookSignaturePreview.tsx",
+          "line": 27,
+          "exact_source_line": "mutate.current({ secret, body: SAMPLE_BODY }).then("
+        }
+      ],
+      "mechanism": "Debounced effect triggers typed TanStack pure-utility mutation; active guard rejects stale UI updates.",
+      "why_conditional": "Not raw fetch/replacement query store. Architecture owner must classify intended utility mutation before counting fetch-useeffect debt. No secret or preview request executed.",
+      "repro_not_executed": "Read timer/hook only; never enter a real signing secret."
+    }
+  ],
+  "native_candidates": [
+    {
+      "id": "N001",
+      "title": "Narrow edit footer/long labels",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 274,
+          "exact_source_line": "<div className=\"flex items-center gap-3 pt-2\">"
+        }
+      ],
+      "existing_owner": "audit-page-148",
+      "source": "Nonwrapping Test/spacer/Cancel/Update row, no wrapLabel.",
+      "required": "320/375/390/430px and narrow allocated containers, long translations/RTL/200% text, body/footer scroll and no clipping.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "N002",
+      "title": "Mobile targets/reachability",
+      "evidence": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36,
+          "exact_source_line": "sm: 'h-9 px-3 text-sm',"
+        }
+      ],
+      "source": "Supports often use 36px sm or 40px md; page Add/Refresh and shared Toggle explicitly declare 44px mobile.",
+      "required": "Actual center/edge hit areas and WCAG spacing exceptions for card/form/device/copy/help actions. Classes alone are not a native pass/failure.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "N003",
+      "title": "Themes/disabled opacity/contrast/forced colors",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
+          "line": 82,
+          "exact_source_line": "channel.enabled ? 'ring-1 ring-white/[0.08]' : 'opacity-60',"
+        },
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 165,
+          "exact_source_line": "? 'border-neon-cyan/40 bg-neon-cyan/10'"
+        }
+      ],
+      "existing_owner": "audit-page-148",
+      "source": "Whole disabled-card opacity, fixed provider colors and dark-white/neon chrome remain. Dynamic color styles are static-inline-style exceptions.",
+      "required": "Composed text/UI/focus contrast in dark/light/custom/OLED/forced colors without resetting saved preferences or recoloring logos.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "N004",
+      "title": "Modal/discard/details keyboard/focus/AT",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+          "line": 135,
+          "exact_source_line": "onClose={requestClose}"
+        }
+      ],
+      "source": "Existing Modal/ConfirmDialog/OperationalBrief review owners reused.",
+      "required": "Tab/Shift+Tab/Escape/backdrop/nested topmost ownership, original-trigger restoration, screen-reader status/error focus.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "N005",
+      "title": "Preferences/localization/motion/extreme data",
+      "source": "No page preference storage or second workspace selector. Stats shared metrics, dates formatRelative, counts t interpolation.",
+      "required": "Real catalogs, RTL, long labels/addresses/counts, font scale/density, reduced motion/low bandwidth and mission widths320/375/390/430/768/1024/1280/1440/1920/2560. No real preference saves.",
+      "status": "NOTRUN"
+    }
+  ],
+  "counts": {
+    "confirmed_issue_mechanisms": 19,
+    "previously_reported": 12,
+    "new_mechanisms": 7,
+    "conditional_candidates": 4,
+    "native_candidates": 5,
+    "deduplicated_needs": 14,
+    "pins": 45,
+    "changed_pins": 0,
+    "authored_it_declarations": 129,
+    "test_executed": 0,
+    "test_discovered_passed_failed_skipped": "NOTRUN",
+    "inspection_commands_attempted": 25,
+    "inspection_command_failures": 4,
+    "by_rule": {
+      "unknown-to-zero": 1,
+      "derived-source-trust": 1,
+      "initial-paused-empty": 1,
+      "initial-paused-capability": 1,
+      "subscription-unknown": 1,
+      "mutation-false-success": 1,
+      "hidden-section": 1,
+      "credential-preview-exposure": 1,
+      "pending-mutation-guard": 1,
+      "result-blind-success": 1,
+      "duplicate-mutation-feedback": 1,
+      "dependent-cache-invalidation": 1,
+      "radio-keyboard-contract": 1,
+      "configuration-preservation": 1,
+      "field-type-validation": 1,
+      "hardcoded-string": 1,
+      "copy-error-feedback": 1,
+      "device-registration-trust": 1,
+      "category-barrel-import": 1
+    },
+    "hardcoded_English_declarations": 3,
+    "count_unit": "Unique confirmed mechanisms; NC016 groups exactly3 English source declarations."
+  },
+  "notrun": {
+    "tests": "No tests/discovery/passing reruns/helper execution authorized; executed=0, discovered/passed/failed/skipped=NOTRUN.",
+    "native": "No browser grant/use/mount/auth/screenshot/keyboard/viewport/contrast/screenreader execution.",
+    "network": "No API/browser/network requests or real channel configuration/token/signature/test-message/delivery.",
+    "gates": "No lint/build/global TSC; no pass claim.",
+    "operations": "No source/test/catalog/config/Git writes, subagents, installs, servers or helper files."
+  },
+  "release": {
+    "source_write_claim": "NONE; readonly",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-notifications-channels.json",
+      "web/logs/phase6-qa-notifications-channels.log"
+    ],
+    "utc": "2026-10-14T02:19:16.744732+00:00",
+    "final_parse_pin_check": "PASS actual disk JSON parse plus45 source/test pins and exact evidence checks; no tests/gates inferred",
+    "ongoing_commands": [],
+    "hard_deadline_met": true
+  },
+  "section_action_coverage": [
+    {
+      "section": "Header/route",
+      "actions": [
+        "Add",
+        "Refresh both channels+stats",
+        "Copy link",
+        "More info"
+      ],
+      "source": "Title/usePageTitle and named actions; PageLayout forwards real PageContainer. /notifications/channels mounted; /notifications/webhooks redirects replace. Named two-source registry, no all-page load/fatal suppression; clipboard errors owned by CopyLinkButton."
+    },
+    {
+      "section": "Delivery health",
+      "actions": [
+        "Stats retry",
+        "Review details"
+      ],
+      "source": "Four sent/failed/pending/enabled-total metrics; sent not total_sent; 4 busy skeletons/fatal retry/retained warning/provenance; explicit no reported time bounds; unknown-zero and save invalidation findings."
+    },
+    {
+      "section": "Configured channels/cards",
+      "actions": [
+        "Grid retry",
+        "Empty Add",
+        "Toggle",
+        "Generic Test",
+        "Signed webhook Test",
+        "Edit",
+        "Delete"
+      ],
+      "source": "ID keys/source order/autofit grid, skeleton/fatal/empty branches, retained rows and selected edit identity preserved. Card name/kind/enabled/preview complete; Test/Delete own loading; toggle missing pending guard. Every action reviewed without invocation."
+    },
+    {
+      "section": "Browser push readiness",
+      "actions": [
+        "Key retry",
+        "Enable on this device",
+        "Disable on this device"
+      ],
+      "source": "No Notification API, key checking/error retry, disabled server null, capability and denied permission reasons; busy and boolean failure surface; retained key warning. No automatic permission prompt/subscribe on mount. Local browser lookup unknown and unsubscribe partial completion defects."
+    },
+    {
+      "section": "Registered devices",
+      "actions": [
+        "List retry",
+        "Endpoint-specific remove"
+      ],
+      "source": "ID keys/current endpoint equality, full wrapping user agent/fallback, formatRelative last used/not-yet-used, per-row busy, fatal and retained list warning. Known-empty shell missing; removing current endpoint does not reconcile local Active."
+    },
+    {
+      "section": "Provider reference",
+      "actions": [],
+      "source": "All7 kinds/reference always rendered; per-kind counts and distinct-in-use, decorative count badge/icons hidden; no additional query. Derived trust and metadata localization defects."
+    },
+    {
+      "section": "Create/edit modal",
+      "actions": [
+        "Choose7 providers",
+        "Edit name/config/enabled",
+        "Create/Update",
+        "Cancel/discard",
+        "Test saved channel"
+      ],
+      "source": "Create defaults Discord/enabled; provider change resets config/result; edit chosen ID. Labels/help/secret fields, name error, custom webhook http(s) validation, save error retains form, success-only onSaved close and unsaved confirmation present. Radio keyboard/native types/config preservation findings; pending draft identity conditional."
+    },
+    {
+      "section": "Webhook preview/results",
+      "actions": [
+        "POST/PUT method",
+        "Signing secret",
+        "Automatic preview effect (not executed)",
+        "Copy signature",
+        "Signed Test (not executed)"
+      ],
+      "source": "Blank secret omits update field; debounced active-result guard, empty/loading/error; card status/latency/signature/body/error, modal live status. Hook URL unprefixed. Copy failure feedback missing. No real token/delivery/signature inspected."
+    }
+  ],
+  "state_identity_review": {
+    "loading": "Independent channel/stats/key/device loading declarations; all main sections retained.",
+    "fatal": "Individual retries with neighbors intact.",
+    "retained": "Page wires fatalError, preserves rows/stats; per-source StaleRefreshWarning including key/list.",
+    "initial_paused": "NC001/2/3/4/7: isLoading-only gates do not distinguish initial blocked state.",
+    "unknown": "NC001/2/5: unknown fact becomes zero/absence.",
+    "identity": "Rows by ID, mutations by ID/endpoint, local device endpoint equality, edit target reset on close. NC014 outgoing retained config loss; NC018 server/local identity split; malformed input conditional.",
+    "confirmation": "Declared unsaved draft confirmation; immediate destructive callbacks conditional product-policy need.",
+    "preferences": "No source preference writes, new picker/formatter/query store. Shared metric/formatRelative owners reused; no SI physics readings; webhook latency is explicitly named response ms.",
+    "i18n": "Most actions/help/errors use t keys/fallbacks. Three untranslated generic metadata literals NC016; real catalog/locale not accepted by mocked tests.",
+    "a11y": "Named h1/sections/lists/switch/delete/refresh, hidden decorative glyphs, status/alert declarations inspected; NC013 radio keyboard defect; focus/contrast/mobile/AT remain NOTRUN."
+  },
+  "governing_reads": {
+    "orchestrator": "docs/orchestrator-loop.md1-296 entire file",
+    "design_contract": "Core1-654 and explicit dialog-return target2481-2539; complete heading index. Unrelated feature-specific append-only addenda not reviewed in detail.",
+    "mission": "Principles/architecture;14-26,30-37,43-45 and relevant definitions of done",
+    "inventory": "ChannelsPage row199; G138493/P263873/P264874;1292-1293 competing implementation references and existing audit-page-148 relevant findings",
+    "handoff": "Current recovery1-47; shared owners/conventions2186-2252",
+    "queue": "Exact current QA row and actor mapping; Phase5 accepted source-only row;394-433 dispatch contract",
+    "instructions": [
+      ".github/copilot-instructions.md fully",
+      ".github/instructions/react-frontend.instructions.md fully"
+    ],
+    "AGENTS": "No root/applicable web/docs AGENTS.md located."
+  },
+  "test_source_review": {
+    "status": "NOTRUN",
+    "direct_page_support_plain_it_counts": {
+      "ChannelsPage": 19,
+      "BrowserPushChannelCard": 18,
+      "ChannelCard": 21,
+      "ChannelFormModal": 16,
+      "channelMeta": 25,
+      "ChannelProvidersPanel": 7,
+      "ChannelsGrid": 10,
+      "ChannelStatsBand": 13
+    },
+    "authored_declarations": 129,
+    "runtime_discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "limits": "Static129 is not discovery/pass evidence. Page mocks all heavy children; card/form mock generic hooks, hiding actual toasts/cache. Band tests179/190 assert unknown-zero; provider test121 asserts undefined-zero; BrowserPush396/402 asserts missing empty/undefined shell; channelMeta152 asserts plaintext webhook URL; useWebPush324/593/615 freeze lookup-false/unsubscribe-true. Hook tests have mocked transport; no channel CRUD integration in inspected useNotifications test. Existing mocked E2E Channels cases147-161 and376-399 inspected only, not rerun."
+  },
+  "engineering_rule_scans": {
+    "command": "Select-String -LiteralPath exact production page/supports/hooks -Pattern per rule -CaseSensitive; raw output in log",
+    "raw_matches": {
+      "dynamic_inline_style_candidates": 7,
+      "exact_static_var_inline_style": 0,
+      "raw_html": 0,
+      "direct_vendor_import": 0,
+      "old_api_import": 0,
+      "double_prefix_same_line": 0,
+      "camelcase_query_candidates": 0,
+      "hidden_section_same_line_candidates": 7,
+      "hardcoded_JSX_same_line_candidates": 11,
+      "PageLayout_PageContainer": 1,
+      "fetch_useEffect_candidates": 3
+    },
+    "classification": "All7 styles dynamic provider values/ternaries: not prohibited static CSS-variable styles. Hidden-section regex misses multiline rows-length gate found by direct read. JSX regex matches generics/comment/t fallback, not11 English defects. Effect matches:1 comment,1 local browser sync exception,1 typed mutation utility C004. PageLayout forwards PageContainer. Shared primitive/test-double raw HTML expected. Backend Go rules N/A/out of scope."
+  },
+  "deduplicated_needs": [
+    {
+      "owner_key": "NC001",
+      "owner": "Existing audit-page-148 support owner",
+      "finding_ids": [
+        "NC001"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/ChannelStatsBand.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC002",
+      "owner": "Existing audit-page-148 support owner",
+      "finding_ids": [
+        "NC002"
+      ],
+      "source_files": [
+        "web/src/features/notifications/pages/ChannelsPage.tsx",
+        "web/src/features/notifications/components/channels/ChannelProvidersPanel.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC003",
+      "owner": "New narrow page/grid paused-state need",
+      "finding_ids": [
+        "NC003"
+      ],
+      "source_files": [
+        "web/src/features/notifications/pages/ChannelsPage.tsx",
+        "web/src/features/notifications/components/channels/ChannelsGrid.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "Existing G138/P261/P263 browser lifecycle owner",
+      "owner": "Existing G138/P261/P263 browser lifecycle owner",
+      "finding_ids": [
+        "NC004",
+        "NC005",
+        "NC006",
+        "NC018"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/BrowserPushChannelCard.tsx",
+        "web/src/hooks/useWebPush.ts",
+        "web/src/api/hooks/usePush.ts"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC007",
+      "owner": "Existing audit-page-148 support owner",
+      "finding_ids": [
+        "NC007"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/BrowserPushChannelCard.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC008",
+      "owner": "Existing audit-page-148 support owner",
+      "finding_ids": [
+        "NC008"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/channelMeta.ts",
+        "web/src/features/notifications/components/channels/ChannelCard.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC009",
+      "owner": "Existing audit-page-148 support owner",
+      "finding_ids": [
+        "NC009"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/ChannelCard.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "Existing G138/P264 channel feedback/cache owner",
+      "owner": "Existing G138/P264 channel feedback/cache owner",
+      "finding_ids": [
+        "NC010",
+        "NC011",
+        "NC012"
+      ],
+      "source_files": [
+        "web/src/api/hooks/useNotifications.ts",
+        "web/src/features/notifications/components/channels/ChannelCard.tsx",
+        "web/src/features/notifications/components/channels/ChannelFormModal.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC013",
+      "owner": "Existing audit-page-148 support owner",
+      "finding_ids": [
+        "NC013"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/ChannelFormModal.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC014",
+      "owner": "New narrow retained configuration payload owner",
+      "finding_ids": [
+        "NC014"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/channelMeta.ts",
+        "web/src/features/notifications/components/channels/ChannelFormModal.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC015",
+      "owner": "New narrow modal field-type owner",
+      "finding_ids": [
+        "NC015"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+        "web/src/features/notifications/components/channels/channelMeta.ts"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC016",
+      "owner": "New metadata localization caller plus parent catalog integration",
+      "finding_ids": [
+        "NC016"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/channelMeta.ts",
+        "web/src/features/notifications/components/channels/ChannelFormModal.tsx",
+        "web/src/features/notifications/components/channels/ChannelProvidersPanel.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC017",
+      "owner": "New narrow signature preview feedback caller",
+      "finding_ids": [
+        "NC017"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/WebhookSignaturePreview.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    },
+    {
+      "owner_key": "NC019",
+      "owner": "Existing audit-page-148 support owner",
+      "finding_ids": [
+        "NC019"
+      ],
+      "source_files": [
+        "web/src/features/notifications/components/channels/ChannelCard.tsx"
+      ],
+      "needs": "Parent leases existing exact source/direct covering test owner; no new migration/source edits or task creation here."
+    }
+  ],
+  "commands": [
+    {
+      "shell_id": "1965",
+      "exit_code": 0,
+      "command": "Get-Date; git readonly status; Get-ChildItem root/audits",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "1966",
+      "exit_code": 0,
+      "command": "git readonly ls-files governing docs",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "1980",
+      "exit_code": 0,
+      "command": "python - document/instruction sizes/location",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "1994",
+      "exit_code": 1,
+      "command": "python - doc pattern scan Unicode cp1252 failure",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2006",
+      "exit_code": 0,
+      "command": "python - UTF8 governing matches/source hashes",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2022",
+      "exit_code": 0,
+      "command": "python - exact queue/inventory/artifact existence",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2034",
+      "exit_code": 0,
+      "command": "python - broad owner/instruction source scan",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2047",
+      "exit_code": 0,
+      "command": "python - narrow owner receipt scan",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2071",
+      "exit_code": 0,
+      "command": "python - log initialization/source test pins",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2089",
+      "exit_code": 0,
+      "command": "python - audit148 JSON/owner/routes/hook scan",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2101",
+      "exit_code": 0,
+      "command": "python - focused audit/test declarations",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2115",
+      "exit_code": 1,
+      "command": "Select-String attempt: PowerShell quote parser failure",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2125",
+      "exit_code": 0,
+      "command": "Select-String corrected production rule scans",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2134",
+      "exit_code": 0,
+      "command": "python - exact G138/P263/P264/direct test locations",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2149",
+      "exit_code": 0,
+      "command": "python - direct hook test/UI pins",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2185",
+      "exit_code": 0,
+      "command": "python - exact states/English/test counts/failure tail",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2211",
+      "exit_code": 0,
+      "command": "python - request guards/queue/E2E source declarations",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2231",
+      "exit_code": 0,
+      "command": "python - Input pin/NOTRUN accounting",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2244",
+      "exit_code": 0,
+      "command": "Select-String exact static CSS-var pattern",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2375",
+      "exit_code": 1,
+      "command": "python artifact compose: Windows os206 length failure before execution",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2403",
+      "exit_code": 0,
+      "command": "python - artifact part1/evidence assertions/hash comparison",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2425",
+      "exit_code": 0,
+      "command": "python - artifact part2/evidence assertions",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2468",
+      "exit_code": 1,
+      "command": "python - final compose failed exact evidence needle assertion before final write; no source or test execution",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "2472",
+      "exit_code": 0,
+      "command": "python - corrected final compose/JSON parse/exact evidence/pins/release",
+      "raw_output": "Authorized log plus original tool receipt; final artifact inline commands logged verbatim"
+    },
+    {
+      "shell_id": "final-receipt-command",
+      "exit_code": 0,
+      "command": "python -: correct prior hardcoded summary failure count, stamp actual command identity/deadline limit; disk JSON parse/count/evidence/pin validation",
+      "raw_output": "web/logs/phase6-qa-notifications-channels.log"
+    }
+  ],
+  "priority_fixes": [
+    "NC008 credential display and NC014 retained outgoing configuration.",
+    "G138/P263 trust/lifecycle and P264 result-aware feedback/cache; no competing owners.",
+    "Paused state, native radio/type, metadata i18n and signature-copy feedback."
+  ],
+  "qa_result": "Needs fixes; NOT page/native/application acceptance"
+}

@@ -33,9 +33,8 @@
 // Network is mocked with a hand-rolled ReadableStream emitting the SSE
 // frames internal/ai/stream/writer.go produces — the same convention
 // the sibling feature tests use. No real network is touched.
-// @testing-library/user-event is intentionally NOT a dependency of this
-// codebase (see web/package.json), so interactions use fireEvent.click,
-// consistent with every other AI feature test. react-i18next returns
+// Interactions use fireEvent.click, consistent with the original
+// AI feature tests. react-i18next returns
 // the English fallback (2nd arg) with no provider mounted, so
 // assertions read the defaults.
 
@@ -552,6 +551,72 @@ describe('AIPreheatPrecoolRecommender — SSE wiring + streaming lifecycle', () 
 })
 
 describe('AIPreheatPrecoolRecommender — public surface', () => {
+  it('describes advisory-only drafting and the actual manual destination without offering Apply or Save', () => {
+    enableFeature()
+
+    render(<AIPreheatPrecoolRecommender {...fullProps} />)
+
+    const description =
+      'Ask Helix to draft an advisory preheat or precool window using the departure heuristic and current temperatures. Helix does not save or apply a schedule. Review the proposal, then use the Vehicle command center for manual climate actions. Its Add precondition action uses a fixed 7 AM daily schedule, not the proposed window.'
+    expect(screen.getByText(description)).toBeInTheDocument()
+    expect(draftButton()).toHaveAttribute('title', 'Draft schedule')
+    expect(screen.queryByRole('button', { name: /apply|save|add precondition/i }))
+      .not.toBeInTheDocument()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['vehicle', { vehicleId: 7 }],
+    ['departure', { departBy: '2099-01-03T07:30:00Z' }],
+  ])('aborts the open stream and clears retained text when the %s scope changes', async (_label, nextScope) => {
+    enableFeature()
+    let signal: AbortSignal | null | undefined
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      signal = init?.signal
+      return new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(sseFrame('delta', {
+            text: 'Retained advisory for the previous scope.',
+          })))
+        },
+      }), { headers: { 'Content-Type': 'text/event-stream' } })
+    })
+
+    const { rerender } = render(<AIPreheatPrecoolRecommender {...fullProps} />)
+    await clickDraft()
+    await waitFor(() => expect(screen.getByTestId('ai-output-panel'))
+      .toHaveTextContent('Retained advisory for the previous scope.'))
+    expect(signal?.aborted).toBe(false)
+
+    rerender(<AIPreheatPrecoolRecommender {...fullProps} {...nextScope} />)
+    await waitFor(() => expect(signal?.aborted).toBe(true))
+    expect(screen.queryByText('Retained advisory for the previous scope.'))
+      .not.toBeInTheDocument()
+    expect(draftButton()).toBeEnabled()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('retains streamed advisory text alongside a terminal error without applying or saving it', async () => {
+    enableFeature()
+    const calls = installStreamingFetch(
+      sseFrame('delta', { text: 'Advisory window: 07:00–07:30.' }) +
+      sseFrame('error', { message: 'provider_unavailable' }),
+    )
+
+    render(<AIPreheatPrecoolRecommender {...fullProps} />)
+    await clickDraft()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-output-panel'))
+        .toHaveTextContent('Advisory window: 07:00–07:30.')
+      expect(screen.getByTestId('ai-output-panel'))
+        .toHaveTextContent('provider_unavailable')
+    })
+    expect(draftButton()).toBeEnabled()
+    expect(calls).toHaveLength(1)
+    expect(calls[0].url).toBe(DRAFT_ROUTE)
+  })
+
   it('exposes a stable displayName for the gated component', () => {
     expect(AIPreheatPrecoolRecommender.displayName).toBe(
       'AIPreheatPrecoolRecommender',

@@ -10,11 +10,12 @@ import { useTranslation } from 'react-i18next'
 import { ShieldCheck, KeyRound, RefreshCw, Trash2 } from 'lucide-react'
 import { GlassPanel, IconBox, Button, Badge, Heading, Text, HelperText } from '@/components/ui'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { knownNumber } from '@/api/dataState'
 
 interface TotpStatusHeroProps {
   activated: boolean
   lastUsedAt?: string
-  backupRemaining: number
+  backupRemaining: number | null | undefined
   enrolling: boolean
   regenerating: boolean
   onEnroll: () => void
@@ -35,21 +36,24 @@ export function TotpStatusHero({
   const { t } = useTranslation('settings')
   const { formatDateTime } = useDateFormat()
 
-  // Null-safe, range-sane count: a missing or negative value from an upstream
-  // data bug must never surface a blank or nonsensical "-1" cell.
-  const safeBackupRemaining = Math.max(0, backupRemaining ?? 0)
-  // A blank/whitespace timestamp is treated as "never used" rather than being
-  // formatted into an "Invalid Date" string.
-  const hasLastUsed = typeof lastUsedAt === 'string' && lastUsedAt.trim().length > 0
+  const knownBackupRemaining = knownNumber(backupRemaining)
+  const safeBackupRemaining = knownBackupRemaining != null
+    && Number.isSafeInteger(knownBackupRemaining)
+    && knownBackupRemaining >= 0
+    ? knownBackupRemaining
+    : t('common.dash', '—')
+  const hasLastUsed = typeof lastUsedAt === 'string'
+    && lastUsedAt.trim().length > 0
+    && Number.isFinite(Date.parse(lastUsedAt))
 
   return (
     <GlassPanel className="h-full space-y-5 p-4 sm:p-5" data-testid="totp-section">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <IconBox color={activated ? 'green' : 'cyan'}>
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </IconBox>
-          <div>
+          <div className="min-w-0">
             <Heading level="panel">{t('totp.title', 'Two-factor authentication')}</Heading>
             <HelperText>
               {t(
@@ -72,7 +76,7 @@ export function TotpStatusHero({
             <div className="space-y-0.5">
               <Text variant="label">{t('totp.lastUsed.label', 'Last used')}</Text>
               <Text variant="bodySm" as="p">
-                {hasLastUsed ? formatDateTime(lastUsedAt) : t('totp.lastUsed.never', 'Never')}
+                {hasLastUsed ? formatDateTime(lastUsedAt) : t('common.dash', '—')}
               </Text>
             </div>
             <div className="space-y-0.5">
@@ -87,6 +91,7 @@ export function TotpStatusHero({
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="ghost"
+              wrapLabel
               onClick={onRegenerate}
               loading={regenerating}
               data-testid="totp-regenerate"
@@ -94,7 +99,7 @@ export function TotpStatusHero({
               <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
               {t('totp.actions.regenerate', 'Regenerate backup codes')}
             </Button>
-            <Button variant="danger" onClick={onDisable} data-testid="totp-disable">
+            <Button variant="danger" wrapLabel onClick={onDisable} data-testid="totp-disable">
               <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
               {t('totp.actions.disable', 'Disable')}
             </Button>
@@ -104,6 +109,7 @@ export function TotpStatusHero({
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="primary"
+            wrapLabel
             onClick={onEnroll}
             loading={enrolling}
             data-testid="totp-enroll"

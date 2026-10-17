@@ -66,7 +66,8 @@ func TestWriteStatementsPlaceholdersAreContiguous(t *testing.T) {
 		sql      string
 		argCount int
 	}{
-		{"UpsertVehicle", queries.UpsertVehicle, 17},
+		{"UpsertVehicle", queries.UpsertVehicle, 8},
+		{"UpdateVehicle", queries.UpdateVehicle, 10},
 		{"DeleteVehicle", queries.DeleteVehicle, 1},
 		{"UpsertChargingSession", queries.UpsertChargingSession, 10},
 		{"UpsertTrip", queries.UpsertTrip, 4},
@@ -115,11 +116,14 @@ func TestUpsertTrip_BugFixPinned(t *testing.T) {
 func TestVehicleQueries_Shape(t *testing.T) {
 	t.Parallel()
 	mustContain(t, "GetVehicleByID", queries.GetVehicleByID,
-		"SELECT id, user_id, vin, display_name, model, year, color", "FROM vehicles", "WHERE id = $1")
+		"SELECT id, tesla_id, vin, display_name, model, option_codes, color", "FROM vehicles", "WHERE id = $1")
 	mustContain(t, "GetVehicleByVIN", queries.GetVehicleByVIN, "FROM vehicles", "WHERE vin = $1")
-	mustContain(t, "GetVehiclesByUserID", queries.GetVehiclesByUserID, "WHERE user_id = $1", "ORDER BY display_name")
+	mustContain(t, "GetAllVehicles", queries.GetAllVehicles, "FROM vehicles", "ORDER BY display_name, id")
+	mustNotContain(t, "GetAllVehicles", queries.GetAllVehicles, "user_id", "$1")
 	mustContain(t, "GetVehicleByIDForUpdate", queries.GetVehicleByIDForUpdate, "WHERE id = $1", "FOR UPDATE")
-	mustContain(t, "UpsertVehicle", queries.UpsertVehicle, "INSERT INTO vehicles", "ON CONFLICT (id) DO UPDATE SET")
+	mustContain(t, "UpsertVehicle", queries.UpsertVehicle, "INSERT INTO vehicles", "ON CONFLICT (tesla_id) DO UPDATE SET", "RETURNING id, enrolled_at, created_at, updated_at")
+	mustContain(t, "UpsertVehicle", queries.UpsertVehicle, "WHERE vehicles.vin = EXCLUDED.vin")
+	mustContain(t, "UpdateVehicle", queries.UpdateVehicle, "WHERE id = $1 AND tesla_id = $2", "RETURNING id, enrolled_at, created_at, updated_at")
 	if queries.DeleteVehicle != "DELETE FROM vehicles WHERE id = $1" {
 		t.Errorf("DeleteVehicle = %q, want DELETE FROM vehicles WHERE id = $1", queries.DeleteVehicle)
 	}

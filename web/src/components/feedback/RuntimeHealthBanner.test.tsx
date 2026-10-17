@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import type { OnboardingStatus } from '@/api/hooks/useOnboarding';
 import type { RuntimeStatusSnapshot } from '@/types/admin';
@@ -24,7 +24,7 @@ vi.mock('@/hooks/useDateFormat', () => ({
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
-  return { ...actual, useNavigate: () => navigate };
+  return { ...actual, useNavigate: vi.fn(() => navigate) };
 });
 
 vi.mock('react-i18next', () => ({
@@ -78,6 +78,7 @@ function renderBanner() {
 
 beforeEach(() => {
   navigate.mockReset();
+  vi.mocked(useNavigate).mockImplementation(() => navigate);
   onboardingData = onboarding();
   runtimeData = runtime([
     { name: 'database', status: 'healthy', consecutive_failures: 0 },
@@ -153,5 +154,58 @@ describe('RuntimeHealthBanner', () => {
       </MemoryRouter>,
     );
     expect(screen.queryByTestId('runtime-health-banner')).toBeNull();
+  });
+
+  it('allocates mobile targets for both health actions while retaining desktop density and label wrapping', () => {
+    runtimeData = runtime([
+      { name: 'mqtt', status: 'degraded', consecutive_failures: 3 },
+    ], 'degraded');
+    renderBanner();
+
+    // jsdom checks allocation classes, not a rendered 44px rectangle or edge hits.
+    const systemStatus = screen.getByRole('button', { name: 'System status' });
+    const healthAlerts = screen.getByRole('button', { name: 'Health alerts' });
+    for (const action of [systemStatus, healthAlerts]) {
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+      expect(action).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal');
+      expect(action.querySelector('span.min-w-0')).toHaveClass('break-words');
+      expect(action).not.toHaveClass('h-9', 'truncate', 'whitespace-nowrap');
+    }
+    expect(systemStatus.parentElement).toBe(healthAlerts.parentElement);
+    expect(systemStatus.parentElement).toHaveClass('flex-col', 'sm:flex-row', 'gap-2');
+    expect(screen.getByTestId('runtime-health-banner')).toHaveAttribute('data-data-state', 'partial');
+  });
+
+  it.each([
+    { Name: 'system status', label: 'System status', path: '/system-status' },
+    { Name: 'health alerts', label: 'Health alerts', path: '/notifications/channels' },
+  ])('keeps real $Name navigation from the mobile-allocated degraded banner', async ({ label, path }) => {
+    const actualRouter = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+    // Only these additive cases use the real hook; original navigation assertions stay mocked.
+    vi.mocked(useNavigate).mockImplementation(actualRouter.useNavigate);
+    runtimeData = runtime([
+      { name: 'mqtt', status: 'degraded', consecutive_failures: 3 },
+    ], 'degraded');
+
+    function CurrentPath() {
+      const location = useLocation();
+      return <output data-testid="current-path">{location.pathname}</output>;
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <RuntimeHealthBanner />
+        <CurrentPath />
+      </MemoryRouter>,
+    );
+
+    const action = screen.getByRole('button', { name: label });
+    expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/dashboard');
+    fireEvent.click(action);
+    expect(screen.getByTestId('current-path').textContent).toBe(path);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('runtime-health-banner')).toHaveAttribute('role', 'status');
+    expect(screen.getByTestId('runtime-health-banner')).toHaveAttribute('data-data-state', 'partial');
   });
 });

@@ -1,0 +1,987 @@
+{
+  "item": "phase6-qa-advanced-tcooptimizer",
+  "phase": 6,
+  "page": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx",
+  "routes": [
+    "/intelligence/tco-optimizer"
+  ],
+  "mode": "finished-page source-only readonly QA",
+  "result": "SOURCE_REVIEW_COMPLETE_WITH_FINDINGS; NOT whole-page PASS",
+  "branch": {
+    "supplied": "fix/dashboard-followups",
+    "verified": false,
+    "reason": "Git prohibited"
+  },
+  "accepted_source": {
+    "item": "phase5-page-advanced-intelligence-tcooptimizer",
+    "status": "done; SOURCE ONLY",
+    "authority": "migration-queue.md:1644 latest receipt supersedes historical WIP notes",
+    "recorded_receipt_commit": "11ebc6aad5af57b364861511746fe0058cac0b3b",
+    "historical_checks": "14 scoped tests/lint/scans are references, NOT rerun; commit not independently looked up"
+  },
+  "queue": {
+    "row": 271,
+    "status_at_read": "pending",
+    "completed_exact_objective_match_lines": 0,
+    "existing_report_reference_match_lines": 0,
+    "report_existed_before_write": false,
+    "log_existed_before_write": false,
+    "scope": "Exact current queue objective and docs/frontend-audits/*.json; phase0/phase5 are different objectives"
+  },
+  "timebox": {
+    "first_command_utc": "2026-10-13T19:42:02.3782241Z",
+    "conservative_return": "2026-10-13T20:00:00Z",
+    "hard_stop": "2026-10-13T20:05:00Z",
+    "commands_max_minutes": 8,
+    "work_max_minutes": 20
+  },
+  "dependencies": [
+    {
+      "file": "web/src/api/hooks/useAdvancedIntelligence.ts",
+      "reviewed": "ROOT, useSimulationMutation:155-172, useRunTCOOptimizer:198-202",
+      "role": "Typed deliberate POST and success/error toast"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "reviewed": "Contracts and deriveDataState:181-270",
+      "role": "Fatal/retained/paused/inferred trust"
+    },
+    {
+      "file": "web/src/types/advancedIntelligence.ts",
+      "reviewed": "DataQuality/Evidence:9-25 and TCO types:398-431",
+      "role": "Declared SI/minor-currency fields; no producer-unit guess"
+    },
+    {
+      "file": "web/src/features/advanced-intelligence/components/index.ts",
+      "role": "Export resolution only"
+    },
+    {
+      "file": "web/src/features/advanced-intelligence/components/InsightPanel.tsx",
+      "role": "Persistent LayoutCard/SourceContent state adapter"
+    },
+    {
+      "file": "web/src/features/advanced-intelligence/components/EvidencePanel.tsx",
+      "role": "Quality, evidence, limitations"
+    },
+    {
+      "file": "web/src/features/advanced-intelligence/components/SiNumberInput.tsx",
+      "role": "Nullable canonical SI input and hint"
+    },
+    {
+      "file": "web/src/features/advanced-intelligence/components/MutationError.tsx",
+      "role": "Mutation failure alert"
+    },
+    {
+      "file": "web/src/features/advanced-intelligence/formatters.ts",
+      "reviewed": "formatCurrencyMinor:21-44"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "role": "Effective URL/store/header vehicle; query trust not exposed"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "role": "Display-only SI and locale/precision preferences"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "role": "Selected locale/timezone bridge"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "role": "Reactive numeric preferences"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "role": "Existing PageContainer adapter"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "role": "Local loading/error/empty/retained bodies"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "reviewed": "Props/header through190; remaining generic internals not audited"
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "role": "Label/hint/validation and sizing"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "role": "Busy/disabled/wrapping submit"
+    },
+    {
+      "file": "web/src/components/ui/Table.tsx",
+      "role": "Semantic embedded table and contained scroll"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "role": "Shared vendor boundary and reduce preference"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "reviewed": "SI declaration and actual pure distance/duration formatters"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "reviewed": "formatDateTime defaults/options:29-63"
+    },
+    {
+      "file": "web/src/lib/currencyFormat.ts",
+      "reviewed": "formatCurrencyValue guards/Intl formatting; no micro-unit adapter used"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "reviewed": "Prefix contract and request entry guards:381-405; transport/auth subsystem not audited"
+    }
+  ],
+  "scope_and_routes": {
+    "frontend_mount": "web/src/App.tsx:241,775 exact source search",
+    "hook_endpoint": "POST /advanced-intelligence/tco-optimizer/scenarios",
+    "client_endpoint": "POST /api/v1/advanced-intelligence/tco-optimizer/scenarios",
+    "backend_route": "internal/api/router.go:3960 delegates to internal/handler/v1/advancedintelligence/handler.go:69-85; prefix at71, POST at85",
+    "route_check": "SOURCE MATCH ONLY, no network. Delegated declaration is not a missing router route.",
+    "header_owner": "Existing shell and useSelectedVehicle; no duplicate page vehicle/range selector",
+    "workspace_contract": "web/src/lib/workspaceScope.ts:23-77,95-135,156-167",
+    "vehicle": true,
+    "range": false,
+    "both_header_bounds": "NOT APPLICABLE: no header analysis range on this route; request has no start/end fields. horizon_s is independent planning duration, not historical window.",
+    "observation_bounds": "EvidencePanel:61-62 displays quality.window_start and window_end; a missing endpoint becomes em dash. Producer lookback/inclusivity not audited; historical fixed-lookback statement is not fresh proof.",
+    "retained_scope": "Page:65-86 captures submitted request and detects vehicle/draft change;263-289 show prior vehicle/all seven submitted constraints. Changed current scope does not relabel completed request.",
+    "transitive_limit": "Fleet/settings transport and runtime authorization not independently exercised; no external-subsystem corruption inferred"
+  },
+  "preservation": {
+    "historical_original": {
+      "reference": "docs/frontend-audits/audit-page-038.json identity/preservation/sourceInventory",
+      "sha256": "0246c0837ad7577658a5dbfcd3a2abe5388a590038ae208d0ed90b23ed5510c0",
+      "lines": 244,
+      "top_level_shells": 4,
+      "fields": 7,
+      "submit_actions": 1,
+      "metric_rows": 5,
+      "evidence_subsections": 3,
+      "fresh_original_grep": "NOTRUN; original not reconstructed"
+    },
+    "accepted_at_first_read": {
+      "sha256": "106D24A6D2A197B57860D3BEE8515181675A31D4AEB833719C1260CF98677B09",
+      "lines": 359,
+      "nonblank_lines": 349,
+      "top_level_shells": 4,
+      "fields": 7,
+      "submit_actions": 1,
+      "metric_rows": 5,
+      "change_handlers": 7,
+      "evidence_subsections": 3,
+      "import_lines": 20
+    },
+    "current_counts": {
+      "lines": 359,
+      "nonblank_lines": 349,
+      "top_level_shells": 4,
+      "fields": 7,
+      "submit_actions": 1,
+      "metric_rows": 5,
+      "change_handlers": 7,
+      "evidence_subsections": 3
+    },
+    "historical_line_ratio_pct": 147.13,
+    "sections": [
+      "Supported-cost notice",
+      "Optimization constraints",
+      "Pareto-like alternatives",
+      "Evidence, quality, and limitations"
+    ],
+    "evidence_subsections": [
+      "Data quality",
+      "Evidence sources",
+      "Limitations and explicitly unsupported uses"
+    ],
+    "actions": [
+      "Edit seven constraints",
+      "Complement charging shares to100",
+      "Uppercase currency draft",
+      "Deliberately generate confirmed alternatives",
+      "Resubmit after failure",
+      "Header-owned vehicle selection"
+    ],
+    "pins": [
+      {
+        "file": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx",
+        "original_at_qa_read": "106D24A6D2A197B57860D3BEE8515181675A31D4AEB833719C1260CF98677B09",
+        "current_at_release": "106D24A6D2A197B57860D3BEE8515181675A31D4AEB833719C1260CF98677B09",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.test.tsx",
+        "original_at_qa_read": "91D974482AF4480E78E73CCE2F3169B2B64AC7C80FD6FC838E8C2E342C4A0411",
+        "review": "Hash only; body not read/run",
+        "current_at_release": "91D974482AF4480E78E73CCE2F3169B2B64AC7C80FD6FC838E8C2E342C4A0411",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/advanced-intelligence/components/EvidencePanel.tsx",
+        "original_at_qa_read": "68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4",
+        "current_at_release": "68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/advanced-intelligence/components/InsightPanel.tsx",
+        "original_at_qa_read": "9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE",
+        "current_at_release": "9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/advanced-intelligence/components/SiNumberInput.tsx",
+        "original_at_qa_read": "DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24",
+        "current_at_release": "DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/advanced-intelligence/components/MutationError.tsx",
+        "original_at_qa_read": "0B5533452EFAF607E34E1BACECD17AABFAB92CAD791EF2F8B951B377B1D505A8",
+        "current_at_release": "0B5533452EFAF607E34E1BACECD17AABFAB92CAD791EF2F8B951B377B1D505A8",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/advanced-intelligence/formatters.ts",
+        "original_at_qa_read": "04A7DB2F8B03374D3353618653FE8D2E8BCD108A6FA5EA4D87267D956C9D0280",
+        "current_at_release": "04A7DB2F8B03374D3353618653FE8D2E8BCD108A6FA5EA4D87267D956C9D0280",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/advanced-intelligence/components/index.ts",
+        "original_at_qa_read": "59128FF5C6963DD4E04B1A5370F8634197986893D79AD74FC3BA67FE48DACFC1",
+        "current_at_release": "59128FF5C6963DD4E04B1A5370F8634197986893D79AD74FC3BA67FE48DACFC1",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useAdvancedIntelligence.ts",
+        "original_at_qa_read": "DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067",
+        "current_at_release": "DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "original_at_qa_read": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "current_at_release": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/types/advancedIntelligence.ts",
+        "original_at_qa_read": "CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13",
+        "current_at_release": "CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13",
+        "unchanged": true
+      }
+    ],
+    "pin_limit": "Named source/test files only, not a repository clean-tree claim. Concurrent unrelated changes not attributed.",
+    "all_named_pins_unchanged": true,
+    "final_hash_raw_output": [
+      "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx 106D24A6D2A197B57860D3BEE8515181675A31D4AEB833719C1260CF98677B09 unchanged=True",
+      "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.test.tsx 91D974482AF4480E78E73CCE2F3169B2B64AC7C80FD6FC838E8C2E342C4A0411 unchanged=True",
+      "web/src/features/advanced-intelligence/components/EvidencePanel.tsx 68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4 unchanged=True",
+      "web/src/features/advanced-intelligence/components/InsightPanel.tsx 9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE unchanged=True",
+      "web/src/features/advanced-intelligence/components/SiNumberInput.tsx DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24 unchanged=True",
+      "web/src/features/advanced-intelligence/components/MutationError.tsx 0B5533452EFAF607E34E1BACECD17AABFAB92CAD791EF2F8B951B377B1D505A8 unchanged=True",
+      "web/src/features/advanced-intelligence/formatters.ts 04A7DB2F8B03374D3353618653FE8D2E8BCD108A6FA5EA4D87267D956C9D0280 unchanged=True",
+      "web/src/features/advanced-intelligence/components/index.ts 59128FF5C6963DD4E04B1A5370F8634197986893D79AD74FC3BA67FE48DACFC1 unchanged=True",
+      "web/src/api/hooks/useAdvancedIntelligence.ts DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067 unchanged=True",
+      "web/src/api/dataState.ts 21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761 unchanged=True",
+      "web/src/types/advancedIntelligence.ts CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13 unchanged=True"
+    ]
+  },
+  "states": {
+    "initial": "All shells/form render; alternatives explain submission prerequisite. EvidencePanel improperly uses returned-response copy (F1).",
+    "pending": "Form aria-busy/busy-disabled submit, local alternatives skeleton if no result; prior result retained on another run.",
+    "fatal": "Fatal error only without completed result; local alternatives error and MutationError; form remains for resubmit.",
+    "retained_failure": "Completed payload/request and generated_at kept, alternatives retained, form error visible; evidence has no lifecycle context (F1).",
+    "paused_initial": "Explicit paused/no-empty-inference copy inside alternatives shell; no real offline scheduling exercised.",
+    "paused_retained": "Prior alternatives kept plus paused status; evidence lacks matching context (F1).",
+    "refreshing": "Prior request/timestamp retained while mutation pending; generic retained copy imprecise (C4).",
+    "unknown": "Null cost/budget -> Unsupported; null risk -> em dash. Blank draft stays null, guarded submit, no invented zero.",
+    "zero": "!=null checks preserve zero cost/risk/budget/coverage/samples; false within_budget -> Over budget. strategies=[] gets local EmptyState, shell not removed.",
+    "malformed": "Arbitrary malformed runtime payload safety not tested; required TS fields do not certify transport"
+  },
+  "calculations_preferences_actions": {
+    "page_math": "Only 100-share complement and currency minor exponent. No page TCO/risk/convenience/Pareto formula or annualization denominator.",
+    "denominators": "Server model/evidence populations outside allowed scope; not asserted correct/comparable/corrupt.",
+    "sign": "Finite negative/zero response amounts preserved by formatCurrencyMinor. Nullable cost/risk/budget use !=null; native request minima intentionally reject negative budget/horizon/distance.",
+    "assumptions_observations": "Projected/Pareto-like/modeled descriptions, supported-cost notice and unsupported purchases/charging changes/financial guarantees preserved; evidence separate. Current producer strategy identity semantics not confirmed.",
+    "SI": "Raw seconds/meters in drafts/request/completed snapshot; canonical suffix and useUnits display equivalents. No legacy/source-unit adapter.",
+    "currency": "Response currency for result costs; submitted currency retained in request context. Currency-specific exponent declaration and synthetic arithmetic reviewed, not producer money storage.",
+    "preferences": "Reactive number preferences, useUnits locale/precision and useDateFormat for generated_at; EvidencePanel dates bypass bridge (F3). No settings reset/unit mutation.",
+    "safe_actions": "Single deliberate POST with confirmed:true, reportValidity and six numeric nonnull guards; success-only completed snapshot. No purchase/export/vehicle-command/unsolicited run/fake completion. Central client guards read but auth/capability/native validity/offline execution NOTRUN."
+  },
+  "confirmed_findings": [
+    {
+      "id": "F1",
+      "rule": "evidence-lifecycle-trust",
+      "contract": "MDC-026; mission22-25",
+      "priority": "high",
+      "file": "web/src/features/advanced-intelligence/components/EvidencePanel.tsx",
+      "line": 14,
+      "related_lines": [
+        40,
+        70,
+        99,
+        115
+      ],
+      "caller": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx:347-355",
+      "mechanism": "Payload-only props omit lifecycle; inner InsightPanel defaults ready. Before success or on initial failure/pause/pending, undefined payload becomes empty arrays and 'No supporting evidence was returned'/'No additional limitations were returned'; missing quality is called unsupported instead of unresolved. Retained evidence cannot describe failure/pause/scope change.",
+      "repro": "Source trace completed=null -> result undefined -> undefined props -> empty arrays -> response-completed copy; same path for initial pending/fatal/paused. No mounted reproduction.",
+      "narrow_need": "Separately owned EvidencePanel lifecycle API and exact TCO caller wiring using existing InsightPanel/SourceContent; preserve all three subsection shells/payloads/unsupported notices and distinguish unresolved/loading/fatal/paused/retained. No fix here.",
+      "owner": "Domain/shared component and exact caller integration",
+      "source_confidence": "high",
+      "runtime_confidence": "NOTRUN"
+    },
+    {
+      "id": "F2",
+      "rule": "hardcoded-string",
+      "contract": "MDC-044",
+      "priority": "medium",
+      "file": "web/src/features/advanced-intelligence/components/EvidencePanel.tsx",
+      "line": 57,
+      "related": "web/src/types/advancedIntelligence.ts:9",
+      "mechanism": "Visible Badge renders quality.status directly, a closed union sufficient/limited/insufficient. No t mapping, so raw English enum remains across locales.",
+      "repro": "Any declared quality status is the raw child at57, independent of locale. Canonical quality object has labels but no status mapping; no locale runtime run.",
+      "narrow_need": "Localize only known quality statuses at existing presentation owner; canonical English changes need separate catalog ownership. Keep raw IDs, unknown fallback, variants and source prose; no translation campaign.",
+      "owner": "EvidencePanel/catalog integration",
+      "source_confidence": "high",
+      "runtime_confidence": "NOTRUN"
+    },
+    {
+      "id": "F3",
+      "rule": "display-preference-bypass",
+      "contract": "MDC-044/045; mission26",
+      "priority": "medium",
+      "file": "web/src/features/advanced-intelligence/components/EvidencePanel.tsx",
+      "line": 6,
+      "related_lines": [
+        62,
+        90,
+        92
+      ],
+      "mechanism": "Unbound lib formatDateTime receives no options for both observation bounds and observed_at; defaults are host locale/timezone, unlike page useDateFormat generated_at. Selected differing locale/timezone cannot govern evidence dates.",
+      "repro": "Pure synthetic 2000-01-01T00:00:00Z with exact Intl options: host 'Dec 31, 1999, 04:00 PM', selected de-DE/UTC '1. Jan. 2000, 00:00'. Default-versus-selected expression only, not rendered component.",
+      "narrow_need": "Use existing useDateFormat bridge for all EvidencePanel observation dates; preserve both bounds and null/invalid placeholders; separately owned covering evidence.",
+      "owner": "EvidencePanel",
+      "source_confidence": "high",
+      "runtime_confidence": "NOTRUN"
+    },
+    {
+      "id": "F4",
+      "rule": "mobile-source-target-minimum",
+      "contract": "MDC-040/043 mobile44px belowmd",
+      "priority": "medium",
+      "file": "web/src/features/advanced-intelligence/components/SiNumberInput.tsx",
+      "line": 29,
+      "related": "web/src/components/ui/Input.tsx:31,44,94; page:134,146",
+      "mechanism": "Wrapper neither sets Input size nor forwards className/size. Input default md declares min-h-10 (40px), missing required44px source minimum, unlike five other fields and submit with min-h-11 belowmd. Actual composed hit geometry not measured.",
+      "repro": "Wrapper props29-43 -> Input default size md -> sizeClasses.md min-h-10. Caller cannot forward44px override through current API.",
+      "narrow_need": "Separately owned SI wrapper minimum sizing/forwarding consistent with Input; preserve SI/null/native constraints/labels/hints/desktop behavior. Native geometry remains separate.",
+      "owner": "SiNumberInput",
+      "source_confidence": "high for missing source minimum; effective geometry NOTRUN"
+    },
+    {
+      "id": "F5",
+      "rule": "page-size",
+      "contract": "react-frontend.instructions.md Component & Page Size Limits",
+      "priority": "low",
+      "file": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx",
+      "line": 35,
+      "related_lines": [
+        1,
+        359
+      ],
+      "mechanism": "359 total lines exceed instructed300-line ceiling. Maintainability guideline, not behavioral/data defect or permission to remigrate.",
+      "repro": "Builtin Get-Content count359; nonblank349; ceiling300.",
+      "narrow_need": "Optional separately authorized local extraction only, preserving shells/fields/actions/state/SI/tests. Do not revise accepted source for report delivery.",
+      "owner": "Future page-local scope",
+      "source_confidence": "high"
+    }
+  ],
+  "unconfirmed_candidates": [
+    {
+      "id": "C1",
+      "file": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx",
+      "line": 298,
+      "concern": "Raw freeform strategy.name; historical audit mentions machine identifiers, but current producer not inspected. Current machine-label localization defect unconfirmed.",
+      "needed": "Exact current finite producer/name contract before mapping; preserve arbitrary source prose."
+    },
+    {
+      "id": "C2",
+      "file": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx",
+      "line": 238,
+      "related": "useSelectedVehicle.ts:50",
+      "concern": "Selection absence message does not distinguish unresolved/failed/empty fleet; hook exposes no query trust. Integration limitation, not demonstrated external corruption or whole-page fatal defect.",
+      "needed": "Workspace prerequisite/capability contract and mounted synthetic states before narrow integration."
+    },
+    {
+      "id": "C3",
+      "file": "web/src/components/ui/Table.tsx",
+      "line": 21,
+      "concern": "Contained scroll source exists; keyboard reachability/narrow overflow/long text/themed/native contrast unverified, no geometry failure confirmed.",
+      "needed": "Authorized keyboard/mobile/RTL/200percent-text/theme/native review."
+    },
+    {
+      "id": "C4",
+      "file": "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx",
+      "line": 97,
+      "related": "SourceContent.tsx:64",
+      "concern": "Generic retained recovery message covers refresh, edited form and changed vehicle without exact reason. Prior request context exists, so false current-scope relabeling not proven.",
+      "needed": "Mounted state/copy review before reason-specific status; retain prior payload/request."
+    }
+  ],
+  "summary": {
+    "confirmed_total": 5,
+    "by_rule": {
+      "evidence-lifecycle-trust": 1,
+      "hardcoded-string": 1,
+      "display-preference-bypass": 1,
+      "mobile-source-target-minimum": 1,
+      "page-size": 1
+    },
+    "by_file": {
+      "EvidencePanel.tsx": 3,
+      "SiNumberInput.tsx": 1,
+      "TCOOptimizerPage.tsx": 1
+    },
+    "candidates": 4,
+    "priority": [
+      "Evidence lifecycle",
+      "Evidence date/state localization",
+      "SI source minimum",
+      "Optional maintainability"
+    ]
+  },
+  "exceptions": [
+    "PageLayout is PageContainer adapter, no missing container violation",
+    "Five var(--text-muted) matches are Tailwind classes, not inline styles",
+    "Initial case-insensitive raw probe matched shared Table; corrected case-sensitive count0",
+    "Raw tbody/tr/th/td under shared Table are semantic children",
+    "Direct vendor inside shared FadeIn is expected building-block boundary",
+    "Five conditional candidates are state text/request metadata/empty body/boolean, not hidden section shells",
+    "Server names/reasons/constraints/summaries not hardcoded literals without finite producer contract"
+  ],
+  "guidance_read": [
+    "docs/orchestrator-loop.md worker/playbook",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-design-contract.md:1-275,419-654 relevant MDC001/002/020/021/026/040-046/060-070",
+    "docs/frontend-mission.md:0-4,14-26,30-37,43-44",
+    "docs/session-handoff.md:1-53,271-300,1900-1960",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/instructions/observability.instructions.md"
+  ],
+  "additional_reads": [
+    "migration-queue.md exact rows271/1644 and duplicate search",
+    "docs/frontend-audits/audit-page-038.json historical only",
+    "web/src/App.tsx exact route/import",
+    "web/src/lib/workspaceScope.ts",
+    "internal/api/router.go exact module mount",
+    "internal/handler/v1/advancedintelligence/handler.go:67-86 declaration only",
+    "web/src/i18n/en.json exact canonical advancedIntelligence.tco/quality/panel and tco.query objects",
+    ".gitignore logs rule:80"
+  ],
+  "limitations": [
+    "No source remigration/fix/revert; no tests read beyond hash, no fixtures authored",
+    "Source cannot certify render/ARIA/native validity/safe execution/auth",
+    "Producer money/denominators/model/window inclusivity unreviewed, not presumed correct or corrupt",
+    "Full dependency graph/unused hook branches/global styles/config unrelated sources not audited",
+    "Git prohibited; actual branch and repository-wide changes not inspected",
+    "Pure synthetic outputs are not financial data, React tests or whole-page acceptance"
+  ],
+  "NOTRUN": [
+    "npx tsc --noEmit / globalTSC",
+    "scoped TypeScript",
+    "ESLint",
+    "unit/integration/full suites",
+    "build/bundle",
+    "browser/server/API",
+    "financial/personal-data access",
+    "native/themed geometry/contrast/forced-colors",
+    "fullpage/screenshots",
+    "keyboard/screen-reader/native validation",
+    "viewport/mobile/RTL/zoom",
+    "performance/runtime",
+    "custom audit/preservation tools/helpers/extensions",
+    "Git/installs/subagents/parent orchestration/schedules"
+  ],
+  "ownership": {
+    "status": "RELEASE",
+    "source_write_claim": "NONE/READONLY",
+    "report_claim": "RELEASED",
+    "log_claim": "RELEASED",
+    "command_claims": "RELEASED",
+    "post_return_writes": false
+  },
+  "changed_paths_by_this_worker": [
+    "D:/repos/teslasync/docs/frontend-audits/phase6-qa-advanced-tcooptimizer.json",
+    "D:/repos/teslasync/web/logs/phase6-qa-advanced-tcooptimizer.log"
+  ],
+  "created_at_utc": "2026-10-13T19:55:58.782668Z",
+  "check_failures": [
+    {
+      "raw": "The filename or extension is too long. (os error 206)",
+      "exit": 1,
+      "resolution": "Large write command did not execute; split bounded authorized artifact writes",
+      "shellId": 5467,
+      "kind": "command-launch-size"
+    },
+    {
+      "raw": "Invalid view_range: start line (280) is beyond the end of the file. The file has 252 lines.",
+      "numeric_exit": null,
+      "resolution": "Read correct hook ranges",
+      "kind": "view-range"
+    },
+    {
+      "raw": "Cannot find path 'D:\\repos\\teslasync\\web\\src\\locales' because it does not exist.",
+      "exit": 0,
+      "resolution": "Nonterminating error despite shell0; actual src/i18n located",
+      "shellId": 5354,
+      "kind": "wrong-directory-probe"
+    },
+    {
+      "raw": "Cannot convert the JSON string because it contains keys with different casing. Please use the -AsHashTable switch instead. The key that was attempted to be added to the existing key 'subFSMs' was 'subFsms'.",
+      "exit": 1,
+      "resolution": "ConvertFrom-Json -AsHashtable read5366 exit0, no catalog change or corruption diagnosis",
+      "shellId": 5362,
+      "kind": "canonical-parser"
+    }
+  ],
+  "named_checks": [
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "static-inline-style",
+      "pattern": "style\\s*=\\s*\\{\\{",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=static-inline-style; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "raw-html",
+      "pattern": "<(button|input|textarea|select|table)(\\s|>)",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=raw-html; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "direct-library-import",
+      "pattern": "from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=direct-library-import; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "old-api-import",
+      "pattern": "from\\s+['\\\"](\\.\\./)+api['\\\"]",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=old-api-import; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "double-prefix",
+      "pattern": "/api/v1/",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=double-prefix; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "camelcase-param",
+      "pattern": "[?&][a-z_]*[A-Z][A-Za-z]*=",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=camelcase-param; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "fetch-useeffect",
+      "pattern": "\\bfetch\\s*\\(|\\buseEffect\\b",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=fetch-useeffect; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "scope_files": [
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useAdvancedIntelligence.ts"
+      ],
+      "name": "page-RUM-or-console",
+      "pattern": "console\\.|init.*RUM|init.*Telemetry",
+      "raw_count": 0,
+      "exit": 0,
+      "raw_output": [
+        "rule=page-RUM-or-console; match_lines=0"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <scope_files> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": "<(AlertBanner|InsightPanel|EvidencePanel)\\b",
+      "name": "top_level_shells",
+      "raw_output": [
+        "count=top_level_shells; match_lines=4",
+        "114:<AlertBanner",
+        "125:<InsightPanel",
+        "248:<InsightPanel",
+        "347:<EvidencePanel"
+      ],
+      "raw_count": 4,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": "<Button\\b",
+      "name": "submit_actions",
+      "raw_output": [
+        "count=submit_actions; match_lines=1",
+        "227:<Button"
+      ],
+      "raw_count": 1,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": "<(SiNumberInput|Input)\\b",
+      "name": "form_fields",
+      "raw_output": [
+        "count=form_fields; match_lines=7",
+        "134:<SiNumberInput",
+        "146:<SiNumberInput",
+        "158:<Input",
+        "174:<Input",
+        "190:<Input",
+        "202:<Input",
+        "214:<Input"
+      ],
+      "raw_count": 7,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": "<tr>",
+      "name": "strategy_metric_rows",
+      "raw_output": [
+        "count=strategy_metric_rows; match_lines=5",
+        "307:<tr>",
+        "313:<tr>",
+        "317:<tr>",
+        "321:<tr>",
+        "325:<tr>"
+      ],
+      "raw_count": 5,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": "onChange=",
+      "name": "change_handlers",
+      "raw_output": [
+        "count=change_handlers; match_lines=7",
+        "137:onChange={(value) => setForm((current) => ({ ...current, horizon_s: value }))}",
+        "149:onChange={(value) => setForm((current) => ({ ...current, annual_distance_m: value }))}",
+        "166:onChange={(event) => {",
+        "182:onChange={(event) => {",
+        "198:onChange={(event) => setForm((current) => ({",
+        "210:onChange={(event) => setForm((current) => ({",
+        "222:onChange={(event) => setForm((current) => ({"
+      ],
+      "raw_count": 7,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": "<Page(Layout|Container)\\b",
+      "name": "layout_wrapper",
+      "raw_output": [
+        "count=layout_wrapper; match_lines=1",
+        "107:<PageLayout"
+      ],
+      "raw_count": 1,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": "&&\\s*\\(|&&\\s*<",
+      "name": "hidden_section_candidates",
+      "raw_output": [
+        "count=hidden_section_candidates; match_lines=5",
+        "82:const retainedScope = completed != null && (",
+        "238:{vehicleId == null && (",
+        "258:{mutation.isPaused && result && (",
+        "263:{completed && (",
+        "340:{result && strategies.length === 0 && ("
+      ],
+      "raw_count": 5,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "pattern": ">[^<{}]*[A-Za-z][^<{}]*<",
+      "name": "literal_visible_candidates",
+      "raw_output": [
+        "count=literal_visible_candidates; match_lines=0"
+      ],
+      "raw_count": 0,
+      "exit": 0,
+      "file": "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path <file> -Pattern <pattern> -CaseSensitive; @(<matches>).Count"
+    },
+    {
+      "exit": 0,
+      "raw_output": [
+        "total_lines=359 nonblank_lines=349"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; (Get-Content D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx).Count; @(Get-Content <same> | Where-Object { $_.Trim().Length -gt 0 }).Count",
+      "name": "total-line-preservation"
+    },
+    {
+      "exit": 0,
+      "raw_output": [
+        "6:import { formatDateTime } from '@/lib/dateFormat';",
+        "48:        <section aria-label={t('advancedIntelligence.quality.title', 'Data quality')} className=\"min-w-0 space-y-3\">",
+        "57:              <Badge variant={qualityVariant(quality.status)} dot>{quality.status}</Badge>",
+        "62:                  ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}` : '—' },",
+        "75:        <section aria-label={t('advancedIntelligence.evidence.sources', 'Evidence sources')} className=\"min-w-0 space-y-3\">",
+        "90:                    date: formatDateTime(item.observed_at),",
+        "92:                  : formatDateTime(item.observed_at)}",
+        "99:              message={t('advancedIntelligence.evidence.empty', 'No supporting evidence was returned.')}",
+        "104:        <section aria-label={t('advancedIntelligence.limitations.title', 'Limitations')} className=\"min-w-0 space-y-3\">",
+        "115:              {t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.')}"
+      ],
+      "raw_count": 10,
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx -Pattern '<section|quality.status|formatDateTime|returned' -CaseSensitive",
+      "name": "evidence-source-findings"
+    },
+    {
+      "timing": "Before authorized report creation, not a self-reference search at release",
+      "name": "duplicate-completed-objective",
+      "shellId": 5354,
+      "raw_output": [
+        "duplicate_queue_done_match_lines=0",
+        "duplicate_report_match_lines=0",
+        "report_exists=False",
+        "log_exists=False"
+      ],
+      "exit": 0,
+      "commands": [
+        "Set-Location D:\\repos\\teslasync\\web",
+        "@(Select-String -Path D:\\repos\\teslasync\\migration-queue.md -Pattern '^\\| \\[x\\].*phase6-qa-advanced-tcooptimizer').Count",
+        "@(Select-String -Path D:\\repos\\teslasync\\docs\\frontend-audits\\*.json -Pattern 'phase6-qa-advanced-tcooptimizer').Count",
+        "Test-Path D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-advanced-tcooptimizer.json",
+        "Test-Path D:\\repos\\teslasync\\web\\logs\\phase6-qa-advanced-tcooptimizer.log"
+      ]
+    },
+    {
+      "raw_output": [
+        "v26.11.1",
+        "node_exit=0"
+      ],
+      "exit": 0,
+      "shellId": 5357,
+      "command": "Set-Location D:\\repos\\teslasync\\web; & 'C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe' --version",
+      "name": "supported-Node"
+    },
+    {
+      "name": "mounted-route-source-match",
+      "raw_output": [
+        "241:const TCOOptimizer = lazy(() => import('./features/advanced-intelligence/pages/TCOOptimizerPage'))",
+        "775:        <Route path=\"intelligence/tco-optimizer\" element={<SafeRoute name=\"TCOOptimizer\"><TCOOptimizer /></SafeRoute>} />",
+        "3960: advancedIntelligenceHandler.MountRoutes(r)",
+        "69:func (h *Handler) MountRoutes(r chi.Router) {",
+        "85:        r.With(writeLimit).Post(\"/tco-optimizer/scenarios\", h.TCOOptimizer)"
+      ],
+      "exit": 0,
+      "raw_output_kind": "Exact matched lines; Go whitespace normalized in these two pasted lines, full declaration read67-86 in tool receipt",
+      "commands": [
+        "Select-String -Path D:\\repos\\teslasync\\web\\src\\App.tsx -Pattern 'TCOOptimizer|tco-optimizer'",
+        "Select-String -Path D:\\repos\\teslasync\\internal\\api\\router.go -Pattern 'advancedIntel|AdvancedIntel|advancedIntelligence'",
+        "Select-String -Path D:\\repos\\teslasync\\internal\\handler\\v1\\advancedintelligence\\handler.go -Pattern 'MountRoutes|tco-optimizer|handleTCO|HandleTCO'"
+      ],
+      "shellIds": [
+        5354,
+        5366
+      ]
+    },
+    {
+      "name": "canonical-English-read",
+      "shellId": 5366,
+      "raw_output": [
+        "{",
+        "  \"coverage\": \"Coverage\",",
+        "  \"samples\": \"Samples\",",
+        "  \"title\": \"Data quality\",",
+        "  \"unsupported\": \"Quality metadata is unsupported.\",",
+        "  \"window\": \"Observation window\"",
+        "}"
+      ],
+      "exit": 0,
+      "command": "Set-Location D:\\repos\\teslasync\\web; $en=Get-Content D:\\repos\\teslasync\\web\\src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; $en.advancedIntelligence.tco | ConvertTo-Json -Depth 6; $en.advancedIntelligence.quality | ConvertTo-Json -Depth 4",
+      "raw_output_kind": "Exact quality-object excerpt of completed command output; full TCO object in tool receipt, no all-language validation"
+    },
+    {
+      "disposition": "CSS-token Tailwind classes and shared Table, not violations; corrected case-sensitive checks above",
+      "name": "initial-broad-probe-false-positives",
+      "shellId": 5349,
+      "raw_output": [
+        "static-inline-style: match_lines=5",
+        "308:<th scope=\"row\" className=\"text-[var(--text-muted)]\">{t('advancedIntelligence.tco.cost', 'Projected cost')}</th>",
+        "314:<th scope=\"row\" className=\"text-[var(--text-muted)]\">{t('advancedIntelligence.tco.risk', 'Risk score')}</th>",
+        "318:<th scope=\"row\" className=\"text-[var(--text-muted)]\">{t('advancedIntelligence.tco.convenience', 'Convenience')}</th>",
+        "322:<th scope=\"row\" className=\"text-[var(--text-muted)]\">{t('advancedIntelligence.tco.mix', 'Home / public mix')}</th>",
+        "326:<th scope=\"row\" className=\"text-[var(--text-muted)]\">{t('advancedIntelligence.tco.budgetStatus', 'Budget status')}</th>",
+        "raw-html: match_lines=1",
+        "306:<Table variant=\"embedded\" aria-labelledby={`${strategyId}-${index}`}><tbody>"
+      ],
+      "exit": 0,
+      "commands": [
+        "Select-String -Path <page> -Pattern 'style\\s*=\\s*\\{\\{|var\\(--'",
+        "Select-String -Path <page> -Pattern '<(button|input|textarea|select|table)(\\s|>)'"
+      ]
+    },
+    {
+      "name": "pure-trust-currency-date-share",
+      "shellId": 5361,
+      "raw_output": "{\"case\":\"initial\",\"status\":\"initial\",\"provenance\":\"unknown\",\"hasData\":false,\"isRefreshing\":false,\"isRefreshBlocked\":false,\"fatalError\":false,\"refreshError\":false,\"alternativesState\":\"empty\"}\n{\"case\":\"pending\",\"status\":\"initial\",\"provenance\":\"unknown\",\"hasData\":false,\"isRefreshing\":false,\"isRefreshBlocked\":false,\"fatalError\":false,\"refreshError\":false,\"alternativesState\":\"loading\"}\n{\"case\":\"fatal\",\"status\":\"initialFailure\",\"provenance\":\"unknown\",\"hasData\":false,\"isRefreshing\":false,\"isRefreshBlocked\":false,\"fatalError\":true,\"refreshError\":false,\"alternativesState\":\"error\"}\n{\"case\":\"initial-paused\",\"status\":\"initial\",\"provenance\":\"unknown\",\"hasData\":false,\"isRefreshing\":false,\"isRefreshBlocked\":true,\"fatalError\":false,\"refreshError\":false,\"alternativesState\":\"empty\"}\n{\"case\":\"ready\",\"status\":\"ok\",\"provenance\":\"inferred\",\"hasData\":true,\"isRefreshing\":false,\"isRefreshBlocked\":false,\"fatalError\":false,\"refreshError\":false,\"alternativesState\":\"ready\"}\n{\"case\":\"retained-failure\",\"status\":\"stale\",\"provenance\":\"inferred\",\"hasData\":true,\"isRefreshing\":false,\"isRefreshBlocked\":false,\"fatalError\":false,\"refreshError\":true,\"alternativesState\":\"retained\"}\n{\"case\":\"refreshing\",\"status\":\"ok\",\"provenance\":\"inferred\",\"hasData\":true,\"isRefreshing\":true,\"isRefreshBlocked\":false,\"fatalError\":false,\"refreshError\":false,\"alternativesState\":\"retained\"}\n{\"case\":\"retained-paused\",\"status\":\"stale\",\"provenance\":\"inferred\",\"hasData\":true,\"isRefreshing\":false,\"isRefreshBlocked\":true,\"fatalError\":false,\"refreshError\":false,\"alternativesState\":\"retained\"}\n{\"currency\":\"USD\",\"digits\":2,\"syntheticMinor\":[{\"minor\":null,\"major\":null},{\"minor\":0,\"major\":0},{\"minor\":-100,\"major\":-1},{\"minor\":100,\"major\":1}]}\n{\"currency\":\"JPY\",\"digits\":0,\"syntheticMinor\":[{\"minor\":null,\"major\":null},{\"minor\":0,\"major\":0},{\"minor\":-100,\"major\":-100},{\"minor\":100,\"major\":100}]}\n{\"currency\":\"BHD\",\"digits\":3,\"syntheticMinor\":[{\"minor\":null,\"major\":null},{\"minor\":0,\"major\":0},{\"minor\":-100,\"major\":-0.1},{\"minor\":100,\"major\":0.1}]}\n{\"syntheticDate\":\"2000-01-01T00:00:00.000Z\",\"unbound\":\"Dec 31, 1999, 04:00 PM\",\"selectedUtcGerman\":\"1. Jan. 2000, 00:00\"}\n{\"home\":0,\"public\":100,\"total\":100}\n{\"home\":100,\"public\":0,\"total\":100}\n{\"home\":35,\"public\":65,\"total\":100}\nsynthetic_exit=0",
+      "exit": 0,
+      "command": "Set-Location D:\\repos\\teslasync\\web; & 'C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe' --input-type=module -e \"import {deriveDataState} from 'file:///D:/repos/teslasync/web/src/api/dataState.ts'; const retained={strategies:[],generated_at:'2000-01-01T00:00:00Z'}; const cases=[['initial',{}],['pending',{isPending:true,isFetching:true,fetchStatus:'fetching'}],['fatal',{error:new Error('synthetic failure')}],['initial-paused',{isPending:true,fetchStatus:'paused'}],['ready',{data:retained}],['retained-failure',{data:retained,error:new Error('synthetic failure')}],['refreshing',{data:retained,isPending:true,isFetching:true,fetchStatus:'fetching'}],['retained-paused',{data:retained,isPending:true,fetchStatus:'paused'}]]; for(const [name,source] of cases){const d=deriveDataState(source,{provenance:'inferred',now:()=>946684800000}); const result=source.data; const alt=result ? d.status==='stale'||source.isPending ? 'retained':'ready' : d.fatalError ? 'error' : source.isPending&&source.fetchStatus!=='paused' ? 'loading':'empty'; console.log(JSON.stringify({case:name,status:d.status,provenance:d.provenance,hasData:d.hasData,isRefreshing:d.isRefreshing,isRefreshBlocked:d.isRefreshBlocked,fatalError:!!d.fatalError,refreshError:!!d.refreshError,alternativesState:alt}));} for(const currency of ['USD','JPY','BHD']){const digits=new Intl.NumberFormat('en-US',{style:'currency',currency}).resolvedOptions().maximumFractionDigits; console.log(JSON.stringify({currency,digits,syntheticMinor:[null,0,-100,100].map(minor=>({minor,major:minor==null?null:minor/10**digits}))}));} const date=new Date('2000-01-01T00:00:00Z'); const base={year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}; console.log(JSON.stringify({syntheticDate:date.toISOString(),unbound:date.toLocaleString(undefined,base),selectedUtcGerman:date.toLocaleString('de-DE',{...base,timeZone:'UTC'})})); for(const share of [0,100,35])console.log(JSON.stringify({home:share,public:100-share,total:share+(100-share)}));\"; 'synthetic_exit='+$LASTEXITCODE",
+      "limitation": "Actual deriveDataState, pure expressions otherwise. No React, financial data or actual currency formatter module run",
+      "raw_counts": {
+        "trust_cases": 8,
+        "share_cases": 3,
+        "currency_inputs_each": 4,
+        "currency_cases": 3,
+        "date_pairs": 1
+      }
+    },
+    {
+      "name": "pure-SI-and-retained-scope",
+      "shellId": 5375,
+      "raw_output": "{\"case\":\"distance\",\"raw\":null,\"SI\":\"m\",\"km\":\"—\",\"mi\":\"—\"}\n{\"case\":\"distance\",\"raw\":0,\"SI\":\"m\",\"km\":\"0.00 km\",\"mi\":\"0.00 mi\"}\n{\"case\":\"distance\",\"raw\":1609.344,\"SI\":\"m\",\"km\":\"1.61 km\",\"mi\":\"1.00 mi\"}\n{\"case\":\"distance\",\"raw\":20000000,\"SI\":\"m\",\"km\":\"20,000.00 km\",\"mi\":\"12,427.42 mi\"}\n{\"case\":\"duration\",\"raw\":null,\"SI\":\"s\",\"h\":\"—\"}\n{\"case\":\"duration\",\"raw\":0,\"SI\":\"s\",\"h\":\"0.00 h\"}\n{\"case\":\"duration\",\"raw\":3600,\"SI\":\"s\",\"h\":\"1.00 h\"}\n{\"case\":\"duration\",\"raw\":94608000,\"SI\":\"s\",\"h\":\"26,280.00 h\"}\n{\"case\":\"same\",\"retainedScope\":false,\"resultVehicle\":7,\"selectedVehicle\":7}\n{\"case\":\"other-vehicle\",\"retainedScope\":true,\"resultVehicle\":7,\"selectedVehicle\":8}\n{\"case\":\"edited-horizon\",\"retainedScope\":true,\"resultVehicle\":7,\"selectedVehicle\":7}\n{\"case\":\"no-selected-vehicle\",\"retainedScope\":true,\"resultVehicle\":7,\"selectedVehicle\":null}\nsi_scope_exit=0",
+      "exit": 0,
+      "command": "Set-Location D:\\repos\\teslasync\\web; & 'C:\\Users\\AtulM\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64\\node.exe' --input-type=module -e \"import {SI,formatDistance,formatDuration} from 'file:///D:/repos/teslasync/web/src/lib/unitConversion.ts'; const pref={distance:'km',speed:'km/h',temperature:'°C',pressure:'bar',energy:'kWh',duration:'h',power:'kW',locale:'en-US',precision:2}; for(const value of [null,0,1609.344,20000000])console.log(JSON.stringify({case:'distance',raw:value,SI:SI.distance,km:formatDistance(value,pref),mi:formatDistance(value,{...pref,distance:'mi'})})); for(const value of [null,0,3600,94608000])console.log(JSON.stringify({case:'duration',raw:value,SI:SI.duration,h:formatDuration(value,pref)})); const request={vehicle_id:7,horizon_s:94608000,annual_distance_m:20000000,home_charging_pct:80,public_charging_pct:20,risk_tolerance_pct:35,budget_minor:1800000,currency:'USD',confirmed:true}; const {vehicle_id,confirmed,...form}=request; for(const [name,id,draft] of [['same',7,form],['other-vehicle',8,form],['edited-horizon',7,{...form,horizon_s:3600}],['no-selected-vehicle',null,form]]){const retainedScope=id!==request.vehicle_id||Object.entries(draft).some(([key,value])=>Object.entries(request).some(([submittedKey,submittedValue])=>key===submittedKey&&value!==submittedValue)); console.log(JSON.stringify({case:name,retainedScope,resultVehicle:request.vehicle_id,selectedVehicle:id}));}\"; 'si_scope_exit='+$LASTEXITCODE",
+      "limitation": "Actual pure SI formatters and copied exact scope expression only, no DOM/request",
+      "raw_counts": {
+        "duration_cases": 4,
+        "scope_cases": 4,
+        "distance_cases": 4
+      }
+    },
+    {
+      "name": "source-preservation",
+      "shellId": 5495,
+      "raw_count": 11,
+      "exit": 0,
+      "raw_output": [
+        "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.tsx 106D24A6D2A197B57860D3BEE8515181675A31D4AEB833719C1260CF98677B09 unchanged=True",
+        "web/src/features/advanced-intelligence/pages/TCOOptimizerPage.test.tsx 91D974482AF4480E78E73CCE2F3169B2B64AC7C80FD6FC838E8C2E342C4A0411 unchanged=True",
+        "web/src/features/advanced-intelligence/components/EvidencePanel.tsx 68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4 unchanged=True",
+        "web/src/features/advanced-intelligence/components/InsightPanel.tsx 9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE unchanged=True",
+        "web/src/features/advanced-intelligence/components/SiNumberInput.tsx DCF18264E4554065E077786F16441F3D24FC6EF923EAA1CF2D29C4198FB67F24 unchanged=True",
+        "web/src/features/advanced-intelligence/components/MutationError.tsx 0B5533452EFAF607E34E1BACECD17AABFAB92CAD791EF2F8B951B377B1D505A8 unchanged=True",
+        "web/src/features/advanced-intelligence/formatters.ts 04A7DB2F8B03374D3353618653FE8D2E8BCD108A6FA5EA4D87267D956C9D0280 unchanged=True",
+        "web/src/features/advanced-intelligence/components/index.ts 59128FF5C6963DD4E04B1A5370F8634197986893D79AD74FC3BA67FE48DACFC1 unchanged=True",
+        "web/src/api/hooks/useAdvancedIntelligence.ts DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067 unchanged=True",
+        "web/src/api/dataState.ts 21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761 unchanged=True",
+        "web/src/types/advancedIntelligence.ts CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13 unchanged=True"
+      ],
+      "command": "Set-Location D:\\repos\\teslasync\\web; foreach($pin in <preservation.pins>){Get-FileHash -Algorithm SHA256 -Path (Join-Path 'D:\\repos\\teslasync' $pin.file); compare with original_at_qa_read}",
+      "changed_count": 0
+    }
+  ],
+  "validation_policy": "On-disk JSON validation and final pin/count checks in final tool receipt govern release. No whole-page acceptance inferred."
+}

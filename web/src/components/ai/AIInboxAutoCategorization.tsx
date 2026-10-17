@@ -15,7 +15,8 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { Text } from '@/components/ui/Typography'
 import type { AiStreamEvent } from '@/hooks/useAiStream'
 import { useAiStream } from '@/hooks/useAiStream'
 
@@ -242,7 +243,7 @@ function InnerSection({
       )}
       description={t(
         'notifications.inbox.aiCategorize.description',
-        'Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.',
+        'Suggest categories through a separate recent-history request using the vehicle, severity, and rule filters supplied to this panel. The inbox or archive view and exact workspace date bounds do not filter this request; it uses its own lookback window (7 days by default). Review the proposal before applying its rule IDs as an inbox filter; this does not save categories or archive notifications.',
       )}
       buttonLabel={t(
         'notifications.inbox.aiCategorize.suggestButton',
@@ -272,25 +273,25 @@ function InnerSection({
               )}
             </Button>
           </div>
-          <div className="rounded-md border border-emerald-300/30 bg-emerald-300/5 p-3 text-sm text-emerald-300">
-            <div className="font-medium">
+          <div className="min-w-0 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3">
+            <Text as="p" variant="bodySm">
               {t(
                 'notifications.inbox.aiCategorize.previewLabel',
                 'Proposed categories (review before applying):',
               )}
-            </div>
+            </Text>
             <ul className="mt-2 flex flex-wrap gap-2">
               {proposal.map((bucket) => (
                 <li
                   key={bucket.category}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2.5 py-1 text-xs font-medium text-emerald-300"
+                  className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-1"
                   data-testid={`ai-feature-inbox-auto-categorization-bucket-${bucket.category}`}
                 >
-                  <span>{bucket.category}</span>
-                  <span className="text-emerald-300/70" aria-hidden="true">
+                  <Text variant="bodySm" className="min-w-0 break-words [overflow-wrap:anywhere]">{bucket.category}</Text>
+                  <Text variant="caption" aria-hidden="true">
                     ·
-                  </span>
-                  <span>{bucket.count}</span>
+                  </Text>
+                  <Text variant="bodySm" className="shrink-0 tabular-nums">{bucket.count}</Text>
                 </li>
               ))}
             </ul>

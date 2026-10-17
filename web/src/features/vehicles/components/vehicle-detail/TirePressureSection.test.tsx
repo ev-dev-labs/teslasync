@@ -2,9 +2,9 @@
  * TirePressureSection unit tests.
  *
  * The section renders a per-corner tyre-pressure snapshot (FL/FR/RL/RR) as a
- * grid of glass cards. Every pressure arrives from the API in SI-canonical
+ * shared OperationalBrief. Every pressure arrives from the API in SI-canonical
  * pascals and must be converted at the render boundary — Pa → kPa
- * (`paToKpa`) → the user's pressure preference (`useUnits().formatPressure`).
+ * (`paToKpa`) → the user's pressure preference through the typed metric formatter.
  * Each card also carries a severity Badge whose colour + label come from the
  * shared `tirePressureVariant` / `tirePressureStatus` helpers.
  *
@@ -31,13 +31,13 @@
  *   6. Badge colour matches severity (success / warning / danger).
  *   7. A null corner degrades to an em-dash value + neutral "No Data" badge,
  *      while the rest of the grid still renders (never a blank panel).
- *   8. Null / undefined snapshot shows the empty state and hides the grid.
- *   9. a11y: the decorative heading icon is aria-hidden.
+ *   8. Null / undefined snapshot shows the empty state and four unknown corners.
+ *   9. a11y: the decorative Review details icon is aria-hidden.
  *  10. Labels come from the i18n fallbacks — no raw translation key leaks.
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { TirePressureSnapshot } from '@/api/types'
 
 vi.mock('react-i18next', async () => {
@@ -45,14 +45,28 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, values?: Record<string, unknown>) => {
+        let out = typeof fallback === 'string' ? fallback : key
+        if (values) {
+          for (const [k, v] of Object.entries(values)) out = out.replace(`{{${k}}}`, String(v))
+        }
+        return out
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   }
 })
 
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics')
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) }
+})
+
 import { TirePressureSection } from './TirePressureSection'
-import { BADGE_VARIANTS } from '@/components/ui';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
+import { tirePressureVariant } from './helpers'
+import { statText } from '../statstrip-vehicle-detail/testQueries'
 
 // Backend SI pascals chosen to land squarely inside each status band.
 // Thresholds (Pa): LOW_CRITICAL 206_800 · LOW_WARNING 241_300 ·
@@ -86,11 +100,24 @@ function mixedTire(): TirePressureSnapshot {
   })
 }
 
+/** Status badges moved into drawer groups; open the drawer, assert, then close it. */
+function openDrawer() {
+  const brief = screen.getByTestId('vehicle-tire-pressure-summary')
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  return screen.getByRole('dialog')
+}
+
+function closeDrawer() {
+  const drawer = screen.getByRole('dialog')
+  fireEvent.keyDown(drawer, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
 describe('TirePressureSection — structure', () => {
   it('renders the "Tire Pressure" panel heading as a real heading element', () => {
     render(<TirePressureSection tireData={makeTire()} />)
 
-    const heading = screen.getByRole('heading', { name: 'Tire Pressure' })
+    const heading = screen.getByRole('heading', { name: 'Tire pressure' })
     expect(heading).toBeInTheDocument()
     expect(heading.tagName).toBe('H3')
   })
@@ -98,10 +125,12 @@ describe('TirePressureSection — structure', () => {
   it('renders one labelled card per corner', () => {
     render(<TirePressureSection tireData={makeTire()} />)
 
-    expect(screen.getByText('Front Left')).toBeInTheDocument()
-    expect(screen.getByText('Front Right')).toBeInTheDocument()
-    expect(screen.getByText('Rear Left')).toBeInTheDocument()
-    expect(screen.getByText('Rear Right')).toBeInTheDocument()
+    expect(screen.getByText('Front left')).toBeInTheDocument()
+    expect(screen.getByText('Front right')).toBeInTheDocument()
+    expect(screen.getByText('Rear left')).toBeInTheDocument()
+    expect(screen.getByText('Rear right')).toBeInTheDocument()
+    expect(document.querySelector('[data-testid="vehicle-tire-pressure-summary"][data-operational-brief]')).not.toBeNull()
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
   })
 })
 
@@ -110,16 +139,16 @@ describe('TirePressureSection — SI pressure conversion', () => {
     render(<TirePressureSection tireData={makeTire()} />)
 
     // 300 000 Pa / 1000 = 300 kPa / 100 = 3.00 bar, for all four corners.
-    expect(screen.getAllByText('3.00 bar')).toHaveLength(4)
+    expect(screen.getAllByText(statText('3.00 bar'))).toHaveLength(4)
   })
 
   it('renders each corner\u2019s own converted value and never the raw pascal magnitude', () => {
     render(<TirePressureSection tireData={mixedTire()} />)
 
-    expect(screen.getByText('3.00 bar')).toBeInTheDocument()
-    expect(screen.getByText('2.20 bar')).toBeInTheDocument()
-    expect(screen.getByText('3.20 bar')).toBeInTheDocument()
-    expect(screen.getByText('3.60 bar')).toBeInTheDocument()
+    expect(screen.getByText(statText('3.00 bar'))).toBeInTheDocument()
+    expect(screen.getByText(statText('2.20 bar'))).toBeInTheDocument()
+    expect(screen.getByText(statText('3.20 bar'))).toBeInTheDocument()
+    expect(screen.getByText(statText('3.60 bar'))).toBeInTheDocument()
     // The raw SI magnitude must never leak through to the UI.
     expect(screen.queryByText(/320000/)).toBeNull()
     expect(screen.queryByText(/320,000/)).toBeNull()
@@ -130,10 +159,12 @@ describe('TirePressureSection — directional status labels', () => {
   it('labels each pressure band directionally (normal / low / high / critical)', () => {
     render(<TirePressureSection tireData={mixedTire()} />)
 
-    expect(screen.getByText('Normal')).toBeInTheDocument()
-    expect(screen.getByText('Low')).toBeInTheDocument()
-    expect(screen.getByText('High')).toBeInTheDocument()
-    expect(screen.getByText('Critical')).toBeInTheDocument()
+    const drawer = openDrawer()
+    expect(within(drawer).getByRole('group', { name: 'Front left' })).toHaveTextContent('Normal')
+    expect(within(drawer).getByRole('group', { name: 'Front right' })).toHaveTextContent('Low')
+    expect(within(drawer).getByRole('group', { name: 'Rear left' })).toHaveTextContent('High')
+    expect(within(drawer).getByRole('group', { name: 'Rear right' })).toHaveTextContent('Critical')
+    closeDrawer()
   })
 
   it('labels an over-inflated tyre "High", never "Low" (high-band regression guard)', () => {
@@ -144,10 +175,12 @@ describe('TirePressureSection — directional status labels', () => {
       />,
     )
 
-    expect(screen.getByText('High')).toBeInTheDocument()
+    const drawer = openDrawer()
+    expect(within(drawer).getByRole('group', { name: 'Rear left' })).toHaveTextContent('High')
     // Pre-fix this over-inflated corner was mislabelled "Low".
-    expect(screen.queryByText('Low')).toBeNull()
-    expect(screen.getAllByText('Normal')).toHaveLength(3)
+    expect(within(drawer).queryByText('Low')).toBeNull()
+    expect(within(drawer).getAllByText('Normal')).toHaveLength(3)
+    closeDrawer()
   })
 
   it('collapses both critical-low and critical-high to "Critical"', () => {
@@ -157,10 +190,12 @@ describe('TirePressureSection — directional status labels', () => {
       />,
     )
 
-    expect(screen.getAllByText('Critical')).toHaveLength(2)
+    const drawer = openDrawer()
+    expect(within(drawer).getAllByText('Critical')).toHaveLength(2)
+    closeDrawer()
     // Directionally-distinct magnitudes still render on their own cards.
-    expect(screen.getByText('1.90 bar')).toBeInTheDocument()
-    expect(screen.getByText('3.60 bar')).toBeInTheDocument()
+    expect(screen.getByText(statText('1.90 bar'))).toBeInTheDocument()
+    expect(screen.getByText(statText('3.60 bar'))).toBeInTheDocument()
   })
 })
 
@@ -170,10 +205,12 @@ describe('TirePressureSection — badge severity variants', () => {
 
     // Badge variant classes come from the shared <Badge> component:
     // success → green, warning → yellow, danger → red.
-    expect(screen.getByText('Normal').className).toContain('bg-green-100')
-    expect(screen.getByText('Low').className).toContain('bg-yellow-100')
-    expect(screen.getByText('High').className).toContain('bg-yellow-100')
-    expect(screen.getByText('Critical').className).toContain('bg-red-100')
+    const drawer = openDrawer()
+    expect(within(drawer).getByText('Normal').className).toContain('bg-[var(--semantic-success-bg)]')
+    expect(within(drawer).getByText('Low').className).toContain('bg-[var(--semantic-warning-bg)]')
+    expect(within(drawer).getByText('High').className).toContain('bg-[var(--semantic-warning-bg)]')
+    expect(within(drawer).getByText('Critical').className).toContain('bg-[var(--semantic-danger-bg)]')
+    closeDrawer()
   })
 })
 
@@ -181,44 +218,48 @@ describe('TirePressureSection — null-value safety', () => {
   it('degrades a null corner to an em-dash value + neutral "No Data" badge', () => {
     render(<TirePressureSection tireData={makeTire({ front_left: null })} />)
 
-    // The missing value is rendered as the em-dash placeholder, not a crash.
-    expect(screen.getByText('\u2014')).toBeInTheDocument()
+    // The missing corner is omitted with a counted explanation, not a crash.
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-tire-pressure-summary'), 'Front left')
 
-    const badge = screen.getByText('No Data')
-    expect(badge).toBeInTheDocument()
-    expect(badge.className).toContain(BADGE_VARIANTS.neutral)
+    // The null corner still maps to the neutral variant with its explicit reason.
+    expect(tirePressureVariant(null)).toBe('neutral')
+    expect(vi.mocked(useOperationalMetrics)).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ occurrenceId: 'front-left', missingReason: 'No data available' }),
+    ]))
 
     // The rest of the grid still renders — the panel is never left blank.
-    expect(screen.getByText('Front Left')).toBeInTheDocument()
-    expect(screen.getAllByText('3.00 bar')).toHaveLength(3)
+    expect(screen.getAllByText(statText('3.00 bar'))).toHaveLength(3)
   })
 })
 
 describe('TirePressureSection — empty states', () => {
-  it('shows the empty state and hides the grid when the snapshot is null', () => {
+  it('shows the empty state and four unknown corners when the snapshot is null', () => {
     render(<TirePressureSection tireData={null} />)
 
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('No tire pressure data available')).toBeInTheDocument()
-    // No corner cards render behind the empty state.
-    expect(screen.queryByText('Front Left')).toBeNull()
-    expect(screen.queryByText('Rear Right')).toBeNull()
+    expect(screen.getByText('Front left')).toBeInTheDocument()
+    expect(screen.getByText('Rear right')).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-tire-pressure-summary'), 'Front left')
+    const drawer = openDrawer()
+    expect(within(drawer).getByText('4 empty fields are hidden.')).toBeInTheDocument()
+    closeDrawer()
   })
 
   it('shows the empty state when the snapshot is undefined', () => {
     render(<TirePressureSection tireData={undefined} />)
 
     expect(screen.getByText('No tire pressure data available')).toBeInTheDocument()
-    expect(screen.queryByText('Front Left')).toBeNull()
+    expect(screen.getByText('Front left')).toBeInTheDocument()
   })
 })
 
 describe('TirePressureSection — accessibility', () => {
-  it('marks the decorative heading icon as aria-hidden', () => {
+  it('marks the decorative shared Review details icon as aria-hidden', () => {
     const { container } = render(<TirePressureSection tireData={makeTire()} />)
 
-    // The heading CircleDot is purely decorative — the adjacent title carries
-    // the meaning — so no SVG should be exposed to the accessibility tree.
+    // The shared Review details glyph is decorative, not a second button label.
     expect(container.querySelectorAll('svg:not([aria-hidden="true"])')).toHaveLength(0)
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(1)
   })
@@ -228,8 +269,10 @@ describe('TirePressureSection — i18n', () => {
   it('renders translated fallbacks, never raw translation keys', () => {
     render(<TirePressureSection tireData={makeTire({ rear_left: HIGH_PA })} />)
 
-    expect(screen.getByText('Tire Pressure')).toBeInTheDocument()
-    expect(screen.getByText('High')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tire pressure' })).toBeInTheDocument()
+    const drawer = openDrawer()
+    expect(within(drawer).getByRole('group', { name: 'Rear left' })).toHaveTextContent('High')
+    closeDrawer()
     // The underlying i18n keys must never leak into the UI.
     expect(screen.queryByText('vehicles.detail.tirePressure')).toBeNull()
     expect(screen.queryByText('common.high')).toBeNull()

@@ -36,8 +36,8 @@ import { MetricSkeleton, MetricBandSkeleton } from './helpers';
 // panel surface is token-driven, so its utility classes are an implementation
 // detail that shifts whenever the design-token layer changes.
 const CARD_SELECTOR = '[data-print-card]';
-// The inner <Skeleton> shimmer bars animate via this class.
-const SHIMMER_SELECTOR = '.animate-pulse';
+// The inner <Skeleton> bars are static decorative placeholders.
+const SHIMMER_SELECTOR = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
 
 describe('MetricSkeleton', () => {
   it('renders a decorative GlassPanel card with exactly two shimmer bars', () => {

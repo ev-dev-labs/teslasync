@@ -59,12 +59,12 @@ describe('MapLayerSwitcher', () => {
 
     const active = screen.getByRole('button', { name: 'Satellite' });
     expect(active.className).toContain('bg-[var(--surface-2)]');
-    expect(active.className).toContain('shadow-sm');
-    expect(active.className).not.toContain('text-[var(--text-secondary)]');
+    expect(active.className).toContain('border-[var(--control-border-hover)]');
+    expect(active.classList).not.toContain('text-[var(--text-secondary)]');
 
     const inactive = screen.getByRole('button', { name: 'Dark' });
     expect(inactive.className).toContain('hover:bg-[var(--surface-2)]');
-    expect(inactive.className).not.toContain('shadow-sm');
+    expect(inactive.className).not.toContain('border-[var(--control-border-hover)]');
   });
 
   it('calls onChange with the selected style id on click (user interaction)', () => {
@@ -113,6 +113,66 @@ describe('MapLayerSwitcher', () => {
     expect(buttons).toHaveLength(4);
     for (const button of buttons) {
       expect(button).toHaveAttribute('aria-pressed', 'false');
+    }
+  });
+
+  it('retains focusable native buttons and focus on activation without changing controlled selection', () => {
+    const onChange = vi.fn();
+    render(<MapLayerSwitcher current="dark" onChange={onChange} />);
+    const ids: MapStyle[] = ['dark', 'satellite', 'streets', 'terrain'];
+
+    for (const [index, button] of screen.getAllByRole('button').entries()) {
+      expect(button.tagName).toBe('BUTTON');
+      expect(button.tabIndex).toBe(0);
+      button.focus();
+      expect(button).toHaveFocus();
+      fireEvent.click(button);
+      expect(onChange).toHaveBeenLastCalledWith(ids[index]);
+      expect(button).toHaveFocus();
+      expect(button.className).toContain('focus-visible:outline-2');
+      expect(button.className).toContain('min-h-11');
+      expect(button.className).toContain('min-w-11');
+      expect(button.className).toContain('md:min-h-d-row');
+    }
+    expect(onChange).toHaveBeenCalledTimes(4);
+    expect(screen.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('retains full long RTL labels, bounded wrapping and opaque neutral map chrome', () => {
+    const label = 'خريطة القمر الصناعي مع تسمية طويلة جداً '.repeat(5);
+    i18n.translations['maps.layerSwitcher.satellite'] = label;
+    render(<div dir="rtl"><MapLayerSwitcher current="satellite" onChange={vi.fn()} /></div>);
+
+    const group = screen.getByRole('group');
+    expect(group.className).toContain('start-2');
+    expect(group.className).toContain('end-2');
+    expect(group.className).toContain('grid-cols-4');
+    expect(group.classList).toContain('z-map-control');
+    expect(group.classList).not.toContain('z-[1000]');
+    expect(group.className).toContain('bg-[var(--surface-1)]');
+    expect(group.className).not.toContain('backdrop-blur');
+    const button = screen.getByRole('button', { name: label.trim() });
+    expect(button).toHaveAttribute('title', label);
+    expect(button.textContent).toContain(label);
+    expect(button.querySelector('.break-words')).not.toBeNull();
+  });
+
+  it('preserves system-color boundaries, selected indicators and reduced-motion styling', () => {
+    render(<MapLayerSwitcher current="dark" onChange={vi.fn()} />);
+    const group = screen.getByRole('group');
+    expect(group.className).toContain('forced-colors:border-[CanvasText]');
+    expect(group.className).toContain('forced-colors:bg-[Canvas]');
+
+    const active = screen.getByRole('button', { name: 'Dark' });
+    expect(active.className).toContain('forced-colors:bg-[Highlight]');
+    expect(active.className).toContain('forced-colors:text-[HighlightText]');
+    const inactive = screen.getByRole('button', { name: 'Terrain' });
+    expect(inactive.className).toContain('forced-colors:bg-[ButtonFace]');
+    expect(inactive.className).toContain('forced-colors:text-[ButtonText]');
+    for (const button of screen.getAllByRole('button')) {
+      expect(button.className).toContain('forced-colors:border-[ButtonBorder]');
+      expect(button.className).toContain('forced-colors:focus-visible:outline-[Highlight]');
+      expect(button.className).toContain('motion-reduce:transition-none');
     }
   });
 });

@@ -115,6 +115,82 @@ afterEach(() => {
 });
 
 describe('DashboardGrid — auto-fit', () => {
+  it.each(['', 'opacity'])('settles the restored box before re-enabling "%s" transitions', async transition => {
+    const dashboard = makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]);
+    for (const items of Object.values(dashboard.layouts)) {
+      items[0] = { ...items[0], h: 14 };
+    }
+    const onLayoutChange = vi.fn();
+    const view = renderGrid(dashboard, onLayoutChange);
+    const panel = view.container.querySelector<HTMLElement>('[data-widget-id="wid-1"] > .widget-panel')!;
+    panel.style.height = '1328px';
+    if (transition) panel.style.setProperty('transition-property', transition, 'important');
+    let renderedHeight = 1328;
+    const measure = () => {
+      if (panel.style.transitionProperty === 'none') {
+        renderedHeight = Number.parseFloat(panel.style.height);
+      }
+      return renderedHeight;
+    };
+    Object.defineProperty(panel, 'clientHeight', { configurable: true, get: measure });
+    Object.defineProperty(panel, 'scrollHeight', { configurable: true, get: measure });
+    Object.defineProperty(panel, 'offsetHeight', { configurable: true, get: measure });
+    const restoredHeights: number[] = [];
+    const setProperty = panel.style.setProperty.bind(panel.style);
+    const removeProperty = panel.style.removeProperty.bind(panel.style);
+    const setSpy = vi.spyOn(panel.style, 'setProperty').mockImplementation((property, value, priority) => {
+      if (property === 'transition-property' && value === transition && transition) {
+        restoredHeights.push(renderedHeight);
+      }
+      setProperty(property, value, priority);
+    });
+    const removeSpy = vi.spyOn(panel.style, 'removeProperty').mockImplementation(property => {
+      if (property === 'transition-property') restoredHeights.push(renderedHeight);
+      return removeProperty(property);
+    });
+    try {
+      await waitFor(() => {
+        expect(onLayoutChange).toHaveBeenCalled();
+        expect(restoredHeights.length).toBeGreaterThan(0);
+        expect(restoredHeights.every(height => height === 1328)).toBe(true);
+        expect(panel.style.height).toBe('1328px');
+        expect(panel.style.transitionProperty).toBe(transition);
+        expect(panel.style.getPropertyPriority('transition-property')).toBe(transition ? 'important' : '');
+      });
+    } finally {
+      setSpy.mockRestore();
+      removeSpy.mockRestore();
+    }
+  });
+
+  it.each(['', 'opacity'])('measures an oversized saved panel without transition delay and restores "%s"', transition => {
+    const dashboard = makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]);
+    for (const items of Object.values(dashboard.layouts)) {
+      items[0] = { ...items[0], h: 14 };
+    }
+    const onLayoutChange = vi.fn();
+    const view = renderGrid(dashboard, onLayoutChange);
+    const panel = view.container.querySelector<HTMLElement>('[data-widget-id="wid-1"] > .widget-panel')!;
+    panel.style.height = '1328px';
+    if (transition) panel.style.setProperty('transition-property', transition, 'important');
+    const measuredProperties: string[] = [];
+    const height = () => {
+      measuredProperties.push(panel.style.transitionProperty);
+      return panel.style.transitionProperty === 'none' ? 560 : 1328;
+    };
+    Object.defineProperty(panel, 'clientHeight', { configurable: true, get: height });
+    Object.defineProperty(panel, 'scrollHeight', { configurable: true, get: height });
+    return waitFor(() => {
+      expect(onLayoutChange).toHaveBeenCalled();
+      const fitted = onLayoutChange.mock.calls[0][0] as RGLLayouts;
+      expect(fitted.lg.find(item => item.i === 'wid-1')?.h).toBe(6);
+      expect(measuredProperties).toContain('none');
+      expect(panel.style.height).toBe('1328px');
+      expect(panel.style.transitionProperty).toBe(transition);
+      expect(panel.style.getPropertyPriority('transition-property')).toBe(transition ? 'important' : '');
+    });
+  });
+
   it('grows a newly added widget when its inner content scrolls but its panel does not', async () => {
     const onLayoutChange = vi.fn();
     const first = renderGrid(makeDashboard([{ id: 'wid-1', widgetId: W1_ID }]), onLayoutChange);

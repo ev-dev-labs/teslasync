@@ -1,0 +1,312 @@
+{
+  "item": "phase6-qa-admin-data-quality",
+  "phase": 6,
+  "status": "SOURCE_REVIEW_COMPLETE_WITH_CONFIRMED_ISSUES",
+  "fullQA": "NOT ACCEPTED",
+  "native": "NOTRUN",
+  "page": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx",
+  "purpose": "Fleet-wide operational signal quality and normalization provenance over a server-owned bounded scoring window.",
+  "primaryGoal": "Review worst-quality fields and distinguish measured normalization coverage from unknown evidence without repairing or changing data.",
+  "authorization": {
+    "queue": "migration-queue.md:146-155,194",
+    "sourceAcceptance": "migration-queue.md:1522",
+    "versionedWrite": "docs\\frontend-audits\\phase6-qa-admin-data-quality.json",
+    "ignoredWrite": "web\\logs\\phase6-qa-admin-data-quality.log",
+    "ignoreEvidence": ".gitignore:80",
+    "applicationFiles": "READ-ONLY; no source, test, catalog, configuration or queue edits",
+    "browserGrant": false,
+    "prohibitedOperationsPerformed": [],
+    "scopeLimits": [
+      "No browser, HTTP/API requests, repair submissions, real identities or runtime captures.",
+      "No Git, subagents, installs, helpers/extensions, servers, full suites or Docker.",
+      "No unchanged passing tests, lint, build or typecheck reruns."
+    ]
+  },
+  "instructionsRead": [
+    "migration-queue.md:128-201 rolling finished-page source QA and worker contracts",
+    "docs\\orchestrator-loop.md:1-296",
+    "docs\\session-handoff.md:1-200,1710-1750",
+    "docs\\frontend-design-contract.md:1-620",
+    "docs\\frontend-mission.md:1-200,506-620,1050-1160",
+    ".github\\instructions\\react-frontend.instructions.md:1-600",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh"
+  ],
+  "timebox": {
+    "startedAt": "2026-10-13T09:20:08.046-07:00",
+    "firstActualClock": "2026-10-13T09:20:20.1386978-07:00",
+    "lastInspectionClock": "2026-10-13T09:29:38.7496679-07:00",
+    "preReturnClock": "2026-10-13T09:34:43.9180902-07:00",
+    "preReturnElapsedMinutes": 14.6,
+    "returnBoundary": "2026-10-13T09:40:08.046-07:00",
+    "hardBoundary": "2026-10-13T09:45:08.046-07:00",
+    "commandLimitSeconds": 480,
+    "finishPolicy": "Finish early; final actual clock and document-validation result retained in the ignored log. No clock resets."
+  },
+  "inventoryReuse": {
+    "original": "docs\\frontend-audits\\audit-page-007.json",
+    "route": "/admin/data-quality",
+    "lazyImportEvidence": "web\\src\\App.tsx:282",
+    "mountEvidence": "web\\src\\App.tsx:717",
+    "mountRuntime": "NOTRUN",
+    "originalPageLines": 125,
+    "currentPageLines": 125,
+    "originalComposedLines": 296,
+    "currentComposedLines": 296,
+    "minimumPreservationLines": 207.2,
+    "linePreservation": "PASS: actual125+62+43+66=296, equal to the original mounted presentation inventory; this is not functional/native acceptance.",
+    "originalSectionCount": 3,
+    "currentSectionCount": 3,
+    "actualSourceComponentCounts": {
+      "OperationalBrief": 1,
+      "LayoutCard": 2,
+      "DataTable": 1,
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "EmptyState": 2,
+      "QueryError": 3
+    },
+    "pageHashMatchesOriginal": true,
+    "childHashQualification": "The current mounted child hashes differ from the Phase0 receipt despite unchanged line counts. Do not claim all children stayed unchanged since Phase0. This worker made no application edits.",
+    "sourceSnapshot": [
+      {"file": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx", "lines": 125, "sha256": "7E09C68F084CF98FEC9E81316463810E56549F1B40AA89747E182BD37516DBB8"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx", "lines": 62, "sha256": "762FF6D533680CA7B8BA11E5CBE4D1DCE13928EFC6E36945811A5CB87F44FD25"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx", "lines": 43, "sha256": "6BA61F0E07FDFCD4A2A0F576A0E674941A545126923460A774B12C3F881A89A2"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx", "lines": 66, "sha256": "21F0D881594885AF2BF540852A09DFF37F0321D0FDB7F0C5140CA159C3C7FC43"}
+    ],
+    "unrenderedPayloadPreserved": "firmware_assignment, firmware_segments, generated_at and per-field last_seen_at remain typed wire metadata, not new rendered sections. See web\\src\\types\\admin-operator-confidence.ts:164-222 and internal\\dataquality\\scorer.go:88-115. Their absence from the original mounted UI is not a newly removed feature."
+  },
+  "sections": [
+    {
+      "name": "Normalization coverage totals",
+      "evidence": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx:88-101",
+      "presentation": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx:24-61",
+      "coverage": "Always mounted. Six numeric metrics: total, attested, unattested, coverage, required version and critical fields. OperationalBrief loading suppresses fabricated readings; explicit server UTC window/inclusive-end provenance remains. Error retry and retained text remain.",
+      "sourceResult": "PASS with DQ002 refreshing-status defect",
+      "native": "NOTRUN"
+    },
+    {
+      "name": "Normalization version distribution",
+      "evidence": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx:105-111",
+      "presentation": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx:17-42",
+      "coverage": "Always mounted. Independent error/skeleton/empty/refresh/populated branches. All buckets kept, null legacy first and explicit version0 retained. Attestation compares the required version. Percent and count formatting use saved number preferences.",
+      "sourceResult": "PASS with DQ007 semantic-color adoption defect",
+      "native": "NOTRUN"
+    },
+    {
+      "name": "Per-field quality and provenance",
+      "evidence": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx:115-121",
+      "presentation": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:16-65",
+      "coverage": "Always mounted. Independent error/skeleton/empty/refresh/populated branches. Eight columns preserve field/sample count, severity/composite score, freshness, max gap, duplicates, attested/unattested counts, coverage/trust. Worst-first source copy, stable field key and tableId, raw value filters and inherited local search/column/density/export controls.",
+      "sourceResult": "FAIL: DQ001,DQ003,DQ004,DQ005,DQ007,DQ008",
+      "native": "NOTRUN"
+    }
+  ],
+  "apiContract": {
+    "hook": "useDataQuality",
+    "evidence": "web\\src\\api\\hooks\\useOperatorConfidence.ts:226-236",
+    "method": "GET",
+    "path": "/admin/observability/data-quality",
+    "routeEvidence": "internal\\api\\router.go:4638-4639",
+    "handlerEvidence": "internal\\api\\dataquality\\handler.go:31-45",
+    "clientEvidence": "web\\src\\api\\client.ts:74-92,268-291,368-407",
+    "queryParameters": [],
+    "requestBody": null,
+    "abortSignal": "Forwarded from queryFn to request",
+    "queryKey": "['admin','observability','data-quality']",
+    "policy": "STANDARD staleTime60000ms; SLOW refetchInterval60000ms; refetchIntervalInBackground=false; retry1; constants web\\src\\lib\\constants.ts:38,58",
+    "response": "Flat DataQualitySnapshot, no envelope unwrapping. TS JSON names/nullability align with internal\\dataquality\\scorer.go:49-115.",
+    "actualErrorWire": "503 body is {error:'SUBSYSTEM_NOT_CONFIGURED',code:'SERVICE_UNAVAILABLE'}, NOT code:'SUBSYSTEM_NOT_CONFIGURED'. Handler uses httpx.WriteError; mapping/evidence internal\\api\\httpx\\json.go:50-51,62-66. Other scorer failures return500. Hook comment claiming the custom code is inaccurate; mounted page currently branches on status only.",
+    "workspace": "Fleet-wide server-owned window, no vehicle/time parameters or local date picker. /admin prefix disables vehicle; range not registered. web\\src\\lib\\workspaceScope.ts:23-76,97-100,173-187.",
+    "aggregation": "Both SQL queries receive the same windowStart/windowEnd and use inclusive >=start/<=end. internal\\dataquality\\scorer.go:149-150,234-235,318-343. Field accumulation combines raw duplicate/comparison counts before deriving the overall ratio:450-461,494-505. Normalization totals/versions come from all window rows, not table-filtered rows.",
+    "scopeQualification": "SQL, pool/deployment wiring, authorization and runtime response/schema validation NOTRUN; equal bound arguments do not establish transaction-snapshot atomicity."
+  },
+  "checks": [
+    {"id": "authorization-and-route", "status": "PASS", "basis": "SOURCE", "evidence": ["migration-queue.md:146-155,194,1522", "web\\src\\App.tsx:282,717"], "detail": "Existing accepted source row and sole report/log writes; actual page route remains lazy SafeRoute."},
+    {"id": "section-and-line-preservation", "status": "PASS", "basis": "ACTUAL_SOURCE_COUNTS", "evidence": ["web\\src\\features\\admin\\pages\\DataQualityPage.tsx:88,105,115", "docs\\frontend-audits\\audit-page-007.json"], "detail": "296composed lines and3independent sections, not source deletion or blank placeholders."},
+    {"id": "initial-loading-and-fatal-error", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\features\\admin\\pages\\DataQualityPage.tsx:49-55,97,107,117", "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx:20-24", "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:57-60"], "detail": "Only fatal-without-retained errors replace section contents; all shells remain mounted."},
+    {"id": "retained-refresh-failure-and-paused", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\api\\dataState.ts:185-276", "web\\src\\features\\admin\\pages\\DataQualityPage.tsx:55,95-97", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82-119,231-240", "web\\src\\components\\layout\\PageContainer.tsx:253"], "detail": "Payload stays; paused/refresh failures show nonblocking shell notice and retries, not fabricated server failure or cleared panels. Age shown by shared freshness owner. Native offline/recovery NOTRUN."},
+    {"id": "healthy-refresh-brief-status", "status": "FAIL", "basis": "SOURCE", "issues": ["DQ002"], "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx:49-50"]},
+    {"id": "unsupported-initial-503-state", "status": "FAIL", "basis": "SOURCE", "issues": ["DQ006"], "evidence": ["web\\src\\features\\admin\\pages\\DataQualityPage.tsx:50-55,71,74-84", "web\\src\\components\\feedback\\DataSourceNotice.tsx:118,239-240"]},
+    {"id": "authoritative-empty-and-normalization-unknown", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\features\\admin\\components\\statstrip-api-quality\\normalizationMetrics.ts:16-26", "web\\src\\features\\admin\\components\\data-quality\\helpers.ts:46-71,80-99", "internal\\dataquality\\scorer.go:553-565,599-605"], "detail": "Empty coverage remains null/Unknown; measured0 remains0; null version and explicitv0 distinct. Counts absent before snapshot are not rendered as invented0 through OperationalBrief. Missing/nonfinite/negative seconds display an emdash."},
+    {"id": "filters-and-aggregate-scope", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:26-51,61-62", "web\\src\\components\\ui\\DataTable.tsx:527-550,1379-1383", "web\\src\\components\\ui\\tableValueFilters.ts:7-8,55-58,69-104"], "detail": "Local loaded-row filtering uses canonical raw values; null and numeric0 have distinct keys. Display-equivalent options preserve all raw keys. Summaries/version buckets remain full-window and independent. No duplicate global selectors."},
+    {"id": "SI-wire-and-display-boundary", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:226-236", "web\\src\\types\\admin-operator-confidence.ts:164-222", "web\\src\\features\\admin\\components\\data-quality\\helpers.ts:128-139"], "detail": "Seconds, dimensionless ratios, percentages, identifiers/counts retained in wire/hooks; no deprecated conversion caller or car-unit adapter. Operational server window_mins is not a migrated drive duration. JSON export has the separate DQ003 defect."},
+    {"id": "JSON-export-raw-numeric-fidelity", "status": "FAIL", "basis": "SOURCE", "issues": ["DQ003"], "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:31-50", "web\\src\\components\\ui\\DataTable.tsx:873-906,907-917"]},
+    {"id": "mobile-all-field-access", "status": "FAIL", "basis": "SOURCE", "issues": ["DQ001"], "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:61-62", "web\\src\\components\\ui\\DataTable.tsx:505,715-725,1386-1399"]},
+    {"id": "accessible-semantic-structure", "status": "PASS", "basis": "SOURCE_ONLY", "evidence": ["web\\src\\components\\layout\\PageContainer.tsx:181-203", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:23-61", "web\\src\\components\\data-display\\MetricBar.tsx:57-65", "web\\src\\components\\ui\\DataTable.tsx:929-930,1447,1471"], "detail": "Shared heading/route-focus target, title association/help, named progressbars and table caption exist. The historical anonymous-table finding is superseded: current fallback names it with tableId. Human localized caption remains DQ004; native AT/keyboard/contrast not accepted."},
+    {"id": "canonical-i18n-key-presence", "status": "PASS", "basis": "ACTUAL_CATALOG_LOOKUP", "evidence": ["web\\src\\i18n\\en.json:11336-11399", "web\\src\\i18n\\en.json:4765-4774"], "detail": "47distinct single-line static t-call keys found, missing0. Eight dynamic sourceStatus keys exist. Multiline admin.dataQuality calls additionally inspected against canonical branch. This is not split-namespace/cold-runtime/full-locale acceptance."},
+    {"id": "localized-visible-and-accessible-values", "status": "FAIL", "basis": "SOURCE", "issues": ["DQ004", "DQ005"], "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:30,61", "web\\src\\components\\data-display\\SeverityBadge.tsx:42,59", "web\\src\\features\\admin\\components\\data-quality\\helpers.ts:128-133"]},
+    {"id": "restrained-semantic-color-and-surface-adoption", "status": "FAIL", "basis": "SOURCE_CONTRACT_ONLY", "issues": ["DQ007", "DQ008"], "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx:35", "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:45,54,61", "web\\src\\components\\ui\\DataTable.tsx:452,1340"], "detail": "Literal color roles and nested standalone table surface remain; actual saturation/contrast/pixel appearance NOTRUN."},
+    {"id": "scoped-prohibited-source-patterns", "status": "PASS", "basis": "ACTUAL_TEXT_SCAN", "evidence": ["web\\logs\\phase6-qa-admin-data-quality.log"], "detail": "Expanded8-file page/presentation/derivation scope: static inlineCSSvar0, raw controls0, direct vendor imports0, oldAPIimports0, deprecatedunitcallers0 matching lines. Not a full AST/lint/TypeScript audit. Fixedpresentationcolors2matching lines containing3fixed color tokens were reported, not waived."},
+    {"id": "hook-prefix-params-response-route", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:230", "internal\\api\\router.go:4639", "internal\\api\\dataquality\\handler.go:45"], "detail": "Mounted hook has no /api/v1 prefix, no queryparams/body, signal forwarded and correct flatresponse/GET route. No API request performed."},
+    {"id": "action-safety-and-validation", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\features\\admin\\pages\\DataQualityPage.tsx:56-58", "web\\src\\api\\hooks\\useOperatorConfidence.ts:226-236", "web\\src\\components\\ui\\DataTable.tsx:527-550,873-917"], "detail": "Refresh/retry only refetches this read hook. Local table filters/search/visibility/density and loaded-row downloads are inherited actions, not repairs. No form, paid/destructive operation or mutation hook to submit. Invocation, downloads and persistence writes NOTRUN."},
+    {"id": "frontend-observability-locality", "status": "PASS", "basis": "SOURCE", "evidence": ["web\\src\\features\\admin\\pages\\DataQualityPage.tsx:24-39", ".github\\instructions\\observability.instructions.md:16"], "detail": "No page-level RUM initialization or identifier logging; telemetry/backend-span/SLO instrumentation is outside this bounded read-only page QA."},
+    {"id": "native-visual-responsive-a11y-matrix", "status": "NOTRUN", "evidence": ["migration-queue.md:146-155,184-194"], "detail": "No browser grant. All320/375/390/430/768/1024/1280/1440/1920/2560 widths, narrow allocated containers, dark/light/custom, RTL,200%text, forced-colors, actual motion, keyboard/focus, screen-reader output, contrast, overflow and44px hit measurements remain unverified. No whole-page native pass."},
+    {"id": "TypeScript-build-lint-tests-audit-script", "status": "NOTRUN", "evidence": ["migration-queue.md:1522", "docs\\session-handoff.md:60-76", ".github\\skills\\audit-violations\\audit.sh:134-146"], "detail": "Read-only documentation task; no unchanged passing gate reruns/full suites. audit.sh unconditionally runs project TypeScript, so it was read, not executed. Historical parent literal npx tsc --noEmit exit0 is recorded in handoff, not a new result; inspected phase5-requested-typecheck-gate.log is empty and supplies no raw successful output. Tests discovered/executed/pass/fail/skip are NOTRUN, not inferred counts."}
+  ],
+  "confirmedIssues": [
+    {
+      "id": "DQ001", "status": "FAIL", "classification": "confirmed-source-issue", "severity": "high", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx", "line": 61, "rule": "MDC-023/MDC-043/no mobile data loss",
+      "mechanism": "Caller fixes mobileColumns to field/severity/freshness, with neither mobilePresentation nor expandable/renderExpanded. DataTable applies hidden md:table-cell to other keys for both cells and headers. Column-menu inclusion cannot override that independent mobile CSS.",
+      "repro": "Source-derived: provide any valid nonempty field row and render below768px. Gap, duplicates, attested count, unattested count and coverage/trust have no displayed cell/detail route; widening to768 restores them. Native reproduction NOTRUN.",
+      "related": ["web\\src\\components\\ui\\DataTable.tsx:505,715-725,1162,1386-1399,1522", "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:34-50"],
+      "narrowFixNeed": "Assigned caller adoption of existing mobilePresentation/detail or all-column contained table strategy; retain all fields, stable identity and filters. Then native/keyboard mobile validation."
+    },
+    {
+      "id": "DQ002", "status": "FAIL", "classification": "confirmed-source-issue", "severity": "medium", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx", "line": 50, "rule": "MDC-026/refreshing trust",
+      "mechanism": "Summary passes isRefreshing:false to sourceBriefStatus. Page passes retained:true when actual source.isRefreshing, but actual refreshing flag is not a component prop. A healthy refresh has sourceStatus ok, producing Source loaded while retained text is also shown.",
+      "repro": "Source-derived: successful snapshot, no error, isFetching=true. Page header derives Updating from query; brief stays Source loaded instead of Refreshing source. No refresh performed.",
+      "related": ["web\\src\\features\\admin\\pages\\DataQualityPage.tsx:95-96", "web\\src\\api\\dataState.ts:195", "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts:8-16", "web\\src\\components\\data-display\\DataFreshness.tsx:153-160"],
+      "narrowFixNeed": "Forward actual typed isRefreshing from page to existing status helper; keep retained/stale/paused and initial loading semantics."
+    },
+    {
+      "id": "DQ003", "status": "FAIL", "classification": "confirmed-source-issue", "severity": "medium", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx", "line": 31, "rule": "MDC-023/MDC-045/numeric export fidelity",
+      "mechanism": "Six numeric columns use presentation keys freshness/gap/duplicates/versioned/unversioned/coverage rather than wire keys. None supplies exportValue/exportRow/onExport. Default JSON export reads row[column.key], finds undefined, then falls back to rendered display text; it therefore exports duration/percent/grouped-count strings instead of SI seconds/raw ratio/numeric counts/nullable coverage.",
+      "repro": "Source-derived: valid synthetic row freshness_seconds=5,duplicate_ratio=0.25,versioned_sample_count=1000,coverage measured25. Default JSON record contains freshness:'5s', duplicates:'25...%', versioned:locale-formatted string and coverage:formatted text plus trust label, not those numeric inputs. No export/download invoked.",
+      "related": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:31-50,61-62", "web\\src\\components\\ui\\DataTable.tsx:82-109,873-917", "web\\src\\types\\admin-operator-confidence.ts:167-173"],
+      "narrowFixNeed": "Provide existing column/export serialization mapping for raw quantitative values and nulls, with explicit intended CSV display versus JSON raw semantics. Preserve loaded-row scope and all actions."
+    },
+    {
+      "id": "DQ004", "status": "FAIL", "classification": "confirmed-source-issue", "severity": "low", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx", "line": 30, "rule": "MDC-040/MDC-044/localized names and statuses",
+      "mechanism": "SeverityBadge is called without children and renders normalized machine severity directly; ok becomes literal success, warn/critical remain English. DataTable receives no caption/name, so its current accessible name/caption falls back to literal admin:data-quality-fields. Table is named, but not with the translated panel title.",
+      "repro": "Source-derived: change display language with any populated row. Header/trust translate, while quality status still reads success/warn/critical and AT table name remains admin:data-quality-fields. No locale/preference write or AT run performed.",
+      "related": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:30,54,61", "web\\src\\components\\data-display\\SeverityBadge.tsx:42,59", "web\\src\\lib\\tokens.ts:298-305", "web\\src\\components\\ui\\DataTable.tsx:929-930,1447,1471"],
+      "narrowFixNeed": "Caller supplies localized severity children and existing caption prop; reuse shared Badge/DataTable, preserve wire enums and tableId. Canonical catalog additions remain parent-owned."
+    },
+    {
+      "id": "DQ005", "status": "FAIL", "classification": "confirmed-source-issue", "severity": "low", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\data-quality\\helpers.ts", "line": 130, "rule": "MDC-044/duration locale",
+      "mechanism": "formatSeconds interpolates Math.round results directly and hardcodes s/m/h/d, without translator or saved numeric locale. Caller subscribes to locale but passes no locale to this helper; re-render does not change duration digits/labels.",
+      "repro": "Source-derived: same61-second freshness with a locale using non-Latin digits yields ASCII1m, while adjacent counts/composite/share use saved number formatting. No preferences changed.",
+      "related": ["web\\src\\features\\admin\\components\\data-quality\\helpers.ts:128-133", "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:18,31-36,52", "web\\src\\hooks\\useNumberFormatting.ts:22-39", "web\\src\\lib\\numberFormat.ts:91-100"],
+      "narrowFixNeed": "Bounded existing display-formatting adoption preserving raw seconds, specialist rounding thresholds and unknown/invalid handling; localize unit readout/number formatting without changing wire/cache."
+    },
+    {
+      "id": "DQ006", "status": "FAIL", "classification": "confirmed-source-issue", "severity": "medium", "confidence": "high",
+      "file": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx", "line": 71, "rule": "MDC-026/unsupported capability versus outage",
+      "mechanism": "Initial scorer-not-configured503 suppresses section errors and adds an info unsupported notice, but the same failed query remains in dataSources. PageContainer independently renders DataSourceNotice: no data+failed => unavailable, rolealert/assertive and danger. Actual code is SERVICE_UNAVAILABLE, so shared classifier supplies service-outage guidance too. The documented calm unsupported-only behavior is not realized at shell level.",
+      "repro": "Source-derived: handler with nil scorer returns503/error SUBSYSTEM_NOT_CONFIGURED/code SERVICE_UNAVAILABLE, query has no data. Render source state: explicit Feature not supported coexists with danger outage/Failed source guidance and retry. No handler/API/browser execution performed.",
+      "related": ["internal\\api\\dataquality\\handler.go:31-40", "internal\\api\\httpx\\json.go:50-51,62-66", "web\\src\\features\\admin\\pages\\DataQualityPage.tsx:50-55,71,74-84", "web\\src\\components\\layout\\PageContainer.tsx:253", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82,118,239-240", "web\\src\\components\\feedback\\DataStateNotice.tsx:64-75", "web\\src\\lib\\errorClassification.ts:72-83"],
+      "narrowFixNeed": "Reconcile the existing unsupported/source-notice contract for this explicit missing-subsystem case, and correct custom-code documentation/contract if coordinated. Do not treat arbitrary proxy503 as missing configuration or suppress real outage warnings."
+    },
+    {
+      "id": "DQ007", "status": "FAIL", "classification": "confirmed-source-contract-issue", "severity": "low", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx", "line": 35, "rule": "MDC-010/MDC-011/MDC-012/semantic palette",
+      "mechanism": "Attestation bar still selects literal #34d399/#fbbf24 instead of existing theme semantic roles; unattested text is literal text-amber-300 rather than mode-aware warning typography. MetricBar already accepts CSS-variable colors.",
+      "repro": "Source-derived: switch saved light/dark/custom semantic colors; bar fill remains the same literal hex and unattested text remains fixed Tailwind amber. Contrast/saturation appearance was not measured and is NOT claimed to fail.",
+      "related": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:45", "web\\src\\components\\data-display\\MetricBar.tsx:13-14,26-27,95", "web\\src\\lib\\tokens.ts:343-345"],
+      "narrowFixNeed": "Caller-only adoption of existing semantic colors/typography, preserving attestation labels/thresholds and all buckets; separate native composed-theme/contrast QA."
+    },
+    {
+      "id": "DQ008", "status": "FAIL", "classification": "confirmed-source-contract-issue", "severity": "low", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx", "line": 61, "rule": "MDC-023/MDC-031/embedded surface",
+      "mechanism": "DataTable remains inside LayoutCard without variant='embedded'. Shared table defaults to standalone and applies tableTokens.frame, creating a second framing owner inside an already framed card.",
+      "repro": "Source-derived: render any nonempty row; table wrapper uses data-grid-variant standalone and frame classes within LayoutCard. No pixel/visual judgment or screenshot performed.",
+      "related": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:54-62", "web\\src\\components\\ui\\DataTable.tsx:452,1338-1344"],
+      "narrowFixNeed": "Use existing embedded variant in caller and preserve toolbar/scroll/filter/export behavior; no new wrapper or shared table fork."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01", "status": "NOTRUN", "classification": "source-evidenced-policy-candidate",
+      "evidence": ["internal\\dataquality\\scorer.go:197,208,575-586,615-618"],
+      "mechanism": "With one sample/no comparable pair, SQL max-gap default and scorer duplicateRatio default are0; both axes earn full score when freshness is also good. Wire exposes no comparison_count/evidence-state to let UI distinguish insufficient pair evidence.",
+      "proposedRepro": "Synthetic one-sample field at windowEnd gives gap0,duplicates0 and potentially composite100. No execution performed.",
+      "whyNotConfirmedDefect": "Current scoring policy may deliberately define these as observed-window lower bounds. Domain owner must decide whether insufficient comparisons require unknown/partial scoring before a frontend/backend nullability change. Do not replace legitimate measured0 values."
+    },
+    {
+      "id": "C02", "status": "NOTRUN", "classification": "integration-candidate",
+      "evidence": ["internal\\dataquality\\scorer.go:336-343,350-358,515-527"],
+      "mechanism": "Queries share inclusive time bounds but execute sequentially through a Querier without an explicit transaction snapshot. A late/backfilled row between statements could change distribution counts relative to field counts.",
+      "whyNotConfirmedDefect": "No database/runtime isolation or concurrent-ingest reproduction performed. Equal windows are confirmed, atomic snapshot is not."
+    },
+    {
+      "id": "C03", "status": "NOTRUN", "classification": "malformed-response-candidate",
+      "evidence": ["web\\src\\features\\admin\\components\\data-quality\\helpers.ts:106-112", "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx:27-30", "web\\src\\lib\\numberFormat.ts:91-100"],
+      "mechanism": "Types require field/score/sample_count; missing composite score sorts as0, malformed field may throw localeCompare, and shared numeric formatting may collapse invalid required readings. Optional arrays/coverage are guarded.",
+      "whyNotConfirmedDefect": "Canonical Go payload supplies required scalars. Malformed network/proxy/schema versions were not injected or validated; no claim of a reachable production crash."
+    },
+    {
+      "id": "C04", "status": "NOTRUN", "classification": "display-preference-review-candidate",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx:41-47", "web\\src\\i18n\\en.json:11338-11340"],
+      "mechanism": "Window description interpolates raw UTC ISO strings rather than saved date/time display preferences.",
+      "whyNotConfirmedDefect": "It explicitly identifies source UTC and inclusive bounds, which is honest operator provenance. Whether to additionally provide saved-timezone formatted bounds needs a bounded product/preference decision; do not discard sourceUTC/inclusive evidence."
+    }
+  ],
+  "validationEvidence": {
+    "log": "web\\logs\\phase6-qa-admin-data-quality.log",
+    "actualCounts": {
+      "staticInlineCssVarMatchingLines": 0,
+      "rawControlMatchingLines": 0,
+      "directVendorImportMatchingLines": 0,
+      "oldApiImportMatchingLines": 0,
+      "deprecatedUnitCallerMatchingLines": 0,
+      "fixedPresentationColorMatchingLines": 2,
+      "fixedPresentationColorTokens": 3,
+      "singleLineStaticI18nKeys": 47,
+      "missingSingleLineStaticI18nKeys": 0,
+      "sourceStatusDynamicKeysPresent": 8
+    },
+    "scanScope": [
+      "web\\src\\features\\admin\\pages\\DataQualityPage.tsx",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx",
+      "web\\src\\features\\admin\\components\\data-quality\\helpers.ts",
+      "web\\src\\features\\admin\\components\\data-quality\\coverageKpis.tsx",
+      "web\\src\\features\\admin\\components\\statstrip-api-quality\\normalizationMetrics.ts",
+      "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts"
+    ],
+    "commands": [
+      {"shellId": "4586", "command": "Get-Content counts/Get-FileHash SHA256 over explicit10-file scope, followed by & rg -n --glob '*.tsx' 'NormalizationCoverageKpis|NormalizationVersionPanel|FieldQualityTable|<OperationalBrief|<LayoutCard|<DataTable|<GlassPanel|<ChartContainer|<EmptyState|<QueryError|isRefreshing: false|mobileColumns|text-amber-300|#34d399|#fbbf24' $scope[0] $scope[1] $scope[2] $scope[3]", "exitCode": 1, "result": "Hashes/counts printed. Shell rg unavailable CommandNotFoundException; no grep pass inferred."},
+      {"shellId": "4603", "command": "Select-String -Path $scope[0..3] -Pattern 'NormalizationCoverageKpis|NormalizationVersionPanel|FieldQualityTable|<OperationalBrief|<LayoutCard|<DataTable|<GlassPanel|<ChartContainer|<EmptyState|<QueryError|isRefreshing: false|mobileColumns|text-amber-300|#34d399|#fbbf24'; foreach ($rule in $patterns.Keys) { $hits = @(Select-String -Path $scope -Pattern $patterns[$rule]); print count and file:line matches }", "exitCode": 0, "result": "Replacement of failed grep only; actual scoped counts and all matching file:lines retained in log. $scope is the8-file scanScope above; patterns retained below."},
+      {"shellId": "4624", "command": "Get-Content -LiteralPath '.\\src\\i18n\\en.json' -Raw | ConvertFrom-Json", "exitCode": 1, "result": "Case-distinct catalog keys subFSMs/subFsms rejected by PowerShell object conversion; no i18n pass inferred."},
+      {"shellId": "4636", "command": "Get-Content -LiteralPath '.\\src\\i18n\\en.json' -Raw | ConvertFrom-Json -AsHashtable; Select-String -Path $files -Pattern \"t\\('([A-Za-z0-9_.]+)'\" -AllMatches; compare each unique key by nested catalog lookup; $catalog.operations.sourceStatus | ConvertTo-Json -Compress", "exitCode": 0, "result": "Replacement of failed parser only;47static keys/missing0 and actual8dynamic key values printed. $files is page+three presentation components+coverageKpis.tsx."},
+      {"shellId": "4692", "command": "Get-Content -LiteralPath '..\\docs\\frontend-audits\\phase6-qa-admin-data-quality.json' -Raw | ConvertFrom-Json -AsHashtable; Group-Object check statuses; Get-FileHash compare4source snapshot hashes; Get-Date minus [datetimeoffset] start", "exitCode": 1, "result": "Report JSON parse PASS;21checks:PASS13/FAIL6/NOTRUN2; all4source snapshot hashes matched. Final clock-only DateTime/DateTimeOffset subtraction failed; command-wide success NOT claimed."},
+      {"shellId": "4704", "command": "$finish = [datetimeoffset]::Now; $start = [datetimeoffset]::Parse('2026-10-13T09:20:08.046-07:00'); [math]::Round(($finish - $start).TotalMinutes, 2)", "exitCode": 0, "result": "Only failed clock receipt replaced: actual2026-10-13T09:34:43.9180902-07:00,elapsed14.6minutes. No passing application command rerun."}
+    ],
+    "patterns": {
+      "staticInlineCssVar": "style=\\{\\{[^\\r\\n]*var\\(--",
+      "rawControl": "<(?:button|input|textarea|select|table)\\b",
+      "directVendorImport": "from\\s+['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"]",
+      "oldApiImport": "from\\s+['\\\"]\\.\\./(?:\\.\\./)?api['\\\"]",
+      "deprecatedUnitCaller": "\\b(?:convertDistance|convertSpeed|convertTemp|convertEfficiency|convertPressure|fmtDistance|fmtSpeed|fmtTemp|fmtPressure)\\s*\\(",
+      "fixedPresentationColor": "#(?:34d399|fbbf24)|text-amber-300"
+    },
+    "testReceipt": {
+      "status": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "existingTestLimit": "web\\src\\features\\admin\\pages\\DataQualityPage.test.tsx:88-104 stubs the three presentation components. Read only; do not infer child/mobile/export/native acceptance from those orchestration cases."
+    },
+    "sourceOnlyExceptions": [
+      "PageLayout delegates to PageContainer; no missing shared page wrapper.",
+      "Raw native HTML/direct vendor libraries inside shared primitives are expected boundaries, not page violations.",
+      "MetricBar computed style is a dynamic caller color, not a static-inline-variable violation.",
+      "Optional unsupported notice is not a data-hidden main section.",
+      "The old duplicate presentation twins are not mounted coverage or permission to delete them."
+    ]
+  },
+  "needs": [
+    "Parent queue eight bounded source fixes DQ001-DQ008 with the exact owners/evidence above; no repair implemented or acceptance claimed here.",
+    "Domain/integration review for C01-C04 before changing contract/policy.",
+    "Separate authorized synthetic native matrix, keyboard/AT/contrast/mobile hit tests and read-only API integration acceptance.",
+    "Parent-owned future stable-input gate cadence; do not reinterpret this report as TypeScript/test/audit-script acceptance."
+  ],
+  "ownership": {
+    "reportAndLog": "Released with terminal delivery after final validation; no post-return writes.",
+    "applicationSourceAndTests": "Read-only throughout; no application-write lease held.",
+    "browser": "Never acquired.",
+    "commands": "All commands synchronous/terminal; no server or background command launched.",
+    "parentQueue": "Not edited; parent owns claim/status reconciliation."
+  }
+}

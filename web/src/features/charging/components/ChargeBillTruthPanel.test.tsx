@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ChargingSession } from '@/api/types';
@@ -17,6 +17,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { energy: 'kWh' } }),
 }));
+vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
 
 function session(overrides: Partial<ChargingSession> = {}): ChargingSession {
   return {
@@ -49,5 +50,29 @@ describe('ChargeBillTruthPanel', () => {
     expect(screen.getByText('Bill vs pack')).toBeInTheDocument();
     expect(screen.getByText('Hayward, CA')).toBeInTheDocument();
     expect(screen.getByText(/Tesla bills cabinet/)).toBeInTheDocument();
+  });
+  it('retains actual invoice denomination and signed cabinet/pack differences in real readings and the drawer', () => {
+    const { container } = render(<ChargeBillTruthPanel session={session({
+      billed_energy_wh: 40_000, billed_cost_decimal: 22, billed_rate_per_kwh: 0.5,
+      billed_currency: 'EUR',
+    })} />);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(container.querySelector('[data-operational-metric="delta"] [data-operational-value]'))
+      .toHaveTextContent('-2.62 kWh');
+    expect(container.querySelector('[data-operational-metric="fees"] [data-operational-value]'))
+      .toHaveTextContent('EUR2.00');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getAllByText(/invoices meter energy at the cabinet/).length)
+      .toBeGreaterThan(0);
+  });
+  it('does not turn an absent invoice into a zero bill or drop the measured pack reading', () => {
+    const { container } = render(<ChargeBillTruthPanel session={session({
+      billed_energy_wh: null, billed_cost_decimal: null, billed_rate_per_kwh: null,
+    })} />);
+    expect(container.querySelector('[data-operational-metric="billed"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="pack"] [data-operational-value]'))
+      .toHaveTextContent('42.62 kWh');
+    expect(screen.getByText(/Pack energy is measured; the bill is missing/)).toBeInTheDocument();
   });
 });

@@ -20,15 +20,17 @@
     "shortcut": "Shortcut: {{keys}}",
     "section": {
       "recent": "Recent",
-      "mostUsed": "Most Used",
+      "mostUsed": "Most used",
       "pages": "Pages",
       "savedViews": "Saved views",
       "vehicles": "Vehicles",
       "preferences": "Preferences",
       "actions": "Actions",
-      "commands": "Vehicle Commands",
-      "selectVehicle": "Select Vehicle",
-      "openAlerts": "Open alerts"
+      "commands": "Vehicle commands",
+      "selectVehicle": "Select vehicle",
+      "openAlerts": "Open alerts",
+      "pinned": "Pinned",
+      "related": "Related to this page"
     },
     "recent": {
       "justNow": "Just now",
@@ -47,9 +49,9 @@
       "switchVehicle": "Switch to {{name}}",
       "themeDark": "Theme: Dark",
       "themeLight": "Theme: Light",
-      "themeOled": "Theme: OLED Black",
+      "themeOled": "Theme: OLED black",
       "themeMidnight": "Theme: Midnight Blue",
-      "themeAuto": "Theme: Auto (system)",
+      "themeAuto": "Theme: auto (system)",
       "themePicker": "Open theme picker",
       "themeNeonCyan": "Switch to Signal Blue",
       "themeTeslaRed": "Switch to Tesla Red",
@@ -58,14 +60,14 @@
       "themeSolarAmber": "Switch to Solar Amber",
       "themeToggleMode": "Toggle dark mode",
       "refresh": "Refresh data",
-      "rangeLive": "Analysis window: Live",
-      "range24h": "Analysis window: Last 24 hours",
-      "rangeToday": "Analysis window: Today",
-      "range7d": "Analysis window: Last 7 days",
-      "range30d": "Analysis window: Last 30 days",
-      "range90d": "Analysis window: Last 90 days",
-      "range1y": "Analysis window: Last year",
-      "rangeAll": "Analysis window: All time",
+      "rangeLive": "Analysis window: live",
+      "range24h": "Analysis window: last 24 hours",
+      "rangeToday": "Analysis window: today",
+      "range7d": "Analysis window: last 7 days",
+      "range30d": "Analysis window: last 30 days",
+      "range90d": "Analysis window: last 90 days",
+      "range1y": "Analysis window: last year",
+      "rangeAll": "Analysis window: all time",
       "densityCompact": "Workspace density: Compact",
       "densityComfortable": "Workspace density: Comfortable",
       "densitySpacious": "Workspace density: Spacious",
@@ -76,7 +78,7 @@
       "commandHistory": "Open command history",
       "securitySettings": "Open security & access",
       "systemStatus": "View system status",
-      "actionCenter": "Open Action Center",
+      "actionCenter": "Open action center",
       "fleetComparison": "Compare fleet vehicles",
       "periodComparison": "Compare analysis periods",
       "apiPlayground": "Open API playground",
@@ -96,6 +98,15 @@
     "toast": {
       "refreshed": "Data refreshed",
       "frecencyReset": "Command palette usage history cleared"
-    }
+    },
+    "resultsLabel": "Results",
+    "clearFilter": "Clear filter",
+    "clearScope": "Clear {{scope}} filter",
+    "related": {
+      "parent": "Back to section",
+      "sibling": "Same section"
+    },
+    "dialogLabel": "Command palette",
+    "filterBy": "Filter"
   }
 }

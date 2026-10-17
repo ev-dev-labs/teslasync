@@ -1,7 +1,9 @@
 import { Activity, Radar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { RepairCaseStats as RepairCaseStatsData } from '@/api/hooks/useRepairCaseStats';
-import { QueryError } from '@/components/feedback';
+import type { DataState } from '@/api/dataState';
+import { QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { RepairCaseStats } from './RepairCaseStats';
@@ -11,6 +13,7 @@ interface RepairCaseWorkspaceHeaderProps {
   statisticsLoading: boolean;
   statisticsBusy: boolean;
   statisticsError: unknown;
+  statisticsState?: DataState<RepairCaseStatsData>;
   scanPending: boolean;
   canWrite: boolean;
   writeBlockReason?: string;
@@ -23,6 +26,7 @@ export function RepairCaseWorkspaceHeader({
   statisticsLoading,
   statisticsBusy,
   statisticsError,
+  statisticsState: suppliedStatisticsState,
   scanPending,
   canWrite,
   writeBlockReason,
@@ -30,16 +34,20 @@ export function RepairCaseWorkspaceHeader({
   onRetryStatistics,
 }: RepairCaseWorkspaceHeaderProps) {
   const { t } = useTranslation();
+  const fallbackStatisticsState = useDataState({
+    data: statistics,
+    error: statisticsError,
+    isLoading: statisticsLoading,
+    isFetching: statisticsBusy,
+    refetch: onRetryStatistics,
+  });
+  const statisticsState = suppliedStatisticsState ?? fallbackStatisticsState;
 
   return (
     <GlassPanel className="relative overflow-hidden p-0">
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-cyan-400/80 via-cyan-300/30 to-transparent"
-      />
       <div className="flex flex-col gap-5 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 shadow-e1">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-secondary)]">
             <Activity className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
@@ -48,12 +56,18 @@ export function RepairCaseWorkspaceHeader({
                 {t('dataRepair.cases.workspaceTitle', 'Integrity command center')}
               </PanelTitle>
               <Badge
-                variant={statisticsError ? 'danger' : statisticsBusy ? 'info' : 'success'}
+                variant={statisticsState.fatalError ? 'danger' : statisticsState.status === 'stale' ? 'warning' : !statisticsState.hasData ? 'neutral' : statisticsState.isRefreshing ? 'info' : 'success'}
                 dot
               >
-                {statisticsError
+                {statisticsState.isRefreshBlocked
+                  ? t('dataSources.status.paused', 'Refresh paused')
+                  : statisticsLoading
+                  ? t('common.loading', 'Loading')
+                  : !statisticsState.hasData
                   ? t('dataRepair.cases.metricsUnavailable', 'Metrics unavailable')
-                  : statisticsBusy
+                  : statisticsState.refreshError
+                    ? t('dataRepair.cases.metricsRetained', 'Retained metrics')
+                  : statisticsState.isRefreshing
                     ? t('dataRepair.cases.refreshing', 'Refreshing')
                     : t('dataRepair.cases.monitoring', 'Monitoring')}
               </Badge>
@@ -65,9 +79,11 @@ export function RepairCaseWorkspaceHeader({
               )}
             </Text>
             <Text as="p" variant="caption" className="mt-2">
-              {statistics?.last_scan_at
+              {!statisticsState.hasData
+                ? '—'
+                : statisticsState.data?.last_scan_at
                 ? t('dataRepair.cases.lastScan', 'Last scan: {{time}}', {
-                    time: formatDateTime(statistics.last_scan_at),
+                    time: formatDateTime(statisticsState.data.last_scan_at),
                   })
                 : t('dataRepair.cases.noScan', 'No completed scan recorded yet')}
             </Text>
@@ -85,17 +101,18 @@ export function RepairCaseWorkspaceHeader({
           {t('dataRepair.cases.scanNow', 'Run integrity scan')}
         </Button>
       </div>
-      {statisticsError ? (
+      <StaleRefreshWarning state={statisticsState} label={t('dataRepair.cases.metricsResource', 'Repair case metrics')} className="px-4 sm:px-5" />
+      {statisticsState.fatalError ? (
         <div className="border-t border-[var(--border-subtle)] p-4 sm:p-5">
           <QueryError
-            error={statisticsError}
+            error={statisticsState.fatalError}
             resourceName={t('dataRepair.cases.metricsResource', 'Repair case metrics')}
             onRetry={onRetryStatistics}
           />
         </div>
-      ) : (
-        <RepairCaseStats statistics={statistics} loading={statisticsLoading} />
-      )}
+      ) : null}
+      <RepairCaseStats statistics={statisticsState.data} loading={statisticsLoading && !statisticsState.hasData}
+        retained={statisticsState.hasData && statisticsState.status !== 'ok'} />
     </GlassPanel>
   );
 }

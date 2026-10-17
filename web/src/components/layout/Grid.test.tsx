@@ -44,6 +44,28 @@ describe('Grid', () => {
     expect(el).toHaveClass('gap-4');
   });
 
+  it('allows the grid to shrink within a narrow parent without clipping children', () => {
+    const el = getGrid();
+    expect(el).toHaveClass('min-w-0');
+    expect(el).not.toHaveClass('overflow-hidden');
+    expect(el).toHaveAttribute('data-layout', 'responsive-columns');
+  });
+
+  it('preserves an explicit caller minimum width override', () => {
+    const el = getGrid({ className: 'min-w-full' });
+    expect(el).toHaveClass('min-w-full');
+    expect(el).not.toHaveClass('min-w-0');
+  });
+
+  it('preserves base and responsive caller column overrides independently', () => {
+    const el = getGrid({
+      cols: { default: 2, sm: 3, md: 4 },
+      className: 'grid-cols-5 md:grid-cols-6',
+    });
+    expect(el).toHaveClass('grid-cols-5', 'sm:grid-cols-3', 'md:grid-cols-6');
+    expect(el).not.toHaveClass('grid-cols-2', 'md:grid-cols-4');
+  });
+
   it('applies responsive column utilities for every breakpoint through 3xl', () => {
     // Regression: `xl` was declared in the props type but never rendered.
     const el = getGrid({
@@ -77,6 +99,23 @@ describe('Grid', () => {
     );
     expect(el).not.toHaveClass('grid-cols-1');
     expect(el).not.toHaveClass('sm:grid-cols-3');
+  });
+
+  it('preserves compact and wide auto-fit sizing without clipping content', () => {
+    const compact = getGrid({ minItemWidth: 'compact' });
+    const wide = getGrid({ minItemWidth: 'wide' });
+    expect(compact).toHaveClass(
+      '[grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr))]',
+      'min-w-0',
+    );
+    expect(wide).toHaveClass(
+      '[grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr))]',
+      'min-w-0',
+    );
+    expect(compact).toHaveAttribute('data-layout', 'auto-fit');
+    expect(wide).toHaveAttribute('data-layout', 'auto-fit');
+    expect(compact).not.toHaveClass('overflow-hidden');
+    expect(wide).not.toHaveClass('overflow-hidden');
   });
 
   it('applies the requested gap and supports a zero gap', () => {

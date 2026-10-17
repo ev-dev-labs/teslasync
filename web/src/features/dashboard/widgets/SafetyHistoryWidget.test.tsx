@@ -46,22 +46,25 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, renderHook, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // i18n echo mock: returns the fallback string (or key when none), interpolating
-// {{var}} tokens from the options object so assertions target rendered English.
+// {{var}} tokens from replace or the options object, as i18next does.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fb?: unknown, opts?: unknown) => {
-      const options = (opts && typeof opts === 'object' ? opts : undefined) as
-        | Record<string, unknown>
-        | undefined;
-      let base = typeof fb === 'string' ? fb : key;
-      if (options) {
+    t: (key: string, fb?: string | Record<string, unknown>, opts?: Record<string, unknown>) => {
+      const options = opts ?? (typeof fb === 'object' ? fb : undefined);
+      let base = typeof fb === 'string' ? fb
+        : typeof options?.defaultValue === 'string' ? options.defaultValue : key;
+      const replacements = options?.replace !== null && typeof options?.replace === 'object'
+        ? Object.fromEntries(Object.entries(options.replace))
+        : options;
+      if (replacements) {
         base = base.replace(/{{\s*(\w+)\s*}}/g, (_m, n: string) =>
-          n in options && options[n] != null ? String(options[n]) : `{{${n}}}`,
+          n in replacements && replacements[n] != null ? String(replacements[n]) : `{{${n}}}`,
         );
       }
       return base;
@@ -72,18 +75,81 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
+describe('SafetyHistoryWidget translation mock', () => {
+  it('honors fallback, defaultValue and replacement operands without coercing missing values', () => {
+    const { result } = renderHook(() => useTranslation());
+    const { t } = result.current;
+    expect(t('test.fallback', 'Returned: {{count}}', { replace: { count: 1 } }))
+      .toBe('Returned: 1');
+    expect(t('test.defaultValue', { defaultValue: 'Returned: {{count}}', replace: { count: 0 } }))
+      .toBe('Returned: 0');
+    expect(t('test.operands', {
+      defaultValue: '{{active}} / {{missing}}',
+      replace: { active: false, missing: null },
+    })).toBe('false / {{missing}}');
+  });
+});
+
 // The two data hooks are mocked so the widget's inputs are deterministic.
 vi.mock('@/api/hooks/useVehicleSystems', async (importActual) => {
   const actual =
     await importActual<typeof import('@/api/hooks/useVehicleSystems')>();
   return { ...actual, useSafetyHistory: vi.fn() };
 });
+
+describe('SafetyHistoryWidget retained snapshot semantics', () => {
+  it('does not classify unknown enum readings as active warnings', () => {
+    expect(classifySnapshot({
+      forward_collision_warning: 'ForwardCollisionSensitivityUnknown',
+      lane_departure_avoidance: 'LaneAssistLevelUnknown',
+    }).type).toBe('general');
+  });
+
+  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 4 }])('keeps cached snapshots and bounded summary trust in %o', (size) => {
+    mockSafety.mockReturnValue(qr({
+      data: [snap({ automatic_emergency_braking_off: true })],
+      error: new Error('refresh failed'), isError: true,
+    }));
+    renderWidget(size);
+    expect(screen.getByText('Summary of returned safety snapshots, not activation counts')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    if (size.cols === 1) expect(screen.getByText('1 events (30d)')).toBeInTheDocument();
+    else expect(screen.getByText('Automatic emergency braking disabled')).toBeInTheDocument();
+    expect(screen.queryByText('AEB activation')).toBeNull();
+  });
+
+  it('does not fabricate stable trend or epoch timestamps from absent evidence', () => {
+    mockSafety.mockReturnValue(qr({ data: [snap({ created_at: undefined })] }));
+    renderWidget(STANDARD);
+    expect(screen.queryByText('Stable')).toBeNull();
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+  });
+
+  it('keeps returned-window zero distinct from missing history and disclaims complete event coverage', () => {
+    mockSafety.mockReturnValue(qr({ data: [snap({ created_at: daysAgo(40) })] }));
+    renderWidget(STANDARD);
+    const brief = screen.getByTestId('dashboard-safety-history-brief');
+    expect(brief).toHaveTextContent('Returned safety-history summary');
+    assertOperationalBriefDisclosure(brief, 'loaded history is not complete event coverage', { contains: true });
+    assertOperationalMetricUnavailable(brief, 'Most common');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
+    expect(brief).not.toHaveTextContent('Stable');
+    expect(screen.getByText('Safety state update')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const coverageDrawer = screen.getByRole('dialog');
+    try {
+      expect(within(within(coverageDrawer).getByRole('group', { name: 'Events (30d)' })).getByText(/preceding 30-day comparison window: 1/)).toBeInTheDocument();
+    } finally {
+      fireEvent.keyDown(coverageDrawer, { key: 'Escape' });
+    }
+  });
+});
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useVehicles')>();
   return { ...actual, useVehicles: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 // Report reduced-motion so the freshness chip settles on its final visual.
 window.matchMedia = ((query: string) => ({
   matches: /prefers-reduced-motion/.test(query),
@@ -96,6 +162,7 @@ window.matchMedia = ((query: string) => ({
   dispatchEvent: () => false,
 })) as unknown as typeof window.matchMedia;
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import SafetyHistoryWidget, {
   classifySnapshot,
   safetyEventTitle,
@@ -113,7 +180,7 @@ const mockVehicles = vi.mocked(useVehicles);
 /** Echo translator matching the `(key, fallback)` overload — returns fallback. */
 const echo = (_k: string, fb: string) => fb;
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,
@@ -213,22 +280,22 @@ describe('classifySnapshot', () => {
 
 describe('safetyEventTitle', () => {
   it('maps each type to its title, appending the cleaned enum for FCW/lane', () => {
-    expect(safetyEventTitle('aeb', {}, echo)).toBe('AEB Activation');
-    expect(safetyEventTitle('bsw', {}, echo)).toBe('Blind Spot Warning');
-    expect(safetyEventTitle('elda', {}, echo)).toBe('Emergency Lane Departure Avoidance');
-    expect(safetyEventTitle('general', {}, echo)).toBe('Safety State Update');
+    expect(safetyEventTitle('aeb', {}, echo)).toBe('Automatic emergency braking disabled');
+    expect(safetyEventTitle('bsw', {}, echo)).toBe('Blind spot warning');
+    expect(safetyEventTitle('elda', {}, echo)).toBe('Emergency lane departure avoidance');
+    expect(safetyEventTitle('general', {}, echo)).toBe('Safety state update');
     expect(
       safetyEventTitle('fcw', { forward_collision_warning: 'ForwardCollisionSensitivityLate' }, echo),
     ).toBe('FCW: Late');
     expect(
       safetyEventTitle('lane', { lane_departure_avoidance: 'LaneAssistLevelWarning' }, echo),
-    ).toBe('Lane Departure: Warning');
+    ).toBe('Lane departure: Warning');
   });
 
   it('resolves the title through the provided translator', () => {
     const t = vi.fn((_k: string, fb: string) => fb);
     safetyEventTitle('aeb', {}, t);
-    expect(t).toHaveBeenCalledWith('widget.safety.aeb', 'AEB Activation');
+    expect(t).toHaveBeenCalledWith('widget.safety.aebDisabled', 'Automatic emergency braking disabled');
   });
 });
 
@@ -238,16 +305,16 @@ describe('safetyTypeLabel', () => {
   it('maps each type to its short label', () => {
     expect(safetyTypeLabel('aeb', echo)).toBe('AEB');
     expect(safetyTypeLabel('fcw', echo)).toBe('FCW');
-    expect(safetyTypeLabel('lane', echo)).toBe('Lane Departure');
-    expect(safetyTypeLabel('bsw', echo)).toBe('Blind Spot');
-    expect(safetyTypeLabel('elda', echo)).toBe('Emergency Lane');
+    expect(safetyTypeLabel('lane', echo)).toBe('Lane departure');
+    expect(safetyTypeLabel('bsw', echo)).toBe('Blind spot');
+    expect(safetyTypeLabel('elda', echo)).toBe('Emergency lane');
     expect(safetyTypeLabel('general', echo)).toBe('General');
   });
 
   it('resolves the label through the provided translator', () => {
     const t = vi.fn((_k: string, fb: string) => fb);
-    expect(safetyTypeLabel('lane', t)).toBe('Lane Departure');
-    expect(t).toHaveBeenCalledWith('widget.safety.laneShort', 'Lane Departure');
+    expect(safetyTypeLabel('lane', t)).toBe('Lane departure');
+    expect(t).toHaveBeenCalledWith('widget.safety.laneShort', 'Lane departure');
   });
 });
 
@@ -263,14 +330,14 @@ describe('buildSubtitle', () => {
       },
       echo,
     );
-    expect(out).toBe('Speed Limit: Chime · Follow: 3 · PIN to Drive');
+    expect(out).toBe('Speed limit: Chime · Follow: 3 · PIN to drive');
     expect(out).not.toContain('SpeedAssistLevel');
     expect(out).not.toContain('FollowDistance');
   });
 
   it('renders a boolean advisory as On/Off (never "true"/"false")', () => {
     const out = buildSubtitle({ speed_limit_warning: false }, echo);
-    expect(out).toBe('Speed Limit: Off');
+    expect(out).toBe('Speed limit: Off');
     expect(out).not.toContain('false');
   });
 
@@ -284,7 +351,7 @@ describe('buildSubtitle', () => {
       { speed_limit_warning: 'SpeedAssistLevelChime', cruise_follow_distance: 2 },
       echo,
     );
-    expect(out).toBe('Speed Limit: Chime · Follow: 2');
+    expect(out).toBe('Speed limit: Chime · Follow: 2');
   });
 });
 
@@ -295,9 +362,9 @@ describe('SafetyHistoryWidget — shell states', () => {
     mockSafety.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Safety History')).toBeNull();
-    expect(screen.queryByText('AEB Activation')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('Safety history')).toBeInTheDocument();
+    expect(screen.queryByText('Automatic emergency braking disabled')).toBeNull();
   });
 
   it('surfaces a QueryError (not a misleading empty state) on failure (R1)', () => {
@@ -310,16 +377,18 @@ describe('SafetyHistoryWidget — shell states', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     // The pre-fix behaviour was to render this empty state on error.
     expect(screen.queryByText('No safety events recorded')).toBeNull();
-    expect(screen.queryByText('Safety History')).toBeNull();
+    expect(screen.queryByText('Safety history')).toBeInTheDocument();
   });
 
   it('renders the title + explicit empty state when there is no history (standard)', () => {
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Safety History')).toBeInTheDocument();
-    // Stat strip still renders (sections never disappear) …
+    expect(screen.getByText('Safety history')).toBeInTheDocument();
+    // The measured zero stays; unknown readings are omitted with an explanation.
     expect(screen.getByText('Events (30d)')).toBeInTheDocument();
-    expect(screen.getByText('Most Common')).toBeInTheDocument();
+    const emptyBrief = screen.getByTestId('dashboard-safety-history-brief');
+    assertOperationalMetricUnavailable(emptyBrief, 'Most common');
+    assertOperationalMetricUnavailable(emptyBrief, 'Trend');
     // … and the feed shows an empty state rather than a blank panel.
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
@@ -334,7 +403,7 @@ describe('SafetyHistoryWidget — shell states', () => {
     mockSafety.mockReturnValue(qr({ data: undefined }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Safety History')).toBeInTheDocument();
+    expect(screen.getByText('Safety history')).toBeInTheDocument();
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
 });
@@ -375,15 +444,15 @@ describe('SafetyHistoryWidget — standard layout', () => {
     );
     renderWidget(STANDARD);
 
-    // Stat strip.
+    // Stat strip (no preceding window exists, so the trend is unknown).
     expect(screen.getByText('Events (30d)')).toBeInTheDocument();
-    expect(screen.getByText('Most Common')).toBeInTheDocument();
-    expect(screen.getByText('Trend')).toBeInTheDocument();
+    expect(screen.getByText('Most common')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(screen.getByTestId('dashboard-safety-history-brief'), 'Trend');
     expect(screen.getByText('AEB')).toBeInTheDocument(); // most-common value
 
     // Feed row: classified title + cleaned enum subtitle, never the raw string.
-    expect(screen.getByText('AEB Activation')).toBeInTheDocument();
-    expect(screen.getByText('Speed Limit: Chime')).toBeInTheDocument();
+    expect(screen.getByText('Automatic emergency braking disabled')).toBeInTheDocument();
+    expect(screen.getByText('Speed limit: Chime')).toBeInTheDocument();
     expect(screen.queryByText(/SpeedAssistLevel/)).toBeNull();
   });
 
@@ -400,7 +469,14 @@ describe('SafetyHistoryWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('↑')).toBeInTheDocument();
-    expect(screen.getByText('Increasing')).toBeInTheDocument();
+    const upBrief = screen.getByTestId('dashboard-safety-history-brief');
+    fireEvent.click(within(upBrief).getByRole('button', { name: 'Review details' }));
+    const upDrawer = screen.getByRole('dialog');
+    try {
+      expect(within(within(upDrawer).getByRole('group', { name: 'Trend' })).getByText('Increasing')).toBeInTheDocument();
+    } finally {
+      fireEvent.keyDown(upDrawer, { key: 'Escape' });
+    }
   });
 
   it('shows a decreasing trend (↓) with its sublabel', () => {
@@ -416,7 +492,14 @@ describe('SafetyHistoryWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('↓')).toBeInTheDocument();
-    expect(screen.getByText('Decreasing')).toBeInTheDocument();
+    const downBrief = screen.getByTestId('dashboard-safety-history-brief');
+    fireEvent.click(within(downBrief).getByRole('button', { name: 'Review details' }));
+    const downDrawer = screen.getByRole('dialog');
+    try {
+      expect(within(within(downDrawer).getByRole('group', { name: 'Trend' })).getByText('Decreasing')).toBeInTheDocument();
+    } finally {
+      fireEvent.keyDown(downDrawer, { key: 'Escape' });
+    }
   });
 });
 

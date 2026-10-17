@@ -1,0 +1,641 @@
+{
+  "item": "phase6-qa-action-center",
+  "phase": 6,
+  "status": "SOURCE_CONTRACT_REVIEW_WITH_CONFIRMED_ISSUES",
+  "fullQA": "NOT ACCEPTED",
+  "createdAt": "2026-10-13T16:01:12.294050+00:00",
+  "authorization": {
+    "row": "migration-queue.md:183",
+    "dispatch": "migration-queue.md:128-150",
+    "writableFiles": [
+      "docs/frontend-audits/phase6-qa-action-center.json"
+    ],
+    "applicationFiles": "READONLY; none modified",
+    "logsWritten": [],
+    "browserGrant": false,
+    "native": "NOTRUN"
+  },
+  "timebox": {
+    "requestedMinutes": 20,
+    "compliance": "EXCEEDED",
+    "detail": "Inspection overran requested20-minute boundary; stopped on detection. No clock reset or within-budget claim."
+  },
+  "page": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+  "routes": [
+    {
+      "path": "/action-center",
+      "lazyImport": "web/src/App.tsx:229",
+      "mount": "web/src/App.tsx:763 SafeRoute",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "purpose": "Prioritized decision inbox based on persisted evidence; reversible inbox state, not vehicle control.",
+  "primaryGoal": "Review ranked recommendations/coverage, inspect evidence, navigate to source and confirm safe inbox decisions.",
+  "dataSources": [
+    {
+      "hook": "useActionCenter(filter)",
+      "file": "web/src/api/hooks/useActionCenter.ts",
+      "line": 41,
+      "method": "GET",
+      "url": "/action-center",
+      "routerLine": 3962,
+      "params": [
+        "vehicle_id",
+        "priority",
+        "source_feature",
+        "state",
+        "limit",
+        "offset"
+      ],
+      "matching": "CONFIRMED_SOURCE; cancellation forwarded; summary before priority/source/state/page verified service.go123-145"
+    },
+    {
+      "hook": "useActionCenterHistory(id,open)",
+      "file": "web/src/api/hooks/useActionCenter.ts",
+      "line": 52,
+      "method": "GET",
+      "url": "/action-center/{encodedID}/history?limit=25&offset=0",
+      "routerLine": 3963,
+      "matching": "CONFIRMED_SOURCE; open-only enablement,cancellation; handler supports1..100/offset0..100000"
+    },
+    {
+      "hook": "useApplyActionCenterAction",
+      "file": "web/src/api/hooks/useActionCenter.ts",
+      "line": 81,
+      "method": "POST",
+      "url": "/action-center/{encodedID}/actions",
+      "routerLine": 3965,
+      "matching": "CONFIRMED_SOURCE; fingerprint/action/expected_version/confirmed/snoozed_until match handler; live guard,networkMode always,cancel/snapshot/optimistic/rollback/authoritative replacement/invalidation; mutation NOTRUN"
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 77,
+      "method": "GET",
+      "url": "/vehicles",
+      "router": "internal/api/router.go:3362-3363 grouped /vehicles + GET /",
+      "matching": "CONFIRMED_SOURCE; array fallback. Fleet loading/error not exposed to page."
+    }
+  ],
+  "coverage": {
+    "sections": [
+      {
+        "name": "Decision queue overview",
+        "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+        "line": 202,
+        "sourceCoverage": "Always mounted; six raw counts through OperationalBrief/useOperationalMetrics; initial/fatal/stale/partial/unavailable labels; generated time/scope/provider windows/limitations."
+      },
+      {
+        "name": "Filter decisions",
+        "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+        "line": 216,
+        "sourceCoverage": "Always mounted; local vehicle/fleet, four priorities,nine sources, all/four states,clear; header vehicle intentionally disabled; AC001/002."
+      },
+      {
+        "name": "Source coverage",
+        "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+        "line": 223,
+        "sourceCoverage": "Always mounted; skeleton/no-status explanation; every provider/status/count/limitation; AC005."
+      },
+      {
+        "name": "Prioritized recommendations",
+        "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+        "line": 229,
+        "sourceCoverage": "Independent initial skeleton/fatal-only retry/filtered-empty-clear/populated articles. Retained errors/paused keep cards/actions with warning."
+      },
+      {
+        "name": "Pagination",
+        "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+        "line": 239,
+        "sourceCoverage": "Always mounted; exact only safe nonnegative total, unknown distinct from0;25/50/100 and offset resets."
+      },
+      {
+        "name": "Confirmation",
+        "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+        "line": 256,
+        "sourceCoverage": "Intentionally conditional on pending action, not data-hidden section; localized inbox-only warning; confirm/cancel and loading close guards."
+      }
+    ],
+    "detailsSections": {
+      "file": "web/src/features/action-center/components/RecommendationDetails.tsx",
+      "narrativeLine": 137,
+      "projectedImpactLine": 140,
+      "scoringLine": 163,
+      "historyLine": 180,
+      "detail": "Reachable controlled Accordion; narrative/confidence/limitations/records/provenance; explicit null impact, Wh via useUnits, cost_minor/sourcecurrency, raw seconds display, localized risk/all basis; history independently initial/fatal/empty/retained/paused/retry. No nested sections hidden for missing data; AC004."
+    },
+    "actions": [
+      "Refresh evidence -> refetch only",
+      "All vehicle/priority/source/state options + clear",
+      "Pagination/size25/50/100",
+      "safe_actions/current_state-gated acknowledge/snooze24h/dismiss/restore",
+      "safe navigate+path -> Open source remains read-only enabled",
+      "Evidence/scoring/outcomes disclosure",
+      "Confirmation/cancel/loading guards",
+      "Success/error/version-safe Undo using authoritative result version",
+      "Copy link (AC002)"
+    ],
+    "null": "Four main sections and paging mounted independently. Missing summary undefined metrics; provider/items arrays fallback. Missing impact unknown not0; authoritative empty history distinguished from initial. Required nested malformed payloads not validated here.",
+    "SI": "RawWh/seconds preserved in hooks/types; display-only energy conversion. Source currency retained, no invented ISO. Currency scale/duration localization remain candidates.",
+    "i18n": "Canonical lookup109 distinct static keys and29 dynamic enum keys, missing0 for each. Not cold production namespace/RTL/full-locale acceptance; plural AC005.",
+    "responsive": "Source only: filters1/sm2/xl4,providers1/md2,card stack/lgrow,min-w-0,wrapping mobile44 actions; shared container-aware paging. No pixel/overflow acceptance.",
+    "a11y": "Source only: labelled articles/regions,Select useId/labels,localized actions,decorative icons hidden,visible read-only reason+describedby,Accordion ids/expanded,ConfirmDialog loading close guards,shared focus/reduced motion. Native focus/contrast/hits/forced colors NOTRUN.",
+    "importExceptions": [
+      "PageLayout delegates to PageContainer; no missing wrapper",
+      "Shared Button/Select raw HTML is expected",
+      "FadeIn direct framer-motion is a shared boundary",
+      "Selection useEffect is not data loading",
+      "Conditional confirmation is not a data-hidden section"
+    ]
+  },
+  "confirmedIssues": [
+    {
+      "id": "AC001",
+      "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+      "line": 61,
+      "rule": "MDC-046/scope-roundtrip",
+      "classification": "confirmed-source-issue",
+      "cause": "Concrete selection updates global store/URL; All vehicles and both clear paths remove only local filter.vehicle_id. Remount initializes from the still-concrete effective vehicle.",
+      "repro": "With A selected, choose All vehicles or Clear filters: query becomes fleet-wide but URL/store stillA. Navigate away/back or reload: page returns toA.",
+      "reproStatus": "SOURCE-DERIVED; native NOTRUN",
+      "fixForParent": "Define explicit fleet-local persistence and navigation semantics; preserve local selector. Do not blindly setVehicleId(null), because shared hook falls back to first vehicle.",
+      "owner": "page/selected-vehicle integration",
+      "related": [
+        "web/src/features/action-center/pages/ActionCenterPage.tsx:41-56",
+        "web/src/features/action-center/pages/ActionCenterPage.tsx:237",
+        "web/src/features/action-center/components/ActionCenterFilters.tsx:71,99",
+        "web/src/hooks/useSelectedVehicle.ts:78",
+        "web/src/lib/workspaceScope.ts:110"
+      ],
+      "severity": "high",
+      "confidence": "high"
+    },
+    {
+      "id": "AC002",
+      "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+      "line": 198,
+      "rule": "MDC-046/share-view-state",
+      "classification": "confirmed-source-issue",
+      "cause": "copyLink promises this view but priority/source/state/limit/offset are local state, neither serialized nor parsed; shared CopyLinkButton copies window.location.href.",
+      "repro": "Choose Critical, a source, Dismissed and25/page; copy and reopen/reload URL. Instance resets to open/50/offset0 without priority/source.",
+      "reproStatus": "SOURCE-DERIVED; native NOTRUN",
+      "fixForParent": "Bounded page-owned typed URL state adoption; reuse existing share helper, preserve defaults/bounds and fleet semantics.",
+      "owner": "page",
+      "related": [
+        "web/src/features/action-center/pages/ActionCenterPage.tsx:32,40,60",
+        "web/src/components/layout/CopyLinkButton.tsx:41"
+      ],
+      "severity": "medium",
+      "confidence": "high"
+    },
+    {
+      "id": "AC003",
+      "file": "web/src/features/action-center/components/RecommendationCard.tsx",
+      "line": 104,
+      "rule": "MDC-044/date-preferences",
+      "classification": "confirmed-source-issue",
+      "cause": "Expiry and summary generation call bare lib formatDateTime without locale/timezone options; helper uses browser defaults, while history uses saved useDateFormat settings.",
+      "repro": "Saved locale/timezone differ from browser: compare Expires/Generated against same timestamp in Action history. No preferences changed in audit.",
+      "reproStatus": "SOURCE-DERIVED; native NOTRUN",
+      "fixForParent": "Adopt existing useDateFormat at these two callers; preserve UTC source/unknown placeholders. Shared evidence timestamp owner needs separate review.",
+      "owner": "RecommendationCard/ActionCenterSummary",
+      "related": [
+        "web/src/features/action-center/components/ActionCenterSummary.tsx:100",
+        "web/src/lib/dateFormat.ts:55",
+        "web/src/hooks/useDateFormat.ts:72",
+        "web/src/features/action-center/components/RecommendationDetails.tsx:212"
+      ],
+      "severity": "medium",
+      "confidence": "high"
+    },
+    {
+      "id": "AC004",
+      "file": "web/src/features/action-center/components/RecommendationDetails.tsx",
+      "line": 203,
+      "rule": "MDC-026/history-coverage",
+      "classification": "confirmed-source-issue",
+      "cause": "Hook fixes history limit25/offset0; UI renders items but ignores total/limit/offset, with no truncation disclosure or route to older events. Backend supports bounded paging.",
+      "repro": "Expand a recommendation with total26+: only first25 requested/rendered; no coverage label or older-events action. Do not manufacture production events.",
+      "reproStatus": "SOURCE-DERIVED; native NOTRUN",
+      "fixForParent": "Bounded details/hook item discloses loaded/total and enables existing supported paging, retaining independent loading/fatal/refresh/paused/retry states.",
+      "owner": "RecommendationDetails/API-hook integration",
+      "related": [
+        "web/src/api/hooks/useActionCenter.ts:52",
+        "web/src/features/action-center/components/RecommendationDetails.tsx:43",
+        "internal/handler/v1/actioncenter/handler.go:130-144"
+      ],
+      "severity": "medium",
+      "confidence": "high"
+    },
+    {
+      "id": "AC005",
+      "file": "web/src/features/action-center/components/ProviderStatusPanel.tsx",
+      "line": 65,
+      "rule": "MDC-044/i18n-plural",
+      "classification": "confirmed-source-issue",
+      "cause": "English has only {{count}} findings; findings_one/other absent. Passing count cannot supply missing singular.",
+      "repro": "Provider item_count1 resolves to 1 findings.",
+      "reproStatus": "SOURCE-DERIVED; native NOTRUN",
+      "fixForParent": "Normal canonical catalog plural/projection integration; preserve actual count and provider limitations/states.",
+      "owner": "catalog integration",
+      "related": [
+        "web/src/i18n/en.json key actionCenter.providers.findings"
+      ],
+      "severity": "low",
+      "confidence": "high"
+    }
+  ],
+  "scannerCandidates": [
+    {
+      "file": "web/src/features/action-center/components/RecommendationCard.tsx",
+      "line": 99,
+      "rule": "MDC-026",
+      "classification": "review-candidate",
+      "cause": "No direct freshness.status/observed_at/age_s display; transport generation/expiry not observation age. Backend rank/confidence basis exposes fresh/stale/unknown in details, so do not claim no freshness information.",
+      "needs": "Decide row-level evidence-age disclosure; native stale/unknown states unrun."
+    },
+    {
+      "file": "web/src/features/action-center/components/RecommendationDetails.tsx",
+      "line": 54,
+      "rule": "MDC-044",
+      "classification": "review-candidate",
+      "cause": "Duration helper fixedh/m and browser numeric formatting; no settingslocale passed. Existing test expects2m.",
+      "needs": "Existing locale-aware duration owner review, preserve raw seconds/rounding."
+    },
+    {
+      "file": "web/src/features/action-center/components/RecommendationDetails.tsx",
+      "line": 27,
+      "rule": "MDC-045",
+      "classification": "integration-unknown",
+      "cause": "cost_minor/100 and unsupportedcurrency raw fallback inherit assumptions; inspected API does not fully define differing currency minor-unit exponents.",
+      "needs": "Confirm source scale before alleging supported-currency error."
+    },
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "line": 204,
+      "rule": "MDC-044",
+      "classification": "shared-review-candidate",
+      "cause": "Evidence time uses i18n locale but browser timezone; DataProvenanceBadge also browser toLocaleString.",
+      "needs": "Separate shared preference owner; no auditor/global edits."
+    },
+    {
+      "file": "web/src/features/action-center/components/ProviderStatusPanel.tsx",
+      "line": 51,
+      "rule": "arbitrary-tailwind",
+      "classification": "acceptable-token-reference",
+      "cause": "Retained2 scanner findings are border-[var(--border-subtle)]/bg-[var(--surface-2)]; existing tokens, not static inline styles.",
+      "needs": "No candidate-based fix; native composed contrast unrun."
+    },
+    {
+      "file": "web/src/features/action-center/components/RecommendationDetails.tsx",
+      "line": 174,
+      "rule": "MDC-026",
+      "classification": "review-candidate",
+      "cause": "Empty rank.basis has no explanation; current buildRank supplies basis.",
+      "needs": "Safe empty-basis acceptance before alleging real server omission."
+    },
+    {
+      "file": "internal/handler/v1/actioncenter/handler.go",
+      "line": 44,
+      "rule": "bare-panic",
+      "classification": "incidental-backend-candidate-outside-page-objective",
+      "cause": "Constructor nil-service panic is wiring invariant, not request panic(err).",
+      "needs": "Separate backend policy adjudication; excluded from5 page issue count."
+    }
+  ],
+  "resolvedHistoricalFindings": [
+    "Retained history now uses DataState/fatalError/warning instead of history.error replacement",
+    "Card neutral surfaces/Typography replace glow/fixed-white/bright rank",
+    "Card/filter actions wrap/mobile44; persistent read-only reason",
+    "Provider neutral semantic presentation",
+    "Unknown totals and mobile44/wrapping Refresh",
+    "Select stable identity and ConfirmDialog semantic warning already implemented"
+  ],
+  "preservation": {
+    "sourceFiles": [
+      {
+        "file": "web/src/features/action-center/components/ActionCenterFilters.tsx",
+        "lines": 142,
+        "sha256": "349cf703ff89d28c94572dcf7cdfe3e37a54544943bbb381e994bcbfe85352da"
+      },
+      {
+        "file": "web/src/features/action-center/components/ActionCenterSummary.tsx",
+        "lines": 121,
+        "sha256": "6f98657aac6b4b6a9597bc1a664484b051baa148c6ffb418424ded41bde2c55d"
+      },
+      {
+        "file": "web/src/features/action-center/components/ActionConfirmation.tsx",
+        "lines": 46,
+        "sha256": "1f6d84132ff8aeaeb8c859dac1468dbe7d64b809cc77dc596dcb4b8b96e3ef4d"
+      },
+      {
+        "file": "web/src/features/action-center/components/index.ts",
+        "lines": 5,
+        "sha256": "8e1837f5358b0289e1a8147bc8d1e9c1ac1477b40f47ce75d435bc7a89fd091b"
+      },
+      {
+        "file": "web/src/features/action-center/components/ProviderStatusPanel.tsx",
+        "lines": 80,
+        "sha256": "656a22d9dd13288fe1c0bfc781031f577aa7ae74727fc1af1af94f4a24b32ff1"
+      },
+      {
+        "file": "web/src/features/action-center/components/RecommendationCard.tsx",
+        "lines": 174,
+        "sha256": "45781a62399811d73e35c26a85a386837796af54942a0ee7fae29c1e18884dcf"
+      },
+      {
+        "file": "web/src/features/action-center/components/RecommendationDetails.tsx",
+        "lines": 221,
+        "sha256": "c23b4b65cbad7b2d3e99b23f5d7fa5e5606cd5fcfab982982c5d78ec04ca8d9f"
+      },
+      {
+        "file": "web/src/features/action-center/components/RecommendationList.tsx",
+        "lines": 83,
+        "sha256": "73df371518201914f7336bdb08667ea37efe18c8a7bcb06d235e0c9d586455eb"
+      },
+      {
+        "file": "web/src/features/action-center/pages/ActionCenterPage.tsx",
+        "lines": 264,
+        "sha256": "1373d316c33f9b983e3121714140482fd8895e2ee137cb1110f29699fd005c10"
+      }
+    ],
+    "pageLines": 264,
+    "originalPageLines": 259,
+    "pagePlusPresentationLines": 1131,
+    "originalTotalFromRetainedReceipt": 1082,
+    "minimum70Percent": 758,
+    "majorSectionsCurrentAndOriginal": 4,
+    "GlassPanelCallSites": 3,
+    "ChartContainerCallSites": 0,
+    "FadeInCallSites": 4,
+    "detailsSectionCallSites": 3,
+    "pageHashMatchesPhase5Receipt": true,
+    "limits": "Line/section retention source evidence, not full behavioral parity. Components changed in accepted narrow Phase6 corrections; historical24 page tests not fresh."
+  },
+  "checks": [
+    {
+      "command": "bash .github/skills/audit-violations/audit.sh web/src/features/action-center (root cwd)",
+      "exit": 0,
+      "rawOutput": "═══════════════════════════════════════════════════════════\n  TeslaSync Engineering Guidelines Audit\n  Target: web/src/features/action-center\n═══════════════════════════════════════════════════════════\n\n▸ [1/7] Static inline styles (var(--*))...\n  ✅ 0 violations\n\n▸ [2/7] Raw HTML elements...\n  ✅ 0 violations\n\n▸ [3/7] Direct library imports...\n  ✅ 0 violations\n\n▸ [4/7] Old API imports...\n  ✅ 0 violations\n\n▸ [5/7] Double /api/v1/ prefix...\n  ✅ 0 violations\n\n▸ [6/7] camelCase query params (vehicleId=)...\n  ✅ 0 violations\n\n▸ [7/7] TypeScript compilation...\n  ✅ TypeScript passes\n\n═══════════════════════════════════════════════════════════\n  ✅ ALL CHECKS PASSED — 0 total violations\n═══════════════════════════════════════════════════════════\nAUDIT_EXIT=0",
+      "limit": "Script executed literal npx tsc --noEmit exit0. Initial Bash runtime version not captured; handoff Node26 not explicitly prepended. No verified supported-runtime fresh compiler gate claimed."
+    },
+    {
+      "command": "prepend handoff Node26; node --version; bash .github/skills/verify-api-hooks/verify.sh web/src/api/hooks/useActionCenter.ts",
+      "exit": 0,
+      "rawOutput": "v26.11.1\n═══════════════════════════════════════════════════════════\n  TeslaSync API Hook Verification\n═══════════════════════════════════════════════════════════\n\n▸ Extracting hook URLs from web/src/api/hooks/useActionCenter.ts...\n  Found 3 unique URL patterns\n\n▸ Checking for double /api/v1/ prefix...\n  ✅ No double prefix issues\n\n▸ Extracting backend routes from internal/api/router.go and mounted route modules...\n  Found 896 route patterns\n\n▸ Checking for camelCase query parameters...\n  ✅ All params use snake_case\n\n═══════════════════════════════════════════════════════════\n  Hook URL Patterns:\n═══════════════════════════════════════════════════════════\n  ✅ /action-center/{PARAM}/actions\n  ✅ /action-center/{PARAM}/history?limit=25&offset=0\n  ✅ /action-center{PARAM}\n\n═══════════════════════════════════════════════════════════\n  ✅ ALL EXTRACTED HOOK PATHS MATCH REGISTERED ROUTES\n═══════════════════════════════════════════════════════════\nVERIFY_EXIT=0"
+    },
+    {
+      "command": "GNU grep -HnE patterns across9 production feature files+hook",
+      "rawOutput": "CHECK=camelcase-param\nGREP_EXIT=1\nCHECK=direct-library-import\nGREP_EXIT=1\nCHECK=double-prefix\nGREP_EXIT=1\nCHECK=fetch-useeffect\n/usr/bin/grep: Unmatched ( or \\(\nGREP_EXIT=2\nCHECK=old-api-import\nGREP_EXIT=1\nCHECK=raw-html\nGREP_EXIT=1\nCHECK=sections\nGREP_EXIT=0\nCHECK=static-inline-style\nGREP_EXIT=1",
+      "limit": "grep1=no matches;2=failed. Exact section matches pasted in terminal transcript:3GlassPanel,4FadeIn,4named section callsites(summary+3details). Multiline JSX names were manually inspected. Pattern failure corrected with fixed-string grep."
+    },
+    {
+      "command": "corrected grep -HnF useEffect/fetch(/&& </return null",
+      "rawOutput": "ActionCenterPage.tsx:1:import { useCallback, useEffect, useState } from react\nActionCenterPage.tsx:50:useEffect(() => {\nActionCenterPage.tsx:181:onClick={() => void query.refetch()}\nActionCenterPage.tsx:233:onRetry={() => void query.refetch()}\nRecommendationDetails.tsx:22:if (impact.cost_minor == null || impact.currency == null) return null;\nActionConfirmation.tsx:27:if (!pending) return null;",
+      "limit": "refetch( matched fetch( substring; rejected manually as false positives; no data-loading useEffect."
+    },
+    {
+      "command": "Read-only Python catalog/hash/count checks",
+      "exit": 0,
+      "rawOutput": "PAGE_PLUS_PRESENTATION_LINES=1131 HISTORICAL_ORIGINAL=1082 MINIMUM=758\nSTATIC_TRANSLATION_KEYS=109 MISSING_KEYS=0\nCATALOG actionCenter.providers.findings {{count}} findings\nCATALOG actionCenter.providers.findings_one None\nCATALOG actionCenter.providers.findings_other None\nCATALOG Moderate Moderate\nDYNAMIC_TRANSLATION_KEYS=29 MISSING=0"
+    },
+    {
+      "command": "focused backend grep for SQL interpolation/println/panic/HTTP-DB calls in handler/types",
+      "rawOutput": "D:\\repos\\teslasync\\internal\\handler\\v1\\actioncenter\\handler.go:44:panic(\"actioncenter.NewHandler: service must not be nil\")\nBACKEND_GREP_EXIT=0",
+      "limit": "Context from r.Context threaded through service calls. No whole backend/DB repository audit."
+    }
+  ],
+  "retainedScopedReceipts": [
+    {
+      "file": "logs/phase5-page-action-center-action-center-report.json",
+      "result": "Historical DONE_SCOPED, full definition of done BLOCKED; page hash still matches. Native receipts had wrong-origin returning-user state/API failures/overlay occlusion.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase5-page-action-center-action-center-tests.log",
+      "result": "Historical exit0, discovered/executed/passed24,failed0,skipped0; not fresh corrected-component coverage.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase5-page-action-center-action-center-preservation.log",
+      "result": "Historical1087/1082; original4 sections. Insensitive rawControls1 was shared Button, superseded by case-sensitive0.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase5-page-action-center-action-center-native.json",
+      "result": "Historical375dark/1440light geometry and paths retained;429/501/503/404; not current acceptance.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-history-retained-trust.log",
+      "result": "Current final details hash matches c23b4b65...; receipt explicitly startup-blocked/UNEXECUTED Vitest, not passing tests.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-history-retained-trust-lint.log",
+      "result": "FINAL_SOURCE_ESLINT_EXIT=0 historical.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-history-retained-trust-scope.log",
+      "result": "3 sections+narrative,221/206, regex candidates0; source only.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-card-noise-access.log",
+      "result": "Current card hash matches45781a62...; VITEST_EXIT1 before discovery, discovered0/pass0/failCases0/skip0/startupErrors1.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-card-noise-access-lint.log",
+      "result": "FINAL_ESLINT_EXIT0; initial wrapper parse error corrected.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-provider-presentation-ProviderStatusPanel.tsx-scan.json",
+      "result": "candidate0/token-review2 at51; existing tokens, not confirmed violations.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-provider-presentation-ProviderStatusPanel.test.tsx-scan.json",
+      "result": "Test-file token review findings, not production violations.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-provider-presentation-static.log",
+      "result": "Retained scanner output read.",
+      "fresh": false
+    },
+    {
+      "file": "logs/phase6-action-provider-presentation-vitest.log",
+      "result": "Printing read failed cp1252 on U+2713; no complete result/pass claimed.",
+      "fresh": false
+    }
+  ],
+  "testsThisAudit": {
+    "status": "NOTRUN",
+    "executed": 0,
+    "discovered": null,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "reason": "No source change; reused covering receipts. Retained startup failures are not passing tests; no new suite/testgeneration."
+  },
+  "nativeMatrix": {
+    "status": "NOTRUN",
+    "reason": "No parent browser grant/lock; no browser context or server created. Historical blocked captures cannot establish current acceptance.",
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "unrun": [
+      "Every width/narrow container",
+      "dark/light/saved custom",
+      "RTL/200percent text/long content",
+      "null/zero/negative-valid/huge",
+      "retained/paused/offline/retry",
+      "keyboard/focus/dialog/open overlays",
+      "contrast/OS forced colors/reduced motion",
+      "Actual API/auth/conflict/Undo outcomes"
+    ]
+  },
+  "evidenceLimits": [
+    "Source-derived repros, not native reproductions",
+    "Focused reads/ranges/grep, not entire app/backend",
+    "All transitive settings/auth/timezone hooks not exhaustively audited; settings route observed3702",
+    "Canonical lookup not cold split readiness",
+    "No global clean-worktree or unrelated worker attribution claim",
+    "rg missing; grep pattern2 errors corrected; guessed backend/useOperationalMode.ts missing, actual owners found/read",
+    "Provider test receipt print cp1252 error; no pass inferred",
+    "Timebox exceeded; audit compiler runtime not verified supported",
+    "First report-write command failed Windows os206 filename/extension too long before writing; this shorter write is the correction"
+  ],
+  "summary": {
+    "confirmedIssues": 5,
+    "byRule": {
+      "MDC-046/scope-roundtrip": 1,
+      "MDC-046/share-view-state": 1,
+      "MDC-044/date-preferences": 1,
+      "MDC-026/history-coverage": 1,
+      "MDC-044/i18n-plural": 1
+    },
+    "severity": {
+      "high": 1,
+      "medium": 3,
+      "low": 1
+    },
+    "mostPrimaryIssues": {
+      "web/src/features/action-center/pages/ActionCenterPage.tsx": 2
+    },
+    "priority": [
+      "AC001 scope authority",
+      "AC004 history completeness",
+      "AC002 share fidelity",
+      "AC003 date preferences",
+      "AC005 plural"
+    ],
+    "basicScans": "No basic regex matches within bounded production scope; not fullQA."
+  },
+  "needs": [
+    "Parent queues one bounded fix per confirmed issue, auditor never fixes application",
+    "Parent grants guarded shared5173/syntheticDRILL4 read-only native ownership; acknowledge0.7.0/local-origin/privacy guards BEFORE mount",
+    "Obtain current supported-runtime covering corrective component receipts; retained details/card logs pre-discovery blocked",
+    "Complete actual viewport/theme/state/a11y/functional acceptance and final parent gates"
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/I18N_GUIDELINES.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/skills/audit-violations/SKILL.md",
+    ".github/skills/audit-violations/audit.sh",
+    ".github/skills/verify-api-hooks/SKILL.md",
+    ".github/skills/verify-api-hooks/verify.sh",
+    "docs/frontend-audits/audit-page-001.json",
+    "web/src/types/actionCenter.ts",
+    "web/src/App.tsx",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useOperationalMode.tsx",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/api/client.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/i18n/en.json",
+    "web/package.json",
+    "web/tsconfig.json",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/CopyLinkButton.tsx",
+    "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+    "web/src/components/data-display/DataProvenanceBadge.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/components/ui/ConfirmDialog.tsx",
+    "web/src/components/ui/Accordion.tsx",
+    "web/src/components/ui/Pagination.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/features/action-center/pages/ActionCenterPage.test.tsx",
+    "web/src/features/action-center/components/RecommendationDetails.test.tsx",
+    "internal/api/router.go",
+    "internal/handler/v1/actioncenter/handler.go",
+    "internal/domain/actioncenter/types.go",
+    "internal/app/actioncentersvc/service.go",
+    "internal/app/actioncentersvc/providers.go",
+    "internal/app/actioncentersvc/evidence_providers.go",
+    "web/src/features/action-center/components/ActionCenterFilters.tsx",
+    "web/src/features/action-center/components/ActionCenterSummary.tsx",
+    "web/src/features/action-center/components/ActionConfirmation.tsx",
+    "web/src/features/action-center/components/index.ts",
+    "web/src/features/action-center/components/ProviderStatusPanel.tsx",
+    "web/src/features/action-center/components/RecommendationCard.tsx",
+    "web/src/features/action-center/components/RecommendationDetails.tsx",
+    "web/src/features/action-center/components/RecommendationList.tsx",
+    "web/src/features/action-center/pages/ActionCenterPage.tsx",
+    "web/src/api/hooks/useActionCenter.ts",
+    "logs/phase5-page-action-center-action-center-report.json",
+    "logs/phase5-page-action-center-action-center-tests.log",
+    "logs/phase5-page-action-center-action-center-preservation.log",
+    "logs/phase5-page-action-center-action-center-native.json",
+    "logs/phase6-action-history-retained-trust.log",
+    "logs/phase6-action-history-retained-trust-lint.log",
+    "logs/phase6-action-history-retained-trust-scope.log",
+    "logs/phase6-action-card-noise-access.log",
+    "logs/phase6-action-card-noise-access-lint.log",
+    "logs/phase6-action-provider-presentation-ProviderStatusPanel.tsx-scan.json",
+    "logs/phase6-action-provider-presentation-ProviderStatusPanel.test.tsx-scan.json",
+    "logs/phase6-action-provider-presentation-static.log",
+    "logs/phase6-action-provider-presentation-vitest.log"
+  ],
+  "filesReadQualification": "Full reads or bounded source ranges/grep/catalog lookup; not full text for every large listed file.",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-action-center.json"
+  ],
+  "release": {
+    "report": "RELEASED after final read-only JSON validation",
+    "source": "ALL APPLICATION READONLY; no source lease ever claimed",
+    "commands": "All owned commands completed; audit4181 exit0,verify4371 exit0; no background owned process/service/browser retained",
+    "browser": "NOTRUN; no grant or lock acquired"
+  },
+  "prohibitedActions": "No Git/Docker/subagents/install/server/sourcefix/helperfile/testgeneration/fulltest/lint/build suite. Existing audit skill ran project-wide compiler step, disclosed."
+}

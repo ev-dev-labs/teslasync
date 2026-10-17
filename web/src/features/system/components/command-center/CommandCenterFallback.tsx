@@ -63,7 +63,7 @@ export function CommandCenterFallback({
             title={t('commands.noVehicles', 'No vehicles found')}
             message={unavailableMessage}
             actionTo={{
-              label: t('tesla.connect', 'Connect Tesla Account'),
+              label: t('tesla.connect', 'Connect Tesla account'),
               to: '/tesla-account',
             }}
             className="py-8"

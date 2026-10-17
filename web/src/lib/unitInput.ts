@@ -11,12 +11,19 @@
  * Storage is the SAME canonical the rest of TeslaSync uses (see
  * `web/src/hooks/useSettings.ts`):
  *
- *   distance     → miles      (display: 'mi' or 'km')
- *   speed        → mph        (display: 'mph' or 'km/h')
+ *   distance     → meters     (display: 'mi' or 'km')
+ *   speed        → m/s        (display: 'mph' or 'km/h')
  *   temperature  → Celsius    (display: '°C' or '°F')
- *   energy       → kWh        (no per-user conversion)
+ *   pressure     → kPa        (display: 'psi' or 'bar')
+ *   energy       → Wh         (display: 'kWh')
  *   percent      → 0..100     (no per-user conversion)
  *   currency     → as-typed   (no FX; symbol from settings.currency_symbol)
+ *   power        → W          (display: kW)
+ *   efficiency   → Wh/km      (display: Wh/km or Wh/mi)
+ *   currencyPerDistance → currency/m (no FX)
+ *   hours        → seconds    (display: h)
+ *   count        → integer
+ *   percentagePoints → percentage points
  *
  * Returning canonical from `parseForUnit` lets callers store one value
  * and re-render in whatever unit the user later prefers without losing
@@ -26,7 +33,7 @@
  *
  * `parseForUnit` understands the locale's decimal AND group separators
  * (e.g. en-US "1,234.5" → 1234.5; de-DE "1.234,5" → 1234.5). Pass
- * `{ strict: true }` to bypass and use plain `Number()` parsing — the
+ * `{ strict: true }` to use ASCII decimal parsing without separators — the
  * Blocked-Path escape hatch for adopters that hit locale edge cases.
  *
  * # Suffix tolerance
@@ -38,36 +45,41 @@
 
 import type { AppSettings } from '@/api/types'
 import { resolveLocale } from './locale'
-
-const KM_PER_MI = 1.609344
-
-function distanceDisplayToCanonical(displayValue: number): number {
-  return displayValue / KM_PER_MI
-}
-
-function distanceCanonicalToDisplay(canonicalValue: number): number {
-  return canonicalValue * KM_PER_MI
-}
-
-function tempDisplayToCanonical(displayValue: number): number {
-  return ((displayValue - 32) * 5) / 9
-}
-
-function tempCanonicalToDisplay(canonicalValue: number): number {
-  return (canonicalValue * 9) / 5 + 32
-}
+import { parseLocaleNumber } from './localeNumber'
+import {
+  convertDistanceFromSI, convertDistanceToSI,
+  convertSpeedFromSI, convertSpeedToSI,
+  convertTempFromSI, convertTempToSI,
+  convertPressureFromSI, convertPressureToSI,
+  convertEnergyFromSI,
+  convertPowerFromSI,
+  convertEfficiencyFromSI,
+  convertDurationFromSI,
+} from './unitConversion'
 
 export type UnitKind =
   | 'distance'
   | 'energy'
   | 'temperature'
   | 'speed'
+  | 'pressure'
   | 'percent'
   | 'currency'
+  | 'number'
+  | 'count'
+  | 'power'
+  | 'efficiency'
+  | 'currencyPerDistance'
+  | 'hours'
+  | 'percentagePoints'
+
+export type UnitInputSettings = Pick<AppSettings,
+  'unit_of_length' | 'unit_of_temp' | 'unit_of_pressure' |
+  'currency_symbol' | 'locale' | 'decimal_precision'>
 
 export interface ParseOptions {
   /**
-   * When true, parse with plain `Number()` only (no locale-aware
+   * When true, parse ASCII decimal notation only (no locale-aware
    * separator handling). Use for adopters that experience ambiguity
    * around locales whose decimal separator collides with the
    * thousands separator of the input data (the Blocked-Path escape).
@@ -77,6 +89,10 @@ export interface ParseOptions {
 
 /** Longest-first so 'km/h' is stripped before 'km' / 'kw' before 'kwh' is wrong → 'kwh' first. */
 const STRIPPABLE_SUFFIXES = [
+  'wh/km',
+  'wh/mi',
+  '/km',
+  '/mi',
   'km/h',
   'kwh',
   'mph',
@@ -85,7 +101,12 @@ const STRIPPABLE_SUFFIXES = [
   'kw',
   'mi',
   'km',
+  'kpa',
+  'psi',
+  'bar',
   '°',
+  'pp',
+  'h',
 ] as const
 
 /**
@@ -103,13 +124,13 @@ const STRIPPABLE_SUFFIXES = [
 export function parseForUnit(
   text: string,
   unit: UnitKind,
-  settings: AppSettings,
+  settings: UnitInputSettings,
   options: ParseOptions = {},
 ): number | null {
   let raw = (text ?? '').trim()
   if (!raw) return null
 
-  if (unit === 'currency') {
+  if (unit === 'currency' || unit === 'currencyPerDistance') {
     const symbol = (settings.currency_symbol ?? '').trim() || '$'
     if (raw.startsWith(symbol)) raw = raw.slice(symbol.length).trim()
     // Accounting parens: "(123.45)" → "-123.45"
@@ -128,6 +149,8 @@ export function parseForUnit(
   const lower = raw.toLowerCase()
   for (const sfx of STRIPPABLE_SUFFIXES) {
     if (lower.endsWith(sfx)) {
+      const symbol = unitSymbol(unit, settings).toLowerCase()
+      if (sfx !== symbol && !(unit === 'currencyPerDistance' && symbol.endsWith(sfx))) return null
       raw = raw.slice(0, raw.length - sfx.length).trim()
       break
     }
@@ -135,25 +158,38 @@ export function parseForUnit(
 
   if (!raw) return null
 
-  const n = options.strict
-    ? Number(raw)
-    : parseLocaleNumber(raw, resolveLocale(settings.locale))
+  const n = parseLocaleNumber(raw, resolveLocale(settings.locale), options)
 
   if (!Number.isFinite(n)) return null
 
-  switch (unit) {
+  const canonical = (() => { switch (unit) {
     case 'distance':
+      return convertDistanceToSI(n, settings.unit_of_length === 'mi' ? 'mi' : 'km')
     case 'speed':
-      // Display unit → canonical (miles/mph).
-      return settings.unit_of_length === 'km' ? distanceDisplayToCanonical(n) : n
+      return convertSpeedToSI(n, settings.unit_of_length === 'mi' ? 'mph' : 'km/h')
     case 'temperature':
-      // Display unit → canonical (°C).
-      return settings.unit_of_temp === 'F' ? tempDisplayToCanonical(n) : n
+      return convertTempToSI(n, settings.unit_of_temp === 'F' ? '°F' : '°C')
+    case 'pressure':
+      return convertPressureToSI(n, settings.unit_of_pressure === 'psi' ? 'psi' : 'bar')
     case 'energy':
+      return n / convertEnergyFromSI(1, 'kWh')
+    case 'power':
+      return n / convertPowerFromSI(1, 'kW')
+    case 'efficiency':
+      return n / convertEfficiencyFromSI(1, settings.unit_of_length === 'mi' ? 'mi' : 'km')
+    case 'currencyPerDistance':
+      return n * convertDistanceFromSI(1, settings.unit_of_length === 'mi' ? 'mi' : 'km')
+    case 'hours':
+      return n / convertDurationFromSI(1, 'h')
+    case 'count':
+      return Number.isSafeInteger(n) ? n : null
     case 'percent':
+    case 'percentagePoints':
     case 'currency':
+    case 'number':
       return n
-  }
+  } })()
+  return canonical !== null && Number.isFinite(canonical) ? canonical : null
 }
 
 /**
@@ -167,29 +203,47 @@ export function parseForUnit(
 export function formatForUnit(
   value: number | null | undefined,
   unit: UnitKind,
-  settings: AppSettings,
+  settings: UnitInputSettings,
 ): string {
   if (value == null || !Number.isFinite(value)) return ''
   const locale = resolveLocale(settings.locale)
-  const decimals = settings.decimal_precision ?? 2
+  const selectedPrecision = settings.decimal_precision
+  const decimals = unit === 'count' ? 0 : typeof selectedPrecision === 'number' && Number.isFinite(selectedPrecision) && selectedPrecision >= 0
+    ? Math.min(20, Math.floor(selectedPrecision))
+    : 2
 
   const display = (() => {
     switch (unit) {
       case 'distance':
+        return convertDistanceFromSI(value, settings.unit_of_length === 'mi' ? 'mi' : 'km')
       case 'speed':
-        return settings.unit_of_length === 'km' ? distanceCanonicalToDisplay(value) : value
+        return convertSpeedFromSI(value, settings.unit_of_length === 'mi' ? 'mph' : 'km/h')
       case 'temperature':
-        return settings.unit_of_temp === 'F' ? tempCanonicalToDisplay(value) : value
+        return convertTempFromSI(value, settings.unit_of_temp === 'F' ? '°F' : '°C')
+      case 'pressure':
+        return convertPressureFromSI(value, settings.unit_of_pressure === 'psi' ? 'psi' : 'bar')
       case 'energy':
+        return convertEnergyFromSI(value, 'kWh')
+      case 'power':
+        return convertPowerFromSI(value, 'kW')
+      case 'efficiency':
+        return convertEfficiencyFromSI(value, settings.unit_of_length === 'mi' ? 'mi' : 'km')
+      case 'currencyPerDistance':
+        return value / convertDistanceFromSI(1, settings.unit_of_length === 'mi' ? 'mi' : 'km')
+      case 'hours':
+        return convertDurationFromSI(value, 'h')
+      case 'count':
       case 'percent':
+      case 'percentagePoints':
       case 'currency':
+      case 'number':
         return value
     }
   })()
 
   return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: Math.max(0, decimals),
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
     useGrouping: false,
   }).format(display)
 }
@@ -201,55 +255,49 @@ export function formatForUnit(
  * 'speed'       → 'mph' | 'km/h'
  * 'temperature' → '°C' | '°F'
  * 'energy'      → 'kWh'
+ * 'pressure'    → 'psi' | 'bar'
  * 'percent'     → '%'
  * 'currency'    → settings.currency_symbol (or '$')
  */
-export function unitSymbol(unit: UnitKind, settings: AppSettings): string {
+export function unitSymbol(unit: UnitKind, settings: UnitInputSettings): string {
   switch (unit) {
     case 'distance':
-      return settings.unit_of_length === 'km' ? 'km' : 'mi'
+      return settings.unit_of_length === 'mi' ? 'mi' : 'km'
     case 'speed':
-      return settings.unit_of_length === 'km' ? 'km/h' : 'mph'
+      return settings.unit_of_length === 'mi' ? 'mph' : 'km/h'
     case 'temperature':
       return settings.unit_of_temp === 'F' ? '°F' : '°C'
     case 'energy':
       return 'kWh'
+    case 'pressure':
+      return settings.unit_of_pressure === 'psi' ? 'psi' : 'bar'
     case 'percent':
       return '%'
     case 'currency':
       return (settings.currency_symbol ?? '').trim() || '$'
+    case 'power':
+      return 'kW'
+    case 'efficiency':
+      return settings.unit_of_length === 'mi' ? 'Wh/mi' : 'Wh/km'
+    case 'currencyPerDistance':
+      return `${unitSymbol('currency', settings)}/${unitSymbol('distance', settings)}`
+    case 'hours':
+      return 'h'
+    case 'percentagePoints':
+      return 'pp'
+    case 'count':
+    case 'number':
+      return ''
   }
 }
 
-/**
- * Parse `text` as a number using the locale's decimal & group separators.
- * Falls back to plain `Number()` when the locale cannot be inspected.
- *
- * Examples:
- *   parseLocaleNumber('1,234.56', 'en-US') → 1234.56
- *   parseLocaleNumber('1.234,56', 'de-DE') → 1234.56
- *   parseLocaleNumber('-3.14',    'en-US') → -3.14
- */
-function parseLocaleNumber(text: string, locale: string): number {
-  if (!text) return NaN
-  let groupSep = ','
-  let decimalSep = '.'
-  try {
-    const parts = new Intl.NumberFormat(locale).formatToParts(12345.6)
-    const g = parts.find((p) => p.type === 'group')?.value
-    const d = parts.find((p) => p.type === 'decimal')?.value
-    if (typeof g === 'string') groupSep = g
-    if (typeof d === 'string') decimalSep = d
-  } catch {
-    // keep en-US defaults
-  }
+/** Display list delimiters stay unambiguous even when the locale uses decimal commas. */
+export function formatUnitList(values: readonly number[], unit: UnitKind, settings: UnitInputSettings): string {
+  return values.map(value => formatForUnit(value, unit, settings)).join('; ')
+}
 
-  let normalized = text
-  if (groupSep && groupSep !== decimalSep) {
-    normalized = normalized.split(groupSep).join('')
-  }
-  if (decimalSep !== '.') {
-    normalized = normalized.split(decimalSep).join('.')
-  }
-  return Number(normalized)
+export function parseUnitList(text: string, unit: UnitKind, settings: UnitInputSettings): number[] | null {
+  if (!text.trim()) return []
+  const values = text.split(';').map(part => parseForUnit(part, unit, settings))
+  return values.every((value): value is number => value !== null) ? values : null
 }

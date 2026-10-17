@@ -2,12 +2,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type {
   DepartureForecast,
   DepartureMatrixCell,
 } from '../../lib/departureForecast';
 import { departureWeekdayShortLabel } from './labels';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastHeatmapGridProps {
   forecast: DepartureForecast;
@@ -20,21 +21,22 @@ function cellClass(cell: DepartureMatrixCell, maximum: number): string {
   }
   const ratio = maximum > 0 ? cell.p / maximum : 0;
   if (ratio >= 0.8) {
-    return 'border-cyan-300/40 bg-cyan-400/30 text-[var(--text-primary)]';
+    return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_8%,var(--surface-1))] text-[var(--text-primary)]';
   }
   if (ratio >= 0.55) {
-    return 'border-cyan-300/30 bg-cyan-400/20 text-[var(--text-primary)]';
+    return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_6%,var(--surface-1))] text-[var(--text-primary)]';
   }
   if (ratio >= 0.3) {
-    return 'border-cyan-300/20 bg-cyan-400/10 text-[var(--text-secondary)]';
+    return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_4%,var(--surface-1))] text-[var(--text-secondary)]';
   }
-  return 'border-cyan-300/10 bg-cyan-400/5 text-[var(--text-secondary)]';
+  return 'border-[var(--border-default)] bg-[color-mix(in_srgb,var(--text-secondary)_2%,var(--surface-1))] text-[var(--text-secondary)]';
 }
 
 export function DepartureForecastHeatmapGrid({
   forecast,
   locale,
 }: DepartureForecastHeatmapGridProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const maximum = Math.max(
     0,
@@ -100,7 +102,7 @@ export function DepartureForecastHeatmapGrid({
                           profile.weekday,
                         ),
                         hour: hourLabel,
-                        likelihood: fmtNumber(cell.p * 100, 1, locale),
+                        likelihood: fmtNumber(cell.p * 100, undefined, locale),
                         departures: fmtInt(cell.departures),
                         occurrences: fmtInt(cell.occurrences),
                       },
@@ -135,7 +137,7 @@ export function DepartureForecastHeatmapGrid({
           ))}
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Badge variant="info">
+          <Badge variant="neutral">
             {t(
               'departure.heatmap.legendObserved',
               'Number = recorded departures',

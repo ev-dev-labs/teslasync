@@ -6,7 +6,7 @@ import { AlertRuleEditor } from '../components/AlertRuleEditor'
 /** Studio only creates rules; existing-rule links belong on the Rules page. */
 export default function AlertStudioPage() {
   const { t } = useTranslation()
-  usePageTitle(t('notifications.alertStudio.title', 'Alert Studio'))
+  usePageTitle(t('notifications.alertStudio.title', 'Alert studio'))
   const [searchParams] = useSearchParams()
   const requestedRuleId = searchParams.get('rule')
   if (requestedRuleId) {

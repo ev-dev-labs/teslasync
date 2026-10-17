@@ -11,27 +11,39 @@ const ANCHOR = Date.UTC(2026, 6, 1);
 
 function samples(values: readonly number[], stepMs = 1_000): DeadbandSample[] {
   return values.map((value, index) => ({
-    timestamp: new Date(ANCHOR + index * stepMs).toISOString(),
-    valueNum: value,
+    ts: new Date(ANCHOR + index * stepMs).toISOString(),
+    kind: 'ValueKindFloat',
+    value,
   }));
 }
 
 describe('toNumericDeadbandSeries', () => {
-  it('accepts camelCase and snake_case histories, sorts, and deduplicates', () => {
+  it('accepts canonical typed histories, sorts, and deduplicates', () => {
     const rows: DeadbandSample[] = [
-      { ts: new Date(ANCHOR + 1_000).toISOString(), value_numeric: 2 },
-      { timestamp: new Date(ANCHOR).toISOString(), valueNum: 1 },
-      { timestamp: new Date(ANCHOR).toISOString(), valueNum: 1.5 },
+      { ts: new Date(ANCHOR + 1_000).toISOString(), kind: 'ValueKindFloat', value: 2 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindFloat', value: 1 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindFloat', value: 1.5 },
     ];
     expect(toNumericDeadbandSeries(rows).map((point) => point.value)).toEqual([1.5, 2]);
   });
 
   it('drops invalid timestamps and non-finite values', () => {
     expect(toNumericDeadbandSeries([
-      { timestamp: 'bad', valueNum: 1 },
-      { timestamp: new Date(ANCHOR).toISOString(), valueNum: Number.NaN },
-      { timestamp: new Date(ANCHOR + 1_000).toISOString(), valueNum: 4 },
+      { ts: 'bad', kind: 'ValueKindFloat', value: 1 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindFloat', value: Number.NaN },
+      { ts: new Date(ANCHOR + 1_000).toISOString(), kind: 'ValueKindFloat', value: 4 },
     ])).toHaveLength(1);
+  });
+
+  it('keeps signed fractional SI measurements and zero separate from invalid inputs', () => {
+    const values = [null, NaN, Infinity, -Infinity, '', '0', false, 0, -2e-12, 3e-12];
+    const rows = values.map((value, index) => ({
+      ts: new Date(ANCHOR + index * 1_000).toISOString(),
+      kind: 'ValueKindFloat',
+      value,
+    }));
+    expect(toNumericDeadbandSeries(rows).map((point) => point.value)).toEqual([0, -2e-12, 3e-12]);
+    expect(analyzeSignalDeadband(rows.slice(0, 7))).toBeNull();
   });
 });
 
@@ -79,6 +91,113 @@ describe('simulateDeadband', () => {
 });
 
 describe('analyzeSignalDeadband', () => {
+  it.each([0, 5, -5, 0.125, -0.125, -2e-12])(
+    'keeps the baseline for constant measurements of %s with default options',
+    value => {
+      const result = analyzeSignalDeadband(samples([value, value, value, value]))!;
+      expect(result.sampleCount).toBe(4);
+      expect(result.updateCount).toBe(3);
+      expect(result.unchangedEmissionRatio).toBe(1);
+      expect(result.redundantEmissionRatio).toBe(1);
+      expect(result.noiseScale).toBe(0);
+      expect(result.noiseThreshold).toBe(0);
+      expect(result.candidates).toEqual([{
+        threshold: 0,
+        retainedUpdates: 4,
+        reduction: 0,
+        noiseSuppression: 0,
+        materialRetention: 1,
+        fidelity: 1,
+      }]);
+      expect(result.recommended).toBe(result.candidates[0]);
+    },
+  );
+
+  it.each([0, -5, 0.125])(
+    'does not recommend an arbitrary supplied threshold for constant measurements of %s',
+    value => {
+      const result = analyzeSignalDeadband(samples([value, value, value, value]), {
+        candidateThresholds: [2, 0.5, 1],
+      })!;
+      expect(result.candidates.map(candidate => candidate.threshold)).toEqual([0, 0.5, 1, 2]);
+      const positiveCandidates = result.candidates.slice(1);
+      for (const candidate of positiveCandidates) {
+        expect(candidate).toEqual({
+          threshold: candidate.threshold,
+          retainedUpdates: 1,
+          reduction: 0.75,
+          noiseSuppression: 1,
+          materialRetention: 1,
+          fidelity: 1,
+        });
+      }
+      expect(result.recommended).toBe(result.candidates[0]);
+      expect(result.recommended.threshold).toBe(0);
+    },
+  );
+
+  it('excludes missing and invalid observations rather than treating them as measured zero', () => {
+    const invalidValues = [undefined, null, NaN, Infinity, -Infinity, '', '0', false];
+    const invalidSamples = invalidValues.map((value, index) => ({
+      ts: new Date(ANCHOR + (index + 4) * 1_000).toISOString(),
+      kind: 'ValueKindFloat',
+      value,
+    }));
+    expect(analyzeSignalDeadband(invalidSamples)).toBeNull();
+    const measuredZeros = samples([0, 0, 0, 0]);
+    expect(analyzeSignalDeadband([...measuredZeros, ...invalidSamples]))
+      .toEqual(analyzeSignalDeadband(measuredZeros));
+  });
+
+  it.each([1e-100, 1e-12, 1e-7, 1, 1e100])(
+    'preserves scale-relative noise, thresholds and simulation results at scale %s',
+    scale => {
+      const values = [0, 0.1, -0.1, 0.05, 4, 4.1, 3.9];
+      const baseline = analyzeSignalDeadband(samples(values))!;
+      const scaledSamples = samples(values.map(value => value * scale));
+      const originalSamples = structuredClone(scaledSamples);
+      const result = analyzeSignalDeadband(scaledSamples)!;
+      expect(scaledSamples).toEqual(originalSamples);
+      expect(result.deltaMedian / scale).toBeCloseTo(baseline.deltaMedian, 10);
+      expect(result.deltaMad / scale).toBeCloseTo(baseline.deltaMad, 10);
+      expect(result.noiseScale / scale).toBeCloseTo(baseline.noiseScale, 10);
+      expect(result.noiseThreshold / scale).toBeCloseTo(baseline.noiseThreshold, 10);
+      const thresholds = [0, 0.5, 20];
+      for (const threshold of thresholds) {
+        const candidate = simulateDeadband(values.map(value => value * scale), threshold * scale, 0.25 * scale);
+        expect(candidate).toEqual({
+          ...simulateDeadband(values, threshold, 0.25),
+          threshold: threshold * scale,
+        });
+      }
+      expect(result.candidates.some(candidate => candidate.threshold > 0)).toBe(true);
+    },
+  );
+
+  it('does not merge small supplied thresholds or round their reported values', () => {
+    const thresholds = [0, 1e-12, 2e-12, 3e-12];
+    const result = analyzeSignalDeadband(samples([0, -1e-12, 2e-12, 0]), {
+      candidateThresholds: thresholds,
+    })!;
+    expect(result.candidates.map(candidate => candidate.threshold)).toEqual(thresholds);
+    expect(result.unchangedEmissionRatio).toBe(0);
+    expect(result.noiseScale).toBeGreaterThan(0);
+  });
+
+  it('retains measured zero emissions and all original reduction denominators', () => {
+    const result = analyzeSignalDeadband(samples([0, 0, 0, 0]), {
+      candidateThresholds: [0, 0.5],
+    })!;
+    expect(result.sampleCount).toBe(4);
+    expect(result.updateCount).toBe(3);
+    expect(result.unchangedEmissionRatio).toBe(1);
+    expect(result.redundantEmissionRatio).toBe(1);
+    expect(result.candidates[0]?.retainedUpdates).toBe(4);
+    expect(result.candidates[0]?.reduction).toBe(0);
+    expect(result.candidates[1]?.retainedUpdates).toBe(1);
+    expect(result.candidates[1]?.reduction).toBe(0.75);
+  });
+
   it('requires at least three numeric observations', () => {
     expect(analyzeSignalDeadband([])).toBeNull();
     expect(analyzeSignalDeadband(samples([1, 2]))).toBeNull();

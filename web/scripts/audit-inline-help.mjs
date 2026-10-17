@@ -52,7 +52,8 @@ const TARGETS = [
   },
   {
     name: 'alert-studio',
-    path: 'src/features/notifications/components/AlertRuleEditor.tsx',
+    // The thin editor forwards its fields to these dedicated production renderers.
+    path: 'src/features/notifications/components/alert-editor-source-closure',
     min: 6,
   },
   {

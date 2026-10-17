@@ -1,0 +1,385 @@
+{
+  "item": "audit-page-051",
+  "page": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+  "routes": ["/statistics"],
+  "purpose": "Display selected-vehicle totals, averages, battery health, state distribution and mileage alongside a date-scoped fleet comparison.",
+  "primaryGoal": "Understand vehicle usage, costs and health, inspect comparative charts and retain saved views and chart exports.",
+  "dataSources": [
+    {
+      "name": "period-stats",
+      "hook": "Page-local useQuery",
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 88,
+      "endpoint": "/analytics/period-stats?vehicle_id=${activeId}",
+      "sourceOwner": "periodStatsHandler.Get",
+      "routeEvidence": "internal\\api\\router.go:3893",
+      "queryKey": ["period-stats", "activeId"],
+      "behavior": "Enabled only with a selected vehicle; no date bounds and no request abort signal. PeriodStats shape is declared in statistics-modernization\\PeriodStatistics.tsx:10-17. Observation bounds and backend payload equivalence are unverified."
+    },
+    {
+      "name": "battery-health",
+      "hook": "useBatteryHealthAnalytics",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 76,
+      "endpoint": "/analytics/battery-health?vehicle_id=${vehicleId}",
+      "sourceOwner": "batteryDegradationHandler.Health",
+      "routeEvidence": "internal\\api\\router.go:3877",
+      "behavior": "Vehicle-specific, enabled for non-null vehicle, ANALYTICS staleTime, retry false, forwards AbortSignal. Does not accept workspace range. Typed capacity is Wh; current_soh, degradation, cycles and age retain source semantics.",
+      "typeEvidence": "web\\src\\types\\energy.ts:151-174"
+    },
+    {
+      "name": "mileage",
+      "hook": "useMileageStats",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 73,
+      "endpoint": "/mileage/stats?vehicle_id=${encodeURIComponent(vehicleId)}",
+      "sourceOwner": "mileageHandler.Stats",
+      "routeEvidence": "internal\\api\\router.go:4193-4203",
+      "behavior": "Vehicle-specific lifetime and fixed last-30-day windows; enabled with vehicle; forwards AbortSignal. Source distances are documented kilometres. Preserve the explicit daily-average and yearly-projection calculations rather than silently converting them into workspace-range metrics.",
+      "typeEvidence": "web\\src\\types\\analytics.ts:49-59"
+    },
+    {
+      "name": "state-summary",
+      "hook": "useStateSummary",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 181,
+      "endpoint": "/vehicle-states/summary?vehicle_id=${encodeURIComponent(vehicleId)}",
+      "sourceOwner": "vehicleStatesHandler.Summary",
+      "routeEvidence": "internal\\api\\router.go:4223-4232",
+      "behavior": "Enabled with vehicle; forwards AbortSignal; safeArray select. The hook's removed-route deprecation comment conflicts with the currently restored route. Page accepts totalMin or total_min and derives rounded percentage shares. Backend timing bounds are unverified.",
+      "typeEvidence": "web\\src\\types\\analytics.ts:181-185"
+    },
+    {
+      "name": "fleet",
+      "hook": "useFleetAnalytics",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 49,
+      "endpoint": "/analytics/fleet?start=${startDate}&end=${endDate}",
+      "sourceOwner": "analyticsHandler.Fleet",
+      "routeEvidence": "internal\\api\\router.go:3852",
+      "behavior": "Fleet-wide comparison deliberately has no selected vehicle filter. Query key includes days/start/end and request forwards AbortSignal. Page sends calendar strings, not precise workspace instants. Retains rounded distance in chosen display unit and rounded source energy labelled kWh.",
+      "typeEvidence": "web\\src\\api\\types.ts:1003-1016"
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Section / CardGrid",
+      "owner": "@/components/layout",
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 145,
+      "role": "Single page/header composition with three persistent sections and full/half/third placement hints; category barrel already used."
+    },
+    {
+      "name": "ChartCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "file": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "line": 13,
+      "role": "Existing LayoutCard-to-EmbeddedChart adapter forwards children, data, dataColumns, export and sizing props. Two page consumers; do not replace with a competing frame."
+    },
+    {
+      "name": "StatisticsChartPlacement",
+      "owner": "web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsChartPlacement.tsx",
+      "file": "web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsChartPlacement.tsx",
+      "line": 6,
+      "role": "Local placement context bridge, min-w-0 and fallback grid span. Direct layout-reference import is a category-barrel adoption concern, not proof that a replacement bridge is needed."
+    },
+    {
+      "name": "OperationalBrief / useOperationalMetrics",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 43,
+      "role": "Canonical metric summary with source scope, provenance, missing/invalid metric state, loading, status and details action. Used by totals, averages, mileage and battery feature adapters."
+    },
+    {
+      "name": "StatisticsPeriodBrief / StatisticsMileageBrief / StatisticsBatteryBrief",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-n-z",
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 33,
+      "role": "Domain-owned presentation adapters preserve specialist currency, number, distance, energy and projection semantics; battery also hosts LinearGauge."
+    },
+    {
+      "name": "StatisticsSource",
+      "owner": "web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.tsx",
+      "file": "web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.tsx",
+      "line": 23,
+      "role": "Existing local retained-data state wrapper used by all five sources; skeleton, empty and compact refresh error with independent retry."
+    },
+    {
+      "name": "Button / SavedViewMenu / DataFreshnessAuto",
+      "owner": "@/components/ui and @/components/data-display",
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 135,
+      "role": "Refresh selected period query, /statistics saved URL view and period-query freshness metadata. Shared implementations other than OperationalBrief were not semantically inspected."
+    },
+    {
+      "name": "ChartLegend / chart category primitives / Skeleton / EmptyState / FadeIn",
+      "owner": "@/components/charts, @/components/feedback, @/components/motion",
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 9,
+      "role": "Existing chart, empty, loading and motion pipeline. Fleet legend uses persistent hidden-series state; state pie uses passive Legend. Shared runtime behavior remains unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsPeriodBrief.tsx",
+      "line": 50,
+      "rule": "MDC-026 / MDC-046",
+      "detail": "Returned/loading/unavailable/retained status derivation repeats in all three brief adapters, while StatisticsSource separately classifies the same query. This is local source-trust duplication, not evidence for another global status component.",
+      "fix": "Reuse one existing local statistics source-state derivation or the canonical DataState adapter while preserving independent query errors and source-specific scope descriptions.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "StatisticsPage.tsx:160-174 full period placement, 179-230 two half cards, 233-285 third mileage and half fleet placement.",
+      "StatisticsPage.tsx:192,247 explicitly sets chart heights 280 and 300; StatisticsChartPlacement.tsx:9 retains min-w-0.",
+      "OperationalBrief.tsx:131-173 supplies stacked header, compact one-column metrics, sm two-column, md three-column and min-1920 six-column branches."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+        "line": 275,
+        "rule": "MDC-043",
+        "detail": "Fleet vehicle names are a categorical axis without a page-level long-name strategy; fixed-height chart and exported table must be checked in narrow containers. This is a QA risk, not an observed clipping defect.",
+        "fix": "Exercise long vehicle names and all supplied data at the ten contract widths, including constrained shell width; reuse existing chart/table alternatives and preserve full names.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportStatus": "Unverified at 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920 and 2560 pixels. No mounted mobile or desktop inspection."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "StatisticsPage.tsx:138 gives the icon-only refresh a localized aria-label; icon is aria-hidden at 140.",
+      "StatisticsPage.tsx:188,242 gives charts localized ariaLabel; dataColumns at 193-196 and 248-252 retain textual data alternatives.",
+      "OperationalBrief.tsx:123 uses section aria-labelledby and aria-busy; its Review details button is at 159-167.",
+      "ChartLegend.tsx:112-118 uses a native shared Button and aria-pressed, but overrides height/min-height/padding."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+        "line": 117,
+        "rule": "MDC-040",
+        "detail": "Interactive legend buttons use h-auto min-h-0 p-0; the fleet page adopts this implementation at StatisticsPage.tsx:278. A 44px target or documented spacing exception is not established by the inspected source.",
+        "fix": "Shared chart owner should validate actual hit areas and spacing before extending existing legend sizing; preserve toggle keys, aria-pressed and URL-hidden-series semantics.",
+        "owner": "shared",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+        "line": 127,
+        "rule": "MDC-044",
+        "detail": "Fallback vehicle name is hardcoded 'Vehicle ${v.id}', and pie names use raw state codes at line 117. The supplied source IDs must remain unchanged, but display labels require locale review.",
+        "fix": "Use existing localized display-name/state-label mechanisms while preserving raw source identity and all export rows.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard order, focus restoration, screen readers, composed contrast, touch spacing, forced colors, RTL, 200%-text and reduced motion are unverified. FadeIn use is source evidence only."
+  },
+  "states": {
+    "loading": "Five sources have independent loading handling. Chart sources get full-size Skeleton; battery gets h-40 Skeleton; period and mileage briefs receive loading flags and a null wrapper skeleton.",
+    "empty": "Persistent sections survive absent data. Empty actions point to /drives, /battery, /state-debugger and /vehicles. Fleet treats zero or one comparison row as insufficient data.",
+    "error": "StatisticsSource.tsx:5-8,26-33 distinguishes fatal error without data from compact retained refresh error. Independent retry callbacks remain for period, mileage, battery, state and fleet.",
+    "staleOffline": "Only period stats supplies DataFreshnessAuto at page line 149. Brief adapters expose retained errors but do not pass freshness; state and fleet wrappers receive loading/error/data only, not query update timestamps or paused status.",
+    "unknown": "Missing response remains null in OperationalBrief adapters, but some missing fields inside a returned response are coerced to zero.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsPeriodBrief.tsx",
+        "line": 21,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Returned period fields default to zero at lines 21-41. Mileage fields similarly default to zero at StatisticsMileageBrief.tsx:18-30; battery current_soh defaults to zero at StatisticsBatteryBrief.tsx:43. An incomplete response can appear to contain measured zeros.",
+        "fix": "Preserve legitimate zeros but route absent/invalid fields into existing metric missing states and an unavailable gauge state; confirm runtime payload guarantees rather than inferring measurements.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+        "line": 149,
+        "rule": "MDC-026",
+        "detail": "Page metadata freshness describes period stats only; four independently scoped sources have no explicit per-source stale/offline freshness wiring in the inspected callers.",
+        "fix": "Reuse existing freshness/DataState capabilities per source and OperationalBrief.freshness; preserve retained data and independent retries instead of adding a whole-page error gate.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtimeStatus": "No loading, empty, failure, refresh failure, offline, stale, disabled or success case was mounted."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 40,
+      "rule": "MDC-010 / MDC-011 / MDC-034 / mission-43",
+      "detail": "State pie hardcodes six hues including fluorescent charging cyan #00f0ff at line 42; only unknown state fallback uses the reactive palette. This creates a saturated rainbow and bypasses the chart preference for known states. No page-level glow or pure-white classes were found.",
+      "fix": "Map state identities to existing restrained semantic/chart tokens and respect current color-blind and explicit neon chart preferences; preserve every state and label, without resetting saved theme IDs.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 88,
+      "rule": "MDC-002 / mission-33",
+      "detail": "Period data fetching is embedded in the page rather than a typed domain hook; queryFn omits TanStack Query's AbortSignal.",
+      "fix": "Move this query to its existing analytics domain owner, preserving query key, enablement, payload and inherited policies, and forward signal to request.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+      "line": 75,
+      "rule": "MDC-032",
+      "detail": "The registered /statistics range uses start/end calendar strings only for fleet. useRangeState.ts:117-122 exposes precise startInstant/endInstantExclusive, including rolling scopes at 656-663. Other sources intentionally retain mixed fixed/lifetime/unknown windows; the page's period empty message still says 'selected period' although that query has no bounds.",
+      "fix": "Send precise workspace bounds through the fleet domain contract after verifying backend support; explicitly label preserved lifetime/fixed-window sources and reconcile period source/window copy with its actual server contract. Do not remove fixed-window metrics or silently reinterpret them.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 180,
+      "rule": "MDC-002 / source-contract-truth",
+      "detail": "useStateSummary is marked deprecated because its endpoint was removed, but router.go:4223-4232 explicitly restores the endpoint from fsm_transitions. The page's two minute field assertions reflect a source contract that is not normalized in its hook.",
+      "fix": "Analytics owner should reconcile restored documentation/type shape against the actual response; retain source history semantics and avoid claiming the route is missing or introducing a legacy adapter.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsChartPlacement.tsx",
+      "line": 2,
+      "rule": "MDC-002 category-barrel imports",
+      "detail": "Feature placement bridge imports the layout-reference implementation path directly rather than the layout category barrel. This does not invalidate the current shared frame.",
+      "fix": "Use the canonical layout barrel if useCardPlacement is available there; otherwise report an export-only shared integration requirement, not a new wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-trust zero fallbacks, ambiguous workspace timing and page-local uncancellable query precede visual polish. Current source already uses reviewed layout, chart frames and operational summaries; preserve that adoption."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Analytics domain query and scope contract reconciliation",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "missingOwner": "No page-consumed typed period-stats hook is present; the current owner is StatisticsPage.tsx:88-92.",
+      "propsVariantsStates": [
+        "Typed selected vehicle input for period query; preserve ['period-stats', activeId] identity and enabled behavior.",
+        "TanStack queryFn signal passed to request; retain raw response and inherited cache/retry policy.",
+        "Explicit precise lower/exclusive upper bounds for the fleet range only when server support is verified.",
+        "Document lifetime mileage, fixed last-30-day projection, battery estimates and state-summary observation bounds without dropping them.",
+        "Reconcile restored state-summary route documentation and typed source shape."
+      ],
+      "usedBy": ["/statistics period totals and averages", "/statistics fleet comparison", "/statistics state distribution"],
+      "dependsOn": ["Verified period and fleet server parameter/payload contracts", "Existing useRangeState instant semantics", "Existing request/query infrastructure"],
+      "evidence": ["StatisticsPage.tsx:75-99", "useAnalytics.ts:49-78,180-187", "internal\\api\\router.go:3852,3893,4223-4232"],
+      "owner": "integration"
+    },
+    {
+      "name": "Existing ChartLegend touch-target review",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "propsVariantsStates": ["Existing state toggle source, hidden/pressed labels and series keys", "Existing Button sizing or documented spacing exception; no competing legend implementation"],
+      "usedBy": ["/statistics fleet-vehicle-comparison"],
+      "dependsOn": ["Mounted target and spacing measurement", "Existing Button and chart hidden-series persistence"],
+      "evidence": ["ChartLegend.tsx:112-118", "StatisticsPage.tsx:278-280"],
+      "owner": "shared",
+      "status": "Source-supported QA requirement; a shared code change is conditional on actual target measurements."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\statistics-modernization\\index.ts",
+      "line": 1,
+      "rule": "MDC-002 / avoid-competing-renderers",
+      "detail": "Barrel still exports PeriodStatistics, MileageStatistics and BatteryStatistics MetricCard renderers, while the assigned page renders OperationalBrief adapters. The briefs borrow ComponentProps from those earlier implementations. Only this page's runtime selection is inspected; other consumers are unknown.",
+      "fix": "Keep the mounted OperationalBrief adapters as current owners. Decouple reusable prop contracts only in authorized implementation scope; do not delete earlier renderers based on an unverified global usage assumption.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "A71F79642271205C3B759A0D0629D415E87770BBF47F8DAA929398092D4F289D",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 292,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Totals and averages", "id": "statistics-period", "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx", "line": 160, "contents": ["Total distance", "Total drives", "Total energy", "Total cost", "CO2 saved", "Average drive distance", "Average efficiency", "Cost per source kilometre"]},
+      {"name": "Battery health and vehicle states", "id": "statistics-health-state", "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx", "line": 179, "contents": ["Battery SOH gauge", "Capacity", "Annual degradation", "Cycles", "Battery age", "State distribution pie, legend, tooltip and export/table columns"]},
+      {"name": "Mileage and fleet comparison", "id": "statistics-mileage-fleet", "file": "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx", "line": 233, "contents": ["Lifetime mileage", "Last-30-day daily average", "Lifetime drives", "Yearly projection", "All-vehicle distance and energy bars, legend toggles, tooltip and export/table columns"]}
+    ],
+    "counts": {"cardGrid": 3, "chartCard": 2, "pageGlassPanel": 0, "operationalBriefInMountedAdapters": 4, "numericMetrics": 16, "batteryGauge": 1, "statePie": 1, "fleetBarSeries": 2},
+    "extractedLineCounts": {
+      "StatisticsPeriodBrief.tsx": 72,
+      "StatisticsMileageBrief.tsx": 52,
+      "StatisticsBatteryBrief.tsx": 58,
+      "pagePlusMountedBriefAdapters": 474,
+      "note": "Current snapshot counts, not historical parity proof; placement/source helpers and older type-bearing renderers are additional dependencies."
+    },
+    "actions": [
+      "Icon refresh refetches period statistics only (page:135-140).",
+      "SavedViewMenu for /statistics keeps currentQuery/apply URL behavior (page:151-155).",
+      "Each source has an independent retry callback; retain usable data during refresh errors.",
+      "Four shared OperationalBrief Review details actions and source evidence drawers (OperationalBrief.tsx:159-167).",
+      "Chart export filenames state-distribution and vehicle-comparison; retain data/dataColumns/exportData (page:185-197,239-253).",
+      "Fleet hidden-series URL persistence under fleet-vehicle-comparison for distance and energy (page:85,244,278-280).",
+      "Empty-state navigation to /drives, /battery, /state-debugger and /vehicles.",
+      "Workspace selected vehicle and shared range, saved unit/currency/number preferences and color-blind/explicit palette preferences."
+    ],
+    "dataBehavior": [
+      "Preserve all five independent sources, query keys, request enablement and existing retry/stale-time behavior.",
+      "No fake data, backend capability assumptions, measurement deletion or cache/wire conversion.",
+      "Preserve km-to-display distance conversion and Wh/km-to-display efficiency logic; endpoint-specific legacy-shaped derived units require integration verification, not silent SI reinterpretation.",
+      "Period average distance divides total distance by drive count only when count is positive; cost-per-km retains the source kilometre denominator.",
+      "Mileage daily average remains last_30d_km / 30; projection remains that average times 365, explicitly labelled a projection.",
+      "Battery capacity formatter receives Wh; age and annual degradation remain distinct source units.",
+      "State shares remain individually rounded percentages of recorded minute totals, with all states and zero/empty distinctions preserved during later trust corrections.",
+      "Fleet remains all-vehicle comparison and requires more than one row; distance/energy rounding, both series, raw identity and complete export rows remain.",
+      "Persistent sections, skeletons, recovery links, source scope/provenance and retained refresh errors must survive modernization."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase 0 source inspection only; no source changes, Git, runtime/browser session, TypeScript, lint, build or tests.",
+    "routeScope": "Only supplied route ['/statistics']; no route-mount or application-wide inventory performed.",
+    "backend": "Five endpoint paths matched current router registration. Backend handlers/queries/payloads/timezone/parameter acceptance were not inspected or executed. Restored route presence is not runtime success.",
+    "shared": "Read only page-specific shared contract excerpts; no foundation audit or second-consumer search. DataFreshnessAuto implementation path initially guessed did not exist and was not inspected; only its caller and barrel export were read.",
+    "scripts": "audit-violations audit.sh was inspected but not executed because it unconditionally runs whole-frontend TypeScript. verify.sh was inspected but not executed because it scans all backend route modules; direct scoped route checks were used instead.",
+    "sourceChecks": {
+      "command": "PowerShell Get-Content / Select-String -CaseSensitive on the assigned page; Get-FileHash -Algorithm SHA256",
+      "exitCode": 0,
+      "output": ["Page lines: 292", "CASE-SENSITIVE RAW CONTROLS: 0", "inlineStyles: 0", "directLibraryImports: 0", "noisyClasses: 0", "sections: 3", "chartCards: 2", "SHA256: A71F79642271205C3B759A0D0629D415E87770BBF47F8DAA929398092D4F289D"],
+      "qualification": "Literal pattern counts are not a semantic/full violations pass; hardcoded saturated colors are separately reported. Initial case-insensitive raw-control count falsely matched shared Button and was corrected.",
+      "failedProbe": "One PowerShell quoting/parser probe exited 1 before execution; corrected bounded probe completed with exit 0."
+    },
+    "unverified": ["Actual mounted route", "Runtime data and server contracts", "Visual appearance, contrast and themes", "All ten viewport sizes and long labels", "Keyboard/focus/screen-reader behavior", "Touch target dimensions", "Reduced motion/forced colors/RTL", "Fullscreen/export and details-drawer runtime behavior", "Historical no-data-loss parity", "TypeScript/lint/build/tests"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+    "web\\src\\features\\analytics\\components\\statistics-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.tsx",
+    "web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsChartPlacement.tsx",
+    "web\\src\\features\\analytics\\components\\statistics-modernization\\PeriodStatistics.tsx",
+    "web\\src\\features\\analytics\\components\\statistics-modernization\\MileageStatistics.tsx",
+    "web\\src\\features\\analytics\\components\\statistics-modernization\\BatteryStatistics.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsPeriodBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsMileageBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsBatteryBrief.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\analytics.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "internal\\api\\router.go"
+  ]
+}

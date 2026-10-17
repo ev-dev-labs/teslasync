@@ -1,0 +1,1436 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-drive-compare",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_REPORT_WITH_FINDINGS",
+  "page": "DriveComparePage",
+  "routes": [
+    "/drive-compare"
+  ],
+  "snapshotUTC": "2026-10-14T01:19:18.5642848Z",
+  "snapshotSemantics": "Sequential source pins, not atomic repository/runtime snapshot; final pin recheck required",
+  "reservation": {
+    "maxCommandMinutes": 15,
+    "reservationUTC": "2026-10-14T01:04:13.296Z",
+    "hardUTC": "2026-10-14T01:29:13.296Z",
+    "returnUTC": "2026-10-14T01:24:13.296Z",
+    "actor": "8f429844-9b21-4e00-96bd-c3484d818418",
+    "targetMinutes": 10,
+    "firstReadUTC": "2026-10-14T01:06:16.5649120Z",
+    "rule": "earlier actual+20/25 or reservation wins; no renewal"
+  },
+  "firstExistingReportCheck": {
+    "report": "ABSENT",
+    "decision": "New current source QA report needed; accepted Phase5 not restarted",
+    "noSourceChange": true,
+    "log": "ABSENT"
+  },
+  "queue": {
+    "acceptance": "Historical SOURCE ONLY, not native/page acceptance",
+    "dependency": "phase5-page-driving-drive-compare",
+    "dedupExistingFixClaimCount": 0,
+    "acceptedCommit": "2045769f61e00c217f8716d99d55833692071d36",
+    "acceptedDependencyLine": 1854,
+    "drift": "Parent inserted2 rows/recorded actor: initial388/1852 now390/1854; clocks unchanged",
+    "qaLine": 390,
+    "edited": false
+  },
+  "sourcePins": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "sha256": "bd6016a7468780a92a09ef1d560979f42519664c5e755acbcbd48b0d9e925581",
+      "lines": 250,
+      "bytes": 9923,
+      "readScope": [
+        1,
+        250
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx",
+      "sha256": "d04e58749b2ed990789af852628bcd1003f54be0fc13c420ccdae432841101d0",
+      "lines": 112,
+      "bytes": 4388,
+      "readScope": [
+        1,
+        112
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx",
+      "sha256": "34f29b3b5944bde17cb9c87576820588479ce5f060a7ae3c22ad5a1b75047486",
+      "lines": 161,
+      "bytes": 5603,
+      "readScope": [
+        1,
+        161
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx",
+      "sha256": "66963ee48ec1db987e0daf2729876542788cb030f611e4a7e969d4284e03f457",
+      "lines": 74,
+      "bytes": 1719,
+      "readScope": [
+        1,
+        74
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+      "sha256": "f54992f44cc47aedef5bc44204b19ed802ec2326e7aee2e1934b0972a753647c",
+      "lines": 109,
+      "bytes": 4244,
+      "readScope": [
+        1,
+        109
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+      "sha256": "3e54c2a4891bd252fb47fbc02f3b4e2c6c8efabbfbbb8848aaa27731e47e990a",
+      "lines": 124,
+      "bytes": 5638,
+      "readScope": [
+        1,
+        124
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx",
+      "sha256": "07e90174fcbb410b913244bc5a3c904d80a4e25e8fcd3b4085643308ad82704d",
+      "lines": 169,
+      "bytes": 6041,
+      "readScope": [
+        1,
+        169
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\useCompareMetricFormatter.ts",
+      "sha256": "a9ac52ce65cddd13816f9de694d123c89b79052c663fb35140949afe984d2cc3",
+      "lines": 58,
+      "bytes": 1817,
+      "readScope": [
+        1,
+        58
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\CompareVerdictBrief.tsx",
+      "sha256": "ca9fc7dbc6024f1a315a5f47afcf3908656a3cf9523b43957fdd242c357050a5",
+      "lines": 49,
+      "bytes": 3271,
+      "readScope": [
+        1,
+        49
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "lines": 53,
+      "bytes": 1893,
+      "readScope": [
+        1,
+        53
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\driveCompare.ts",
+      "sha256": "19acf56eb3cc9390ce4bfa4eb22feae7fa41aa8588d4c69d1a2791a37e59e0b9",
+      "lines": 259,
+      "bytes": 8474,
+      "readScope": [
+        1,
+        259
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\index.ts",
+      "sha256": "1d9145a7eeb7beb3b23c2bd9f90c0fd0f87515c369f4d1914bd64036df82e38b",
+      "lines": 8,
+      "bytes": 478,
+      "readScope": [
+        1,
+        8
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "lines": 454,
+      "bytes": 17391,
+      "readScope": [
+        1,
+        230
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "bytes": 15482,
+      "readScope": [
+        1,
+        270
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "bytes": 2035,
+      "readScope": [
+        1,
+        65
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "bytes": 6545,
+      "readScope": [
+        1,
+        194
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47,
+      "bytes": 2095,
+      "readScope": [
+        1,
+        47
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\hooks\\useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines": 148,
+      "bytes": 5230,
+      "readScope": [
+        1,
+        148
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174,
+      "bytes": 6593,
+      "readScope": [
+        1,
+        174
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462,
+      "bytes": 18863,
+      "readScope": [
+        1,
+        210
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "bytes": 4411,
+      "readScope": [
+        1,
+        168
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "lines": 289,
+      "bytes": 31836,
+      "readScope": "Search contexts110-120 only",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lines": 919,
+      "bytes": 68125,
+      "readScope": "Search lazy145, SafeRoute358-376, route847 only",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "bytes": 658,
+      "readScope": [
+        1,
+        17
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259,
+      "bytes": 10783,
+      "readScope": "30-58 and120-259",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115,
+      "bytes": 4093,
+      "readScope": [
+        1,
+        115
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\components\\data-display\\DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "lines": 342,
+      "bytes": 11545,
+      "readScope": "1-75 and318-342",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\components\\ui\\Select.tsx",
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines": 119,
+      "bytes": 4432,
+      "readScope": [
+        1,
+        115
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\types\\driving.ts",
+      "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "lines": 411,
+      "bytes": 10894,
+      "readScope": [
+        1,
+        190
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "sha256": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "lines": 77,
+      "bytes": 2977,
+      "readScope": [
+        1,
+        77
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\api\\client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458,
+      "bytes": 17825,
+      "readScope": "Search contexts64-93,264-268,344-364 only",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "internal\\api\\router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363,
+      "bytes": 260353,
+      "readScope": [
+        3506,
+        3538
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "docs\\orchestrator-loop.md",
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "lines": 296,
+      "bytes": 16978,
+      "readScope": [
+        1,
+        296
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "lines": 2539,
+      "bytes": 182554,
+      "readScope": [
+        1,
+        2539
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "docs\\session-handoff.md",
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "lines": 2460,
+      "bytes": 163930,
+      "readScope": [
+        1,
+        110
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lines": 1593,
+      "bytes": 31079,
+      "readScope": [
+        1416,
+        1545
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "docs\\frontend-worker-conventions.md",
+      "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "lines": 152,
+      "bytes": 8608,
+      "readScope": [
+        1,
+        152
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": ".github\\copilot-instructions.md",
+      "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "lines": 707,
+      "bytes": 37483,
+      "readScope": [
+        1,
+        707
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "lines": 94,
+      "bytes": 3585,
+      "readScope": [
+        1,
+        94
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": ".github\\instructions\\react-frontend.instructions.md",
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "lines": 629,
+      "bytes": 22645,
+      "readScope": [
+        1,
+        629
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": ".github\\instructions\\observability.instructions.md",
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "lines": 45,
+      "bytes": 4267,
+      "readScope": [
+        1,
+        45
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": ".github\\instructions\\unit-conversion.instructions.md",
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "lines": 221,
+      "bytes": 6501,
+      "readScope": [
+        1,
+        221
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "docs\\frontend-audits\\audit-page-107.json",
+      "sha256": "484c47f56c8aa9056b3b7bd9150d838cc7a72df3322fc4f27b9f06f32bcc0536",
+      "lines": 268,
+      "bytes": 22851,
+      "readScope": "Parsed preservation/routes only",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.test.tsx",
+      "sha256": "a52ebc08f7d3ae6c8b826dcb4bc2efc4bb580e65507bed6fd117fcf6671aa1bc",
+      "lines": 347,
+      "bytes": 11851,
+      "readScope": "Native name grep only; no runner discovery/execution",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\ComparisonVerdict.tsx",
+      "sha256": "9ec96c3b41e8bdbf0c02211b94839c39b571570172dacf8b2d16c1099ee7a2f7",
+      "lines": 116,
+      "bytes": 4392,
+      "readScope": [
+        1,
+        116
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "file": "web\\src\\lib\\unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "lines": 500,
+      "bytes": 16774,
+      "readScope": [
+        200,
+        365
+      ],
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    },
+    {
+      "bytes": 1842282,
+      "lines": 38994,
+      "file": "web\\src\\i18n\\en.json",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "readScope": "Parsed exact77 keys only",
+      "hashScope": "Full file; actual source reading bounded by readScope"
+    }
+  ],
+  "scope": {
+    "model": "web\\src\\features\\driving\\lib\\driveCompare.ts",
+    "unmountedTypeReference": "web\\src\\features\\driving\\components\\drive-compare\\ComparisonVerdict.tsx",
+    "repositoryWide": false,
+    "presentationFiles": [
+      "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\CompareVerdictBrief.tsx",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx"
+    ],
+    "page": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+    "backend": "router registration3506-3538 only",
+    "formatter": "web\\src\\features\\driving\\components\\drive-compare\\useCompareMetricFormatter.ts"
+  },
+  "preservation": {
+    "wholeOriginalGraphComparison": "NOTRUN: immutable original graph not reconstructed, no Git",
+    "presentationModuleCount": 8,
+    "totalWithBarrelLines": 1426,
+    "actionCounts": {
+      "lineSeries": 4,
+      "combinedRetry": 1,
+      "identityRetrySources": 2,
+      "staleRetrySources": 3,
+      "selectors": 2,
+      "conditionalBrowseLink": 1,
+      "chartExportDeclarations": 2
+    },
+    "pageLines": 250,
+    "pagePresentationFormatterModelLines": 1418,
+    "runnerDiscovery": "NOTRUN",
+    "presentationLines": 851,
+    "sectionCounts": {
+      "fairMetrics": 3,
+      "ChartContainerDeclarations": 2,
+      "charts": 2,
+      "GlassPanelDeclarations": 3,
+      "staleNotices": 3,
+      "mountedPanelInstances": 7,
+      "identityCards": 2,
+      "entranceGroups": 4,
+      "GlassPanelInstances": 4,
+      "namedHtmlSections": 3,
+      "OperationalBriefDeclarations": 1,
+      "headToHeadMetrics": 10
+    },
+    "sections": [
+      "Fair comparison verdict",
+      "What decided it",
+      "Drive A context",
+      "Drive B context",
+      "Speed through trip progress",
+      "Battery through trip progress",
+      "Full head-to-head"
+    ],
+    "modelLines": 259,
+    "pagePlusPresentationLines": 1101,
+    "historicalAuditPageSHA256": "343cbd3eb0786d44102196e948c013f79af837c4a5a71c415fb345bdd275b9ab",
+    "historicalOriginalTestBodies": 8,
+    "historicalAuditPageLines": 248,
+    "formatterLines": 58,
+    "existingTestDeclarations": 10,
+    "barrelLines": 8
+  },
+  "counts": {
+    "confirmedFindings": 7,
+    "byRule": {
+      "truncated-data-without-recovery": 1,
+      "selection-identity-replacement": 1,
+      "initial-paused-state": 1,
+      "battery-number-display-preferences": 1,
+      "rounded-progress-export-overwrite": 1,
+      "signed-soc-preservation": 1,
+      "date-display-preferences": 1
+    },
+    "unpromotedCandidates": 6,
+    "counting": "Deduplicated source mechanisms, not grep matches or observed incidents; F02 four call sites, F06 two declarations",
+    "mostIssues": [
+      {
+        "findings": [
+          "F01",
+          "F02",
+          "F07"
+        ],
+        "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+      },
+      {
+        "findings": [
+          "F02",
+          "F03",
+          "F06"
+        ],
+        "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx"
+      },
+      {
+        "findings": [
+          "F04",
+          "F05"
+        ],
+        "file": "web\\src\\features\\driving\\lib\\driveCompare.ts"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "detail": "Explicit drive_a/drive_b absent from the capped limit=1000 list become first/distinct fallback IDs, then URL replacement canonicalizes those new IDs. Absence from a bounded list does not establish nonexistent drive identity. Mechanism can silently change an explicitly requested pair.",
+      "owner": "page",
+      "line": 53,
+      "lines": [
+        50,
+        74
+      ],
+      "priority": "P1",
+      "fix": "Default only absent selections; retain requested IDs until resolved and explain unavailable/out-of-window selection before deliberate replacement. Do not expand authorization or fetch arbitrary real identities.",
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "rule": "selection-identity-replacement",
+      "incidentObserved": false,
+      "support": {
+        "lines": [
+          115,
+          139
+        ],
+        "file": "web\\src\\api\\hooks\\useDriving.ts"
+      },
+      "confidence": "high-source",
+      "id": "F01"
+    },
+    {
+      "detail": "Bare formatDateShort/formatDateTime/formatTime calls omit locale/timezone options, so browser locale/timezone bypass saved preferences. Existing useDateFormat binds settings locale/tz_display_default at lines73-88; dateFormat defaults are lines30-81.",
+      "locations": [
+        {
+          "lines": [
+            101,
+            103
+          ],
+          "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+        },
+        {
+          "lines": [
+            80,
+            81
+          ],
+          "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx"
+        },
+        {
+          "lines": [
+            77,
+            77
+          ],
+          "file": "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx"
+        }
+      ],
+      "line": 101,
+      "confidence": "high-source",
+      "incidentObserved": false,
+      "priority": "P1",
+      "fix": "Adopt existing useDateFormat for all four call sites and memo dependencies; preserve raw timestamps and independent drive selection.",
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "rule": "date-display-preferences",
+      "owner": "page-presentation",
+      "callSites": 4,
+      "id": "F02"
+    },
+    {
+      "detail": "Battery transition directly interpolates raw start/end percentages instead of preference-bound numeric formatting. This bypasses locale/precision used elsewhere in comparison.",
+      "owner": "presentation",
+      "line": 27,
+      "lines": [
+        26,
+        28
+      ],
+      "priority": "P2",
+      "fix": "Use existing useNumberFormatting for known endpoints; retain measured zero, unknown em dashes, both endpoints and direction.",
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+      "rule": "battery-number-display-preferences",
+      "incidentObserved": false,
+      "confidence": "high-source",
+      "id": "F03"
+    },
+    {
+      "detail": "Finite measured endBatteryPct greater than startBatteryPct returns null instead of preserving negative start-minus-end battery use. Neutral head-to-head suppresses the physical gain sign; no real gain incident inspected.",
+      "owner": "domain-model",
+      "line": 116,
+      "lines": [
+        113,
+        116
+      ],
+      "priority": "P1",
+      "fix": "Preserve signed measured SOC difference with independent percentage-domain validation; keep totals neutral and missing endpoints unknown.",
+      "file": "web\\src\\features\\driving\\lib\\driveCompare.ts",
+      "rule": "signed-soc-preservation",
+      "incidentObserved": false,
+      "confidence": "high-source",
+      "id": "F04"
+    },
+    {
+      "detail": "Progress rounds to 0.01 percentage points; Map keyed by progress overwrites earlier same-side samples sharing rounded/clamped progress. ChartContainer export/dataColumns use these lossy rows while Line consumes per-side series, producing different declared source populations when collisions occur.",
+      "locations": [
+        {
+          "lines": [
+            214,
+            220
+          ],
+          "file": "web\\src\\features\\driving\\lib\\driveCompare.ts"
+        },
+        {
+          "lines": [
+            249,
+            258
+          ],
+          "file": "web\\src\\features\\driving\\lib\\driveCompare.ts"
+        },
+        {
+          "lines": [
+            44,
+            59,
+            76,
+            76
+          ],
+          "file": "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx"
+        },
+        {
+          "lines": [
+            41,
+            49,
+            67,
+            67
+          ],
+          "file": "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx"
+        }
+      ],
+      "line": 252,
+      "confidence": "high-source-conditional-collision",
+      "incidentObserved": false,
+      "priority": "P1",
+      "fix": "Preserve duplicate-progress sample identity in export/text alternative or obtain explicit approved aggregation semantics, not last-write-wins. Preserve null opposite-side gaps/source ordering; no sampling or invented observations.",
+      "file": "web\\src\\features\\driving\\lib\\driveCompare.ts",
+      "rule": "rounded-progress-export-overwrite",
+      "owner": "domain-model/chart-presentation",
+      "id": "F05"
+    },
+    {
+      "detail": "Identity facts and advantage explanatory captions use truncate without wrapping/title/disclosure/full-text recovery. Source-level long/scaled/localized full-content recovery gap confirmed; actual pixel clipping NOT observed.",
+      "locations": [
+        {
+          "lines": [
+            93,
+            100
+          ],
+          "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx"
+        },
+        {
+          "lines": [
+            89,
+            90
+          ],
+          "file": "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx"
+        }
+      ],
+      "line": 100,
+      "confidence": "high-source-declaration",
+      "incidentObserved": false,
+      "priority": "P2",
+      "fix": "Use full wrapping/captions or reachable existing disclosure; preserve distance/duration/battery/conditions and complete explanations on narrow layouts.",
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+      "rule": "truncated-data-without-recovery",
+      "owner": "presentation",
+      "declarationSites": 2,
+      "id": "F06"
+    },
+    {
+      "detail": "deriveDataState exposes initial+isRefreshBlocked on paused first load, but page passes only isLoading. Local state adapter cannot distinguish blocked from fetching, StaleRefreshWarning hides without data, header freshness omits fetchStatus; only skeleton loading remains for this state.",
+      "locations": [
+        {
+          "lines": [
+            109,
+            129
+          ],
+          "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+        },
+        {
+          "lines": [
+            138,
+            157
+          ],
+          "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+        },
+        {
+          "lines": [
+            48,
+            58
+          ],
+          "file": "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx"
+        },
+        {
+          "lines": [
+            195,
+            232
+          ],
+          "file": "web\\src\\api\\dataState.ts"
+        },
+        {
+          "lines": [
+            64,
+            65
+          ],
+          "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx"
+        },
+        {
+          "lines": [
+            331,
+            339
+          ],
+          "file": "web\\src\\components\\data-display\\DataFreshness.tsx"
+        }
+      ],
+      "line": 120,
+      "confidence": "high-source",
+      "incidentObserved": false,
+      "priority": "P1",
+      "fix": "Expose existing neutral paused/deferred initial trust state and source retry/resume without claiming device offline or server failure; keep shells. Confirm existing copy before any separately leased catalog addition.",
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "rule": "initial-paused-state",
+      "owner": "page/local-state-adapter",
+      "id": "F07"
+    }
+  ],
+  "candidates": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "rule": "selector-visible-identity",
+      "line": 101,
+      "detail": "Month/day+distance omit year/start time/unique identity and can collide. No actual ambiguous option or real identity incident inspected.",
+      "id": "C01",
+      "promotionNeeds": "Authorized safe bounded identity/option evidence before promotion."
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\driveCompare.ts",
+      "rule": "fair-population-denominators",
+      "line": 95,
+      "detail": "Consumption/regen require positive used energy and >=1000m; regen recovered/used; score only0-100; live/incomplete not excluded. Any-two subtitle exceeds capped observed selector population. Net/gross energy/completeness/fairness across conditions remain domain unknowns.",
+      "id": "C02",
+      "promotionNeeds": "Existing API/domain owner numerator/denominator/coverage/population contract; no guessed payload incident or regen clamp."
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\driveCompare.ts",
+      "rule": "telemetry-unit-timestamp-provenance",
+      "line": 174,
+      "detail": "createdAt > created_at > timestamp; telemetry when>=2 valid otherwise position fallback; generic speed treated as SI. Router/types do not prove payload units/timestamp authority/source quality.",
+      "id": "C03",
+      "promotionNeeds": "Separately authorized source-owner contract evidence; no API/device/location inspection."
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\driveCompare.ts",
+      "rule": "profile-missing-gaps",
+      "line": 185,
+      "detail": "Invalid/null samples compact away before per-side chart data; connectNulls=false alone cannot prove preservation of original missing readings. Whether missing records delimit visible gaps needs approved semantics.",
+      "id": "C04",
+      "promotionNeeds": "Bounded existing fixture/domain gap contract; no fabricated observations/interpolation incident."
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+      "rule": "keyboard-mobile-scroll",
+      "line": 56,
+      "detail": "Overflow contains 640px-minimum ARIA table with headers/rows/cells but no explicit named focusable scroll wrapper. Browser automatic focus varies; keyboard/RTL/zoom/viewport not exercised.",
+      "id": "C05",
+      "promotionNeeds": "Authorized mounted Edge-only proof at mission widths; no browser lock currently."
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+      "rule": "token-color-geometry-review",
+      "line": 60,
+      "detail": "Three arbitrary geometry occurrences/two literal values; seven colored text occurrences/five lines; A/B cyan-purple identity borders; chart2.5px lines. Token classes/indexed chart colors are exceptions. Unmounted ComparisonVerdict decoration is not a current route incident.",
+      "id": "C06",
+      "promotionNeeds": "Existing design/token disposition and composed theme/contrast QA; no speculative replacements/scanner waiver."
+    }
+  ],
+  "preciseNeeds": [
+    {
+      "queued": false,
+      "findings": [
+        "F01"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+        "web\\src\\features\\driving\\pages\\DriveComparePage.test.tsx"
+      ],
+      "need": "Parent reserve narrow explicit-selection identity repair; preserve defaults/same-drive/unrelated URL and capped population. Not a migration restart.",
+      "id": "N01"
+    },
+    {
+      "queued": false,
+      "findings": [
+        "F02",
+        "F03",
+        "F06"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+        "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+        "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+        "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx"
+      ],
+      "need": "Parent reserve atomic preference/full-text adoptions with exact covering tests; reuse existing formatters, no new shared/catalog system.",
+      "id": "N02"
+    },
+    {
+      "queued": false,
+      "findings": [
+        "F04",
+        "F05"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\lib\\driveCompare.ts",
+        "web\\src\\features\\driving\\lib\\driveCompare.test.ts"
+      ],
+      "need": "Reserve signed neutral SOC and lossless export/sample model repairs; chart caller writes only if proven necessary, preserve all original assertions/SI.",
+      "id": "N03"
+    },
+    {
+      "queued": false,
+      "findings": [
+        "F07"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+        "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx",
+        "web\\src\\features\\driving\\pages\\DriveComparePage.test.tsx"
+      ],
+      "need": "Reserve initial-paused distinction and verify neutral existing copy. Serialize all overlapping page leases N01/N02/N04.",
+      "id": "N04"
+    },
+    {
+      "queued": false,
+      "candidates": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06"
+      ],
+      "need": "Remain unpromoted until precise authorized evidence; parent owns queue/dedup/catalog/router/token/shared permissions",
+      "id": "N05"
+    }
+  ],
+  "validation": {
+    "runnerFailed": 0,
+    "runnerPassed": 0,
+    "runnerSkipped": 0,
+    "runnerExecuted": 0,
+    "lint": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "json": "FINAL_NATIVE_PARSE_AND_CARDINALITY_VALIDATED",
+    "pagePASS": "NOTRUN",
+    "runtime": "NOTRUN",
+    "currentPinCheck": {
+      "checked": 47,
+      "UTC": "2026-10-14T01:22:22.0451666Z",
+      "matched": 47,
+      "sourceDriftCount": 0,
+      "status": "MATCHED",
+      "driftCount": 0,
+      "drift": []
+    },
+    "build": "NOTRUN",
+    "tests": "NOTRUN",
+    "runnerDiscovered": 0,
+    "native": "NOTRUN",
+    "semanticCitationCheck": "Every primary finding file/line exists within pinned line count; all7 section invocation lines re-grepped; no runtime exercise",
+    "finalParseUTC": "2026-10-14T01:23:12.8646613+00:00"
+  },
+  "release": {
+    "sourceWriteClaims": "NONE",
+    "reportLogRelease": "Released both exclusive writable report/log paths after this final write/parse/log append; no writes after terminal return",
+    "commandRelease": "Final bounded native command ends before terminal return; no background command/service/helper started; all earlier tools returned numeric exits",
+    "files": [
+      "docs\\frontend-audits\\phase6-qa-driving-drive-compare.json",
+      "web\\logs\\phase6-qa-driving-drive-compare.log"
+    ],
+    "status": "RELEASED",
+    "browserLock": "NONE",
+    "UTC": "2026-10-14T01:23:12.8547419+00:00",
+    "deadlineMet": true,
+    "clockCorrection": "Initial DateTime UTC versus locally parsed deadline tick comparison printed false despite actual01:22:22Z. Corrected DateTimeOffset instant comparison; raw incorrect receipt preserved, not a real deadline breach."
+  },
+  "sections": [
+    {
+      "line": 202,
+      "name": "Fair comparison verdict",
+      "instances": 1,
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "component": "CompareVerdictBrief -> DrivingSummaryBrief -> OperationalBrief"
+    },
+    {
+      "line": 212,
+      "name": "What decided it",
+      "instances": 1,
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "component": "AdvantageBreakdown"
+    },
+    {
+      "line": 225,
+      "name": "Drive A context",
+      "instances": 1,
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "component": "DriveIdentityCard side=a"
+    },
+    {
+      "line": 226,
+      "name": "Drive B context",
+      "instances": 1,
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "component": "DriveIdentityCard side=b"
+    },
+    {
+      "line": 234,
+      "name": "Speed through trip progress",
+      "instances": 1,
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "component": "SpeedComparisonChart"
+    },
+    {
+      "line": 235,
+      "name": "Battery through trip progress",
+      "instances": 1,
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "component": "BatteryComparisonChart"
+    },
+    {
+      "line": 241,
+      "name": "Full head-to-head",
+      "instances": 1,
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "component": "HeadToHeadGrid"
+    }
+  ],
+  "actions": [
+    {
+      "contract": "Shared Select labels/aria names; independent URL selection; unrelated query params retained. Canonicalization at65-74 is not fetch useEffect.",
+      "name": "A/B selectors",
+      "lines": [
+        175,
+        191
+      ],
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+    },
+    {
+      "contract": "List plus active detail IDs refetch",
+      "name": "Combined retry",
+      "lines": [
+        131,
+        134
+      ],
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+    },
+    {
+      "contract": "List plus own detail only",
+      "name": "Own identity retry",
+      "lines": [
+        151,
+        156
+      ],
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+    },
+    {
+      "contract": "Three independent shared stale warning retries; shared warning disables while refreshing",
+      "name": "Retained per-source refresh",
+      "lines": [
+        196,
+        198
+      ],
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+    },
+    {
+      "contract": "needTwo condition -> /drives",
+      "name": "Browse drives",
+      "lines": [
+        209,
+        210
+      ],
+      "file": "web\\src\\features\\driving\\pages\\DriveComparePage.tsx"
+    },
+    {
+      "contract": "PageContainer and governed setup/onboarding recovery; fleet pending/error versus empty beyond this boundary not established",
+      "name": "No vehicle recovery",
+      "lines": [
+        52,
+        70
+      ],
+      "file": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"
+    },
+    {
+      "contract": "Two ChartContainer exportable declarations, persistent chart keys, four series, hiddenSeries legends, export/dataColumns alternatives; shared fullscreen/export internals not exhaustively audited/runtime tested",
+      "name": "Charts",
+      "files": [
+        "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx",
+        "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx"
+      ]
+    }
+  ],
+  "workspace": {
+    "detailQuery": "useDrive(activeId); singular drive key prevents list/detail collision; request /drives/{id} passes AbortSignal; live:true-only polling",
+    "backendRoutes": {
+      "detailLines": [
+        3514,
+        3515
+      ],
+      "file": "internal\\api\\router.go",
+      "listLine": 3507
+    },
+    "scopeOwner": {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "lines": [
+        23,
+        76,
+        155,
+        168
+      ]
+    },
+    "vehicleEnabled": true,
+    "rangeBounds": "No start/end supplied intentionally: independent drive-pair route not RANGE_ENABLED_PATHS, historical audit explicitly preserves this. Do not promote missing bounds to a defect or add duplicate picker.",
+    "mount": {
+      "boundary": "SafeRoute/SuspenseProgressBoundary/ErrorBoundary",
+      "lazyLine": 145,
+      "file": "web\\src\\App.tsx",
+      "routeLine": 847
+    },
+    "registry": {
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "line": 112
+    },
+    "client": {
+      "prefixLine": 93,
+      "camelcaseResponseLine": 268,
+      "file": "web\\src\\api\\client.ts"
+    },
+    "route": "/drive-compare",
+    "runtimeScopeProof": "NOTRUN",
+    "rangeEnabled": false,
+    "secondWorkspacePicker": false,
+    "listQuery": "useDrives(String(vehicleId),{limit:1000}); vehicle_id snake_case; hook bound/clamp1..1000; no offsets; observed capped window not total/lifetime/full-result guarantee",
+    "vehicleOwner": {
+      "lines": [
+        47,
+        79,
+        166,
+        174
+      ],
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "precedence": "Path/query/store/first known fleet"
+    }
+  },
+  "dataBehavior": {
+    "denominators": {
+      "regen": "regenWh/energyWh",
+      "eligibility": "Positive used energy and >=1000m, measured nonnegative recovered energy; score finite0..100",
+      "lines": [
+        95,
+        111,
+        139,
+        159
+      ],
+      "consumption": "energyWh/(distanceM/1000)",
+      "comparableCount": "aWins+bWins+ties over directional rows with values on both sides; zero -> insufficient",
+      "file": "web\\src\\features\\driving\\lib\\driveCompare.ts"
+    },
+    "rawSI": "No conversion in inspected hooks/cache; model distanceM,durationS,Mps,Wh,Celsius with display useUnits/useNumberFormatting. Speed chart convertSpeedFromSI; generic telemetry payload SI remains C03 unknown.",
+    "profiles": "Independent start/end or duration/sample spans; telemetry-first/positions fallback; compact timestamps, progress clamp/round, merged opposite-side nulls. F05 lossy same-side rounded key; C03/C04 provenance/gap uncertainties.",
+    "unknownZero": "num rejects null/nonfinite; measured zero retained for neutral totals/speeds/SOC/score. Zero regen remains0 with valid denominator. Zero-energy ratio ineligible by existing model, not fabricated zero.",
+    "signs": "Negative temperature/energy retained through num/display; SOC gain suppression F04; negative speed sample rejected, no reverse-speed incident invented.",
+    "metrics": "10 rows; only consumption lower, regen share higher, valid score higher award wins. Totals/speed/SOC/temperature neutral."
+  },
+  "states": {
+    "noVehicle": "Existing PageContainer recovery preserved; necessary selection hook null resolution does not prove fleet-empty runtime state",
+    "loading": "Seven shells remain, localized source-shaped skeleton in CompareSectionBody; PageLayout query is metadata only and does not erase children",
+    "fatal": "fatalError only, combined sections depend on both details; identity states isolate own detail failures. QueryError retry and /drives recovery remain",
+    "retry": "Combined/list+own/source refetch handlers only; no execution/API mutation",
+    "empty": "Need-two, same-drive, missing-details, no-metrics, chart fewer-than-two-samples-each localized states. Always mounted panel shells, need-both chart policy deliberate",
+    "retained": "Three source-specific StaleRefreshWarnings retain content through background failures; fatalError null with usable payload. Verdict retains A/B warning tone; retained paused warning does not assert device offline",
+    "initialPaused": "F07: blocked first load collapses to loading skeleton, not explicit paused meaning"
+  },
+  "frontendChecks": {
+    "tokens": {
+      "truncateDeclarations": 2,
+      "inlineStyleMatches": 0,
+      "arbitraryGeometryOccurrences": 3,
+      "coloredTextLines": 5,
+      "coloredTextOccurrences": 7,
+      "arbitraryGeometryUniqueLiterals": 2
+    },
+    "observability": "Instruction read; no page RUM bootstrap added. No change/new observability integration audited.",
+    "rules": {
+      "staticInlineStyleMatches": 0,
+      "wrapperDeclarations": 1,
+      "hardcodedEnglishLiteralPatternMatches": 0,
+      "doublePrefixMatches": 0,
+      "listedCamelcaseUrlParamMatches": 0,
+      "directLibraryImportMatches": 0,
+      "fetchOrUseEffectMatches": 1,
+      "rawHtmlMatches": 0,
+      "hiddenSectionPatternMatches": 0,
+      "fetchUseEffectViolations": 0,
+      "oldApiImportMatches": 0
+    },
+    "exceptions": [
+      "PageLayout delegates to PageContainer; NoVehicleSelected also wraps PageContainer",
+      "useEffect65-74 only synchronizes URL; not data loading",
+      "Shared Select raw HTML expected inside components/ui; no raw page controls",
+      "CSS-variable Tailwind classes are not inline styles; indexed CHART_COLORS and Recharts geometry props are exceptions",
+      "ComparisonVerdict is type-only reference, not mounted decoration",
+      "Conditional inner content of always-mounted shells acceptable; need-two chart policy deliberate",
+      "No workspace range on independent pair-selection route is preserved behavior"
+    ],
+    "responsive": {
+      "actualViewportChecks": 0,
+      "missionWidths": [
+        320,
+        375,
+        390,
+        430,
+        768,
+        1024,
+        1280,
+        1440,
+        1920,
+        2560
+      ],
+      "declarations": "Selectors base1/sm2 columns; identity/chart pair default1/lg2; hero default1/xl5; min-w-0; 640px contained matrix; shared Select size sm min-h-11 belowmd/md:min-h-9",
+      "touch": "Shared Select44px belowmd at16px root is rem arithmetic, not measured rectangle. Desktop36 declaration is historical/context, not pass.",
+      "a11y": "Localized visible/ARIA Select labels; shared locale-independent useId; headings via Typography; decorative icons aria-hidden; ARIA table headers/row/cell semantics; chart dataColumns alternatives. Keyboard/focus/contrast/forced-colors/native/mobile NOTRUN."
+    },
+    "scanFiles": [
+      "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\useCompareMetricFormatter.ts",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\CompareVerdictBrief.tsx",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "web\\src\\features\\driving\\lib\\driveCompare.ts"
+    ],
+    "i18n": {
+      "otherLocales": "NOTRUN",
+      "generatorNamespaceGuards": "NOTRUN",
+      "canonicalKeysChecked": 77,
+      "scope": "76 single-quoted visible literal/metric keys plus help.driveCompare.body",
+      "fallbackWordingEquality": "NOTRUN",
+      "missingKeys": 0
+    },
+    "method": "Case-sensitive native regex candidates plus manual interpretation, not AST/lint/full-repo scan"
+  },
+  "boundedScan": {
+    "rawOutput": "All bounded scan/evidence output retained verbatim in log; seven oversized earlier tool stdout files appended in full. Other early locator/range reads retained in caller tool transcript, not represented as a full terminal transcript.",
+    "otherReadLimits": [
+      "View of DataFreshnessAuto.tsx path absent; real implementation DataFreshness.tsx323 found. No numeric shell exit for view API.",
+      "Optional lib/freshness.ts locator PATH_ABSENT, shell675 exit0; no inferred application dependency."
+    ],
+    "fileCount": 11,
+    "rawCommandParameters": "Patterns and file scope printed in raw log; exact native tool invocation text remains in caller transcript. No custom helper/extension files created.",
+    "backendRules": "sql-interpolation/fmt-println/bare-panic/missing-context NOTRUN outside bounded route registration read; no 0-violation claim",
+    "corrections": "Case-sensitive shared-Select false positives and greedy queue dependency-match corrected and preserved",
+    "rawLog": "web\\logs\\phase6-qa-driving-drive-compare.log",
+    "numericExits": {
+      "exit1": 2,
+      "exit0": 10,
+      "recordedEvidenceAndRecoveryCommands": 12
+    },
+    "files": [
+      "web\\src\\features\\driving\\pages\\DriveComparePage.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\AdvantageBreakdown.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\DriveIdentityCard.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\HeadToHeadGrid.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\SpeedComparisonChart.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\BatteryComparisonChart.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\CompareSectionBody.tsx",
+      "web\\src\\features\\driving\\components\\drive-compare\\useCompareMetricFormatter.ts",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\CompareVerdictBrief.tsx",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "web\\src\\features\\driving\\lib\\driveCompare.ts"
+    ],
+    "commands": [
+      {
+        "command": "Select-String -LiteralPath scanFiles -Pattern rulePatterns -AllMatches",
+        "exit": 0,
+        "shellId": "683",
+        "raw": "Initial case-insensitive raw-html=2 both shared Select; false positives preserved/corrected in704"
+      },
+      {
+        "command": "Select-String -LiteralPath scanFiles -Pattern rulePatterns -CaseSensitive -AllMatches; Get-Content useDriving.ts; scan lines1-211",
+        "exit": 0,
+        "shellId": "704",
+        "raw": "static-inline-style=0;raw-html=0;direct-library-import=0;old-api-import=0;double-prefix=0;camelcase-param=0;hidden-section=0;hardcoded-string=0;wrapper=1;fetch/useEffect=1(url sync only). Hook prefix=0;listed camelCase URL=0;fetch=0"
+      },
+      {
+        "command": "Get-FileHash -LiteralPath inspectedSource -Algorithm SHA256; @(Get-Content).Count; Get-Item",
+        "exit": 0,
+        "shellId": "703",
+        "raw": "32 exact source hash/line/byte pins"
+      },
+      {
+        "command": "Get-Content exact targets; output numbered bounded ranges",
+        "exit": 0,
+        "shellId": "722",
+        "raw": "Exact selection/sign/profile/identity/table/truncate mechanisms in raw log"
+      },
+      {
+        "command": "Select-String scoped literal i18n keys -AllMatches; Get-Content en.json -Raw | ConvertFrom-Json -AsHashtable; exact key traversal",
+        "exit": 0,
+        "shellId": "723",
+        "raw": "76 keys present,missing0. Raw LITERAL_KEYS label split across two lines; numeric76."
+      },
+      {
+        "command": "Select-String mounted declarations -CaseSensitive -AllMatches; Select-String narrow queue fix claims",
+        "exit": 0,
+        "shellId": "721",
+        "raw": "section3;FadeIn4;GlassPanel3;ChartContainer2;OperationalBrief1;Select2;StaleRefreshWarning3;exportable2;Line4;truncate2;arbitrary-grid2;fixrows0"
+      },
+      {
+        "command": "Select-String nine mounted TSX geometry/truncate/color/style/paused patterns -CaseSensitive -AllMatches; exact help.body parse",
+        "exit": 0,
+        "shellId": "792",
+        "raw": "geometry3;truncate2;colored-text7/five lines;style0;fetchStatus/isRefreshBlocked0;helpbodyTrue;canonical keys77 missing0"
+      },
+      {
+        "command": "Select-String queue item patterns; Get-FileHash/Get-Content instruction/history",
+        "exit": 0,
+        "shellId": "793",
+        "raw": "QA1; greedy Phase5 match2 includes QA dependency, not two migrations. Corrected823."
+      },
+      {
+        "command": "Get-Content queue; split literal table rows; compare item[3] exactly and fix/rescue file[5] scope",
+        "exit": 0,
+        "shellId": "823",
+        "raw": "QA390[~]attempt1; accepted1854[x]attempt1; exactitems2; no existing repair file claim"
+      },
+      {
+        "command": "Select-String -Path web/src/App.tsx,web/src/routeRegistry.ts,web/src/lib/routeRegistry.ts,web/src/routes/*.ts* -Pattern DriveComparePage|drive-compare -Context 2,4 -ErrorAction Continue",
+        "exit": 1,
+        "shellId": "646",
+        "raw": "Cannot find path D:\\repos\\teslasync\\web\\src\\routeRegistry.ts because it does not exist; corrected actual lib/routeRegistry owner, not app failure"
+      },
+      {
+        "command": "Oversized inline native report serialization command",
+        "exit": 1,
+        "shellId": "935",
+        "raw": "The filename or extension is too long. (os error 206). Could not launch; no file/source execution; recovered bounded977."
+      },
+      {
+        "command": "ConvertTo-Json -Depth30; Set-Content exact authorized report; Get-Content -Raw | ConvertFrom-Json",
+        "exit": 0,
+        "shellId": "977",
+        "raw": "FINDINGS=7 CANDIDATES=6 PINS=47 PAGE=250 PRESENTATION=851; first valid report; source call declarations printed"
+      }
+    ]
+  },
+  "limits": [
+    "Native/runtime/page PASS NOTRUN. Source QA report completion is not page acceptance or Phase6/Phase7 completion.",
+    "No real drive/location/API/device/identity/mutation/browser/screenshot/network access; no fixture injection.",
+    "No tests/lint/build/global TSC/Git/subagents/install/server/Docker/customhelpers/extensions/heartbeats run or changed.",
+    "npx tsc --noEmit NOTRUN; TypeScript passes not claimed. Test discovery/execution/pass/fail/skipped all0 because no runner was used, not a passing suite.",
+    "Parent5173 remains parent-owned; no readiness request/server action. No browser lock. Later authorized browser must use installed Edge msedge only, no downloads.",
+    "Backend only actual router registrations read; no handler/repo/unit/payload incident guessed.",
+    "Catalog check exact77 canonical key existence only, not fallback parity/generated closure/other locales.",
+    "Static declaration/invocation counts not runtime preservation. Whole immutable original graph not reconstructed; history retained as context only.",
+    "Shared ChartContainer actions, RouteDisplay layout, complete workspace/mobile/native behavior not exhaustively audited.",
+    "Sequential file pins may drift under authorized concurrent writers; final source versus context drift recorded honestly.",
+    "All source/tests/catalog/backend/config/queue/handoff read-only; branch kept without Git operation."
+  ],
+  "filesWritten": [
+    "docs\\frontend-audits\\phase6-qa-driving-drive-compare.json",
+    "web\\logs\\phase6-qa-driving-drive-compare.log"
+  ],
+  "finalizationCommands": [
+    {
+      "exit": 0,
+      "kind": "initial report write/parse",
+      "shellId": "977"
+    },
+    {
+      "exit": 0,
+      "kind": "report enrichment/reparse",
+      "shellId": "1014"
+    },
+    {
+      "command": "Get-FileHash/Get-Content current47 pin check; native final JSON parse and exact cardinality checks",
+      "exit": 0,
+      "rawOutput": "Final MATCH/DRIFT rows, numeric counts and release text retained in authorized log/caller stdout",
+      "kind": "final source/report validation"
+    },
+    {
+      "exit": 0,
+      "shellId": "1024",
+      "raw": "47MATCH/0DRIFT; raw deadline false was timezone-kind metadata bug, corrected without rerunning unchanged source checks",
+      "kind": "Final47 pin check/JSON parse"
+    }
+  ]
+}

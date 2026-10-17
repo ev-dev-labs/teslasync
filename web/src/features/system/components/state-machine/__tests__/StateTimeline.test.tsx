@@ -1,7 +1,17 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { StateTimeline } from '../StateTimeline';
 import type { FSMTransition } from '@/types/fsm';
+import { formatDateShort, formatTime, formatRelative } from '@/lib/dateFormat';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { tz_display_default: 'user' }, locale: 'de-DE' }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'Asia/Tokyo',
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -36,6 +46,25 @@ function makeTransition(overrides: Partial<FSMTransition>): FSMTransition {
 }
 
 describe('StateTimeline', () => {
+  it('labels both dates across saved-zone midnight and excludes invalid or missing timestamps', () => {
+    const start = '2026-10-01T14:55:00Z';
+    const end = '2026-10-01T15:05:00Z';
+    const opts = { locale: 'de-DE', tz: 'Asia/Tokyo' };
+    render(<StateTimeline transitions={[
+      makeTransition({ id: 1, ts: start }),
+      makeTransition({ id: 2, ts: 'invalid' }),
+      makeTransition({ id: 3, ts: '' }),
+    ]} fsmType="vehicle" anchor={new Date(end)} windowMinutes={10} />);
+    expect(screen.getByText(`${formatDateShort(start, opts)} ${formatTime(start, opts)}`)).toBeInTheDocument();
+    expect(screen.getByText(`${formatDateShort(end, opts)} ${formatTime(end, opts)}`)).toBeInTheDocument();
+    expect(screen.queryByTestId('state-timeline-tick-2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('state-timeline-tick-3')).not.toBeInTheDocument();
+  });
+
+  it.each(['invalid', '', '2026-01-01T23:30:00Z'])('formats empty-window freshness with saved preferences: %s', ts => {
+    render(<StateTimeline transitions={[]} fsmType="vehicle" lastTransition={makeTransition({ ts })} />);
+    expect(screen.getByText(`Last transition ${formatRelative(ts, { locale: 'de-DE', tz: 'Asia/Tokyo' })}`)).toBeInTheDocument();
+  });
   it('shows the empty placeholder when no transitions are in the window', () => {
     const anchor = new Date('2025-01-15T12:00:00Z');
     // The page now pre-windows transitions before passing them in;
@@ -89,5 +118,35 @@ describe('StateTimeline', () => {
     const tick = screen.getByTestId('state-timeline-tick-21');
     // Selected ticks ring themselves with `ring-2`
     expect(tick.className).toContain('ring-2');
+    expect(tick).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('exposes selection and the persistent detail target without changing names or keyboard activation', async () => {
+    const user = userEvent.setup();
+    const anchor = new Date('2025-01-15T12:00:00Z');
+    const first = makeTransition({ id: 31, ts: '2025-01-15T11:55:00Z' });
+    const second = makeTransition({ id: 32, from_state: 'driving', to_state: 'parked', ts: '2025-01-15T11:58:00Z' });
+    const onSelect = vi.fn();
+    const props = { transitions: [first, second], fsmType: 'vehicle', anchor, onSelect, detailId: 'transition-detail' };
+    const { rerender } = render(<StateTimeline {...props} selectedId={31} />);
+
+    const firstTick = screen.getByRole('button', { name: 'parked to driving', pressed: true });
+    const secondTick = screen.getByRole('button', { name: 'driving to parked', pressed: false });
+    expect(firstTick).toHaveAttribute('aria-controls', 'transition-detail');
+    expect(secondTick).toHaveAttribute('aria-controls', 'transition-detail');
+    expect(secondTick).not.toHaveAttribute('aria-expanded');
+    secondTick.focus();
+    await user.keyboard('{Enter}');
+    expect(onSelect).toHaveBeenLastCalledWith(second);
+    await user.keyboard(' ');
+    expect(onSelect).toHaveBeenCalledTimes(2);
+
+    rerender(<StateTimeline {...props} selectedId={32} />);
+    expect(firstTick).toHaveAttribute('aria-pressed', 'false');
+    expect(secondTick).toHaveAttribute('aria-pressed', 'true');
+    expect(secondTick).toHaveFocus();
+    rerender(<StateTimeline {...props} selectedId={null} />);
+    expect(firstTick).toHaveAttribute('aria-pressed', 'false');
+    expect(secondTick).toHaveAttribute('aria-pressed', 'false');
   });
 });

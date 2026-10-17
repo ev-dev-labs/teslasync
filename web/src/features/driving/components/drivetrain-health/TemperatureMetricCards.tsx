@@ -6,10 +6,11 @@ import { MetricCard } from '@/components/data-display';
 import { StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 
 import type { HealthStatus, TempSensor } from './constants';
 import { tempNeonColor, displayTemp } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TemperatureMetricCardsProps {
   sensors: TempSensor[];
@@ -26,6 +27,7 @@ export function TemperatureMetricCards({
   peakPower,
   loading = false,
 }: TemperatureMetricCardsProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
@@ -73,7 +75,7 @@ export function TemperatureMetricCards({
           Number.isFinite(reading) &&
           Number.isFinite(maxTemp) &&
           maxTemp > 0
-            ? `${fmtNumber((reading / maxTemp) * 100, 0)}% ${t('drivetrain.ofMax', 'of max')}`
+            ? `${fmtNumber((reading / maxTemp) * 100)}% ${t('drivetrain.ofMax', 'of max')}`
             : t('drivetrain.noData', 'No data');
         return (
           <StaggerItem key={sensor.key}>
@@ -90,7 +92,7 @@ export function TemperatureMetricCards({
       <StaggerItem>
         <MetricCard
           label={t('drivetrain.healthScore', 'Health Score')}
-          value={`${safeHealthScore}%`}
+          value={`${fmtNumber(safeHealthScore)}%`}
           icon={<Heart className="h-4 w-4" aria-hidden="true" />}
           color={
             overallHealth === 'good'
@@ -104,7 +106,7 @@ export function TemperatureMetricCards({
       <StaggerItem>
         <MetricCard
           label={t('drivetrain.peakPower', 'Peak Power')}
-          value={peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—'}
+          value={peakPower > 0 ? `${fmtNumber(peakPower)} kW` : '—'}
           icon={<Zap className="h-4 w-4" aria-hidden="true" />}
           color="purple"
         />

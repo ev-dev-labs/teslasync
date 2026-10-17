@@ -66,7 +66,7 @@ function sym(octal: string): string {
 }
 
 const octalInput = () =>
-  screen.getByLabelText('Octal Permission') as HTMLInputElement
+  screen.getByLabelText('Octal permission') as HTMLInputElement
 const presetSelect = () => screen.getByLabelText('Presets') as HTMLSelectElement
 const resultsList = () => screen.queryByRole('list', { name: RESULTS_LABEL })
 const codeEl = () => screen.queryByText(/^[rwx-]{9}$/, { selector: 'code' })
@@ -89,7 +89,7 @@ describe('UnixPermissionTool', () => {
     render(<UnixPermissionTool />)
 
     expect(
-      screen.getByRole('heading', { name: 'Unix Permissions' }),
+      screen.getByRole('heading', { name: 'Unix permissions' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText(
@@ -198,7 +198,7 @@ describe('UnixPermissionTool', () => {
     const { container } = render(<UnixPermissionTool />)
 
     // The value field has an accessible name via its associated label.
-    expect(octalInput()).toHaveAccessibleName('Octal Permission')
+    expect(octalInput()).toHaveAccessibleName('Octal permission')
     // The decorative Lock icon inside the field is hidden from assistive tech.
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
     // The breakdown grid is a named list of exactly the three permission scopes.

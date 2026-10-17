@@ -80,8 +80,8 @@ export function DeliveryOutlookPanel({
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <CalendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('admin.teslaOrders.panels.outlook', 'Delivery Outlook')}
+        <CalendarClock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+        {t('admin.teslaOrders.panels.outlook', 'Delivery outlook')}
       </PanelTitle>
 
       <OrdersSectionState
@@ -96,7 +96,7 @@ export function DeliveryOutlookPanel({
         )}
       >
         <div className="space-y-4">
-          <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/[0.06] p-3">
+          <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
             <Caption>
               {t('admin.teslaOrders.outlook.nextDelivery', 'Next delivery')}
             </Caption>
@@ -109,7 +109,9 @@ export function DeliveryOutlookPanel({
             >
               {stats.nextDelivery
                 ? formatDateWithDay(stats.nextDelivery)
-                : t('admin.teslaOrders.outlook.noUpcoming', 'None scheduled')}
+                : stats.hasUnknownDelivery !== false
+                  ? t('admin.teslaOrders.outlook.unknownDelivery', 'Delivery date unknown')
+                  : t('admin.teslaOrders.outlook.noUpcoming', 'None scheduled')}
             </Text>
           </div>
 

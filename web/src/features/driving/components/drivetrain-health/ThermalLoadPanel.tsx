@@ -6,11 +6,12 @@ import { MetricBar, InlineMetric } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 
 import type { TempSensor } from './constants';
 import { tempSeverityColor, displayTemp } from './helpers';
 import type { DrivingStats } from '@/types/driving';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ThermalLoadPanelProps {
   sensors: TempSensor[];
@@ -27,6 +28,7 @@ export function ThermalLoadPanel({
   stats,
   loading = false,
 }: ThermalLoadPanelProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTemperature: formatTemperatureUnit } = useUnits();
   const formatTemperature = (value: number | null | undefined, precision?: number) => formatTemperatureUnit(value, { precision });
@@ -69,12 +71,12 @@ export function ThermalLoadPanel({
               <InlineMetric
                 icon={<Zap className="h-4 w-4 text-purple-300" aria-hidden="true" />}
                 label={t('drivetrain.peakPower', 'Peak Power')}
-                value={peakPower > 0 ? `${fmtInt(peakPower)} kW` : '—'}
+                value={peakPower > 0 ? `${fmtNumber(peakPower)} kW` : '—'}
               />
               <InlineMetric
                 icon={<TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                 label={t('drivetrain.avgPower', 'Avg Power')}
-                value={avgPowerMax > 0 ? `${fmtNumber(avgPowerMax, 1)} kW` : '—'}
+                value={avgPowerMax > 0 ? `${fmtNumber(avgPowerMax)} kW` : '—'}
               />
               <InlineMetric
                 icon={<Activity className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
@@ -84,7 +86,7 @@ export function ThermalLoadPanel({
               <InlineMetric
                 icon={<Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />}
                 label={t('drivetrain.regenRatio', 'Regen Ratio')}
-                value={stats ? `${fmtNumber(stats.regenRatio * 100, 1)}%` : '—'}
+                value={stats?.regenRatio != null ? `${fmtNumber(stats.regenRatio * 100)}%` : '—'}
               />
             </div>
           </>

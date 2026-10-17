@@ -36,9 +36,23 @@ export function PackCapacitySocWindowProfile({
   energyUnit,
 }: PackCapacitySocWindowProfileProps) {
   const { t } = useTranslation();
+  const usableHistory =
+    state.vehicleSelected && state.isResolved && !state.error && !state.isLoading;
+  const ariaDescription = !state.vehicleSelected
+    ? t('packCapacity.states.noVehiclePassive', 'Select a vehicle to make its returned charging evidence available.')
+    : state.isLoading
+      ? t('packCapacity.states.loading', 'Loading up to 1,000 charging sessions for deterministic analysis...')
+      : state.error
+        ? t('packCapacity.states.errorPassive', 'Charging history is unavailable; retry from the evidence status above.')
+        : !state.isResolved
+          ? t('packCapacity.states.pendingPassive', 'Charging-history availability has not resolved.')
+          : state.refreshError
+            ? t('packCapacity.states.refreshError', 'Charging history could not refresh. Showing the most recently loaded evidence.')
+            : undefined;
   const rows = useMemo(
-    () =>
-      result.socWindowProfile.map((point) => ({
+    () => {
+      if (!usableHistory) return [];
+      return result.socWindowProfile.map((point) => ({
         window: `${point.lowerPct}–${point.upperPct}%`,
         samples: point.samples,
         median:
@@ -49,8 +63,9 @@ export function PackCapacitySocWindowProfile({
           point.meanRelativeSigma == null
             ? null
             : point.meanRelativeSigma * 100,
-      })),
-    [energyUnit, result.socWindowProfile],
+      }));
+    },
+    [energyUnit, result.socWindowProfile, usableHistory],
   );
 
   return (
@@ -68,10 +83,11 @@ export function PackCapacitySocWindowProfile({
           'packCapacity.socProfile.aria',
           'Measurement count and uncertainty by state of charge window',
         )}
+        ariaDescription={ariaDescription}
         size="standard"
         loading={state.isLoading}
         empty={false}
-        exportable={state.isResolved && !state.error}
+        exportable={usableHistory}
         exportData={rows}
         data={rows}
         dataColumns={[

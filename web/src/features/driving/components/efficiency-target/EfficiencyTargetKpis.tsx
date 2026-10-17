@@ -5,11 +5,12 @@ import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { TargetSummary } from '../../lib/efficiencyTarget';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
@@ -24,6 +25,7 @@ export function EfficiencyTargetKpis({
   targetWhPerKm,
   state,
 }: EfficiencyTargetKpisProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEfficiency } = useEfficiencyTargetDisplay();
 
@@ -73,7 +75,7 @@ export function EfficiencyTargetKpis({
               label={t('effTarget.hitRate', 'Completed-week hit rate')}
               value={
                 summary.hitRate != null
-                  ? `${fmtNumber(summary.hitRate * 100, 0)}%`
+                  ? `${fmtNumber(summary.hitRate * 100)}%`
                   : '—'
               }
               subtitle={t(

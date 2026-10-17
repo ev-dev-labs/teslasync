@@ -65,7 +65,7 @@ function expectHasKeys(v: unknown, keys: readonly string[]): Record<string, unkn
 
 /**
  * A raw per-vehicle row exactly as a snake_case backend emits it — i.e. WITHOUT
- * the camelCase counters the `VehicleTelemetry` interface marks required. The
+ * the optional camelCase counters on the `VehicleTelemetry` interface. The
  * `as unknown as VehicleTelemetry` cast models that runtime reality (the whole
  * point of the normalizers is to survive it) without leaking `any`.
  */
@@ -113,13 +113,11 @@ describe('normalizeVehicleTelemetry', () => {
     expect(out.lastReceived).toBe('camel');
   });
 
-  it('defaults missing counts to 0 but leaves absent rate / last-seen undefined', () => {
+  it('keeps missing counts, rate and last-seen unknown instead of inventing zero', () => {
     const out = normalizeVehicleTelemetry(snakeVehicle({ vin: 'B', state: 'asleep' }));
 
-    // Counts are summable without a guard…
-    expect(out.signalCount).toBe(0);
-    expect(out.batchCount).toBe(0);
-    // …while genuinely-absent optionals stay undefined (distinct from a real 0).
+    expect(out.signalCount).toBeUndefined();
+    expect(out.batchCount).toBeUndefined();
     expect(out.signalsPerSecond).toBeUndefined();
     expect(out.lastReceived).toBeUndefined();
   });
@@ -154,11 +152,70 @@ describe('normalizeVehicleTelemetry', () => {
 /* ── telemetryVehicleList ───────────────────────────────────────────────── */
 
 describe('telemetryVehicleList', () => {
-  it('returns an empty array for null / undefined / vehicle-less status', () => {
-    expect(telemetryVehicleList(null)).toEqual([]);
-    expect(telemetryVehicleList(undefined)).toEqual([]);
-    expect(telemetryVehicleList({ connected: false })).toEqual([]);
+  it('keeps null / undefined / vehicle-less status unknown and explicit empty containers observed', () => {
+    expect(telemetryVehicleList(null)).toBeUndefined();
+    expect(telemetryVehicleList(undefined)).toBeUndefined();
+    expect(telemetryVehicleList({ connected: false })).toBeUndefined();
     expect(telemetryVehicleList({ connected: true, vehicles: {} })).toEqual([]);
+    expect(telemetryVehicleList({ connected: true, vehicles: [] })).toEqual([]);
+  });
+
+  describe('Q01 telemetry presence', () => {
+    it.each([
+      { shape: 'array', casing: 'camel' },
+      { shape: 'array', casing: 'snake' },
+      { shape: 'map', casing: 'camel' },
+      { shape: 'map', casing: 'snake' },
+    ] as const)('retains independent unknown counts and real zeros through the $shape / $casing bridge', ({ shape, casing }) => {
+      const rows = casing === 'camel'
+        ? [
+          { vin: 'ZERO', signalCount: 0, batchCount: 0, signalsPerSecond: 0 },
+          { vin: 'NO-SIGNALS', batchCount: 7, signalsPerSecond: 2 },
+          { vin: 'NO-BATCHES', signalCount: 9, signalsPerSecond: 3 },
+        ]
+        : [
+          { vin: 'ZERO', signal_count: 0, batch_count: 0, signals_per_second: 0 },
+          { vin: 'NO-SIGNALS', batch_count: 7, signals_per_second: 2 },
+          { vin: 'NO-BATCHES', signal_count: 9, signals_per_second: 3 },
+        ];
+      const vehicles = shape === 'array' ? rows
+        : Object.fromEntries(rows.map(row => [row.vin, { ...row, vin: 'NON-AUTHORITATIVE' }]));
+      const status = camelCaseKeys({ connected: false, vehicles }) as TelemetryStatus;
+      const list = telemetryVehicleList(status);
+
+      expect(list).toHaveLength(3);
+      expect(list?.[0]).toMatchObject({ vin: 'ZERO', signalCount: 0, batchCount: 0, signalsPerSecond: 0 });
+      expect(list?.[1]).toMatchObject({ vin: 'NO-SIGNALS', batchCount: 7, signalsPerSecond: 2 });
+      expect(list?.[1].signalCount).toBeUndefined();
+      expect(list?.[2]).toMatchObject({ vin: 'NO-BATCHES', signalCount: 9, signalsPerSecond: 3 });
+      expect(list?.[2].batchCount).toBeUndefined();
+    });
+
+    it('keeps nullish aliases unknown unless a non-nullish count supplies evidence', () => {
+      const out = normalizeVehicleTelemetry(snakeVehicle({
+        vin: 'NULLISH', signalCount: null, signal_count: null,
+        batchCount: null, batch_count: 0, state: 'online', latency_ms: 42,
+      }));
+      expect(out.signalCount).toBeUndefined();
+      expect(out.batchCount).toBe(0);
+      expect(out.signal_count).toBeNull();
+      expect(out.state).toBe('online');
+      expect(out.latency_ms).toBe(42);
+    });
+
+    it('preserves valid empty primary precedence and never uses legacy evidence to certify a malformed primary', () => {
+      const fallback = { FALLBACK: { vin: 'ignored', signalCount: 99 } };
+      for (const vehicles of [[], {}]) {
+        expect(telemetryVehicleList({ connected: true, vehicles, streaming_vehicles: fallback })).toEqual([]);
+      }
+      for (const vehicles of ['oops', 0, false]) {
+        expect(telemetryVehicleList({ connected: true, vehicles, streaming_vehicles: fallback } as unknown as TelemetryStatus)).toBeUndefined();
+      }
+      expect(telemetryVehicleList({ connected: true, vehicles: null, streaming_vehicles: fallback } as unknown as TelemetryStatus))
+        .toMatchObject([{ vin: 'FALLBACK', signalCount: 99 }]);
+      expect(telemetryVehicleList({ connected: false, streaming_vehicles: [] })).toEqual([]);
+      expect(telemetryVehicleList({ connected: false, streaming_vehicles: {} })).toEqual([]);
+    });
   });
 
   it('normalizes a Record<vin, …> map, using the map key as the authoritative VIN', () => {
@@ -172,10 +229,10 @@ describe('telemetryVehicleList', () => {
     const list = telemetryVehicleList(status);
 
     expect(list).toHaveLength(1);
-    expect(list[0].vin).toBe('5YJVIN');
-    expect(list[0].signalCount).toBe(10);
-    expect(list[0].batchCount).toBe(2);
-    expect(list[0].signalsPerSecond).toBe(3);
+    expect(list?.[0].vin).toBe('5YJVIN');
+    expect(list?.[0].signalCount).toBe(10);
+    expect(list?.[0].batchCount).toBe(2);
+    expect(list?.[0].signalsPerSecond).toBe(3);
   });
 
   it('normalizes an ARRAY of snake_case rows — the array-branch regression', () => {
@@ -190,9 +247,9 @@ describe('telemetryVehicleList', () => {
     const list = telemetryVehicleList(status);
 
     expect(list).toHaveLength(1);
-    expect(list[0].vin).toBe('A');
-    expect(list[0].signalCount).toBe(5);
-    expect(list[0].batchCount).toBe(1);
+    expect(list?.[0].vin).toBe('A');
+    expect(list?.[0].signalCount).toBe(5);
+    expect(list?.[0].batchCount).toBe(1);
   });
 
   it('falls back to streaming_vehicles when vehicles is absent', () => {
@@ -204,8 +261,8 @@ describe('telemetryVehicleList', () => {
     const list = telemetryVehicleList(status);
 
     expect(list).toHaveLength(1);
-    expect(list[0].vin).toBe('VIN2');
-    expect(list[0].signalCount).toBe(0);
+    expect(list?.[0].vin).toBe('VIN2');
+    expect(list?.[0].signalCount).toBeUndefined();
   });
 
   it('prefers vehicles over streaming_vehicles when both are present', () => {
@@ -218,12 +275,12 @@ describe('telemetryVehicleList', () => {
     const list = telemetryVehicleList(status);
 
     expect(list).toHaveLength(1);
-    expect(list[0].vin).toBe('PRIMARY');
+    expect(list?.[0].vin).toBe('PRIMARY');
   });
 
   it('tolerates a malformed non-object vehicles field without throwing', () => {
     const status = { connected: true, vehicles: 'oops' } as unknown as TelemetryStatus;
-    expect(telemetryVehicleList(status)).toEqual([]);
+    expect(telemetryVehicleList(status)).toBeUndefined();
   });
 });
 
@@ -289,11 +346,11 @@ describe('telemetry contract via the camelCaseKeys resilience bridge', () => {
 
     const list = telemetryVehicleList(status);
     expect(list).toHaveLength(1);
-    const v = expectHasKeys(list[0], ['vin', 'signalCount', 'batchCount']);
+    const v = expectHasKeys(list?.[0], ['vin', 'signalCount', 'batchCount']);
     expect(v.vin).toBe('5YJ3E1EA');
     expect(v.signalCount).toBe(1200);
     expect(v.batchCount).toBe(40);
-    expect((list[0] as VehicleTelemetry).signalsPerSecond).toBe(3.5);
+    expect(list?.[0].signalsPerSecond).toBe(3.5);
   });
 
   it('handles the array-shape payload through the same bridge', () => {
@@ -308,9 +365,9 @@ describe('telemetry contract via the camelCaseKeys resilience bridge', () => {
     const list = telemetryVehicleList(status);
 
     expect(list).toHaveLength(1);
-    expect(list[0].vin).toBe('A');
-    expect(list[0].signalCount).toBe(5);
-    expect(list[0].lastReceived).toBe('t');
+    expect(list?.[0].vin).toBe('A');
+    expect(list?.[0].signalCount).toBe(5);
+    expect(list?.[0].lastReceived).toBe('t');
   });
 });
 
@@ -351,13 +408,56 @@ describe('signal data-shape contracts', () => {
       from: '2025-01-15T11:00:00Z',
       to: '2025-01-15T12:00:00Z',
       count: 1,
-      data: [{ timestamp: '2025-01-15T11:30:00Z', value_num: 55 }],
+      data: [{
+        ts: '2025-01-15T11:30:00Z',
+        kind: 'ValueKindDouble',
+        value: 55,
+        ingest_origin: null,
+        source_emitted_at: null,
+        received_at: null,
+        normalization_version: null,
+      }],
     }) as SignalHistoryResponse;
 
     expectHasKeys(resp, ['vehicleId', 'signal', 'from', 'to', 'count', 'data']);
     expect(resp.vehicleId).toBe(2);
     expect(resp.data).toHaveLength(1);
-    expect(resp.data[0].valueNum).toBe(55);
+    expect(resp.data[0].ts).toBe('2025-01-15T11:30:00Z');
+    expect(resp.data[0].kind).toBe('ValueKindDouble');
+    expect(resp.data[0].value).toBe(55);
+    expect(resp.data[0].ingest_origin).toBeNull();
+    expect(resp.data[0].source_emitted_at).toBeNull();
+    expect(resp.data[0].received_at).toBeNull();
+    expect(resp.data[0].normalization_version).toBeNull();
+  });
+
+  it.each([
+    ['ValueKindDouble', 0],
+    ['ValueKindBoolean', false],
+    ['ValueKindString', 'unknown'],
+    ['ValueKindDouble', null],
+  ])('SignalHistoryResponse retains the %s typed value %s', (kind, value) => {
+    const resp = camelCaseKeys({
+      vehicle_id: 2,
+      signal: 'ExampleSignal',
+      from: '2025-01-15T11:00:00Z',
+      to: '2025-01-15T12:00:00Z',
+      count: 1,
+      data: [{
+        ts: '2025-01-15T11:30:00Z',
+        kind,
+        value,
+        ingest_origin: null,
+        source_emitted_at: null,
+        received_at: null,
+        normalization_version: null,
+      }],
+    }) as SignalHistoryResponse;
+
+    expect(resp.data[0].kind).toBe(kind);
+    expect(resp.data[0].value).toBe(value);
+    expect(resp.data[0]).not.toHaveProperty('valueNum');
+    expect(resp.data[0]).not.toHaveProperty('timestamp');
   });
 
   it('SignalEntry: the discriminant + already-camel fields pass through the bridge intact', () => {

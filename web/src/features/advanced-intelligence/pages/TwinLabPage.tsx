@@ -2,23 +2,27 @@ import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRunTwinLab } from '@/api/hooks/useAdvancedIntelligence';
 import {
-  Bar, BarChart, CartesianGrid, ChartContainer, CHART_COLORS,
+  axisTick, Bar, BarChart, chartGrid, ChartLegend, ChartTooltip, CHART_COLORS,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { ChartCard, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { TwinScenarioInput } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, TwinScenarioForm } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
+import { useDataState } from '@/hooks/useDataState';
 
 const createScenario = (index: number, name: string): TwinScenarioInput => ({
   name,
@@ -30,41 +34,80 @@ const createScenario = (index: number, name: string): TwinScenarioInput => ({
 });
 
 export default function TwinLabPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const mutation = useRunTwinLab();
+  const publication = useRetainedMutation(mutation, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const [scenarios, setScenarios] = useState<TwinScenarioInput[]>(() => [
     createScenario(0, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 1 })),
     createScenario(1, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 2 })),
   ]);
-  usePageTitle(t('advancedIntelligence.twin.title', 'Twin Lab'));
+  usePageTitle(t('advancedIntelligence.twin.title', 'Twin lab'));
 
   const updateScenario = (index: number, patch: Partial<TwinScenarioInput>) => {
     setScenarios((current) => current.map((scenario, itemIndex) =>
       itemIndex === index ? { ...scenario, ...patch } : scenario));
   };
 
+  const addScenario = () => {
+    setScenarios((current) => {
+      const names = new Set(current.map((scenario) => scenario.name));
+      let number = current.length + 1;
+      let name = t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number });
+      while (names.has(name)) {
+        number += 1;
+        name = t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number });
+      }
+      return [...current, createScenario(current.length, name)];
+    });
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId == null) return;
+    if (vehicleId == null || publication.pending) return;
     mutation.mutate({ vehicle_id: vehicleId, scenarios, confirmed: true });
   };
 
-  const result = mutation.data;
+  const result = publication.result;
+  const sourceState = useDataState(publication.source, { provenance: 'inferred' });
+  const paused = publication.source.fetchStatus === 'paused';
+  const summaryMetrics: readonly StatMetric[] = [
+    { occurrenceId: 'model', metricId: 'text', rawValue: result?.model_name,
+      label: t('advancedIntelligence.twin.baseline.model', 'Model'),
+      description: t('advancedIntelligence.twin.brief.model', 'Source-provided model name from this simulation result.') },
+    { occurrenceId: 'efficiency', metricId: 'efficiency', rawValue: result?.baseline.efficiency_wh_per_m,
+      label: t('advancedIntelligence.twin.baseline.efficiency', 'Efficiency'),
+      description: t('advancedIntelligence.twin.brief.efficiency', 'Calibrated energy intensity in preferred energy-per-distance units; missing calibration is not zero consumption.'),
+      display: { formatter: (raw, preferences) => ({
+        value: formatEfficiencyFromSI(raw, preferences.units), unit: '',
+      }) } },
+    { occurrenceId: 'usable-battery', metricId: 'energy', rawValue: result?.baseline.usable_battery_wh,
+      label: t('advancedIntelligence.twin.baseline.capacity', 'Usable battery'),
+      description: t('advancedIntelligence.twin.brief.capacity', 'Returned usable battery estimate for the calibrated baseline.') },
+    { occurrenceId: 'calibration-samples', metricId: 'count', rawValue: result?.baseline.calibration_sample_count,
+      label: t('advancedIntelligence.twin.baseline.samples', 'Calibration samples'),
+      description: t('advancedIntelligence.twin.brief.samples', 'Calibration sample count for this model, not scenario count or confidence.') },
+  ];
   const chartData = useMemo(() => (result?.scenarios ?? []).map((scenario) => ({
     name: scenario.name,
-    low: scenario.range_low_m == null
+    low: scenario.range_low_m == null || !Number.isFinite(scenario.range_low_m)
       ? null : convertDistanceFromSI(scenario.range_low_m, units.unitPrefs.distance),
-    estimate: scenario.range_delta_m == null
+    estimate: scenario.range_delta_m == null || !Number.isFinite(scenario.range_delta_m)
       ? null : convertDistanceFromSI(scenario.range_delta_m, units.unitPrefs.distance),
-    high: scenario.range_high_m == null
+    high: scenario.range_high_m == null || !Number.isFinite(scenario.range_high_m)
       ? null : convertDistanceFromSI(scenario.range_high_m, units.unitPrefs.distance),
   })), [result, units.unitPrefs.distance]);
+  const supportedScenarioCount = chartData.filter((scenario) =>
+    [scenario.low, scenario.estimate, scenario.high].some((value) =>
+      value != null && Number.isFinite(value))).length;
 
   return (
-    <PageContainer
-      title={t('advancedIntelligence.twin.title', 'Twin Lab')}
+    <PageLayout
+      title={t('advancedIntelligence.twin.title', 'Twin lab')}
       subtitle={t(
         'advancedIntelligence.twin.subtitle',
         'Compare calibrated, vehicle-specific counterfactuals with explicit uncertainty.',
@@ -90,60 +133,46 @@ export default function TwinLabPage() {
         >
           <TwinScenarioForm
             scenarios={scenarios}
-            pending={mutation.isPending}
+            pending={publication.pending}
             disabled={vehicleId == null}
             onUpdate={updateScenario}
             onRemove={(index) => setScenarios((current) => current.filter((_, i) => i !== index))}
-            onAdd={() => setScenarios((current) => [
-              ...current,
-              createScenario(
-                current.length,
-                t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', {
-                  number: current.length + 1,
-                }),
-              ),
-            ])}
+            onAdd={addScenario}
             onSubmit={submit}
           />
-          <MutationError error={mutation.error} />
+          <MutationError error={publication.error} />
         </InsightPanel>
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <InsightPanel
+        <AnalysisBrief
+          id="advanced-intelligence-twin-brief"
           title={t('advancedIntelligence.twin.baseline.title', 'Calibrated baseline')}
-          empty={!result}
+          description={t('advancedIntelligence.twin.brief.description', 'Vehicle-specific calibration returned by the simulation, with source measurements and uncertainty kept separate from real-world guarantees.')}
+          metrics={summaryMetrics}
+          vehicleId={result?.vehicle_id ?? vehicleId}
+          hasResult={result != null}
+          pending={publication.pending}
+          error={publication.error}
+          query={publication.source}
+          quality={result?.data_quality}
+          evidence={result?.evidence}
+          limitations={result?.limitations}
+          generatedAt={result?.generated_at}
+          provenance={t('advancedIntelligence.twin.brief.source', 'Calibrated twin simulation')}
           emptyMessage={t(
             'advancedIntelligence.twin.baseline.empty',
             'Run scenarios to view the calibrated baseline.',
           )}
-        >
-          <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.model', 'Model')}
-              value={result?.model_name ?? null}
-            />
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.efficiency', 'Efficiency')}
-              value={result
-                ? formatEfficiencyFromSI(result.baseline.efficiency_wh_per_m, units.unitPrefs)
-                : null}
-            />
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.capacity', 'Usable battery')}
-              value={units.formatEnergy(result?.baseline.usable_battery_wh)}
-            />
-            <StatCard
-              label={t('advancedIntelligence.twin.baseline.samples', 'Calibration samples')}
-              value={result ? fmtNumber(result.baseline.calibration_sample_count, 0) : null}
-            />
-          </Grid>
-        </InsightPanel>
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>
         {/* chart-legend-audit:skip uncertainty bounds and estimate form one modeled interval and must remain visible together */}
-        <ChartContainer
+        <ChartCard
+          size="standard"
+          toolbar
+          exportable
           title={t('advancedIntelligence.twin.uncertainty.title', 'Range-effect uncertainty comparison')}
           subtitle={t(
             'advancedIntelligence.twin.uncertainty.subtitle',
@@ -153,51 +182,73 @@ export default function TwinLabPage() {
             'advancedIntelligence.twin.uncertainty.aria',
             'Comparison of modeled range uncertainty across twin scenarios',
           )}
-          empty={chartData.length < 2}
+          empty={supportedScenarioCount < 2}
+          loading={publication.pending && !result && !paused}
+          error={sourceState.fatalError}
+          emptyMessage={paused && !result
+            ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
+            : t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')}
+          metadata={{
+            sourceLabel: t('advancedIntelligence.twin.brief.source', 'Calibrated twin simulation'),
+            unitLabel: units.unitPrefs.distance,
+            freshness: sourceState.status === 'stale' ? 'stale' : 'unknown',
+            freshnessLabel: sourceState.status === 'stale'
+              ? t('advancedIntelligence.brief.retained', 'Retained result') : undefined,
+          }}
           data={chartData}
           dataColumns={[
             { key: 'name', label: t('advancedIntelligence.twin.form.name', 'Scenario name') },
-            { key: 'low', label: t('advancedIntelligence.twin.uncertainty.low', 'Low') },
-            { key: 'estimate', label: t('advancedIntelligence.twin.uncertainty.estimate', 'Estimate') },
-            { key: 'high', label: t('advancedIntelligence.twin.uncertainty.high', 'High') },
+            { key: 'low', label: t('advancedIntelligence.twin.uncertainty.low', 'Low'), kind: 'measurement' },
+            { key: 'estimate', label: t('advancedIntelligence.twin.uncertainty.estimate', 'Estimate'), kind: 'measurement' },
+            { key: 'high', label: t('advancedIntelligence.twin.uncertainty.high', 'High'), kind: 'measurement' },
           ]}
         >
-          {chartData.length >= 2 ? (
-            <ResponsiveContainer width="100%" height={300}>
+          {supportedScenarioCount >= 2 ? (
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis unit={` ${units.unitPrefs.distance}`} />
-                <Tooltip />
-                <Bar dataKey="low" fill={CHART_COLORS[2]} />
-                <Bar dataKey="estimate" fill={CHART_COLORS[0]} />
-                <Bar dataKey="high" fill={CHART_COLORS[1]} />
+                {chartGrid}
+                <XAxis dataKey="name" tick={axisTick} />
+                <YAxis tick={axisTick} tickFormatter={(value: number) => fmtNumber(value)} unit={` ${units.unitPrefs.distance}`} />
+                <Tooltip content={<ChartTooltip />} />
+                <ChartLegend />
+                <Bar dataKey="low" name={t('advancedIntelligence.twin.uncertainty.low', 'Low')} unit={units.unitPrefs.distance} fill={CHART_COLORS[2]} />
+                <Bar dataKey="estimate" name={t('advancedIntelligence.twin.uncertainty.estimate', 'Estimate')} unit={units.unitPrefs.distance} fill={CHART_COLORS[0]} />
+                <Bar dataKey="high" name={t('advancedIntelligence.twin.uncertainty.high', 'High')} unit={units.unitPrefs.distance} fill={CHART_COLORS[1]} />
               </BarChart>
             </ResponsiveContainer>
           ) : <EmptyState /* no-action: the scenario add/remove controls above this chart are the trigger surface; uncertainty bars appear once at least two scenarios have supported results. */ message={t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')} />}
-        </ChartContainer>
+        </ChartCard>
       </FadeIn>
 
       <FadeIn delay={0.15}>
         <InsightPanel
           title={t('advancedIntelligence.twin.sensitivity.title', 'Sensitivity drivers')}
-          empty={!result || result.scenarios.length === 0}
+          query={result || publication.pending || publication.error
+            ? { ...publication.source, isLoading: publication.source.isLoading && !paused }
+            : undefined}
+          empty={!result || (result.scenarios ?? []).length === 0}
           emptyMessage={t(
             'advancedIntelligence.twin.sensitivity.empty',
             'Sensitivity drivers appear after a supported simulation.',
           )}
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            {(result?.scenarios ?? []).map((scenario) => (
-              <div key={scenario.name} className="rounded-lg border border-white/[0.07] p-4">
-                <Text as="h3" variant="label">{scenario.name}</Text>
-                {(scenario.sensitivity_drivers ?? []).map((driver) => (
-                  <div key={driver.driver} className="mt-2 flex justify-between gap-3 text-sm">
-                    <span className="text-[var(--text-muted)]">{driver.driver}</span>
-                    <span>{fmtNumber(driver.effect_pct, 1)}%</span>
+          <div className="grid min-w-0 gap-4 @2xl:grid-cols-2">
+            {(result?.scenarios ?? []).map((scenario, scenarioIndex) => (
+              <article key={scenarioIndex} className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+                <Text as="h3" variant="label" className="break-words">{scenario.name}</Text>
+                {(scenario.sensitivity_drivers ?? []).map((driver, driverIndex) => (
+                  <div key={driverIndex} className="mt-2 flex min-w-0 flex-wrap justify-between gap-x-3 gap-y-1">
+                    <Text as="span" variant="bodySm" color="secondary" className="min-w-0 break-words">{driver.driver}</Text>
+                    <Text as="span" variant="bodySm" className="tabular-nums">
+                      {driver.effect_pct == null || !Number.isFinite(driver.effect_pct) ? '—' : `${fmtNumber(driver.effect_pct)}%`}
+                    </Text>
                   </div>
                 ))}
-              </div>
+                {!(scenario.sensitivity_drivers ?? []).some((driver) =>
+                  driver.effect_pct != null && Number.isFinite(driver.effect_pct)) && <Text as="p" variant="bodySm" color="secondary" className="mt-2">
+                  {t('advancedIntelligence.panel.empty', 'No supported data is available.')}
+                </Text>}
+              </article>
             ))}
           </div>
         </InsightPanel>
@@ -214,6 +265,6 @@ export default function TwinLabPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

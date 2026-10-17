@@ -1,0 +1,1363 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicle-systems-cabin-thermal",
+  "attempt": 1,
+  "status": "source-QA-complete-with-findings; native acceptance NOTRUN",
+  "page": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+  "routes": [
+    "/cabin-thermal"
+  ],
+  "routeEvidence": [
+    "web/src/App.tsx:90 lazy page import",
+    "web/src/App.tsx:863 SafeRoute declaration"
+  ],
+  "purpose": "Audit returned climate evidence, normalization, segmentation, first-failure gates and accepted direction-specific Newton-cooling fits; distinguish worked scenarios from observations/forecasts.",
+  "primaryGoal": "Understand whether a thermal time constant is supported and inspect all exclusions/rejections without overstating source completeness.",
+  "scope": {
+    "mode": "READONLY source/support/test inspection",
+    "writableOnly": [
+      "docs/frontend-audits/phase6-qa-vehicle-systems-cabin-thermal.json",
+      "web/logs/phase6-qa-vehicle-systems-cabin-thermal.log"
+    ],
+    "queueLine": 57,
+    "queueRow": "[~] | phase6-qa-vehicle-systems-cabin-thermal | read-only-finished-page-QA | attempt1 | reserved01:24:50.678Z | depends on phase5-page-vehicle-systems-cabin-thermal; Accepted657281301 source only",
+    "inspectionStartedAt": "2026-10-14T01:27:48.4387708Z",
+    "returnBy": "2026-10-14T01:44:50.678Z",
+    "hardStop": "2026-10-14T01:49:50.678Z",
+    "parent5173": "untouched; not contacted",
+    "nativeAcceptance": false,
+    "sourceTestCatalogGitWrites": false
+  },
+  "counts": {
+    "confirmedMechanisms": 4,
+    "conditionalCandidates": 2,
+    "nativeCandidates": 3,
+    "deduplicatedNeeds": 4,
+    "persistentSections": 14,
+    "chartSections": 5,
+    "authoredTestDeclarations": {
+      "pagePlain": 9,
+      "modelPlain": 30,
+      "modelParameterizedTables": 1,
+      "modelLiteralParameterizedRows": 8,
+      "preservationCjsPlain": 11
+    },
+    "testsDiscovered": null,
+    "testsExecuted": 0,
+    "testsPassed": null,
+    "testsFailed": null,
+    "testsSkipped": null,
+    "byRule": {
+      "workspace-range-bounds": 1,
+      "saved-timestamp-preferences": 1,
+      "saved-numeric-locale": 1,
+      "unresolved-populations-as-zero": 1
+    },
+    "countingBasis": "One confirmed root mechanism per finding, not one count per occurrence or conditional/native candidate. Authored declarations are not executed tests."
+  },
+  "findings": [
+    {
+      "id": "CT-01",
+      "rule": "workspace-range-bounds",
+      "contract": "MDC-032",
+      "priority": "P1",
+      "owner": "integration",
+      "confidence": "confirmed source mechanism",
+      "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+      "line": 46,
+      "mechanism": "The page consumes selected vehicle but no useRangeState, and calls useClimateHistory(vehicleIdStr) with no start/end. The existing climateHistory key and URL contain vehicle only. /cabin-thermal is absent from RANGE_ENABLED_PATHS, so the shared header/mobile date range is disabled rather than controlling this dated analysis. Neither bound is consumed; there is no local selector competing with the header.",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useVehicleSystems.ts",
+          "lines": [
+            14,
+            37,
+            40
+          ]
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "lines": [
+            23,
+            77,
+            156,
+            165
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSourceCoverage.tsx",
+          "line": 39
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalMethodology.tsx",
+          "line": 32
+        }
+      ],
+      "repro": {
+        "kind": "source-derived, NOT executed",
+        "steps": [
+          "Open /cabin-thermal?vehicle_id=7&from=<valid-start>&to=<valid-end>.",
+          "Change both URL bounds or navigate from a workspace-range-owning route.",
+          "The page still supplies only '7'; query identity and /climate?vehicle_id=7 have neither bound, and route scope.range is false."
+        ]
+      },
+      "fix": "Reuse existing useRangeState and header/mobile ownership. Integration owner extends existing typed history hook/key with both instants, registers the actual route, verifies both server-side bounds, then page forwards both. Preserve unscoped existing callers, signal cancellation, enablement, safeArray, all gates and source-local states; truthfully update default-seven-day captions. No loaded-row-only filtering or second date picker.",
+      "dedup": "Existing audit-page-217 and inventory G220 already describe this objective. Exact queue scan found historical audit/source/current QA rows, not a separate named current Cabin Thermal bounds repair. Reuse G220 objective; no queue/catalog/backend writes here. Historical backend accepts-bounds claims were not independently checked."
+    },
+    {
+      "id": "CT-02",
+      "rule": "saved-timestamp-preferences",
+      "contract": "MDC-044/045",
+      "priority": "P1",
+      "owner": "page/direct presentations",
+      "confidence": "confirmed source mechanism",
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateRow.tsx",
+      "line": 58,
+      "mechanism": "Four timestamp calls pass only locale derived from i18n.language. formatDateTime uses browser timezone unless opts.tz is supplied, and locale-specific formatting with fixed date/time fields. These calls do not consume settings.locale, tz_display_default or the resolved vehicle/user/UTC zone. The already-existing useDateFormat hook resolves saved locale and timezone; no shared API extension is needed.",
+      "occurrences": [
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSourceCoverage.tsx",
+          "lines": [
+            49,
+            50
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateRow.tsx",
+          "line": 58
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptedDirectory.tsx",
+          "line": 63
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+          "line": 62
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "lines": [
+            30,
+            37,
+            54,
+            58
+          ]
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "lines": [
+            73,
+            83,
+            85,
+            92
+          ]
+        },
+        {
+          "file": "web/src/hooks/useSettings.ts",
+          "lines": [
+            47,
+            48,
+            49,
+            53
+          ]
+        }
+      ],
+      "repro": {
+        "kind": "source-derived, NOT executed",
+        "steps": [
+          "Use UI language en and save locale de-DE with tz_display_default=utc; browser zone America/Los_Angeles.",
+          "Provide an accepted/candidate start at 2026-08-08T00:30:00Z.",
+          "The current calls format using UI-language conventions and browser-zone prior day, not saved UTC/saved locale."
+        ]
+      },
+      "fix": "Adopt existing useDateFormat or bound formatter props for all four calls. Keep precise source instants, full timestamp content and explicit absolute evidence-date semantics; disclose effective zone where interpretation depends on it. Review saved relative/absolute and locale-derived 12/24-hour policy with existing owner rather than inventing a new formatter.",
+      "limits": "Actual preference changes and browser timezone output NOTRUN. A separate explicit 12/24-hour setting was not established from inspected sources; no invented setting or claim that absolute evidence dates must become relative."
+    },
+    {
+      "id": "CT-03",
+      "rule": "saved-numeric-locale",
+      "contract": "MDC-044/045",
+      "priority": "P2",
+      "owner": "page/direct presentations",
+      "confidence": "confirmed source mechanism",
+      "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+      "line": 62,
+      "mechanism": "The page threads i18n.language as numeric locale to formatTemperatureDelta and explicit fmtScientificNumber overrides. Those explicit overrides bypass the saved numeric locale used by useNumberFormatting/useUnits. Thus saved number conventions differ between deltas/slopes and adjacent counts/absolute temperatures. Precision is NOT lost: the delta helper reads getGlobalPrecision and scientific formatting retains a minimum diagnostic precision.",
+      "occurrences": [
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/labels.ts",
+          "lines": [
+            104,
+            113
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateRow.tsx",
+          "lines": [
+            87,
+            97
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalThresholdMatrix.tsx",
+          "lines": [
+            78,
+            86,
+            104
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalDirectionProfile.tsx",
+          "line": 99
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "lines": [
+            28,
+            29,
+            32,
+            42
+          ]
+        },
+        {
+          "file": "web/src/hooks/useUnits.ts",
+          "lines": [
+            125,
+            126
+          ]
+        },
+        {
+          "file": "web/src/lib/numberFormat.ts",
+          "lines": [
+            91,
+            93,
+            119,
+            121
+          ]
+        }
+      ],
+      "repro": {
+        "kind": "source-derived, NOT executed",
+        "steps": [
+          "Keep UI language en, save locale de-DE and decimal_precision=2.",
+          "Inspect a signed -1.25 Celsius initial gap or a fractional fitted slope.",
+          "Explicit English locale prints decimal point in the affected delta/slope while saved-locale counts/temperatures use German number conventions."
+        ]
+      },
+      "fix": "Use the existing reactive formatting locale (or unitPrefs.locale for physical displays); do not use translation language as number locale. Reuse the existing SI delta formatter if consolidating the local duplicate. Keep Fahrenheit difference scale without absolute offset, signed values and diagnostic minimum precision."
+    },
+    {
+      "id": "CT-04",
+      "rule": "unresolved-populations-as-zero",
+      "contract": "MDC-026/033",
+      "priority": "P1",
+      "owner": "page/direct presentations",
+      "confidence": "confirmed source mechanism",
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateDirectory.tsx",
+      "line": 47,
+      "mechanism": "Before history resolves the page intentionally analyzes [] to build safe shells. Four population-specific rendered copies read that zero summary outside a resolved-state gate: directory cap, accepted cap, methodology numeric notice, and normalized-row metric description. Therefore initial-paused/loading/fatal/no-vehicle states can assert zero populations although no response established zero. Main KPI raw values correctly remain null and SectionBody correctly keeps passive unresolved states; these good gates do not gate the captions/metric descriptions.",
+      "occurrences": [
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateDirectory.tsx",
+          "lines": [
+            47,
+            49,
+            50,
+            51
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptedDirectory.tsx",
+          "lines": [
+            54,
+            55
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalMethodology.tsx",
+          "lines": [
+            105,
+            107,
+            108
+          ]
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalEvidenceStats.tsx",
+          "lines": [
+            38,
+            39,
+            67
+          ]
+        }
+      ],
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+          "line": 49
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/sourceState.ts",
+          "lines": [
+            13,
+            14,
+            15
+          ]
+        },
+        {
+          "file": "web/src/lib/operationalMetrics.tsx",
+          "lines": [
+            14,
+            45,
+            47
+          ]
+        },
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 205
+        }
+      ],
+      "repro": {
+        "kind": "source-derived, NOT executed",
+        "steps": [
+          "Selected vehicle7; data undefined; isSuccess false; isLoading false; isPending true; fetchStatus paused.",
+          "SourceState is unresolved/paused and ledger raw values are null, but summary([]) has count zero.",
+          "Directory displays Showing0 of0 candidates; accepted directory shows0; methodology notice interpolates0 returned rows/0 windows; normalized description says0 rows excluded. Pause status itself says no empty response is inferred.",
+          "Contrast with successful data=[]: zero count populations are legitimate and must remain visible."
+        ]
+      },
+      "fix": "Keep all shells/methodology text and actions. Gate only population-dependent copy on vehicleSelected && isResolved && !error; use truthful unresolved text before resolution. Thread trust to methodology or separate its static explanation from numeric notice. Gate the metric description as well as raw/context values. Retained successful empty/nonempty evidence continues using real counts on failure/paused refresh."
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "CT-C01",
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalPreservation.test.cjs",
+      "lines": [
+        203,
+        206,
+        270,
+        299,
+        308,
+        313,
+        322
+      ],
+      "rule": "stale-preservation-harness",
+      "detail": "The fake page mocks PageContainer/Grid but not today's category-barrel PageLayout; mobile mocks CardGrid only in layout-reference while current grid imports layout; stat presenter expects a panel/StatStrip tree and string raw counts, while current presenter uses VehicleOperationalBrief with numeric rawValue. The last test expressly forbids introducing date bounds, which now conflicts with the repair objective. Baseline environment/source originals are required. Structural divergence is observed, but no runtime test failure/exit is inferred.",
+      "need": "After source fixes, update this existing harness narrowly against preserved originals and retain all parity objectives. No test execution or baseline rewriting here."
+    },
+    {
+      "id": "CT-C02",
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/index.ts",
+      "line": 8,
+      "rule": "dormant-competing-implementation",
+      "detail": "Old six-colored-MetricCard CabinThermalEvidenceKpiBand remains barrel-exported; mounted page imports modernization EvidenceStats only. No double-render demonstrated. Historical inventory already records this competitor. No deletion authorized; caller-closure proof required before retirement."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "CT-N01",
+      "files": [
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalRejectionReasons.tsx:64-67",
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptanceFunnel.tsx:64-67",
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalDirectionProfile.tsx:61",
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalThresholdMatrix.tsx:137"
+      ],
+      "detail": "150px category axes, 18px chart left margin, 10px labels and fixed three/two-column diagnostic grids need narrow allocation, translation and200% text review. Source declarations are not proof of clipping/overflow.",
+      "acceptance": "NOTRUN ten mission widths plus narrow allocated cards"
+    },
+    {
+      "id": "CT-N02",
+      "files": [
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateDirectory.tsx:57",
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptedDirectory.tsx:59",
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalQueryStatus.tsx:83",
+        "web/src/components/data-display/OperationalBrief.tsx:166-173"
+      ],
+      "detail": "Verify keyboard-contained directory scrolling, mobile Retry hit target, chart toolbar/review drawer focus/Escape/restore and export/table alternatives. Retry uses size sm without local min-h-11; no computed native size or WCAG failure asserted.",
+      "acceptance": "NOTRUN keyboard/screen reader/touch/native"
+    },
+    {
+      "id": "CT-N03",
+      "files": [
+        "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalPredictionScenario.tsx:131-138",
+        "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx:66-177"
+      ],
+      "detail": "Chart tokens and FadeIn declarations require real saved palettes, light/dark/custom/forced-colors contrast, reduced-motion/low-bandwidth, RTL and localized axis/tooltip review. Recharts tick objects are API props, not static-inline-style violations.",
+      "acceptance": "NOTRUN visual/contrast/motion/native"
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "id": "CT-NEED01",
+      "finding": "CT-01",
+      "name": "G220 climate-history exact workspace bounds integration",
+      "owners": [
+        "web/src/api/hooks/useVehicleSystems.ts",
+        "web/src/lib/workspaceScope.ts",
+        "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx"
+      ],
+      "contract": "Typed optional start/end; vehicle+both bounds in key; AbortSignal; backward-compatible unscoped callers; actual route/header/mobile registration; server full-result bounds proof; truthful captions",
+      "dedup": "Already proposed by audit-page-217/inventory G220. Do not create competing endpoint/range selector or duplicate inventory need. Parent queues exact exclusive fix if not already claimed.",
+      "dependsOn": [
+        "existing useRangeState",
+        "authorized backend exact-bounds inspection/acceptance"
+      ]
+    },
+    {
+      "id": "CT-NEED02",
+      "finding": "CT-02",
+      "name": "Adopt existing saved date formatting",
+      "owners": [
+        "three timestamp presentation files"
+      ],
+      "existingOwner": "web/src/hooks/useDateFormat.ts",
+      "contract": "Saved locale and resolved timezone; preserve source timestamps, absolute evidence semantics and missing-state display",
+      "dedup": "No new shared formatter/capability. Prior completed date preference fixes on other features do not cover these four calls."
+    },
+    {
+      "id": "CT-NEED03",
+      "finding": "CT-03",
+      "name": "Adopt saved reactive numeric locale",
+      "owners": [
+        "CabinThermalPage.tsx",
+        "cabin-thermal/labels.ts and numeric consumers"
+      ],
+      "existingOwner": "web/src/hooks/useNumberFormatting.ts; web/src/lib/unitConversion.ts",
+      "contract": "Saved numeric locale, precision, signed SI differences/slopes; optional reuse existing shared delta formatter",
+      "dedup": "No new formatter/store or catalog expansion."
+    },
+    {
+      "id": "CT-NEED04",
+      "finding": "CT-04",
+      "name": "Truthful unresolved population captions",
+      "owners": [
+        "candidate/accepted directories",
+        "methodology",
+        "CabinThermalEvidenceStats"
+      ],
+      "existingOwner": "sourceState/SectionBody and existing unresolved i18n copy",
+      "contract": "No synthetic count zero before a successful source; preserve authoritative zero and retained empty data; keep all sections/actions",
+      "dedup": "One trust-copy mechanism across four render statements, not four unrelated campaigns. Any genuinely new copy needs canonical catalog integration by parent; no keys authored here."
+    }
+  ],
+  "preservation": {
+    "pageLineCount": 198,
+    "sectionNames": [
+      "Evidence ledger",
+      "Source coverage",
+      "Segmentation diagnostics",
+      "Candidate disposition",
+      "Final rejection reasons",
+      "Acceptance funnel",
+      "Threshold and gate matrix",
+      "Candidate-window directory",
+      "Accepted-fit quality",
+      "Cooling versus warming profile",
+      "Accepted-event directory",
+      "Accepted-fit worked scenario",
+      "Data and accounting matrix",
+      "Methodology and limitations"
+    ],
+    "sectionEvidence": "Unconditional CardGridItem declarations CabinThermalPage.tsx65-178; passive gates change section bodies rather than remove shells. PageLayout wraps actual PageContainer; page passes query metadata without whole-page loading/error/empty gates.",
+    "actions": [
+      "one actionable climate retry owner across fatal/refresh/paused",
+      "shared header selected vehicle",
+      "shared operational evidence Review details drawers",
+      "five chart toolbar/export/table capabilities declared",
+      "prediction series visibility via hiddenSeries; other shared chart actions delegated"
+    ],
+    "independentControls": "No page-local vehicle/range picker, form scenario inputs, new API/device mutations or local scope bypass. Worked scenario constants are explicitly modeled assumptions, not workspace controls or observed future weather.",
+    "siAndSigns": "Raw climate temperatures remain Celsius in hook and analysis. Domain minutes convert to seconds for duration formatting; prediction uses convertDurationFromSI/convertTempFromSI only at chart boundary. Delta conversion subtracts converted zero to avoid Fahrenheit offset. Cooling/warming signs stay separate; slope may be positive and diagnostic tau negative. CandidateRow.tsx103-106 uses shared unitConversion.formatDuration473-482 which preserves finite negative values. No sign-loss finding.",
+    "missingVsZero": "Normalization rejects missing/nonfinite timestamps/temperatures, accepts measured0 and valid negative Celsius. Unknown HVAC stays out of candidates; only explicit off can participate. Ledger raw null before resolution; resolved empty counts0 with tau null. CT-04 identifies the remaining caption exception.",
+    "thermalModelVsObserved": "Observed/source coverage uses returned normalized rows; first-failure accounting separates rows/candidates/accepted fits. Prediction scenario is accepted-direction-only, cooling45/22/25C or warming5/22/19C, explicit horizon assumptions and not future weather. Methodology discloses ambient proxy, forward-filled non-independent observations and omitted sun/wind/occupancy/sensor/HVAC influences.",
+    "caps": "Candidate directory newest50 with exact omission count; accepted directory newest20 with omission disclosure. Full model/accounting/chart data retains all rows/candidates/events; no claim capped directories are full results.",
+    "preferences": "Unit and numeric precision owners remain useUnits/useNumberFormatting. CT-02/03 identify explicit date/number locale bypasses. No settings writes/reset or legacy converter adoption.",
+    "originalTests": "All original tests read-only; six source/test files reviewed, no runner execution or baseline regeneration. CJS preservation is source-only and candidate stale, not an accepted test receipt."
+  },
+  "states": {
+    "noVehicle": "Query disabled with empty vehicle string; samples cleared and all shells remain; passive select-vehicle messages and unknown KPI raw values.",
+    "initialLoading": "Source-shaped section skeletons and one live query status; no retry until error; false-count captions separately CT-04.",
+    "initialFailure": "Fatal error only with no retained payload; one QueryError/onRetry; all specialist shells remain.",
+    "initialPausedNoData": "deriveDataState sets isRefreshBlocked without fatalError; sourceState isPaused=true/isResolved=false/isLoading=false; QueryStatus returns VehicleSourcePause and explicitly no empty response inferred; sections pending, raw ledger null. Source pause exists, not a missing-pause violation; false-count captions CT-04.",
+    "successfulEmpty": "data=[] is retained authoritative payload; known population counts0, tau missing, no normalized/candidate/accepted content claim.",
+    "retainedRefreshError": "Usable payload (including[]) retained; one warning/retry; graphs/inference from last successful evidence stay visible.",
+    "retainedPaused": "Usable payload preserved with retained pause warning/retry; no invented server error.",
+    "staleAndRefreshing": "Query metadata forwarded to PageContainer/DataFreshnessAuto; sourceState does not itself expose age/refreshing. No backend freshness/age acceptance inferred.",
+    "invalidOrNoFits": "All-excluded/no-candidate/all-rejected passive explanations; ordered gates, rejection reason counts and methodology remain distinct; tau/projections withheld."
+  },
+  "architecture": {
+    "owners": "Typed TanStack hook -> pure deterministic cabinThermal domain -> source trust adapter -> shared numeric OperationalBrief/presentation components -> PageLayout/CardGrid -> existing shell.",
+    "sharedBoundaries": "Category barrels for layout/charts/ui/motion; concrete shared internal imports accepted. PageLayout -> PageContainer confirmed. Recharts tick/margin objects and dynamic series visibility are not static inline-style violations.",
+    "scan": "Native Select-String on28 scoped feature/page/lib/hook source files executed; raw outputs/log retained. Static style/direct imports/old API/double prefix/hidden JSX/fetch-useEffect scans matched0. Raw HTML and camelCase scans rerun CaseSensitive matched0. Hardcoded JSX scan9 candidates were TypeScript request generic lines, not visible English; prop scan0. Manual fallback strings use t(). This is bounded source checking, not lint/catalog/type/runtime acceptance.",
+    "backendRules": "sql-interpolation/fmt-println/bare-panic/missing-context NOTAPPLICABLE: no internal Go file audited, no backend acceptance."
+  },
+  "responsive": {
+    "declarations": "w-full/min-w-0 and shared CardGrid placement; wrapped list headers; column reflow; contained vertical directories and ResponsiveContainer charts. No rendered viewport measurement.",
+    "widthsNotRun": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ]
+  },
+  "accessibility": {
+    "declarations": "Shared page heading/route focus target, semantic section/list labels, localized chart aria labels, explicit status/retry, text labels alongside status hues, existing shared review drawers and chart alternatives. No screen-reader/keyboard/contrast/native acceptance.",
+    "unverified": "Open drawers/toolbars, contained scrolling, hit targets, focus return, reduced motion, forced colors and long translated/scaled data."
+  },
+  "visualIssues": [],
+  "architectureIssues": [
+    "CT-01"
+  ],
+  "duplicatedPatterns": [
+    "Local temperature-delta helper overlaps existing shared SI delta formatter; do not change math/preferences while consolidating."
+  ],
+  "competingImplementations": [
+    "CT-C02"
+  ],
+  "priority": "P1 trust and workspace/timestamp semantics; P2 consistent numeric locale; native acceptance deferred",
+  "evidenceLimits": [
+    "Source QA only, no mounted-page acceptance.",
+    "No tests (focused/full), lint, build, global TSC, installs, browser, API, device/thermal action, servers, Git or helper tools.",
+    "No backend route/filter/unit/completeness/auth proof; historical backend citations were not rerun.",
+    "No performance timing, composed contrast, mobile overflow or accessibility acceptance.",
+    "Root orchestrator fully read. Design contract core1-654 and relevant mission/inventory/handoff/instructions read; unrelated additive contract sections and whole large inventory/handoff not asserted fully read.",
+    "Initial page discovery view preceded baseline hash; baseline then detailed source audit and before/after verification. Hash equality proves pinned byte stability only, not runtime behavior.",
+    "Oversized tool displays and parser/silent/path inspection failures are honestly logged; raw outputs preserved. No failure hidden or promoted to pass."
+  ],
+  "instructionsRead": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "ranges": "1-EOF fully"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "ranges": "1-654 core; headings beyond core for applicability only"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "ranges": "1-1593 fully"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "ranges": "3-23; exact CabinThermal entry268; G220575 and competitor1409 excerpts"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "ranges": "1-47,2186-2250"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "ranges": "1-708"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "file": "docs/MOBILE_GUIDELINES.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "file": "migration-queue.md",
+      "ranges": "exact row57; column-filtered dedup references, no queue write"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-217.json",
+      "ranges": "requiredSharedChanges/architectureIssues parsed for dedup only"
+    }
+  ],
+  "filesRead": [
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptanceFunnel.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptedDirectory.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAccountingMatrix.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateDirectory.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateDisposition.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateRow.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalDirectionProfile.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalEvidenceKpiBand.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalFitQuality.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalMethodology.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalPredictionScenario.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalQueryStatus.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalRejectionReasons.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSectionBody.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSegmentationDiagnostics.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSourceCoverage.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalThresholdMatrix.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/index.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/labels.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/types.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalEvidenceStats.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalGrid.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalPreservation.test.cjs",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/index.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/ledgerPresenter.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/sourceState.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.test.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/lib/cabinThermal.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/lib/cabinThermal.test.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicleSystems.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "inspection": "1-260 and targeted formatter contexts"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "inspection": "1-275"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "inspection": "454-500 and targeted conversion/formatter contexts"
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/lib/climateState.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/types/vehicle-systems.ts",
+      "inspection": "1-50"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/usePageTitle.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/CabinRuntimePages.test.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.test.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/EvidenceStats.preservation.test.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "inspection": "82-95,850-870 and route grep"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "inspection": "1-EOF source view"
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "inspection": "targeted caption propagation contexts12-52"
+    }
+  ],
+  "sourcePins": [
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptanceFunnel.tsx",
+      "lineCount": 76,
+      "sha256Before": "29EDDB4F03BC3CB8FDA91B26473F0C66C2FA4726C6C61F6F162693706A9740CA",
+      "sha256After": "29EDDB4F03BC3CB8FDA91B26473F0C66C2FA4726C6C61F6F162693706A9740CA",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptedDirectory.tsx",
+      "lineCount": 85,
+      "sha256Before": "E56954D59C7F145B5FA9B5F0E56990425DFABC87F6230740BD684745D7BBDFD8",
+      "sha256After": "E56954D59C7F145B5FA9B5F0E56990425DFABC87F6230740BD684745D7BBDFD8",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAccountingMatrix.tsx",
+      "lineCount": 137,
+      "sha256Before": "36BC1721AC63FEB6C0A9B4D56294A817D80BA351F45B2B3AC9446E67660C11A5",
+      "sha256After": "36BC1721AC63FEB6C0A9B4D56294A817D80BA351F45B2B3AC9446E67660C11A5",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateDirectory.tsx",
+      "lineCount": 73,
+      "sha256Before": "CFEF80BE06314E653C4995A4E470551F60F91C3306209A429BD6C6FA52A7DEB8",
+      "sha256After": "CFEF80BE06314E653C4995A4E470551F60F91C3306209A429BD6C6FA52A7DEB8",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateDisposition.tsx",
+      "lineCount": 81,
+      "sha256Before": "EA21A901521EC1BEAB2F69936219D41E2E7B05AEDCFAB5D96FDDD1A4A979DD50",
+      "sha256After": "EA21A901521EC1BEAB2F69936219D41E2E7B05AEDCFAB5D96FDDD1A4A979DD50",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateRow.tsx",
+      "lineCount": 111,
+      "sha256Before": "A127E595BEA5FF1CD8A76065332EE4B4DCBBE767F21E6A350A35EAC1867769A6",
+      "sha256After": "A127E595BEA5FF1CD8A76065332EE4B4DCBBE767F21E6A350A35EAC1867769A6",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalDirectionProfile.tsx",
+      "lineCount": 135,
+      "sha256Before": "53B6115FA0F1D15A79AF26AAE59200994B77E8910AAEEFED4DA3EC2639F2CB9A",
+      "sha256After": "53B6115FA0F1D15A79AF26AAE59200994B77E8910AAEEFED4DA3EC2639F2CB9A",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalEvidenceKpiBand.tsx",
+      "lineCount": 120,
+      "sha256Before": "5288065B3426A74D5F864BC35B0CC203BE805A14BA128924F86CB93BBBA52E7B",
+      "sha256After": "5288065B3426A74D5F864BC35B0CC203BE805A14BA128924F86CB93BBBA52E7B",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalFitQuality.tsx",
+      "lineCount": 89,
+      "sha256Before": "9E4A4640FF351A0D68A3286B94B8CBE2C9C6AEA66B3BA082A26C0C01A8EEE67F",
+      "sha256After": "9E4A4640FF351A0D68A3286B94B8CBE2C9C6AEA66B3BA082A26C0C01A8EEE67F",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalMethodology.tsx",
+      "lineCount": 116,
+      "sha256Before": "5570B908AF0449E6BF7E0FD914538A7382EE76652D8858AB7E7049193E1AB7BE",
+      "sha256After": "5570B908AF0449E6BF7E0FD914538A7382EE76652D8858AB7E7049193E1AB7BE",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalPredictionScenario.tsx",
+      "lineCount": 147,
+      "sha256Before": "1148755EF38E95A05215142D0686C8AE280DF029330888B271C18019163DCFC7",
+      "sha256After": "1148755EF38E95A05215142D0686C8AE280DF029330888B271C18019163DCFC7",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalQueryStatus.tsx",
+      "lineCount": 150,
+      "sha256Before": "95C34D317DC79C5D11847F54BC7B377B4DFFCCACC18E6885CEB4F2E80992938D",
+      "sha256After": "95C34D317DC79C5D11847F54BC7B377B4DFFCCACC18E6885CEB4F2E80992938D",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalRejectionReasons.tsx",
+      "lineCount": 76,
+      "sha256Before": "62E8F81931C4922BC32B1F4E4630BD639D019E5FAB63161C4BDB84E2F23ECE29",
+      "sha256After": "62E8F81931C4922BC32B1F4E4630BD639D019E5FAB63161C4BDB84E2F23ECE29",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSectionBody.tsx",
+      "lineCount": 152,
+      "sha256Before": "0D94FB2F1FA7A8D11098155F954309F4795FFBAB52812823BD322A2AF5BEFA55",
+      "sha256After": "0D94FB2F1FA7A8D11098155F954309F4795FFBAB52812823BD322A2AF5BEFA55",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSegmentationDiagnostics.tsx",
+      "lineCount": 62,
+      "sha256Before": "BCD50E605BBD087ABF6AE3101868239FB7CD50D035825FDB1F3F5F139BD61DA3",
+      "sha256After": "BCD50E605BBD087ABF6AE3101868239FB7CD50D035825FDB1F3F5F139BD61DA3",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalSourceCoverage.tsx",
+      "lineCount": 69,
+      "sha256Before": "2A47AE00D30E45DD794866860BFAA15E826F1A68C75C0CF179E4EEE4488B635A",
+      "sha256After": "2A47AE00D30E45DD794866860BFAA15E826F1A68C75C0CF179E4EEE4488B635A",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalThresholdMatrix.tsx",
+      "lineCount": 162,
+      "sha256Before": "8295B571786D5B17479A0CF2B116F64B0CDF15EA81B665E7B0C9C5B33BD7BAE0",
+      "sha256After": "8295B571786D5B17479A0CF2B116F64B0CDF15EA81B665E7B0C9C5B33BD7BAE0",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/index.ts",
+      "lineCount": 21,
+      "sha256Before": "6414527725EE72002292ACE64E5BEB9603BD66A3DDF95C0031D81F1CFD26883B",
+      "sha256After": "6414527725EE72002292ACE64E5BEB9603BD66A3DDF95C0031D81F1CFD26883B",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/labels.ts",
+      "lineCount": 114,
+      "sha256Before": "7E4AD697F331DC8A41EAF8028A8B471730CA65ED931CD2567E56FA113AC34DDE",
+      "sha256After": "7E4AD697F331DC8A41EAF8028A8B471730CA65ED931CD2567E56FA113AC34DDE",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal/types.ts",
+      "lineCount": 15,
+      "sha256Before": "60833F370298E1240AE3B442085FBA6F3778B44E67D9C90EDD2B94857AD993FE",
+      "sha256After": "60833F370298E1240AE3B442085FBA6F3778B44E67D9C90EDD2B94857AD993FE",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalEvidenceStats.tsx",
+      "lineCount": 92,
+      "sha256Before": "F3C86B99A74B215F3EDA2451C41AFD9FE91A5715152F54BA24A9BFB8EB38E295",
+      "sha256After": "F3C86B99A74B215F3EDA2451C41AFD9FE91A5715152F54BA24A9BFB8EB38E295",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalGrid.tsx",
+      "lineCount": 35,
+      "sha256Before": "6619AB1ADF4D709903B6803BDCE6EA5EFB2BB229B69E4DF24EB4C895AA465147",
+      "sha256After": "6619AB1ADF4D709903B6803BDCE6EA5EFB2BB229B69E4DF24EB4C895AA465147",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/CabinThermalPreservation.test.cjs",
+      "lineCount": 327,
+      "sha256Before": "175B0DBBFA442862971E94493D4D492ACFC2D691DA5597BFA261EFF38A01D178",
+      "sha256After": "175B0DBBFA442862971E94493D4D492ACFC2D691DA5597BFA261EFF38A01D178",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/index.ts",
+      "lineCount": 3,
+      "sha256Before": "3D8F88F344EA46CEE62A013767A9760B3710B57F6407DE58F1F085B5E1E08E0E",
+      "sha256After": "3D8F88F344EA46CEE62A013767A9760B3710B57F6407DE58F1F085B5E1E08E0E",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/ledgerPresenter.ts",
+      "lineCount": 32,
+      "sha256Before": "596AF634DC374B6D37B1814270752E8791FFF6C3F4B560406FEA3E1EF9668094",
+      "sha256After": "596AF634DC374B6D37B1814270752E8791FFF6C3F4B560406FEA3E1EF9668094",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/cabin-thermal-modernization/sourceState.ts",
+      "lineCount": 22,
+      "sha256Before": "86A372C89FDCD663708C85575481BB4DB113C6922FBD2B0E562663CAF4D8571A",
+      "sha256After": "86A372C89FDCD663708C85575481BB4DB113C6922FBD2B0E562663CAF4D8571A",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+      "lineCount": 198,
+      "sha256Before": "88DE17A1E08E41C5CB65D344D5122CF44334CE25B2900F9B2131E868D991B0F9",
+      "sha256After": "88DE17A1E08E41C5CB65D344D5122CF44334CE25B2900F9B2131E868D991B0F9",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.test.tsx",
+      "lineCount": 340,
+      "sha256Before": "D4D8B78F1F401C57B6C76A99EEE41CDC39FBCC2611EECC847BFC46074B975E5E",
+      "sha256After": "D4D8B78F1F401C57B6C76A99EEE41CDC39FBCC2611EECC847BFC46074B975E5E",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/lib/cabinThermal.ts",
+      "lineCount": 971,
+      "sha256Before": "89256B81481476BD3DBFA4584DA8E74D2306BF44FFDA64AFF88765A4BC15A164",
+      "sha256After": "89256B81481476BD3DBFA4584DA8E74D2306BF44FFDA64AFF88765A4BC15A164",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/lib/cabinThermal.test.ts",
+      "lineCount": 516,
+      "sha256Before": "CAFF22B2E7D3AF012E39DF58639EB54C05768E3189EE1C2C59652CCC294BB952",
+      "sha256After": "CAFF22B2E7D3AF012E39DF58639EB54C05768E3189EE1C2C59652CCC294BB952",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicleSystems.ts",
+      "lineCount": 176,
+      "sha256Before": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+      "sha256After": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "lineCount": 65,
+      "sha256Before": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "sha256After": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "lineCount": 194,
+      "sha256Before": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "sha256After": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "lineCount": 174,
+      "sha256Before": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "sha256After": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "lineCount": 47,
+      "sha256Before": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "sha256After": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "lineCount": 462,
+      "sha256Before": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "sha256After": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "lineCount": 168,
+      "sha256Before": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "sha256After": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "lineCount": 17,
+      "sha256Before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "sha256After": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "unchanged": true,
+      "baselineEvidence": "1182 raw baseline output before detailed reads"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "lineCount": 434,
+      "sha256Before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "sha256After": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "lineCount": 500,
+      "sha256Before": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "sha256After": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "lineCount": 172,
+      "sha256Before": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "sha256After": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "lineCount": 106,
+      "sha256Before": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "sha256After": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "lineCount": 146,
+      "sha256Before": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "sha256After": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/lib/climateState.ts",
+      "lineCount": 8,
+      "sha256Before": "09E5C29B473279A17B6D14742BAC7D02469BDE4F3580736AA7F758389578FE6F",
+      "sha256After": "09E5C29B473279A17B6D14742BAC7D02469BDE4F3580736AA7F758389578FE6F",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/types/vehicle-systems.ts",
+      "lineCount": 154,
+      "sha256Before": "85B58A61A9A5D8824B77A9FFCBB29C97AE2AE3AEC3237C3B3395624A06C9A0F8",
+      "sha256After": "85B58A61A9A5D8824B77A9FFCBB29C97AE2AE3AEC3237C3B3395624A06C9A0F8",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+      "lineCount": 17,
+      "sha256Before": "E871E533BE1616ED3445E75E4B881DC020B8EFB084A3404E6433222AA0DF8BB5",
+      "sha256After": "E871E533BE1616ED3445E75E4B881DC020B8EFB084A3404E6433222AA0DF8BB5",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "lineCount": 73,
+      "sha256Before": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "sha256After": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "lineCount": 42,
+      "sha256Before": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "sha256After": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/hooks/usePageTitle.ts",
+      "lineCount": 30,
+      "sha256Before": "D04D8C90812C380005924CD4F004BE273F2E89B64D57AA1DF880B15BB49E9A9B",
+      "sha256After": "D04D8C90812C380005924CD4F004BE273F2E89B64D57AA1DF880B15BB49E9A9B",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "lineCount": 259,
+      "sha256Before": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "sha256After": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "lineCount": 148,
+      "sha256Before": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "sha256After": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/pages/CabinRuntimePages.test.tsx",
+      "lineCount": 102,
+      "sha256Before": "4CA535070BF2DC2CBC70CB83F877B83B75AA2CAEE4C558A106B813A984F9C690",
+      "sha256After": "4CA535070BF2DC2CBC70CB83F877B83B75AA2CAEE4C558A106B813A984F9C690",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.test.tsx",
+      "lineCount": 97,
+      "sha256Before": "5A68BDF9C4503107C5F14112BE334D16B44E41B862C287DEEBD03E080D3CB095",
+      "sha256After": "5A68BDF9C4503107C5F14112BE334D16B44E41B862C287DEEBD03E080D3CB095",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/features/vehicle-systems/components/EvidenceStats.preservation.test.tsx",
+      "lineCount": 120,
+      "sha256Before": "CF5EEBB0D69780B1316CA0BF54F863D715D5F769DD0EF19F75F1B2A751DFBE23",
+      "sha256After": "CF5EEBB0D69780B1316CA0BF54F863D715D5F769DD0EF19F75F1B2A751DFBE23",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "lineCount": 74,
+      "sha256Before": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "sha256After": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "lineCount": 919,
+      "sha256Before": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "sha256After": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "lineCount": 24,
+      "sha256Before": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "sha256After": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "lineCount": 321,
+      "sha256Before": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "sha256After": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "lineCount": 53,
+      "sha256Before": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "sha256After": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "unchanged": true,
+      "baselineEvidence": "1271/1294/1340/1428 pre-inspection tool receipt"
+    }
+  ],
+  "verification": {
+    "jsonReparsed": true,
+    "pinsChecked": true,
+    "scopeScans": "completed with raw outputs in log",
+    "testRunners": "NOTRUN",
+    "typescript": "NOTRUN",
+    "native": "NOTRUN",
+    "inspectionProcessFailures": [
+      1356,
+      1370,
+      1399,
+      1410,
+      1251
+    ],
+    "inspectionNonterminatingErrors": [
+      "missing guessed appRoutes.tsx/routes.tsx/app/routes/PageLayoutBase.tsx/DateTime.tsx/operationalMetrics.ts; resolved owners inspected without writes"
+    ],
+    "pinnedFiles": 59,
+    "driftCount": 0,
+    "checkedAt": "2026-10-14T01:41:24.6000187Z",
+    "finalPinCheckRequired": "After final report serialization; executed by final receipt command below"
+  },
+  "release": {
+    "report": true,
+    "log": true,
+    "commands": true,
+    "sourceWriteClaim": "never held",
+    "releasedAt": "2026-10-14T01:43:01.3900710Z"
+  },
+  "summary": {
+    "priorityFixes": [
+      "CT-04 unresolved counts P1",
+      "CT-01 G220 header and both bounds P1",
+      "CT-02 saved timestamp locale/timezone P1",
+      "CT-03 saved numeric locale P2"
+    ],
+    "filesWithMostConfirmedMechanisms": [
+      {
+        "file": "web/src/features/vehicle-systems/pages/CabinThermalPage.tsx",
+        "mechanisms": 2
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalCandidateRow.tsx",
+        "mechanisms": 2
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/cabin-thermal/CabinThermalAcceptedDirectory.tsx",
+        "mechanisms": 2
+      }
+    ],
+    "noNativeAcceptance": true
+  }
+}

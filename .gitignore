@@ -63,6 +63,7 @@ docs/.vitepress/dist/
 test-results/
 web/test-results/
 web/test-results-pwa-assets/
+web/test-results-guard/
 web/playwright-report/
 web/blob-report/
 web/e2e/.auth-state.json
@@ -75,6 +76,10 @@ coverage.txt
 coverage-by-package.txt
 web/coverage/
 *.test.log
+.agent-status/
+qa-screenshots/
+logs/
+report.*.json
 
 PROMPT_COMMANDS.txt
 
@@ -122,3 +127,7 @@ REDESIGN-NOTES.md
 # transient commit-message files used by R-phase recipe
 commit_msg.txt
 commit_msg*.txt
+
+state/
+
+.runner/

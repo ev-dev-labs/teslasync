@@ -26,7 +26,7 @@
  * Both hooks are mocked at the hook boundary so no network is touched;
  * `importActual` keeps the module's other exports intact. `useDateFormat` is
  * mocked to a deterministic `formatDateTime` (so the >24h fall-through is
- * assertable) + `formatTime` (which <DataFreshness> inside <WidgetShell>
+ * assertable) + `formatTime` (which <FreshnessDot> inside <WidgetShell>
  * destructures). `react-i18next` is stubbed to echo the English fallback and
  * interpolate `{{var}}` tokens. `@testing-library/user-event` is not installed
  * in this repo (see the sibling ExportStatusWidget / LocationFavoritesWidget
@@ -36,12 +36,13 @@
 
 import { type ReactNode } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
-// options bag so count-bearing copy ("{{minutes}}m ago", DataFreshness) renders
+// options bag so count-bearing copy ("{{minutes}}m ago", FreshnessDot) renders
 // as real text.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -70,7 +71,7 @@ vi.mock('@/api/hooks/useNotifications', async () => {
 });
 
 // Deterministic date formatting: the widget uses `formatDateTime` for the
-// >24h relative-time fall-through, and <DataFreshness> (inside <WidgetShell>)
+// >24h relative-time fall-through, and <FreshnessDot> (inside <WidgetShell>)
 // destructures `formatTime`. Both are stubbed so assertions never depend on
 // the ambient locale / timezone settings.
 vi.mock('@/hooks/useDateFormat', async () => {
@@ -80,7 +81,14 @@ vi.mock('@/hooks/useDateFormat', async () => {
   return { ...actual, useDateFormat: vi.fn() };
 });
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import NotificationStatsWidget from './NotificationStatsWidget';
+
+it.each([1, 2, 3])('identifies notification statistics at %i columns', (cols) => {
+  renderWidget({ cols, rows: 4 });
+  const surface = cols <= 1 ? screen : within(screen.getByRole('region', { name: 'Notification stats' }));
+  expect(surface.getByRole('heading', { name: cols <= 1 ? 'Notification counters' : 'Notification stats' })).toBeInTheDocument();
+});
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { NotificationLog, NotificationStats } from '@/api/types';
@@ -90,7 +98,7 @@ const mockUseStats = vi.mocked(useNotificationStats);
 const mockUseLogs = vi.mocked(useNotificationLogs);
 const mockUseDateFormat = vi.mocked(useDateFormat);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -105,8 +113,8 @@ if (typeof window.matchMedia !== 'function') {
   })) as unknown as typeof window.matchMedia;
 }
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
-function qr(over: Record<string, unknown> = {}): any {
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
+function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,
     isLoading: false,
@@ -117,7 +125,7 @@ function qr(over: Record<string, unknown> = {}): any {
     dataUpdatedAt: 1_700_000_000_000,
     refetch: vi.fn(),
     ...over,
-  };
+  } as never;
 }
 
 /** Deterministic `useDateFormat` stub: only the two consumed formatters. */
@@ -159,13 +167,17 @@ const minsAgo = (mins: number) => new Date(Date.now() - mins * 60_000).toISOStri
 
 function renderWidget(size: WidgetSize) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <NotificationStatsWidget size={size} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName(
+    size.cols <= 1 ? 'Notification counters' : 'Notification stats',
+  );
+  return view;
 }
 
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
@@ -186,8 +198,8 @@ describe('NotificationStatsWidget — compact layout', () => {
   it('renders a loading skeleton (no hero copy) while the stats query loads', () => {
     mockUseStats.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(COMPACT);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Delivery Rate')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('Delivery rate')).toBeNull();
   });
 
   it('shows an empty state (never a blank panel) when there is no stats data', () => {
@@ -202,15 +214,16 @@ describe('NotificationStatsWidget — compact layout', () => {
     renderWidget(COMPACT);
     // QueryError's generic (status-less) branch renders the network copy.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Delivery Rate')).toBeNull();
+    expect(screen.queryByText('Delivery rate')).toBeNull();
   });
 
   it('renders the delivery-rate hero and the "N failed" line when failures exist', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     renderWidget(COMPACT);
     // 118 / 120 → 98.333… → one decimal.
-    expect(screen.getByText('98.3%')).toBeInTheDocument();
-    expect(screen.getByText('Delivery Rate')).toBeInTheDocument();
+    expect(screen.getByText('98.33')).toBeInTheDocument();
+    expect(screen.getByText('%')).toBeInTheDocument();
+    expect(screen.getByText('Delivery rate')).toBeInTheDocument();
     expect(screen.getByText('2 failed')).toBeInTheDocument();
   });
 
@@ -219,7 +232,7 @@ describe('NotificationStatsWidget — compact layout', () => {
       qr({ data: { ...STATS, total_sent: 100, sent: 100, failed: 0 } }),
     );
     renderWidget(COMPACT);
-    expect(screen.getByText('100.0%')).toBeInTheDocument();
+    expect(screen.getByText('100.00')).toBeInTheDocument();
     expect(screen.queryByText(/failed/i)).toBeNull();
   });
 
@@ -240,44 +253,162 @@ describe('NotificationStatsWidget — compact layout', () => {
 // ── Standard layout (2×2): the KPI stat grid ────────────────────────────────
 
 describe('NotificationStatsWidget — standard layout', () => {
+  it('retains complete notification text and all details in a narrow allocated table', () => {
+    const title = 'A-long-notification-title-without-spaces-that-must-not-be-truncated';
+    const message = 'The complete notification message remains available alongside status and the original formatted instant.';
+    const createdAt = '2024-06-01T12:00:00Z';
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 320, 200));
+    try {
+      mockUseStats.mockReturnValue(qr({ data: STATS }));
+      mockUseLogs.mockReturnValue(qr({ data: [makeLog({
+        title, message, status: 'pending', created_at: createdAt,
+      })] }));
+      const { container } = renderWidget(WIDE);
+      expect(container.querySelector('[data-mobile-table]')).toBeInTheDocument();
+      expect(screen.queryByRole('table')).toBeNull();
+      expect(screen.getByText(title)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText(message)).toBeInTheDocument();
+      expect(within(details).getByText('pending')).toBeInTheDocument();
+      expect(within(details).getByText(`ABS:${createdAt}`)).toBeInTheDocument();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
   it('renders the title, four KPIs, and the threshold-driven trend copy', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Notification Stats')).toBeInTheDocument();
-    expect(screen.getByText('Total Sent (7d)')).toBeInTheDocument();
-    expect(screen.getByText('Delivery Rate')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Notification stats' })).getByRole('heading', { name: 'Notification stats' })).toBeInTheDocument();
+    expect(screen.getByText('Total sent (7d)')).toBeInTheDocument();
+    expect(screen.getByText('Delivery rate')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
 
-    // Values: total sent (also echoed as its "up" trend), delivery rate,
-    // failed, active channels.
-    expect(screen.getAllByText('120')).toHaveLength(2);
-    expect(screen.getByText('98.3')).toBeInTheDocument();
+    // Values on the face: total sent, delivery rate, failed, active channels.
+    expect(screen.getAllByText('120')).toHaveLength(1);
+    expect(screen.getByText('98.33%')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
 
-    // 98.3% ≥ 95 → "Healthy"; failed 2 > 0 → "Needs attention".
-    expect(screen.getByText('Healthy')).toBeInTheDocument();
-    expect(screen.getByText('Needs attention')).toBeInTheDocument();
+    // The "up" trend echo plus 98.3% ≥ 95 → "Healthy" and failed 2 > 0 →
+    // "Needs attention" render in the review drawer.
+    const brief = screen.getByTestId('notification-stats-operational-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getAllByText('120')).toHaveLength(2);
+      expect(within(drawer).getByText('Healthy')).toBeInTheDocument();
+      expect(within(drawer).getByText('Needs attention')).toBeInTheDocument();
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
-  it('treats a logs-query load as loading too (renders the skeleton)', () => {
-    // Stats are ready but the secondary logs query is still loading — the
-    // standard layout gates its skeleton on `statsLoading || logsLoading`.
+  it('keeps ready statistics visible when the unused logs query is loading', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     mockUseLogs.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Total Sent (7d)')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
+    expect(screen.getByText('Total sent (7d)')).toBeInTheDocument();
   });
 
-  it('shows the title + empty state (not the grid) when stats are absent', () => {
+  describe('NotificationStatsWidget — prerequisite trust and preferences', () => {
+    it('shows missing counts and an unobserved delivery rate as unknown, not zero', () => {
+      mockUseStats.mockReturnValue(qr({ data: {} }));
+      renderWidget(STANDARD);
+      const unknownBrief = screen.getByTestId('notification-stats-operational-brief');
+      for (const label of ['Total sent (7d)', 'Delivery rate', 'Failed', 'Active channels']) {
+        assertOperationalMetricUnavailable(unknownBrief, label);
+      }
+      expect(screen.queryByText('0')).toBeNull();
+      expect(screen.queryByText('%')).toBeNull();
+    });
+
+    it('keeps explicit zero counts but does not invent a delivery rate for zero attempts', () => {
+      mockUseStats.mockReturnValue(qr({ data: { ...STATS, total_sent: 0, sent: 0, failed: 0, enabled_channels: 0 } }));
+      renderWidget(STANDARD);
+      expect(screen.getAllByText('0')).toHaveLength(3);
+      assertOperationalMetricUnavailable(screen.getByTestId('notification-stats-operational-brief'), 'Delivery rate');
+      expect(screen.queryByText('%')).toBeNull();
+    });
+
+    it('keeps cached KPIs and logs and retries both sources after refresh failure', () => {
+      const statsRefetch = vi.fn();
+      const logsRefetch = vi.fn();
+      mockUseStats.mockReturnValue(qr({ data: STATS, isError: true, error: new Error('stats refresh failed'), refetch: statsRefetch }));
+      mockUseLogs.mockReturnValue(qr({ data: [makeLog({ title: 'Retained log' })], refetch: logsRefetch }));
+      renderWidget(WIDE);
+      expect(screen.getByText('Retained log')).toBeInTheDocument();
+      expect(screen.getByText('Active channels')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(statsRefetch).toHaveBeenCalledTimes(1);
+      expect(logsRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps KPIs while a failed secondary source has its own real retry', () => {
+      const logsRefetch = vi.fn();
+      mockUseStats.mockReturnValue(qr({ data: STATS }));
+      mockUseLogs.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('logs failed'), refetch: logsRefetch }));
+      renderWidget(WIDE);
+      expect(screen.getByText('Active channels')).toBeInTheDocument();
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+      expect(logsRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('shows history even if the statistics source failed its initial load', () => {
+      mockUseStats.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('stats failed') }));
+      mockUseLogs.mockReturnValue(qr({ data: [makeLog({ title: 'Independent history' })] }));
+      renderWidget(WIDE);
+      expect(screen.getByText('Independent history')).toBeInTheDocument();
+      expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    });
+
+    it('reacts to locale and precision changes without a query refresh', () => {
+      const locale = getGlobalLocale();
+      const precision = getGlobalPrecision();
+      const refetch = vi.fn();
+      try {
+        mockUseStats.mockReturnValue(qr({ data: STATS, refetch }));
+        renderWidget(COMPACT);
+        act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+        expect(screen.getByText('98,3')).toBeInTheDocument();
+        expect(refetch).not.toHaveBeenCalled();
+      } finally {
+        act(() => { setGlobalLocale(locale); setGlobalPrecision(precision); });
+      }
+    });
+  });
+
+  it('shows the title, recovery and unknown source measurements when stats are absent', () => {
     mockUseLogs.mockReturnValue(qr({ data: [makeLog()] }));
     renderWidget(STANDARD);
-    expect(screen.getByText('Notification Stats')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Notification stats' })).getByRole('heading', { name: 'Notification stats' })).toBeInTheDocument();
     expect(screen.getByText('No notification data')).toBeInTheDocument();
-    expect(screen.queryByText('Active Channels')).toBeNull();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    const absentBrief = screen.getByTestId('notification-stats-operational-brief');
+    for (const label of ['Total sent (7d)', 'Delivery rate', 'Failed', 'Active channels']) {
+      assertOperationalMetricUnavailable(absentBrief, label);
+    }
+  });
+
+  it('reviews retained notification counters without replacing independent log history', () => {
+    mockUseStats.mockReturnValue(qr({ data: STATS, isError: true, error: new Error('refresh failed') }));
+    mockUseLogs.mockReturnValue(qr({ data: [makeLog({ title: 'Independent history' })] }));
+    renderWidget(WIDE);
+    expect(screen.getByText('Independent history')).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-stats-operational-brief');
+    assertOperationalBriefDisclosure(brief, 'Retained readings');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('98.33%')).toBeInTheDocument();
+    expect(within(drawer).getByText('Healthy')).toBeInTheDocument();
+    expect(within(drawer).getByText('Needs attention')).toBeInTheDocument();
+    expect(within(drawer).getByText('System notifications; reported seven-day counters and separate latest log rows')).toBeInTheDocument();
   });
 
   it('does NOT render the recent-log table below the standard breakpoint', () => {
@@ -376,7 +507,7 @@ describe('NotificationStatsWidget — wide layout', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     mockUseLogs.mockReturnValue(qr({ data: [] }));
     renderWidget(WIDE);
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
     // No logs → no table headers.
     expect(screen.queryByText('Title')).toBeNull();
     expect(screen.queryByText('Status')).toBeNull();

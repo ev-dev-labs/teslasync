@@ -16,9 +16,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import '../../../i18n';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { __resetEditLeasesForTests } from '@/hooks/useEditLease';
@@ -28,6 +28,10 @@ import type {
   AutomationFull,
   AutomationTriggerStep,
 } from '@/api/types';
+import type { AutomationFullInput } from '@/api/hooks/useAutomations';
+import type { DataStateSource } from '@/api/dataState';
+import type { AutomationConditionStepInput } from '../components/stepInputTypes';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 // ── Shared, hoisted mock state (created before any vi.mock factory runs). ──
 const H = vi.hoisted(() => ({
@@ -36,12 +40,49 @@ const H = vi.hoisted(() => ({
     isLoading: boolean;
     error: unknown;
   },
-  presetState: { data: undefined } as { data: unknown },
-  vehicles: [] as unknown[],
+  presetState: { data: undefined } as DataStateSource<unknown>,
+  vehicles: [] as unknown[] | undefined,
+  vehiclesQueryState: {} as Omit<DataStateSource<unknown[]>, 'data'>,
+  channelsState: { data: [], isLoading: false, error: null } as DataStateSource<unknown[]>,
   createMutateAsync: vi.fn(),
   updateMutateAsync: vi.fn(),
   testRunMutate: vi.fn(),
+  realAI: false,
+  realTrigger: false,
 }));
+
+// These query-boundary fixtures model source failures while the browser is online.
+// Unrelated settings fetches must not flip their recovery controls into offline mode.
+vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
+
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      return H.realAI ? {
+        ...result,
+        settings: {
+          ...result.settings,
+          ai_mode: 'cloud',
+          ai_features: { 'geofence-aware-automation-suggestions': true },
+        },
+      } : result;
+    },
+  };
+});
+
+vi.mock('@/hooks/useSelectedVehicle', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSelectedVehicle')>();
+  return {
+    ...actual,
+    useSelectedVehicle: () => {
+      const result = actual.useSelectedVehicle();
+      return H.realAI ? { ...result, vehicleId: 7 } : result;
+    },
+  };
+});
 
 // framer-motion — collapse animations to plain divs (matches the repo's
 // established page-test convention).
@@ -85,8 +126,10 @@ vi.mock('./TriggerConfigurator', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./TriggerConfigurator')>();
   return {
     ...actual,
-    TriggerConfigurator: ({ trigger }: { trigger: { kind?: string } | null }) => (
-      <div data-testid="trigger-configurator">tc:{trigger?.kind ?? 'none'}</div>
+    TriggerConfigurator: (props: React.ComponentProps<typeof actual.TriggerConfigurator>) => H.realTrigger ? (
+      <actual.TriggerConfigurator {...props} />
+    ) : (
+      <div data-testid="trigger-configurator">tc:{props.trigger?.kind ?? 'none'}</div>
     ),
   };
 });
@@ -148,12 +191,18 @@ vi.mock('@/components/ai/AINLAutomationBuilder', () => ({
   AINLAutomationBuilder: () => <div data-testid="ai-nl-builder" />,
 }));
 
-vi.mock('@/components/ai/AIGeofenceAwareAutomationSuggestions', () => ({
+vi.mock('@/components/ai/AIGeofenceAwareAutomationSuggestions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/ai/AIGeofenceAwareAutomationSuggestions')>();
+  return {
   AIGeofenceAwareAutomationSuggestions: ({
     onApplyDraft,
+    vehicleId,
   }: {
-    onApplyDraft: (draft: unknown) => void;
-  }) => (
+    onApplyDraft: (draft: AutomationFullInput) => void;
+    vehicleId?: number;
+  }) => H.realAI ? (
+    <actual.AIGeofenceAwareAutomationSuggestions vehicleId={vehicleId} onApplyDraft={onApplyDraft} />
+  ) : (
     <button
       type="button"
       onClick={() =>
@@ -177,7 +226,8 @@ vi.mock('@/components/ai/AIGeofenceAwareAutomationSuggestions', () => ({
       apply-ai-draft
     </button>
   ),
-}));
+  };
+});
 
 // API hooks — spread the real modules (preserve keys/types) and override the
 // hooks the page consumes with controllable stubs backed by hoisted state.
@@ -195,14 +245,14 @@ vi.mock('@/api/hooks/useAutomations', async (importOriginal) => {
 
 vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
-  return { ...actual, useVehicles: () => ({ data: H.vehicles }) };
+  return { ...actual, useVehicles: () => ({ data: H.vehicles, ...H.vehiclesQueryState }) };
 });
 
 vi.mock('@/api/hooks/useNotifications', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useNotifications')>();
   return {
     ...actual,
-    useNotificationChannels: () => ({ data: [], isLoading: false, error: null }),
+    useNotificationChannels: () => H.channelsState,
   };
 });
 
@@ -216,14 +266,21 @@ import AutomationBuilderPage, {
   applyDraftToForm,
   triggerNeedsPlace,
   conditionNeedsPlace,
+  conditionIsIncomplete,
   actionIsIncomplete,
 } from './AutomationBuilderPage';
 
 function renderPage(entry = '/automations/new') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  let navigate: ReturnType<typeof useNavigate>;
+  function NavigationControl() {
+    navigate = useNavigate();
+    return null;
+  }
+  const tree = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[entry]}>
+        <NavigationControl />
         <ToastProvider>
           <Routes>
             <Route path="/automations" element={<div>AUTOMATIONS_LIST</div>} />
@@ -232,8 +289,14 @@ function renderPage(entry = '/automations/new') {
           </Routes>
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(tree());
+  return {
+    ...result,
+    refresh: () => result.rerender(tree()),
+    changeScope: (path: string) => act(() => { navigate(path); }),
+  };
 }
 
 const EDIT_AUTOMATION: AutomationFull = {
@@ -249,15 +312,170 @@ const EDIT_AUTOMATION: AutomationFull = {
   actions: [{ kind: 'action_command', command_name: 'climate_on' }],
 };
 
+const INVALID_CONDITIONS: { label: string; condition: AutomationConditionStepInput }[] = [
+  ...[0, -1, 1.5, NaN, Infinity].flatMap((id) => [
+    { label: `geofence identifier ${id}`, condition: { kind: 'condition_geofence' as const, place_id: id, state: 'inside' as const } },
+    { label: `other automation identifier ${id}`, condition: { kind: 'condition_other_automation' as const, other_automation_id: id, state: 'enabled' as const } },
+  ]),
+  { label: 'missing signal identifier', condition: { kind: 'condition_signal', signal: '', op: '<', value_num: 0 } },
+  { label: 'blank signal identifier', condition: { kind: 'condition_signal', signal: ' ', op: '<', value_num: 0 } },
+  ...[undefined, null, NaN, Infinity].map((value_num) => ({
+    label: `missing or invalid threshold ${value_num}`,
+    condition: { kind: 'condition_signal' as const, signal: 'outside_temp', op: '<' as const, value_num },
+  })),
+  { label: 'missing range maximum', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'between', value_min: 0 } },
+  { label: 'reversed range', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'between', value_min: 2, value_max: -2 } },
+  { label: 'missing state value', condition: { kind: 'condition_signal', signal: 'state', op: '=', value_text: ' ' } },
+  { label: 'missing boolean value', condition: { kind: 'condition_signal', signal: 'is_locked', op: '=' } },
+  { label: 'invalid numeric list', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'in', value_text: '0,invalid' } },
+  { label: 'empty list member', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'in', value_text: '0,' } },
+  ...[
+    { start_time: '' }, { end_time: '' }, { start_time: '25:00' }, { timezone: ' ' }, { days_of_week: [7] },
+  ].map((fields) => ({
+    label: `incomplete time window ${JSON.stringify(fields)}`,
+    condition: { kind: 'condition_time_window' as const, start_time: '06:00', end_time: '09:00', timezone: 'UTC', days_of_week: [], ...fields },
+  })),
+];
+
+const VALID_CONDITIONS: { label: string; condition: AutomationConditionStepInput }[] = [
+  ...[0, -12, +12, -0.25, 0.25].map((value_num) => ({
+    label: `measured threshold ${value_num}`,
+    condition: { kind: 'condition_signal' as const, signal: 'outside_temp', op: '<' as const, value_num },
+  })),
+  { label: 'signed fractional range', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'between', value_min: -1.25, value_max: 0 } },
+  { label: 'signed fractional numeric list', condition: { kind: 'condition_signal', signal: 'outside_temp', op: 'in', value_text: '-1.25,0,+2.5' } },
+  { label: 'false boolean', condition: { kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false } },
+  { label: 'state text', condition: { kind: 'condition_signal', signal: 'state', op: '=', value_text: 'online' } },
+  { label: 'geofence', condition: { kind: 'condition_geofence', place_id: 7, state: 'inside' } },
+  { label: 'other automation', condition: { kind: 'condition_other_automation', other_automation_id: 7, state: 'enabled' } },
+  { label: 'overnight window with optional weekdays', condition: { kind: 'condition_time_window', start_time: '22:00', end_time: '06:00', timezone: 'UTC', days_of_week: [] } },
+  { label: 'full-day window', condition: { kind: 'condition_time_window', start_time: '00:00', end_time: '00:00', timezone: 'UTC', days_of_week: [0] } },
+];
+
 beforeEach(() => {
+  H.realAI = false;
+  H.realTrigger = false;
   H.createMutateAsync.mockReset();
   H.updateMutateAsync.mockReset();
   H.testRunMutate.mockReset();
   H.automationState = { data: undefined, isLoading: false, error: null };
   H.presetState = { data: undefined };
   H.vehicles = [];
+  H.vehiclesQueryState = {};
+  H.channelsState = { data: [], isLoading: false, error: null };
   window.localStorage.clear();
   __resetEditLeasesForTests();
+});
+
+describe('condition readiness and submit validation', () => {
+  it.each(INVALID_CONDITIONS)('rejects $label in both readiness and submit', async ({ condition }) => {
+    expect(conditionIsIncomplete(condition)).toBe(true);
+    H.automationState = { data: { ...EDIT_AUTOMATION, conditions: [condition] }, isLoading: false, error: null };
+    const { container } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    const group = screen.getByRole('group', { name: 'Only if (conditions)' });
+    expect(group).toHaveAttribute('aria-invalid', 'true');
+    const descriptionIds = group.getAttribute('aria-describedby')!.split(/\s+/);
+    expect(descriptionIds.map(id => document.getElementById(id))).not.toContain(null);
+    const feedback = document.getElementById(descriptionIds.at(-1)!);
+    expect(feedback).toBeInTheDocument();
+    expect(feedback?.textContent).not.toBe('');
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
+    fireEvent.submit(container.querySelector('form')!);
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'add-condition' })).toHaveFocus();
+    expect(screen.getByText('Save error').parentElement).toHaveTextContent(feedback!.textContent!);
+  });
+
+  it.each([
+    ...VALID_CONDITIONS.map(({ label, condition }) => ({ label, conditions: [condition] })),
+    { label: 'optional zero-condition rule', conditions: [] },
+  ])('saves $label without changing its values', async ({ conditions }) => {
+    conditions.forEach((condition) => expect(conditionIsIncomplete(condition)).toBe(false));
+    H.automationState = { data: { ...EDIT_AUTOMATION, conditions }, isLoading: false, error: null };
+    H.updateMutateAsync.mockResolvedValue({ id: 5 });
+    const { container } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    expect(screen.getAllByText('Ready to save')).toHaveLength(1);
+    expect(screen.getByRole('group', { name: 'Only if (conditions)' })).not.toHaveAttribute('aria-invalid');
+    fireEvent.submit(container.querySelector('form')!);
+    await waitFor(() => expect(H.updateMutateAsync).toHaveBeenCalledWith({
+      id: 5,
+      input: expect.objectContaining({ conditions }),
+    }));
+  });
+});
+
+describe('canonical geofence SSE draft through baseline save and readback', () => {
+  it('retains two triggers, one weekday condition, two commands then a 30-second wait', async () => {
+    H.realAI = true;
+    const draft: AutomationFullInput = {
+      name: 'Welcome Home', description: 'Typed geofence draft', vehicle_id: 7, enabled: true,
+      triggers: [
+        { kind: 'trigger_geofence', place_id: 1, event: 'enter' },
+        { kind: 'trigger_geofence', place_id: 2, event: 'exit' },
+      ],
+      conditions: [{
+        kind: 'condition_time_window', start_time: '00:00', end_time: '00:00',
+        timezone: 'UTC', days_of_week: [1, 2],
+      }],
+      actions: [
+        { kind: 'action_command', command_name: 'cabin_overheat_protection_on' },
+        { kind: 'action_command', command_name: 'hvac_on' },
+        { kind: 'action_wait', duration_s: 30 },
+      ],
+    };
+    const body = `event: tool_result\ndata: ${JSON.stringify({
+      id: 'draft1', name: 'draft_automation_graph', ok: true, data: { status: 'ok', draft },
+    })}\n\nevent: done\ndata: {"finish_reason":"stop"}\n\n`;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => Promise.resolve(
+      String(input).includes('/ai/geofences/automations/draft')
+        ? new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+        : new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    H.createMutateAsync.mockResolvedValue({ id: 123 });
+    const { unmount } = renderPage('/automations/new');
+    try {
+      fireEvent.change(screen.getByTestId('ai-feature-geofence-aware-automation-suggestions-prompt'), {
+        target: { value: 'Run the two commands on Monday or Tuesday, then wait 30 seconds.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /suggest automation/i }));
+      const apply = await screen.findByTestId('ai-feature-geofence-aware-automation-suggestions-apply');
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+      fireEvent.click(apply);
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+      expect(screen.getByDisplayValue('Welcome Home')).toBeInTheDocument();
+      expect(screen.getByText('conditions:1')).toBeInTheDocument();
+      expect(screen.getByText('actions:3')).toBeInTheDocument();
+      const create = screen.getByRole('button', { name: /^create$/i });
+      expect(create).toBeEnabled();
+      expect(create).toHaveAttribute('type', 'submit');
+      fireEvent.click(create);
+      await waitFor(() => expect(H.createMutateAsync).toHaveBeenCalledTimes(1));
+      expect(H.createMutateAsync).toHaveBeenCalledWith(draft);
+      expect(H.updateMutateAsync).not.toHaveBeenCalled();
+      expect(await screen.findByText('AUTOMATIONS_LIST')).toBeInTheDocument();
+      const draftCalls = fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes('/ai/geofences/automations/draft'));
+      expect(draftCalls).toHaveLength(1);
+
+      const readback: AutomationFull = {
+        id: 123, name: draft.name, description: draft.description ?? null,
+        vehicle_id: 7, enabled: true, created_at: '2026-10-10T00:00:00Z', updated_at: '2026-10-10T00:00:00Z',
+        triggers: draft.triggers, conditions: draft.conditions, actions: draft.actions,
+      };
+      expect(formToPayload(automationToForm(readback))).toEqual(draft);
+      expect(actionIsIncomplete({ kind: 'action_wait', duration_s: 30 })).toBe(false);
+      for (const duration_s of [0, -1, 3601, 1.5, Number.NaN]) {
+        expect(actionIsIncomplete({ kind: 'action_wait', duration_s })).toBe(true);
+      }
+    } finally {
+      unmount();
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 // ───────────────────────────── Pure helpers ─────────────────────────────
@@ -490,28 +708,28 @@ describe('AutomationBuilderPage — create mode', () => {
   it('renders the KPI band, form sections and a not-ready readiness badge', () => {
     renderPage('/automations/new');
 
-    expect(screen.getByRole('heading', { name: 'Create Automation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create automation' })).toBeInTheDocument();
     // KPI band: trigger label defaults to "Not set", status starts Enabled.
     expect(screen.getByText('Not set')).toBeInTheDocument();
     expect(screen.getByText('conditions:0')).toBeInTheDocument();
     expect(screen.getByText('actions:1')).toBeInTheDocument();
     // Readiness starts incomplete (no name, no trigger).
-    expect(screen.getByText('Not ready yet')).toBeInTheDocument();
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
     // Form controls are present and labelled.
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/trigger type/i)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Trigger type' })).toBeInTheDocument();
   });
 
   it('flips the readiness badge to "Ready to save" once name + trigger are set', () => {
     renderPage('/automations/new');
-    expect(screen.getByText('Not ready yet')).toBeInTheDocument();
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Commute Prep' } });
-    fireEvent.change(screen.getByLabelText(/trigger type/i), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
       target: { value: 'trigger_signal' },
     });
 
-    expect(screen.getByText('Ready to save')).toBeInTheDocument();
+    expect(screen.getAllByText('Ready to save')).toHaveLength(1);
     expect(screen.queryByText('Not ready yet')).not.toBeInTheDocument();
     // The stubbed configurator reflects the newly created default trigger.
     expect(screen.getByText('tc:trigger_signal')).toBeInTheDocument();
@@ -525,6 +743,180 @@ describe('AutomationBuilderPage — create mode', () => {
 
     expect(await screen.findByText('Name is required')).toBeInTheDocument();
     expect(H.createMutateAsync).not.toHaveBeenCalled();
+    const name = screen.getByRole('textbox', { name: 'Name required' });
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    const feedbackId = name.getAttribute('aria-describedby');
+    expect(feedbackId).toBeTruthy();
+    expect(document.getElementById(feedbackId!)).toHaveTextContent('Name is required');
+    expect(screen.getByRole('combobox', { name: 'Trigger type' }))
+      .not.toHaveAttribute('aria-describedby', feedbackId);
+  });
+
+  it('focuses the missing trigger control and associates its validation feedback', async () => {
+    const { container } = renderPage();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name required' }), {
+      target: { value: 'Named draft' },
+    });
+    fireEvent.submit(container.querySelector('form')!);
+    expect(await screen.findByText('Trigger type is required')).toBeInTheDocument();
+    const trigger = screen.getByRole('combobox', { name: 'Trigger type' });
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById(trigger.getAttribute('aria-describedby')!))
+      .toHaveTextContent('Trigger type is required');
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('uses semantic readiness roles and explains an incomplete geofence condition', async () => {
+    H.automationState = {
+      data: { ...EDIT_AUTOMATION, conditions: [{ kind: 'condition_geofence', place_id: 0, state: 'inside' }] },
+      isLoading: false,
+      error: null,
+    };
+    renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    const assistant = screen.getByRole('complementary', { name: 'Builder assistant' });
+    const rows = within(assistant).getAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toHaveTextContent('Name addedcomplete');
+    expect(rows[1]).toHaveTextContent('Trigger configuredcomplete');
+    expect(rows[2]).toHaveTextContent('Conditionsincomplete');
+    expect(rows[3]).toHaveTextContent('At least one actioncomplete');
+    expect(rows[0].querySelector('svg')).toHaveClass(neonColorMap.green.text);
+    expect(rows[2].querySelector('svg')).toHaveClass(typography.color.muted);
+    expect(within(assistant).getByText('Select a geofence for each geofence condition')).toBeInTheDocument();
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('reviews the actual draft summary while retaining labelled editors and proposal-only behavior', () => {
+    renderPage('/automations/new');
+    fireEvent.click(screen.getByRole('button', { name: 'add-condition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'add-action' }));
+    const brief = screen.getByTestId('automation-builder-brief');
+    expect(brief.querySelector('[data-operational-metric="conditions"]')).toHaveTextContent('1');
+    expect(brief.querySelector('[data-operational-metric="actions"]')).toHaveTextContent('2');
+    const nameEditor = screen.getByRole('textbox', { name: 'Name required' });
+    const triggerEditor = screen.getByRole('combobox', { name: 'Trigger type' });
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Automation summary details' });
+    expect(within(drawer).getAllByText('Current editor draft only. Publishing still requires validation and an explicit save.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('Actions are executed in order.')).toBeInTheDocument();
+    expect(nameEditor).toBeInTheDocument();
+    expect(triggerEditor).toBeInTheDocument();
+    expect(screen.getByTestId('condition-builder')).toBeInTheDocument();
+    expect(screen.getByTestId('action-builder')).toBeInTheDocument();
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
+    expect(H.testRunMutate).not.toHaveBeenCalled();
+  });
+
+  describe('AutomationBuilderPage — independent source trust', () => {
+    it('shows unresolved auxiliary reads without claiming empty configuration or hiding editors', () => {
+      H.vehicles = undefined;
+      H.vehiclesQueryState = { isPending: true, isLoading: true };
+      H.channelsState = { data: undefined, isPending: true, isLoading: true };
+      renderPage();
+      expect(screen.getByRole('status', { name: 'Loading Vehicle registry' })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Loading Notification channels' })).toBeInTheDocument();
+      expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('No channels configured')).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('');
+      expect(screen.getByTestId('condition-builder')).toBeInTheDocument();
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+    });
+
+    it('keeps the saved business target and graph while auxiliary failures expose independent retries', async () => {
+      const retryVehicles = vi.fn();
+      const retryChannels = vi.fn();
+      H.automationState = { data: { ...EDIT_AUTOMATION, vehicle_id: 7 }, isLoading: false, error: null };
+      H.vehicles = undefined;
+      H.vehiclesQueryState = { error: new Error('Vehicle read failed'), refetch: retryVehicles };
+      H.channelsState = { data: undefined, error: new Error('Channel read failed'), refetch: retryChannels };
+      renderPage('/automations/5/edit');
+      await screen.findByDisplayValue('Existing One');
+      const target = screen.getByRole('combobox', { name: 'Vehicle' });
+      expect(target).toHaveValue('7');
+      expect(within(target).getByRole('option', { name: 'Vehicle 7' })).toBeInTheDocument();
+      expect(screen.getByTestId('trigger-configurator')).toHaveTextContent('tc:trigger_event');
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+      const retries = screen.getAllByRole('button', { name: /^retry$/i });
+      expect(retries).toHaveLength(2);
+      fireEvent.click(retries[0]);
+      expect(retryVehicles).toHaveBeenCalledOnce();
+      expect(retryChannels).not.toHaveBeenCalled();
+      fireEvent.click(retries[1]);
+      expect(retryChannels).toHaveBeenCalledOnce();
+      expect(H.updateMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('retains auxiliary options and local draft edits during paused or failed refreshes', () => {
+      H.vehicles = [{ id: 7, display_name: 'Test vehicle' }];
+      H.vehiclesQueryState = { fetchStatus: 'paused' };
+      H.channelsState = { data: [{ id: 2, name: 'Test channel' }], error: new Error('Refresh failed') };
+      renderPage();
+      fireEvent.change(screen.getByRole('textbox', { name: 'Name required' }), {
+        target: { value: 'Unpublished draft' },
+      });
+      expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+      expect(screen.getByRole('option', { name: 'Test vehicle' })).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Unpublished draft')).toBeInTheDocument();
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('distinguishes authoritatively empty auxiliary lists from failures', () => {
+      renderPage();
+      expect(screen.getByText('No vehicles yet')).toBeInTheDocument();
+      expect(screen.getByText('No channels configured')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('');
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+    });
+
+    it.each([
+      { name: 'loading', query: { data: undefined, isPending: true, isLoading: true }, expected: 'Loading Automation presets' },
+      { name: 'failed', query: { data: undefined, error: new Error('Preset read failed') }, expected: 'Failed to load data' },
+      { name: 'empty', query: { data: undefined, isSuccess: true }, expected: 'No preset templates available' },
+    ])('keeps the editor visible and prevents blank preset publishing when $name', ({ query, expected }) => {
+      H.presetState = query;
+      const { container } = renderPage('/automations/new?preset=test-preset');
+      if ('isLoading' in query && query.isLoading) {
+        expect(screen.getByRole('status', { name: expected })).toBeInTheDocument();
+      } else {
+        expect(screen.getByText(expected)).toBeInTheDocument();
+      }
+      expect(screen.getByRole('textbox', { name: 'Name required' })).toBeInTheDocument();
+      expect(screen.getByTestId('condition-builder')).toBeInTheDocument();
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+      expect(screen.getByRole('button', { name: /^create$/i })).toBeDisabled();
+      fireEvent.submit(container.querySelector('form')!);
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('hydrates the complete preset and retains unsaved edits through preset refresh failure', async () => {
+      const preset = {
+        name: 'Preset draft',
+        description: 'Typed preset',
+        triggers: [{ kind: 'trigger_event', event_type: 'online' }],
+        conditions: [{ kind: 'condition_time_window', start_time: '08:00', end_time: '09:00', timezone: 'UTC', days_of_week: [1] }],
+        actions: [{ kind: 'action_command', command_name: 'climate_on' }, { kind: 'action_wait', duration_s: 30 }],
+      };
+      H.presetState = { data: preset };
+      const { refresh } = renderPage('/automations/new?preset=test-preset');
+      const name = await screen.findByDisplayValue('Preset draft');
+      expect(screen.getByTestId('condition-builder')).toHaveTextContent('conditions:1');
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:2');
+      expect(screen.getByRole('button', { name: /^create$/i })).toBeEnabled();
+      fireEvent.change(name, { target: { value: 'Edited preset draft' } });
+      H.presetState = { data: preset, error: new Error('Refresh failed') };
+      refresh();
+      expect(screen.getByDisplayValue('Edited preset draft')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^create$/i })).toBeEnabled();
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+    });
   });
 
   it('creates the automation with a normalized payload and navigates to the list', async () => {
@@ -532,7 +924,7 @@ describe('AutomationBuilderPage — create mode', () => {
     const { container } = renderPage('/automations/new');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'My Automation' } });
-    fireEvent.change(screen.getByLabelText(/trigger type/i), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
       target: { value: 'trigger_signal' },
     });
     fireEvent.submit(container.querySelector('form')!);
@@ -556,7 +948,7 @@ describe('AutomationBuilderPage — create mode', () => {
     const { container } = renderPage('/automations/new');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'My Automation' } });
-    fireEvent.change(screen.getByLabelText(/trigger type/i), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
       target: { value: 'trigger_signal' },
     });
     fireEvent.submit(container.querySelector('form')!);
@@ -616,11 +1008,24 @@ describe('AutomationBuilderPage — create mode', () => {
 // ────────────────────────────── Edit mode ──────────────────────────────
 
 describe('AutomationBuilderPage — edit mode', () => {
+  it('keeps the hydrated form and unsaved values during failed source recovery', async () => {
+    H.automationState = { data: EDIT_AUTOMATION, isLoading: false, error: null };
+    const { refresh } = renderPage('/automations/5/edit');
+    const name = await screen.findByDisplayValue('Existing One');
+    fireEvent.change(name, { target: { value: 'Unsaved retained edit' } });
+    H.automationState = { data: EDIT_AUTOMATION, isLoading: false, error: new Error('Refresh offline') };
+    refresh();
+    expect(screen.getByDisplayValue('Unsaved retained edit')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
+  });
+
   it('renders the loading state and hides the form while the automation loads', () => {
     H.automationState = { data: undefined, isLoading: true, error: null };
     renderPage('/automations/5/edit');
 
-    expect(screen.getByRole('heading', { name: 'Edit Automation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit automation' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/name/i)).not.toBeInTheDocument();
   });
 
@@ -646,6 +1051,92 @@ describe('AutomationBuilderPage — edit mode', () => {
 
 // ──────────────────── Draft autosave regression (bug fix) ────────────────────
 
+describe('AutomationBuilderPage — multi-trigger editing', () => {
+  const siblings: AutomationFull['triggers'] = [
+    { kind: 'trigger_schedule', cron_expr: '*/15 9-17 * * 1-5', timezone: 'Europe/London' },
+    { kind: 'trigger_geofence', place_id: 7, event: 'dwell', dwell_minutes: 2.5 },
+    { kind: 'trigger_signal', signal: 'outside_temp', op: '<', value_num: -0.5 },
+  ];
+
+  function hydrateRule() {
+    const rule: AutomationFull = {
+      ...EDIT_AUTOMATION,
+      vehicle_id: 7,
+      enabled: false,
+      triggers: [
+        { kind: 'trigger_signal', signal: 'battery_level', op: '<', value_num: 20 },
+        ...siblings,
+      ],
+      conditions: [{ kind: 'condition_geofence', place_id: 3, state: 'inside' }],
+      actions: [{ kind: 'action_wait', duration_s: 30 }],
+    };
+    H.automationState = { data: rule, isLoading: false, error: null };
+    H.updateMutateAsync.mockResolvedValue({ id: 5 });
+    return rule;
+  }
+
+  it.each([
+    { label: 'missing', input: '', expected: undefined },
+    { label: 'invalid', input: 'invalid', expected: undefined },
+    { label: 'measured zero', input: '0', expected: 0 },
+    { label: 'negative signed value', input: '-12', expected: -12 },
+    { label: 'positive signed value', input: '+12', expected: 12 },
+    { label: 'fractional value', input: '0.25', expected: 0.25 },
+    { label: 'negative fractional value', input: '-0.25', expected: -0.25 },
+  ])('preserves the hydrated graph when trigger zero receives $label', async ({ input, expected }) => {
+    H.realTrigger = true;
+    const rule = hydrateRule();
+    const original = structuredClone(rule);
+    const { container, refresh } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    const valueEditor = screen.getByRole('textbox', { name: /^Value\b/ });
+    fireEvent.focus(valueEditor);
+    fireEvent.change(valueEditor, {
+      target: { value: input },
+    });
+    fireEvent.blur(valueEditor);
+    if (input === 'invalid') {
+      expect(screen.getByText('Enter a valid number')).toBeInTheDocument();
+    }
+    refresh();
+    fireEvent.submit(container.querySelector('form')!);
+    await waitFor(() => expect(H.updateMutateAsync).toHaveBeenCalledOnce());
+    const trigger: AutomationFullInput['triggers'][number] = {
+      kind: 'trigger_signal', signal: 'battery_level', op: '<',
+      ...(expected !== undefined ? { value_num: expected } : {}),
+    };
+    expect(H.updateMutateAsync).toHaveBeenCalledWith({
+      id: 5,
+      input: { ...formToPayload(automationToForm(rule)), triggers: [trigger, ...siblings] },
+    });
+    expect(rule).toEqual(original);
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { kind: 'trigger_event', first: { kind: 'trigger_event', event_type: 'online' } },
+    { kind: '', first: null },
+  ])('preserves siblings when the first trigger type changes to "$kind"', async ({ kind, first }) => {
+    const rule = hydrateRule();
+    const original = structuredClone(rule);
+    const { container } = renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
+      target: { value: kind },
+    });
+    fireEvent.submit(container.querySelector('form')!);
+    await waitFor(() => expect(H.updateMutateAsync).toHaveBeenCalledOnce());
+    expect(H.updateMutateAsync).toHaveBeenCalledWith({
+      id: 5,
+      input: {
+        ...formToPayload(automationToForm(rule)),
+        triggers: first ? [first, ...siblings] : siblings,
+      },
+    });
+    expect(rule).toEqual(original);
+  });
+});
+
 describe('AutomationBuilderPage — new-automation draft autosave', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -668,5 +1159,91 @@ describe('AutomationBuilderPage — new-automation draft autosave', () => {
     const raw = window.localStorage.getItem('teslasync:draft:v1:automation:new');
     expect(raw).not.toBeNull();
     expect(raw).toContain('Draft Me');
+  });
+
+  it('clears storage on matching success without resetting the canonical editor or conflict feedback', async () => {
+    let resolveSave!: (result: { id: number; conflicts: { type: string; message: string }[] }) => void;
+    H.createMutateAsync.mockImplementation(() => new Promise((resolve) => { resolveSave = resolve; }));
+    const { container } = renderPage();
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: '  Saved automation  ' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
+      target: { value: 'trigger_signal' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'add-condition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'add-action' }));
+    fireEvent.click(screen.getByRole('switch'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const key = 'teslasync:draft:v1:automation:new';
+    expect(window.localStorage.getItem(key)).toContain('Saved automation');
+    fireEvent.submit(container.querySelector('form')!);
+
+    await act(async () => {
+      resolveSave({ id: 124, conflicts: [{ type: 'overlap', message: 'overlap' }] });
+    });
+    expect(window.localStorage.getItem(key)).toBeNull();
+    expect(screen.getByDisplayValue('Saved automation')).toBeInTheDocument();
+    expect(screen.getByTestId('trigger-configurator')).toHaveTextContent('tc:trigger_signal');
+    expect(screen.getByText('conditions:1')).toBeInTheDocument();
+    expect(screen.getByText('actions:2')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByTestId('conflict-warnings')).toHaveTextContent('conflicts:1');
+    fireEvent.click(screen.getByRole('button', { name: /test run/i }));
+    expect(H.testRunMutate).toHaveBeenCalledWith(124);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(window.localStorage.getItem(key)).toBeNull();
+    expect(screen.queryByText('AUTOMATIONS_LIST')).not.toBeInTheDocument();
+  });
+
+  it('retains the form and persisted draft on rejection without successful state transitions', async () => {
+    H.createMutateAsync.mockRejectedValue(new Error('Save rejected'));
+    const { container } = renderPage();
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Keep this draft' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
+      target: { value: 'trigger_signal' },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const key = 'teslasync:draft:v1:automation:new';
+    const draft = window.localStorage.getItem(key);
+    await act(async () => { fireEvent.submit(container.querySelector('form')!); });
+    expect(screen.getByText('Save rejected')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Keep this draft')).toBeInTheDocument();
+    expect(window.localStorage.getItem(key)).toBe(draft);
+    expect(screen.queryByRole('button', { name: /test run/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('AUTOMATIONS_LIST')).not.toBeInTheDocument();
+  });
+
+  it.each(['success', 'rejection'] as const)('ignores a stale %s after a scope change during a pending save', async (outcome) => {
+    let resolveSave!: (result: { id: number }) => void;
+    let rejectSave!: (error: Error) => void;
+    H.updateMutateAsync.mockImplementation(() => new Promise((resolve, reject) => {
+      resolveSave = resolve;
+      rejectSave = reject;
+    }));
+    H.automationState = { data: EDIT_AUTOMATION, isLoading: false, error: null };
+    const { container, changeScope } = renderPage('/automations/5/edit');
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Pending edit' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const oldKey = 'teslasync:draft:v1:automation:edit:5';
+    const oldDraft = window.localStorage.getItem(oldKey);
+    expect(oldDraft).toContain('Pending edit');
+    fireEvent.submit(container.querySelector('form')!);
+    H.automationState = { data: { ...EDIT_AUTOMATION, id: 7, name: 'Another automation' }, isLoading: false, error: null };
+    changeScope('/automations/7/edit');
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Current edit' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const currentKey = 'teslasync:draft:v1:automation:edit:7';
+    const currentDraft = window.localStorage.getItem(currentKey);
+    expect(currentDraft).toContain('Current edit');
+    await act(async () => {
+      if (outcome === 'success') resolveSave({ id: 5 });
+      else rejectSave(new Error('Stale rejection'));
+    });
+    expect(screen.getByDisplayValue('Current edit')).toBeInTheDocument();
+    expect(window.localStorage.getItem(currentKey)).toBe(currentDraft);
+    expect(window.localStorage.getItem(oldKey)).toBe(oldDraft);
+    expect(screen.queryByText('Stale rejection')).not.toBeInTheDocument();
+    expect(screen.queryByText('AUTOMATIONS_LIST')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /test run/i }));
+    expect(H.testRunMutate).toHaveBeenCalledWith(7);
   });
 });

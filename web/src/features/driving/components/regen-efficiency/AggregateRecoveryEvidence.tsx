@@ -117,12 +117,8 @@ export function AggregateRecoveryEvidence({
                     'regen.recoveredInfo',
                     'The complete aggregate reports {{recovered}} recovered from {{driveEnergy}} of drive energy.',
                     {
-                      recovered: formatEnergy(aggregate.totalRegenWh, {
-                        precision: 1,
-                      }),
-                      driveEnergy: formatEnergy(aggregate.totalDriveWh, {
-                        precision: 1,
-                      }),
+                      recovered: formatEnergy(aggregate.totalRegenWh),
+                      driveEnergy: formatEnergy(aggregate.totalDriveWh),
                     },
                   )}
                 </Text>
@@ -140,7 +136,7 @@ export function AggregateRecoveryEvidence({
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-white/[0.03] p-3">
                 <MetricValue>
-                  {formatEnergy(aggregate.batteryCapacityWh, { precision: 1 })}
+                  {formatEnergy(aggregate.batteryCapacityWh)}
                 </MetricValue>
                 <MetricLabel>
                   {t(

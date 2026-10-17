@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GlassPanel, PanelTitle } from '@/components/ui';
+import { DataStateNotice } from '@/components/feedback';
+import type { DataState } from '@/api/dataState';
+import type { SecurityEvent } from '@/types/admin';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import {
   BarChart,
   Bar,
@@ -16,10 +20,11 @@ import {
   EmbeddedChart,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
-import { formatDateShort } from '@/lib/dateFormat';
+import { formatDayKey } from '@/lib/dateFormat';
 import type { SentryDayBucket } from './helpers';
 
 interface SentryModeChartProps {
+  sourceState?: DataState<SecurityEvent[]>;
   sentryBuckets: SentryDayBucket[];
   isLoading: boolean;
   error: unknown;
@@ -27,8 +32,9 @@ interface SentryModeChartProps {
   className?: string;
 }
 
-export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, className }: SentryModeChartProps) {
+export function SentryModeChart({ sentryBuckets, sourceState, isLoading, error, onRetry, className }: SentryModeChartProps) {
   const { t } = useTranslation();
+  const { locale } = useNumberFormatting();
 
   // The parent derives `sentryBuckets` from an untyped history response that
   // can transiently omit the array; guard before reading `.length` or handing
@@ -40,21 +46,24 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
     [sentryBuckets],
   );
   const chartRows = useMemo(
-    () => buckets.map(({ date, sentryOn, sentryOff }) => ({ date, sentryOn, sentryOff })),
+    () => buckets.map(({ date, sentryOn, sentryOff, sentryUnknown }) => ({ date, sentryOn, sentryOff, sentryUnknown: sentryUnknown ?? 0 })),
     [buckets],
   );
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('admin.security.sentryChart', 'Sentry Mode Activity')}
+        <Activity className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        {t('admin.security.sentryChart', 'Sentry mode activity')}
       </PanelTitle>
-      <EmbeddedChart
+      {sourceState?.status === 'stale' && <DataStateNotice state="stale" />}
+      {sourceState && !sourceState.hasData && sourceState.isRefreshBlocked ? (
+        <DataStateNotice state="partial" title={t('dataSources.status.paused', 'Refresh paused')} />
+      ) : <EmbeddedChart
         chartKey="admin-security-sentry-mode"
-        title={t('admin.security.sentryChart', 'Sentry Mode Activity')}
-        ariaLabel={t('admin.security.sentryChart', 'Sentry Mode Activity')}
-        loading={isLoading && !error}
+        title={t('admin.security.sentryChart', 'Sentry mode activity')}
+        ariaLabel={t('admin.security.sentryChart', 'Sentry mode activity')}
+        loading={(isLoading || sourceState?.status === 'initial') && !error}
         error={error instanceof Error ? error : error ? new Error(String(error)) : undefined}
         onRetry={onRetry}
         empty={!error && !isLoading && buckets.length === 0}
@@ -69,8 +78,10 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
         data={chartRows}
         dataColumns={[
           { key: 'date', label: t('admin.security.chart.date', 'Date') },
-          { key: 'sentryOn', label: t('admin.security.chart.sentryOn', 'Sentry On') },
-          { key: 'sentryOff', label: t('admin.security.chart.sentryOff', 'Sentry Off') },
+          { key: 'sentryOn', label: t('admin.security.chart.sentryOn', 'Sentry on') },
+          { key: 'sentryOff', label: t('admin.security.chart.sentryOff', 'Sentry off') },
+          ...(buckets.some((bucket) => (bucket.sentryUnknown ?? 0) > 0)
+            ? [{ key: 'sentryUnknown', label: t('admin.security.unknown', 'Unknown') }] : []),
         ]}
       >
         {({ hiddenSeries }) => (
@@ -80,14 +91,14 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
               <XAxis
                 dataKey="date"
                 tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
-                tickFormatter={(val: string) => formatDateShort(val)}
+                tickFormatter={(val: string) => formatDayKey(val, { locale, style: 'short' })}
               />
               <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 11 }} allowDecimals={false} />
               <Tooltip content={<ChartTooltip />} />
               <ChartLegend />
               <Bar
                 dataKey="sentryOn"
-                name={t('admin.security.chart.sentryOn', 'Sentry On')}
+                name={t('admin.security.chart.sentryOn', 'Sentry on')}
                 fill={chartTokens.series[0]}
                 radius={[4, 4, 0, 0]}
                 stackId="sentry"
@@ -95,16 +106,23 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
               />
               <Bar
                 dataKey="sentryOff"
-                name={t('admin.security.chart.sentryOff', 'Sentry Off')}
+                name={t('admin.security.chart.sentryOff', 'Sentry off')}
                 fill={chartTokens.axisStroke}
                 radius={[4, 4, 0, 0]}
                 stackId="sentry"
                 hide={hiddenSeries?.isHidden('sentryOff') ?? false}
               />
+              {buckets.some((bucket) => (bucket.sentryUnknown ?? 0) > 0) && <Bar
+                dataKey="sentryUnknown"
+                name={t('admin.security.unknown', 'Unknown')}
+                fill={chartTokens.series[2]}
+                stackId="sentry"
+                hide={hiddenSeries?.isHidden('sentryUnknown') ?? false}
+              />}
             </BarChart>
           </ResponsiveContainer>
         )}
-      </EmbeddedChart>
+      </EmbeddedChart>}
     </GlassPanel>
   );
 }

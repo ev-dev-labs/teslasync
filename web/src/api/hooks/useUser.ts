@@ -104,12 +104,12 @@ export function useRefreshTeslaFeatureConfig() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () =>
-      request<TeslaConfigEnvelope>('/tesla/user/feature-config/refresh', { method: 'POST' }),
+      request<TeslaConfigEnvelope>('/tesla/user/feature-config/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: userKeys.teslaFeatureConfig });
-      success('toast.user.featureConfig.success', 'Feature config refreshed');
+      success('toast.featureConfigRefreshed', 'Feature config refreshed');
     },
-    onError: (err) => error(err, 'toast.user.featureConfig.error', 'Failed to refresh feature config'),
+    onError: (err) => error(err, 'toast.featureConfigFailed', 'Failed to refresh feature config'),
   });
 }
 
@@ -133,12 +133,12 @@ export function useRefreshTeslaRegion() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () =>
-      request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region/refresh', { method: 'POST' }),
+      request<TeslaConfigEnvelope<TeslaRegionData>>('/tesla/user/region/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: userKeys.teslaRegion });
-      success('toast.user.region.success', 'Region refreshed');
+      success('toast.regionRefreshed', 'Region info refreshed');
     },
-    onError: (err) => error(err, 'toast.user.region.error', 'Failed to refresh region'),
+    onError: (err) => error(err, 'toast.regionFailed', 'Failed to refresh region'),
   });
 }
 
@@ -215,7 +215,7 @@ export function useRefreshTeslaProfile() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () =>
-      request<TeslaProfileEnvelope>('/tesla/user/profile/refresh', { method: 'POST' }),
+      request<TeslaProfileEnvelope>('/tesla/user/profile/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: userKeys.teslaProfile });
       success('toast.user.teslaProfile.success', 'Tesla profile refreshed');

@@ -1,0 +1,1050 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-diagnostics-service-evidence-pack",
+  "attempt": 1,
+  "actor": "d0228c06-5786-4b5a-b2ec-388fcd34cbe4",
+  "status": "DONE_SOURCE_ONLY_REPORT_NOT_ACCEPTANCE",
+  "snapshotUtc": "2026-10-14T01:05:41.7747066Z",
+  "supportPinUtc": "2026-10-14T01:07:52.9605395Z",
+  "catalogPinUtc": "2026-10-14T01:08:59.388666Z",
+  "onboardingPinUtc": "2026-10-14T01:10:39.3676511Z",
+  "reportWrittenUtc": "2026-10-14T01:17:04.5723387Z",
+  "reservation": {
+    "reservedUtc": "2026-10-14T01:00:00.625Z",
+    "returnUtc": "2026-10-14T01:20:00.625Z",
+    "hardUtc": "2026-10-14T01:25:00.625Z",
+    "firstActualCommandUtc": "2026-10-14T01:02:07.3374675Z",
+    "targetMinutes": 10,
+    "boundedCommandsLimitMinutes": 15
+  },
+  "authorizedWrites": [
+    "docs\\frontend-audits\\phase6-qa-diagnostics-service-evidence-pack.json",
+    "web\\logs\\phase6-qa-diagnostics-service-evidence-pack.log"
+  ],
+  "firstCheck": {
+    "existingReport": "ABSENT",
+    "existingLog": "ABSENT",
+    "exit": 0,
+    "noChangeNeeded": false,
+    "reason": "Report absent; report-only source QA; accepted page not remigrated."
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "claimLine": 385,
+    "claimRaw": "| [~] | 6 | phase6-qa-diagnostics-service-evidence-pack | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-service-evidence-pack.json | phase5-page-diagnostics-service-evidence-pack | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=d0228c06-5786-4b5a-b2ec-388fcd34cbe4; LastConsumed=-1 | - |CurrentacceptedServiceEvidencePackPage/directparts source-onlyQA; report/logonly/no realservice/export/API/browser/native/source/test/catalog/fullsuite. Preserveevidence/privacy/scopes/rawSI/preferences/trust/unknownzero/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by d0228c06-5786-4b5a-b2ec-388fcd34cbe4, no browser lock. |",
+    "dependencyLine": 1849,
+    "dependencyRaw": "| [x] | 5 | phase5-page-diagnostics-service-evidence-pack | original-page-migration | web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx; web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.test.tsx | - | 1 | 2026-10-12T14:32:17.5561838Z | 2ac3b1e6858b08d2efaf245944a5d408eddc31b3 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/diagnostics/service-evidence; audit=docs\\frontend-audits\\audit-page-102.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=b10fd6a3-c0a2-4bc4-aeda-b0cec173dd67; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Receipt lint0/style0;296-to315 page/915-to933 composed/6sections; preservation1 three deliberate hook changes documented, not blanket preservation pass; final tests external catalog startup1/zero cases;15maskedPNG/mobile incomplete, no native QA; commit=2ac3b1e6858b08d2efaf245944a5d408eddc31b3; pushed. |",
+    "acceptedCommit": "2ac3b1e6858b08d2efaf245944a5d408eddc31b3",
+    "queueSha256": "7F70F73C4AF8DB47C66F4A8D4B5399F7A077F3C13C34BB6E5BEA332BFD6541AB",
+    "queueReadUtc": "2026-10-14T01:17:04.5859778Z",
+    "git": "NOTRUN",
+    "phase": "Phases0-5 remain closed; Phase6 unfinished; Phase7 NOTRUN",
+    "latestHandoff": "docs\\session-handoff.md:1-43 new-machine2026-10-14T00:44Z"
+  },
+  "requiredReading": {
+    "full": [
+      "docs\\orchestrator-loop.md:1-296",
+      "docs\\frontend-design-contract.md:1-2539",
+      ".github\\instructions\\frontend-si-cutover.instructions.md:1-94",
+      ".github\\instructions\\react-frontend.instructions.md:1-629",
+      ".github\\instructions\\observability.instructions.md:1-45",
+      ".github\\instructions\\unit-conversion.instructions.md:1-221"
+    ],
+    "relevant": [
+      "docs\\frontend-mission.md:1416-1518 mission43-45",
+      "docs\\session-handoff.md:1-260 including current1-43",
+      "docs\\frontend-audits\\audit-page-102.json:1-338"
+    ],
+    "precedence": "Current restrained design/raw-SI/null-not-zero authority over legacy neon/source-unit compatibility examples; no gate commands authorized."
+  },
+  "pins": [
+    {
+      "path": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+      "sha256": "948E7DAB446800B0F963E9AF9BB3F876FC8F12DBD8F3B69E246394EFFD9BFDBA",
+      "lines": 315,
+      "bytes": 13398,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+      "sha256": "B047979B5D082032A7C2176CA3893FF732D07B606BFDC7430DB7A695EDF4A2AD",
+      "lines": 91,
+      "bytes": 3549,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx",
+      "sha256": "FED946C38C4351D001787FE29F41B105A9A585F950C4E6A651C955CF30F858FF",
+      "lines": 114,
+      "bytes": 4417,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx",
+      "sha256": "4731E72EBA09ADD0C1548D3ED877CBC999DE287FAF5AB538B78DFE76827D6EE4",
+      "lines": 64,
+      "bytes": 2742,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+      "sha256": "BE470BE944B013E9A4FE23B0C9B7A1B554092699303ED3B02F14FBFCDF673A78",
+      "lines": 109,
+      "bytes": 4490,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx",
+      "sha256": "3F80E53F076EA939A45055481938BCCE133078C1D8E4AC89FE1EFDFB0CE018A0",
+      "lines": 42,
+      "bytes": 1697,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.tsx",
+      "sha256": "A4EEF29E9CC17C258D73F13B0C4C466C1F94FA9E851C0ED19C905E868253B99E",
+      "lines": 42,
+      "bytes": 1534,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx",
+      "sha256": "4E4B4269DC1764C44BC6EB79AC75562667447083A1F71103FECFC2F616343CA0",
+      "lines": 86,
+      "bytes": 3822,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx",
+      "sha256": "BFA050B201EDA4D19630676257DD28F6256EB57AE9AE2500A9188DA800F7F478",
+      "lines": 70,
+      "bytes": 3753,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+      "sha256": "3CEA2105EB993377C38F334C361381924C2311C0421A00F9663DA6CF04AA31F2",
+      "lines": 131,
+      "bytes": 5345,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts",
+      "sha256": "CA4B02D504691395065EA26B9A87DF00D6AC76B9FA320347C1CE61AE478EBBAA",
+      "lines": 387,
+      "bytes": 16839,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts",
+      "sha256": "8D9CADC97DB35509EB958A3C2E2B6FC94B6251D6E2121E2C835E5705DDC9D12B",
+      "lines": 1018,
+      "bytes": 40532,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\lib\\signalEvidenceAvailability.ts",
+      "sha256": "78122794815E99D1452BFEBB85AD6C19154EE57109412F151EE7D4472DBB776C",
+      "lines": 11,
+      "bytes": 504,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+      "lines": 683,
+      "bytes": 25746,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "sha256": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+      "lines": 176,
+      "bytes": 6828,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lines": 434,
+      "bytes": 15482,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lines": 174,
+      "bytes": 6593,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\hooks\\useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "lines": 148,
+      "bytes": 5230,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17,
+      "bytes": 658,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "lines": 259,
+      "bytes": 10783,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "lines": 93,
+      "bytes": 5174,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Select.tsx",
+      "sha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+      "lines": 119,
+      "bytes": 4432,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\components\\ui\\DataTable.tsx",
+      "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "lines": 1707,
+      "bytes": 77157,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "sha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "lines": 321,
+      "bytes": 11591,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168,
+      "bytes": 4411,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919,
+      "bytes": 68125,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\lib\\routeRegistry.ts",
+      "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "lines": 289,
+      "bytes": 31836,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.test.tsx",
+      "sha256": "5E1F999A58E9B795C38E8D5BC50D43629379673C8CFFB272F8E3925299343428",
+      "lines": 278,
+      "bytes": 13391,
+      "group": "PIN"
+    },
+    {
+      "path": "web\\src\\components\\ui\\CopyButton.tsx",
+      "sha256": "5C34313CBC9A8147E6F3B0000265D5340A83D7B75A4A2C9181921697DE9A3869",
+      "lines": 155,
+      "bytes": 5307,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "web\\src\\components\\ui\\CodeBlock.tsx",
+      "sha256": "D512639539E748184D6AF09D1CAC226F1F203FACF5D0069391C9178538815287",
+      "lines": 71,
+      "bytes": 2244,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\OperationalNarrativeDetails.tsx",
+      "sha256": "42D86533A953D9EE7C25E933FA7200890A420EE31868FA515F01D89B4F0E6FA1",
+      "lines": 244,
+      "bytes": 8350,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "web\\src\\api\\types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "lines": 4194,
+      "bytes": 120243,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "web\\src\\types\\telemetry.ts",
+      "sha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+      "lines": 159,
+      "bytes": 5083,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "docs\\orchestrator-loop.md",
+      "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "lines": 296,
+      "bytes": 16978,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "docs\\frontend-design-contract.md",
+      "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "lines": 2539,
+      "bytes": 182554,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "docs\\session-handoff.md",
+      "sha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "lines": 2460,
+      "bytes": 163930,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "docs\\frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "lines": 1593,
+      "bytes": 31079,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "lines": 94,
+      "bytes": 3585,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": ".github\\instructions\\react-frontend.instructions.md",
+      "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "lines": 629,
+      "bytes": 22645,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": ".github\\instructions\\observability.instructions.md",
+      "sha256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42",
+      "lines": 45,
+      "bytes": 4267,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": ".github\\instructions\\unit-conversion.instructions.md",
+      "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "lines": 221,
+      "bytes": 6501,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "migration-queue.md",
+      "sha256": "64ADD164F9E8DE3B1F761F78EEBDA85467DDD94D22139E24D79377AA0BEF9F88",
+      "lines": 2041,
+      "bytes": 2547101,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "docs\\frontend-audits\\audit-page-102.json",
+      "sha256": "C7A142AE31136CFBFF9F69767017F97036D7C22689BA25A70C4391C0AFE85F53",
+      "lines": 450,
+      "bytes": 34475,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "5E0056D6747E60450D4B2134BABA2152CEEC59C79E89AAE06D3712CC441F3A7E",
+      "lines": 130,
+      "bytes": 2122,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "sha256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "lines": 38994,
+      "bytes": 1842282,
+      "group": "SUPPORT_PIN"
+    },
+    {
+      "path": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "lines": 77,
+      "bytes": 2977,
+      "group": "SUPPORT_PIN"
+    }
+  ],
+  "pinCount": 46,
+  "pinReviewLimit": "Full page and8 local presentation parts. Necessary supporting hook/domain/shared ranges only; test read, NOTRUN. Byte pins are not whole-file QA claims.",
+  "composition": {
+    "definition": "Page +7 direct TSX parts +transitive SignalEvidenceSourceList, excluding shared library internals/hooks/domain",
+    "pageLines": 315,
+    "directPartFiles": 7,
+    "directPartLines": 548,
+    "transitivePartFiles": 1,
+    "transitivePartLines": 70,
+    "presentationFilesIncludingPage": 9,
+    "composedLines": 933,
+    "acceptedQueuePageLines": 315,
+    "acceptedQueueComposedLines": 933,
+    "historicalAuditPageLines": 298,
+    "historicalAuditComposedLines": 915,
+    "historicalQueueOriginalPageLines": 296,
+    "sectionCount": 6,
+    "sections": [
+      {
+        "name": "Focal signal/window",
+        "line": 226
+      },
+      {
+        "name": "KPI/evidence brief",
+        "line": 253,
+        "metricCount": 4
+      },
+      {
+        "name": "Evidence inventory",
+        "line": 278,
+        "columns": [
+          "signal",
+          "role",
+          "domains",
+          "sampleCount",
+          "hasEvidence"
+        ]
+      },
+      {
+        "name": "Privacy manifest",
+        "line": 291
+      },
+      {
+        "name": "Integrity/export",
+        "line": 296
+      },
+      {
+        "name": "Exact JSON preview",
+        "line": 309
+      }
+    ],
+    "actionFamilyCount": 12,
+    "actions": [
+      {
+        "name": "Focal signal",
+        "site": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx:77"
+      },
+      {
+        "name": "Hour preset",
+        "site": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx:85"
+      },
+      {
+        "name": "Catalog retry",
+        "site": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:233"
+      },
+      {
+        "name": "Individual history retry",
+        "site": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:60",
+        "cardinality": "maximum8 source identities"
+      },
+      {
+        "name": "Combined catalog/history retry",
+        "site": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:160-163,267,287",
+        "placements": 2
+      },
+      {
+        "name": "Software history retry",
+        "site": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:249"
+      },
+      {
+        "name": "Generate",
+        "site": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:69"
+      },
+      {
+        "name": "Dismiss generation error",
+        "site": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:58"
+      },
+      {
+        "name": "Copy digest",
+        "site": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:88-93"
+      },
+      {
+        "name": "Download exact generated JSON",
+        "site": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:36-46,146-148"
+      },
+      {
+        "name": "Review narrative details",
+        "site": "web\\src\\components\\data-display\\OperationalBrief.tsx:159-169"
+      },
+      {
+        "name": "Copy exact JSON preview",
+        "site": "web\\src\\components\\ui\\CodeBlock.tsx:57"
+      }
+    ],
+    "actionCountLimit": "12 traced families, not mounted controls. Variable source retry count; inherited table density/column/resize/onboarding affordances not exhaustively counted.",
+    "preservation": "Current presence/counts only; no immutable original comparator or blanket preservation PASS. Historical preservation1/catalog startup1/zero tests/native limits retained."
+  },
+  "routeAndScope": {
+    "path": "/diagnostics/service-evidence",
+    "mount": "web\\src\\App.tsx:219,755 lazy SafeRoute",
+    "registry": "web\\src\\lib\\routeRegistry.ts:107",
+    "workspace": "workspaceScope.ts:23-77,163-167: range=false,vehicle=true",
+    "vehicle": "useSelectedVehicle URL/store/first-vehicle precedence; no local picker",
+    "window": "Local72h default;24/72/168/720 presets; history hours1-8760/limit1-10000/max8 names; no absolute from/to",
+    "requests": "Client-relative request paths, snake_case vehicle_id, encoded signalName, AbortSignal. No API execution."
+  },
+  "statesAndSafety": {
+    "loading": "Initial-only skeletons; independent sections mounted",
+    "initialPaused": "Per-source flag retained; aggregate loses it/offline unsupported SEP003/004",
+    "fatal": "Catalog/evidence QueryError/retry; separate software fatal notice; no all-page gate",
+    "retained": "Retained histories analyzed with per-source warnings/retries; exported qualifications lost SEP002",
+    "empty": "Resolved-empty identities retained; unknown KPIs withheld; samples em dash; aggregate mismatch SEP003",
+    "zeroAndSigns": "Numeric0/negative retained; boolean->null deliberately excludes nonnumeric analysis. Median signs/signed candidate-focal lag preserved; absolute effect magnitude has separate direction. No hook display conversion.",
+    "generation": "Explicit click; latch/generation authority guards obsolete settlement/unmount/vehicle/signal/hours. Crypto error guidance; no weak fallback.",
+    "export": "Browser-local Blob/anchor/URL cleanup. Preview/download same toPrettyJson(pack); no upload/service mutation. SHA256 core excludes integrity/sorts keys/retains array order; isSignature false. None executed.",
+    "privacy": "Vehicle id/displayName whitelist protects extra fields; statistical payload not excluded SEP001",
+    "semantic": "Shared Select labels/useId, semantic DataTable, localized ARIA/headings, hidden decorative icons and real PageContainer via PageLayout",
+    "mobile": "min-w-0/wrap/sm columns;5 table fields remain in contained scroll; source target shortfalls SEP007, no measurements",
+    "observability": "No page RUM initialization observed; no backend scope"
+  },
+  "historicalSourceClosures": [
+    {
+      "id": "C102-01",
+      "current": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:240-245,272-273",
+      "result": "Notice props now conform; narrative stays in brief; compiler NOTRUN"
+    },
+    {
+      "id": "C102-02",
+      "current": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:87-97,112-143",
+      "result": "Latch/generation protects settlement; tests read, NOTRUN"
+    },
+    {
+      "id": "S102-01",
+      "current": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:70-76,186-207",
+      "result": "Nonempty availability guard/identities retained; tests NOTRUN"
+    },
+    {
+      "id": "V102-02",
+      "current": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:227,254,279,292,297,310",
+      "result": "No delayed entrance props; browser motion NOTRUN"
+    }
+  ],
+  "confirmedIssueCount": 9,
+  "confirmedIssues": [
+    {
+      "id": "SEP-SOURCE-001",
+      "rule": "privacy-export-boundary",
+      "priority": "P1",
+      "file": "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts",
+      "line": 271,
+      "title": "Never-included privacy guarantee does not constrain statistical contents",
+      "mechanism": "Vehicle reference is whitelisted, but focalShift and hypothesis.shift copy unrestricted numeric medians/MAD. Picker accepts every catalog name; there is no sensitive-signal exclusion. Focal-only qualifying shift receives weak quality and can clear export gate. excludedFields is only a static manifest, not enforcement.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx:50,72-79 web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts:51-56,96-112 web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:230-240,314-318,338-375,698-705,881-882 web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:53-63,168-176,197-208,253-258,267-285 web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx:43-44"
+      ],
+      "limit": "Source-reachable guarantee gap, not executed leakage. No actual catalog, identities or location data retrieved.",
+      "fix": "Existing diagnostics export/privacy domain owner defines and enforces exclusion policy for sensitive signal summaries. Preserve allowed raw evidence/schema compatibility/all sections; do not merely remove privacy claims.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "Benchmarks/settings privacy rows are unrelated; no exact export privacy repair."
+    },
+    {
+      "id": "SEP-SOURCE-002",
+      "rule": "export-source-trust",
+      "priority": "P1",
+      "file": "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts",
+      "line": 245,
+      "title": "Export drops source provenance and merges unresolved candidates with zero",
+      "mechanism": "Page passes analysis/software payloads, not bundle.sources. Workspace maps history points to ts/value, discarding available ingest/source-time metadata. Graph gives absent candidate series sampleCount0; builder copies it. Pending/failed candidates and measured-empty cannot be distinguished in JSON, though inventory correctly displays unknown. Weak valid focal shift can generate before all candidate reads resolve; retained failures are not qualified in exported snapshot.",
+      "evidence": [
+        "web\\src\\api\\types.ts:2670-2679",
+        "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+        ":51-56,96-112",
+        "web\\src\\api\\hooks\\useTelemetry.ts",
+        ":265-287",
+        "web\\src\\features\\diagnostics\\lib\\",
+        "rootCauseIntelligence.ts:698-705,855-861,881-882",
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+        ":110-124",
+        "web\\src\\features\\diagnostics\\lib\\",
+        "serviceEvidencePack.ts:245-285",
+        "web\\src\\features\\diagnostics\\components\\",
+        "ServiceEvidenceInventoryTable.tsx:66,73-78"
+      ],
+      "limit": "Export NOTRUN; schema/dataflow loss, not claim of a real stale export. Retained export may remain valid with honest provenance.",
+      "fix": "Existing evidence/export domain owner carries complete snapshot source identities/trust and explicit unknown-versus-empty counts via backward-safe schema. Preserve raw cache/query policy/signs, no fabricated completeness.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+        "web\\src\\features\\diagnostics\\lib\\",
+        "rootCauseIntelligence.ts",
+        "web\\src\\features\\diagnostics\\lib\\",
+        "serviceEvidencePack.ts",
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "Accepted adapter repair does not establish exported source-state contract."
+    },
+    {
+      "id": "SEP-SOURCE-003",
+      "rule": "aggregate-state-contract",
+      "priority": "P2",
+      "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+      "line": 73,
+      "title": "Aggregate loses paused, last-success and authoritative-empty facts",
+      "mechanism": "Bundle combine omits fetchStatus/dataUpdatedAt/isSuccess; spreading into useDataState cannot retain these facts. Filtering all resolved empty histories to undefined produces initial rather than unavailable. Per-source states are correct, but aggregate blocked=false/updatedAt=null; summary classifies initial-paused as unavailable/partial.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:70-76,154-158 web\\src\\api\\hooks\\useTelemetry.ts:265-287 web\\src\\api\\dataState.ts:190-219,244-258 web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx:33-48"
+      ],
+      "limit": "Independent source list remains visible, nonempty retained histories preserved; no whole-page blanking claim.",
+      "fix": "Existing page/brief owner derives aggregate summary from complete sources using existing DataState vocabulary. Preserve independent neighbors/retries and already fixed unknown KPI guards.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+        "web\\src\\features\\diagnostics\\components\\",
+        "operationalbrief-all\\DiagnosticEvidenceBrief.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "S102-01 display availability is source-addressed; this narrower residual state projection does not restart migration."
+    },
+    {
+      "id": "SEP-SOURCE-004",
+      "rule": "unsupported-offline-claim",
+      "priority": "P2",
+      "file": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx",
+      "line": 23,
+      "title": "Paused query is labeled offline without cause evidence",
+      "mechanism": "isRefreshBlocked chooses Paused offline key/fallback, while deriveDataState establishes only fetchStatus paused. Initial-paused also renders initial skeleton. Deferral alone does not prove network/device offline.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:21-28,38-42 web\\src\\api\\dataState.ts:193-219"
+      ],
+      "fix": "Existing diagnostic source-list owner uses cause-neutral deferred wording/initial-paused feedback; coordinate canonical owner only if exact key unavailable. Retain identities/samples/individual retry.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "Notification paused fixture/excluded inverse guard unrelated; no exact component repair."
+    },
+    {
+      "id": "SEP-SOURCE-005",
+      "rule": "date-preference-bypass",
+      "priority": "P2",
+      "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+      "line": 98,
+      "title": "Two timestamp displays bypass saved locale/timezone",
+      "mechanism": "Generated time and per-signal last-success time use new Date(...).toLocaleString() without saved preferences. Existing useDateFormat resolves settings locale/tz_display_default.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:98 web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:52 web\\src\\hooks\\useDateFormat.ts:73-92"
+      ],
+      "siteCount": 2,
+      "fix": "Existing diagnostic display owners adopt useDateFormat.formatDateTime only at presentation; keep ISO/generatedAt/updatedAt and digest bytes unchanged.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "C102-04 remains; accepted advanced-evidence date fix owns different files. Shared formatter roots accepted, not restart targets."
+    },
+    {
+      "id": "SEP-SOURCE-006",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "file": "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts",
+      "line": 743,
+      "title": "Derived English narrative reaches review details verbatim",
+      "mechanism": "buildSummary/buildLimitations produce full English sentences independent of locale. Page passes summary/limitations into brief narrative; OperationalNarrativeDetails renders strings verbatim. Translated titles do not localize explanation.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:728-784 web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:272-273 web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx:72-83 web\\src\\components\\data-display\\OperationalNarrativeDetails.tsx:76,158-164"
+      ],
+      "fix": "Existing diagnostic domain/presentation owner exposes structured narrative facts/reason IDs, translating only at display via existing catalog owner. Preserve machine export disclaimers/rationale/facts/signs; technical identifiers are exceptions.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "Accepted catalog closure/current literal key presence does not translate derived English."
+    },
+    {
+      "id": "SEP-SOURCE-007",
+      "rule": "mobile-target-declaration",
+      "priority": "P2",
+      "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+      "line": 65,
+      "title": "Five action sites inherit36px small-button sizing",
+      "mechanism": "Generate/Download use sm, digest CopyButton defaults sm, source Retry uses sm, inherited CodeBlock copy uses sm. Button sm h-9 and wrapped copy min-h-9 have no mobile44 override at these sites. Review details/Select already declare mobile44 and are not counted.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:65,88-93,101 web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:60 web\\src\\components\\ui\\CopyButton.tsx:59,138-150 web\\src\\components\\ui\\CodeBlock.tsx:57 web\\src\\components\\ui\\Button.tsx:35-47 web\\src\\components\\ui\\Select.tsx:35-36 web\\src\\components\\data-display\\OperationalBrief.tsx:159-165"
+      ],
+      "siteCount": 5,
+      "limit": "Declaration shortfall only, not measured rectangles/WCAG failure. Width/spacing/scaling exceptions NOTRUN.",
+      "fix": "Existing diagnostic callsite owners adopt mobile44/wrapping with desktop restoration; CodeBlock owner handles inherited copy site under separate exact lease. Preserve density/copy/all actions, no global Button reset.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx web\\src\\components\\ui\\CodeBlock.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "A102-01 action concern remains, old Select40px concern is no longer present. Native fleet/header/health fixes do not cover these files; primitive-button stays accepted."
+    },
+    {
+      "id": "SEP-SOURCE-008",
+      "rule": "decorative-fixed-ink",
+      "priority": "P3",
+      "file": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx",
+      "line": 59,
+      "title": "Five decorative headers retain fixed cyan ink",
+      "mechanism": "aria-hidden header glyphs repeat text-cyan-300 without source/status meaning, rather than neutral theme roles. Surfaces otherwise reuse tokens; no inline-style/glow claim.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx:59 web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx:87 web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx:27 web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:47 web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx:23"
+      ],
+      "siteCount": 5,
+      "fix": "Existing feature presentation owners adopt existing neutral icon role/canonical Icon boundary; retain meanings/labels, no palette/token-root/theme mutation.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "V102-01 remains; source migration acceptance is not visual/token waiver."
+    },
+    {
+      "id": "SEP-SOURCE-009",
+      "rule": "page-size-limit",
+      "priority": "P3",
+      "file": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx",
+      "line": 315,
+      "title": "315-line page exceeds300-line guideline",
+      "mechanism": "Exact pinned line count315 exceeds documented300-line page ceiling. All8 local presentation parts are below200 lines. This is structural debt, not authority to restart Phase5.",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:1-315 .github\\instructions\\react-frontend.instructions.md:575"
+      ],
+      "fix": "Only separately authorized existing page/domain owner may do behavior-preserving extraction. Keep snapshot guards, every section/action/original test; do not delete content to satisfy count.",
+      "existingOwnerFiles": [
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx"
+      ],
+      "dedup": "Canonical item/file scans01:07:53/01:10:39 found no same-objective repair. Accepted page/adapter/audit rows stay closed; coordinate shared RootCause report-only QA peer, not duplicate remigration.",
+      "queueRelation": "Accepted dependency explicitly retains315 lines; preserve its source acceptance/history."
+    }
+  ],
+  "unpromotedCandidateCount": 6,
+  "unpromotedCandidates": [
+    {
+      "id": "SEP-CANDIDATE-001",
+      "topic": "Workspace range intent",
+      "evidence": [
+        "web\\src\\App.tsx:219,755",
+        "web\\src\\lib\\workspaceScope.ts:23-77,163-167",
+        "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts",
+        ":46-49,83-85,100",
+        "web\\src\\features\\diagnostics\\components\\",
+        "SignalWindowPicker.tsx:81-86"
+      ],
+      "observation": "Actual route vehicle enabled/range disabled, independent local72h/default4 presets; no visible duplicate header range.",
+      "notPromotedBecause": "Specialist independent business window may be intended; historical C102-03 conditional. Exact-bound backend capability unknown.",
+      "need": "Existing workspace/diagnostic integration owner decides ownership before route/hook change, preserving presets.",
+      "dedup": "Historical C102-03; no exact range-ownership repair found; do not simply register unsupported header."
+    },
+    {
+      "id": "SEP-CANDIDATE-002",
+      "topic": "Coverage/timebounds/truncation",
+      "evidence": [
+        "web\\src\\api\\hooks\\useTelemetry.ts:238-263 web\\src\\api\\hooks\\useVehicleSystems.ts:118-129 web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:238-242"
+      ],
+      "observation": "hours1-8760/limit1-10000 per signal; no absolute start/end. Export observed min/max union is not complete coverage; optional software history is vehicle scoped, not analysis-window filtered.",
+      "notPromotedBecause": "No backend/API execution; actual bound semantics, sampling/truncation/completeness unverified. Optional context does not explicitly claim window filtering.",
+      "need": "Existing typed-hook/backend contract owner later obtains authorized evidence; no invented endpoint/bounds capability.",
+      "dedup": "Not a demonstrated API defect or new backend repair."
+    },
+    {
+      "id": "SEP-CANDIDATE-003",
+      "topic": "Physical unit interpretation",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts:51-56 web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:97-107,245-273 web\\src\\api\\hooks\\useTelemetry.ts:90-95"
+      ],
+      "observation": "Raw numeric values retained; exported numeric shifts lack unit descriptor, name-only catalog cannot prove unit_kind.",
+      "notPromotedBecause": "Unknown backend units cannot be guessed; machine JSON preview is not automatically a display-unit conversion defect.",
+      "need": "Existing signal/domain owner confirms typed unit context first; preserve raw SI/cache/negative/zero.",
+      "dedup": "No exact established unit contract repair in inspected queue, no speculative source-unit compatibility engine."
+    },
+    {
+      "id": "SEP-CANDIDATE-004",
+      "topic": "Inventory mobile scroll",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx:61,103-110 web\\src\\components\\ui\\DataTable.tsx:733-744,1215-1219"
+      ],
+      "observation": "Only domains visibleOnMobile false; no true/mobileColumns. Derived allow-list null, all5 fields remain in contained horizontal table.",
+      "notPromotedBecause": "No demonstrated field loss; scroll/focus/RTL/containment not measured.",
+      "need": "Existing table/caller QA owner documents/exercises current all-field scroll; never silently remove domains.",
+      "dedup": "Historical R102-01 is declarative strategy uncertainty, not measured loss."
+    },
+    {
+      "id": "SEP-CANDIDATE-005",
+      "topic": "Snapshot age/live inventory divergence",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:84-97,99-108,145-148 web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx:32-35"
+      ],
+      "observation": "Same-scope query refresh does not invalidate generated point-in-time pack; preview/download still same pack while live inventory may change.",
+      "notPromotedBecause": "Explicit snapshot behavior legitimate; no scope race or preview/download mismatch found.",
+      "need": "Later authorized workflow QA checks age/clarity without automatic regeneration or discarding historical evidence.",
+      "dedup": "C102-02 scope race is source-addressed; do not restart it for intentional snapshot retention."
+    },
+    {
+      "id": "SEP-CANDIDATE-006",
+      "topic": "Fleet bootstrap selection",
+      "evidence": [
+        "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:150-152 web\\src\\hooks\\useSelectedVehicle.ts:48-74 web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:53-74"
+      ],
+      "observation": "Selection hook does not expose query trust; null can show setup guidance before fleet resolution.",
+      "notPromotedBecause": "OnboardingGate/route lifecycle may suppress bootstrap; full mounted gate not audited/run.",
+      "need": "Existing selection/onboarding owner later verifies initial-paused/fatal bootstrap; preserve valid no-selection guidance.",
+      "dedup": "Shared inherited prerequisite, not a proved leaf repair."
+    }
+  ],
+  "canonicalDedup": {
+    "lastScanUtc": "2026-10-14T01:10:39.3676511Z",
+    "matchingRows": 10,
+    "result": "No same-objective repair found in item/file scans; accepted rows stay closed. Parent reconcile shared RootCause report-only QA peer before overlapping repair leases.",
+    "peer": "phase6-qa-diagnostics-root-cause-intelligence",
+    "protected": [
+      "phase5-page-diagnostics-service-evidence-pack",
+      "phase5-page-diagnostics-root-cause-intelligence",
+      "repair-service-pack-notice-props",
+      "repair-root-cause-adapter"
+    ]
+  },
+  "boundedScans": {
+    "tool": "Native PowerShell Select-String/Get-Content/Get-FileHash/ConvertFrom-Json, no helper files",
+    "rawOutput": [
+      "COMMAND: foreach($path in $paths){ Get-FileHash -Algorithm SHA256 -LiteralPath ($root+$path); (Get-Content -LiteralPath ($root+$path)).Count; Get-Item -LiteralPath ($root+$path) }",
+      "COMMAND_EXIT=0",
+      "SCAN_A_START_UTC=2026-10-14T01:06:21.5495819Z",
+      "SCOPE_A=first9 PIN records: current page + seven direct TSX parts + transitive SignalEvidenceSourceList; no shared-primitive exception files included",
+      "COMMAND: foreach($entry in $rules.GetEnumerator()){ $matches=@(Select-String -LiteralPath $files -Pattern $entry.Value); print matching lines and count; }",
+      "CHECK=static-inline-style; PATTERN=style=\\{\\{; MATCHING_LINES=0; EXIT=0",
+      "CHECK=raw-html; PATTERN=<(button|input|textarea|select|table)(\\s|>); MATCHING_LINES=3; EXIT=0",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:24: * uses `<Button loading>` for its in-flight state (matching the existing",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:101:            <Button type=\"button\" variant=\"secondary\" size=\"sm\" icon={<Download className=\"h-4 w-4\" />} onClick={onExport}>",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:60:              <Button type=\"button\" variant=\"secondary\" size=\"sm\" onClick={state.retry}",
+      "CHECK=direct-library-import; PATTERN=from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]; MATCHING_LINES=0; EXIT=0",
+      "CHECK=old-api-import; PATTERN=from\\s+['\\\"](\\.\\./|\\.\\./\\.\\./)api['\\\"]; MATCHING_LINES=0; EXIT=0",
+      "CHECK=double-prefix; PATTERN=['\\\"`]/api/v1/; MATCHING_LINES=0; EXIT=0",
+      "CHECK=camelcase-param; PATTERN=[?&][a-z][A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*=; MATCHING_LINES=0; EXIT=0",
+      "CHECK=hidden-section-candidate; PATTERN=&&\\s*<(GlassPanel|section); MATCHING_LINES=0; EXIT=0",
+      "CHECK=hardcoded-jsx-text-candidate; PATTERN=>\\s*[A-Za-z][A-Za-z ]{3,}\\s*<; MATCHING_LINES=0; EXIT=0",
+      "CHECK=page-container-literal; PATTERN=<PageContainer; MATCHING_LINES=0; EXIT=0",
+      "CHECK=page-layout-adapter; PATTERN=<PageLayout; MATCHING_LINES=1; EXIT=0",
+      "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:218:    <PageLayout",
+      "CHECK=fetch-useeffect-candidate; PATTERN=\\bfetch\\s*\\(|\\buse(Effect|LayoutEffect)\\s*\\(; MATCHING_LINES=1; EXIT=0",
+      "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx:87:  useLayoutEffect(() => {",
+      "CHECK=browser-date-preference-bypass; PATTERN=\\.toLocaleString\\(; MATCHING_LINES=2; EXIT=0",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:98:                when: new Date(pack.generatedAt).toLocaleString(),",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:52:                  time: new Date(state.updatedAt).toLocaleString(),",
+      "CHECK=fixed-cyan-header-ink; PATTERN=text-cyan-300; MATCHING_LINES=5; EXIT=0",
+      "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx:59:        <Waypoints className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx:87:        <ClipboardList className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx:27:        <ShieldCheck className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:47:        <Fingerprint className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx:23:        <FileJson className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+      "CHECK=small-size-candidate; PATTERN=size=\"sm\"; MATCHING_LINES=4; EXIT=0",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:65:          size=\"sm\"",
+      "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx:101:            <Button type=\"button\" variant=\"secondary\" size=\"sm\" icon={<Download className=\"h-4 w-4\" />} onClick={onExport}>",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:34:              <Badge size=\"sm\" variant={state.fatalError ? 'danger'",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:60:              <Button type=\"button\" variant=\"secondary\" size=\"sm\" onClick={state.retry}",
+      "COMMAND_EXIT=0",
+      "SCAN_A_END_UTC=2026-10-14T01:06:21.5861995Z",
+      "SCAN_B_START_UTC=2026-10-14T01:07:10.8658407Z",
+      "COMMAND: Select-String -LiteralPath $ui -Pattern '<(button|input|textarea|select|table)(\\s|>)' -CaseSensitive",
+      "RAW_HTML_CORRECTED_MATCHING_LINES=0; EXIT=0; previous case-insensitive3 were shared Button/comment false positives, retained",
+      "COMMAND: for each recorded inclusive region, Select-String -InputObject $lines[$i] -Pattern $pattern -CaseSensitive; count matching source lines, preserving original line numbers",
+      "REGIONS=[[\"web\\\\src\\\\api\\\\hooks\\\\useTelemetry.ts\",98,126],[\"web\\\\src\\\\api\\\\hooks\\\\useTelemetry.ts\",232,292],[\"web\\\\src\\\\api\\\\hooks\\\\useVehicleSystems.ts\",118,130],[\"web\\\\src\\\\features\\\\diagnostics\\\\hooks\\\\useRootCauseWorkspace.ts\",1,131],[\"web\\\\src\\\\features\\\\diagnostics\\\\lib\\\\serviceEvidencePack.ts\",1,387]]",
+      "CHECK=double-prefix; PATTERN=['\\\"`]/api/v1/; MATCHING_LINES=0; EXIT=0",
+      "CHECK=camelcase-param; PATTERN=[?&][a-z][A-Za-z0-9_]*[A-Z][A-Za-z0-9_]*=; MATCHING_LINES=0; EXIT=0",
+      "CHECK=fetch-useeffect; PATTERN=\\bfetch\\s*\\(|\\buseEffect\\s*\\(; MATCHING_LINES=0; EXIT=0",
+      "CHECK=raw-numeric-rewrite-candidate; PATTERN=convert|toDisplay|Math\\.abs|value:; MATCHING_LINES=4; EXIT=0",
+      "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts:55:    value: typeof point.value === 'boolean' ? null : point.value,",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:300:export function canonicalize(value: unknown): unknown {",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:313:export function canonicalStringify(value: unknown): string {",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:318:export function toPrettyJson(value: unknown): string {",
+      "CHECK=trust-export-context-candidate; PATTERN=sources|fetchStatus|updatedAt|refreshError|fatalError|ingest_origin|source_emitted_at|normalization_version; MATCHING_LINES=1; EXIT=0",
+      "web\\src\\api\\hooks\\useTelemetry.ts:266:      sources: results.map((result, index) => ({",
+      "COMMAND_EXIT=0",
+      "SCAN_B_END_UTC=2026-10-14T01:07:11.0283566Z",
+      "COMMAND: foreach($path in $paths){ Get-FileHash -Algorithm SHA256 -LiteralPath ($root+$path); (Get-Content -LiteralPath ($root+$path)).Count; Get-Item -LiteralPath ($root+$path) }",
+      "COMMAND_EXIT=0",
+      "DEDUP_FIRST_COMMAND_EXIT=1; command used $matches array with -match automatic $Matches collision; raw error: A hash table can only be added to another hash table. No source changes or queue decision based on failure.",
+      "DEDUP_CORRECTED_START_UTC=2026-10-14T01:07:52.9890532Z",
+      "COMMAND: for each pattern, for($i=0;$i -lt $q.Count;$i++){ $cells=$q[$i].Split('|'); if($cells.Count -gt 9 -and (($cells[3]+' '+$cells[5]) -match $pattern)){ print line number and first8 cells } } using $hits instead of $matches",
+      "PATTERN=service-evidence; MATCHING_ROWS=2; EXIT=0",
+      "PATTERN=ServiceEvidence; MATCHING_ROWS=3; EXIT=0",
+      "PATTERN=SignalEvidenceSourceList; MATCHING_ROWS=0; EXIT=0",
+      "PATTERN=useRootCauseWorkspace; MATCHING_ROWS=2; EXIT=0",
+      "PATTERN=rootCauseIntelligence; MATCHING_ROWS=3; EXIT=0",
+      "PATTERN=serviceEvidencePack; MATCHING_ROWS=3; EXIT=0",
+      "PATTERN=date-preferences|date-format|datePreferences; MATCHING_ROWS=3; EXIT=0",
+      "PATTERN=paused|initial.*trust; MATCHING_ROWS=2; EXIT=0",
+      "PATTERN=privacy|redaction|sensitive; MATCHING_ROWS=8; EXIT=0",
+      "PATTERN=mobile.*target|touch.*target|mobile.*button; MATCHING_ROWS=7; EXIT=0",
+      "PATTERN=diagnostic.*copy|diagnostic.*i18n|diagnostic.*token|diagnostic.*size; MATCHING_ROWS=1; EXIT=0",
+      "COMMAND_EXIT=0",
+      "DEDUP_CORRECTED_END_UTC=2026-10-14T01:07:53.1747637Z",
+      "SCAN_C_START_UTC=2026-10-14T01:08:58.7776085Z",
+      "COMMAND: first9 pinned paths: count lines; Select-String -CaseSensitive for exact six numbered section markers; scan selected builder/analysis lines for privacy/provenance/unknown mechanisms; count literal translation calls and resolve keys in readonly canonical en.json",
+      "LITERAL_T_CALLS=93; UNIQUE_KEYS_WITH_4_DYNAMIC_PRESETS=89; MISSING_CANONICAL_KEYS=0; EXIT=0",
+      "MECHANISM_FILE=web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts; PATTERN=includedVehicleFields|excludedFields|focalShift:|shift: h.shift|sampleCount: n.sampleCount|softwareUpdates:|isSignature: false|privacy: buildPrivacy; MATCHING_LINES=13; EXIT=0",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:112:  includedVehicleFields: string[];",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:113:  excludedFields: string[];",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:126:  focalShift: RobustShift | null;",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:132:  softwareUpdates: ServiceEvidencePackSoftwareUpdateEntry[] | null;",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:149:  isSignature: false;",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:199:    includedVehicleFields: [...SERVICE_EVIDENCE_PACK_INCLUDED_VEHICLE_FIELDS],",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:200:    excludedFields: [...SERVICE_EVIDENCE_PACK_EXCLUDED_FIELD_NOTES],",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:249:    sampleCount: n.sampleCount,",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:258:    shift: h.shift,",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:271:    focalShift: analysis?.focalShift ?? null,",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:284:    softwareUpdates: normalizeSoftwareUpdates(input.softwareUpdates),",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:285:    privacy: buildPrivacyManifest(),",
+      "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts:377:      isSignature: false,",
+      "MECHANISM_FILE=web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts; PATTERN=sampleCount: seriesBySignal|hasEvidence: true|return result.focalShift|return 'Choose a focal|No robust shift|notes.push|Every listed item; MATCHING_LINES=11; EXIT=0",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:739:    return 'Choose a focal signal to generate an evidence-ranked summary.';",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:743:      `No robust shift was found for ${focalSignal} in the analyzed window, so no hypotheses are offered. ` +",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:768:    `Every listed item is an evidence-ranked hypothesis derived from statistical association. ${NO_CAUSAL_PROOF_DISCLAIMER}`,",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:772:    notes.push(",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:777:    notes.push('No related signals were identified in the catalog for this focal signal.');",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:779:    notes.push('None of the related signals cleared the minimum evidence bar for sample coverage or shift strength.');",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:782:    notes.push('Evidence quality is low — treat any listed hypothesis as preliminary and confirm with additional data before acting.');",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:784:  notes.push('Temporal proximity alone does not establish which signal, if any, is upstream of the other.');",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:855:    { id: focalSignal, kind: 'focal', domains: focalDomains, sampleCount: focalSampleCount, hasEvidence: true },",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:860:      sampleCount: seriesBySignal.get(c.signal)?.length ?? 0,",
+      "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts:882:  return result.focalShift != null && result.quality.band !== 'insufficient';",
+      "MECHANISM_FILE=web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx; PATTERN=Paused offline|state.status === 'initial'|toLocaleString; MATCHING_LINES=4; EXIT=0",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:23:          : state.isRefreshBlocked ? t('dataSources.status.paused', 'Paused offline')",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:24:          : state.status === 'initial' ? t('dataSources.status.pending', 'Pending')",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:38:            {state.status === 'initial' && (",
+      "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:52:                  time: new Date(state.updatedAt).toLocaleString(),",
+      "COMMAND_EXIT=0",
+      "SCAN_C_END_UTC=2026-10-14T01:08:59.3886660Z",
+      "FINAL_DEDUP_START_UTC=2026-10-14T01:10:39.2376021Z",
+      "COMMAND: $q=Get-Content -LiteralPath 'D:\\repos\\teslasync\\migration-queue.md'; for($i=0;$i -lt $q.Count;$i++){ $c=$q[$i].Split('|'); if($c.Count -gt 9 -and (($c[3]+' '+$c[5]) -match $pattern)){ '{0}: {1}' -f ($i+1),(($c | Select-Object -First 8) -join '|') } }; pattern=ServiceEvidence|SignalEvidenceSourceList|useRootCauseWorkspace|rootCauseIntelligence|service-evidence|diagnostic.*(privacy|export|trust|paused|date|i18n|token|size)",
+      "MATCHING_ROWS=10; EXIT=0",
+      "COMMAND_EXIT=0",
+      "FINAL_DEDUP_END_UTC=2026-10-14T01:10:39.3676511Z"
+    ],
+    "unit": "Matching lines, not semantic root totals",
+    "classification": [
+      "Presentation9 files: static-inline-style0/case-sensitive forbidden raw HTML0/direct vendor and old API imports0",
+      "Necessary hook/builder regions: double-prefix0/camelCase URL params0/fetch-useEffect data loading0",
+      "Snapshot invalidation useLayoutEffect is allowed; PageLayout delegates real PageContainer",
+      "Conditional fatal notice/digest/error feedback supplement persistent six sections",
+      "Technical identifiers/raw JSON are not untranslated UI labels; derived English narrative is",
+      "93 literal t calls/89 unique keys including4 preset keys/canonical missing0, key presence only"
+    ],
+    "correction": "Initial raw-html case-insensitive3 Button/comment false positives; corrected CaseSensitive0 retained",
+    "failures": [
+      {
+        "shellId": "587",
+        "exit": 1,
+        "error": "A hash table can only be added to another hash table.",
+        "correctedShellId": "620",
+        "correctedExit": 0
+      },
+      {
+        "shellId": "826",
+        "exit": 1,
+        "error": "The filename or extension is too long. (os error206)",
+        "result": "Host pre-execution failure; split authorized report writes"
+      },
+      {
+        "shellId": "869",
+        "exit": 1,
+        "error": "Queue dependency not uniquely accepted",
+        "result": "Regex also matched depends-on cell; corrected anchored exact item column"
+      },
+      {
+        "shellId": "879",
+        "exit": 1,
+        "error": "Cannot find an overload for AppendAllLines and argument count3",
+        "result": "Diagnostic printed counts; corrected string AppendAllText, no report/source write"
+      }
+    ],
+    "limit": "Bounded regex/source traces, not compiler/lint/tests/global zero proof",
+    "rawCommands": [
+      "$files = first9 PIN paths in log, rooted at D:\\repos\\teslasync\\; $m=@(Select-String -LiteralPath $files -Pattern $entry.Value); patterns and raw matching lines recorded in SCAN_A",
+      "$m=@(Select-String -LiteralPath $ui -Pattern '<(button|input|textarea|select|table)(\\s|>)' -CaseSensitive)",
+      "$lines=Get-Content -LiteralPath ($root+$r[0]); for($i=$r[1]-1;$i -lt $r[2];$i++){ if(Select-String -InputObject $lines[$i] -Pattern $entry.Value -CaseSensitive -Quiet){ $count++; $details.Add(('{0}:{1}:{2}' -f $r[0],($i+1),$lines[$i])) } }; exact regions/patterns recorded in SCAN_B",
+      "$q=Get-Content -LiteralPath ('D:\\repos\\teslasync\\migration-queue.md'); for($i=0;$i -lt $q.Count;$i++){ $cells=$q[$i].Split('|'); if($cells.Count -gt 9 -and (($cells[3]+' '+$cells[5]) -match $pattern)){ $hits.Add(('{0}: {1}' -f ($i+1),(($cells | Select-Object -First 8) -join '|'))) } }; exact patterns/counts in dedup raw output",
+      "$s=@(Select-String -LiteralPath 'D:\\repos\\teslasync\\web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx' -Pattern '\\{/\\* [1-6] —' -CaseSensitive)"
+    ]
+  },
+  "needs": {
+    "orchestrator": "Source-only delivery; dedup peer roots; existing-owner exact leases, serialize overlap; no acceptedphase restart",
+    "catalog": "Existing serialized canonical owner approves needed narrative/cause-neutral paused keys/normal outputs before adoption; no fallback-only keys/guard bypass",
+    "integration": "Workspace/bounds/truncation/units/bootstrap remain candidate-only proof needs",
+    "futureAcceptance": "Parent5173 from handoff only/no HTTP readiness probe/browsergrant. Later separately authorized Edge msedge/no downloads; mission43-45 stays open.",
+    "existingOwners": "Existing export/privacy/domain owners SEP001/002; diagnostic page/brief trust SEP003; source-list SEP004/005/007; diagnostic narrative/catalog SEP006; callsites/CodeBlock SEP007; feature presentation SEP008; authorized page extraction SEP009 only. Exact existingOwnerFiles per issue; overlapping leases must serialize."
+  },
+  "limits": {
+    "sourceOnly": true,
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "fullPage": "NOTRUN",
+    "browser": "NOTRUN",
+    "screenshots": "NOTRUN",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "exports": "NOTRUN",
+    "service": "NOTRUN",
+    "api": "NOTRUN",
+    "git": "NOTRUN",
+    "serversDockerInstallsSubagentsHelpersExtensions": "NOTRUN",
+    "statusFilesHeartbeats": "NOTRUN",
+    "backend": "NOTAUDITED",
+    "sensitiveData": "No identity/location/vehicle data retrieval/logging; governed synthetic test source read only",
+    "acceptance": "NOT_ACCEPTED; no Phase6/7 completion",
+    "readonlyProof": "Final pin comparison only, no whole-repo concurrent write attribution"
+  },
+  "finalVerification": {
+    "command": "Final on-disk ConvertFrom-Json/counts/hash-line-byte pin comparison",
+    "receipt": "web\\logs\\phase6-qa-diagnostics-service-evidence-pack.log",
+    "status": "Recorded only in final ignored-log block to avoid post-verification report rewrite"
+  },
+  "release": {
+    "report": "After final receipt",
+    "log": "After final receipt",
+    "commands": "All bounded commands complete, no browser/services started",
+    "afterTerminal": "No postreturn writes"
+  },
+  "summary": {
+    "counting": "9 unique source roots, not grep matches/repeated sites; candidates separate. No global zero claim.",
+    "byRule": [
+      {
+        "rule": "",
+        "rootCount": 9
+      }
+    ],
+    "mostAffected": [
+      {
+        "file": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx",
+        "rootIds": [
+          "SEP-SOURCE-005",
+          "SEP-SOURCE-007",
+          "SEP-SOURCE-008"
+        ]
+      },
+      {
+        "file": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx",
+        "rootIds": [
+          "SEP-SOURCE-004",
+          "SEP-SOURCE-005",
+          "SEP-SOURCE-007"
+        ]
+      }
+    ],
+    "priority": [
+      "Privacy enforcement/export provenance first",
+      "Aggregate/paused trust next",
+      "Dates/narrative/targets next",
+      "Neutral icons and structural debt last"
+    ]
+  },
+  "completedUtc": "2026-10-14T01:18:52.9296644Z"
+}

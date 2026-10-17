@@ -1,0 +1,15 @@
+{
+  "namespace": "dashboard",
+  "owner": "parent i18n integration",
+  "source": "web\\src\\features\\dashboard\\widgets\\UptimeMonitorWidget.tsx",
+  "requests": {
+    "widget.summaryEyebrow": "Dashboard source summary",
+    "widget.uptime.dbSizeSource": "Database size text returned by the server, preserved verbatim; no byte count is supplied.",
+    "widget.uptime.tablesSource": "Database table count returned by the system-health snapshot; not a fleet-history record count.",
+    "widget.uptime.summaryTitle": "Database snapshot",
+    "widget.uptime.summaryDescription": "Database size and table count describe the returned system-health snapshot, separate from the four service-status records.",
+    "widget.uptime.summaryScope": "Server-returned system-health snapshot · no vehicle or date-range filter; not complete fleet history."
+  },
+  "catalogsEdited": false,
+  "sharedRendererRequests": "Existing DashboardSourceBrief and OperationalBrief own their existing summary-status, provenance and Review details translations; no shared renderer or catalog changes."
+}

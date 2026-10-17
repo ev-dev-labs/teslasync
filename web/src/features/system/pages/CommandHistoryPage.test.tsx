@@ -22,7 +22,7 @@
  *      block).
  *
  * Strategy mirrors the sibling PeriodComparePage suite: render the REAL page +
- * REAL shared subtree (PageContainer, MetricCard, Timeline, TabNav, Pagination,
+ * REAL shared subtree (PageContainer, OperationalBrief, Timeline, TabNav, Pagination,
  * QueryError, charts). Only the network `request` helper and react-i18next are
  * mocked. `useVehicles` runs for real (driven by the mocked `request`) so the
  * active-vehicle derivation and its enabled/disabled query gate are genuinely
@@ -36,8 +36,8 @@
  * (`waitForCount`), never a heading.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -197,7 +197,7 @@ function renderPage(initialEntries: string[] = ['/command-history']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
         <SelectedVehicleProvider>
@@ -206,6 +206,7 @@ function renderPage(initialEntries: string[] = ['/command-history']) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 }
 
 /** The KPI band is the only `<section aria-label>` → exposed as role "region". */
@@ -216,14 +217,14 @@ function kpiBand() {
 /** The GlassPanel (`[data-print-card]`) that owns the command timeline. */
 function timelinePanel(): HTMLElement {
   return screen
-    .getByRole('heading', { name: 'Command Timeline' })
+    .getByRole('heading', { name: 'Command timeline' })
     .closest('[data-print-card]') as HTMLElement;
 }
 
 /** The GlassPanel that owns the status breakdown bars. */
 function statusPanel(): HTMLElement {
   return screen
-    .getByRole('heading', { name: 'Status Breakdown' })
+    .getByRole('heading', { name: 'Status breakdown' })
     .closest('[data-print-card]') as HTMLElement;
 }
 
@@ -240,6 +241,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
 
@@ -252,7 +254,7 @@ describe('CommandHistoryPage — happy path', () => {
 
     await waitForCount(5); // feed resolved for the derived active vehicle
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Command History' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Command history' })).toBeInTheDocument();
     expect(screen.getByText('Audit log of all vehicle commands')).toBeInTheDocument();
 
     expect(historyCalls().some((u) => /\/vehicles\/10\/commands\/history/.test(u))).toBe(true);
@@ -267,21 +269,29 @@ describe('CommandHistoryPage — happy path', () => {
     await waitForCount(5);
 
     const band = kpiBand();
+    expect(band.querySelector('[data-operational-brief]')).toBeInTheDocument();
+    expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     for (const label of [
-      'Total Commands',
+      'Total commands',
       'Commands (24h)',
-      'Success Rate',
+      'Success rate',
       'Failed',
-      'Most Used',
-      'Last Sent',
+      'Most used',
+      'Last sent',
     ]) {
       expect(within(band).getByText(label)).toBeInTheDocument();
     }
     expect(within(band).getByText('5')).toBeInTheDocument(); // total
     expect(within(band).getByText('3')).toBeInTheDocument(); // 24h
-    expect(within(band).getByText('60%')).toBeInTheDocument(); // success rate
+    const rate = within(band).getByText('Success rate').closest('[data-operational-metric]') as HTMLElement;
+    expect(rate.querySelector('[data-operational-value]')).toHaveTextContent('60.00%');
     expect(within(band).getByText('2')).toBeInTheDocument(); // failed
     expect(within(band).getByText('Lock')).toBeInTheDocument(); // most-used, i18n-resolved
+    expect(within(band).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    const last = within(band).getByText('Last sent').closest('[data-operational-metric]') as HTMLElement;
+    expect(last).toHaveTextContent(new Date(RECENT).getUTCFullYear().toString());
+    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
   });
 
   it('renders all four analytics/detail panels with data (never their empty states)', async () => {
@@ -290,14 +300,14 @@ describe('CommandHistoryPage — happy path', () => {
 
     await waitForCount(5);
 
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('heading', { level: 3, name: 'Top Commands' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: 'Status Breakdown' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { level: 3, name: 'Top commands' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Status breakdown' })).toBeInTheDocument();
 
     // Status breakdown percentages exercise pctLabel(n, total): 3/5 and 2/5.
     // Regex avoids depending on the middle-dot glyph in "3 · 60%".
-    expect(within(statusPanel()).getByText(/60%/)).toBeInTheDocument();
-    expect(within(statusPanel()).getByText(/40%/)).toBeInTheDocument();
+    expect(within(statusPanel()).getByText(/60\.00%/)).toBeInTheDocument();
+    expect(within(statusPanel()).getByText(/40\.00%/)).toBeInTheDocument();
 
     // Analytics rendered data, not the "no commands in range" placeholder.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
@@ -310,8 +320,8 @@ describe('CommandHistoryPage — happy path', () => {
     await waitForCount(5);
 
     const tl = timelinePanel();
-    expect(within(tl).getByText('Wake Up')).toBeInTheDocument();
-    expect(within(tl).getByText('Honk Horn')).toBeInTheDocument();
+    expect(within(tl).getByText('Wake up')).toBeInTheDocument();
+    expect(within(tl).getByText('Honk horn')).toBeInTheDocument();
     // Subtitles are timeline-only: JSON params and the error prefix.
     expect(within(tl).getByText(/foo: bar/)).toBeInTheDocument();
     expect(within(tl).getByText(/Error: Vehicle offline/)).toBeInTheDocument();
@@ -328,13 +338,16 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     const { container } = renderPage();
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     // Panels stay mounted; the KPI band is present even while the feed loads.
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);
     expect(kpiBand()).toBeInTheDocument();
-    // … but its cards wait for data: skeletons, never fabricated zeros.
-    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
+    // OperationalBrief keeps labels mounted, while values wait for data.
+    expect(within(kpiBand()).getByText('Total commands')).toBeInTheDocument();
+    expect(kpiBand().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(kpiBand().querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(kpiBand().querySelector('[data-operational-value]')).not.toBeInTheDocument();
     // No analytics empty copy while genuinely loading.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
   });
@@ -347,7 +360,7 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     await waitFor(() => expect(screen.getAllByText('Server error').length).toBeGreaterThanOrEqual(4));
     // The KPI band joins the error states (no fabricated zeros) …
     expect(within(kpiBand()).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
+    expect(within(kpiBand()).queryByText('Total commands')).not.toBeInTheDocument();
 
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThan(0);
@@ -377,24 +390,42 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     await waitFor(() =>
       expect(screen.getAllByText('Select a vehicle to view command activity').length).toBe(3),
     );
-    expect(screen.getByText('Select a vehicle to view command history')).toBeInTheDocument();
+    expect(screen.getAllByText('Select a vehicle to view command activity')).toHaveLength(3);
     // The command feed is gated off — enabled:!!vehicleId — so it never fires.
     expect(historyCalls().length).toBe(0);
+    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    expect(within(kpiBand()).queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('retains all six summary values and their scope during a failed background refresh', async () => {
+    installRequest({ commands: richCommands() });
+    const { client } = renderPage();
+    await waitForCount(5);
+    installRequest({ commandsMode: 'reject', commandsError: new ApiError('refresh failed', 500) });
+    await act(async () => { await client.invalidateQueries(); });
+
+    await waitFor(() =>
+      expect(within(kpiBand()).getByText('Data may be stale')).toBeInTheDocument(),
+    );
+    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
+    expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
+    expect(within(kpiBand()).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    expect(within(timelinePanel()).getByText('Wake up')).toBeInTheDocument();
+    expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
   });
 });
 
 describe('CommandHistoryPage — daily bucketing timezone', () => {
   it('buckets daily activity by the vehicle calendar day, not UTC', async () => {
     tzMock.mockReturnValue('America/New_York');
-    // 00:30 UTC Jan 15 = 19:30 ET Jan 14 → the activity lands on 01-14
-    // (the old UTC slice filed it under 01-15).
+    // Full display dates retain the same vehicle-local bucket and its year.
     installRequest({ commands: [mkCmd({ created_at: '2026-01-15T00:30:00Z' })] });
     renderPage();
 
-    const caption = await screen.findByText('Daily Activity — data table');
+    const caption = await screen.findByText('Daily activity — data table');
     const table = caption.closest('table') as HTMLElement;
-    expect(within(table).getByText('01-14')).toBeInTheDocument();
-    expect(within(table).queryByText('01-15')).not.toBeInTheDocument();
+    expect(within(table).getByText('Jan 14, 2026')).toBeInTheDocument();
+    expect(within(table).queryByText('Jan 15, 2026')).not.toBeInTheDocument();
   });
 });
 
@@ -412,8 +443,8 @@ describe('CommandHistoryPage — filters & interactions', () => {
     // 2 of 5 commands failed → timeline narrows; the success-only "Wake Up" leaves.
     await screen.findByText('2 commands');
     const tl = timelinePanel();
-    expect(within(tl).getByText('Honk Horn')).toBeInTheDocument();
-    expect(within(tl).queryByText('Wake Up')).not.toBeInTheDocument();
+    expect(within(tl).getByText('Honk horn')).toBeInTheDocument();
+    expect(within(tl).queryByText('Wake up')).not.toBeInTheDocument();
     // KPI band is unaffected by the timeline filter (still full history).
     expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
   });
@@ -431,7 +462,7 @@ describe('CommandHistoryPage — filters & interactions', () => {
 
     await screen.findByText('1 commands');
     const tl = timelinePanel();
-    expect(within(tl).getByText('Wake Up')).toBeInTheDocument();
+    expect(within(tl).getByText('Wake up')).toBeInTheDocument();
     expect(within(tl).queryByText('Honk Horn')).not.toBeInTheDocument();
   });
 
@@ -453,12 +484,12 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     renderPage();
 
     // 30 > PAGE_SIZE (25) → pager shown on page 1.
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 1.25 of 30/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
 
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 26.30 of 30/)).toBeInTheDocument();
   });
 
@@ -466,7 +497,7 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     installRequest({ commands: manyCommands(30) });
     renderPage(['/command-history?page=5']); // only 2 pages exist
 
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 26.30 of 30/)).toBeInTheDocument();
     // The timeline shows the clamped page's rows rather than an empty window.
     expect(within(timelinePanel()).queryByText('No commands have been sent yet')).not.toBeInTheDocument();
@@ -476,7 +507,7 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     installRequest({ commands: manyCommands(30) });
     renderPage(['/command-history?page=-3']);
 
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     expect(screen.getByText(/Showing 1.25 of 30/)).toBeInTheDocument();
   });
 });
@@ -492,9 +523,9 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     installRequest({ commands: raceCommands() });
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
 
     const search = screen.getByRole('textbox', { name: 'Search commands' });
     fireEvent.change(search, { target: { value: 'wake' } });
@@ -503,7 +534,7 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     await waitFor(() => expect(search).toHaveValue('wake'));
     await screen.findByText('2 commands');
     const tl = timelinePanel();
-    expect(within(tl).getAllByText('Wake Up')).toHaveLength(2);
+    expect(within(tl).getAllByText('Wake up')).toHaveLength(2);
     expect(within(tl).queryByText('Honk Horn')).not.toBeInTheDocument();
   });
 
@@ -516,15 +547,15 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     installRequest({ commands: cmds });
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
 
     // Switch to "failed" (4 items → single page). Page resets; timeline is not blank.
     fireEvent.click(screen.getByRole('button', { name: 'Failed' }));
 
     await screen.findByText('4 commands');
-    expect(within(timelinePanel()).getAllByText('Honk Horn')).toHaveLength(4);
+    expect(within(timelinePanel()).getAllByText('Honk horn')).toHaveLength(4);
     // <= PAGE_SIZE now, so the pager is gone entirely (not stuck on a blank page 2).
     expect(screen.queryByText('2 / 2')).not.toBeInTheDocument();
   });
@@ -547,14 +578,132 @@ describe('CommandHistoryPage — command name & subtitle formatting', () => {
 
     const tl = timelinePanel();
     // Curated label from COMMAND_LABELS.
-    expect(within(tl).getByText('Set Charge Limit')).toBeInTheDocument();
+    expect(within(tl).getByText('Set charge limit')).toBeInTheDocument();
     // Fallback Title-Case for an unmapped command.
-    expect(within(tl).getByText('Super Secret Mode')).toBeInTheDocument();
+    expect(within(tl).getByText('Super secret mode')).toBeInTheDocument();
     // Subtitle from JSON params.
     expect(within(tl).getByText(/percent: 80/)).toBeInTheDocument();
     // Subtitle from the error field.
     expect(within(tl).getByText(/Error: Timeout/)).toBeInTheDocument();
     // Subtitle falls back to the raw string when params aren't valid JSON.
     expect(within(tl).getByText(/\{bad json/)).toBeInTheDocument();
+  });
+});
+
+describe('CommandHistoryPage — restrained presentation and trust', () => {
+  it('names every timeline outcome without relabeling unknown raw statuses as failures', async () => {
+    installRequest({
+      commands: [
+        mkCmd({ command: 'lock', status: 'success' }),
+        mkCmd({ command: 'unlock', status: 'failed' }),
+        mkCmd({ command: 'wake_up', status: 'queued' }),
+        mkCmd({ command: 'honk_horn', status: '' }),
+      ],
+    });
+    renderPage();
+    await waitForCount(4);
+
+    const rows = within(timelinePanel()).getAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    expect(within(rows[0]).getByText('Success')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Failed')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('queued')).toBeInTheDocument();
+    expect(within(rows[3]).getByText('Unknown')).toBeInTheDocument();
+    expect(rows[2].querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    // Assert declared theme roles, not jsdom's unresolved computed CSS variables.
+    const outcomeColors = [
+      'var(--semantic-success)', 'var(--semantic-danger)',
+      'var(--text-secondary)', 'var(--text-secondary)',
+    ];
+    rows.forEach((row, index) => {
+      const marker = row.querySelector<HTMLElement>('span[style]');
+      expect(marker?.style.getPropertyValue('color')).toBe(outcomeColors[index]);
+      expect(marker?.style.getPropertyValue('border-color')).toBe(outcomeColors[index]);
+    });
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Other' })).toHaveAttribute('aria-valuenow', '2');
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Failed' })).toHaveAttribute('aria-valuenow', '1');
+  });
+
+  it('keeps source-unresolved paused history distinct from empty or filtered history in every panel', async () => {
+    installRequest({ commands: richCommands() });
+    onlineManager.setOnline(false);
+    renderPage(['/command-history?vehicle_id=10&status=failed&q=lock']);
+
+    await waitFor(() => expect(screen.getAllByText('Command history unavailable').length).toBeGreaterThanOrEqual(5));
+    expect(historyCalls()).toHaveLength(0);
+    expect(within(timelinePanel()).getAllByText('Command history unavailable')).toHaveLength(2);
+    expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
+    expect(screen.queryByText('No commands match the current filters')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 commands')).not.toBeInTheDocument();
+    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    expect(within(kpiBand()).queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('prioritizes the vehicle prerequisite over carried filters without sending commands', async () => {
+    installRequest({ vehicles: [], commands: richCommands() });
+    renderPage(['/command-history?status=failed&q=lock&page=3']);
+
+    await screen.findAllByText('Select a vehicle to view command activity');
+    expect(within(timelinePanel()).getAllByText('Select a vehicle to view command history')).toHaveLength(2);
+    expect(screen.queryByText('No commands match the current filters')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Search commands' })).toHaveValue('lock');
+    expect(screen.getByRole('group', { name: 'Status' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Failed' })).toHaveAttribute('aria-pressed', 'true');
+    expect(historyCalls()).toHaveLength(0);
+    expect(mockRequest.mock.calls.every((call) => !String(call[0]).includes('/command/'))).toBe(true);
+  });
+
+  it('uses solid neutral rankings and semantic outcome fills while retaining every count', async () => {
+    installRequest({ commands: richCommands() });
+    renderPage();
+    await waitForCount(5);
+
+    const top = screen.getByRole('heading', { name: 'Top commands' }).closest('[data-print-card]') as HTMLElement;
+    const ranked = within(top).getAllByRole('progressbar');
+    expect(ranked).toHaveLength(3);
+    expect(ranked[0]).toHaveAttribute('aria-valuenow', '3');
+    expect(ranked[0]).toHaveAttribute('aria-valuemax', '3');
+    for (const row of ranked) {
+      expect(row.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--text-secondary)' });
+    }
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Success' }).querySelector('[data-metric-fill]'))
+      .toHaveStyle({ background: 'var(--semantic-success)' });
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Failed' }).querySelector('[data-metric-fill]'))
+      .toHaveStyle({ background: 'var(--semantic-danger)' });
+    expect(screen.getByRole('textbox', { name: 'Search commands' })).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(screen.getByRole('link', { name: 'Commands' })).toHaveAttribute('href', '/commands');
+  });
+
+  it('retains full calendar-year identities in the daily data alternative', async () => {
+    tzMock.mockReturnValue('America/New_York');
+    installRequest({
+      commands: [
+        mkCmd({ created_at: '2026-01-15T00:30:00Z' }),
+        mkCmd({ created_at: '2025-01-15T00:30:00Z', status: 'failed' }),
+      ],
+    });
+    renderPage();
+    await waitForCount(2);
+
+    const caption = await screen.findByText('Daily activity — data table');
+    const table = caption.closest('table') as HTMLElement;
+    expect(within(table).getByText('Jan 14, 2025')).toBeInTheDocument();
+    expect(within(table).getByText('Jan 14, 2026')).toBeInTheDocument();
+    expect(within(table).queryByText('Jan 15, 2026')).not.toBeInTheDocument();
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+  });
+
+  it('preserves complete unbroken parameters and error text with the source timeline', async () => {
+    const rawParams = '{malformed-' + 'x'.repeat(240);
+    const rawError = 'test-only-error-' + 'y'.repeat(240);
+    installRequest({ commands: [mkCmd({ status: 'failed', params: rawParams, error: rawError })] });
+    renderPage();
+    await waitForCount(1);
+
+    const row = within(timelinePanel()).getByRole('listitem');
+    expect(row).toHaveTextContent(rawParams);
+    expect(row).toHaveTextContent(`Error: ${rawError}`);
+    expect(row.querySelector('p')).toHaveClass('break-words', 'whitespace-pre-wrap');
+    expect(row.querySelector('p')).not.toHaveClass('truncate');
   });
 });

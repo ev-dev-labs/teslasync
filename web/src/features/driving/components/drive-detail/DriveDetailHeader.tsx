@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Route, Play, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { DateTime } from '@/components/data-display';
 import type { DriveDetail } from '@/types/driving';
@@ -59,9 +59,7 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
             {t('driveDetail.replay', 'Replay')}
           </Button>
         </Link>
-        <Button variant="ghost" size="sm" onClick={onShare} icon={<Share2 className="h-4 w-4" aria-hidden="true" />}>
-          {t('driveDetail.share', 'Share')}
-        </Button>
+        <IconButton icon={<Share2 className="h-4 w-4" aria-hidden="true" />} label={t('driveDetail.share', 'Share')} onClick={onShare} />
       </div>
     </FadeIn>
   );

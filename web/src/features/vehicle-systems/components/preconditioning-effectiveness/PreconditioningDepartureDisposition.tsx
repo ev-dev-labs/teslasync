@@ -1,18 +1,13 @@
-import { ListFilter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type { PreconditioningQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningDepartureDispositionProps {
   summary: PreconditioningSummary;
@@ -23,6 +18,7 @@ export function PreconditioningDepartureDisposition({
   summary,
   state,
 }: PreconditioningDepartureDispositionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const a = summary.departureAccounting;
   const outcomes = [
@@ -90,14 +86,7 @@ export function PreconditioningDepartureDisposition({
 
   return (
     <section data-testid="preconditioning-departure-disposition">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListFilter className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.departures.title',
-            'Departure disposition',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.departures.title', 'Departure disposition')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.departures.subtitle',
@@ -105,22 +94,20 @@ export function PreconditioningDepartureDisposition({
           )}
         </Text>
         <PreconditioningSectionBody summary={summary} state={state}>
-          <Grid cols={{ default: 1, md: 2, xl: 5 }} gap={3}>
-            {outcomes.map((outcome) => (
-              <div
-                key={outcome.key}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <MetricLabel>{outcome.label}</MetricLabel>
-                <MetricValue className="mt-1">{fmtInt(outcome.value)}</MetricValue>
-                <Text as="p" variant="caption" className="mt-2">
-                  {outcome.detail}
-                </Text>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="preconditioning-departure-disposition-summary"
+            title={t('preconditioningEffectiveness.departures.title', 'Departure disposition')}
+            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)
+              || state.climate.isPaused || state.drives.isPaused}
+            period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage'),
+              reason: t('preconditioningEffectiveness.departures.subtitle', 'Ordered gates assign every unique valid drive to exactly one exclusion or observational group.') }}
+            metrics={outcomes.map(outcome => ({
+              metricId: 'count', occurrenceId: outcome.key, label: outcome.label, rawValue: outcome.value,
+              description: outcome.detail,
+              display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
+            }))}
+          />
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

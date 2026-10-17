@@ -24,7 +24,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -69,6 +69,9 @@ import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import TeslaOrdersPage from './TeslaOrdersPage'
 import type { TeslaOrder } from '@/api/hooks/useUser'
+import { subscribeAnnouncer, __resetAnnouncerForTests } from '@/hooks/useAnnouncer'
+import { __resetStatusAnnouncerForTests } from '@/hooks/useStatusAnnouncer'
+import { __resetAnnouncePolicyForTests } from '@/lib/announcePolicy'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -143,7 +146,7 @@ function makeOrders(): TeslaOrder[] {
 }
 
 interface InstallOptions {
-  orders?: TeslaOrder[]
+  orders?: TeslaOrder[] | null
   fetchedAt?: string | null
   /** When true, the orders query never resolves (loading state). */
   pending?: boolean
@@ -184,7 +187,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -193,6 +196,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...view, client: qc }
 }
 
 const ordersCallCount = () =>
@@ -209,15 +213,57 @@ const headerRefresh = () =>
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  __resetStatusAnnouncerForTests()
+  __resetAnnouncerForTests()
+  __resetAnnouncePolicyForTests()
 })
 
 describe('TeslaOrdersPage — ready state', () => {
+  it('announces the initial loading completion once without hiding sections or announcing background reads', async () => {
+    const listener = vi.fn()
+    const unsubscribe = subscribeAnnouncer(listener)
+    install()
+    const { client, container } = renderPage()
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
+    expect(kpiRegion()).toBeInTheDocument()
+    await screen.findByRole('table', { name: 'Order details' })
+    await waitFor(() => expect(listener).toHaveBeenCalled())
+    const initialCalls = listener.mock.calls.length
+    expect(listener.mock.calls.some(([message]) => String(message).includes('Orders'))).toBe(true)
+    await act(async () => { await client.refetchQueries({ type: 'active' }) })
+    expect(listener).toHaveBeenCalledTimes(initialCalls)
+    expect(container.querySelector('[data-role="page-container"]')).not.toHaveAttribute('aria-busy', 'true')
+    expect(mockedRequest.mock.calls.filter((call) => call[0] === REFRESH_PATH)).toHaveLength(0)
+    unsubscribe()
+  })
+  it('mounts the real six-metric OperationalBrief with source counts, delivery date and original controls', async () => {
+    install()
+    const { container } = renderPage()
+    await screen.findByRole('table')
+    const strip = container.querySelector('[data-operational-brief][data-testid="tesla-orders-summary"]')!
+    const tiles = strip.querySelectorAll('[data-operational-metric]')
+    expect(tiles).toHaveLength(6)
+    expect(within(strip as HTMLElement).getByText(/Last synced:/)).toBeInTheDocument()
+    expect(Array.from(tiles).map((tile) => tile.querySelector('[data-operational-value]')?.textContent))
+      .toEqual(['4', '1', '1', '1', '1', expect.stringContaining('2099')])
+    expect(tiles[2]).toHaveTextContent('Booked or building')
+    expect(tiles[3]).toHaveTextContent('Awaiting handover')
+    expect(tiles[5]).toHaveTextContent('Soonest upcoming')
+    expect(headerRefresh()).toBeEnabled()
+    expect(screen.getByRole('textbox', { name: 'Filter orders' })).toBeInTheDocument()
+    expect(insightsRegion()).toBeInTheDocument()
+    fireEvent.click(within(strip as HTMLElement).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog')
+    expect(drawer).toHaveTextContent('Booked or building')
+    expect(drawer).toHaveTextContent('Awaiting handover')
+    expect(drawer).toHaveTextContent('Soonest upcoming')
+  })
   it('renders the header, KPI band, status breakdown, board and detail table', async () => {
     install()
     renderPage()
 
     // Header + subtitle + primary action.
-    expect(screen.getByRole('heading', { name: 'Tesla Orders' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Tesla orders' })).toBeInTheDocument()
     expect(
       screen.getByText('Vehicle orders and delivery tracking pulled from your Tesla account.'),
     ).toBeInTheDocument()
@@ -228,13 +274,13 @@ describe('TeslaOrdersPage — ready state', () => {
     const table = await screen.findByRole('table')
 
     // KPI band shows the derived total once data lands.
-    expect(within(kpiRegion()).getByText('Total Orders')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Total orders')).toBeInTheDocument()
     expect(within(kpiRegion()).getByText('4')).toBeInTheDocument()
 
     // Status breakdown badges — one per non-empty lifecycle bucket + "Other".
     const insights = insightsRegion()
-    expect(within(insights).getByText('In Progress')).toBeInTheDocument()
-    expect(within(insights).getByText('Ready · In Transit')).toBeInTheDocument()
+    expect(within(insights).getByText('In progress')).toBeInTheDocument()
+    expect(within(insights).getByText('Ready · in transit')).toBeInTheDocument()
     expect(within(insights).getByText('Delivered')).toBeInTheDocument()
     expect(within(insights).getByText('Cancelled')).toBeInTheDocument()
     expect(within(insights).getByText('Other')).toBeInTheDocument()
@@ -269,14 +315,40 @@ describe('TeslaOrdersPage — ready state', () => {
 })
 
 describe('TeslaOrdersPage — loading, error, empty', () => {
+  it('does not turn a missing order list into five measured zeros', async () => {
+    install({ orders: null, fetchedAt: null })
+    const { container } = renderPage()
+    await screen.findAllByText('No order data yet. Refresh to fetch the latest orders from Tesla.')
+    const strip = container.querySelector('[data-operational-brief][data-testid="tesla-orders-summary"]')!
+    expect(strip.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6)
+    expect(within(strip as HTMLElement).getByText('Not synced yet')).toBeInTheDocument()
+  })
+  it('keeps unknown counts missing on failure but renders a successful empty snapshot as real zero', async () => {
+    install({ ordersError: true })
+    const first = renderPage()
+    await screen.findAllByRole('alert')
+    const failed = first.container.querySelector('[data-operational-brief][data-testid="tesla-orders-summary"]')!
+    expect(failed.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6)
+    expect(failed.querySelector('[data-operational-value]')).toHaveTextContent('—')
+    first.unmount()
+
+    install({ orders: [] })
+    const second = renderPage()
+    await screen.findAllByText('No active orders found on this Tesla account.')
+    const empty = second.container.querySelector('[data-operational-brief][data-testid="tesla-orders-summary"]')!
+    expect(empty.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(5)
+    expect(Array.from(empty.querySelectorAll('[data-operational-metric][data-value-state="value"] [data-operational-value]'))
+      .map((value) => value.textContent)).toEqual(['0', '0', '0', '0', '0'])
+    expect(empty.querySelector('[data-operational-metric="orders-next-delivery"]')).toHaveAttribute('data-value-state', 'missing')
+  })
   it('shows skeleton placeholders while the orders query is pending (never blank)', () => {
     install({ pending: true })
     const { container } = renderPage()
 
     // Header shell + KPI band stay mounted; each data section shows a skeleton.
     expect(headerRefresh()).toBeInTheDocument()
-    expect(within(kpiRegion()).getByText('Total Orders')).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
+    expect(within(kpiRegion()).getByText('Total orders')).toBeInTheDocument()
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThanOrEqual(4)
 
     // No resolved data or error surfaced yet.
     expect(screen.queryByRole('table')).toBeNull()
@@ -292,7 +364,7 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
       expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1),
     )
     // KPI band still renders its (zeroed) shell rather than disappearing.
-    expect(within(kpiRegion()).getByText('Total Orders')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Total orders')).toBeInTheDocument()
 
     const before = ordersCallCount()
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0])
@@ -346,6 +418,99 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
 })
 
 describe('TeslaOrdersPage — interactions', () => {
+  it('uses neutral decorative panel icons and a wrapping mobile refresh target without losing sections', async () => {
+    install()
+    const { container } = renderPage()
+    await screen.findByRole('table')
+
+    expect(headerRefresh()).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0')
+    expect(headerRefresh()).toHaveClass('whitespace-normal')
+    for (const glyph of ['lucide-layout-grid', 'lucide-list-ordered']) {
+      const icon = container.querySelector(`svg.${glyph}`)
+      expect(icon).toHaveClass('text-[var(--text-muted)]', 'shrink-0')
+      expect(icon).not.toHaveClass('text-cyan-300')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(icon).toHaveAttribute('focusable', 'false')
+    }
+    expect(kpiRegion()).toBeInTheDocument()
+    expect(insightsRegion()).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Orders board' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Orders' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Order details' })).toBeInTheDocument()
+  })
+
+  it('coalesces both empty-panel refresh actions and the header into one pending request', async () => {
+    install({ orders: [], refreshPending: true })
+    renderPage()
+    await screen.findAllByText('No active orders found on this Tesla account.')
+    const recoveries = screen.getAllByRole('status')
+      .map((host) => within(host).queryByRole('button', { name: 'Refresh' }))
+      .filter((button): button is HTMLElement => button !== null)
+    expect(recoveries).toHaveLength(2)
+
+    await act(async () => {
+      fireEvent.click(recoveries[0])
+      fireEvent.click(recoveries[1])
+      fireEvent.click(headerRefresh())
+    })
+
+    await waitFor(() => expect(
+      mockedRequest.mock.calls.filter((call) => call[0] === REFRESH_PATH),
+    ).toHaveLength(1))
+    expect(mockedRequest).toHaveBeenCalledWith(
+      REFRESH_PATH,
+      expect.objectContaining({ method: 'POST' }),
+    )
+    await waitFor(() => expect(headerRefresh()).toBeDisabled())
+    expect(headerRefresh()).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getAllByText('No active orders found on this Tesla account.')).toHaveLength(2)
+  })
+
+  it('releases the refresh guard after failure and permits a successful empty-panel retry', async () => {
+    install({ orders: [] })
+    const failedRefresh = new Error('refresh unavailable')
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === REFRESH_PATH) return Promise.reject(failedRefresh)
+      return Promise.resolve({ orders: [], fetched_at: SYNCED_AT })
+    })
+    renderPage()
+    await screen.findAllByText('No active orders found on this Tesla account.')
+    fireEvent.click(headerRefresh())
+    await waitFor(() => expect(mockedRequest.mock.calls
+      .filter((call) => call[0] === REFRESH_PATH)).toHaveLength(1))
+    await waitFor(() => expect(headerRefresh()).toBeEnabled())
+
+    install({ orders: [] })
+    const recovery = screen.getAllByRole('status')
+      .map((host) => within(host).queryByRole('button', { name: 'Refresh' }))
+      .find((button) => button !== null)!
+    fireEvent.click(recovery)
+    await waitFor(() => expect(mockedRequest.mock.calls
+      .filter((call) => call[0] === REFRESH_PATH)).toHaveLength(2))
+    await waitFor(() => expect(headerRefresh()).toBeEnabled())
+    await waitFor(() => expect(ordersCallCount()).toBeGreaterThan(1))
+    expect(screen.getAllByText('No active orders found on this Tesla account.')).toHaveLength(2)
+  })
+
+  it('retains all orders, aggregate counts, board and table after a failed background read without automatically refreshing Tesla', async () => {
+    install()
+    const { client } = renderPage()
+    await screen.findByRole('table')
+    install({ ordersError: true })
+    await act(async () => { await client.refetchQueries({ type: 'active' }) })
+    const table = screen.getByRole('table')
+    for (const model of ['Model Y', 'Model 3', 'Model S', 'Cybertruck']) {
+      expect(within(table).getByText(model)).toBeInTheDocument()
+    }
+    expect(within(kpiRegion()).getByText('4')).toBeInTheDocument()
+    expect(screen.getAllByText('Cybertruck').length).toBeGreaterThanOrEqual(2)
+    await waitFor(() =>
+      expect(within(kpiRegion()).getByText('Retained account snapshot')).toBeInTheDocument(),
+    )
+    expect(screen.queryByText("Can't reach server")).toBeNull()
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+    expect(mockedRequest).not.toHaveBeenCalledWith(REFRESH_PATH, expect.anything())
+  })
   it('fires POST /tesla/user/orders/refresh and reflects the pending state from the header action', async () => {
     install({ refreshPending: true })
     renderPage()

@@ -21,7 +21,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+
+const { captureBody } = vi.hoisted(() => ({ captureBody: vi.fn() }));
 
 // i18n echo mock: returns the fallback string (or key when none), interpolating
 // {{var}} tokens from the options object so assertions target rendered English.
@@ -94,13 +96,16 @@ vi.mock('../components/InboxBody', () => ({
     archived: boolean;
     vehicles: unknown[];
     rules: unknown[];
-  }) => (
-    <div data-testid="inbox-body">
-      <span data-testid="inbox-body-archived">{String(archived)}</span>
-      <span data-testid="inbox-body-vehicles">{vehicles.length}</span>
-      <span data-testid="inbox-body-rules">{rules.length}</span>
-    </div>
-  ),
+  }) => {
+    captureBody({ archived, vehicles, rules });
+    return (
+      <div data-testid="inbox-body">
+        <span data-testid="inbox-body-archived">{String(archived)}</span>
+        <span data-testid="inbox-body-vehicles">{vehicles.length}</span>
+        <span data-testid="inbox-body-rules">{rules.length}</span>
+      </div>
+    );
+  },
 }));
 vi.mock('../components/NotificationReportPanel', () => ({
   NotificationReportPanel: ({ fromInstant, toExclusive, timezone }: { fromInstant: string; toExclusive: string; timezone: string }) => (
@@ -110,6 +115,7 @@ vi.mock('../components/NotificationReportPanel', () => ({
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import InboxPage from './InboxPage';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAlertRules, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
@@ -119,7 +125,7 @@ const mockVehicles = vi.mocked(useVehicles);
 const mockRules = vi.mocked(useAlertRules);
 const mockLogs = vi.mocked(useNotificationLogs);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,
@@ -152,6 +158,11 @@ const LOGS = [
 const VEHICLES = [{ id: 1 }, { id: 2 }] as unknown as Vehicle[];
 const RULES = [{ id: 10 }, { id: 11 }, { id: 12 }] as unknown as AlertRule[];
 
+function RouteState() {
+  const location = useLocation();
+  return <div data-testid="route-state">{location.pathname}{location.search}</div>;
+}
+
 function renderPage(path = '/notifications/inbox') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -161,6 +172,7 @@ function renderPage(path = '/notifications/inbox') {
       <MemoryRouter initialEntries={[path]}>
         <ToastProvider>
           <InboxPage />
+          <RouteState />
         </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -174,6 +186,7 @@ function summaryScope() {
 
 beforeEach(() => {
   __resetTitleStoreForTests();
+  captureBody.mockClear();
   mockVehicles.mockReturnValue(qr({ data: VEHICLES }));
   mockRules.mockReturnValue(qr({ data: RULES }));
   mockLogs.mockReturnValue(qr({ data: LOGS }));
@@ -215,6 +228,17 @@ describe('InboxPage — page shell & composition', () => {
     );
     expect(screen.getByTestId('notification-report').getAttribute('data-timezone')).toBeTruthy();
   });
+
+  it('places evidence before the complete secondary report, without tabs or hidden analytics', () => {
+    renderPage();
+    const evidence = screen.getByTestId('inbox-body');
+    const report = screen.getByTestId('notification-report');
+    expect(evidence.compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // FadeIn starts at opacity zero in jsdom; assert no disclosure or hidden attribute.
+    expect(report).toBeInTheDocument();
+    expect(report.closest('[hidden], details')).toBeNull();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+  });
 });
 
 describe('InboxPage — summary KPI derivation (happy path)', () => {
@@ -230,9 +254,16 @@ describe('InboxPage — summary KPI derivation (happy path)', () => {
     renderPage();
     const summary = summaryScope();
     expect(summary.getByText('5')).toBeInTheDocument(); // total rows
-    expect(summary.getByText('Latest 50 active entries · all time')).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-backlog-brief');
+    assertOperationalBriefDisclosure(brief, 'Latest 50 active entries · all time');
     expect(summary.getByText('3')).toBeInTheDocument(); // unread (rows w/o read_at)
-    expect(summary.getByText('3 of 5')).toBeInTheDocument(); // unread subtitle
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Unread' })).toHaveTextContent('3 of 5'); // unread subtitle
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(summary.getByText('1')).toBeInTheDocument(); // warnings
     expect(summary.getAllByText('2')).toHaveLength(2); // critical + info both 2
   });
@@ -244,8 +275,10 @@ describe('InboxPage — summary states', () => {
     renderPage();
     // Page shell is still present around the skeleton.
     expect(screen.getByRole('heading', { level: 1, name: 'Inbox' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading stat cards' })).toBeInTheDocument();
-    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('notification-backlog-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('surfaces a retryable error state and invokes refetch on retry', () => {
@@ -279,5 +312,156 @@ describe('InboxPage — null safety', () => {
     expect(screen.getByTestId('inbox-body-vehicles')).toHaveTextContent('0');
     expect(screen.getByTestId('inbox-body-rules')).toHaveTextContent('0');
     expect(screen.getByTestId('inbox-body-archived')).toHaveTextContent('false');
+  });
+});
+
+describe('InboxPage — restrained navigation and independent registry trust', () => {
+  it('uses shared archive-link chrome with mobile targets, wrapping and a decorative icon', () => {
+    renderPage();
+    const link = screen.getByRole('link', { name: 'View archived' });
+    expect(link).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal', 'break-words');
+    expect(link).toHaveClass('bg-[var(--control-bg)]', 'rounded-shape-sm', 'focus-visible:outline-2');
+    expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(link.querySelector('svg')).toHaveAttribute('focusable', 'false');
+    expect(link).not.toHaveClass('focus-visible:ring-cyan-400/60', 'hover:bg-white/[0.04]');
+  });
+
+  it('shows separate initial registry loading without removing evidence, report or backlog rows', () => {
+    mockVehicles.mockReturnValue(qr({ data: undefined, isPending: true, isFetching: true }));
+    mockRules.mockReturnValue(qr({ data: undefined, isPending: true, isFetching: true }));
+    renderPage();
+    expect(screen.getByRole('status', { name: 'Loading Vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Rules' })).toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alert rules yet')).not.toBeInTheDocument();
+    expect(screen.getByTestId('inbox-body')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-report')).toBeInTheDocument();
+    expect(summaryScope().getByText('5')).toBeInTheDocument();
+  });
+
+  it('keeps populated rule filters and notification rows while only the failed vehicle registry retries', () => {
+    const vehiclesRetry = vi.fn();
+    const rulesRetry = vi.fn();
+    mockVehicles.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('Synthetic registry failure'), refetch: vehiclesRetry }));
+    mockRules.mockReturnValue(qr({ data: RULES, refetch: rulesRetry }));
+    renderPage();
+    const vehiclesRegion = within(screen.getByRole('region', { name: 'Vehicles' }));
+    fireEvent.click(vehiclesRegion.getByRole('button', { name: 'Retry' }));
+    expect(vehiclesRetry).toHaveBeenCalledTimes(1);
+    expect(rulesRetry).not.toHaveBeenCalled();
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: [], rules: RULES });
+    expect(summaryScope().getByText('5')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-report')).toBeInTheDocument();
+  });
+
+  it('keeps populated vehicle filters while only the failed rule registry retries', () => {
+    const rulesRetry = vi.fn();
+    const vehiclesRetry = vi.fn();
+    mockVehicles.mockReturnValue(qr({ data: VEHICLES, refetch: vehiclesRetry }));
+    mockRules.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('Synthetic rule failure'), refetch: rulesRetry }));
+    renderPage();
+    fireEvent.click(within(screen.getByRole('region', { name: 'Rules' })).getByRole('button', { name: 'Retry' }));
+    expect(rulesRetry).toHaveBeenCalledTimes(1);
+    expect(vehiclesRetry).not.toHaveBeenCalled();
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: VEHICLES, rules: [] });
+    expect(summaryScope().getByText('5')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-report')).toBeInTheDocument();
+  });
+
+  it('retains both registry arrays and IDs on refresh failure with independently scoped refresh actions', () => {
+    const vehiclesRetry = vi.fn();
+    const rulesRetry = vi.fn();
+    mockVehicles.mockReturnValue(qr({ data: VEHICLES, isError: true, error: new Error('Synthetic refresh failure'), refetch: vehiclesRetry }));
+    mockRules.mockReturnValue(qr({ data: RULES, isError: true, error: new Error('Synthetic refresh failure'), refetch: rulesRetry }));
+    renderPage();
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: VEHICLES, rules: RULES });
+    expect(captureBody.mock.lastCall?.[0].vehicles).toBe(VEHICLES);
+    expect(captureBody.mock.lastCall?.[0].rules).toBe(RULES);
+    fireEvent.click(within(screen.getByRole('region', { name: 'Rules' })).getByRole('button', { name: 'Refresh' }));
+    expect(rulesRetry).toHaveBeenCalledTimes(1);
+    expect(vehiclesRetry).not.toHaveBeenCalled();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alert rules yet')).not.toBeInTheDocument();
+    expect(summaryScope().getByText('5')).toBeInTheDocument();
+  });
+
+  it('retains paused registry data without asserting offline or a failed request', () => {
+    mockVehicles.mockReturnValue(qr({ data: VEHICLES, fetchStatus: 'paused' }));
+    renderPage();
+    const source = screen.getByRole('region', { name: 'Vehicles' });
+    expect(within(source).getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(source).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeInTheDocument();
+    expect(within(source).queryByRole('alert')).not.toBeInTheDocument();
+    expect(within(source).queryByText(/offline/i)).not.toBeInTheDocument();
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: VEHICLES, rules: RULES });
+  });
+
+  it('distinguishes successfully empty registries from loading and failure without hiding other sections', () => {
+    mockVehicles.mockReturnValue(qr({ data: [] }));
+    mockRules.mockReturnValue(qr({ data: [] }));
+    renderPage();
+    expect(within(screen.getByRole('region', { name: 'Vehicles' })).getByText('No vehicles yet')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Rules' })).getByText('No alert rules yet')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Vehicles' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('inbox-body')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-report')).toBeInTheDocument();
+    expect(summaryScope().getByText('5')).toBeInTheDocument();
+  });
+
+  it('normalizes null registries without reporting an authoritative empty response', () => {
+    mockVehicles.mockReturnValue(qr({ data: null }));
+    mockRules.mockReturnValue(qr({ data: null }));
+    renderPage();
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: [], rules: [] });
+    expect(within(screen.getByRole('region', { name: 'Vehicles' })).getByText('Unknown')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Rules' })).getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Vehicles' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Rules' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'paused', fetchStatus: 'paused', isFetching: false, label: 'Refresh paused' },
+    { name: 'idle', fetchStatus: 'idle', isFetching: false, label: 'Unknown' },
+  ])('keeps no-data $name registries honest and independently recoverable', ({ fetchStatus, isFetching, label }) => {
+    const vehiclesRetry = vi.fn();
+    const rulesRetry = vi.fn();
+    mockVehicles.mockReturnValue(qr({ data: undefined, isPending: true, fetchStatus, isFetching, refetch: vehiclesRetry }));
+    mockRules.mockReturnValue(qr({ data: undefined, isPending: true, fetchStatus, isFetching, refetch: rulesRetry }));
+    renderPage();
+    const vehiclesRegion = within(screen.getByRole('region', { name: 'Vehicles' }));
+    const rulesRegion = within(screen.getByRole('region', { name: 'Rules' }));
+    expect(vehiclesRegion.getByText(label)).toBeInTheDocument();
+    expect(rulesRegion.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Vehicles' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Rules' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alert rules yet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    fireEvent.click(vehiclesRegion.getByRole('button', { name: 'Retry' }));
+    expect(vehiclesRetry).toHaveBeenCalledTimes(1);
+    expect(rulesRetry).not.toHaveBeenCalled();
+    fireEvent.click(rulesRegion.getByRole('button', { name: 'Retry' }));
+    expect(rulesRetry).toHaveBeenCalledTimes(1);
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: [], rules: [] });
+    expect(summaryScope().getByText('5')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-report')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View archived' })).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'inbox route', path: '/notifications/inbox' },
+    { name: 'notifications alias', path: '/notifications' },
+  ])('preserves both workspace instants and all existing local URL filters on the $name', ({ path }) => {
+    const route = `${path}?from=2026-01-01&to=2026-01-30&vehicle_id=2&rule_id=12&severity=critical&source=rule&q=synthetic&read=false&view=grouped&size=25&page=2`;
+    renderPage(route);
+    expect(screen.getByTestId('route-state')).toHaveTextContent(route);
+    expect(screen.getByTestId('notification-report')).toHaveTextContent(
+      `Notification activity ${new Date('2026-01-01T00:00:00').toISOString()} ${new Date('2026-01-31T00:00:00').toISOString()}`,
+    );
+    expect(mockLogs).toHaveBeenCalledWith({ archived: false });
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: VEHICLES, rules: RULES });
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 });

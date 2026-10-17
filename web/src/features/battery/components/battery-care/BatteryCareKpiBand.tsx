@@ -7,11 +7,12 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+import { fmtPercent } from '@/lib/numberFormat';
 
 import type { CareScore } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryCareKpiBandProps {
   care: CareScore;
@@ -19,7 +20,7 @@ interface BatteryCareKpiBandProps {
 }
 
 function percentage(value: number | null): string {
-  return value != null ? fmtPercent(value * 100, 0) : '—';
+  return value != null ? fmtPercent(value * 100) : '—';
 }
 
 /** Existing four-KPI summary, now calibrated against the larger evidence window. */
@@ -27,6 +28,7 @@ export function BatteryCareKpiBand({
   care,
   state,
 }: BatteryCareKpiBandProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const hasData =
     care.sessionsAnalyzed > 0 ||

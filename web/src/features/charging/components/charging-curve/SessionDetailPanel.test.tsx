@@ -18,8 +18,8 @@
  *      "0% → ?%" (start defaulted to a misleading 0, end to a stray "?");
  *   2. the DURATION regression — an in-progress session (no `ended_at`) must
  *      show "—" (unknown), not the pre-fix "0.00 min" silent-zero;
- *   3. NULL-SAFETY — an absent energy / peak-power reading must coerce to a
- *      finite "0.00" unit string, never "NaN";
+ *   3. NULL-SAFETY — absent energy retains its zero fallback; unavailable
+ *      observed peak power shows "—", never zero or a model assumption;
  *   4. a11y — the panel is exposed as a `region` landmark whose accessible name
  *      is its "Session Details" heading.
  *
@@ -31,10 +31,15 @@
  * from the real lib so the Date-row assertion is timezone-independent (it
  * compares the row against the same formatter the component uses).
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, cleanup } from '@testing-library/react';
 import type { ChargingSession } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
+import {
+  getFormatterPreferences,
+  setGlobalLocale,
+  setGlobalPrecision,
+} from '@/lib/numberFormat';
 
 // jsdom lacks matchMedia; shared UI can reach framer-motion's useReducedMotion
 // transitively. Install a benign stub before any shared module evaluates.
@@ -68,6 +73,20 @@ vi.mock('react-i18next', async () => {
 });
 
 import SessionDetailPanel from './SessionDetailPanel';
+
+let originalPreferences = getFormatterPreferences();
+
+beforeEach(() => {
+  originalPreferences = getFormatterPreferences();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+});
+
+afterEach(() => {
+  cleanup();
+  setGlobalLocale(originalPreferences.locale);
+  setGlobalPrecision(originalPreferences.precision);
+});
 
 /** Build one charging session; every field defaults to a completed AC session. */
 function makeSession(over: Partial<ChargingSession> = {}): ChargingSession {
@@ -154,7 +173,7 @@ describe('SessionDetailPanel — value formatting', () => {
     // because we compare against that same formatter, not a hardcoded string).
     expect(rowValue('Date')).toBe(formatDateTime('2024-06-01T12:00:00Z'));
     expect(rowValue('Date')).not.toContain('T12:00:00Z'); // not the raw ISO
-    expect(rowValue('SOC Range')).toBe('20% → 80%');
+    expect(rowValue('SOC Range')).toBe('20.00% → 80.00%');
     expect(rowValue('Energy Added')).toBe('40.00 kWh');
     expect(rowValue('Peak Power')).toBe('250.00 kW');
     expect(rowValue('Duration')).toBe('30.00 min');
@@ -211,6 +230,40 @@ describe('SessionDetailPanel — charger label branches', () => {
 });
 
 describe('SessionDetailPanel — null safety + regressions', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'preserves unknown SOC placeholders for %s separately from measured zero',
+    (value) => {
+      const session = makeSession({ end_soc_pct: value });
+      Object.assign(session, { start_soc_pct: value });
+      const { rerender } = renderPanel(session);
+
+      expect(rowValue('SOC Range')).toBe('— → —');
+
+      rerender(<SessionDetailPanel session={makeSession({ start_soc_pct: 0, end_soc_pct: 0 })} />);
+      expect(rowValue('SOC Range')).toBe('0.00% → 0.00%');
+    },
+  );
+
+  it.each([
+    [-15, 80, '-15.00% → 80.00%'],
+    [15.125, 80.875, '15.13% → 80.88%'],
+  ])('formats finite SOC values %s and %s', (start_soc_pct, end_soc_pct, expected) => {
+    renderPanel(makeSession({ start_soc_pct, end_soc_pct }));
+    expect(rowValue('SOC Range')).toBe(expected);
+  });
+
+  it('updates SOC with locale and precision preferences without changing the session', () => {
+    renderPanel(makeSession({ start_soc_pct: -15.125, end_soc_pct: 80.875 }));
+    expect(rowValue('SOC Range')).toBe('-15.13% → 80.88%');
+
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(3);
+    });
+
+    expect(rowValue('SOC Range')).toBe('-15,125% → 80,875%');
+  });
+
   it('placeholders both SOC ends when readings are missing (regression: no "0% → ?%")', () => {
     renderPanel(
       makeSession({
@@ -229,10 +282,10 @@ describe('SessionDetailPanel — null safety + regressions', () => {
 
   it('keeps a known start SOC while placeholdering an unknown end SOC', () => {
     renderPanel(makeSession({ start_soc_pct: 15, end_soc_pct: null }));
-    expect(rowValue('SOC Range')).toBe('15% → —');
+    expect(rowValue('SOC Range')).toBe('15.00% → —');
   });
 
-  it('coerces missing energy and peak power to zeroed readings without NaN', () => {
+  it('keeps the missing-energy fallback but does not invent an observed peak', () => {
     renderPanel(
       makeSession({
         total_energy_added_wh: undefined as unknown as number,
@@ -242,7 +295,27 @@ describe('SessionDetailPanel — null safety + regressions', () => {
 
     expect(rowValue('Energy Added')).toBe('0.00 kWh');
     expect(rowValue('Energy Added')).not.toContain('NaN');
-    expect(rowValue('Peak Power')).toBe('0.00 kW');
+    expect(rowValue('Peak Power')).toBe('—');
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'shows unavailable observed peak power for %s without substituting the model assumption',
+    (peak_power_w) => {
+      renderPanel(makeSession({ peak_power_w }));
+
+      expect(rowValue('Peak Power')).toBe('—');
+      expect(rowCount()).toBe(6);
+    },
+  );
+
+  it.each([
+    [0, '0.00 kW'],
+    [11_000, '11.00 kW'],
+    [250_000, '250.00 kW'],
+  ])('preserves a measured peak of %s W', (peak_power_w, expected) => {
+    renderPanel(makeSession({ peak_power_w }));
+
+    expect(rowValue('Peak Power')).toBe(expected);
   });
 
   it('shows an em-dash duration for an in-progress session (regression: no "0.00 min")', () => {

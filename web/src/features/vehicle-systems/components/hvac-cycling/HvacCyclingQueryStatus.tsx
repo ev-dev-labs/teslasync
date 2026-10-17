@@ -12,6 +12,7 @@ import {
   QueryError,
 } from '@/components/feedback';
 import { Button, Text } from '@/components/ui';
+import { VehicleSourcePause } from '../VehicleSourcePause';
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import type { HvacCyclingQueryState } from './types';
 
@@ -67,6 +68,11 @@ export function HvacCyclingQueryStatus({
         <QueryError error={state.error} onRetry={state.onRetry} />
       </div>
     );
+  }
+  if (state.isPaused && !state.refreshError) {
+    const label = t('hvacCycling.title', 'HVAC cycling');
+    const paused = t('hvacCycling.states.paused', 'Climate history loading is paused while the network is unavailable; no empty response is inferred.');
+    return <VehicleSourcePause label={label} message={paused} retained={state.isResolved} onRetry={state.onRetry} />;
   }
   if (state.refreshError) {
     return (

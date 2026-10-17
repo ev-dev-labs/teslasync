@@ -4,6 +4,29 @@ let _globalPrecision = 2
 /** Global locale (BCP-47) — set by useSettings, read by all formatters */
 let _globalLocale = 'en-US'
 
+interface FormatterPreferences {
+  readonly precision: number
+  readonly locale: string
+}
+
+let preferences: FormatterPreferences = { precision: _globalPrecision, locale: _globalLocale }
+const preferenceListeners = new Set<() => void>()
+
+export function getFormatterPreferences(): FormatterPreferences {
+  return preferences
+}
+
+export function subscribeFormatterPreferences(listener: () => void): () => void {
+  preferenceListeners.add(listener)
+  return () => { preferenceListeners.delete(listener) }
+}
+
+function publishPreferences() {
+  if (preferences.precision === _globalPrecision && preferences.locale === _globalLocale) return
+  preferences = { precision: _globalPrecision, locale: _globalLocale }
+  preferenceListeners.forEach(listener => listener())
+}
+
 /** Set the global decimal precision (called by useSettings on load) */
 export function setGlobalPrecision(decimals: number) {
   // Reject non-finite input (NaN / ±Infinity). Without this guard a bad
@@ -11,6 +34,7 @@ export function setGlobalPrecision(decimals: number) {
   // makes every downstream `toLocaleString` call throw a RangeError.
   if (!Number.isFinite(decimals)) return
   _globalPrecision = Math.max(0, Math.min(20, decimals))
+  publishPreferences()
 }
 
 /** Get the current global decimal precision */
@@ -25,11 +49,28 @@ export function getGlobalPrecision(): number {
  */
 export function setGlobalLocale(locale: string) {
   _globalLocale = locale && locale.trim() ? locale : 'en-US'
+  publishPreferences()
 }
 
 /** Get the current global locale tag (BCP-47). */
 export function getGlobalLocale(): string {
   return _globalLocale
+}
+
+/**
+ * Test-only reset for the shared formatter preferences.
+ *
+ * `setGlobalLocale` / `setGlobalPrecision` mutate module state that survives
+ * across tests in the same file, so a French-locale case leaks `fr-FR` (and a
+ * precision-4 case leaks `4`) into every later test that assumes the
+ * defaults. The global setup calls this in `beforeEach`; individual files
+ * that need other values set them in their own (later-running) hooks.
+ * Subscribed components are notified when anything actually changed.
+ */
+export function _resetFormatterPreferences(): void {
+  _globalPrecision = 2
+  _globalLocale = 'en-US'
+  publishPreferences()
 }
 
 /** Safe number extraction from unknown values, returns 0 for nullish/NaN */
@@ -90,9 +131,32 @@ export function fmtPercent(v: unknown, decimals?: number): string {
   return `${fmtNumber(v, decimals)}%`
 }
 
+/**
+ * Keep diagnostic detail without reducing the user's chosen precision.
+ * Use scientific notation only when fixed digits would erase a nonzero measurement.
+ */
+export function fmtScientificNumber(v: unknown, minimumDecimals: number, locale?: string): string {
+  if (!isFiniteNumber(v)) return '—'
+  const d = Math.max(_globalPrecision, toFractionDigits(minimumDecimals))
+  if (v === 0 || fmtNumber(Math.abs(v), d, locale) !== fmtNumber(0, d, locale)) {
+    return fmtNumber(v, d, locale)
+  }
+  const options: Intl.NumberFormatOptions = {
+    notation: 'scientific',
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
+  }
+  try {
+    return v.toLocaleString(locale ?? _globalLocale, options)
+  } catch {
+    // Match fmtNumber's recovery for an invalid locale tag.
+    return v.toLocaleString('en-US', options)
+  }
+}
+
 /** Format as integer with locale separators: fmtInt(12345.6) → "12,346" */
-export function fmtInt(v: unknown): string {
-  return fmtNumber(v, 0)
+export function fmtInt(v: unknown, locale?: string): string {
+  return fmtNumber(v, 0, locale)
 }
 
 /**
@@ -124,6 +188,8 @@ interface FormatBytesOptions {
   zeroAsEmpty?: boolean
   empty?: string
   gbDecimals?: number
+  precision?: number
+  locale?: string
 }
 
 /** Format a byte count with binary units while preserving existing dashboard/file-table output. */
@@ -132,7 +198,8 @@ export function formatBytes(bytes: number | null | undefined, options: FormatByt
   if (bytes == null || !Number.isFinite(bytes)) return empty
   if (options.zeroAsEmpty && bytes === 0) return empty
   if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(options.gbDecimals ?? 1)} GB`
+  const digits = options.precision ?? _globalPrecision
+  if (bytes < 1024 * 1024) return `${fmtNumber(bytes / 1024, digits, options.locale)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${fmtNumber(bytes / (1024 * 1024), digits, options.locale)} MB`
+  return `${fmtNumber(bytes / (1024 * 1024 * 1024), options.gbDecimals ?? digits, options.locale)} GB`
 }

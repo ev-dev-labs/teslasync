@@ -1,0 +1,635 @@
+{
+  "item": "phase6-qa-analytics-mileage",
+  "status": "DONE",
+  "result": "SOURCE_ONLY_REPORT_WITH_NEEDS",
+  "page": "web/src/features/analytics/pages/MileagePage.tsx",
+  "routes": [
+    "/mileage"
+  ],
+  "purpose": "Read-only QA of accepted page/direct support; no remigration or page PASS.",
+  "primaryGoal": "Review source trust, fixed-period mileage, calculations, SI/display preferences and preserved sections/actions.",
+  "ownership": {
+    "root": "D:/repos/teslasync",
+    "workingDirectory": "D:/repos/teslasync/web",
+    "branch": "fix/dashboard-followups",
+    "ownedFiles": [
+      "D:/repos/teslasync/docs/frontend-audits/phase6-qa-analytics-mileage.json",
+      "D:/repos/teslasync/web/logs/phase6-qa-analytics-mileage.log"
+    ],
+    "logIgnoreEvidence": ".gitignore:80 logs/; no Git command",
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "helperFiles": 0,
+    "agents": 0,
+    "servers": 0,
+    "gitCommands": 0,
+    "installs": 0,
+    "startedUtc": "2026-10-13T19:50:42.3581755Z",
+    "returnByUtc": "2026-10-13T20:05:00Z",
+    "hardStopUtc": "2026-10-13T20:10:00Z",
+    "released": true,
+    "noPostReturnWrites": true,
+    "releasedAtUtc": "2026-10-13T20:05:33.1924165Z"
+  },
+  "eligibility": {
+    "task": "migration-queue.md:276 existing [ ] read-only-finished-page-QA",
+    "dependency": "migration-queue.md:1659 phase5-page-analytics-mileage [x], source-only proof/release accepted; historical 20/20 is not fresh QA",
+    "duplicateExactItemMatches": 0,
+    "duplicateCommand": "C05 Select-String docs/frontend-audits/*.json exact item regex; repeated C06",
+    "reportAndLogPreviouslyExisted": false,
+    "queueHandoffModified": false
+  },
+  "runtime": {
+    "defaultProbe": {
+      "command": "node --version",
+      "output": "v24.18.0",
+      "exit": 0
+    },
+    "existingRuntime": "C:/Users/AtulM/.copilot/session-state/499cebd4-378c-418c-9113-3b8fe85355b5/files/node-v26.11.1-win-x64/node.exe",
+    "verifiedOutput": "v26.11.1",
+    "exit": 0,
+    "usage": "Existing session-files runtime only for read-only catalog JSON; no install/PATH change/helper/source execution."
+  },
+  "scope": {
+    "headerVehicle": "MileagePage:75 useSelectedVehicle; three hooks use stringified ID; vehicle scope enabled",
+    "headerRange": "workspaceScope.ts:23-76 excludes /mileage; resolver155-166 gives range=false,vehicle=true",
+    "bothBounds": "NOT_APPLICABLE: mileage hooks/handlers accept fixed periods, not workspace start/end. No guessed adapter or missing-header-bounds finding.",
+    "calendarBusinessYear": "No independent date/year navigation in inspected page/live support. UTC bucket labels are not duplicate controls; other pages untouched.",
+    "fixedPeriods": "Stats elapsed trailing7/30/365d plus recorded lifetime. Daily days=90 snaps earliest UTC day. Monthly default months=24 snaps earliest UTC month; not guaranteed exactly90/24 loaded buckets. Independent request clocks/lower cutoffs; no explicit upper bound added or assumed."
+  },
+  "dataSources": [
+    {
+      "hook": "useMileageStats(activeId)",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "line": 73,
+      "urlLine": 76,
+      "path": "/mileage/stats?vehicle_id=${encodeURIComponent(vehicleId)}",
+      "routerLine": 4246,
+      "key": "['analytics','mileage',vehicleId]",
+      "keyLine": 18,
+      "enabled": "!!vehicleId",
+      "signal": true,
+      "wire": "snake_case km rollups, nullable RFC3339 first/last timestamps"
+    },
+    {
+      "hook": "useDailyMileage(activeId,90)",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "line": 98,
+      "urlLine": 101,
+      "path": "/mileage/daily?vehicle_id=${encodeURIComponent(vehicleId)}&days=${days}",
+      "routerLine": 4249,
+      "key": "['analytics','daily-mileage',vehicleId,days]",
+      "keyLine": 20,
+      "enabled": "!!vehicleId",
+      "signal": true,
+      "select": "safeArray(resp.days)",
+      "wire": "UTC date,total_km,nullable end_odometer_km"
+    },
+    {
+      "hook": "useMonthlyMileage(activeId)",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "line": 85,
+      "urlLine": 88,
+      "path": "/mileage/monthly?vehicle_id=${encodeURIComponent(vehicleId)}",
+      "routerLine": 4245,
+      "key": "['analytics','monthly-mileage',vehicleId]",
+      "keyLine": 19,
+      "enabled": "!!vehicleId",
+      "signal": true,
+      "select": "safeArray(resp.months)",
+      "wire": "UTC YYYY-MM,total_km,drive_count,nullable energy/efficiency"
+    }
+  ],
+  "wireCalculations": {
+    "evidence": "internal/database/drive/mileage_repo.go:121,141,179 explicitly divides distance_m/end_odometer_m by1000; handler JSON tags/types agree. Existing km cache preserved, not guessed as meters.",
+    "conversion": "MileagePage:63-69 knownNumber then km*1000 -> convertDistanceFromSI; MileageBrief:17-36 raw meter inputs -> existing operational formatter. No hook/cache conversion or SI migration.",
+    "canonicalKeys": "api/client.ts:297-301 exposes BOTH original snake_case and camelCase forms; no missing-key incident inferred.",
+    "averageProjection": "MileageBrief:15,26-31 last_30d_km/30, projection*365; source null guard precedes output; projection explicitly inferred.",
+    "monthlyRatio": "MileagePage:158-168 total_km/drive_count when>0, null for unknown operand, existing zero-count result0 preserved; label Distance / drive.",
+    "totals": "No lifetime/full-history totals inferred from daily/monthly loaded rows; chart/table use same monthly rows. Filtered/paginated/loaded export is not full history.",
+    "unknownZero": "knownNumber keeps missing/nonfinite cells/windows null; genuine zero retained. Null odometer removed only from odometer series; no fabricated zero daily gaps.",
+    "preferences": "Saved distance,reactive numeric locale/precision,occurrence-specific KPI precision and saved chart palette retained. formatDayKey keeps calendar identity; timestamps use formatDate.",
+    "nativeIncident": false
+  },
+  "components": [
+    "PageLayout -> PageContainer; Section/CardGrid/LayoutCard",
+    "MileageBrief -> OperationalBrief/useOperationalMetrics",
+    "MetricBar/KVList",
+    "EmbeddedChart -> ChartContainer; Area/Bar via barrel",
+    "DataTable stable ID/four sortable columns/value filters/pagination",
+    "MileageSourceNotice/QueryError/EmptyState/Skeleton/FadeIn/NoVehicleSelected"
+  ],
+  "states": {
+    "initial": "Six source-local card shells/skeletons remain with selected vehicle. NoVehicleSelected is deliberate prerequisite, not null-data section hiding.",
+    "fatal": "Only affected no-retained-data card content replaced; no global loading/error prop erases neighbors.",
+    "retainedFailure": "Payload remains; additive source-specific warning/retry.",
+    "pausedRetained": "Payload remains; paused notice and shared source retry.",
+    "pausedInitial": "F01 false last-success claim before payload.",
+    "refreshing": "deriveDataState isRefreshing requires retained data; additive notice keeps content.",
+    "empty": "Independent odometer/daily/monthly messages/table empty; unavailable summary View drives and windows Refresh.",
+    "coverage": "Explicitly unknown recording completeness, not invented zero/complete."
+  },
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "file": "web/src/features/analytics/components/mileage-modernization/MileageSourceNotice.tsx",
+      "line": 29,
+      "rule": "initial-paused-retention-claim",
+      "priority": "P1",
+      "confidence": "high",
+      "contract": "MDC-026/mission25",
+      "detail": "Initial paused load falsely says last successful mileage data is shown.",
+      "mechanism": "Props:7 omit hasData. Branch:25-29 tests isRefreshBlocked only. dataState.ts:205-216 sets isRefreshBlocked for data=undefined,fetchStatus=paused. Six cards call notice.",
+      "sourceRepro": "Selected vehicle, query data=undefined,isPending=true,isLoading=false,fetchStatus=paused -> hasData=false/blocked=true -> retained wording; daily cards also fall through to empty rather than initial-paused content.",
+      "reproExecution": "NOTRUN; source branch proof only",
+      "fix": "Authorized support owner distinguish initial/retained paused via existing trust fields; canonical catalog owner localizes wording. Keep shells/content/independent retry.",
+      "owner": "page/support plus i18n owner",
+      "needs": "Bounded followup, then authorized affected-state verification; no source/catalog write here.",
+      "commands": [
+        "C12",
+        "C13"
+      ]
+    },
+    {
+      "id": "F02",
+      "file": "web/src/features/analytics/components/mileage-modernization/MileageSourceContract.test.ts",
+      "line": 50,
+      "relatedLines": [
+        58,
+        59,
+        71,
+        72,
+        73,
+        74,
+        75
+      ],
+      "rule": "stale-preservation-assertions",
+      "priority": "P2",
+      "confidence": "high",
+      "contract": "MDC-060/070 preserve tests/accepted semantics",
+      "detail": "Existing source-contract assertions contradict current accepted source; NOT an executed failing-test claim.",
+      "mechanism": "Test reads current page/TS AST;50 requires removed areaGradient;58-59 removed three-field mobileColumns;71-75 old zero-fallback/filter/max initializers. Current source has8% solid area/all4columns/knownNumber-null guards.",
+      "sourceRepro": "C16 five old source literals each returned0 current-page matches; exact test assertions and replacement branches pasted. Three of four source-test blocks contain incompatible assertions.",
+      "reproExecution": "Source scans executed; test runner NOTRUN",
+      "fix": "Designated test owner reconcile existing assertions to accepted semantics without deleting coverage, restoring regressions or weakening unknown/zero/mobile/date/ID/action/operand requirements.",
+      "owner": "existing source-contract test owner",
+      "needs": "Later authorized existing-test reconciliation/run; all existing tests preserved read-only here.",
+      "commands": [
+        "C16"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "CAND01",
+      "file": "web/src/features/analytics/pages/MileagePage.tsx",
+      "line": 121,
+      "rule": "unknown-denominator-accessible-zero",
+      "confidence": "medium",
+      "mechanism": "Unknown lifetime -> max0; known window still passed. MetricBar:50-63 clamps ARIA now0/max0 without unknown text while sublabel shows distance.",
+      "sourceRepro": "Conditional partial payload lifetime_km missing,last_7d_km10 -> visible10km versus aria0.",
+      "notConfirmed": "Valid DTO normally supplies lifetime; no such response/browser run observed.",
+      "needs": "Confirm partial payload/denominator contract before existing page/shared treatment; no guessed ratio.",
+      "owner": "page/integration/MetricBar"
+    },
+    {
+      "id": "CAND02",
+      "file": "web/src/features/analytics/pages/MileagePage.tsx",
+      "line": 65,
+      "rule": "physical-sign-population-review",
+      "confidence": "medium",
+      "mechanism": "knownNumber accepts finite negative/fractional values; page distance/count formatting lacks domain guards; MetricBar clamps negative geometry not label. Repo stats141-150 sums all distances; daily/monthly128,184 and counts exclude<=0.",
+      "sourceRepro": "Conditional negative stored drive can affect stats sums but not loaded buckets/counts; invalid count can display rounded rather than unknown.",
+      "notConfirmed": "Admissible signed-distance/odometer and storage guarantees not checked; no real record or native incident assumed.",
+      "needs": "Confirm physical-distance/safe-count/aggregate-population contracts; never blanket abs/clamp raw values or guessed SI.",
+      "owner": "domain/integration"
+    },
+    {
+      "id": "CAND03",
+      "file": "web/src/features/analytics/components/mileage-modernization/MileageSourceNotice.tsx",
+      "line": 7,
+      "rule": "per-source-last-success-visibility",
+      "confidence": "medium",
+      "mechanism": "Notice no updatedAt/source label. PageContainer:38-48 selects one worst query for automatic freshness; DataSourceNotice query interface lacks dataUpdatedAt.",
+      "sourceRepro": "Three retained sources with different last-success times -> header stamp represents only one, local notice has no source timestamp.",
+      "notConfirmed": "Composed discoverability/accessibility not exercised.",
+      "needs": "Review source-labelled last-success using existing freshness owner, no competing timestamp engine.",
+      "owner": "page/shared freshness"
+    }
+  ],
+  "responsive": {
+    "source": "One allocated CardGrid; charts288desktop/256mobile; all4tablecolumns reachable in caller source (no mobileColumns restriction). Historical date-shift/gradient/hidden-ratio findings no longer re-raised.",
+    "viewports": "320/375/390/430/768/1024/1280/1440/1920/2560,allocated containers,RTL,long labels,200%text NOTRUN",
+    "geometry": "NOTRUN"
+  },
+  "accessibility": {
+    "source": "Localized headings/card labels,summary aria-label,notice role=status,table caption and chart dataColumns. PageLayout delegates route focus. ChartContainer705-840 uses named group when chartKey; mocked page chart role=img assertions do not prove real frame semantics.",
+    "keyboardScreenReaderForcedColors": "NOTRUN",
+    "contrast": "NOTRUN"
+  },
+  "i18nStyle": {
+    "source": "Visible page/live-support strings use t(); canonical mileage,dataSources.labels,analytics.brief subtrees read. Non-English/common/shared keys not exhaustively checked; no catalogs changed.",
+    "exceptions": [
+      "PageLayout wraps PageContainer, not missing wrapper",
+      "Recharts stroke/tick/fill API props not inline-style violations",
+      "MetricBar/ChartTooltip computed styles dynamic",
+      "NoVehicleSelected prerequisite allowed",
+      "Unused MileageSummary export not migrated/deleted or assumed safe to retire"
+    ],
+    "runtime": "NOTRUN"
+  },
+  "ruleScans": {
+    "method": "Actual builtin Select-String + manual source review; NOT official static acceptance",
+    "C11Matches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidate": 0,
+      "fetch-useeffect": 0,
+      "page-wrapper": 1
+    },
+    "files": "Page/live Brief/SourceNotice; supplemental existing Summary/index five source patterns each0 in C14",
+    "directHookFinal": {
+      "range": [
+        73,
+        104
+      ],
+      "doublePrefix": 0,
+      "camelCaseCaseSensitive": 0,
+      "wiringMatches": 11
+    },
+    "retainedCorrections": [
+      "C11 insensitive Section/section2each corrected C12 to1each",
+      "C14 insensitive camelcase3 snake_case false positives corrected C15 to0",
+      "C14 loose VehicleSelect2 NoVehicleSelected false positives corrected C15 to0 actual controls",
+      "C17 broad column5 includes chart column; table range180-183 exactly4"
+    ],
+    "notBlanketZeroViolations": true,
+    "backendGeneralAudit": "OUT_OF_SCOPE; direct route/wire only"
+  },
+  "preservation": {
+    "sourceSHA256": "3FF5E5D704833B6E9CC9285DBE1FF29C5F949C8F9343C40DD93C92DEE02E1F57",
+    "pageTestSHA256": "E7585A0744777F03B875E52DD54AD8D21211F3ACD183CDDE3C5AF07796C4045A",
+    "currentLineCount": 465,
+    "renderedLines": {
+      "MileageBrief": 56,
+      "MileageSourceNotice": 35,
+      "composed": 556
+    },
+    "baseline": {
+      "file": "docs/frontend-audits/audit-page-048.json",
+      "pageLines": 461,
+      "composedLines": 552,
+      "note": "Recorded audit baseline, not newly fetched original/Git history.465/461 and556/552 exceed70%; not full preservation acceptance."
+    },
+    "counts": {
+      "sections": 1,
+      "summaryNativeRegion": 1,
+      "cardGrid": 1,
+      "cards": 6,
+      "charts": 3,
+      "tables": 1,
+      "tableColumns": 4,
+      "summaryMetrics": 6,
+      "windowBars": 3,
+      "activityFacts": 4,
+      "pageRetryProps": 12,
+      "pageRefreshActionProps": 1,
+      "briefViewDrivesActionProps": 1,
+      "uniqueRetryTargets": 3,
+      "pageTestDefinitions": 20
+    },
+    "actionCountDefinition": "Syntax sites, not simultaneously visible buttons or every inherited shared action.",
+    "sections": [
+      {
+        "name": "Recorded mileage",
+        "line": 455
+      },
+      {
+        "name": "Mileage summary metrics",
+        "line": 197
+      },
+      {
+        "name": "Odometer over time",
+        "line": 214
+      },
+      {
+        "name": "Distance by window",
+        "line": 270
+      },
+      {
+        "name": "Daily distance",
+        "line": 309
+      },
+      {
+        "name": "Monthly distance",
+        "line": 363
+      },
+      {
+        "name": "Monthly summary",
+        "line": 417
+      }
+    ],
+    "actions": [
+      "3independent retries",
+      "windows Refresh",
+      "summary View drives /drives",
+      "NoVehicleSelected onboarding",
+      "monthly sort/value filters/pagination/persistence/shared loaded-row exports",
+      "chart data alternatives/preferences",
+      "shared descriptions/header freshness refresh",
+      "OperationalBrief disclosure"
+    ],
+    "stableIds": [
+      "mileage-summary",
+      "analytics:mileage-monthly",
+      "mileage-odometer-over-time",
+      "mileage-daily-distance",
+      "mileage-monthly-distance"
+    ],
+    "hashFiles": [
+      {
+        "path": "web/src/features/analytics/pages/MileagePage.tsx",
+        "sha256": "3FF5E5D704833B6E9CC9285DBE1FF29C5F949C8F9343C40DD93C92DEE02E1F57"
+      },
+      {
+        "path": "web/src/features/analytics/pages/MileagePage.test.tsx",
+        "sha256": "E7585A0744777F03B875E52DD54AD8D21211F3ACD183CDDE3C5AF07796C4045A"
+      },
+      {
+        "path": "web/src/features/analytics/components/operationalbrief-a-m/MileageBrief.tsx",
+        "sha256": "05C70F025BFABAAAC995BFB23AA63CF8D894DCEEFC407E1C59C2E62D049DFFAC"
+      },
+      {
+        "path": "web/src/features/analytics/components/mileage-modernization/MileageSourceNotice.tsx",
+        "sha256": "E88F09B57E408EB404672C87D2407ABADB39E2DF84A85F57C0A9313A5C3D35B0"
+      },
+      {
+        "path": "web/src/features/analytics/components/mileage-modernization/MileageSummary.tsx",
+        "sha256": "1A2754426511359D2097AA504BF600FA77DA17023C9A9AB5B1A96D36EBE46C56"
+      },
+      {
+        "path": "web/src/features/analytics/components/mileage-modernization/index.ts",
+        "sha256": "03BFF60D7C4444472C529C3D6FEF5DDA95431E06E9D017C0812CBE9EAEDF00E1"
+      },
+      {
+        "path": "web/src/features/analytics/components/mileage-modernization/MileageModernization.test.tsx",
+        "sha256": "B78D4BD42FB4A041AFF928A8DD877F0C1E0CFDA970B4C989CC0AEFAB112FCA02"
+      },
+      {
+        "path": "web/src/features/analytics/components/mileage-modernization/MileageSourceContract.test.ts",
+        "sha256": "576D11475995424552DA3EB6CBD6A41188E450AEDDB9EF8299214AFE32F0A2D7"
+      }
+    ],
+    "unchangedThroughC17": true,
+    "finalHashValidation": "8/8 exact source/support/test hashes unchanged; final source counts verified"
+  },
+  "summary": {
+    "confirmed": 2,
+    "candidates": 3,
+    "byRule": {
+      "initial-paused-retention-claim": 1,
+      "stale-preservation-assertions": 1
+    },
+    "mostIssues": "SourceNotice and SourceContract.test tied at1confirmed each",
+    "priority": "F01 honest paused state; F02 existing assertion reconciliation",
+    "pageAcceptance": "NOTRUN; report delivery is not PASS"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Initial-paused localization",
+      "existingOwnerFile": "web/src/i18n/en.json",
+      "states": "initial-paused vs retained-paused",
+      "usedBy": [
+        "MileageSourceNotice"
+      ],
+      "dependsOn": [
+        "authorized F01support followup",
+        "catalog owner"
+      ],
+      "made": false
+    },
+    {
+      "name": "Conditional denominator/sign/freshness review",
+      "existingOwnerFile": "web/src/components/data-display/MetricBar.tsx",
+      "required": "UNKNOWN until candidates/domain contracts confirmed",
+      "made": false
+    }
+  ],
+  "commands": [
+    {
+      "id": "C01",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Get-ChildItem absolute docs/.github/.claude roots -Recurse filtered instruction/task names; Test-Path artifacts",
+      "exit": 0
+    },
+    {
+      "id": "C02",
+      "command": "Get-ChildItem absolute docs/.github/.claude roots; conditional Get-Content existing exact report",
+      "exit": 0
+    },
+    {
+      "id": "C03",
+      "command": "Get-ChildItem root/instructions/docs -File; Select-String C02 tool receipt task paths",
+      "exit": 0,
+      "raw": "caller transcript; core probes repeated C06"
+    },
+    {
+      "id": "C04",
+      "command": "Select-String migration-queue mileage refs -Context4,7; Get-Content .git/HEAD; report task-ref search",
+      "exit": 0
+    },
+    {
+      "id": "C05",
+      "command": "Select-String queue exact task/dependency and reports exact item regex; Test-Path report/log; Get-Content .git/HEAD",
+      "exit": 0,
+      "duplicateMatches": 0,
+      "raw": "caller transcript; exact core probes repeated C06"
+    },
+    {
+      "id": "C06",
+      "command": "node --version; state task grep; Get-FileHash page/test; Get-Content original audit; repeat discovery/eligibility; allowed log System.IO write",
+      "exit": 0
+    },
+    {
+      "id": "C07",
+      "command": "runtime root-directory probes; Select-String direct imports/hooks/router/wire/scope",
+      "exit": 0,
+      "errors": 3,
+      "result": "PARTIAL missing guessed files; retained"
+    },
+    {
+      "id": "C08",
+      "command": "Get-ChildItem session-state wildcard files node.exe, planned scans",
+      "exit": null,
+      "result": "INTERRUPTED shell5460 stopped; buffered output unavailable, no counts claimed"
+    },
+    {
+      "id": "C09",
+      "command": "Get-ChildItem exact support/api dirs/recent5 session runtime dirs; guessed internal/drivedb",
+      "exit": 0,
+      "errors": 1
+    },
+    {
+      "id": "C10",
+      "command": "Existing absolute Node26 --version; page ReadAllLines; Select-String page test it definitions",
+      "exit": 0,
+      "lines": 465,
+      "tests": 20
+    },
+    {
+      "id": "C11",
+      "command": "Select-String exact page/brief/notice named violation/count patterns; numeric/client excerpts",
+      "exit": 0,
+      "errors": 1
+    },
+    {
+      "id": "C12",
+      "command": "Case-sensitive section/action counts; numbered notice; numeric/date/catalog excerpts",
+      "exit": 0
+    },
+    {
+      "id": "C13",
+      "command": "Existing Node26 JSON.parse/readFileSync en.json targeted subtrees; wire/max/paused excerpts",
+      "exit": 0
+    },
+    {
+      "id": "C14",
+      "command": "Direct hook range73-104 greps; support source/test excerpts; .gitignore; prohibited gates NOTRUN",
+      "exit": 0
+    },
+    {
+      "id": "C15",
+      "command": "Case-sensitive direct-hook camelCase and anchored local JSX control greps; six support hashes",
+      "exit": 0,
+      "camelCase": 0,
+      "localControls": 0
+    },
+    {
+      "id": "C16",
+      "command": "Select-String page five obsolete literals -SimpleMatch -CaseSensitive; existing assertion/current branch excerpts",
+      "exit": 0,
+      "matches": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "C17",
+      "command": "Get-FileHash eight readonly files; linecounts; KPI/window/fact/column greps",
+      "exit": 0,
+      "hashFiles": 8
+    },
+    {
+      "id": "C18",
+      "command": "Oversized PowerShell JSON report creation",
+      "exit": 1,
+      "result": "Tool os206 filename/extension too long; process body did not execute; no report created"
+    },
+    {
+      "id": "C18-receipt",
+      "command": "System.IO.AppendAllText permitted log failed C18 receipt and UTC",
+      "exit": 0
+    },
+    {
+      "id": "C19",
+      "command": "ConvertFrom-Json concise literal; System.IO.WriteAllText sole report; AppendAllText sole log",
+      "exit": 0
+    },
+    {
+      "id": "C20",
+      "command": "Final ConvertFrom-Json/count/path/raw-log checks; Get-FileHash eight readonly files; final JSON reparse; release receipts",
+      "exit": 0,
+      "result": "Final JSON/raw-log markers/8 hashes/source counts verified; all owned report/log/commands released; acceptance NOTRUN"
+    }
+  ],
+  "failedOperations": [
+    "C07 exit0 with3 missing-file errors",
+    "C08 stopped5460, unknown exit/buffered output",
+    "C09 exit0 with1 missing-directory error",
+    "C11 exit0 with1 missing-file error",
+    "view mileage-modernization.tsx absent; actual directory read",
+    "view internal/database/drive/mileage.go absent; mileage_repo.go read",
+    "C18 tool exit1 os206; retained, concise C19 used"
+  ],
+  "filesRead": [
+    "migration-queue.md exact refs/context",
+    ".agents/state.md1-60/task grep",
+    ".git/HEAD",
+    ".gitignore log excerpt",
+    "agent-loop-playbook.md1-180",
+    "shared-library-loop.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-design-contract.md1-220,260-735 relevant ranges",
+    "docs/frontend-mission.md1-220,240-980 relevant ranges",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    "docs/frontend-audits/audit-page-048.json",
+    "web/src/features/analytics/pages/MileagePage.tsx entire",
+    "web/src/features/analytics/pages/MileagePage.test.tsx entire",
+    "web/src/features/analytics/components/operationalbrief-a-m/MileageBrief.tsx",
+    "web/src/features/analytics/components/mileage-modernization/MileageSourceNotice.tsx",
+    "web/src/features/analytics/components/mileage-modernization/index.ts",
+    "web/src/features/analytics/components/mileage-modernization/MileageSummary.tsx",
+    "web/src/features/analytics/components/mileage-modernization/MileageModernization.test.tsx focused excerpts",
+    "web/src/features/analytics/components/mileage-modernization/MileageSourceContract.test.ts entire",
+    "web/src/api/hooks/useAnalytics.ts1-108, audit73-104 only",
+    "web/src/types/analytics.ts mileage DTOs49-103",
+    "web/src/api/dataState.ts1-280,378-386",
+    "web/src/api/client.ts1-110,297-301",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/App.tsx mileage excerpts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/lib/unitConversion.ts1-150",
+    "web/src/lib/dateFormat.ts formatter excerpts",
+    "web/src/lib/metric-reference/formatMetric.ts1-130",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx1-270",
+    "web/src/components/layout/layout-reference/LayoutCard.tsx",
+    "web/src/components/feedback/DataSourceNotice.tsx1-240",
+    "web/src/components/data-display/DataFreshness.tsx1-210",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/charts/ChartContainer.tsx705-840",
+    "web/src/components/charts/ChartTooltip.tsx",
+    "web/src/i18n/en.json mileage/labels/brief subtrees only",
+    "internal/api/router.go direct mileage route/import excerpts",
+    "internal/api/mileage/handler.go1-290,319-435",
+    "internal/database/drive/mileage_repo.go direct wire/calculation only"
+  ],
+  "evidenceLimits": {
+    "staticAcceptance": "NOTRUN; builtin source scans only",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "realAPI": "NOTRUN",
+    "geometry": "NOTRUN",
+    "contrast": "NOTRUN",
+    "performance": "NOTRUN",
+    "tests": "NOTRUN; definitions/assertions read only",
+    "globalTSC": {
+      "status": "NOTRUN",
+      "command": "npx tsc --noEmit",
+      "exit": null,
+      "reason": "Explicit task prohibits global gate; no TypeScript passes claim"
+    },
+    "fullPage": "NOTRUN; no page PASS",
+    "browserIdentity": "NOTRUN",
+    "globalWriteVerification": "No Git/global audit; only allowed artifacts written and eight exact source/test baselines checked. Unrelated concurrent changes not attributed.",
+    "rawOutput": "Actual outputs pasted in caller transcript/permitted log; C01/C02/C04 complete tool receipts copied; C03/C05 core probes repeated/logged C06; C08 buffered output unavailable recorded honestly."
+  },
+  "artifactValidation": {
+    "status": "VALID_JSON_RAW_LOG_AND_SCOPED_HASHES_ONLY",
+    "command": "C20",
+    "validatedAtUtc": "2026-10-13T20:05:33.1848198Z"
+  }
+}

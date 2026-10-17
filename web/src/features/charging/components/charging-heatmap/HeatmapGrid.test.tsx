@@ -19,8 +19,8 @@
  *   - the legend: "Less"/"More" bookends plus one decorative (`aria-hidden`)
  *     swatch per `HEAT_LEGEND` stop;
  *   - hardening: a malformed model (missing grid/maxCount) still renders all 168
- *     cells instead of crashing, and a dirty cell missing `totalEnergyWh` is
- *     neutralised to a finite "0" energy so no "NaN" ever leaks into the popover.
+ *     cells instead of crashing; missing/invalid energy evidence is never
+ *     replaced with a fabricated measured zero.
  *
  * `react-i18next` is stubbed so `t(key, fallback)` resolves to its English
  * fallback deterministically (mirrors the sibling charging-curve tests). The
@@ -29,9 +29,10 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import type { ComponentProps } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-import { HeatmapGrid } from './HeatmapGrid';
+import { HeatmapGrid as Grid } from './HeatmapGrid';
 import {
   heatColor,
   HEAT_LEGEND,
@@ -54,6 +55,14 @@ vi.mock('react-i18next', async () => {
 const makeFormatEnergy = () =>
   vi.fn((wh: number) => `${(wh / 1000).toFixed(2)} kWh`);
 
+function HeatmapGrid(props: ComponentProps<typeof Grid>) {
+  const energySlots = props.model.grid?.flatMap((row) => row.map((cell) => ({
+    energy_wh: cell.totalEnergyWh,
+    recorded_energy_count: Number.isFinite(cell.totalEnergyWh) ? cell.count : 0,
+  })));
+  return <Grid energySlots={energySlots} {...props} />;
+}
+
 /** A fully-zeroed 7×24 grid, ready to have specific slots overwritten. */
 function emptyModel(): HeatmapModel {
   const grid: HeatCell[][] = Array.from({ length: 7 }, () =>
@@ -71,6 +80,11 @@ const heatCells = (container: HTMLElement) =>
 
 /** Normalise rgba serialisation so whitespace differences don't break equality. */
 const norm = (s: string) => s.replace(/\s+/g, '');
+const normalizedCssColor = (value: string) => {
+  const probe = document.createElement('div');
+  probe.style.backgroundColor = value;
+  return norm(probe.style.backgroundColor);
+};
 
 describe('HeatmapGrid — structure & accessibility', () => {
   it('renders a labelled role="img" grid with all weekdays and hour columns', () => {
@@ -124,14 +138,14 @@ describe('HeatmapGrid — colour scale', () => {
     const cells = heatCells(container);
 
     // Busiest slot: ratio 1 → hottest stop.
-    expect(norm(cells[cellIndex(1, 9)].style.backgroundColor)).toBe(norm(heatColor(4, 4)));
+    expect(norm(cells[cellIndex(1, 9)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(4, 4)));
     // Quarter-density slot: distinct mid stop, not the hot one.
-    expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).toBe(norm(heatColor(1, 4)));
+    expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(1, 4)));
     expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).not.toBe(
-      norm(heatColor(4, 4)),
+      normalizedCssColor(heatColor(4, 4)),
     );
     // Empty slot: faintest base fill.
-    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe(norm(heatColor(0, 4)));
+    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(0, 4)));
   });
 });
 
@@ -193,7 +207,7 @@ describe('HeatmapGrid — legend', () => {
     swatches.forEach((swatch, i) => {
       // Swatches are purely decorative and paint the exact scale colours.
       expect(swatch).toHaveAttribute('aria-hidden', 'true');
-      expect(norm(swatch.style.backgroundColor)).toBe(norm(HEAT_LEGEND[i]));
+      expect(norm(swatch.style.backgroundColor)).toBe(normalizedCssColor(HEAT_LEGEND[i]));
     });
   });
 });
@@ -215,11 +229,11 @@ describe('HeatmapGrid — hardening', () => {
     expect(screen.getByRole('img')).toBeInTheDocument();
     // Every slot paints the faint base fill (heatColor(0, 0)).
     expect(norm(heatCells(container)[cellIndex(0, 0)].style.backgroundColor)).toBe(
-      norm(heatColor(0, 0)),
+      normalizedCssColor(heatColor(0, 0)),
     );
   });
 
-  it('neutralises a cell missing totalEnergyWh to a finite "0" energy (no NaN leak)', () => {
+  it('shows missing energy as unavailable without formatting a fabricated zero', () => {
     const model = emptyModel();
     // Dirty upstream cell: a count but no energy field at all.
     model.grid[2][10] = { count: 2 } as HeatCell;
@@ -230,10 +244,76 @@ describe('HeatmapGrid — hardening', () => {
 
     fireEvent.mouseEnter(heatCells(container)[cellIndex(2, 10)]);
 
-    // The `?? 0` guard means the formatter sees 0, not undefined → "0.00 kWh".
-    expect(screen.getByText('2 sessions · 0.00 kWh')).toBeInTheDocument();
-    expect(formatEnergy).toHaveBeenCalledWith(0);
+    expect(screen.getByText('2 sessions · No recorded measurements in the returned sessions')).toBeInTheDocument();
+    expect(formatEnergy).not.toHaveBeenCalled();
     // Crucially, no "NaN" ever reaches the DOM.
     expect(container.textContent).not.toContain('NaN');
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'does not format invalid energy evidence (%s)',
+    (energy) => {
+      const model = emptyModel();
+      model.grid[1][9] = { count: 2, totalEnergyWh: 0 };
+      const formatEnergy = makeFormatEnergy();
+      const { container } = render(
+        <Grid model={model} formatEnergy={formatEnergy}
+          energySlots={Array.from({ length: 168 }, () => ({
+            energy_wh: energy as number | null, recorded_energy_count: 2,
+          }))} />,
+      );
+      fireEvent.mouseEnter(heatCells(container)[cellIndex(1, 9)]);
+      expect(screen.getByText('2 sessions · No recorded measurements in the returned sessions')).toBeInTheDocument();
+      expect(formatEnergy).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([0, -1250.75, 1250.75])('preserves measured SI energy %s without changing sign or precision', (energy) => {
+    const model = emptyModel();
+    model.grid[1][9] = { count: 1, totalEnergyWh: energy };
+    const formatEnergy = makeFormatEnergy();
+    const { container } = render(<HeatmapGrid model={model} formatEnergy={formatEnergy} />);
+    fireEvent.mouseEnter(heatCells(container)[cellIndex(1, 9)]);
+    expect(formatEnergy).toHaveBeenCalledWith(energy);
+    expect(screen.getByText(`1 sessions · ${(energy / 1000).toFixed(2)} kWh`)).toBeInTheDocument();
+    expect(screen.queryByText(/Some returned sessions/)).not.toBeInTheDocument();
+  });
+
+  it('labels a recorded-only partial total instead of implying complete energy coverage', () => {
+    const model = emptyModel();
+    model.grid[1][9] = { count: 3, totalEnergyWh: NaN };
+    const formatEnergy = makeFormatEnergy();
+    const energySlots = Array.from({ length: 168 }, () => ({
+      energy_wh: null as number | null, recorded_energy_count: 0,
+    }));
+    energySlots[cellIndex(1, 9)] = { energy_wh: -1250.75, recorded_energy_count: 1 };
+    const { container } = render(<Grid model={model} energySlots={energySlots} formatEnergy={formatEnergy} />);
+    fireEvent.mouseEnter(heatCells(container)[cellIndex(1, 9)]);
+    expect(formatEnergy).toHaveBeenCalledWith(-1250.75);
+    expect(screen.getByText('Some returned sessions have no recorded value; the total includes recorded values only.')).toBeInTheDocument();
+    expect(heatCells(container)).toHaveLength(168);
+  });
+
+  it('does not infer measured zero when slot coverage is absent', () => {
+    const model = emptyModel();
+    model.grid[1][9] = { count: 1, totalEnergyWh: 0 };
+    const formatEnergy = makeFormatEnergy();
+    const { container } = render(<Grid model={model} formatEnergy={formatEnergy} />);
+    fireEvent.mouseEnter(heatCells(container)[cellIndex(1, 9)]);
+    expect(screen.getByText('1 sessions · No recorded measurements in the returned sessions')).toBeInTheDocument();
+    expect(formatEnergy).not.toHaveBeenCalled();
+  });
+
+  it.each([0, -1, 0.5, NaN, Infinity, 3])('rejects invalid observation count %s', (recordedCount) => {
+    const model = emptyModel();
+    model.grid[1][9] = { count: 2, totalEnergyWh: 0 };
+    const formatEnergy = makeFormatEnergy();
+    const energySlots = Array.from({ length: 168 }, () => ({
+      energy_wh: 0, recorded_energy_count: recordedCount,
+    }));
+    const { container } = render(<Grid model={model} energySlots={energySlots} formatEnergy={formatEnergy} />);
+    fireEvent.mouseEnter(heatCells(container)[cellIndex(1, 9)]);
+    expect(screen.getByText('2 sessions · No recorded measurements in the returned sessions')).toBeInTheDocument();
+    expect(formatEnergy).not.toHaveBeenCalled();
   });
 });

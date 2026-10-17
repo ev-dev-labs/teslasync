@@ -150,7 +150,7 @@ function renderCards(overrides: Partial<CardsProps> = {}) {
 }
 
 /** The labelled section landmark (accessible name from aria-label). */
-const region = () => screen.getByRole('region', { name: 'Week Summary' });
+const region = () => screen.getByRole('region', { name: 'Week summary' });
 
 /** Resolve a KPI tile by any text it contains (label or value). */
 function cardContaining(text: string | RegExp): HTMLElement {
@@ -172,7 +172,7 @@ describe('SummaryHeroCards — state-invariant chrome', () => {
     for (const override of cases) {
       const { unmount } = renderCards(override);
       expect(region()).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Week Summary' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Week summary' })).toBeInTheDocument();
       unmount();
     }
   });
@@ -191,7 +191,7 @@ describe('SummaryHeroCards — state-invariant chrome', () => {
 
 describe('SummaryHeroCards — state precedence', () => {
   it('prioritises the error branch over loading when both flags are set', () => {
-    const { container } = renderCards({
+    renderCards({
       isLoading: true,
       isError: true,
       error: new ApiError('still broken', 500),
@@ -199,8 +199,10 @@ describe('SummaryHeroCards — state precedence', () => {
 
     // Error wins: the retriable alert shows and the skeletons do not.
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
-    expect(screen.queryByText('Total Distance')).toBeNull();
+    expect(region().querySelectorAll(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="height: 72px"]',
+    )).toHaveLength(0);
+    expect(screen.queryByText('Total distance')).toBeNull();
   });
 });
 
@@ -210,17 +212,17 @@ describe('SummaryHeroCards — populated KPI grid', () => {
   it('renders the five always-on KPI cards with formatted, unit-suffixed values', () => {
     renderCards();
 
-    expect(within(cardContaining('Total Distance')).getByText('120.0 km')).toBeInTheDocument();
-    expect(within(cardContaining('Total Drives')).getByText('8')).toBeInTheDocument();
-    expect(within(cardContaining('Energy Used')).getByText('200.0 kWh')).toBeInTheDocument();
+    expect(within(cardContaining('Total distance')).getByText('120.00 km')).toBeInTheDocument();
+    expect(within(cardContaining('Total drives')).getByText('8')).toBeInTheDocument();
+    expect(within(cardContaining('Energy used')).getByText('200.00 kWh')).toBeInTheDocument();
     // Currency comes from the injected formatCurrency double (2 decimals).
-    expect(within(cardContaining('Charging Cost')).getByText('$12.50')).toBeInTheDocument();
-    expect(within(cardContaining(/Saved/)).getByText('42.0 kg')).toBeInTheDocument();
+    expect(within(cardContaining('Charging cost')).getByText('$12.50')).toBeInTheDocument();
+    expect(within(cardContaining(/saved/)).getByText('42.00 kg')).toBeInTheDocument();
   });
 
   it('shows a positive (emerald / TrendingUp) trend for an increased distance', () => {
     renderCards();
-    const trend = within(cardContaining('Total Distance')).getByText('+20.0%');
+    const trend = within(cardContaining('Total distance')).getByText('+20.00%');
 
     expect(trend.className).toContain('text-emerald-300');
     expect(trend.querySelector('svg')?.getAttribute('class')).toContain('trending-up');
@@ -228,7 +230,7 @@ describe('SummaryHeroCards — populated KPI grid', () => {
 
   it('shows a negative (rose / TrendingDown) trend for a decreased drive count', () => {
     renderCards();
-    const trend = within(cardContaining('Total Drives')).getByText('-20.0%');
+    const trend = within(cardContaining('Total drives')).getByText('-20.00%');
 
     expect(trend.className).toContain('text-rose-300');
     expect(trend.querySelector('svg')?.getAttribute('class')).toContain('trending-down');
@@ -238,7 +240,7 @@ describe('SummaryHeroCards — populated KPI grid', () => {
     renderCards();
     // The magnitude still reads "+100.0%" (up), but the invertPositive flag
     // flips the semantic to negative → rose colour + TrendingDown glyph.
-    const trend = within(cardContaining('Energy Used')).getByText('+100.0%');
+    const trend = within(cardContaining('Energy used')).getByText('+100.00%');
 
     expect(trend.className).toContain('text-rose-300');
     expect(trend.className).not.toContain('text-emerald-300');
@@ -247,7 +249,7 @@ describe('SummaryHeroCards — populated KPI grid', () => {
 
   it('renders a flat "0%" trend (positive) when a value is unchanged', () => {
     renderCards();
-    const trend = within(cardContaining('Charging Cost')).getByText('0%');
+    const trend = within(cardContaining('Charging cost')).getByText('0%');
 
     expect(trend.className).toContain('text-emerald-300');
     expect(trend.querySelector('svg')?.getAttribute('class')).toContain('trending-up');
@@ -256,7 +258,7 @@ describe('SummaryHeroCards — populated KPI grid', () => {
   it('omits the optional Fun Fact card when no funFact is supplied', () => {
     const { container } = renderCards({ funFact: undefined });
 
-    expect(screen.queryByText('Fun Fact')).toBeNull();
+    expect(screen.queryByText('Fun fact')).toBeNull();
     // Five KPI tiles, no sixth.
     expect(container.querySelectorAll('[data-print-card]')).toHaveLength(5);
   });
@@ -270,7 +272,7 @@ describe('SummaryHeroCards — fun fact card', () => {
 
     expect(container.querySelectorAll('[data-print-card]')).toHaveLength(6);
 
-    const card = cardContaining('Fun Fact');
+    const card = cardContaining('Fun fact');
     // value = `${times}×`, subtitle = "≈ {{times}}× {{from}} → {{to}}" interpolated.
     expect(card.textContent).toContain('1.2');
     expect(card.textContent).toContain('LA');
@@ -282,11 +284,32 @@ describe('SummaryHeroCards — fun fact card', () => {
 
 describe('SummaryHeroCards — loading', () => {
   it('renders exactly six skeleton tiles and withholds KPI labels + errors', () => {
-    const { container } = renderCards({ isLoading: true });
+    renderCards({ isLoading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
-    expect(screen.queryByText('Total Distance')).toBeNull();
-    expect(screen.queryByText('Energy Used')).toBeNull();
+    const tiles = region().querySelectorAll<HTMLElement>(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="height: 72px"]',
+    );
+    expect(tiles).toHaveLength(6);
+    expect(region()).toHaveAttribute('aria-busy', 'true');
+    for (const tile of tiles) {
+      expect(tile).toHaveAttribute('aria-hidden', 'true');
+      expect(tile).toHaveClass('h-4', 'w-full', 'rounded');
+      expect(tile.style.height).toBe('72px');
+      expect(tile).toBeEmptyDOMElement();
+      expect(tile).not.toHaveClass('animate-pulse');
+    }
+    expect(screen.queryByText('Total distance')).toBeNull();
+    expect(screen.queryByText('Energy used')).toBeNull();
+    expect(screen.queryByText('Total drives')).toBeNull();
+    expect(screen.queryByText('Charging cost')).toBeNull();
+    expect(screen.queryByText('CO₂ saved')).toBeNull();
+    expect(screen.queryByText('Fun fact')).toBeNull();
+    expect(region().querySelectorAll('[data-print-card]')).toHaveLength(6);
+    expect(screen.queryByText('120.00 km')).toBeNull();
+    expect(screen.queryByText('8')).toBeNull();
+    expect(screen.queryByText('200.00 kWh')).toBeNull();
+    expect(screen.queryByText('$12.50')).toBeNull();
+    expect(screen.queryByText('42.00 kg')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
@@ -303,7 +326,7 @@ describe('SummaryHeroCards — error', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     // No KPI cards render behind the error affordance.
-    expect(screen.queryByText('Total Distance')).toBeNull();
+    expect(screen.queryByText('Total distance')).toBeNull();
   });
 });
 
@@ -327,10 +350,10 @@ describe('SummaryHeroCards — null-safety hardening', () => {
 
     renderCards({ metrics: sparse });
 
-    expect(within(cardContaining('Total Distance')).getByText('0.0 km')).toBeInTheDocument();
-    expect(within(cardContaining('Energy Used')).getByText('0.0 kWh')).toBeInTheDocument();
+    expect(within(cardContaining('Total distance')).getByText('0.00 km')).toBeInTheDocument();
+    expect(within(cardContaining('Energy used')).getByText('0.00 kWh')).toBeInTheDocument();
     // formatCurrency double coalesces a non-finite amount to $0.00.
-    expect(within(cardContaining('Charging Cost')).getByText('$0.00')).toBeInTheDocument();
-    expect(within(cardContaining(/Saved/)).getByText('0.0 kg')).toBeInTheDocument();
+    expect(within(cardContaining('Charging cost')).getByText('$0.00')).toBeInTheDocument();
+    expect(within(cardContaining(/saved/)).getByText('0.00 kg')).toBeInTheDocument();
   });
 });

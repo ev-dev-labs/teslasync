@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -60,7 +61,19 @@ export function RepairCaseQueue({
   bulkPending = false,
 }: RepairCaseQueueProps) {
   const { t } = useTranslation();
-  const columns = useRepairCaseColumns(onOpenCase);
+  const baseColumns = useRepairCaseColumns(onOpenCase);
+  const columns = useMemo(() => baseColumns.map((column) =>
+    column.key === 'confidence' ? {
+      ...column,
+      render: (item: RepairCase) => (
+        <Badge variant="neutral">
+          {item.confidence === 'high'
+            ? t('dataRepair.confidence.high', 'High confidence')
+            : t('dataRepair.confidence.medium', 'Medium confidence')}
+        </Badge>
+      ),
+    } : column,
+  ), [baseColumns, t]);
 
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-5">
@@ -110,6 +123,7 @@ export function RepairCaseQueue({
           ) : null}
           <DataTable
             tableId="data-repair:cases"
+            enableValueFilters={false}
             columns={columns}
             data={cases}
             keyExtractor={(item) => item.id}

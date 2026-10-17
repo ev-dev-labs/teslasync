@@ -1,0 +1,1613 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-speed-sweet-spot",
+  "attempt": 1,
+  "actor": "ec5736fb-4d37-4817-b223-3c48c6ed4053",
+  "page": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+  "routes": [
+    "/speed-sweetspot"
+  ],
+  "mode": "first-report/source-only/no-change",
+  "outcome": "Report complete with confirmed source mechanisms; no implementation or re-migration; page acceptance NOTRUN",
+  "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+  "sourceRecheckUTC": "2026-10-14T01:20:33.5274272Z",
+  "clocks": {
+    "reservationUTC": "2026-10-14T01:10:24.802Z",
+    "firstObservedUTC": "2026-10-14T01:12:20.9874286Z",
+    "returnUTC": "2026-10-14T01:30:24.802Z",
+    "hardUTC": "2026-10-14T01:35:24.802Z",
+    "targetMinutes": 10,
+    "earlierActualPlus20And25Wins": true,
+    "reset": false,
+    "boundedCommandLimitMinutes": 15
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "reservationRow": 405,
+    "acceptedRow": 1872,
+    "predecessor": "phase5-page-driving-speed-sweet-spot",
+    "acceptedCommit": "82dc493b9626077c79aa7772bd6dcfe48f1cd80b",
+    "baseline": "docs/frontend-audits/audit-page-126.json",
+    "baselineRow": 617,
+    "historicalEvidence": "Predecessor native13/all-pass/lint0/scans0/release remain historical, NOT rerun",
+    "closedPhasesPreserved": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "phase6": "unfinished",
+    "phase7": "NOTRUN",
+    "fullReads": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md all2539 lines including addenda",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/observability.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "currentReads": [
+      "migration-queue current lifecycle/reserved405/accepted1872/dedup",
+      "docs/session-handoff.md1-100 latest new-machine current block",
+      "docs/frontend-mission.md1416-1518 sections43-45",
+      "docs/frontend-inventory.md SpeedSweetSpot reference",
+      ".github/copilot-instructions.md heading index"
+    ],
+    "supersededDiscoveryReads": [
+      "agent-loop-playbook.md",
+      "shared-library-loop.md"
+    ],
+    "operatingAuthority": "sole orchestrator-loop/current queue/handoff; explicit narrower task prohibits historical heartbeat/server/gate directions",
+    "documentPins": [
+      {
+        "path": "migration-queue.md",
+        "SHA256": "10E8409C99E9D67AFAFB9E393709A030816F5F32CB215E608E1047F29311191E",
+        "lines": 2082,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": "docs/orchestrator-loop.md",
+        "SHA256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "lines": 296,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": "docs/frontend-design-contract.md",
+        "SHA256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "lines": 2539,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": "docs/session-handoff.md",
+        "SHA256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+        "lines": 2460,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": "docs/frontend-mission.md",
+        "SHA256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "lines": 1593,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": ".github/instructions/frontend-si-cutover.instructions.md",
+        "SHA256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+        "lines": 94,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": ".github/instructions/react-frontend.instructions.md",
+        "SHA256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+        "lines": 629,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": ".github/instructions/observability.instructions.md",
+        "SHA256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42",
+        "lines": 45,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      },
+      {
+        "path": ".github/instructions/unit-conversion.instructions.md",
+        "SHA256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+        "lines": 221,
+        "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+        "limit": "current read pin; queue/handoff may be changed by parent, not a global freeze"
+      }
+    ]
+  },
+  "counts": {
+    "pageLines": 135,
+    "auditBaselinePageLines": 133,
+    "mountedPresentationSupportFiles": 12,
+    "mountedPresentationSupportLines": 1590,
+    "pagePlusMountedPresentationLines": 1725,
+    "domainAdapterLines": 440,
+    "displayAdapterLines": 113,
+    "sectionTypeLines": 5,
+    "barrelLines": 10,
+    "localPinnedFiles": 20,
+    "patternScanFiles": 20,
+    "i18nScanFiles": 19,
+    "unmountedBarrelPresentationFiles": 3,
+    "unmountedBarrelPresentationLines": 504,
+    "sections": 8,
+    "baselineSections": 8,
+    "sectionLoss": 0,
+    "actionFamilies": 8,
+    "outerChartFrames": 4,
+    "innerFrames": 2,
+    "briefDrawers": 3,
+    "scorecardColumns": 9,
+    "scorecardMobileVisible": 4,
+    "scorecardMobileHidden": 5,
+    "scorecardExportFields": 9,
+    "confirmedFindings": 5,
+    "confirmedSourceSites": 8,
+    "unpromotedCandidates": 4,
+    "staticTCalls": 186,
+    "distinctStaticTKeys": 122,
+    "canonicalMissing": 0,
+    "routeNamespaceMissing": 0,
+    "checkAttemptFailures": 3,
+    "artifactWriteFailures": 1,
+    "totalFailedCommands": 4,
+    "testExecuted": 0,
+    "testDiscovered": null,
+    "testPassed": null,
+    "testFailed": null,
+    "testSkipped": null,
+    "counting": "Five unique causal mechanisms; affected sites3+1+1+1+2=8. Five hidden fields and two suppressed metrics not extra findings. Source declarations, not mounted geometry or test discovery."
+  },
+  "routeAndScope": {
+    "mount": "App.tsx lazy138/SafeRoute368/Layout route574/mount840; routeRegistry.ts239",
+    "workspace": "workspaceScope.ts67 includes /speed-sweetspot; no vehicle-disabled path/prefix match; both controls enabled",
+    "range": "useRangeState.ts301-318 detects canonical header-owned route: header product default/shared preference override page all default/persistKey",
+    "bounds": "Page35-45 passes startInstant inclusive and endInstantExclusive exclusive to useDrives, limit1000. Calendar bounds use browser-resolved IANA timezone unless explicit override; Live/24h precise rolling instants, not date-label client filtering.",
+    "selection": "useSelectedVehicle URL positive numeric ID > reconciled store > first fleet; no real identity values inspected",
+    "query": "useDriving.ts107-132 /drives with vehicle_id/start/end/limit; key includes vehicle,both bounds,limit; enabled !!vehicleId; select safeArray; cancellation signal passed request; staleTime STALE_TIMES.FAST; no placeholderData",
+    "units": "types/driving.ts7 duration seconds,9 distance meters,22 energy Wh,26 speed m/s are explicit frontend contracts; backend producer correctness NOTRUN, no guessed units/DTO incidents",
+    "client": "api/client.ts75-93 adds /api/v1;263-268 aliases snake_case/camelCase without physical conversion; hook omits prefix and uses snake_case params",
+    "noLocalSelectors": "Two lexical VehicleSelect matches are NoVehicleSelected import/JSX, not pickers",
+    "privacy": "No actual drive/identity/location/API/device data, fixture injection, mutations, downloads or exports"
+  },
+  "modelReview": {
+    "owner": "web/src/features/driving/lib/speedSweetSpot.ts",
+    "meaning": "Minimum observed distance-weighted consumption among qualified whole-drive average-speed bands, not modeled vehicle optimum/instantaneous cruising/recommended road speed/causal savings forecast",
+    "admission": "169-196: finite positive measured Wh and m/s; finite distance>=2000m and duration>=300s. Invalid start dates remain in noncalendar aggregates; invalidDateCount retained; only monthly grouping excludes them.",
+    "bands": "Explicit10km/h half-open bands, at least3 eligible drives; bucketIndex stabilizes conceptual exact boundary with numerical tolerance, not measurement clamp",
+    "weighting": "Individual Wh/(m/1000); band/overall/monthly SUM Wh/(SUM m/1000), never mean drive ratios; monthly speed SUM m/SUM s rawm/s",
+    "shares": "Distance share band/all eligible distance; winner drive share winner/all eligible drives; signed observed gap (overall-best)/overall; runner-up gap (runner-best)/best",
+    "ranking": "Qualified only, rounded1-decimal Wh/km then low-speed tie break; unqualified retained unranked",
+    "signs": "Signed observed/scorecard gaps preserved. Math.abs used only after explicit sign extraction or numerical bucket tolerance; no blanket energy abs/clamp. Nonpositive energy is declared admission exclusion, not fabricated zero.",
+    "unknownZero": "Missing optimum/overall/gaps null; resolved empty sample count0. Known0/sparse presentation problems isolated in F01/F04, not asserted malformed required DTO incidents.",
+    "window": "1000-row returned subset, cap disclosed when observed>=limit; no lifetime/full-range completeness claim",
+    "sample": "At most300 chronological evenly spaced scatter points, endpoints retained for limit>1; all eligible returned rows feed aggregates; sampled counts disclosed. Scatter CSV exports displayed sample, not full eligible population.",
+    "display": "useSpeedSweetSpotDisplay converts SI at render using useUnits/unitConversion; Wh/mi scales through convertDistanceToSI(1,mi)/1000. StatMetric speed rawm/s and efficiency rawWh/m precede validated formatter; raw wire/cache/model not replaced.",
+    "preferences": "NumberFormatting subscribes locale/precision; distance/speed labels user preference; fixed pre-rounded rows C03 remains policy candidate",
+    "provenance": "useDataState historical input; brief explicitly scopes distance-weighted eligible returned drives; observation time not provided, not invented from fetch time"
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "component": "SweetSpotSummaryBrief",
+      "pageLines": "81-86",
+      "metrics": 4,
+      "content": "best qualified band, band consumption, overall weighted consumption, signed descriptive gap; unknown until resolved, skeleton/fatal retry/empty/retained"
+    },
+    {
+      "id": "evidence",
+      "component": "SweetSpotEvidenceBrief",
+      "pageLines": "90-97",
+      "metrics": 5,
+      "content": "eligible, best-band drives/distance/share, qualified bands, runner-up; SectionBody loading/fatal retry/empty/retained; F04"
+    },
+    {
+      "id": "coverage",
+      "component": "SpeedBandCoverage",
+      "pageLines": "98-102",
+      "chartKey": "speed-sweet-spot-coverage",
+      "series": [
+        "distance",
+        "drives"
+      ],
+      "content": "coverage/qualification/winner/share; loading/fatal retry/empty; F01"
+    },
+    {
+      "id": "curve",
+      "component": "ConsumptionSpeedCurve",
+      "pageLine": 107,
+      "chartKey": "speed-sweet-spot-curve",
+      "innerKey": "consumption-speed",
+      "series": [
+        "qualifiedConsumption",
+        "unqualifiedConsumption",
+        "distance"
+      ],
+      "content": "best-band reference, qualified/sparse consumption and evidence volume; loading/fatal retry/empty; F05"
+    },
+    {
+      "id": "scatter",
+      "component": "DriveEvidenceScatter",
+      "pageLine": 111,
+      "chartKey": "speed-sweet-spot-drive-evidence",
+      "innerKey": "drive-evidence",
+      "series": [
+        "other eligible drives",
+        "best-band drives"
+      ],
+      "content": "converted speed/consumption/distance and ID/date/group alternative/export; sample disclosure; loading/fatal retry/empty; F01/F05"
+    },
+    {
+      "id": "monthly",
+      "component": "MonthlyOperatingContext",
+      "pageLine": 115,
+      "chartKey": "speed-sweet-spot-monthly",
+      "series": [
+        "consumption",
+        "speed"
+      ],
+      "content": "UTC months, weighted consumption, distance/duration speed and sample counts; loading/fatal retry/valid-date empty; F01"
+    },
+    {
+      "id": "scorecard",
+      "component": "SpeedBandScorecard",
+      "pageLine": 119,
+      "tableId": "speed-sweet-spot:bands",
+      "fields": [
+        "rank",
+        "band",
+        "consumption",
+        "distance",
+        "drives",
+        "distanceShare",
+        "qualification",
+        "gapToBest",
+        "gapToOverall"
+      ],
+      "content": "qualified ranks, signed differences, unqualified rows; SectionBody loading/fatal retry/empty; F03"
+    },
+    {
+      "id": "methodology",
+      "component": "SweetSpotMethodBrief",
+      "pageLines": "122-131",
+      "metrics": 3,
+      "statements": 7,
+      "content": "returned/eligible/excluded, range label, cap, admission, buckets, denominators, sampling, association/confounder/savings limits; resolved gates/loading/fatal retry/retained/empty"
+    }
+  ],
+  "states": {
+    "sourceCount": 1,
+    "source": "drivesQuery; shared vehicle/settings are prerequisite/preference dependencies, not invented analytics endpoints",
+    "shells": "All8 mount after selection; NoVehicleSelected intentional prerequisite also PageContainer; PageLayout delegates PageContainer, not missing wrapper",
+    "initial": "sourceState initial=>loading, Brief/chart/scorecard body skeletons; header claims bypass gate F01",
+    "initialPaused": "initial+isRefreshBlocked no data=>all loading and StaleRefreshWarning null; no cause-neutral notice/retry F02; no offline inference",
+    "fatal": "Only fatalError, not raw query.error, replaces source bodies with same-query retry",
+    "retained": "refreshError/blocked keep sample; shared nonblocking warning/retry, historical/observation-unknown copy, no fresh-measurement fabrication",
+    "empty": "Successful[] resolves count0/null winner and explicit EmptyStates; F04 independently known count suppression",
+    "retry": "Same source refetch; no mutation or broad fake recovery",
+    "runtime": "NOTRUN"
+  },
+  "actions": [
+    {
+      "family": "workspace selection",
+      "mechanism": "Shared header/mobile range and vehicle, useRangeState/useSelectedVehicle; no duplicate picker"
+    },
+    {
+      "family": "source retry",
+      "mechanism": "Page66-68 refetch and retained StaleRefreshWarning; F02 initial-paused gap"
+    },
+    {
+      "family": "review details",
+      "mechanism": "Three Brief Review details Buttons/Drawers, metric/source context; shared owner"
+    },
+    {
+      "family": "chart export",
+      "mechanism": "Four outer exportData/exportFilename; CSV plus shared PNG/SVG/copy; unavailable until loaded nonfatal rows; no fullscreen opt-in; no export executed"
+    },
+    {
+      "family": "legend",
+      "mechanism": "ChartLegend keyboard Button/aria-pressed, URL keys; F05 competing controllers"
+    },
+    {
+      "family": "chart data alternative",
+      "mechanism": "All four outer frames data/dataColumns stable figcaption/Table, forced-colors path; inner scatter no-table is not loss of outer alternative"
+    },
+    {
+      "family": "scorecard controls/export",
+      "mechanism": "Stable tableId/keyExtractor/compact/maxHeight440; nine export fields; shared column/persistence/export owner; CSV alone does not recover mobileUI F03"
+    },
+    {
+      "family": "no-selection guidance",
+      "mechanism": "NoVehicleSelected PageContainer/EmptyState governed onboarding actionTo; not a fabricated selected identity"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "rule": "unknown-zero/source-state-claims",
+      "priority": "high",
+      "sourceSites": 3,
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandCoverage.tsx",
+          "line": 77,
+          "range": "75-81"
+        },
+        {
+          "file": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+          "line": 87,
+          "range": "85-91"
+        },
+        {
+          "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidenceScatter.tsx",
+          "line": 114,
+          "range": "107-116"
+        }
+      ],
+      "mechanism": "Page46 computes data??[] before resolution. Unconditional chart actions render0 qualified/0 observed months/All eligible points while initial or fatal. ChartContainer641 renders action independently of loading/error body793-822. Unresolved source becomes known-looking zero/completeness.",
+      "needs": "Separately lease direct callers to carry same-source resolution/fatal/retained status; unknown until resolved, preserve genuine0 after successful[] and retained badges. No model/global ChartContainer rewrite.",
+      "evidence": "Source-confirmed; mounted incident NOTRUN"
+    },
+    {
+      "id": "F02",
+      "rule": "initial-paused-recovery",
+      "priority": "high",
+      "sourceSites": 1,
+      "sites": [
+        {
+          "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+          "line": 64,
+          "range": "62-80"
+        }
+      ],
+      "support": [
+        "api/dataState.ts203-219",
+        "feedback/StaleRefreshWarning.tsx59"
+      ],
+      "mechanism": "No payload+paused derives initial/isRefreshBlocked and existing retry. Page sends loading true; StaleRefreshWarning !hasData returns null, so no paused/deferred explanation or source retry beside skeletons. No evidence device/vehicle offline.",
+      "needs": "Separately lease page to adopt existing cause-neutral initial-paused notice/recovery while retaining shells, unknown/error distinctions. Catalog prerequisite only if actual copy absent, no guessed keys.",
+      "evidence": "Source-confirmed; network/device state NOTRUN"
+    },
+    {
+      "id": "F03",
+      "rule": "mobile-field-reachability",
+      "priority": "high",
+      "sourceSites": 1,
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+          "line": 177,
+          "range": "172-197"
+        }
+      ],
+      "support": [
+        "ui/DataTable.tsx733-743",
+        "ui/DataTable.tsx479,506,1404-1417"
+      ],
+      "fields": [
+        "distance",
+        "drives",
+        "distanceShare",
+        "gapToBest",
+        "gapToOverall"
+      ],
+      "mechanism": "Four mobileColumns keys hard-hide other5 header/cell fields belowmd via hidden md:table-cell. Caller has no mobilePresentation or expandable/renderExpanded/detail surface. Nine fields in CSV are not reachable page data; visibility menu cannot override hard mobile class.",
+      "needs": "Separate caller lease: existing MobileDataTableAdapter/detail, expansion, or complete contained scroll; preserve9 fields, tableId, density, ranks/signs, exportRow and tests. No global DataTable rewrite.",
+      "evidence": "Exact source declaration; mobile rectangles/a11y NOTRUN"
+    },
+    {
+      "id": "F04",
+      "rule": "known-data-suppression",
+      "priority": "medium",
+      "sourceSites": 1,
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+          "line": 28,
+          "range": "28-40"
+        }
+      ],
+      "metrics": [
+        "eligible",
+        "qualified-bands"
+      ],
+      "mechanism": "available=resolved&&sweetSpot!=null gates independently known eligible/qualifiedBandCount to null for sparse/no-winner resolved samples, including known0 qualified. Winner-specific metrics correctly require winner. Counts elsewhere retained, not whole-page deletion.",
+      "needs": "Separate evidence-brief lease: known counts depend source resolution; winner-dependent values depend coverage. Preserve unknown initially/genuine0/insufficient explanation.",
+      "evidence": "Source-confirmed conditional, no fixture execution"
+    },
+    {
+      "id": "F05",
+      "rule": "competing-legend-state-authority",
+      "priority": "high",
+      "sourceSites": 2,
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+          "line": 76,
+          "range": "75-85"
+        },
+        {
+          "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+          "line": 56,
+          "range": "55-63"
+        }
+      ],
+      "support": [
+        "ConsumptionSpeedCurve.tsx96,150",
+        "DriveEvidenceScatter.tsx117,168",
+        "charts/ChartContainer.tsx822",
+        "charts/ChartLegend.tsx175-181",
+        "hooks/useHiddenSeries.ts58-84"
+      ],
+      "mechanism": "Inner consumption-speed/drive-evidence providers compete with preserved outer speed-sweet-spot-curve/speed-sweet-spot-drive-evidence keys. Series hide ORs inner/outer, but visible legend reads/toggles nearest inner only. Outer-URL-hidden series cannot be unhidden there; aria-pressed only reflects inner state. Not merely nesting visual frames.",
+      "needs": "Separate local plot/parent-pair leases: one existing displayed-chart controller, preserving outer URL keys/shared links, all series,exports/alternatives. No new store, URL reset or blanket EmbeddedChart removal.",
+      "evidence": "Source-confirmed split authority; real interaction NOTRUN"
+    }
+  ],
+  "queueDedup": {
+    "exactDirectScopeMatches": 0,
+    "commandExit": 0,
+    "pattern": "SpeedBandScorecard.tsx|ConsumptionSpeedPlot.tsx|DriveEvidencePlot.tsx|SpeedBandCoverage.tsx|MonthlyOperatingContext.tsx|SweetSpotEvidenceBrief.tsx|speed-sweet-spot\\",
+    "historicalReference": "Accepted1872 notes old zero-badge/mobile-scorecard/nested-chart gaps; note not repair row/lease/pass. Other page source-status items different objectives.",
+    "disposition": "Findings report-only, no new queue row/repair assignment or reopening closed phases"
+  },
+  "candidates": [
+    {
+      "id": "C01",
+      "promoted": false,
+      "topic": "Rolling scope date-label precision",
+      "pins": [
+        "SpeedSweetSpotPage.tsx83,94",
+        "SweetSpotMethodBrief.tsx31-34"
+      ],
+      "observation": "Day labels omit precise Live/24h instant/timezone while query bounds correct",
+      "limit": "Header may already explain scope; mounted/product review needed, not backend range allegation"
+    },
+    {
+      "id": "C02",
+      "promoted": false,
+      "topic": "UTC-month disclosure",
+      "pins": [
+        "speedSweetSpot.ts buildMonthly UTC month",
+        "MonthlyOperatingContext.tsx80-83",
+        "useSpeedSweetSpotDisplay.ts90-102"
+      ],
+      "observation": "UTC month grouping/labels versus browser range/scatter timezone; description not explicitly UTC",
+      "limit": "Explicit domain algorithm, not guessed producer time; clarify disclosure without regrouping data"
+    },
+    {
+      "id": "C03",
+      "promoted": false,
+      "topic": "Fixed pre-rounding/precision",
+      "pins": [
+        "speedSweetSpot.ts round1/qualified ranking",
+        "ConsumptionSpeedCurve.tsx50-57",
+        "DriveEvidenceScatter.tsx50-53",
+        "MonthlyOperatingContext.tsx56-58"
+      ],
+      "observation": "Model1-decimal ranks and converted chart rows1-decimal before preference formatting; detail/ties cannot be recovered",
+      "limit": "Accepted algorithm may deliberately choose1decimal; policy clarification before rerank, not mandatory DTO fault"
+    },
+    {
+      "id": "C04",
+      "promoted": false,
+      "topic": "Restrained chart/material followup",
+      "pins": [
+        "ConsumptionSpeedPlot.tsx137,157",
+        "DriveEvidencePlot.tsx102",
+        "MonthlyOperatingContext.tsx177,187",
+        "SpeedBandScorecard.tsx151"
+      ],
+      "observation": "Reference fill0.10/0.09 vs8% area target, line2.5 vs2px, decorative purple icon; shared dynamic/Recharts color props not inline-style violations",
+      "limit": "Design followup, not measured contrast/visual failure or new palette campaign"
+    }
+  ],
+  "guidelines": {
+    "lexical": "Nine prohibited candidate scans0 matches over20 local files, not AST/global0violations",
+    "wrapper": "Five wrapper candidate lines; PageLayout/NoVehicleSelected both PageContainer adapters, acceptable",
+    "i18n": "186calls/122keys/19files; canonical+route namespace missing0 after AsHashtable; dynamic keys/fallback equality/translations/runtime activation unproven",
+    "imports": "37 category lines; erased StatMetric stat-reference barrel acceptable; Lucide locality allowed. Unmounted legacy exports not current page surfaces",
+    "signExceptions": "Six abs/min/max match lines are option validation/bucket tolerance/explicit-sign magnitudes, no physical abs repair; API row-limit clamp not measurement clamp",
+    "observability": "Local console/telemetry/initRUM/Sentry/EventSource scan0; no page RUM bootstrap",
+    "sharedExceptions": "Raw HTML/vendor imports inside shared building blocks expected; no false-positive charge",
+    "backendRules": "SQL interpolation/println/panic/context NOTRUN; no backend audit"
+  },
+  "scanEvidence": [
+    {
+      "rawOutput": "RULE=static-inline-style MATCH_LINES=0 EXIT=0\r\nRULE=raw-html MATCH_LINES=0 EXIT=0\r\nRULE=direct-library-import MATCH_LINES=0 EXIT=0\r\nRULE=old-api-import MATCH_LINES=0 EXIT=0\r\nRULE=double-prefix MATCH_LINES=0 EXIT=0\r\nRULE=camelcase-param MATCH_LINES=0 EXIT=0\r\nRULE=hidden-section MATCH_LINES=0 EXIT=0\r\nRULE=hardcoded-string-candidate MATCH_LINES=0 EXIT=0\r\nRULE=fetch-useeffect MATCH_LINES=0 EXIT=0\r\nRULE=missing-page-container-candidate MATCH_LINES=5 EXIT=0\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:6:import { Grid, PageLayout } from '@/components/layout';\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:10:import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:55:      <NoVehicleSelected\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:72:    <PageLayout\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:133:    </PageLayout>\r\nRULE=sign-clamp-candidate MATCH_LINES=6 EXIT=0\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.ts:152:  return Math.max(1, Math.ceil(positiveFinite(value, name)));\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.ts:204:  const tolerance = 1e-10 * Math.max(1, Math.abs(quotient));\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.ts:206:    Math.abs(quotient - nearestInteger) <= tolerance\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotSummaryBrief.tsx:55:      display: { formatter: (raw) => ({ value: `${raw > 0 ? '+' : raw < 0 ? '−' : ''}${fmtNumber(Math.abs(raw))}%`, unit: '' }) },\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotKpis.tsx:36:          Math.abs(gap) * 100,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\useSpeedSweetSpotDisplay.ts:56:      return `${sign}${fmtNumber(Math.abs(converted), precision)} ${efficiencyUnit}`;",
+      "matchLineCounts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        6
+      ],
+      "scope": "localSourceManifest20",
+      "processExit": 0,
+      "limit": "Line-pattern evidence; quoted-import patterns represented in equivalent hex quote spelling, not AST/global gate",
+      "patterns": {
+        "static-inline-style": "style\\s*=\\s*\\{\\{",
+        "raw-html": "<(?:button|input|textarea|select|table)\\b",
+        "direct-library-import": "from\\s+[\\x27\\x22](?:recharts|react-leaflet|framer-motion)[\\x27\\x22]",
+        "old-api-import": "from\\s+[\\x27\\x22](?:\\.\\./){1,2}api[\\x27\\x22]",
+        "double-prefix": "/api/v1/",
+        "camelcase-param": "[?&][a-z]+[A-Z][A-Za-z]*=|params\\.set\\([\\x27\\x22][a-z]+[A-Z]",
+        "hidden-section": "&&\\s*<(?:GlassPanel|ChartContainer|section)|\\{data\\s*&&",
+        "hardcoded-string-candidate": ">\\s*[A-Za-z][^<{]*<",
+        "fetch-useeffect": "\\bfetch\\s*\\(|\\buseEffect\\s*\\(",
+        "wrapper-candidate": "PageLayout|PageContainer|NoVehicleSelected",
+        "sign-clamp-candidate": "Math\\.(?:abs|min|max)\\("
+      },
+      "command": "$m=@(Select-String -LiteralPath $files -Pattern $r.Value); 'RULE={0} MATCH_LINES={1} EXIT=0' -f $r.Key,$m.Count; foreach($x in $m){ '{0}:{1}:{2}' -f $x.Path.Substring(19),$x.LineNumber,$x.Line }",
+      "id": "engineering-patterns",
+      "toolShell": "918"
+    },
+    {
+      "toolShell": "974",
+      "rawOutput": "PATTERN=console\\.(?:log|warn|error)|telemetry|initRUM|Sentry|EventSource MATCH_LINES=0 EXIT=0\r\nPATTERN=from [\\x27\\x22]@/components/ MATCH_LINES=37 EXIT=0\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:6:import { Grid, PageLayout } from '@/components/layout';\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:7:import { StaleRefreshWarning } from '@/components/feedback';\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:9:import { FadeIn } from '@/components/motion';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedCurve.tsx:5:import { ChartContainer } from '@/components/charts';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedCurve.tsx:6:import { EmptyState, QueryError } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedPlot.tsx:9:} from '@/components/charts';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidencePlot.tsx:7:} from '@/components/charts';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx:5:import { ChartContainer } from '@/components/charts';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx:6:import { EmptyState, QueryError } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx:7:import { Badge } from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:8:} from '@/components/charts';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:9:import { EmptyState, QueryError } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:10:import { Badge } from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx:9:} from '@/components/charts';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx:10:import { EmptyState, QueryError } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx:11:import { Badge } from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandScorecard.tsx:4:import { EmptyState } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandScorecard.tsx:7:} from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotKpis.tsx:4:import { MetricCard } from '@/components/data-display';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotKpis.tsx:5:import { EmptyState, QueryError, Skeleton } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotKpis.tsx:6:import { Grid } from '@/components/layout';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotKpis.tsx:7:import { GlassPanel } from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotMethodology.tsx:5:import { EmptyState } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotMethodology.tsx:8:} from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotSectionBody.tsx:4:import { QueryError, Skeleton } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SweetSpotEvidence.tsx:4:import { EmptyState } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SweetSpotEvidence.tsx:12:} from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotSummaryBrief.tsx:2:import type { StatMetric } from '@/components/data-display/stat-reference';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotSummaryBrief.tsx:3:import { EmptyState, QueryError } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotEvidenceBrief.tsx:2:import type { StatMetric } from '@/components/data-display/stat-reference';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotEvidenceBrief.tsx:3:import { EmptyState } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotEvidenceBrief.tsx:4:import { Badge, Text } from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotMethodBrief.tsx:2:import type { StatMetric } from '@/components/data-display/stat-reference';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotMethodBrief.tsx:3:import { EmptyState } from '@/components/feedback';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotMethodBrief.tsx:4:import { Badge, Text } from '@/components/ui';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx:3:import { OperationalBrief } from '@/components/data-display';\r\nweb\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx:4:import type { StatMetric } from '@/components/data-display/stat-reference';\r\nPATTERN=RangePicker|DateRangeFilter|VehicleSelect|scope=\"local\" MATCH_LINES=2 EXIT=0\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:10:import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:55:      <NoVehicleSelected\r\nPATTERN=toFixed\\(|Math.round\\(|fillOpacity=|strokeWidth=|text-(?:cyan|purple|emerald|amber|neon) MATCH_LINES=29 EXIT=0\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedCurve.tsx:50:        speed: Math.round(convertBandSpeed(point.speedKph) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedCurve.tsx:52:          ? Math.round(convertEfficiency(point.whPerKm) * 10) / 10\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedCurve.tsx:56:          : Math.round(convertEfficiency(point.whPerKm) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedCurve.tsx:57:        distance: Math.round(convertDistance(point.distanceM) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedPlot.tsx:137:                  fillOpacity={0.1}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedPlot.tsx:147:                fillOpacity={0.26}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedPlot.tsx:157:                strokeWidth={2.5}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedPlot.tsx:168:                strokeWidth={2}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidencePlot.tsx:102:                  fillOpacity={0.09}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidencePlot.tsx:125:                fillOpacity={0.58}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidencePlot.tsx:132:                fillOpacity={0.85}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx:50:        speed: Math.round(convertDriveSpeed(point.avgSpeedMps) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx:52:          Math.round(convertEfficiency(point.whPerKm) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx:53:        distance: Math.round(convertDistance(point.distanceM) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:56:            Math.round(convertEfficiency(month.whPerKm) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:57:          speed: Math.round(convertDriveSpeed(month.avgSpeedMps) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:58:          distance: Math.round(convertDistance(month.distanceM) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:177:                  strokeWidth={2.5}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx:187:                  strokeWidth={2.5}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx:41:        distance: Math.round(convertDistance(band.distanceM) * 10) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx:43:        share: Math.round(band.distanceShare * 1_000) / 10,\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx:181:                      fillOpacity={row.qualified === 1 ? 0.82 : 0.35}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx:191:                  strokeWidth={2}\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandScorecard.tsx:151:        <ListOrdered className=\"h-4 w-4 text-purple-300\" aria-hidden=\"true\" />\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotMethodology.tsx:130:          <Database className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotMethodology.tsx:191:                <span className=\"mt-0.5 shrink-0 text-cyan-300\">{method.icon}</span>\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SweetSpotEvidence.tsx:79:          <Award className=\"h-4 w-4 text-emerald-300\" aria-hidden=\"true\" />\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SweetSpotEvidence.tsx:126:                    className=\"mt-0.5 h-4 w-4 shrink-0 text-cyan-300\"\r\nweb\\src\\features\\driving\\components\\speed-sweet-spot\\SweetSpotEvidence.tsx:149:                    className=\"mt-0.5 h-4 w-4 shrink-0 text-amber-300\"\r\nEXACT PAGE/READ HOOK NARROW PROHIBITED SCAN\r\nPAGE_PATTERN=/api/v1/ MATCH_LINES=0 EXIT=0\r\nPAGE_PATTERN=[?&]vehicleId=|params.set\\([\\x27\\x22]vehicleId MATCH_LINES=0 EXIT=0\r\nPAGE_PATTERN=\\bfetch\\s*\\(|useEffect\\s*\\( MATCH_LINES=0 EXIT=0\r\n107:export function useDrives(vehicleId?: string, options?: DriveWindow | number) {\r\n108:  // The second parameter used to be a bare refetch interval; keep that shape\r\n109:  // working so callers that only poll are unaffected.\r\n110:  const opts: DriveWindow = typeof options === 'number' ? { refetchInterval: options } : (options ?? {});\r\n111:  const boundedLimit = opts.limit == null\r\n112:    ? undefined\r\n113:    : Math.max(1, Math.min(1000, Math.floor(opts.limit)));\r\n114:  const window: DriveWindow = { start: opts.start, end: opts.end, limit: boundedLimit };\r\n115:\r\n116:  return useQuery({\r\n117:    queryKey: drivingKeys.drives(vehicleId, window),\r\n118:    queryFn: ({ signal }) => {\r\n119:      const params = new URLSearchParams();\r\n120:      if (vehicleId) params.set('vehicle_id', vehicleId);\r\n121:      if (opts.start) params.set('start', opts.start);\r\n122:      if (opts.end) params.set('end', opts.end);\r\n123:      if (boundedLimit != null) params.set('limit', String(boundedLimit));\r\n124:      const qs = params.toString();\r\n125:      return request<Drive[]>(qs ? `/drives?${qs}` : '/drives', { signal });\r\n126:    },\r\n127:    enabled: !!vehicleId,\r\n128:    select: safeArray,\r\n129:    refetchInterval: opts.refetchInterval,\r\n130:    staleTime: STALE_TIMES.FAST,\r\n131:  });\r\n132:}\r\nREAD-ONLY PAGE TEST DECLARATIONS (NOT EXECUTED)\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:302:  it('mounts every workspace section and requests the selected server window', () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:319:  it('re-queries when the selected range changes', async () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:349:  it('preserves no-vehicle recovery while disabling the drives query', () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:366:  it('converts to miles only at render while preserving SI model values', () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:411:  it('keeps a successfully empty window distinct from an unresolved source', () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:422:  it('keeps unresolved measurements unknown rather than reporting measured zero', () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:434:  it('preserves a measured zero observed gap and the positive SI consumption', () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:445:  it('forwards fatal retry actions to the same drives source for every evidence section', () => {\r\nweb\\src\\features\\driving\\pages\\SpeedSweetSpotPage.test.tsx:456:  it('renders the same SI-derived model in metric display units', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:44:  it('finds the lowest-consumption qualified bucket and runner-up contrast', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:64:  it('keeps sparse buckets visible but does not let them qualify', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:76:  it('weights bucket and overall consumption by distance', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:92:  it('places an exact boundary in the higher half-open bucket', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:107:  it('includes drives exactly at the distance and duration eligibility floors', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:118:  it('reports a descriptive observed gap without claiming a forecast', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:129:  it('allows a signed gap when sparse efficient drives pull overall below the winner', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:139:  it('uses total monthly distance divided by total duration for average speed', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:169:  it('sorts months and excludes only malformed dates from date-derived output', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:187:  it('caps only visual scatter evidence with deterministic even sampling', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:211:  it('accounts for malformed measurements, empty input, and an unqualified window', () => {\r\nweb\\src\\features\\driving\\lib\\speedSweetSpot.test.ts:236:  it('detects a returned-window cap without changing eligibility accounting', () => {",
+      "patterns": [
+        "console\\.(?:log|warn|error)|telemetry|initRUM|Sentry|EventSource",
+        "from [\\x27\\x22]@/components/",
+        "RangePicker|DateRangeFilter|VehicleSelect|scope=\"local\"",
+        "toFixed\\(|Math.round\\(|fillOpacity=|strokeWidth=|text-(?:cyan|purple|emerald|amber|neon)"
+      ],
+      "command": "foreach($pattern in <patterns>){$m=@(Select-String -LiteralPath $files -Pattern $pattern); print PATTERN/MATCH_LINES plus every file:line:text}",
+      "matchLineCounts": [
+        0,
+        37,
+        2,
+        29
+      ],
+      "scope": "page+speed-sweet-spot directory+four brief files19",
+      "processExit": 0,
+      "id": "observability-import-workspace-ink"
+    },
+    {
+      "toolShell": "993",
+      "command": "Get-Content -Raw | ConvertFrom-Json -AsHashtable; [regex]::Matches($raw,'\\bt\\(\\s*[\\x27\\x22](?<key>[^\\x27\\x22]+)[\\x27\\x22]'); traverse each key.Split('.') using dictionary indexes",
+      "limit": "Static leaf lookup, not fallback parity/runtime namespace proof",
+      "rawOutput": "FILES=19\nSTATIC_T_CALLS=186\nDISTINCT_KEYS=122\nMISSING_CANONICAL=0\nMISSING_ROUTE_NAMESPACE=0\nIGNORE_PIN=80:logs/",
+      "scope": "19 source files; exact en.json+locale-driving-speed-sweet-spot.json",
+      "id": "i18n-leaves",
+      "processExit": 0
+    },
+    {
+      "toolShell": "1004",
+      "command": "Select-String -LiteralPath D:\\repos\\teslasync\\migration-queue.md -Pattern 'SpeedBandScorecard.tsx|ConsumptionSpeedPlot.tsx|DriveEvidencePlot.tsx|SpeedBandCoverage.tsx|MonthlyOperatingContext.tsx|SweetSpotEvidenceBrief.tsx|speed-sweet-spot\\\\'",
+      "matchLines": 0,
+      "rawOutput": "EXACT QUEUE ROOT SCOPE MATCH\nMATCH_LINES=0 EXIT=0",
+      "id": "exact-queue-dedup",
+      "processExit": 0
+    },
+    {
+      "id": "local-snapshot-recheck",
+      "toolShell": "1004",
+      "command": "Get-FileHash -Algorithm SHA256 for each logged local file; compare logged SHA256",
+      "rawOutput": "SOURCE SNAPSHOT PIN DIFF\nPINNED_FILES=20\nHASH_MISMATCHES=0\n2026-10-14T01:20:33.5274272Z",
+      "processExit": 0
+    },
+    {
+      "id": "presentation-section-counts",
+      "toolShell": "994",
+      "command": "Get-Content.Count per exact12 mounted TSX supports; Measure-Object -Sum; Select-String eight mounted section JSX names",
+      "rawOutput": "MOUNTED_PRESENTATION_SUPPORT_FILES=12\nMOUNTED_PRESENTATION_SUPPORT_LINES=1590\nPAGE_PLUS_MOUNTED_PRESENTATION_LINES=1725\nSECTION_JSX_COUNT=8",
+      "processExit": 0
+    }
+  ],
+  "validation": {
+    "sourceQA": "COMPLETED_WITH_FINDINGS",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "pagePASS": "NOTRUN",
+    "browser": "NOTRUN/no grant",
+    "screenshots": "NOTRUN",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "TypeScript": "NOTRUN",
+    "Git": "NOTRUN",
+    "backend": "NOTRUN",
+    "API": "NOTRUN",
+    "device": "NOTRUN",
+    "mutations": "NOTRUN",
+    "mountedA11yMobileContrast": "NOTRUN",
+    "testDeclarationScan": "Page9 direct it declarations and model12; it.each not expanded, not discovery/pass. Historical13 pass not rerun.",
+    "failedChecks": [
+      {
+        "shell": "957",
+        "exit": 1,
+        "error": "ParserError Missing ')' in method call; no check executed"
+      },
+      {
+        "shell": "958",
+        "exit": 1,
+        "error": "ParserError Unexpected token ']' in expression or statement; no check executed"
+      },
+      {
+        "shell": "973",
+        "exit": 1,
+        "error": "ConvertFrom-Json subFSMs/subFsms case collision; scan not reached; corrected AsHashtable"
+      }
+    ],
+    "artifactWriteFailure": {
+      "shell": "1049",
+      "exit": 1,
+      "error": "Windows os206 invocation too long; command did not execute; split report calls, no helper"
+    },
+    "viewLimit": "Unreferenced MonthlyOperatingPlot.tsx exploratory read missing; no dependency/incident inferred, no process exit for view",
+    "rangePinCorrection": "Single nested-range loop omitted ranges despite exit0; corrected exact Select-String pins retained, no false coverage claim",
+    "localPinCheck": {
+      "files": 20,
+      "mismatches": 0,
+      "exit": 0,
+      "UTC": "2026-10-14T01:20:33.5274272Z"
+    },
+    "finalJSONParseAndPins": {
+      "status": "VERIFIED_ARTIFACT_ONLY",
+      "UTC": "2026-10-14T01:29:22.9725690Z",
+      "processExit": 0,
+      "localHashes": 20,
+      "boundaryHashes": 32,
+      "hashMismatches": 0,
+      "exactLinePins": 89,
+      "lineMismatches": 0,
+      "rawReceipts": 6,
+      "nativeRuntimePagePass": "NOTRUN",
+      "limit": "JSON/pins verification is not TypeScript/test/lint/build/browser/page acceptance"
+    }
+  },
+  "needs": [
+    "Parent triage/reserve disjoint bounded F01 chart trust callers,F02 page paused recovery,F03 scorecard mobile detail,F04 evidence independent counts,F05 existing legend authority; report creates no lease.",
+    "Preserve accepted Phase5 page/test intent and8sections/actions; no remigration/reopening or repeated accepted predecessor tests.",
+    "C01-C04 unpromoted product/design/calculation questions only; no guessed mandatory backend/catalog work.",
+    "Separate authorized mounted desktop/mobile/keyboard/contrast/forced-colors/RTL/200%-text/long-label/reduced-motion/retained-retry/route-export QA remains. Parent5173 only; installed Edge channel msedge if authorized, no download/server.",
+    "No missing producer unit/DTO capability, endpoint, mandatory key or global type repair established; inherited global compiler debt not adjudicated."
+  ],
+  "limits": [
+    "Only reserved JSON+ignored log writable, source/tests/catalog/backend/config/queue/handoff unchanged by task",
+    "Source mechanisms/declarations only, not real drive/runtime incident/backend bounds enforcement/full history/native geometry/contrast/application acceptance",
+    "No browser/screenshots/tests/lint/build/globalTSC/Git/subagents/installs/servers/Docker/helper files/extensions/heartbeats",
+    "Parent5173/Edge taken from latest handoff, no listener/API probe",
+    "133-line audit is historical source citation, not immutable original preservationCLI baseline;70%gate NOTRUN",
+    "Shared dependency ranges bounded, not global shared/backend audit; boundary hashes final-read pins, not all pre-read locks"
+  ],
+  "release": {
+    "reportPath": "docs/frontend-audits/phase6-qa-driving-speed-sweet-spot.json",
+    "logPath": "web/logs/phase6-qa-driving-speed-sweet-spot.log",
+    "logIgnore": ".gitignore:80 logs/",
+    "sourceChanges": 0,
+    "sourceWriteLease": "none/read-only",
+    "reportLogReleased": true,
+    "commandRelease": "RELEASED after this final synchronous native artifact command; no background checks/services started; no further commands or writes after terminal return",
+    "terminal": "one DONE after final parse/pins; no post-return writes",
+    "releasedUTC": "2026-10-14T01:29:22.9725690Z",
+    "reportRelease": "Explicitly release reserved JSON claim upon terminal delivery",
+    "logRelease": "Explicitly release reserved ignored log claim upon terminal delivery; raw log retained",
+    "sourceWriteRelease": "No source write lease acquired; all source/tests/catalog/backend/config/queue/handoff remain read-only"
+  },
+  "preparedUTC": "2026-10-14T01:27:33.6737875Z",
+  "localSourceManifest": [
+    {
+      "path": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "lines": 135,
+      "bytes": 4607,
+      "SHA256": "16BE7C9F53D941664BD1525F90166EB078DFC3C5B1247BC0B029273463BA4864",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/lib/speedSweetSpot.ts",
+      "lines": 440,
+      "bytes": 13114,
+      "SHA256": "EECB16C473512ACC6FD12F6AF56EA2C99F094EAF73FEABF248F775E5CE025B01",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx",
+      "lines": 53,
+      "bytes": 1767,
+      "SHA256": "BCB8C5BB0646613A424B14C4A22B04B456A7507195FF2B4E4BD5C45BE5948060",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotSummaryBrief.tsx",
+      "lines": 79,
+      "bytes": 4402,
+      "SHA256": "0C39C0148C9B2A00D090950F5506284A519036599D7DF051C7539E88982B80F5",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+      "lines": 72,
+      "bytes": 4525,
+      "SHA256": "505FAFCBAB8BC2DA6215C7DCE0EF235FAE5A144A6691629534375084150F6CC6",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotMethodBrief.tsx",
+      "lines": 85,
+      "bytes": 5697,
+      "SHA256": "628C70F47D63E97F7D78758E4A46D7B09F2E9F57D949E42FF62C0CBA2DB51A33",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedCurve.tsx",
+      "lines": 156,
+      "bytes": 5146,
+      "SHA256": "041DEC4D49CEB28754447495CA0A6E2708CDEAF9A2F37D3289765161A2E7AB76",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "lines": 179,
+      "bytes": 5907,
+      "SHA256": "B5495C2D1BB20C723DD8E13F03F4A38E1A5FA7CB2D38943484D92B4BA4E21FF3",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+      "lines": 141,
+      "bytes": 4589,
+      "SHA256": "7C37771B08D37C148395F174483C2FC2F9559D3CB873B9E56365562F834062F8",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/DriveEvidenceScatter.tsx",
+      "lines": 175,
+      "bytes": 6184,
+      "SHA256": "47CDCBA549687066F7398FAA8B98FBDD5F2157B253AE5D64A85611AE792EB49D",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/index.ts",
+      "lines": 10,
+      "bytes": 634,
+      "SHA256": "93C5FED082411BAF3DEB0B5D6DC07F360C014F1F13B7C6315AE04A30A39538A6",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+      "lines": 198,
+      "bytes": 6924,
+      "SHA256": "1D9FCF291FDF9C843D3CDB203F66ADFC143BC816655AC06460A3726FD7840DF5",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/SpeedBandCoverage.tsx",
+      "lines": 202,
+      "bytes": 7208,
+      "SHA256": "4F8C22D9385E9292A621F89052538580BC7EC66DF03878AF472E55FF77C71635",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "lines": 202,
+      "bytes": 6635,
+      "SHA256": "7AEEFF13DA427C3A785842F2E26E60D35DF899387377A1928DDF9DF50CEA0C86",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/SpeedSweetSpotKpis.tsx",
+      "lines": 138,
+      "bytes": 4966,
+      "SHA256": "421A4A36CF75E14E217F4602FE3A9988E71923C5942BF10E786983403F976CEA",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "unmounted-barrel-legacy"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/SpeedSweetSpotMethodology.tsx",
+      "lines": 200,
+      "bytes": 7543,
+      "SHA256": "69251E71AEFC9C22103D3A47A25702749AAB107A8B75C6F7E3161E8966AF6B16",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "unmounted-barrel-legacy"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/SpeedSweetSpotSectionBody.tsx",
+      "lines": 48,
+      "bytes": 1203,
+      "SHA256": "205ABE404EE1DFFBDF703FE2CD8A25BB669D3F42DA91018A3D27A12F18CFA794",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/SweetSpotEvidence.tsx",
+      "lines": 166,
+      "bytes": 5810,
+      "SHA256": "352C67553AB710A31F6563FC2708A8F5DD710166BF4CA4898699216A7FB456AA",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "unmounted-barrel-legacy"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/types.ts",
+      "lines": 5,
+      "bytes": 111,
+      "SHA256": "31B2625554606C7A75B60A9A8E3552ACE4BE1FCF96E585726ADFEA9FD0B1BFF3",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    },
+    {
+      "path": "web/src/features/driving/components/speed-sweet-spot/useSpeedSweetSpotDisplay.ts",
+      "lines": 113,
+      "bytes": 3918,
+      "SHA256": "140A0B36070325764E74C68B5BC3C199AF6AD1158C402832BEA11C32FA031756",
+      "snapshotUTC": "2026-10-14T01:17:10.5356356Z",
+      "role": "mounted-page/presentation-or-adapter"
+    }
+  ],
+  "boundaryManifest": [
+    {
+      "path": "web/src/App.tsx",
+      "SHA256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919,
+      "bytes": 68125,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/lib/routeRegistry.ts",
+      "SHA256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "lines": 289,
+      "bytes": 31836,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "SHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168,
+      "bytes": 4411,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/hooks/useRangeState.ts",
+      "SHA256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "lines": 694,
+      "bytes": 22200,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "SHA256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lines": 174,
+      "bytes": 6593,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/api/hooks/useDriving.ts",
+      "SHA256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "lines": 454,
+      "bytes": 17391,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "SHA256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "lines": 458,
+      "bytes": 17825,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/types/driving.ts",
+      "SHA256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "lines": 411,
+      "bytes": 10894,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "SHA256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lines": 434,
+      "bytes": 15482,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "SHA256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lines": 65,
+      "bytes": 2035,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "SHA256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lines": 194,
+      "bytes": 6545,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "SHA256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "lines": 47,
+      "bytes": 2095,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "SHA256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "lines": 500,
+      "bytes": 16774,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "SHA256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "lines": 462,
+      "bytes": 18863,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/hooks/useHiddenSeries.ts",
+      "SHA256": "A7CFECEBBB60E53783E13DBFABCCA5CA685B06F72AB6684FE3B6F712409D876E",
+      "lines": 88,
+      "bytes": 3062,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "SHA256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "lines": 1006,
+      "bytes": 41517,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "SHA256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "lines": 42,
+      "bytes": 1225,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/charts/ChartHiddenSeriesContext.tsx",
+      "SHA256": "1DAECF7D4CFCC161A3A698EC68BA8971C6D06BA1231025A5A5E7528CD36F7594",
+      "lines": 58,
+      "bytes": 1850,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/charts/ChartLegend.tsx",
+      "SHA256": "E5F0B49F6F1159224D3B000CE2C57800DC13CE33C3053DC72EE1E35B2DA67095",
+      "lines": 193,
+      "bytes": 6830,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/charts/ChartExportMenu.tsx",
+      "SHA256": "84D0AA6FD871B3D0374EE6F929F0D67A7080C11D2F0E1048086288A0A116184B",
+      "lines": 263,
+      "bytes": 8874,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "SHA256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "lines": 1707,
+      "bytes": 77157,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "SHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "lines": 259,
+      "bytes": 10783,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "SHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17,
+      "bytes": 658,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "SHA256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "lines": 115,
+      "bytes": 4093,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "SHA256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "lines": 321,
+      "bytes": 11591,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "SHA256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "lines": 77,
+      "bytes": 2977,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "SHA256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "lines": 38994,
+      "bytes": 1842282,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/i18n/en/locale-driving-speed-sweet-spot.json",
+      "SHA256": "4A483C41CED84DF07309DF7D3F1DFAE8713E59B1EA197FBC65744CEB858E4B55",
+      "lines": 907,
+      "bytes": 31356,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/features/driving/pages/SpeedSweetSpotPage.test.tsx",
+      "SHA256": "73D789F9F936957347C5749F250D39D106C914E59DE9C2F6DFBC2192DA281630",
+      "lines": 463,
+      "bytes": 15121,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "web/src/features/driving/lib/speedSweetSpot.test.ts",
+      "SHA256": "B1657B6DDEF969A092ED070B21CD3E497EC44848DE93FC2B49E7FD85B37ED0D4",
+      "lines": 256,
+      "bytes": 8364,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": "docs/frontend-audits/audit-page-126.json",
+      "SHA256": "C771EA9660CA666CEAE3E8BC50B26BF3CB4994455B777A213D5BE4AAE8CAF8A8",
+      "lines": 321,
+      "bytes": 32494,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    },
+    {
+      "path": ".gitignore",
+      "SHA256": "5E0056D6747E60450D4B2134BABA2152CEEC59C79E89AAE06D3712CC441F3A7E",
+      "lines": 130,
+      "bytes": 2122,
+      "pinnedUTC": "2026-10-14T01:28:41.4744039Z",
+      "review": "bounded source contracts/dependency or read-only catalog/test declarations, not full-file engineering audit"
+    }
+  ],
+  "exactLinePins": [
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 35,
+      "text": "  const { vehicleId } = useSelectedVehicle();"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 37,
+      "text": "  const { start, end, startInstant, endInstantExclusive } = useRangeState({"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 42,
+      "text": "    start: startInstant,"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 43,
+      "text": "    end: endInstantExclusive,"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 44,
+      "text": "    limit: DRIVE_WINDOW_LIMIT,"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 46,
+      "text": "  const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 47,
+      "text": "  const sourceState = useDataState(drivesQuery, { provenance: 'historical' });"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 62,
+      "text": "  const retained = sourceState.refreshError != null || sourceState.isRefreshBlocked;"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 64,
+      "text": "    isLoading: sourceState.status === 'initial',"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 65,
+      "text": "    error: sourceState.fatalError,"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 67,
+      "text": "      void drivesQuery.refetch();"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 72,
+      "text": "    <PageLayout"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 80,
+      "text": "      <StaleRefreshWarning state={sourceState} label={t('sweetSpot.title', 'Speed Sweet Spot')} />"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 83,
+      "text": "          scope={`${start} — ${end}`}"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 94,
+      "text": "            scope={`${start} — ${end}`}"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 107,
+      "text": "        <ConsumptionSpeedCurve summary={summary} state={sectionState} />"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 111,
+      "text": "        <DriveEvidenceScatter summary={summary} state={sectionState} />"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 115,
+      "text": "        <MonthlyOperatingContext summary={summary} state={sectionState} />"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 119,
+      "text": "        <SpeedBandScorecard summary={summary} state={sectionState} />"
+    },
+    {
+      "file": "web/src/features/driving/pages/SpeedSweetSpotPage.tsx",
+      "line": 123,
+      "text": "        <SweetSpotMethodBrief"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandCoverage.tsx",
+      "line": 75,
+      "text": "        action={"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandCoverage.tsx",
+      "line": 77,
+      "text": "            {t('sweetSpot.coverage.qualifiedCount', '{{count}} qualified', {"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandCoverage.tsx",
+      "line": 78,
+      "text": "              count: summary.qualifiedBandCount,"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandCoverage.tsx",
+      "line": 84,
+      "text": "        empty={false}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+      "line": 85,
+      "text": "        action={"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+      "line": 87,
+      "text": "            {t('sweetSpot.monthly.monthCount', '{{count}} observed months', {"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+      "line": 88,
+      "text": "              count: rows.length,"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+      "line": 94,
+      "text": "        empty={false}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+      "line": 177,
+      "text": "                  strokeWidth={2.5}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/MonthlyOperatingContext.tsx",
+      "line": 187,
+      "text": "                  strokeWidth={2.5}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidenceScatter.tsx",
+      "line": 107,
+      "text": "        action={"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidenceScatter.tsx",
+      "line": 110,
+      "text": "            dot"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidenceScatter.tsx",
+      "line": 114,
+      "text": "              : t('sweetSpot.scatter.allPoints', 'All eligible points')}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidenceScatter.tsx",
+      "line": 117,
+      "text": "        chartKey=\"speed-sweet-spot-drive-evidence\""
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidenceScatter.tsx",
+      "line": 168,
+      "text": "              isHidden={(key) => hiddenSeries?.isHidden(key) ?? false}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 97,
+      "text": "        key: 'distance',"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 103,
+      "text": "        key: 'drives',"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 109,
+      "text": "        key: 'distanceShare',"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 125,
+      "text": "        key: 'gapToBest',"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 131,
+      "text": "        key: 'gapToOverall',"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 151,
+      "text": "        <ListOrdered className=\"h-4 w-4 text-purple-300\" aria-hidden=\"true\" />"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 173,
+      "text": "            tableId=\"speed-sweet-spot:bands\""
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 177,
+      "text": "            mobileColumns={['rank', 'band', 'consumption', 'qualification']}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 184,
+      "text": "            exportable"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/SpeedBandScorecard.tsx",
+      "line": 186,
+      "text": "            exportRow={(row) => ({"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+      "line": 28,
+      "text": "  const available = resolved && summary.sweetSpot != null;"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+      "line": 30,
+      "text": "    { metricId: 'count', occurrenceId: 'eligible', rawValue: available ? summary.eligible : null,"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+      "line": 32,
+      "text": "    { metricId: 'count', occurrenceId: 'winning-drives', rawValue: available ? coverage?.drives : null,"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+      "line": 34,
+      "text": "    { metricId: 'distance', occurrenceId: 'winning-distance', rawValue: available ? coverage?.distanceM : null,"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+      "line": 37,
+      "text": "    { metricId: 'percent', occurrenceId: 'distance-share', rawValue: available && coverage ? coverage.distanceShare * 100 : null,"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-n-z/SweetSpotEvidenceBrief.tsx",
+      "line": 39,
+      "text": "    { metricId: 'count', occurrenceId: 'qualified-bands', rawValue: available ? summary.qualifiedBandCount : null,"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "line": 75,
+      "text": "    <EmbeddedChart"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "line": 76,
+      "text": "      chartKey=\"consumption-speed\""
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "line": 82,
+      "text": "      {({ hiddenSeries }) => {"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "line": 84,
+      "text": "          (hiddenSeries?.isHidden(key) ?? false) ||"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "line": 85,
+      "text": "          (externalIsHidden?.(key) ?? false);"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "line": 137,
+      "text": "                  fillOpacity={0.1}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/ConsumptionSpeedPlot.tsx",
+      "line": 157,
+      "text": "                strokeWidth={2.5}"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+      "line": 55,
+      "text": "    <EmbeddedChart"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+      "line": 56,
+      "text": "      chartKey=\"drive-evidence\""
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+      "line": 60,
+      "text": "      {({ hiddenSeries }) => {"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+      "line": 62,
+      "text": "          (hiddenSeries?.isHidden(key) ?? false) ||"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+      "line": 63,
+      "text": "          (externalIsHidden?.(key) ?? false);"
+    },
+    {
+      "file": "web/src/features/driving/components/speed-sweet-spot/DriveEvidencePlot.tsx",
+      "line": 102,
+      "text": "                  fillOpacity={0.09}"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "line": 59,
+      "text": "  if (!state.hasData) return null;"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "line": 485,
+      "text": "    const showToolbar = toolbar !== false && ("
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "line": 641,
+      "text": "            {action}"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "line": 793,
+      "text": "          {loading ? ("
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "line": 822,
+      "text": "            <ChartHiddenSeriesProvider chartKey={chartKey}>"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "line": 479,
+      "text": "  expandable = false,"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "line": 506,
+      "text": "  const mobileEnabled = mobilePresentation != null"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "line": 733,
+      "text": "  const effectiveMobileColumns = useMemo(() => {"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "line": 734,
+      "text": "    if (mobileColumns) return mobileColumns"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "line": 742,
+      "text": "  const colHiddenClass = (key: string) =>"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "line": 743,
+      "text": "    mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''"
+    },
+    {
+      "file": "web/src/components/charts/ChartLegend.tsx",
+      "line": 175,
+      "text": "  const contextState = useChartHiddenSeries()"
+    },
+    {
+      "file": "web/src/components/charts/ChartLegend.tsx",
+      "line": 176,
+      "text": "  const resolved: ChartLegendToggleSource | null = state ?? contextState"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "line": 190,
+      "text": "  const data = source.data"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "line": 193,
+      "text": "  const isPaused = source.fetchStatus === 'paused'"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "line": 203,
+      "text": ""
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "line": 209,
+      "text": "      status: failed ? 'initialFailure' : 'initial',"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "line": 214,
+      "text": "      isRefreshBlocked: isPaused,"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "line": 219,
+      "text": "      retry,"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 67,
+      "text": "  '/speed-sweetspot',"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "line": 138,
+      "text": "const SpeedSweetSpot = lazy(() => import('./features/driving/pages/SpeedSweetSpotPage'))"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "line": 368,
+      "text": "export function SafeRoute({ children, name }: { children: React.ReactNode; name: string }) {"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "line": 574,
+      "text": "      <Route path=\"/\" element={<Layout />}>"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "line": 840,
+      "text": "                <Route path=\"speed-sweetspot\" element={<SafeRoute name=\"SpeedSweetSpot\"><SpeedSweetSpot /></SafeRoute>} />"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "line": 239,
+      "text": "  { path: \"/speed-sweetspot\", name: \"SpeedSweetSpot\", label: \"Speed sweet spot\", i18nKey: \"routes.speedSweetSpot\" },"
+    }
+  ],
+  "candidateExactPins": [
+    {
+      "file": "web/src/features/driving/lib/speedSweetSpot.ts",
+      "line": 155,
+      "text": "function round1(value: number): number {"
+    },
+    {
+      "file": "web/src/features/driving/lib/speedSweetSpot.ts",
+      "line": 233,
+      "text": "    const month = new Date(row.startMs).toISOString().slice(0, 7);"
+    },
+    {
+      "file": "web/src/features/driving/lib/speedSweetSpot.ts",
+      "line": 255,
+      "text": "      avgSpeedMps: aggregate.distanceM / aggregate.durationS,"
+    },
+    {
+      "file": "web/src/features/driving/lib/speedSweetSpot.ts",
+      "line": 345,
+      "text": "        left.whPerKm - right.whPerKm ||"
+    }
+  ],
+  "commandLog": "Ignored raw log retains executed bounded read/scan outputs, native commands and numeric exits; failed invocation/quoting/catalog checks retained. Tool transcript also retains raw failed output.",
+  "enrichedUTC": "2026-10-14T01:28:41.4744039Z",
+  "summary": {
+    "confirmedMechanisms": 5,
+    "confirmedSourceSites": 8,
+    "affectedSourceFiles": 8,
+    "countsByRule": {
+      "unknown-zero/source-state-claims": 1,
+      "initial-paused-recovery": 1,
+      "mobile-field-reachability": 1,
+      "known-data-suppression": 1,
+      "competing-legend-state-authority": 1
+    },
+    "filesWithMostIssues": "All eight confirmed primary source files tie at one mechanism each; candidates excluded",
+    "priorities": "High: F01/F02/F03/F05; medium: F04",
+    "unpromotedCandidates": 4,
+    "noSourceChanges": null
+  }
+}

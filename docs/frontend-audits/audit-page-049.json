@@ -1,0 +1,351 @@
+{
+  "item": "audit-page-049",
+  "phase": 0,
+  "mode": "read-only source audit",
+  "page": "web\\src\\features\\analytics\\pages\\MilestonesPage.tsx",
+  "routes": ["/milestones"],
+  "routeEvidence": [
+    {"file": "web\\src\\App.tsx", "line": 146, "detail": "Lazy import of the assigned page."},
+    {"file": "web\\src\\App.tsx", "line": 848, "detail": "Mounted milestones route wrapped in SafeRoute; runtime reachability unverified."}
+  ],
+  "purpose": "Explain calibrated odometer growth, round milestones and evidence-supported pace projections from bounded returned drive history.",
+  "primaryGoal": "Set the window-start calibration, understand progress and crossings, and review upcoming thresholds with qualified forecast evidence.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected vehicle>&limit=1000",
+      "routeOwner": "internal\\api\\router.go:3463-3464 -> driveHandler.ListByVehicle",
+      "ownership": "Backend historical drives; page-specific model derives cumulative progress, UTC monthly aggregates, crossings and pace scenarios.",
+      "behavior": "Vehicle-scoped history key ['drives', vehicleId, 'history', boundedLimit]; enabled only with a vehicle; AbortSignal forwarded; MODERATE stale time; safeArray selection. No date bounds or pagination beyond this bounded window.",
+      "units": "Drive.distanceM is meters (web\\src\\types\\driving.ts:9). Model divides into kilometer-valued local derived fields; display helpers convert from meters. Existing kilometer-valued calibration persistence is an explicit exception/risk, not a claim that all cache values are SI-floor compliant.",
+      "contractVerified": "Hook path and snake_case vehicle_id match the router source. Backend filtering, ordering, completeness and live response shape were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeOwner": "internal\\api\\router.go:3320 -> vehicleHandler.List",
+      "ownership": "Existing workspace selection; URL/store/first-vehicle precedence. useVehicles request at web\\src\\api\\hooks\\useVehicles.ts:73-80.",
+      "behavior": "No competing page vehicle picker. Null selection renders the existing onboarding recovery surface."
+    },
+    {
+      "hook": "useUnits -> useSettings",
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "line": 117,
+      "endpoint": "GET /api/v1/settings",
+      "routeOwner": "internal\\api\\router.go:3659 -> settingsHandler.Get",
+      "ownership": "Existing user settings, distance preference, locale and precision. Request source web\\src\\api\\settings.ts:24.",
+      "behavior": "Preferences alter presentation and the round-unit threshold ladder; raw drive query/cache measurements are not rewritten."
+    },
+    {
+      "hook": "useStoredNumber",
+      "file": "web\\src\\hooks\\useStoredNumber.ts",
+      "line": 12,
+      "endpoint": null,
+      "ownership": "Browser localStorage numeric calibration, with cross-tab storage event updates.",
+      "behavior": "teslasync:milestones-base-km:v1, fallback zero; shared across all vehicles; accepted finite values. Preserve saved values and document any later migration explicitly."
+    },
+    {
+      "hook": "buildOdometerMilestones",
+      "file": "web\\src\\features\\analytics\\lib\\odometerMilestones.ts",
+      "line": 523,
+      "endpoint": null,
+      "ownership": "Page-specific pure analytical model.",
+      "behavior": "Clock frozen at mount; excludes invalid/future timestamps and nonfinite/zero/negative distance once; sorts eligible rows chronologically; 240-point cumulative downsampling; UTC monthly buckets; five-drive support minimum; 30-day, 90-day and full-observed scenarios; 36525-day projection horizon; five upcoming milestones."
+    }
+  ],
+  "components": {
+    "layout": ["PageLayout", "Grid", "LayoutCard", "ChartCard", "SourceContent"],
+    "primitives": ["Input", "Caption", "Text", "MetricValue", "Badge", "Table", "HelpTooltip"],
+    "composites": ["OperationalBrief", "ProgressRing", "Timeline", "StaleRefreshWarning", "EmptyState", "QueryError", "Skeleton", "FadeIn"],
+    "domainOwners": ["MilestoneBrief", "MilestoneControls", "MilestoneProgress", "OdometerGrowthChart", "MonthlyDistanceChart", "ReachedMilestones", "UpcomingRoadmap", "PaceForecastScenarios", "MilestoneMethodology", "MilestoneSectionBody", "useOdometerMilestoneDisplay", "NoVehicleSelected"],
+    "chartPipeline": "Category-barrel charts through ChartCard -> EmbeddedChart. Data-column alternatives, export inputs and monthly series visibility are supplied at the caller; browser execution unverified."
+  },
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx",
+      "line": 91,
+      "rule": "MDC-002 / MDC-033",
+      "detail": "Four local label/value tiles repeat the three methodology accounting tiles and scenario label/value presentation. Existing KVList and stats primitives already own these presentation patterns.",
+      "fix": "Reuse existing KVList where semantic details fit, or existing numeric stats contracts where measurement tiles fit; retain every value and explanatory label. No new shared renderer.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceBehavior": "PageLayout retains w-full/min-w-0; outer pairs stack until xl; progress tiles default to two columns and become four at lg; scenarios become three at lg; accounting becomes three at sm; charts request 330px height; reached timeline is independently scrollable.",
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx",
+        "line": 17,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Fixed two-column detail tiles at the smallest allocated widths can constrain long translated labels or large formatted odometers. Source shows no min-w-0/wrap policy on each tile; clipping is a risk, not observed runtime failure.",
+        "fix": "Use existing Grid.minItemWidth or a one-column narrow-container strategy; retain all four details and test long strings, large values and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "Localized section names, help labels and explicit progress-ring ariaLabel.",
+      "Decorative icons use aria-hidden; scenario tables use th scope=row.",
+      "Input has label, descriptive help, numeric constraints, Enter commit and Escape revert behavior.",
+      "Charts supply ariaLabel plus named data columns; FadeIn uses the shared reduced-motion bridge.",
+      "Shared stale notice has role=status and aria-live=polite."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx",
+        "line": 127,
+        "rule": "MDC-040",
+        "detail": "Text renders as dd inside a div-based Grid, without a dl ancestor or dt label. The four detail labels are ordinary caption text rather than definition terms.",
+        "fix": "Reuse existing KVList with stable row IDs and formatted values, or compose valid dl/dt/dd semantics while retaining the current four details.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx",
+        "line": 29,
+        "rule": "MDC-021 / MDC-040",
+        "detail": "Invalid or negative calibration silently resets the DOM value on blur; no caller error/hint announces why it was rejected.",
+        "fix": "Use the existing Input validation feedback with localized explanation, retaining blur/Enter commit and Escape cancellation.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard/focus and chart toolbar", "screen reader", "effective contrast on actual composed themes", "forced colors", "touch targets", "reduced-motion runtime", "RTL and long translations"]
+  },
+  "states": {
+    "initial": "deriveDataState.status initial drives localized section SourceContent skeletons, chart loading and OperationalBrief loading without fabricated metric values.",
+    "empty": "Empty KPI, growth, monthly, reached and scenario bodies; progress and roadmap still explain calibration/thresholds, methodology remains available.",
+    "fatalError": "Only source.fatalError enters sectionState.error; per-section recovery refetches the single shared history query.",
+    "retainedRefreshFailure": "Retained rows continue into the model, StaleRefreshWarning remains adjacent, and Brief uses Retained evidence rather than replacing sections.",
+    "offline": "Paused refresh with retained data is described by StaleRefreshWarning; no-retained paused query remains initial. Runtime behavior not exercised.",
+    "unknown": "Unsupported pace/ETA uses missing values and explanatory copy; bounded coverage explicitly says lifetime completeness is unknown. Unset calibration still defaults to numeric zero, an existing behavior requiring careful preservation rather than silent reinterpretation.",
+    "noVehicle": "NoVehicleSelected routes to existing onboarding guidance.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx",
+        "line": 67,
+        "rule": "MDC-046",
+        "detail": "Input is uncontrolled via defaultValue, keyed only by distanceUnit (line 48). A cross-tab calibration change updates the model through useStoredNumber but need not update the current displayed input value.",
+        "fix": "Maintain a draft that synchronizes on external calibration/unit changes without overwriting active edits; preserve Escape/Enter/blur semantics and cross-tab updates.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx",
+      "line": 102,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Roadmap caveat uses fixed bg-white/[0.025] and text-cyan-300 rather than neutral surface and semantic theme tokens. Methodology and progress also use fixed amber/cyan callout classes. Contrast failure is not measured.",
+      "fix": "Use restrained existing surface/text/severity tokens; keep actual evidence severity, explanatory text and saved chart/theme choices. Do not introduce a new palette.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MilestonesPage.tsx",
+      "line": 48,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "Calibration uses one global localStorage key despite vehicle-scoped history. Switching workspace vehicles applies the same entered base odometer to another vehicle, changing its inferred odometer and crossings.",
+      "fix": "Integration must define vehicle-specific calibration ownership with an explicit non-destructive migration of existing values; do not silently delete/reset the saved global calibration during presentation modernization.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MilestonesPage.tsx",
+      "line": 84,
+      "rule": "MDC-040 / mission 37",
+      "detail": "Any finite nonnegative calibration is accepted, but buildMilestoneLadder throws when post-100000 steps exceed 10000 (model line 265). Large finite input can therefore throw during page render instead of returning field-level recovery. Conversion overflow can also leave a displayed input that was not persisted.",
+      "fix": "Validate converted calibration against the existing model's admissible range before persistence and provide localized field feedback; preserve model guardrails and do not weaken forecasts.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\lib\\odometerMilestones.ts",
+      "line": 5,
+      "rule": "MDC-045",
+      "detail": "Existing derived model and persisted calibration are kilometer-valued, whereas wire Drive.distanceM stays in meters. This is a source-confirmed local representation exception; no backend non-SI write is present in this page.",
+      "fix": "Preserve current saved data/math in this presentation cohort; report to SI/integration owner for an explicit, tested model/persistence migration if required. Never reinterpret saved kilometers as meters.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Vehicle calibration ownership and finite-but-out-of-range input affect inferred measurements/recovery. Presentation already reuses the core layout and trust pipeline; fix bounded semantic/theme issues without rebuilding or removing sections.",
+    "runtimeAcceptance": "unverified"
+  },
+  "requiredSharedChanges": [],
+  "sharedContracts": [
+    {
+      "name": "KVList reuse",
+      "ownerFile": "web\\src\\components\\data-display\\KVList.tsx",
+      "propsVariantsStates": "items[{id,label,value,leading?}], columns 1|2, layout inline|stacked|responsive, wrap, emptyMessage; semantic dl/dt/dd with responsive wrapping.",
+      "usedBy": ["MilestoneProgress", "PaceForecastScenarios if a non-table detail layout is selected"],
+      "dependsOn": ["Already-formatted display values", "Localized labels", "Preserve all current row meanings"],
+      "changeNeeded": false
+    },
+    {
+      "name": "Container-safe Grid reuse",
+      "ownerFile": "web\\src\\components\\layout\\Grid.tsx",
+      "propsVariantsStates": "minItemWidth compact|standard|wide or existing cols; gap; auto-fit min(100%, minimum) tracks.",
+      "usedBy": ["MilestoneProgress", "MilestoneMethodology", "PaceForecastScenarios"],
+      "dependsOn": ["Allocated-width and long-content QA", "All existing detail tiles preserved"],
+      "changeNeeded": false
+    },
+    {
+      "name": "Source trust and persistent shells",
+      "ownerFile": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "propsVariantsStates": "ready/loading/error/empty/retained, label, loadingContent, emptyContent, errorRecovery; fatalError-only replacement. PageLayout/ChartCard/LayoutCard remain canonical.",
+      "usedBy": ["MilestoneSectionBody", "MilestoneBrief"],
+      "dependsOn": ["deriveDataState", "StaleRefreshWarning", "Existing history query and individual recovery"],
+      "changeNeeded": false
+    },
+    {
+      "name": "OperationalBrief metric ownership",
+      "ownerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "propsVariantsStates": "compact, loading, metrics with rawValue/valueState/context bridge, source-derived statusLabel/statusTone, scope, provenance, Review details drawer.",
+      "usedBy": ["MilestoneBrief"],
+      "dependsOn": ["Existing useOperationalMetrics bridge; implementation not inspected", "useOdometerMilestoneDisplay", "Retained-data semantics"],
+      "changeNeeded": false
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneKpis.tsx",
+      "line": 15,
+      "rule": "MDC-002 / MDC-033",
+      "detail": "The local barrel still exports a four-KPI StatStrip renderer, but the mounted page imports MilestoneBrief under the MilestoneKpis alias (page line 30). Two presentations coexist; this audit does not establish whether the alternate has other consumers.",
+      "fix": "Keep the mounted OperationalBrief and every metric/context. Check actual consumers before retiring or adapting the alternate; do not replace the mounted source with the dormant implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "56fe402311a7264bcb03d9806e3c263158ce0f526d5a846227f5a264dfb773bc",
+    "currentLineCount": 176,
+    "presentationLineCount": 1507,
+    "featureInventoryLineCount": 2315,
+    "countsMeaning": "Presentation includes root plus mounted TSX dependencies, not model/display hook/barrel/types/dormant KPI file. Feature inventory includes those additional files. This is a current-source baseline, not a historical original comparison.",
+    "sectionCount": 8,
+    "sectionNames": ["Milestone summary metrics", "Progress to next milestone", "Observed odometer growth history", "Monthly distance and pace context", "Milestones reached", "Upcoming milestone roadmap", "Pace and forecast scenarios", "Coverage calibration and methodology"],
+    "frameCounts": {"LayoutCard": 5, "ChartCard": 2, "OperationalBrief": 1, "GlassPanelInFeatureInventory": 0, "ChartContainerInFeatureInventory": 0},
+    "actions": [
+      "Calibration input: blur/Enter commit, Escape revert, distance-unit suffix and help",
+      "History refetch/retry and stale refresh recovery",
+      "Browse drives empty-state navigation",
+      "Growth and monthly chart exports/data-column alternatives via the canonical frame",
+      "Monthly hidden-series state with chartKey odometer-milestones-monthly",
+      "OperationalBrief Review details drawer",
+      "Onboarding recovery when no vehicle is selected"
+    ],
+    "dataBehavior": [
+      "Preserve isolated 1000-row history query/cache key, enablement, cancellation, stale policy and returned window qualifications.",
+      "Preserve raw meter distances in query/cache, display preference conversion and round selected-unit ladder.",
+      "Preserve saved kilometer calibration with an explicit migration plan only; never reset or reinterpret values.",
+      "Preserve all exclusions, chronological crossings, 240-point sampling, monthly UTC context, support thresholds, frozen as-of time, sensitivity ranges and forecast horizon.",
+      "Keep all sections visible for loading/error/empty states; do not drop calibration-only progress or upcoming thresholds.",
+      "Keep retained histories through refresh failure/offline and distinguish unsupported estimates from measured zero.",
+      "Workspace vehicle is shell-owned. /milestones currently has range=false and vehicle=true under workspaceScope; no page date picker exists. Treat bounded cumulative history as the current intentional contract, not an unsupported demand to apply a new date range that changes calibration meaning."
+    ],
+    "sourceInventory": [
+      {"file": "web\\src\\features\\analytics\\pages\\MilestonesPage.tsx", "lines": 176, "sha256": "56fe402311a7264bcb03d9806e3c263158ce0f526d5a846227f5a264dfb773bc"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\index.ts", "lines": 10, "sha256": "f1ed99621829ff6014b63cbf951cae2c498a87c93c66f7192271bd480604c343"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx", "lines": 75, "sha256": "5954e1a407e123cc2fdcedca24a33971592e26b6a36b67deff82729c167c0b95"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneKpis.tsx", "lines": 85, "sha256": "9612d4ccb207922bac6222543b4650c329814ac59a6feaec25e90a320e0d5d02"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx", "lines": 219, "sha256": "ba1e712066d85a0c8a5ccff4f3e1269c844910b23408836dc7c76b096dad6f6a"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx", "lines": 150, "sha256": "3eb89069e52808447d43905aa361102750fe50e6624b68e096bb28fdc73491f7"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneSectionBody.tsx", "lines": 34, "sha256": "beace3abc8c02d95644ad0180dcce10cb02bdfc97d48db52378f2c8690e72a76"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx", "lines": 201, "sha256": "ef29657b85d111166d1a06fe1639b545544aedf12bafea7fcb89aa92c36b51a6"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx", "lines": 176, "sha256": "a4a96a64f89b91f028627f5055bba99be8015918c5c619d4ff8a59d60ed14ce4"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx", "lines": 201, "sha256": "2dc82505ca573e3d8e304f4724763393612be6c73bdfc3d1a4de9d42ebe794a3"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx", "lines": 82, "sha256": "979462c21a5d673ada24737d62092979dcb7d3824f5f98eccd61b915b7e01a06"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\types.ts", "lines": 5, "sha256": "109e5eb22c416916622ade3ac08d049b7068eb151c7945437ec4fe5c88d4ebbd"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx", "lines": 118, "sha256": "ca7b3560d93a3b8fec14f5c2deeb43789c69b0c19c553859014bb1c69e641fa0"},
+      {"file": "web\\src\\features\\analytics\\components\\odometer-milestones\\useOdometerMilestoneDisplay.ts", "lines": 53, "sha256": "de36f99ba60e93139ebdbdcfac237093ca371dbef65654d6329628c1c629ea8d"},
+      {"file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx", "lines": 75, "sha256": "9f9ab259653801ee3edb8d35a0b9c70b8942beec73810df05be13ca965a11ac6"},
+      {"file": "web\\src\\features\\analytics\\lib\\odometerMilestones.ts", "lines": 655, "sha256": "7adb2313f926279290fbcb32587608ceb8552f711f42bebfd82a4f673c774f50"}
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "Router identity only; handler/query implementation, response completeness and live units not inspected or exercised.",
+    "sourceOnly": "No source/shared/queue edits, Git commands, application mutations, runtime sessions or full validation gates.",
+    "commands": [
+      {"command": "Get-FileHash -Algorithm SHA256 -Path 'web\\src\\features\\analytics\\pages\\MilestonesPage.tsx'", "exitCode": 0, "output": "SHA256 56FE402311A7264BCB03D9806E3C263158CE0F526D5A846227F5A264DFB773BC"},
+      {"command": "PowerShell here-string piped to python -: pathlib/hashlib inventory and re source-pattern counts over the 16 preservation.sourceInventory files", "exitCode": 0, "output": "inlineStyles 0\nrawControls 0\ndirectLibraries 0\noldApi 0\nfixedWhite 1\nframes 7\nlegacyFrames 0", "limit": "Bounded lexical counts are not complete engineering or runtime acceptance."},
+      {"command": "Two initial compound PowerShell inventory probes", "exitCode": 1, "output": "", "limit": "No evidence produced; successfully replaced with the Python read-only inventory probe."},
+      {"command": "bash .github\\skills\\audit-violations\\audit.sh <scope>", "exitCode": null, "output": "NOT RUN: inspected script includes full npx tsc --noEmit, prohibited by this Phase0 assignment."},
+      {"command": "npx tsc --noEmit / lint / build / tests", "exitCode": null, "output": "NOT RUN: no full gates or validation baton authorized."},
+      {"command": "PowerShell here-string piped to python -: json.loads report, assert required schema and issue fields, hashlib.sha256 all sourceInventory bytes, assert current line counts and inventory total", "exitCode": 0, "output": "JSON valid; required fields and issue schema present; 16 source hashes/line counts matched; feature inventory total 2315; runtime unverified."}
+    ],
+    "inventoryLimits": "Exact feature bytes/lines hashed; infrastructure files were inspected only at relevant ranges. No transitive whole-application scan. Shared rendering internals, catalog completeness, metric-bridge implementation, actual chart toolbar/export behavior and historical line-count equivalence remain unverified.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-049.json", ".agent-status\\audit-page-049.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\MilestonesPage.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\index.ts",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\types.ts",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneKpis.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneSectionBody.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx",
+    "web\\src\\features\\analytics\\components\\odometer-milestones\\useOdometerMilestoneDisplay.ts",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx",
+    "web\\src\\features\\analytics\\lib\\odometerMilestones.ts",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useStoredNumber.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\Grid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\ProgressRing.tsx",
+    "web\\src\\components\\data-display\\KVList.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go"
+  ]
+}

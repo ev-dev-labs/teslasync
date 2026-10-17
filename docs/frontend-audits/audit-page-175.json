@@ -1,0 +1,315 @@
+{
+  "item": "audit-page-175",
+  "page": "web\\src\\features\\settings\\pages\\SettingsPage.tsx",
+  "routes": ["/settings"],
+  "purpose": "Configure saved application preferences and browser-local workspace, appearance, typography, confirmation and connection behavior, with discovery and guarded recovery actions.",
+  "primaryGoal": "Find the correct category, change a preference without losing a draft, understand its persistence scope, and safely save or reset it.",
+  "dataSources": [
+    {
+      "name": "Saved application settings",
+      "hooks": ["useSettings", "useSaveSettings"],
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoints": ["GET /api/v1/settings", "PUT /api/v1/settings"],
+      "citations": ["web\\src\\api\\hooks\\useSettings.ts:27-48", "internal\\api\\router.go:3659-3660"],
+      "behavior": "Shared ['settings'] query; read forwards AbortSignal; full AppSettings save invalidates and broadcasts the settings query. General edits use a persistent draft; appearance controls merge a loaded snapshot and save immediately. Backend replacement/validation semantics were not independently inspected."
+    },
+    {
+      "name": "Vehicle display preferences",
+      "hooks": ["useVehicles from useSettings", "useCarPreferences"],
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoints": ["GET /api/v1/vehicles", "GET /api/v1/user-preferences/latest?vehicle_id=<first vehicle ID>"],
+      "citations": ["web\\src\\api\\hooks\\useSettings.ts:118-126", "web\\src\\api\\hooks\\useSettings.ts:152-159", "web\\src\\features\\settings\\components\\GeneralSettings.tsx:142-168", "internal\\api\\router.go:3319-3320", "internal\\api\\router.go:4158-4161"],
+      "behavior": "safeArray vehicle list; preferences read disabled without an ID. Sync uses first returned vehicle, not workspace selection; selectively copies detected display units and immediately saves the complete form. Clock preference is read-only."
+    },
+    {
+      "name": "Workspace preferences and vehicle choices",
+      "hooks": ["useProductPreferences", "useSelectedVehicle"],
+      "owner": "web\\src\\hooks\\useProductPreferences.ts",
+      "endpoints": ["GET /api/v1/vehicles via web\\src\\api\\hooks\\useVehicles.ts:73-77"],
+      "citations": ["web\\src\\lib\\productPreferences.ts:6-53", "web\\src\\hooks\\useProductPreferences.ts:20-41", "web\\src\\hooks\\useSelectedVehicle.ts:48-82", "web\\src\\features\\settings\\components\\WorkspacePreferencesSettings.tsx:104-173"],
+      "behavior": "Browser-local teslasync:product-preferences:v1 external store; persona is presentation, never authorization. Landing applies on fresh root entry; selecting a default vehicle changes global selection, and changing analysis preset dispatches global scope immediately. Missing saved vehicle remains an explicit option."
+    },
+    {
+      "name": "Browser typography, status bar, celebrations and confirmations",
+      "owner": "Existing FontProvider, status-bar and celebration preference hooks, confirmSilence; consumed by the settings feature",
+      "endpoints": [],
+      "citations": ["web\\src\\features\\settings\\components\\TypographySettings.tsx:90-114", "web\\src\\features\\settings\\components\\AppearanceSettings.tsx:48-56", "web\\src\\features\\settings\\components\\AdvancedSettings.tsx:40-61"],
+      "behavior": "Independent local sources apply immediately. Optional TypographyAgent provider supplies harmonic scale/HUD. Font preview may load an external stylesheet; system/custom installed fonts work offline. Source providers themselves were not exhaustively audited."
+    },
+    {
+      "name": "Destructive reset",
+      "hooks": ["useResetSection", "useResetAllSettings"],
+      "owner": "web\\src\\api\\hooks\\useSettingsReset.ts",
+      "endpoints": ["POST /api/v1/settings/reset"],
+      "citations": ["web\\src\\api\\hooks\\useSettingsReset.ts:96-152", "internal\\api\\router.go:3682-3687", "web\\src\\features\\settings\\components\\ResetSection.tsx:258-301"],
+      "behavior": "Live-only mutation, existing request-layer sudo interception, cancel distinguished from error, normalized receipt, global query invalidation; section body versus empty global-reset body. No reset was executed."
+    },
+    {
+      "name": "Server and onboarding actions",
+      "owner": "web\\src\\features\\settings\\components\\ServerSection.tsx and existing tour/checklist libraries",
+      "endpoints": [],
+      "citations": ["web\\src\\features\\settings\\components\\ServerSection.tsx:17-37", "web\\src\\features\\settings\\pages\\SettingsPage.tsx:269-302", "web\\src\\features\\settings\\components\\AppearanceSettings.tsx:469-557"],
+      "behavior": "Connection display comes from current remote mode; change navigates to /connect; disconnect clears saved connection and reloads root. Tours/checklist use existing dispatch/reset mechanisms. No production action exercised."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "citation": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "use": "Existing PageContainer adapter, query and header actions; full-width min-w-0 container."},
+    {"name": "SettingsNavigation and SettingsSearch", "kind": "domain", "owner": "web\\src\\features\\settings\\components", "citations": ["SettingsNavigation.tsx:16-39", "SettingsSearch.tsx:95-193"], "use": "Mobile category Select, desktop navigation, keyboard combobox and existing search index."},
+    {"name": "SettingsSummaryBrief", "kind": "domain-to-composite adapter", "owner": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx", "citation": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx:23-47", "use": "OperationalBrief and useOperationalMetrics; seven raw configuration metrics, loading/unavailable/retained labels."},
+    {"name": "SettingsActionCard", "kind": "domain", "owner": "web\\src\\features\\settings\\components\\SettingsActionCard.tsx", "citation": "web\\src\\features\\settings\\components\\SettingsActionCard.tsx:44-86", "use": "Three overview shortcut cards using GlassPanel, IconBox, native anchor or shared Button."},
+    {"name": "Settings forms", "kind": "domain", "owner": "web\\src\\features\\settings\\components", "use": "GeneralSettings, WorkspacePreferencesSettings, AppearanceSettings, TypographySettings, AdvancedSettings, ServerSection and ResetSection remain mounted across category switches.", "citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:105-113,311-320"},
+    {"name": "UI/form primitives", "kind": "existing shared", "owner": "web\\src\\components\\ui and web\\src\\components\\forms", "use": "GlassPanel, Button, Input, Select, Toggle, RadioCard, Slider, Textarea, Heading/Text/role wrappers, HelpIcon, ThemePicker, Accordion, ConfirmDialog, CurrencyInput and PersonaSelect; no new primitive proposed."},
+    {"name": "Feedback and motion", "kind": "existing shared", "owner": "web\\src\\components\\feedback and web\\src\\components\\motion", "use": "QueryError, DataStateNotice, EditConflictBanner, DraftRecoveryBanner, EmptyState, Skeleton, Toast and FadeIn.", "citations": ["web\\src\\features\\settings\\pages\\SettingsPage.tsx:219-224", "web\\src\\components\\motion\\FadeIn.tsx:23-38"]}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\settings\\components\\SettingField.tsx",
+      "line": 11,
+      "rule": "MDC-002/MDC-021/MDC-013",
+      "detail": "Feature field wrapper duplicates existing label/control/feedback ownership; calls commonly omit htmlFor. Existing FormField already injects control identity and description IDs.",
+      "fix": "Prefer Input label/hint directly for simple inputs; compose existing FormField and HelpIcon for composites, preserving explicit IDs, CurrencyInput aria labels and help.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\components\\forms\\FormField.tsx:68-112", "web\\src\\features\\settings\\components\\GeneralSettings.tsx:344-355,361-418"]
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\TypographySettings.tsx",
+      "line": 52,
+      "rule": "MDC-002/MDC-020",
+      "detail": "Local Segmented helper manually styles repeated pressed Buttons, while appearance uses existing RadioCard. These express related but not necessarily identical selection contracts.",
+      "fix": "Evaluate reuse of existing RadioCard/group semantics before proposing shared work; preserve pressed-state keyboard behavior and typography-specific immediate changes.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "runtime": "unverified",
+    "sourceStrategy": [
+      {"citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:226-229", "detail": "One column below lg; desktop 15rem navigation plus minmax(0,1fr); search w-full and sm:w-72."},
+      {"citation": "web\\src\\features\\settings\\components\\SettingsNavigation.tsx:20-36", "detail": "Labeled category Select below lg; sticky button nav at lg. All eight categories retained."},
+      {"citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:254-255,272-274,290-302", "detail": "Auto-fit shortcut grid with min(100%,18rem); action labels wrap and use minimum 44px height."},
+      {"citation": "web\\src\\features\\settings\\components\\GeneralSettings.tsx:241,286,361,384-405", "detail": "Single-to-two-column forms at sm; fuel price wraps with flexible basis and fixed fuel-unit Select."},
+      {"citation": "web\\src\\features\\settings\\components\\TypographySettings.tsx:65,215,273", "detail": "Font families split only at 2xl; spacing controls stack below sm, but inner segmented groups remain three columns."},
+      {"citation": "web\\src\\features\\settings\\components\\FontFamilyPicker.tsx:71-86", "detail": "Font list has bounded vertical scrolling and one/two/three columns; focus preview exists, not hover-only."},
+      {"citation": "web\\src\\features\\settings\\components\\ResetSection.tsx:198-223,403-424", "detail": "Reset rows retain description and action in a horizontal flex row; global reset footer stacks below sm."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\settings\\components\\TypographySettings.tsx", "line": 65, "rule": "MDC-043/MDC-040", "detail": "Always-three-column segmented controls and nested sm three-column outer grouping need long-label/200% text checks; source alone cannot prove clipping or adequate targets.", "fix": "Validate at the ten contract widths and constrained shell widths; allow wrapping/stacking if measured overflow occurs without hiding choices.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\settings\\components\\ResetSection.tsx", "line": 198, "rule": "MDC-043", "detail": "Long destructive descriptions share a row with icon and reset action; narrow-width reachability remains unverified.", "fix": "Exercise long translations and 320px before deciding whether to wrap the action row.", "owner": "page", "confidence": "medium"}
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "sourceStrengths": [
+      "Named category navigation and aria-controls; mobile labeled Select (SettingsNavigation.tsx:18-36).",
+      "Search combobox/listbox IDs, active descendant, ArrowUp/Down, Enter, Escape and click-outside handling (SettingsSearch.tsx:52-64,95-140).",
+      "General subsections have heading associations (GeneralSettings.tsx:239,284,359).",
+      "Appearance radiogroups and named/described status-bar and celebration toggles (AppearanceSettings.tsx:140-142,238-239,336-388,411-474).",
+      "Per-prompt Restore accessible name disambiguates rows (AdvancedSettings.tsx:109-120).",
+      "Destructive confirmation and typed RESET protection use existing ConfirmDialog (ResetSection.tsx:429-465).",
+      "Font selection exposes pressed state and focus-triggered preview; specimen Textarea has a label (FontFamilyPicker.tsx:78-85; TypographySpecimen.tsx:45-52)."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\settings\\components\\GeneralSettings.tsx", "line": 344, "rule": "MDC-021/MDC-040", "detail": "Timezone override Input is enclosed in SettingField without htmlFor or its own label/aria-label. Comparison MPG has the same structure at line 408; SettingField does not inject an ID.", "fix": "Give Input its native shared label/hint API or connect explicit control IDs through existing FormField. Keep all saved field names and values.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\settings\\components\\SettingField.tsx:28-43", "web\\src\\features\\settings\\components\\GeneralSettings.tsx:408-417"]},
+      {"file": "web\\src\\features\\settings\\pages\\SettingsPage.tsx", "line": 140, "rule": "MDC-042", "detail": "Explicit smooth scroll is unconditional, unlike shared FadeIn's reduced-motion behavior. Search fallback repeats the smooth-scroll path.", "fix": "Honor existing motion preference in both hash-scroll and same-hash search fallback without losing deep links or timing cleanup.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\settings\\components\\SettingsSearch.tsx:80-90", "web\\src\\components\\motion\\FadeIn.tsx:23-33"]},
+      {"file": "web\\src\\features\\settings\\components\\SettingsSearch.tsx", "line": 167, "rule": "MDC-040", "detail": "Listbox options are focusable Buttons inside list items; arrow handling belongs to the input. Actual Tab/Enter order and announcement coherence need browser/screen-reader proof.", "fix": "Test combobox focus retention, option activation, Escape, outside dismissal and category landing using existing controls; do not introduce another overlay engine.", "owner": "page", "confidence": "medium"}
+    ],
+    "unverified": ["Effective contrast", "Keyboard/focus restoration across category changes and dialogs", "Screen-reader announcements", "Touch target measurements", "Forced colors", "RTL", "200% text", "Reduced-motion runtime"]
+  },
+  "states": {
+    "initialLoading": {"citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:245-246; web\\src\\features\\settings\\components\\GeneralSettings.tsx:195-198", "detail": "Summary suppresses loading measurements; General has five skeletons. Other local panels remain independently mounted."},
+    "emptyUnavailable": {"citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:77-79,151-197,245-246", "detail": "Missing saved preferences become dash/null values; independent font preferences remain real local data. Confirmation list and font search have specific empty copy."},
+    "fatalError": {"citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:219", "detail": "Initial failure gets QueryError with refetch; exact PageContainer suppression/composition was not audited."},
+    "staleOffline": {"citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:88,220,246; web\\src\\api\\dataState.ts:158-170", "detail": "Refresh error or paused retained data derives stale, retains payload and shows DataStateNotice plus retained brief. No explicit page-specific offline differentiation; local preferences are independent."},
+    "draftConflict": {"citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:117-119,221-224; web\\src\\features\\settings\\components\\GeneralSettings.tsx:92-139,185-193", "detail": "Page edit lease; draft survives mount/navigation with recovery, 800ms debounce, 24h maximum and navigation guard. Hidden mounted panels deliberately preserve unsaved edits."},
+    "mutation": {"citation": "web\\src\\features\\settings\\components\\GeneralSettings.tsx:423-435; web\\src\\features\\settings\\components\\AppearanceSettings.tsx:59-72,154,250,291", "detail": "Shared mutation toasts, pending controls, General inline success; appearance server-backed choices disabled without loaded settings or during pending save."},
+    "reset": {"citation": "web\\src\\features\\settings\\components\\ResetSection.tsx:240-301,429-465", "detail": "Independent pending section/global dialogs, typed confirmation, success receipt, error toast and silent sudo cancellation."},
+    "serverError": {"citation": "web\\src\\features\\settings\\components\\ServerSection.tsx:31-37,54-58", "detail": "Storage-clear failure shows role=alert instead of redirecting."},
+    "issues": [
+      {"file": "web\\src\\features\\settings\\components\\GeneralSettings.tsx", "line": 423, "rule": "MDC-026/MDC-046", "detail": "Save disabled condition only checks cost validity, not absence of settings or initial loading. DEFAULT_FORM remains available when no server snapshot exists; page-level error is not a local write guard.", "fix": "Prevent full-form saves until a trustworthy settings snapshot/draft policy is established; preserve existing defaults as defaults, never present them as fetched configuration.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\settings\\components\\GeneralSettings.tsx", "line": 162, "rule": "MDC-026", "detail": "Sync units announces success immediately after mutate, before request success, and General save supplies toasts on top of hook-level success/error toasts.", "fix": "Emit outcome feedback only on resolved mutation and choose one existing toast owner while retaining inline saved feedback.", "owner": "page", "confidence": "high", "citations": ["web\\src\\api\\hooks\\useSettings.ts:44-48", "web\\src\\features\\settings\\components\\GeneralSettings.tsx:423-425"]},
+      {"file": "web\\src\\features\\settings\\components\\WorkspacePreferencesSettings.tsx", "line": 107, "rule": "MDC-026", "detail": "useSelectedVehicle exposes an empty-array fallback but no query error/loading status; vehicle options cannot visibly distinguish empty fleet from initial/failed list in this consumer.", "fix": "Reuse the existing vehicle query evidence alongside local preferences if integration needs distinct states; do not replace browser preferences with the fleet error.", "owner": "integration", "confidence": "medium"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\settings\\components\\SettingsActionCard.tsx", "line": 49, "rule": "MDC-010/MDC-015", "detail": "Export link explicitly requests colored GlassPanel hover glow. Prior shared-card migration is present but link decoration remains.", "fix": "Use restrained existing surface/focus treatment and remove caller-requested decorative glow, preserving whole-card navigation.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\settings\\components\\GeneralSettings.tsx", "line": 202, "rule": "MDC-010/MDC-012", "detail": "Sync banner uses neon border/background/icon and clock banner uses fixed-white surfaces; these are residual decoration, not reasons to reset saved theme IDs.", "fix": "Use neutral surface/border and subdued meaningful icon tokens; retain car-preference information and actions.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\settings\\components\\GeneralSettings.tsx:202-222"]},
+    {"file": "web\\src\\features\\settings\\components\\SettingsSearch.tsx", "line": 154, "rule": "MDC-010/MDC-015/MDC-013", "detail": "Dropdown requests shadow-2xl/backdrop-blur-xl, fixed-white selected/hover backgrounds and an ad-hoc text-xs empty row.", "fix": "Reuse existing neutral surface/focus/typography tokens without changing results or keyboard navigation.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\settings\\components\\SettingsSearch.tsx:154-160,183-184"]},
+    {"file": "web\\src\\features\\settings\\components\\SettingField.tsx", "line": 36, "rule": "MDC-013", "detail": "Raw field label uses ad-hoc text-xs/font-medium/tracking-wider instead of shared label role.", "fix": "Consolidate with existing field/label primitives while fixing association; no new typography scale.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\settings\\pages\\SettingsPage.tsx",
+      "line": 86,
+      "rule": "MDC-044",
+      "detail": "KNOWN UNRESOLVED title namespace collision: useTranslation('settings') still calls unqualified t('title', 'Settings') for document title at line 86 and PageLayout at line 214. Runtime resources are flat translation with fallbackNS='translation'; root title is 'Command center', while canonical routes.settings is 'Settings'. This audit does not fix either call.",
+      "fix": "Future assigned implementation should use existing canonical routes.settings for both titles, then validate cold and loaded locale behavior. No new catalog or namespace.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\settings\\pages\\SettingsPage.tsx:85-86,214", "web\\src\\i18n\\index.ts:126-135,199-205", "web\\src\\i18n\\en\\locale-unreferenced.json:419", "web\\src\\i18n\\en.json:5605,5797,15652"],
+      "status": "unresolved-source-confirmed; runtime-unverified"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\GeneralSettings.tsx",
+      "line": 137,
+      "rule": "MDC-046",
+      "detail": "General form hydrates server settings once. Appearance independently submits whole-snapshot merges, and resets invalidate settings; retained General draft can remain based on older values. Edit lease warns across tabs but source does not prove same-page snapshot reconciliation.",
+      "fix": "Preserve draft recovery while testing General edit plus appearance save/reset sequences; reconcile source changes through existing draft/query policy rather than inventing a second settings store.",
+      "owner": "integration",
+      "confidence": "medium",
+      "citations": ["web\\src\\features\\settings\\components\\GeneralSettings.tsx:130-139", "web\\src\\features\\settings\\components\\AppearanceSettings.tsx:26-30,59-72", "web\\src\\api\\hooks\\useSettingsReset.ts:115-118"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Resolve documented title collision in a separately authorized item", "Guard unhydrated settings writes", "Associate timezone/MPG labels", "Prove draft/snapshot preservation"],
+    "next": ["Remove residual shortcut glow/neon/fixed-white decoration", "Respect motion preference in anchor scrolling", "Validate mobile and combobox interaction"],
+    "reason": "Prior category/shared-summary/form migrations are already present. Surgical follow-up is preferable to replacing this functioning multi-source settings page."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse existing field identity and feedback contract; no new shared component required",
+      "owner": "web\\src\\components\\forms\\FormField.tsx",
+      "propsVariantsStates": ["label", "htmlFor or generated stable ID", "hint/error described-by", "single-control identity forwarding", "preserve CurrencyInput ariaLabel and HelpIcon"],
+      "usedBy": ["GeneralSettings timezone override", "GeneralSettings comparison MPG", "GeneralSettings composite cost controls"],
+      "dependsOn": ["Confirm custom composite ID forwarding before adoption", "MDC-021/MDC-022 existing Input identity work"],
+      "changeNeeded": false,
+      "citation": "web\\src\\components\\forms\\FormField.tsx:68-112"
+    },
+    {
+      "name": "Canonical title integration; reuse existing routes.settings, no catalog change",
+      "owner": "web\\src\\i18n\\index.ts and web\\src\\i18n\\en.json",
+      "propsVariantsStates": ["flat translation namespace", "routes.settings", "cold/deferred English resources", "document and visible page title"],
+      "usedBy": ["SettingsPage usePageTitle", "SettingsPage PageLayout"],
+      "dependsOn": ["Separately authorized page implementation", "Real-i18n cold/warm regression acceptance"],
+      "changeNeeded": false,
+      "citation": "web\\src\\i18n\\index.ts:126-135; web\\src\\i18n\\en.json:5797"
+    },
+    {
+      "name": "Potential vehicle-query evidence exposure",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "propsVariantsStates": ["existing effective vehicle/vehicles/setter", "independent initial/loading/failure/empty/stale query evidence without changing selection precedence"],
+      "usedBy": ["WorkspacePreferencesSettings default vehicle choices"],
+      "dependsOn": ["Verify whether direct existing useVehicles query subscription suffices", "Evidence from another production consumer before extending shared API"],
+      "changeNeeded": "conditional; not justified as a new shared implementation by this one-page audit",
+      "citation": "web\\src\\hooks\\useSelectedVehicle.ts:31-39,48-82"
+    }
+  ],
+  "competingImplementations": [
+    {"name": "SettingField versus shared FormField", "citation": "web\\src\\features\\settings\\components\\SettingField.tsx:11-44; web\\src\\components\\forms\\FormField.tsx:68-112", "disposition": "Reuse existing field owner; do not add a third wrapper."},
+    {"name": "Two useVehicles hooks share ['vehicles'] but declare different interfaces", "citation": "web\\src\\api\\hooks\\useSettings.ts:112-126; web\\src\\api\\hooks\\useVehicles.ts:34-35,73-77", "disposition": "Existing competing hook ownership is source-confirmed; actual cache-shape effects unverified. Preserve current first-car sync and workspace default behavior unless explicitly authorized to change."},
+    {"name": "UI density and typography-agent density", "citation": "web\\src\\features\\settings\\components\\AppearanceSettings.tsx:26-30; web\\src\\features\\settings\\components\\TypographySettings.tsx:317-324", "disposition": "Distinct server setting and optional typography agent dispatch; do not collapse or rename persistence to remove apparent duplication."},
+    {"name": "Tour launcher and direct replay controls", "citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:271-275; web\\src\\features\\settings\\components\\AppearanceSettings.tsx:496-535", "disposition": "Distinct discover/replay/reset actions; preserve all, not a deletion opportunity."}
+  ],
+  "preservation": {
+    "sourceHash": "d30a524df129a8437e95c6d474a7be8f48ab4b9418f68d32d2ea41144486a32e",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 325,
+    "sectionCount": 8,
+    "sectionNames": ["Overview", "Units, language & costs", "Workspace", "Appearance & experience", "Fonts & readability", "Confirmation prompts", "Server", "Reset & recovery"],
+    "counts": {
+      "rootGlassPanel": 0,
+      "rootChartContainer": 0,
+      "overviewMetrics": 7,
+      "overviewShortcuts": 3,
+      "mountedCategoryForms": 7,
+      "generalSubsections": 3,
+      "appearanceGlassPanels": 5,
+      "resetGlassPanels": 3,
+      "resettableSections": 8,
+      "deniedResetSections": 2,
+      "inspectedPanelOwnerGlassPanelOccurrences": 14,
+      "note": "14 includes one SettingsActionCard renderer reused for three overview cards. Source occurrences are not rendered/runtime counts; no charts are mounted by this page."
+    },
+    "sections": [
+      {"name": "Overview", "citation": "web\\src\\features\\settings\\pages\\SettingsPage.tsx:235-307", "contents": ["Distance with rated/ideal range", "Temperature", "Pressure", "Language/code/name", "Currency", "Electricity cost per kWh with saved precision/locale", "Independent local font family and scale", "Data export link", "Tours launcher", "Setup checklist restart"]},
+      {"name": "General", "citation": "web\\src\\features\\settings\\components\\GeneralSettings.tsx:174-438", "contents": ["Draft recovery", "Car unit sync", "Read-only 12/24-hour clock", "Distance/temperature/pressure/range/precision with preview", "Language/currency/locale/timezone policy and override", "Electricity price", "Comparison fuel price and gallon/liter", "Comparison MPG", "Save/pending/success/error feedback"]},
+      {"name": "Workspace", "citation": "web\\src\\features\\settings\\components\\WorkspacePreferencesSettings.tsx:175-353", "contents": ["Browser-local scope badge", "Persona", "Landing page", "Default vehicle including unavailable saved ID", "Analysis window", "Contextual help", "Release highlights", "Reset defaults and global range dispatch"]},
+      {"name": "Appearance", "citation": "web\\src\\features\\settings\\components\\AppearanceSettings.tsx:109-562", "contents": ["Theme mode/palette/custom colors via ThemePicker", "Density and expandable preview", "More-options accordion", "Relative/absolute time", "CB-safe/neon chart palette with source swatches", "Status bar visibility/icon-only dependent control", "Celebration toast/sound/dashboard/push", "Main/debugger/automations replay", "Reset all tours", "Dashboard kiosk settings deep link"]},
+      {"name": "Typography", "citation": "web\\src\\features\\settings\\components\\TypographySettings.tsx:183-349", "contents": ["Editable preview specimen", "Four reading presets", "Searchable UI and monospace families", "Focus/hover stylesheet preview", "Custom font stacks", "Scale slider", "Leading/tracking/heading weight", "Offline-font explanation", "Optional harmonic ratio/density/verification and HUD", "Reset font defaults"]},
+      {"name": "Confirmation prompts", "citation": "web\\src\\features\\settings\\components\\AdvancedSettings.tsx:40-131", "contents": ["Known/unknown silence-key labels", "Restore single prompt", "Restore all", "Specific empty guidance"]},
+      {"name": "Server", "citation": "web\\src\\features\\settings\\components\\ServerSection.tsx:17-71", "contents": ["Same-origin or remote URL", "Reload explanation", "Change server", "Remote-only disconnect", "Storage failure alert"]},
+      {"name": "Reset & recovery", "citation": "web\\src\\features\\settings\\components\\ResetSection.tsx:79-184,304-467", "contents": ["General", "Appearance", "Alert rules", "Geofences and assignment explanation", "Notification channels/history", "Dashboard layouts", "Automations/history", "Quiet hours", "Tariffs and sound preferences deny-list guidance", "Section danger confirmation", "Global typed RESET confirmation", "Sudo cancel/error/receipt behavior"]}
+    ],
+    "actions": [
+      "Eight category selections preserve pathname/search and replace hash history.",
+      "Search substring/keyword/fuzzy results, maximum eight; ArrowUp/Down, Enter, Escape and same-hash fallback.",
+      "Legacy /settings#ai redirects with replace to /integrations/helix.",
+      "Overview export /data-export, tour launcher and checklist restart with toast.",
+      "General change fields, recover/discard draft, sync detected units from first car, save full form.",
+      "Workspace immediate updates/reset with current global vehicle/range effects.",
+      "Appearance theme/density/time/chart/local toggles, tour replays/reset and /?kiosk=settings.",
+      "Typography family search/preview/select, custom stack, sample text, presets/sliders/segments, optional ratio/density/HUD and reset.",
+      "Individual/all confirmation unsilencing.",
+      "Server /connect and remote disconnect/reload.",
+      "Eight section resets and global reset with confirmation, cancellation and typed RESET."
+    ],
+    "dataBehavior": [
+      "Hidden category panels remain mounted; hidden is intentional category navigation, not data-dependent section deletion.",
+      "Preserve existing settings query keys, AbortSignals, mutation invalidation/broadcast and independent local stores.",
+      "Do not replace missing values with measured zeros; summary configuration choices are not vehicle measurements.",
+      "Preserve raw AppSettings fields and display-only monetary formatting; no unit-suffixed fields changed or wire units inferred.",
+      "Persisted neon theme/chart options are explicit user choices and must survive visual-noise cleanup.",
+      "Do not resurrect promoted Tesla integration/account/privacy/session/Helix panels; preserve current search destinations and #ai alias.",
+      "Typography specimen fixed numbers are explicitly sample preview content, not application telemetry.",
+      "Preserve reset live-mode and sudo guards and deny-list descriptions."
+    ],
+    "previousMigration": "PageLayout, OperationalBrief summary, shared typography/actions, responsive category navigation and mounted drafts are current inherited source. No source was modified or migration reverted."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "Only matching router declarations and hook payloads inspected; handler/repository validation, storage and mutation outcomes unverified.",
+    "commands": [
+      {"command": "Get-FileHash 'web\\src\\features\\settings\\pages\\SettingsPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\settings\\pages\\SettingsPage.tsx').Count", "exitCode": 0, "output": "D30A524DF129A8437E95C6D474A7BE8F48AB4B9418F68D32D2EA41144486A32E; 325"},
+      {"command": "Bounded Get-Content and regex occurrence counts for SettingsPage and its eight inspected panel/card owners", "exitCode": 0, "output": "SettingsPage 325/0; General 439/1; Appearance 565/5; Workspace 353/1; Typography 352/1; Advanced 131/1; Reset 470/3; Server 71/1; SettingsActionCard 87/1 (lines/GlassPanel); ChartContainer 0 in each."}
+    ],
+    "notRun": ["Git", "TypeScript", "Full violations script (includes project TypeScript; source-only Phase 0 contract controls)", "Lint/build/test suites", "Browser/server", "Production mutations"],
+    "scope": "One route and relevant direct presentation/data dependencies only. No whole-app coverage claim, historical runtime borrowing, nested agents or source edits."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\settings\\pages\\SettingsPage.tsx",
+    "web\\src\\features\\settings\\components\\GeneralSettings.tsx",
+    "web\\src\\features\\settings\\components\\WorkspacePreferencesSettings.tsx",
+    "web\\src\\features\\settings\\components\\AppearanceSettings.tsx",
+    "web\\src\\features\\settings\\components\\TypographySettings.tsx",
+    "web\\src\\features\\settings\\components\\AdvancedSettings.tsx",
+    "web\\src\\features\\settings\\components\\ServerSection.tsx",
+    "web\\src\\features\\settings\\components\\ResetSection.tsx",
+    "web\\src\\features\\settings\\components\\SettingsNavigation.tsx",
+    "web\\src\\features\\settings\\components\\SettingsSearch.tsx",
+    "web\\src\\features\\settings\\components\\SettingsActionCard.tsx",
+    "web\\src\\features\\settings\\components\\SettingField.tsx",
+    "web\\src\\features\\settings\\components\\FontFamilyPicker.tsx",
+    "web\\src\\features\\settings\\components\\TypographySpecimen.tsx",
+    "web\\src\\features\\settings\\components\\fontChoices.ts",
+    "web\\src\\features\\settings\\components\\fontPreview.css",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+    "web\\src\\features\\settings\\searchIndex.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useSettingsReset.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useProductPreferences.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\productPreferences.ts",
+    "web\\src\\components\\forms\\FormField.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\i18n\\index.ts",
+    "web\\src\\i18n\\en.json",
+    "web\\src\\i18n\\en\\locale-settings.json",
+    "web\\src\\i18n\\en\\locale-unreferenced.json",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

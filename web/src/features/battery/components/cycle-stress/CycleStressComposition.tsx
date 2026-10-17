@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
+import { MetricGrid } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { CycleStressResult } from '../../lib/cycleStress';
 import {
@@ -18,6 +19,7 @@ import {
 } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressCompositionProps {
   result: CycleStressResult;
@@ -30,6 +32,7 @@ export function CycleStressComposition({
   state,
   locale,
 }: CycleStressCompositionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const composition = result.summary.composition;
   const halfEfcShare =
@@ -43,7 +46,7 @@ export function CycleStressComposition({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <GitCompareArrows
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t(
@@ -62,8 +65,9 @@ export function CycleStressComposition({
           state={state}
           requirement="cycles"
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <MetricGrid>
             <MetricCard
+              compact
               label={t(
                 'cycleStress.composition.fullRecords',
                 'Full-cycle records',
@@ -71,16 +75,16 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.fullCycleRecords,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.composition.closedRanges',
                 'closed ranges, count 1.0',
               )}
               icon={<CircleDot className="h-5 w-5" />}
-              color="green"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.composition.halfRecords',
                 'Half-cycle records',
@@ -88,16 +92,16 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.halfCycleRecords,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.composition.residualRanges',
                 'boundary ranges, count 0.5',
               )}
               icon={<CircleDashed className="h-5 w-5" />}
-              color="amber"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.composition.weightedCount',
                 'Weighted cycle count',
@@ -112,9 +116,10 @@ export function CycleStressComposition({
                 'full + half x 0.5',
               )}
               icon={<Sigma className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.composition.fullEfc',
                 'EFC from full cycles',
@@ -122,16 +127,16 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.fullEquivalentFullCycles,
                 locale,
-                2,
               )}
               subtitle={t(
                 'cycleStress.composition.closedContribution',
                 'closed-range contribution',
               )}
               icon={<BatteryCharging className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.composition.halfEfc',
                 'EFC from residues',
@@ -139,16 +144,16 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.halfEquivalentFullCycles,
                 locale,
-                2,
               )}
               subtitle={t(
                 'cycleStress.composition.boundaryContribution',
                 'boundary-range contribution',
               )}
               icon={<Gauge className="h-5 w-5" />}
-              color="purple"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.composition.residueShare',
                 'Residue share of EFC',
@@ -159,9 +164,9 @@ export function CycleStressComposition({
                 'returned-window sensitivity',
               )}
               icon={<CircleDashed className="h-5 w-5" />}
-              color="red"
+              color="neutral"
             />
-          </div>
+          </MetricGrid>
           <AlertBanner className="mt-4" variant="info">
             <Text as="p" variant="caption">
               {t(

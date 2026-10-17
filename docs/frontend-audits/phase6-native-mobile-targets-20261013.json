@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "status": "FIVE_MEASURED_FIXES_ACCEPTED",
+  "whole_pilot_status": "PARTIAL_NOT_ACCEPTED",
+  "owner_scope": "phase4-pilot-dashboard corrective continuation",
+  "previous_native_receipt": "docs\\frontend-audits\\phase4-pilot-dashboard-native-20261013.json",
+  "source_pin": "8f6ff8824698ac652c7e47f1e4b4b550d3a4ee03",
+  "source_commit_count": 1838,
+  "source_equals_upstream": true,
+  "preview": "http://localhost:5173/?vehicle_id=4",
+  "deployment_changed": false,
+  "browser": {
+    "started_at": "2026-10-13T13:19:14.800Z",
+    "closed_at": "2026-10-13T13:29:54.218Z",
+    "elapsed_seconds": 639.418,
+    "original_deadline": "2026-10-13T13:39:14.800Z",
+    "owned_page_closed": true,
+    "browser_lock_released": true,
+    "saved_scheme": "light",
+    "saved_layout": "Minimal",
+    "write_guard_installed_before_navigation": true,
+    "external_reads_blocked": true,
+    "blocked_write_attempts": 0,
+    "synthetic_responses": 0,
+    "selected_actual_acknowledged_fixture": 4,
+    "actual_roster_status": 200,
+    "nonfixture_identifiers_visible": false,
+    "page_exceptions": 0,
+    "external_read_attempt_hosts": ["local.adguard.org", "fonts.googleapis.com"]
+  },
+  "deliveries": [
+    {
+      "item": "phase6-native-connection-mobile-target",
+      "source_commit": "8d8446ff383b9cfb9d994c44ba3069441b98a7d0",
+      "actor": "c2af5d13-f17b-4081-99e7-1de1e93bec1e",
+      "source_released": true,
+      "scoped_passed": 24,
+      "additive_cases": 10,
+      "original_bodies_preserved": 14,
+      "delta": "Only three trigger class strings; native links and admin button retained.",
+      "receipt_stem": "web\\logs\\phase6-native-connection-mobile-target"
+    },
+    {
+      "item": "phase6-native-honesty-mobile-target",
+      "source_commit": "a4f27ff41aeca258db645724589010c8b1cf6130",
+      "actor": "33ba336a-75fd-4c86-b295-114c2156987c",
+      "source_released": true,
+      "scoped_passed": 12,
+      "additive_cases": 2,
+      "original_cases_preserved": 10,
+      "delta": "One trigger class string; native anchor and fleet trust semantics retained.",
+      "receipt_stem": "web\\logs\\phase6-native-honesty-mobile-target"
+    },
+    {
+      "item": "phase6-native-live-telemetry-mobile-target",
+      "source_commit": "5323afce6085fb2c33804d61e428d5be6317844b",
+      "actor": "8d9b8a7e-4172-458c-ab9a-3a9f3b8585e6",
+      "source_released": true,
+      "scoped_passed": 27,
+      "additive_cases": 2,
+      "original_test_prefix_bytes_preserved": 11076,
+      "delta": "One trigger class string; status age, announcer and native route retained.",
+      "retained_red_result": {"passed": 25, "failed": 2},
+      "receipt_stem": "web\\logs\\phase6-native-live-telemetry-mobile-target"
+    },
+    {
+      "item": "phase6-native-operational-mode-mobile-target",
+      "source_commit": "63eda9e265b50cedc68fd3052a6389aaeac248ab",
+      "actor": "79f3b377-98e3-4d94-857b-a27e065555c0",
+      "source_released": true,
+      "scoped_passed": 12,
+      "additive_cases": 6,
+      "original_cases_preserved": 6,
+      "delta": "One trigger class string; all mode descriptions, glyphs and picker event retained.",
+      "retained_red_result": {"passed": 6, "failed": 6},
+      "receipt_stem": "web\\logs\\phase6-native-operational-mode-mobile-target"
+    },
+    {
+      "item": "phase6-native-health-banner-mobile-targets",
+      "source_commit": "8f6ff8824698ac652c7e47f1e4b4b550d3a4ee03",
+      "actor": "d1ed55e6-0689-4f4a-8650-477d63dbfb46",
+      "source_released": true,
+      "scoped_passed": 8,
+      "additive_cases": 3,
+      "original_bodies_preserved": 5,
+      "source_lines_before": 112,
+      "source_lines_after": 116,
+      "preserved_sections": {"notices": 1, "paragraphs": 2, "actions": 2},
+      "delta": "Both actions add existing wrapping and min-size props. Two test wiring replacements import real router hooks and make the existing navigation mock configurable; all original bodies unchanged.",
+      "retained_red_result": {"passed": 5, "failed": 3},
+      "receipt_stem": "web\\logs\\phase6-native-health-banner-mobile-targets"
+    }
+  ],
+  "scoped_validation": {
+    "actual_passed_total": 83,
+    "additive_total": 23,
+    "failed": 0,
+    "skipped": 0,
+    "raw_native_runtime_name_missing": 0,
+    "each_exact_pair_lint_exit": 0,
+    "each_corrected_nine_scoped_scan_counts": 0,
+    "parent_owned_source_test_semantic_diagnostics": 0,
+    "parent_fixture_programs": 2,
+    "external_context_diagnostics_per_program": 1,
+    "identified_remaining_three_pair_context_diagnostic": "web\\src\\test-setup.ts TS2304 Cannot find name 'global'",
+    "global_production_compiler_claim": false,
+    "unchanged_passing_commands_rerun": false,
+    "retained_capture_failures": "PowerShell transcript omitted native stdout; actual completed-tool stdout restored verbatim with provenance. Initial parser/reconciliation errors retained. Banner's initial case-insensitive raw-HTML scan falsely matched shared Button; corrected case-sensitive scan is zero.",
+    "full_suite_or_phase_gate_run": false
+  },
+  "native_requirement": {
+    "below_md_real_click_target_minimum_css_px": [44, 44],
+    "invisible_hit_slop": false,
+    "measurement_points": ["center", "center_x_minus_21", "center_x_plus_21", "center_y_minus_21", "center_y_plus_21"],
+    "native_mobile_branch": "Actual read-only native anchors, current live operational mode and degraded banner; other business states covered by retained scoped cases, not falsely claimed as native scenarios."
+  },
+  "mobile_375": {
+    "measured_at": "2026-10-13T13:20:47.195Z",
+    "viewport": [375, 844],
+    "document_width": 375,
+    "coarse": true,
+    "fine": false,
+    "touch_points": 1,
+    "footer_rect": [0, 676, 375, 112],
+    "bottom_navigation_height": 56,
+    "main_bottom_padding": 168,
+    "corrected_targets": [
+      {"name": "API connection", "rect": [16, 682.75, 44, 44], "href": "/system-status", "all_five_hit_points_belong": true},
+      {"name": "Live telemetry", "rect": [68, 682.75, 44, 44], "href": "/signal-diff", "all_five_hit_points_belong": true},
+      {"name": "Telemetry honesty", "rect": [120, 682.75, 44, 44], "href": "/", "all_five_hit_points_belong": true},
+      {"name": "Current operational mode", "rect": [172, 682.75, 44, 44], "all_five_hit_points_belong": true},
+      {"name": "System status", "rect": [61, 211, 285, 44], "all_five_hit_points_belong": true},
+      {"name": "Health alerts", "rect": [61, 263, 285, 44], "all_five_hit_points_belong": true}
+    ],
+    "three_existing_utility_rectangles": [[16, 738.25, 44, 44], [68, 738.25, 44, 44], [120, 738.25, 44, 44]],
+    "three_existing_utility_all_five_hit_points_belong": true
+  },
+  "responsive_actual_measurements": [
+    {"width": 320, "height": 844, "document_width": 320, "coarse": true, "touch_points": 1, "four_footer_targets": [44, 44], "banner_widths": [230, 230], "banner_heights": [44, 44], "six_targets_all_five_hits": true, "all_within_viewport": true, "footer_height": 112, "main_padding": 168},
+    {"width": 390, "height": 844, "document_width": 390, "coarse": true, "touch_points": 1, "four_footer_targets": [44, 44], "banner_widths": [300, 300], "banner_heights": [44, 44], "six_targets_all_five_hits": true, "all_within_viewport": true, "footer_height": 112, "main_padding": 168},
+    {"width": 430, "height": 844, "document_width": 430, "coarse": true, "touch_points": 1, "four_footer_targets": [44, 44], "banner_widths": [340, 340], "banner_heights": [44, 44], "six_targets_all_five_hits": true, "all_within_viewport": true, "footer_height": 112, "main_padding": 168},
+    {"width": 767, "height": 844, "document_width": 767, "coarse": true, "touch_points": 1, "four_footer_targets": [44, 44], "banner_widths": [136.78125, 130.84375], "banner_heights": [44, 44], "six_targets_all_five_hits": true, "all_within_viewport": true, "footer_height": 112, "main_padding": 168},
+    {"width": 768, "height": 844, "document_width": 768, "fine": true, "touch_points": 0, "four_footer_sizes": [[36, 16], [36, 16], [24, 16], [36, 20]], "four_footer_minima_px": 0, "banner_heights": [36, 36], "all_center_hits": true, "footer_height": 24, "main_padding": 80},
+    {"width": 1024, "height": 844, "document_width": 1024, "fine": true, "touch_points": 0, "four_footer_sizes": [[100.84375, 22], [86.828125, 22], [103.53125, 22], [67.453125, 20]], "four_footer_minima_px": 0, "banner_heights": [36, 36], "all_center_hits": true, "footer_height": 24, "main_padding": 80},
+    {"width": 1440, "height": 936, "document_width": 1440, "fine": true, "touch_points": 0, "four_footer_sizes": [[100.84375, 22], [86.828125, 22], [103.53125, 22], [67.453125, 20]], "four_footer_minima_px": 0, "banner_heights": [36, 36], "all_center_hits": true, "footer_height": 28, "main_padding": 28}
+  ],
+  "actual_touch_flows": {
+    "system_status": {"expected_path": "/system-status", "observed_path": "/system-status", "passed": true},
+    "health_alerts": {"expected_path": "/notifications/channels", "observed_path": "/notifications/channels", "passed": true},
+    "operational_mode": {
+      "actual_time_machine_open_picker_events": 1,
+      "inline_picker_visible": true,
+      "datetime_local_input_visible": true,
+      "modal_dialog_count": 0,
+      "cancelled_with_actual_cancel_control": true,
+      "date_submitted": false,
+      "note": "This is an inline picker, not a modal. A zero-dialog proxy is not a failed click."
+    }
+  },
+  "actual_maximum_scroll": {
+    "viewport": [375, 844],
+    "coarse": true,
+    "touch_points": 1,
+    "main_client_height": 475,
+    "main_scroll_height": 2828,
+    "main_scroll_top": 2353,
+    "main_scroll_max": 2353,
+    "main_padding_bottom": 168,
+    "footer_top": 676,
+    "final_links": [
+      {"name": "Details", "href": "/vehicles/4", "rect": [33, 542.5, 91.203125, 44], "center_hit": true, "clear_of_footer": true},
+      {"name": "Commands", "href": "/commands", "rect": [132.203125, 542.5, 119.8125, 44], "center_hit": true, "clear_of_footer": true},
+      {"name": "Live map", "href": "/live", "rect": [33, 594.5, 104.9375, 44], "center_hit": true, "clear_of_footer": true},
+      {"name": "Digital twin", "href": "/digital-twin", "rect": [145.9375, 594.5, 121.140625, 44], "center_hit": true, "clear_of_footer": true}
+    ],
+    "occlusion_repair_justified": false
+  },
+  "screenshots": [
+    {"path": "web\\.playwright-mcp\\page-2026-10-13T13-22-06-842Z.png", "actual_dimensions": [375, 844], "bytes": 41444, "sha256": "9cf6bd85b6547967f3a4144966d3472c5c45c74dd4003fbca2121b43c048467f"},
+    {"path": "web\\.playwright-mcp\\page-2026-10-13T13-28-15-085Z.png", "actual_dimensions": [1440, 936], "bytes": 112229, "sha256": "a7e293a903c1ad26c0a3690f3835aa81af003287bdb0e9b106b360ceea2dd701"}
+  ],
+  "retained_nonpassing_review_trials": [
+    "Initial /dashboard?vehicle_id=4 is not a registered route. The heading wait timed out after20s; actual headings identified Page not found. Correct root /?vehicle_id=4 used; no product repair inferred.",
+    "First last-link scrollIntoView(block:end) aligned links behind fixed chrome and was not maximum scroll. Actual overflow-owner scrollTop2353 equals maximum2353; all four final links are clear/clickable. No speculative frame fix.",
+    "Initial PNG byte-shift probe printed119x76 because byte arithmetic truncated before int promotion. Corrected integer-promotion parsing verified actual375x844; image bytes/hash unchanged."
+  ],
+  "actual_resource_failures": [
+    {"status": 501, "path": "/api/v1/admin/rbac/matrix"},
+    {"status": 501, "path": "/api/v1/admin/impersonate"},
+    {"status": 503, "path": "/api/v1/system/health"},
+    {"status": 404, "path": "/api/v1/push/public-key"}
+  ],
+  "not_run_or_not_accepted": [
+    "Other schemes/layouts and entire original Dashboard pilot matrix.",
+    "All data-state, keyboard/focus, contrast, RTL, zoom, forced-colors, reduced-motion, axe and Lighthouse obligations.",
+    "Original Drive History and Settings native pilot acceptance.",
+    "Full suites, phase gates, global compiler, production rollout or reseeding.",
+    "Native admin-only connection branches and alternate operational modes are not falsely claimed from current read-only native branch.",
+    "Exhausted helper/failure budgets unchanged; combinedPhase6 and Phase7 not started."
+  ]
+}

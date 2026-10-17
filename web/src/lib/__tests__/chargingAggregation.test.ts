@@ -4,7 +4,9 @@ import {
   getChargerCategory,
   durationMinutes,
   avgPowerW,
+  sessionAveragePowerW,
   costPerKwh,
+  blendedRecordedCostPerKwh,
   computeChargingPeriodStats,
   batteryFriendlyScore,
   detectChargingAnomalies,
@@ -99,6 +101,21 @@ describe('costPerKwh', () => {
   });
 });
 
+describe('blendedRecordedCostPerKwh', () => {
+  it('pairs recorded costs with their own energy instead of diluting with unknown costs', () => {
+    expect(blendedRecordedCostPerKwh([
+      s({ cost_decimal: 6, total_energy_added_wh: 30_000 }),
+      s({ cost_decimal: null, total_energy_added_wh: 30_000 }),
+    ])).toBeCloseTo(0.2);
+  });
+
+  it('preserves a recorded free rate and leaves unknown costs unavailable', () => {
+    expect(blendedRecordedCostPerKwh([s({ cost_decimal: 0 })])).toBe(0);
+    expect(blendedRecordedCostPerKwh([s({ cost_decimal: null })])).toBeNull();
+    expect(blendedRecordedCostPerKwh([s({ total_energy_added_wh: 0 })])).toBeNull();
+  });
+});
+
 describe('computeChargingPeriodStats', () => {
   const sessions = [
     s({ id: 1, total_energy_added_wh: 20_000, cost_decimal: 4, charger_type: 'Supercharger', started_at: '2026-04-15T08:00:00Z', ended_at: '2026-04-15T09:00:00Z', start_soc_pct: 20, end_soc_pct: 80 }),
@@ -125,6 +142,15 @@ describe('computeChargingPeriodStats', () => {
     expect(stats.freeCount).toBe(1);
   });
 
+  it('does not classify an unknown cost as a free session', () => {
+    const stats = computeChargingPeriodStats([
+      s({ id: 1, cost_decimal: null }),
+      s({ id: 2, cost_decimal: 0 }),
+      s({ id: 3, cost_decimal: 5 }),
+    ]);
+    expect(stats.freeCount).toBe(1);
+  });
+
   it('breaks down by category', () => {
     const stats = computeChargingPeriodStats(sessions);
     expect(stats.byCategory.supercharger).toBe(1);
@@ -136,6 +162,26 @@ describe('computeChargingPeriodStats', () => {
     // 100 kWh in 9.5 h → ~10.5 kW
     const stats = computeChargingPeriodStats(sessions);
     expect(stats.avgRateKw).toBeCloseTo(100 / 9.5, 1);
+  });
+
+  it('does not inflate rates or shorten average duration with unfinished sessions', () => {
+    const stats = computeChargingPeriodStats([
+      s({ id: 1, total_energy_added_wh: 18_000, avg_power_w: null }),
+      s({ id: 2, total_energy_added_wh: 60_000, ended_at: null, avg_power_w: null }),
+    ]);
+    expect(stats.totalEnergyWh).toBe(78_000);
+    expect(stats.avgRateKw).toBe(18);
+    expect(stats.avgDurationMin).toBe(60);
+    expect(stats.avgPowerW).toBe(18_000);
+  });
+
+  it('preserves known zero power without treating missing power as zero', () => {
+    const unknown = s({ ended_at: null, avg_power_w: null });
+    const zero = s({ ended_at: null, avg_power_w: 0 });
+    expect(sessionAveragePowerW(unknown)).toBeNull();
+    expect(sessionAveragePowerW(zero)).toBe(0);
+    expect(computeChargingPeriodStats([unknown]).avgPowerW).toBeNull();
+    expect(computeChargingPeriodStats([unknown, zero]).avgPowerW).toBe(0);
   });
 
   it('returns count=0 and avg=null for empty windows', () => {
@@ -193,6 +239,39 @@ describe('detectChargingAnomalies', () => {
     ]);
     expect(anomalies).toHaveLength(1);
     expect(anomalies[0].kind).toBe('cost_zero');
+  });
+
+  it.each(['Supercharger', 'DC Fast', 'Mystery brand'])(
+    'distinguishes missing cost from recorded free cost on %s',
+    (charger_type) => {
+      for (const cost_decimal of [null, undefined]) {
+        const session = s({ charger_type, cost_decimal });
+        expect(detectChargingAnomalies([session])).toEqual([{
+          session,
+          kind: 'cost_zero',
+          message: 'Energy added but no cost recorded',
+          actionLabel: 'Add cost',
+        }]);
+      }
+      expect(detectChargingAnomalies([s({ charger_type, cost_decimal: 0 })])).toEqual([]);
+      expect(detectChargingAnomalies([s({ charger_type, cost_decimal: 5 })])).toEqual([]);
+    },
+  );
+
+  it.each([
+    ['DC Fast', 'bad_power'],
+    ['Supercharger', 'trickle'],
+  ] as const)('preserves missing-cost priority over %s power anomalies', (charger_type, kind) => {
+    const session = s({
+      charger_type,
+      started_at: '2026-04-15T00:00:00Z',
+      ended_at: '2026-04-15T07:00:00Z',
+      total_energy_added_wh: 2_000,
+      cost_decimal: null,
+    });
+    expect(detectChargingAnomalies([session]).map((anomaly) => anomaly.kind)).toEqual(['cost_zero']);
+    expect(detectChargingAnomalies([{ ...session, cost_decimal: 0 }])
+      .map((anomaly) => anomaly.kind)).toEqual([kind]);
   });
 
   it('does NOT flag cost_zero on home chargers (free is normal)', () => {
@@ -304,6 +383,23 @@ describe('dailyChargingTrend', () => {
 
   it('returns empty array for empty input', () => {
     expect(dailyChargingTrend([], 'sessions')).toEqual([]);
+  });
+
+  it('does not turn unknown daily cost or power into a measured zero', () => {
+    const unknown = [s({ ended_at: null, avg_power_w: null, cost_decimal: null })];
+    expect(dailyChargingTrend(unknown, 'cost')).toEqual([]);
+    expect(dailyChargingTrend(unknown, 'power')).toEqual([]);
+    expect(dailyChargingTrend(unknown, 'sessions')[0].value).toBe(1);
+  });
+
+  it('includes genuine zero power in the daily mean and preserves free cost', () => {
+    const readings = [
+      s({ total_energy_added_wh: 20_000, cost_decimal: 0 }),
+      s({ ended_at: null, avg_power_w: 0, cost_decimal: null }),
+      s({ ended_at: null, avg_power_w: null, cost_decimal: null }),
+    ];
+    expect(dailyChargingTrend(readings, 'power')[0].value).toBe(10);
+    expect(dailyChargingTrend(readings, 'cost')[0].value).toBe(0);
   });
 });
 

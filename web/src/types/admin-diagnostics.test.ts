@@ -277,6 +277,8 @@ describe('type identities and DTO contract (enforced by tsc --noEmit)', () => {
       vehicle_id: 1,
       window: '1h',
       bucket: '1m',
+      now: '2026-01-01T00:00:00Z',
+      window_start: '2025-12-31T23:00:00Z',
       generated_at: '2026-01-01T00:00:00Z',
       total_samples: 0,
       unique_fields: 0,
@@ -287,6 +289,68 @@ describe('type identities and DTO contract (enforced by tsc --noEmit)', () => {
     expect(isIngestXRayBucket(resp.bucket)).toBe(true);
     expectTypeOf<IngestXRayResponse['window']>().toEqualTypeOf<IngestXRayWindow>();
     expectTypeOf<IngestXRayResponse['bucket']>().toEqualTypeOf<IngestXRayBucket>();
+  });
+
+  describe('ingest x-ray server metadata and full-window count contract', () => {
+    const populated: IngestXRayResponse = {
+      vehicle_id: 1,
+      now: '2026-01-01T00:00:00Z',
+      window_start: '2025-12-31T23:00:00Z',
+      window: '1h',
+      bucket: '1m',
+      last_seen_at: '2025-12-31T23:59:30Z',
+      freshness_seconds: 30,
+      total_samples: 250,
+      fields: [{
+        field: 'VehicleSpeed',
+        sample_count: 100,
+        last_seen_at: '2025-12-31T23:59:30Z',
+        value_kind: 6,
+      }],
+      buckets: [{ bucket_start: '2025-12-31T23:59:00Z', count: 250 }],
+    };
+
+    it('preserves actual server bounds and freshness with populated capped rows', () => {
+      expect(populated.now).toBe('2026-01-01T00:00:00Z');
+      expect(populated.window_start).toBe('2025-12-31T23:00:00Z');
+      expect(populated.last_seen_at).toBe('2025-12-31T23:59:30Z');
+      expect(populated.freshness_seconds).toBe(30);
+      expect(populated.generated_at).toBeUndefined();
+      expect(populated.total_samples).toBe(250);
+      expect(populated.fields[0].sample_count).toBe(100);
+      expect(populated.buckets[0].count).toBe(250);
+    });
+
+    it('does not claim a full distinct count from a capped populated ranking', () => {
+      expect(populated.fields).toHaveLength(1);
+      expect(populated.unique_fields).toBeUndefined();
+      expectTypeOf<IngestXRayResponse['unique_fields']>().toEqualTypeOf<number | undefined>();
+    });
+
+    it('retains an explicitly supplied full count independent of returned rows', () => {
+      const response: IngestXRayResponse = { ...populated, unique_fields: 125 };
+      expect(response.unique_fields).toBe(125);
+      expect(response.fields).toHaveLength(1);
+    });
+
+    it('distinguishes absent freshness and distinct counts from explicit zero', () => {
+      const empty: IngestXRayResponse = {
+        vehicle_id: populated.vehicle_id,
+        now: populated.now,
+        window_start: populated.window_start,
+        window: populated.window,
+        bucket: populated.bucket,
+        total_samples: 0,
+        fields: [],
+        buckets: [],
+      };
+      expect(empty.last_seen_at).toBeUndefined();
+      expect(empty.freshness_seconds).toBeUndefined();
+      expect(empty.unique_fields).toBeUndefined();
+      const fresh: IngestXRayResponse = { ...empty, last_seen_at: empty.now, freshness_seconds: 0, unique_fields: 0 };
+      expect(fresh.freshness_seconds).toBe(0);
+      expect(fresh.unique_fields).toBe(0);
+    });
   });
 
   it('DriveDiagnosticResponse carries a guard-validatable window', () => {

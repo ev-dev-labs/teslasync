@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createMemoryKvStore, createLocalStorageKvStore, createIndexedDbKvStore, createDefaultKvStore, IndexedDbUnavailableError } from '../kvStore';
 
 describe('createMemoryKvStore', () => {
@@ -20,6 +20,8 @@ describe('createMemoryKvStore', () => {
 });
 
 describe('createLocalStorageKvStore', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   beforeEach(() => {
     window.localStorage.clear();
   });
@@ -41,9 +43,53 @@ describe('createLocalStorageKvStore', () => {
     expect(await kvA.getItem('k')).toBe('valueA');
     expect(await kvB.getItem('k')).toBe('valueB');
   });
+
+  it.each(['getItem', 'setItem', 'removeItem'] as const)('propagates %s failures without changing saved data', async (method) => {
+    const kv = createLocalStorageKvStore('failure:');
+    await kv.setItem('pack', 'saved');
+    const error = new DOMException('Storage denied', 'SecurityError');
+    vi.spyOn(Storage.prototype, method).mockImplementationOnce(() => { throw error; });
+
+    const operation = method === 'setItem' ? kv.setItem('pack', 'replacement') : kv[method]('pack');
+    await expect(operation).rejects.toBe(error);
+    expect(await kv.getItem('pack')).toBe('saved');
+  });
 });
 
 describe('createIndexedDbKvStore', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each(['getItem', 'setItem', 'removeItem'] as const)('rejects an aborted %s transaction', async (method) => {
+    const transaction: {
+      error: DOMException | null;
+      onabort: (() => void) | null;
+      oncomplete: (() => void) | null;
+      objectStore: () => object;
+    } = {
+      error: null,
+      onabort: null,
+      oncomplete: null,
+      objectStore: () => ({
+        get: () => ({ result: 'saved' }),
+        put: () => undefined,
+        delete: () => undefined,
+      }),
+    };
+    const request: { result: object; onsuccess: (() => void) | null } = {
+      result: { transaction: () => transaction },
+      onsuccess: null,
+    };
+    vi.stubGlobal('indexedDB', { open: () => request });
+    const kv = createIndexedDbKvStore('abort-db', 'kv');
+    const operation = method === 'setItem' ? kv.setItem('pack', 'value') : kv[method]('pack');
+    const rejection = expect(operation).rejects.toThrow(/IndexedDB .* aborted/);
+    request.onsuccess?.();
+    await Promise.resolve();
+    expect(transaction.onabort).toBeTypeOf('function');
+    transaction.onabort?.();
+    await rejection;
+  });
+
   it('rejects with IndexedDbUnavailableError in this jsdom test environment (documented coverage limitation: no real IndexedDB in jsdom)', async () => {
     // jsdom does not implement a real `indexedDB` global; this test honestly
     // documents that limitation rather than mocking IndexedDB out.

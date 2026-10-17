@@ -526,8 +526,16 @@ describe('SignalDataTable', () => {
     // The Badge-variant fix: the 'num' chip carries the info variant and the
     // 'str' chip the success variant (previously an inert `color` attr left
     // every chip rendering the default neutral style).
-    expect(within(table).getByText('num').className).toContain('bg-blue-100');
-    expect(within(table).getByText('str').className).toContain('bg-green-100');
+    expect(within(table).getByText('num')).toHaveClass(
+      'bg-[var(--semantic-info-bg)]',
+      'border-[var(--semantic-info-border)]',
+      'text-[var(--semantic-info)]',
+    );
+    expect(within(table).getByText('str')).toHaveClass(
+      'bg-[var(--semantic-success-bg)]',
+      'border-[var(--semantic-success-border)]',
+      'text-[var(--semantic-success)]',
+    );
   });
 
   it('shows the empty message for an empty batch and does not crash on undefined rows', () => {

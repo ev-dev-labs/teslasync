@@ -94,9 +94,9 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     <AIFeatureCard
       title={t('range.aiPredict.title', 'Learn per-vehicle range model')}
       description={t(
-                'range.aiPredict.description',
-                'Compute per-bucket (temperature × speed) learned Wh/km from this vehicle’s recent drives and walk through how each bucket compares to the static heuristic curve the projection uses today.',
-              )}
+        'range.aiPredict.description',
+        'Compute per-bucket (temperature × speed) learned Wh/km from this vehicle’s recent drives and walk through how each bucket compares to the static heuristic curve the projection uses today.',
+      )}
       buttonLabel={t('range.aiPredict.generateButton', 'Train range model')}
       badgeLabel={t('range.aiPredict.badge', 'Helix')}
       canStart={canStart}

@@ -1,8 +1,8 @@
-import { BookOpenCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { OrderedStepList } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -42,27 +42,18 @@ export function ShareCardMethodology({
   return (
     <section
       data-testid="share-card-methodology"
-      aria-label={t('shareCard.method.aria', 'Share Card methodology privacy and export limits')}
+      aria-label={t('shareCard.method.aria', 'Share card methodology privacy and export limits')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <BookOpenCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.method.title', 'Methodology, privacy, and export limits')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.method.title', 'Methodology, privacy, and export limits')}>
         <ShareCardSectionBody state={state}>
-          <ol className="grid gap-3 lg:grid-cols-2">
-            {methods.map((method, index) => (
-              <li
-                key={method}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <Text as="p" variant="label">
-                  {t('shareCard.method.step', 'Method {{number}}', { number: index + 1 })}
-                </Text>
-                <Text as="p" variant="bodySm" className="mt-1">{method}</Text>
-              </li>
-            ))}
-          </ol>
+          <OrderedStepList
+            aria-label={t('shareCard.method.title', 'Methodology, privacy, and export limits')}
+            steps={methods.map((method, index) => ({
+              id: ['identity', 'metrics', 'efficiency', 'timezone', 'privacy', 'export'][index],
+              title: t('shareCard.method.step', 'Method {{number}}', { number: index + 1 }),
+              description: method,
+            }))}
+          />
           <AlertBanner variant={analysis.historyCapReached ? 'warning' : 'info'} className="mt-4">
             {analysis.historyCapReached
               ? t(
@@ -75,7 +66,7 @@ export function ShareCardMethodology({
               )}
           </AlertBanner>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

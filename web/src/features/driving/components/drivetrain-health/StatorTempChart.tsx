@@ -71,7 +71,7 @@ export function StatorTempChart({ data, loading = false }: StatorTempChartProps)
       <ChartContainer
         title={t('drivetrain.statorTempHistory', 'Stator Temperature History')}
         subtitle={t('drivetrain.statorTempSub', 'Motor stator temperature over recent snapshots')}
-        ariaLabel={t('drivetrain.statorTempHistory.aria', 'Front, rear-left and rear-right motor stator temperature history line chart')}
+        ariaLabel={t('drivetrain.statorTempHistoryAria', 'Front, rear-left and rear-right motor stator temperature history line chart')}
         loading={loading}
         empty={empty}
         data={fallbackRows}

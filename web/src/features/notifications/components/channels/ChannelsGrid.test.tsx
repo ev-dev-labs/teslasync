@@ -31,6 +31,7 @@ import '@/i18n';
 
 import { ChannelsGrid } from './ChannelsGrid';
 import type { NotificationChannel } from '@/api/types';
+import { deriveDataState, type DataState } from '@/api/dataState';
 
 // Stub the child: surface just enough (the channel id + name and an edit
 // affordance wired to onEdit) to assert ChannelsGrid forwards the right props.
@@ -70,6 +71,7 @@ interface Overrides {
   isLoading?: boolean;
   isError?: boolean;
   error?: unknown;
+  source?: DataState<NotificationChannel[]>;
 }
 
 function renderGrid(overrides: Overrides = {}) {
@@ -83,6 +85,7 @@ function renderGrid(overrides: Overrides = {}) {
         isLoading={overrides.isLoading ?? false}
         isError={overrides.isError ?? false}
         error={'error' in overrides ? overrides.error : null}
+        source={overrides.source}
         onRetry={onRetry}
         onEdit={onEdit}
         onAdd={onAdd}
@@ -93,6 +96,40 @@ function renderGrid(overrides: Overrides = {}) {
 }
 
 describe('ChannelsGrid', () => {
+  it.each(['idle', 'paused'] as const)('does not misreport an initial %s query as configured-empty or failed', (fetchStatus) => {
+    const { onRetry } = renderGrid({
+      source: deriveDataState<NotificationChannel[]>({ isPending: true, fetchStatus }),
+    });
+    expect(screen.getByRole('status')).toHaveTextContent(fetchStatus === 'paused' ? 'Refresh paused' : 'Pending');
+    expect(screen.queryByText('No channels configured')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /loading channels/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains populated channels when refresh is paused', () => {
+    const channels = [makeChannel(1, 'Discord Ops')];
+    renderGrid({ channels, source: deriveDataState({ data: channels, fetchStatus: 'paused' }) });
+    expect(screen.getByText('Discord Ops')).toBeInTheDocument();
+    expect(screen.queryByText('No channels configured')).not.toBeInTheDocument();
+  });
+
+  it('shows skeletons for an actively loading initial source', () => {
+    renderGrid({
+      isLoading: true,
+      source: deriveDataState<NotificationChannel[]>({ isPending: true, fetchStatus: 'fetching' }),
+    });
+    expect(screen.getByRole('status', { name: /loading channels/i })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No channels configured')).not.toBeInTheDocument();
+  });
+
+  it('shows configured-empty only after the source supplies an empty list', () => {
+    renderGrid({ source: deriveDataState({ data: [] as NotificationChannel[], fetchStatus: 'idle' }) });
+    expect(screen.getByText('No channels configured')).toBeInTheDocument();
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+  });
+
   it('renders one ChannelCard per channel, preserving order', () => {
     renderGrid({
       channels: [

@@ -69,6 +69,22 @@ beforeEach(() => {
 })
 
 describe('TotpCompatibleApps', () => {
+  it('uses neutral theme roles for informational icons and app surfaces', () => {
+    const { container } = render(<TotpCompatibleApps />)
+    const icons = container.querySelectorAll('svg')
+
+    expect(icons[0].parentElement).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+      'ring-[var(--border-default)]',
+    )
+    for (const item of screen.getAllByRole('listitem')) {
+      expect(item).toHaveClass('bg-[var(--surface-2)]', 'ring-[var(--border-subtle)]')
+      expect(item.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]')
+    }
+    expect(container.innerHTML).not.toMatch(/(?:text|bg|ring)-(?:neon|cyan|purple|emerald|amber)/)
+  })
+
   it('renders the translated heading and subtitle', () => {
     render(<TotpCompatibleApps />)
 

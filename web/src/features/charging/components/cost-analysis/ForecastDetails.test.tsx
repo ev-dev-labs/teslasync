@@ -264,8 +264,8 @@ describe('ForecastDetails — breakdown donut', () => {
 
     expect(within(bd).getByText('Home')).toBeInTheDocument();
     expect(within(bd).getByText('Supercharger')).toBeInTheDocument();
-    expect(bd.textContent).toContain('$0.120/kWh');
-    expect(bd.textContent).toContain('$0.340/kWh');
+    expect(bd.textContent).toContain('$0.12/kWh');
+    expect(bd.textContent).toContain('$0.34/kWh');
   });
 });
 
@@ -279,10 +279,10 @@ describe('ForecastDetails — savings block', () => {
 
     expect(within(sv).getByText('Monthly Savings')).toBeInTheDocument();
     // currencySymbol ($) + AnimatedNumber(160, 0), settled synchronously.
-    expect(sv.textContent).toContain('$160');
+    expect(sv.textContent).toContain('$160.00');
     // Annual / Lifetime at 0-dp with locale separators.
-    expect(sv.textContent).toContain('$1,920');
-    expect(sv.textContent).toContain('$19,200');
+    expect(sv.textContent).toContain('$1,920.00');
+    expect(sv.textContent).toContain('$19,200.00');
 
     // Gas (rose) vs EV (emerald) monthly cost at the default 2-dp.
     const gasCost = within(sv).getByText('$220.00');
@@ -291,7 +291,7 @@ describe('ForecastDetails — savings block', () => {
     expect(evCost).toHaveClass('text-emerald-300');
 
     // Avg distance uses fmtNumber (locale separators, 0-dp).
-    expect(within(sv).getByText('1,500')).toBeInTheDocument();
+    expect(within(sv).getByText('1,500.00')).toBeInTheDocument();
   });
 });
 
@@ -350,7 +350,7 @@ describe('ForecastDetails — partial payload (regression)', () => {
     ]);
     // Missing cost → em-dash; present cost → 3-dp currency.
     expect(bd.textContent).toContain('—/kWh');
-    expect(bd.textContent).toContain('$0.500/kWh');
+    expect(bd.textContent).toContain('$0.50/kWh');
   });
 });
 

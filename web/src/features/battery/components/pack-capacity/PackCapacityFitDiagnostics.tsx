@@ -17,6 +17,7 @@ import {
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
+import { MetricGrid } from '@/components/layout';
 import {
   GlassPanel,
   PanelTitle,
@@ -112,7 +113,7 @@ export function PackCapacityFitDiagnostics({
             'A gated least-squares description of filtered observations, not a degradation forecast or causal estimate.',
           )}
         </Text>
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricGrid className="mb-4">
           <MetricCard
             label={t('packCapacity.fitDiagnostics.status', 'Fit status')}
             value={resolved ? packCapacityFitLabel(t, fit.status) : '—'}
@@ -129,7 +130,7 @@ export function PackCapacityFitDiagnostics({
             )}
             value={
               resolved
-                ? formatEnergy(fit.annualChangeWh, { precision: 1 })
+                ? formatEnergy(fit.annualChangeWh)
                 : '—'
             }
             subtitle={
@@ -198,7 +199,7 @@ export function PackCapacityFitDiagnostics({
             )}
             color="green"
           />
-        </div>
+        </MetricGrid>
         <AlertBanner className="mb-4" variant="info">
           <Text as="p" variant="caption">
             {t(

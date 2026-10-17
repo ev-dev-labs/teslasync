@@ -24,12 +24,14 @@ import { GlassPanel, Button } from '@/components/ui'
 import { Heading, Text, Caption } from '@/components/ui/Typography'
 import { MetricBar } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
-import { fmtNumber } from '@/lib/numberFormat'
-import { formatRelative, formatDurationMsLong } from '@/lib/dateFormat'
+
+import { formatRelative } from '@/lib/dateFormat'
 import { useQueueStatus } from '@/api/hooks/useSystemQueues'
 import type { QueueHeartbeatSeverity, QueueStat } from '@/api/types'
 
 import { QueueJobDrawer } from './QueueJobDrawer'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { IconButton } from '@/components/ui/IconButton';
 
 // Severity → hex colour passed into MetricBar (which expects a raw
 // string for its dynamic gradient + glow). Hex rather than CSS
@@ -56,6 +58,8 @@ interface WorkerCardProps {
 }
 
 function WorkerCard({ stat, onOpen }: WorkerCardProps) {
+  const { formatDurationMsLong } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const tone = SEVERITY_TONE_CLASS[stat.heartbeat_severity]
   const color = SEVERITY_COLOR[stat.heartbeat_severity]
@@ -80,7 +84,7 @@ function WorkerCard({ stat, onOpen }: WorkerCardProps) {
     return t('queueStatus.oldestPending', 'Oldest pending: {{duration}}', {
       duration: formatDurationMsLong(stat.oldest_pending_age_seconds * 1000),
     })
-  }, [stat.oldest_pending_age_seconds, t])
+  }, [stat.oldest_pending_age_seconds, t, formatDurationMsLong])
 
   const handleOpen = () => onOpen(stat.worker)
 
@@ -226,18 +230,9 @@ export function QueueStatusPanel({ testHookOverride }: QueueStatusPanelProps = {
             <Caption className="mt-2 block">{updatedLabel}</Caption>
           ) : null}
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => {
+        <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('queueStatus.refresh', 'Refresh')} onClick={() => {
             void refetch()
-          }}
-          loading={isFetching && !isLoading}
-          disabled={isFetching}
-          icon={<RefreshCw className="h-4 w-4" aria-hidden />}
-          data-testid="queue-refresh-button"
-        >
-          {t('queueStatus.refresh', 'Refresh')}
-        </Button>
+          }} busy={isFetching && !isLoading} disabled={isFetching} data-testid="queue-refresh-button" />
       </div>
 
       {isLoading ? (

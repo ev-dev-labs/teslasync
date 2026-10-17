@@ -1,14 +1,33 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '../../../i18n';
 import type { Alert, AlertDetail } from '@/api/types';
+import { formatDateTime } from '@/lib/dateFormat';
+import { useSettings } from '@/hooks/useSettings';
+import { useTimezone } from '@/lib/timezone';
 import {
   AlertDetailDrawer,
   getAlertRemediationKind,
 } from './AlertDetailDrawer';
 
 const CREATED_AT = '2026-05-02T10:00:00Z';
+
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return { ...actual, useSettings: vi.fn() };
+});
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: vi.fn() };
+});
+beforeEach(() => {
+  vi.mocked(useSettings).mockReturnValue({
+    settings: { tz_display_default: 'user' },
+    locale: 'en-US',
+  } as ReturnType<typeof useSettings>);
+  vi.mocked(useTimezone).mockReturnValue('UTC');
+});
 
 function alert(overrides: Partial<Alert> = {}): Alert {
   return {
@@ -27,12 +46,12 @@ function alert(overrides: Partial<Alert> = {}): Alert {
 
 function renderDrawer(overrides: {
   alert?: Alert;
-  detail?: AlertDetail;
+  detail?: AlertDetail | null;
   isLoading?: boolean;
   error?: unknown;
 } = {}) {
   const baseAlert = overrides.alert ?? alert();
-  const detail = overrides.detail ?? {
+  const detail = overrides.detail === null ? undefined : overrides.detail ?? {
     ...baseAlert,
     acknowledged_at: '2026-05-02T10:15:00Z',
     acknowledged_by: 'fleet.operator',
@@ -84,7 +103,97 @@ describe('getAlertRemediationKind', () => {
   });
 });
 
+function fieldRow(label: string): HTMLElement {
+  const term = screen.getByText(label).closest('dt');
+  if (!term?.parentElement) throw new Error('Field row was not rendered');
+  return term.parentElement;
+}
+
 describe('AlertDetailDrawer', () => {
+  it.each([
+    [false, null],
+    [true, null],
+    [false, new Error('Initial detail failure')],
+  ])('keeps unresolved lifecycle and owner unknown without writes (loading=%s)', (isLoading, error) => {
+    const { onAcknowledge, onReopen, onRetry } = renderDrawer({ detail: null, isLoading, error });
+    expect(fieldRow('Resolution state')).toHaveTextContent('Unknown');
+    expect(fieldRow('Owner')).toHaveTextContent('Unknown');
+    expect(screen.queryByText('Awaiting acknowledgement')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
+    expect(screen.getByText('Recommended response')).toBeInTheDocument();
+    expect(screen.getByText('Audit timeline')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Investigate signal' })).toBeEnabled();
+    if (!isLoading) {
+      fireEvent.click(screen.getByRole('button', { name: /Retry/ }));
+      expect(onRetry).toHaveBeenCalledOnce();
+    }
+    expect(onAcknowledge).not.toHaveBeenCalled();
+    expect(onReopen).not.toHaveBeenCalled();
+  });
+
+  it('ignores another alert detail instead of leaking its lifecycle or audit history', () => {
+    renderDrawer({ detail: { ...alert({ id: 99, title: 'Other alert', acknowledged_at: CREATED_AT, acknowledged_by: 'other.owner' }), events: [] } });
+    expect(screen.getByRole('dialog', { name: 'Battery critically low' })).toBeInTheDocument();
+    expect(screen.queryByText('other.owner')).not.toBeInTheDocument();
+    expect(fieldRow('Resolution state')).toHaveTextContent('Unknown');
+    expect(screen.queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
+  });
+
+  it('does not invent Open when a detail omits acknowledgement evidence', () => {
+    renderDrawer({ detail: { ...alert(), events: [] } });
+    expect(fieldRow('Resolution state')).toHaveTextContent('Unknown');
+    expect(screen.queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
+  });
+
+  it('permits acknowledgement only for explicit server-confirmed open lifecycle', () => {
+    const { onAcknowledge } = renderDrawer({ detail: { ...alert(), acknowledged_at: null, events: [] } });
+    expect(fieldRow('Resolution state')).toHaveTextContent('Open');
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge alert' }));
+    expect(onAcknowledge).toHaveBeenCalledWith(41);
+  });
+
+  it('blocks lifecycle writes during a retained detail refresh', () => {
+    renderDrawer({ isLoading: true });
+    expect(screen.getByText('Acknowledged by fleet.operator')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['utc', 'UTC', '2026-05-02'],
+    ['user', 'America/Los_Angeles', '2026-05-01'],
+    ['vehicle', 'Asia/Tokyo', '2026-05-02'],
+  ] as const)('uses the saved %s display zone for trigger, audit, and related-context day', (mode, tz, day) => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: { tz_display_default: mode },
+      locale: 'de-DE',
+    } as ReturnType<typeof useSettings>);
+    vi.mocked(useTimezone).mockImplementation((requestedMode) =>
+      requestedMode === 'utc' ? 'UTC' :
+      requestedMode === 'vehicle' ? 'Asia/Tokyo' : 'America/Los_Angeles',
+    );
+    const created_at = '2026-05-02T01:00:00Z';
+    const sourceAlert = alert({ created_at });
+    renderDrawer({ alert: sourceAlert });
+    expect(fieldRow('Triggered')).toHaveTextContent(
+      formatDateTime(created_at, { locale: 'de-DE', tz }),
+    );
+    expect(screen.getByRole('list', { name: 'Timeline' })).toHaveTextContent(
+      formatDateTime(CREATED_AT, { locale: 'de-DE', tz }),
+    );
+    expect(vi.mocked(useTimezone)).toHaveBeenCalledWith(mode);
+    for (const [name, path] of [
+      ['Drive history', '/drives'],
+      ['Charging sessions', '/charging'],
+      ['Visited locations', '/locations'],
+      ['Telemetry evidence', '/signals'],
+    ]) {
+      const suffix = path === '/signals' ? '&signals=BatteryLevel' : '';
+      expect(screen.getByRole('link', { name })).toHaveAttribute('href', `${path}?from=${day}&to=${day}${suffix}`);
+    }
+    expect(sourceAlert.created_at).toBe(created_at);
+  });
+
   it('shows lifecycle, owner, signal evidence, response guidance, note, and audit history', () => {
     const { onClose, onReopen } = renderDrawer();
 
@@ -123,6 +232,7 @@ describe('AlertDetailDrawer', () => {
         'The latest refresh failed. Showing the most recent cached audit trail.',
       ),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Retry/ }));
     expect(onRetry).toHaveBeenCalledTimes(1);

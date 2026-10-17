@@ -24,13 +24,13 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, AlertCircle, Activity } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Select, Caption } from '@/components/ui';
-import { EmptyState, AlertBanner } from '@/components/feedback';
+import { EmptyState, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { getErrorMessage } from '@/lib/errorMessage';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlArray } from '@/hooks/useUrlState';
@@ -53,6 +53,7 @@ import {
   buildSignalChartData,
   buildSignalStats,
 } from '../components/signalLogSummary';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PER_PAGE_OPTIONS = [
   { value: '25', label: '25' },
@@ -72,17 +73,22 @@ interface SubmittedSignalQuery {
 }
 
 export default function SignalLogViewerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('signalLog.title', 'Signal Log Viewer'));
+  usePageTitle(t('signalLog.title', 'Signal log viewer'));
   const { preferences } = useProductPreferences();
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
 
-  const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
+  const signalsQuery = useSignals(vehicleId);
+  const { data: availableSignals } = signalsQuery;
+  const catalogState = useDataState(signalsQuery);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
+  const { startInstant, endInstantExclusive } = useRangeState({
+    defaultPresetId: preferences.defaultAnalysisRange,
+  });
 
   const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
@@ -94,16 +100,11 @@ export default function SignalLogViewerPage() {
   // useDeferredValue would defer nothing.
   const [submittedQuery, setSubmittedQuery] = useState<SubmittedSignalQuery | null>(null);
 
-  const canQuery = selectedSignals.length > 0 && !!start && !!end && vehicleId > 0;
+  const canQuery = selectedSignals.length > 0 && !!startInstant && !!endInstantExclusive && vehicleId > 0;
 
-  const fromIso = useMemo(
-    () => (start ? new Date(`${start}T00:00:00`).toISOString() : ''),
-    [start],
-  );
-  const toIso = useMemo(
-    () => (end ? new Date(`${end}T23:59:59.999`).toISOString() : ''),
-    [end],
-  );
+  // The shared range owner preserves rolling windows, calendar/DST boundaries
+  // and the exclusive upper bound. Capture these instants only on submission;
+  // later header edits must not relabel or refetch the already-loaded evidence.
 
   const handleQuery = useCallback(() => {
     if (!canQuery) return;
@@ -112,16 +113,16 @@ export default function SignalLogViewerPage() {
       revision: (current?.revision ?? 0) + 1,
       vehicleId,
       signals: [...selectedSignals],
-      from: fromIso,
-      to: toIso,
+      from: startInstant,
+      to: endInstantExclusive,
       perPage,
       limit: perPage * 10,
     }));
-  }, [canQuery, fromIso, perPage, selectedSignals, toIso, vehicleId]);
+  }, [canQuery, startInstant, perPage, selectedSignals, endInstantExclusive, vehicleId]);
 
   const signalLogQuery = useSignalHistoryBatch(submittedQuery);
   const signalLogState = useDataState(signalLogQuery, { provenance: 'historical' });
-  const { data: historyResponses, isLoading, isFetching, error: dataError } = signalLogQuery;
+  const { data: historyResponses, isLoading, isFetching } = signalLogQuery;
 
   const rowsAll = useMemo<SignalLogEntry[]>(
     () =>
@@ -133,7 +134,7 @@ export default function SignalLogViewerPage() {
     [historyResponses],
   );
   const hasQueried = submittedQuery !== null;
-  const anyError = (signalsError ?? dataError) as Error | undefined;
+  const anyError = catalogState.fatalError ?? signalLogState.fatalError;
   const resultSignals = submittedQuery?.signals ?? [];
   const resultPageSize = submittedQuery?.perPage ?? perPage;
 
@@ -151,8 +152,8 @@ export default function SignalLogViewerPage() {
   }, [page, resultPageSize, rowsAll]);
 
   return (
-    <PageContainer
-      title={t('signalLog.title', 'Signal Log Viewer')}
+    <PageLayout
+      title={t('signalLog.title', 'Signal log viewer')}
       subtitle={t('signalLog.subtitle', 'Query signal history from Postgres')}
       query={hasQueried ? signalLogQuery : undefined}
       copyLink
@@ -162,6 +163,8 @@ export default function SignalLogViewerPage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
+      <StaleRefreshWarning state={catalogState} label={t('dataSources.labels.signalCatalog', 'Signal catalog')} />
+      {hasQueried && <StaleRefreshWarning state={signalLogState} label={t('signalLog.title', 'Signal log viewer')} />}
 
       {vehicleId === 0 ? (
         // no-action: vehicle picker is in the page header; no inline CTA needed.
@@ -174,18 +177,37 @@ export default function SignalLogViewerPage() {
         <>
           {/* 1 — Query cockpit: signal selector + rows + Query */}
           <FadeIn>
-            <GlassPanel className="space-y-4 p-4 sm:p-5">
+            <GlassPanel padding="auto" className="min-w-0 max-w-full space-y-4">
               <SignalSelector
                 options={availableSignals ?? []}
                 value={selectedSignals}
                 onChange={setSelectedSignals}
                 max={null}
+                loading={signalsQuery.isLoading}
               />
+
+              {/* Catalog recovery never removes draft selections or neighboring results. */}
+              {catalogState.fatalError && catalogState.retry && (
+                <Button type="button" variant="secondary" wrapLabel
+                  className="min-h-11 max-w-full md:min-h-10" onClick={catalogState.retry}>
+                  {t('error.retry', 'Retry')}
+                </Button>
+              )}
+              {catalogState.hasData && availableSignals?.length === 0 && !signalsQuery.isLoading && !catalogState.refreshError && !catalogState.isRefreshBlocked && (
+                <EmptyState
+                  title={t('common.emptyResultsForTitle', 'No {{title}} found.', {
+                    title: t('dataSources.labels.signalCatalog', 'Signal catalog'),
+                  })}
+                  message={t('common.noDataAvailable', 'No data available')}
+                  action={catalogState.retry ? { label: t('error.retry', 'Retry'), onClick: catalogState.retry } : undefined}
+                  className="py-6"
+                />
+              )}
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-wrap items-end gap-3">
                   <Select
-                    label={t('signalLog.perPage', 'Per Page')}
+                    label={t('signalLog.perPage', 'Per page')}
                     value={String(perPage)}
                     onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
                     options={PER_PAGE_OPTIONS}
@@ -193,6 +215,8 @@ export default function SignalLogViewerPage() {
                   />
                   <Button
                     variant="primary"
+                    wrapLabel
+                    className="min-h-11 max-w-full md:min-h-10"
                     icon={<Database className="h-4 w-4" aria-hidden="true" />}
                     onClick={handleQuery}
                     disabled={!canQuery}
@@ -218,7 +242,10 @@ export default function SignalLogViewerPage() {
           </FadeIn>
 
           {/* 2 — KPI band: derived counters, full-width responsive grid */}
-          <SignalLogKpiBand summary={summary} loading={isLoading} />
+          <SignalLogKpiBand summary={summary} loading={isLoading}
+            hasQueried={hasQueried} unavailable={hasQueried && signalLogState.fatalError != null}
+            retained={signalLogState.hasData && (signalLogState.isRefreshing || signalLogState.status === 'stale' || signalLogState.refreshError != null)}
+            scope={submittedQuery ? `${submittedQuery.from} → ${submittedQuery.to}` : t('telemetry.brief.notSubmitted', 'No query submitted')} />
 
           <TransportAgreementPanel
             vehicleId={submittedQuery?.vehicleId ?? 0}
@@ -229,20 +256,24 @@ export default function SignalLogViewerPage() {
 
           {/* 3 — Bento: signal chart (hero, 2fr) + value composition (1fr) */}
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-            <div className="xl:col-span-2">
+            <div className="min-w-0 max-w-full xl:col-span-2">
               <SignalChartPanel
                 selectedSignals={resultSignals}
                 data={chartData}
                 stats={chartStats}
                 loading={isLoading}
+                error={hasQueried ? signalLogState.fatalError : null}
+                onRetry={signalLogState.retry ?? undefined}
                 pointsLoaded={totalRecords}
-                title={t('signalLog.chart', 'Signal Chart')}
+                title={t('signalLog.chart', 'Signal chart')}
               />
             </div>
             <SignalLogBreakdownPanel
               summary={summary}
               hasQueried={hasQueried}
               loading={isLoading}
+              error={hasQueried ? signalLogState.fatalError : null}
+              onRetry={signalLogState.retry ?? undefined}
             />
           </section>
 
@@ -255,9 +286,11 @@ export default function SignalLogViewerPage() {
             totalRows={totalRecords}
             onPageChange={setPage}
             loading={isLoading}
+            error={hasQueried ? signalLogState.fatalError : null}
+            onRetry={signalLogState.retry ?? undefined}
           />
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

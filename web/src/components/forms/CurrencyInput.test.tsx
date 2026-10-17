@@ -44,27 +44,28 @@ function Harness({ initialMicro = null, onCommit, ...rest }: HarnessProps) {
 }
 
 describe('CurrencyInput — display & symbol', () => {
-  it('renders an input with the localized currency symbol adornment (USD)', () => {
+  it('renders the localized USD symbol exactly once in the value', () => {
     render(
       <Harness ariaLabel="Tariff" currency="USD" locale="en-US" initialMicro={1_500_000} />,
     )
     const input = screen.getByLabelText(/tariff/i) as HTMLInputElement
     expect(input).toBeInstanceOf(HTMLInputElement)
-    expect(screen.getByTestId('currency-input-symbol').textContent).toBe('$')
+    expect(input.value.match(/\$/g)).toHaveLength(1)
+    expect(screen.queryByTestId('currency-input-symbol')).not.toBeInTheDocument()
   })
 
   it('renders the € symbol for EUR / de-DE', () => {
     render(
       <Harness ariaLabel="Tariff" currency="EUR" locale="de-DE" initialMicro={1_500_000} />,
     )
-    expect(screen.getByTestId('currency-input-symbol').textContent).toBe('€')
+    expect((screen.getByLabelText(/tariff/i) as HTMLInputElement).value).toContain('€')
   })
 
   it('renders the £ symbol for GBP / en-GB', () => {
     render(
       <Harness ariaLabel="Tariff" currency="GBP" locale="en-GB" initialMicro={1_500_000} />,
     )
-    expect(screen.getByTestId('currency-input-symbol').textContent).toBe('£')
+    expect((screen.getByLabelText(/tariff/i) as HTMLInputElement).value).toContain('£')
   })
 
   it('formats canonical 1_500_000 micro as "$1.50" in en-US', () => {
@@ -108,6 +109,40 @@ describe('CurrencyInput — display & symbol', () => {
 })
 
 describe('CurrencyInput — commit on blur / Enter', () => {
+  it('does not replace precise micro storage with an untouched rounded display', () => {
+    const onCommit = vi.fn()
+    render(<Harness ariaLabel="Tariff" currency="USD" precision={2} initialMicro={123_456} onCommit={onCommit} />)
+    const input = screen.getByLabelText('Tariff')
+    fireEvent.focus(input)
+    fireEvent.blur(input)
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(input).toHaveValue('$0.12')
+  })
+
+  it('commits Enter followed by blur only once without dropping micro precision', () => {
+    const onCommit = vi.fn()
+    render(<Harness ariaLabel="Tariff" currency="USD" precision={2} onCommit={onCommit} />)
+    const input = screen.getByLabelText('Tariff')
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '0.123456' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.blur(input)
+    expect(onCommit).toHaveBeenCalledTimes(1)
+    expect(onCommit).toHaveBeenCalledWith({ valueMicro: 123_456 })
+  })
+
+  it('does not silently commit an invalid price and reports validity to the form', () => {
+    const onCommit = vi.fn()
+    const onValidityChange = vi.fn()
+    render(<Harness ariaLabel="Tariff" currency="USD" onCommit={onCommit} onValidityChange={onValidityChange} />)
+    const input = screen.getByLabelText('Tariff')
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: 'not a price' } })
+    fireEvent.blur(input)
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onValidityChange).toHaveBeenLastCalledWith(false)
+    expect(screen.getByText('Enter a valid number')).toBeInTheDocument()
+  })
   it('parses "1.50" USD and commits 1_500_000 micro on blur', () => {
     const onCommit = vi.fn()
     render(

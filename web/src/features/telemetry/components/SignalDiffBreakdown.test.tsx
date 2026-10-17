@@ -26,6 +26,8 @@ import type { ReactNode } from 'react';
 
 import { SignalDiffBreakdown, type SignalDiffBreakdownProps } from './SignalDiffBreakdown';
 import type { SignalDiffRow } from '@/api/hooks/useTelemetry';
+import { deriveDataState } from '@/api/dataState';
+import { chartTokens, gaugeTone } from '@/lib/tokens';
 
 // i18n stub: echo the English fallback so assertions read the production copy,
 // and interpolate `{{count}}` from the options bag so the pinned caption
@@ -93,6 +95,121 @@ function panelFor(headingName: string): HTMLElement {
 }
 
 describe('SignalDiffBreakdown', () => {
+  it('uses solid chart fills for categories and neutral source fills with a semantic stale warning', () => {
+    const pins = new Set(['vehicle_speed', 'battery_level']);
+    renderBreakdown({
+      rows: [
+        ...sampleRows(),
+        { name: 'battery_voltage', value_a: 350, value_b: 360, source_b: 'log', changed: true },
+        { name: 'battery_temp', value_a: 20, value_b: 21, source_b: 'stale', changed: true },
+      ],
+      pinnedSignals: pins,
+    });
+
+    // The canonical series token; jsdom serializes its hex stops to rgb().
+    expect(chartTokens.series[0]).toBe('light-dark(#385e7e, #91b4d2)');
+    for (const bar of within(panelFor(CATEGORY_TITLE)).getAllByRole('progressbar')) {
+      const fill = bar.querySelector<HTMLElement>('[data-metric-fill]');
+      expect(fill).not.toBeNull();
+      expect(fill?.style.background).toBe('light-dark(rgb(56, 94, 126), rgb(145, 180, 210))');
+    }
+
+    const sources = within(panelFor(SOURCE_TITLE));
+    for (const label of ['L1 · in-process', 'L2 · Redis', 'LOG · history', 'Stale', 'Unknown']) {
+      const bar = sources.getByRole('progressbar', { name: label });
+      const fill = bar.querySelector<HTMLElement>('[data-metric-fill]');
+      expect(fill).not.toBeNull();
+      expect(fill?.style.background).toBe(label === 'Stale' ? gaugeTone.warning : gaugeTone.neutral);
+      expect(bar).toHaveAttribute('aria-valuemax', '6');
+      expect(bar).toHaveAttribute('aria-valuenow', label === 'L1 · in-process' ? '2' : '1');
+    }
+    expect(within(panelFor(PINNED_TITLE)).getByText('2 pinned')).toBeInTheDocument();
+    expect(Array.from(pins)).toEqual(['vehicle_speed', 'battery_level']);
+  });
+
+  it('keeps all three shells unknown while diff and pin requests are paused without data', () => {
+    const paused = deriveDataState({ fetchStatus: 'paused' });
+    renderBreakdown({ rows: [], diffState: paused, pinnedState: paused });
+    for (const title of [CATEGORY_TITLE, SOURCE_TITLE, PINNED_TITLE]) {
+      expect(within(panelFor(title)).getByText('Unknown')).toBeInTheDocument();
+    }
+    for (const message of [CATEGORY_EMPTY, SOURCE_EMPTY, PINNED_EMPTY]) {
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows source-shaped skeletons for all actively loading sources', () => {
+    const initial = deriveDataState({ isFetching: true });
+    renderBreakdown({ rows: [], diffState: initial, pinnedState: initial, loading: true, pinnedLoading: true });
+    for (const title of [CATEGORY_TITLE, SOURCE_TITLE, PINNED_TITLE]) {
+      expect(panelFor(title).querySelector('[class~="bg-[var(--skeleton-bg)]"]')).not.toBeNull();
+    }
+    expect(screen.queryByText(PINNED_EMPTY)).not.toBeInTheDocument();
+  });
+
+  it('distinguishes prerequisite unknown from a successful empty diff and pin list', () => {
+    const view = renderBreakdown({
+      rows: [], unknown: true, pinnedState: deriveDataState({ data: [] }),
+    });
+    expect(within(panelFor(CATEGORY_TITLE)).getByText('Unknown')).toBeInTheDocument();
+    expect(within(panelFor(PINNED_TITLE)).getByText(PINNED_EMPTY)).toBeInTheDocument();
+    view.rerender(
+      <MemoryRouter><SignalDiffBreakdown rows={[]} pinnedSignals={new Set()}
+        diffState={deriveDataState({ data: [] })} pinnedState={deriveDataState({ data: [] })} /></MemoryRouter>,
+    );
+    expect(screen.getByText(CATEGORY_EMPTY)).toBeInTheDocument();
+    expect(screen.getByText(SOURCE_EMPTY)).toBeInTheDocument();
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+  });
+
+  it('retains rows and independent pins through refresh failure, retry and recovery', () => {
+    const retry = vi.fn();
+    const rows = sampleRows();
+    const pins = new Set(['battery_level']);
+    const view = renderBreakdown({
+      diffState: deriveDataState({ data: rows, error: new Error('diff refresh') }),
+      pinnedState: deriveDataState({ data: ['battery_level'], error: new Error('pin refresh'), refetch: retry }),
+      pinnedSignals: pins,
+    });
+    expect(within(panelFor(CATEGORY_TITLE)).getByText('2 (50%)')).toBeInTheDocument();
+    expect(within(panelFor(SOURCE_TITLE)).getByText('L1 · in-process')).toBeInTheDocument();
+    expect(within(panelFor(PINNED_TITLE)).getByText('battery_level')).toBeInTheDocument();
+    expect(within(panelFor(PINNED_TITLE)).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(within(panelFor(PINNED_TITLE)).getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    view.rerender(
+      <MemoryRouter><SignalDiffBreakdown rows={rows} pinnedSignals={pins}
+        diffState={deriveDataState({ data: rows })} pinnedState={deriveDataState({ data: ['battery_level'] })} /></MemoryRouter>,
+    );
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('battery_level')).toBeInTheDocument();
+  });
+
+  it('isolates a fatal pin failure from healthy diff panels and retries its own source', () => {
+    const retry = vi.fn();
+    renderBreakdown({ pinnedState: deriveDataState({ error: new Error('pins failed'), refetch: retry }) });
+    expect(within(panelFor(CATEGORY_TITLE)).getByText('Battery')).toBeInTheDocument();
+    expect(within(panelFor(PINNED_TITLE)).getByRole('alert')).toBeInTheDocument();
+    fireEvent.click(within(panelFor(PINNED_TITLE)).getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(PINNED_EMPTY)).not.toBeInTheDocument();
+  });
+
+  it('preserves retained payload during active and paused refreshes without claiming a failure', () => {
+    renderBreakdown({
+      loading: true, pinnedLoading: true,
+      diffState: deriveDataState({ data: sampleRows(), isFetching: true }),
+      pinnedState: deriveDataState({ data: ['battery_level'], fetchStatus: 'paused' }),
+      pinnedSignals: new Set(['battery_level']),
+    });
+    expect(within(panelFor(CATEGORY_TITLE)).getByText('Battery')).toBeInTheDocument();
+    expect(within(panelFor(SOURCE_TITLE)).getByText('L1 · in-process')).toBeInTheDocument();
+    expect(within(panelFor(PINNED_TITLE)).getByText('battery_level')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('always renders the three labelled panel shells inside a named region', () => {
     renderBreakdown({ rows: sampleRows(), pinnedSignals: new Set(['battery_level']) });
 
@@ -130,7 +247,7 @@ describe('SignalDiffBreakdown', () => {
     const panel = panelFor(SOURCE_TITLE);
 
     // l1(2) → l2(1) → unknown(1), in SOURCE_META reporting order.
-    expect(within(panel).getByText('L1 · In-process')).toBeInTheDocument();
+    expect(within(panel).getByText('L1 · in-process')).toBeInTheDocument();
     expect(within(panel).getByText('L2 · Redis')).toBeInTheDocument();
     // The row with no `source_b` is attributed to the Unknown bucket.
     expect(within(panel).getByText('Unknown')).toBeInTheDocument();
@@ -138,8 +255,8 @@ describe('SignalDiffBreakdown', () => {
     expect(within(panel).getByText('2 (50%)')).toBeInTheDocument();
 
     // Layers with zero rows never render (no LOG / STALE rows in the fixture).
-    expect(within(panel).queryByText('LOG · History')).toBeNull();
-    expect(within(panel).queryByText('STALE')).toBeNull();
+    expect(within(panel).queryByText('LOG · history')).toBeNull();
+    expect(within(panel).queryByText('Stale')).toBeNull();
   });
 
   it('lists pinned signals sorted alphabetically with a live count caption', () => {
@@ -169,11 +286,21 @@ describe('SignalDiffBreakdown', () => {
     renderBreakdown({ loading: true, rows: sampleRows() });
 
     const catPanel = panelFor(CATEGORY_TITLE);
-    expect(catPanel.querySelector('.animate-pulse')).not.toBeNull();
+    const skeletonSelector = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(catPanel.querySelector(skeletonSelector)).not.toBeNull();
+    expect(catPanel.querySelectorAll(skeletonSelector)).toHaveLength(1);
+    expect(catPanel.querySelector(skeletonSelector)).toHaveClass('w-full');
+    expect(catPanel.querySelector(skeletonSelector)).toHaveStyle({ height: '180px' });
     expect(within(catPanel).queryByText('Battery')).toBeNull();
     expect(within(catPanel).queryByText(CATEGORY_EMPTY)).toBeNull();
 
-    expect(panelFor(SOURCE_TITLE).querySelector('.animate-pulse')).not.toBeNull();
+    const sourcePanel = panelFor(SOURCE_TITLE);
+    expect(sourcePanel.querySelector(skeletonSelector)).not.toBeNull();
+    expect(sourcePanel.querySelectorAll(skeletonSelector)).toHaveLength(1);
+    expect(sourcePanel.querySelector(skeletonSelector)).toHaveClass('w-full');
+    expect(sourcePanel.querySelector(skeletonSelector)).toHaveStyle({ height: '180px' });
+    expect(within(sourcePanel).queryByText('L1 · in-process')).toBeNull();
+    expect(within(panelFor(PINNED_TITLE)).getByText(PINNED_EMPTY)).toBeInTheDocument();
   });
 
   it('surfaces a retryable error in the diff panels while keeping the pinned panel alive', () => {

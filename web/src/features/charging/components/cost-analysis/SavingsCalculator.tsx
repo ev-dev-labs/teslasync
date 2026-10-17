@@ -128,28 +128,28 @@ export function SavingsCalculator({
             <div className="grid grid-cols-2 gap-3 2xl:grid-cols-4">
               <ComparisonCard
                 label={t('costAnalysis.calculator.gasCost', 'Gas Cost (equivalent)')}
-                value={formatCurrency(gasComparison.gasCost, 2)}
+                value={formatCurrency(gasComparison.gasCost)}
                 valueClass="text-rose-300"
-                sub={`${formatCurrency(gasComparison.costPerMileGas, 3)}/${unit}`}
+                sub={`${formatCurrency(gasComparison.costPerMileGas)}/${unit}`}
               />
               <ComparisonCard
                 label={t('costAnalysis.calculator.evCost', 'EV Cost (actual)')}
-                value={formatCurrency(gasComparison.actualCost, 2)}
+                value={formatCurrency(gasComparison.actualCost)}
                 valueClass="text-cyan-300"
-                sub={`${formatCurrency(gasComparison.costPerMileEV, 3)}/${unit}`}
+                sub={`${formatCurrency(gasComparison.costPerMileEV)}/${unit}`}
               />
               <ComparisonCard
                 glow="green"
                 label={t('costAnalysis.calculator.totalSavings', 'Total Savings')}
-                value={formatCurrency(gasComparison.savings, 2)}
+                value={formatCurrency(gasComparison.savings)}
                 valueClass="text-emerald-300"
                 sub={t('costAnalysis.calculator.overPeriod', 'over selected period')}
               />
               <ComparisonCard
                 label={t('costAnalysis.calculator.monthlySavings', 'Monthly Savings')}
-                value={formatCurrency(gasComparison.monthlySavings, 2)}
+                value={formatCurrency(gasComparison.monthlySavings)}
                 valueClass="text-emerald-300"
-                sub={`~${formatCurrency(gasComparison.yearlySavings, 0)} ${t('costAnalysis.calculator.perYear', '/ year')}`}
+                sub={`~${formatCurrency(gasComparison.yearlySavings)} ${t('costAnalysis.calculator.perYear', '/ year')}`}
               />
             </div>
           ) : (

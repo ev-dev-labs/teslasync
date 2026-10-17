@@ -414,6 +414,61 @@ describe('renderShareCardSvg', () => {
     expect(svg).toContain('&lt;script&gt;&amp;&quot;&apos;');
   });
 
+  it.each(['populated', 'missing'] as const)(
+    'describes all six %s metric pairs with escaped context and no private identifiers',
+    (state) => {
+      const hostile = `<script>&"'`;
+      const escaped = '&lt;script&gt;&amp;&quot;&apos;';
+      const evidenceLines = lines.map((line, index) => ({
+        label: `${line.label} ${hostile}`,
+        value: state === 'missing' && index !== 1
+          ? `Not measured ${hostile}`
+          : `${line.value} ${hostile}`,
+        id: 'private-drive-id',
+        vin: 'private-vehicle-vin',
+        startAddress: 'Private origin',
+        endAddress: 'Private destination',
+      }));
+      const disclosure = state === 'missing'
+        ? `Missing: Distance, Energy, Regen, Longest, Top speed ${hostile}`
+        : `Returned evidence; full-range coverage is not claimed ${hostile}`;
+      const svg = renderShareCardSvg(
+        'Selected window',
+        `Observed sample ${hostile}`,
+        [...evidenceLines, { label: 'Hidden seventh', value: 'Private extra' }],
+        'midnight',
+        { disclosure, footer: `TeslaSync ${hostile}` },
+      );
+      const description = svg.match(
+        /<desc id="share-card-description">([^]*?)<\/desc>/,
+      )?.[1];
+      const expectedPairs = evidenceLines.map((line, index) =>
+        `${lines[index]?.label} ${escaped}: ${
+          state === 'missing' && index !== 1
+            ? 'Not measured'
+            : lines[index]?.value
+        } ${escaped}`,
+      );
+
+      expect(description).toBe([
+        `Observed sample ${escaped}`,
+        disclosure.replace(hostile, escaped),
+        ...expectedPairs,
+        `TeslaSync ${escaped}`,
+      ].join('. '));
+      for (const privateValue of [
+        'private-drive-id',
+        'private-vehicle-vin',
+        'Private origin',
+        'Private destination',
+        'Hidden seventh',
+        'Private extra',
+      ]) expect(svg).not.toContain(privateValue);
+      expect(description).not.toContain('<script>');
+      expect(description).not.toContain('&amp;lt;');
+    },
+  );
+
   it('wraps a long missing-data disclosure inside the fixed canvas', () => {
     const disclosure = [
       'Cap reached; full-range coverage not claimed',

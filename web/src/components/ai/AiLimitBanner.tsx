@@ -143,9 +143,9 @@ export function AiLimitBanner({
         <p>{description}</p>
         {!retryReady && (
           <p className="text-[var(--text-secondary)]">
-            {t('ai.limit.retryIn', `Try again in ${secondsLeft}s`, {
+            {t('ai.limit.retryIn', 'Try again in {{seconds}}s', {
               seconds: secondsLeft,
-              defaultValue: `Try again in ${secondsLeft}s`,
+              defaultValue: 'Try again in {{seconds}}s',
             })}
           </p>
         )}

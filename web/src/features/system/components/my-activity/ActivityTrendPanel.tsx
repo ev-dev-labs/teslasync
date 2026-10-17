@@ -21,6 +21,7 @@ import {
 } from '@/components/charts';
 import { Icons } from '@/lib/icons';
 import { chartTokens } from '@/lib/tokens';
+import { fmtInt, isFiniteNumber } from '@/lib/numberFormat';
 import type { TrendPoint } from './myActivityAnalytics';
 
 export interface ActivityTrendPanelProps {
@@ -44,9 +45,9 @@ const TOOLTIP_CURSOR = { fill: 'var(--surface-2)', opacity: 0.4 } as const;
  */
 const FALLBACK_ERROR = new Error('activity trend failed to load');
 
-/** Coerce a possibly-nullish / NaN / negative count to a finite, non-negative integer. */
-function safeCount(value: number | null | undefined): number {
-  return Number.isFinite(value) && (value as number) > 0 ? Math.trunc(value as number) : 0;
+/** Action counts are nonnegative safe integers; unknown is not a quiet day. */
+function safeCount(value: unknown): number | null {
+  return isFiniteNumber(value) && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 export function ActivityTrendPanel({
@@ -60,18 +61,21 @@ export function ActivityTrendPanel({
 }: ActivityTrendPanelProps) {
   const { t } = useTranslation();
 
-  // Sanitise once per data change so recharts never receives a NaN bar and the
-  // derived totals can power the chart's accessible name.
+  // Missing bars remain gaps, and an incomplete window cannot claim an exact total.
   const { rows, days, total } = useMemo(() => {
     const safeRows = (Array.isArray(data) ? data : []).map((point) => ({
       day: point?.day ?? '',
       label: point?.label ?? '—',
       count: safeCount(point?.count),
     }));
+    const sum = safeRows.reduce<number | null>(
+      (total, point) => total === null || point.count === null ? null : safeCount(total + point.count),
+      0,
+    );
     return {
       rows: safeRows,
       days: safeRows.length,
-      total: safeRows.reduce((sum, point) => sum + point.count, 0),
+      total: sum,
     };
   }, [data]);
 
@@ -79,7 +83,7 @@ export function ActivityTrendPanel({
     <GlassPanel className={className}>
       <div className="p-4 sm:p-5">
         <PanelTitle className="mb-3 flex items-center gap-2">
-          <Icons.analytics className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icons.analytics className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('activity.myActivity.trend.title', 'Activity over time')}
         </PanelTitle>
         <EmbeddedChart
@@ -87,7 +91,7 @@ export function ActivityTrendPanel({
           ariaLabel={t(
             'activity.myActivity.trend.aria',
             '{{total}} actions across {{days}} days',
-            { total, days },
+            { total: total === null ? '—' : fmtInt(total), days: fmtInt(days) },
           )}
           loading={isLoading}
           error={isError ? (error ?? FALLBACK_ERROR) : undefined}

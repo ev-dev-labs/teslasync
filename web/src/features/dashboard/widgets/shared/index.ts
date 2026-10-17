@@ -1,12 +1,12 @@
 export { WidgetEventFeed, type EventFeedItem } from './WidgetEventFeed';
 export { WidgetGaugeHero, type GaugeHeroConfig, type GaugeHeroStat } from './WidgetGaugeHero';
-export { WidgetStatGrid, type StatGridItem } from './WidgetStatGrid';
-export { WidgetChartSummary, type ChartSummaryStat } from './WidgetChartSummary';
+export { WidgetStatGrid, type StatGridItem, type WidgetStatGridProps } from './WidgetStatGrid';
+export { WidgetChartSummary, type ChartSummaryStat, type WidgetChartSummaryProps } from './WidgetChartSummary';
 export { WidgetDetailCard, type DetailEntry } from './WidgetDetailCard';
 export { WidgetRankedList, type RankedItem } from './WidgetRankedList';
 export { WidgetComparisonCard, type ComparisonMetric } from './WidgetComparisonCard';
-export { WidgetBigNumber } from './WidgetBigNumber';
+export { WidgetBigNumber, type WidgetBigNumberProps } from './WidgetBigNumber';
 export { WidgetMapView } from './WidgetMapView';
-export { WidgetStatusGrid, type StatusCell } from './WidgetStatusGrid';
+export { WidgetStatusGrid, type StatusCell, type WidgetStatusGridProps } from './WidgetStatusGrid';
 export { WidgetTipCards, type TipItem } from './WidgetTipCards';
 export { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './WidgetFlowDiagram';

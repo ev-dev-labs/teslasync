@@ -4,7 +4,7 @@
  * Framework-free and i18n-free on purpose: components translate the returned
  * zone keys so this module stays trivially unit-testable. The Fleet API base
  * URL Tesla resolves for an account encodes the regional datacenter zone in
- * its host (`…prd.<zone>.vn.cloud.tesla.com`); we sniff that so the UI can show
+ * its host (`fleet-api.prd.<zone>.vn.cloud.tesla.com`); we match that so the UI can show
  * a compact region badge alongside the full descriptive region string.
  */
 
@@ -32,14 +32,17 @@ export interface EndpointParts {
 }
 
 /**
- * Sniff the na/eu/cn Fleet API zone from a host (or raw URL) string. Anchors on
- * the dotted datacenter segment for precision; returns null when no recognised
- * zone is present so the UI degrades to a neutral placeholder.
+ * Recognize only the Fleet API hosts documented in docs/guide/tesla-fleet-api.md.
+ * Unknown identities remain unknown; this does not validate endpoint security.
  */
 export function regionKeyFromHost(host: string | null | undefined): RegionZoneKey | null {
   if (!host) return null
-  const dotted = host.toLowerCase().match(/\.(na|eu|cn)\./)
-  return (dotted?.[1] as RegionZoneKey | undefined) ?? null
+  switch (host.toLowerCase()) {
+    case 'fleet-api.prd.na.vn.cloud.tesla.com': return 'na'
+    case 'fleet-api.prd.eu.vn.cloud.tesla.com': return 'eu'
+    case 'fleet-api.prd.cn.vn.cloud.tesla.com': return 'cn'
+    default: return null
+  }
 }
 
 /**
@@ -52,10 +55,9 @@ export function parseEndpoint(baseUrl: string | null | undefined): EndpointParts
     const url = new URL(baseUrl)
     const host = url.host || null
     const scheme = url.protocol ? url.protocol.replace(/:$/, '') : null
-    return { host, scheme, regionKey: regionKeyFromHost(host) }
+    return { host, scheme, regionKey: regionKeyFromHost(url.hostname) }
   } catch {
-    // Not a well-formed URL — still try to sniff a zone from the raw string.
-    return { host: null, scheme: null, regionKey: regionKeyFromHost(baseUrl) }
+    return { host: null, scheme: null, regionKey: null }
   }
 }
 

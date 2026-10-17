@@ -1,0 +1,41 @@
+{
+  "pwa": {
+    "newVersion": "New version available",
+    "reloadingIn": "Reloading in {{seconds}}s...",
+    "reloadNow": "Reload now",
+    "later": "Later",
+    "offline": {
+      "title": "You're offline",
+      "banner": "Showing cached data. Operational changes stay disabled until you reconnect."
+    },
+    "update": {
+      "requiredTitle": "Update required",
+      "availableTitle": "New version available",
+      "requiredBody": "This tab is running an older app version than the server. Reload to stay in sync.",
+      "availableBody": "A newer build has been downloaded and is ready to apply.",
+      "runningLabel": "Running",
+      "serverLabel": "Server",
+      "unsavedBlocked": "Reload cancelled — finish or discard your unsaved changes first.",
+      "applying": "Reloading…"
+    },
+    "cache": {
+      "cachedAt": "Showing data cached {{relative}} ({{absolute}}).",
+      "cachedRange": "Showing cached data captured between {{oldestRelative}} ({{oldestAbsolute}}) and {{newestRelative}}.",
+      "cachedUnknown": "Showing cached data. The capture time is unknown — treat it as stale.",
+      "offlineNoData": "You're offline and nothing is cached for this view.",
+      "regionLabel": "Cached data disclosure"
+    },
+    "lowBandwidth": {
+      "on": "Always on",
+      "auto": "Automatic (follow the network)",
+      "off": "Always off",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusUser": "Active — enabled manually on this device.",
+      "statusOff": "Not active — the app is using full quality.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles."
+    }
+  }
+}

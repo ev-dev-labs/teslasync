@@ -2,6 +2,7 @@ export { Spinner } from './Spinner';
 export { EmptyState } from './EmptyState';
 export {
   ActionableEmptyState,
+  EmptyStateGuidanceDetails,
   type ActionableEmptyStateProps,
 } from './ActionableEmptyState';
 export { ErrorDisplay } from './ErrorDisplay';

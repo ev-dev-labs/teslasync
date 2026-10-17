@@ -72,7 +72,7 @@ export function Grid({
     <div
       data-layout={minItemWidth ? 'auto-fit' : 'responsive-columns'}
       className={cn(
-        'grid',
+        'grid min-w-0',
         minItemWidth
           ? AUTO_FIT_CLASSES[minItemWidth]
           : [

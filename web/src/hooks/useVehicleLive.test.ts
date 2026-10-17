@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // initial hydration source). They are only dereferenced inside the mock
 // functions, which run at test time, so plain `let` bindings are safe here.
 let capturedOnVehicleUpdate: ((data: unknown) => void) | undefined
+let capturedOnSignalChange: ((data: unknown) => void) | undefined
 let capturedEnabled: boolean | undefined
 let mockConnected = false
 let mockInitialData:
@@ -18,9 +19,11 @@ let mockInitialData:
 vi.mock('./useRealtimeEvents', () => ({
   useRealtimeEvents: (opts: {
     onVehicleUpdate?: (data: unknown) => void
+    onSignalChange?: (data: unknown) => void
     enabled?: boolean
   }) => {
     capturedOnVehicleUpdate = opts.onVehicleUpdate
+    capturedOnSignalChange = opts.onSignalChange
     capturedEnabled = opts.enabled
     return {
       connected: mockConnected,
@@ -46,7 +49,7 @@ vi.mock('./useLiveRecovery', () => ({
 }))
 
 // Import AFTER the mocks are registered so the hook binds to the fakes.
-import { useVehicleLive } from './useVehicleLive'
+import { isLiveFieldFresh, liveFieldAge, useVehicleLive } from './useVehicleLive'
 
 /** Fire a live `vehicle_update` payload through the captured SSE handler. */
 function emit(payload: unknown) {
@@ -56,12 +59,124 @@ function emit(payload: unknown) {
 }
 
 describe('useVehicleLive', () => {
-  beforeEach(() => {
+  beforeEach((): void => {
     capturedOnVehicleUpdate = undefined
+    capturedOnSignalChange = undefined
     capturedEnabled = undefined
     mockConnected = false
     mockInitialData = undefined
-    liveRecoverySpy.mockClear()
+    liveRecoverySpy.mockReset()
+  })
+
+  it('preserves source time, age and classification through hydration and unrelated messages', () => {
+    const observedAtMs = Date.now() - 120_001
+    mockInitialData = { signals: {
+      BatteryLevel: { value: 80.4, timestamp: new Date(observedAtMs).toISOString(), age_ms: 120_001, source: 'stale' },
+      ChargeLimitSoc: { value: 90, ts: new Date(observedAtMs + 120_000).toISOString(), source: 'l1', age_ms: 1 },
+      DetailedChargeState: { value: 'DetailedChargeStateCharging', ts: new Date(observedAtMs).toISOString(), source: 'stale' },
+    } }
+    const { result } = renderHook(() => useVehicleLive(1))
+    const before = result.current.state.advisorProvenance
+    expect(before.batteryLevel).toMatchObject({ observedAtMs, ageMs: 120_001, source: 'stale' })
+    expect(isLiveFieldFresh(before.batteryLevel, observedAtMs + 120_001)).toBe(false)
+    expect(isLiveFieldFresh(before.chargeLimitSoc, observedAtMs + 120_001)).toBe(true)
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 25, BatteryLevel: 80.4 } })
+    expect(result.current.state.advisorProvenance).toEqual(before)
+    expect(result.current.state.batteryLevelObservation.value).toBe(80.4)
+    expect(liveFieldAge(before.batteryLevel, before.batteryLevel!.receivedAtMs + 60_000)).toBeGreaterThanOrEqual(180_001)
+  })
+
+  it('does not invent source time for a legacy scalar or unknown envelope', () => {
+    mockInitialData = { signals: {
+      BatteryLevel: 80,
+      ChargeLimitSoc: { value: 90, source: 'l2', timestamp: '0001-01-01T00:00:00Z' },
+    } }
+    const { result } = renderHook(() => useVehicleLive(1))
+    expect(result.current.state.advisorProvenance.batteryLevel).toMatchObject({ observedAtMs: null, source: 'unknown' })
+    expect(result.current.state.advisorProvenance.chargeLimitSoc).toMatchObject({ observedAtMs: null, source: 'l2' })
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, Date.now())).toBe(false)
+  })
+
+  it('ages each field independently at the exact two-minute boundary', () => {
+    const now = Date.now()
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, signals: {
+      BatteryLevel: { value: 80, ts: new Date(now).toISOString() },
+      ChargeLimitSoc: { value: 90, ts: new Date(now - 120_001).toISOString() },
+    } })
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, now + 120_000)).toBe(true)
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, now + 120_001)).toBe(false)
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.chargeLimitSoc, now)).toBe(false)
+    emit({ vehicle_id: 1, signals: { DetailedChargeState: { value: 'DetailedChargeStateCharging', ts: new Date(now).toISOString() } } })
+    expect(result.current.state.advisorProvenance.batteryLevel?.observedAtMs).toBe(now)
+    expect(result.current.state.advisorProvenance.chargeLimitSoc?.observedAtMs).toBe(now - 120_001)
+  })
+
+  it('retains the typed signal-change source time instead of its receipt time', () => {
+    const timestamp = new Date(Date.now() - 300_000).toISOString()
+    const { result } = renderHook(() => useVehicleLive(1))
+    act(() => capturedOnSignalChange?.({ vehicle_id: 1, field: 'BatteryLevel', value: 79.5, ts: timestamp }))
+    expect(result.current.state.batteryLevelObservation.value).toBe(79.5)
+    expect(result.current.state.advisorProvenance.batteryLevel?.observedAtMs).toBe(Date.parse(timestamp))
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, Date.now())).toBe(false)
+    act(() => capturedOnSignalChange?.({ vehicle_id: 2, field: 'BatteryLevel', value: 40, ts: timestamp }))
+    expect(result.current.state.batteryLevelObservation.value).toBe(79.5)
+  })
+
+  it('does not infer advisor observations from unrelated signals', () => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 0 } })
+    for (const observation of [
+      result.current.state.batteryLevelObservation,
+      result.current.state.chargeLimitSocObservation,
+      result.current.state.isChargingObservation,
+    ]) {
+      expect(observation).toEqual({ present: false, valid: false, value: null })
+    }
+  })
+
+  it.each([null, undefined, '', '0', false, {}, NaN, Infinity, -Infinity])(
+    'marks invalid advisor inputs (%s) as observed but unusable',
+    value => {
+      const { result } = renderHook(() => useVehicleLive(1))
+      emit({ vehicle_id: 1, state: { BatteryLevel: value, ChargeLimitSoc: value, ChargeAmps: value, DetailedChargeState: value } })
+      expect(result.current.state.batteryLevelObservation).toEqual({ present: true, valid: false, value: null })
+      expect(result.current.state.chargeLimitSocObservation).toEqual({ present: true, valid: false, value: null })
+      expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: false, value: null })
+    },
+  )
+
+  it.each([0, 0.25, 79.6, 100])('preserves the exact measured percentage %s', value => {
+    mockInitialData = { signals: { BatteryLevel: { value }, ChargeLimitSoc: { value }, ChargeAmps: { value: 0 } } }
+    const { result } = renderHook(() => useVehicleLive(1))
+    expect(result.current.state.batteryLevelObservation).toEqual({ present: true, valid: true, value })
+    expect(result.current.state.chargeLimitSocObservation).toEqual({ present: true, valid: true, value })
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: false })
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 12 } })
+    expect(result.current.state.batteryLevelObservation.value).toBe(value)
+  })
+
+  it.each([-1, 100.1])('rejects out-of-range percentages %s', value => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { BatteryLevel: value, ChargeLimitSoc: value } })
+    expect(result.current.state.batteryLevelObservation.valid).toBe(false)
+    expect(result.current.state.chargeLimitSocObservation.value).toBeNull()
+  })
+
+  it.each([-16, -0.25, 0, 0.5, 1.25, 16])('accepts signed and fractional measured charge current %s', amps => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { ChargeAmps: amps } })
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: amps > 1 })
+  })
+
+  it('invalidates previously valid observations without losing independent fields', () => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { BatteryLevel: 80.4, ChargeLimitSoc: 90.2, DetailedChargeState: 'DetailedChargeStateCharging' } })
+    expect(result.current.state.isChargingObservation.value).toBe(true)
+    emit({ vehicle_id: 1, state: { BatteryLevel: null, DetailedChargeState: 'Unknown' } })
+    expect(result.current.state.batteryLevelObservation).toEqual({ present: true, valid: false, value: null })
+    expect(result.current.state.isChargingObservation.value).toBeNull()
+    expect(result.current.state.chargeLimitSocObservation.value).toBe(90.2)
   })
 
   it('arms SSE reconnect recovery for the live-signals read', () => {
@@ -181,6 +296,7 @@ describe('useVehicleLive', () => {
     const { result } = renderHook(() => useVehicleLive(1))
     emit({ vehicle_id: 1, state: { DetailedChargeState: 'DetailedChargeStateCharging' } })
     expect(result.current.state.isCharging).toBe(true)
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: true })
     // Charging finished: state no longer indicates charging and amps drop to 0.
     // Previously isCharging was sticky-true and never reset — guard against it.
     emit({
@@ -188,6 +304,7 @@ describe('useVehicleLive', () => {
       state: { DetailedChargeState: 'DetailedChargeStateComplete', ChargeAmps: 0 },
     })
     expect(result.current.state.isCharging).toBe(false)
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: false })
   })
 
   it('flags isCharging from a meaningful charge current alone', () => {
@@ -294,5 +411,150 @@ describe('useVehicleLive', () => {
     expect(result.current.state.batteryLevel).toBe(55)
     expect(result.current.state.signalCount).toBe(3)
     expect(result.current.state.lastUpdated).toBeInstanceOf(Date)
+  })
+
+  it('resets every retained field before exposing a changed vehicle scope', () => {
+    const observed: Array<{ vehicleId: number; isolation: number; lastUpdated: Date | null }> = []
+    const { result, rerender } = renderHook(({ vehicleId }) => {
+      const live = useVehicleLive(vehicleId)
+      observed.push({ vehicleId, isolation: live.state.isolationResistance, lastUpdated: live.state.lastUpdated })
+      return live
+    }, { initialProps: { vehicleId: 1 } })
+    const emptyState = { ...result.current.state }
+    mockConnected = true
+    emit({
+      vehicle_id: 1,
+      state: {
+        VehicleSpeed: 24, BatteryLevel: 80, Gear: 'D', IsolationResistance: 600,
+        VehicleName: 'First vehicle', SoftwareUpdateVersion: '2026.1',
+        DetailedChargeState: 'DetailedChargeStateCharging', Locked: true,
+        HvacPower: true, DestinationName: 'First destination', TpmsPressureFl: 260,
+      },
+    })
+    expect(result.current.state.isolationResistance).toBe(600)
+    expect(result.current.state.isCharging).toBe(true)
+
+    rerender({ vehicleId: 2 })
+    expect(result.current.state).toEqual(emptyState)
+    expect(result.current.state.lastUpdated).toBeNull()
+    expect(result.current.state.signalCount).toBe(0)
+    expect(result.current.connected).toBe(true)
+    const newScopeRenders = observed.filter(entry => entry.vehicleId === 2)
+    expect(newScopeRenders.length).toBeGreaterThan(0)
+    for (const entry of newScopeRenders) {
+      expect(entry).toEqual({ vehicleId: 2, isolation: 0, lastUpdated: null })
+    }
+    expect(liveRecoverySpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ queryKeys: [['live-signals', 2]], enabled: true }),
+    )
+
+    emit({ vehicle_id: 2, state: { BatteryLevel: 0 } })
+    expect(result.current.state).toEqual({
+      ...emptyState, batteryLevel: 0,
+      batteryLevelObservation: { present: true, valid: true, value: 0 },
+      advisorProvenance: { batteryLevel: expect.objectContaining({ observedAtMs: null, source: 'unknown' }) },
+      signalCount: 1, lastUpdated: expect.any(Date),
+    })
+  })
+
+  it('clears retained state when selection becomes null and does not rehydrate its old snapshot', () => {
+    mockInitialData = { vehicle_id: 1, signals: { IsolationResistance: { value: 750 }, VehicleName: 'First' } }
+    const { result, rerender } = renderHook(
+      ({ vehicleId }: { vehicleId: number | null }) => useVehicleLive(vehicleId ?? undefined),
+      { initialProps: { vehicleId: 1 as number | null } },
+    )
+    expect(result.current.state.isolationResistance).toBe(750)
+    const oldHandler = capturedOnVehicleUpdate
+
+    rerender({ vehicleId: null })
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.vehicleName).toBe('')
+    expect(result.current.state.lastUpdated).toBeNull()
+    expect(result.current.state.signalCount).toBe(0)
+    expect(capturedEnabled).toBe(true)
+    expect(liveRecoverySpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ queryKeys: [['live-signals', undefined]], enabled: false }),
+    )
+    act(() => oldHandler?.({ vehicle_id: 1, state: { IsolationResistance: 900 } }))
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.lastUpdated).toBeNull()
+  })
+
+  it('retains same-identity readings across rerenders and canonical recovery snapshots', () => {
+    const { result, rerender } = renderHook(
+      ({ vehicleId }) => useVehicleLive(vehicleId),
+      { initialProps: { vehicleId: 1 } },
+    )
+    emit({ vehicle_id: 1, state: { IsolationResistance: 650, VehicleName: 'Retained', Locked: false } })
+    const receivedAt = result.current.state.lastUpdated
+    rerender({ vehicleId: 1 })
+    expect(result.current.state.lastUpdated).toBe(receivedAt)
+    expect(result.current.state.isolationResistance).toBe(650)
+
+    mockInitialData = { vehicle_id: 1, signals: { BatteryLevel: { value: 0 }, PackCurrent: { value: 0 } } }
+    rerender({ vehicleId: 1 })
+    expect(result.current.state.isolationResistance).toBe(650)
+    expect(result.current.state.vehicleName).toBe('Retained')
+    expect(result.current.state.locked).toBe(false)
+    expect(result.current.state.batteryLevel).toBe(0)
+    expect(result.current.state.packCurrent).toBe(0)
+    expect(result.current.state.signalCount).toBe(2)
+    expect(result.current.connected).toBe(false)
+  })
+
+  it('rejects delayed old events and mismatched snapshots after switching vehicles', () => {
+    mockInitialData = { vehicle_id: 1, signals: { IsolationResistance: { value: 800 } } }
+    const { result, rerender } = renderHook(
+      ({ vehicleId }) => useVehicleLive(vehicleId),
+      { initialProps: { vehicleId: 1 } },
+    )
+    const oldHandler = capturedOnVehicleUpdate
+    rerender({ vehicleId: 2 })
+    act(() => oldHandler?.({ vehicle_id: 1, state: { VehicleSpeed: 99 } }))
+    emit({ vehicle_id: 1, state: { IsolationResistance: 999 } })
+    expect(result.current.state.speed).toBe(0)
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.lastUpdated).toBeNull()
+
+    mockInitialData = { vehicle_id: 2, signals: { BatteryLevel: { value: 42 } } }
+    rerender({ vehicleId: 2 })
+    expect(result.current.state.batteryLevel).toBe(42)
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.signalCount).toBe(1)
+    expect(result.current.state.lastUpdated).toBeInstanceOf(Date)
+  })
+
+  it('rejects an obsolete callback even after returning to its original vehicle', () => {
+    const { result, rerender } = renderHook(
+      ({ vehicleId }) => useVehicleLive(vehicleId),
+      { initialProps: { vehicleId: 1 } },
+    )
+    emit({ vehicle_id: 1, state: { IsolationResistance: 600 } })
+    const originalHandler = capturedOnVehicleUpdate
+    rerender({ vehicleId: 2 })
+    emit({ vehicle_id: 2, state: { VehicleName: 'Second' } })
+    rerender({ vehicleId: 1 })
+    act(() => originalHandler?.({ vehicle_id: 1, state: { IsolationResistance: 950 } }))
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.vehicleName).toBe('')
+    expect(result.current.state.lastUpdated).toBeNull()
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 0 } })
+    expect(result.current.state.speed).toBe(0)
+    expect(result.current.state.signalCount).toBe(1)
+    expect(result.current.state.lastUpdated).toBeInstanceOf(Date)
+  })
+
+  it('keeps unscoped SSE support without merging readings from different vehicle identities', () => {
+    const { result } = renderHook(() => useVehicleLive())
+    emit({ vehicle_id: 7, state: { IsolationResistance: 700, VehicleName: 'Seventh' } })
+    emit({ vehicle_id: 7, state: { VehicleSpeed: 12 } })
+    expect(result.current.state.isolationResistance).toBe(700)
+    expect(result.current.state.speed).toBe(12)
+    emit({ vehicle_id: 8, state: { BatteryLevel: 0 } })
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.vehicleName).toBe('')
+    expect(result.current.state.speed).toBe(0)
+    expect(result.current.state.batteryLevel).toBe(0)
+    expect(result.current.state.signalCount).toBe(1)
   })
 })

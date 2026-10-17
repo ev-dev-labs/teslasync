@@ -1,4 +1,5 @@
 import type { ChargingSession } from '@/api/types';
+import { chartTokens } from '@/lib/tokens';
 
 /**
  * Pure aggregation helpers for the Charging Patterns page. Kept free of React
@@ -59,28 +60,26 @@ export function buildGrid(sessions: ChargingSession[]): HeatmapModel {
   return { grid, maxCount, favDay, favHour };
 }
 
-/**
- * Heat intensity → rgba fill. The output is a data-driven value consumed by an
- * inline `style` (dynamic values are the sanctioned exception to the no-inline
- * -style rule — a static className cannot express a continuous scale).
- */
-export function heatColor(count: number, max: number): string {
-  if (count === 0 || max === 0) return 'rgba(0, 240, 255, 0.04)';
-  const ratio = count / max;
-  if (ratio < 0.25) return 'rgba(0, 240, 255, 0.15)';
-  if (ratio < 0.5) return 'rgba(16, 185, 129, 0.4)';
-  if (ratio < 0.75) return 'rgba(245, 158, 11, 0.55)';
-  return 'rgba(239, 68, 68, 0.75)';
-}
-
 /** Legend swatches (low → high), aligned with the {@link heatColor} scale. */
-export const HEAT_LEGEND: readonly string[] = [
-  'rgba(0, 240, 255, 0.04)',
-  'rgba(0, 240, 255, 0.15)',
-  'rgba(16, 185, 129, 0.4)',
-  'rgba(245, 158, 11, 0.55)',
-  'rgba(239, 68, 68, 0.75)',
-];
+export const HEAT_LEGEND: readonly string[] = [4, 15, 40, 55, 75].map(
+  (strength) => `color-mix(in srgb, ${chartTokens.series[0]} ${strength}%, transparent)`,
+);
+
+/** Data-driven density fill; unknown inputs stay distinct from measured zero. */
+export function heatColor(
+  count: number | null | undefined,
+  max: number | null | undefined,
+): string {
+  if (count == null || max == null || !Number.isFinite(count) || !Number.isFinite(max)) {
+    return 'var(--surface-2)';
+  }
+  if (count === 0 || max === 0) return HEAT_LEGEND[0];
+  const ratio = count / max;
+  if (ratio < 0.25) return HEAT_LEGEND[1];
+  if (ratio < 0.5) return HEAT_LEGEND[2];
+  if (ratio < 0.75) return HEAT_LEGEND[3];
+  return HEAT_LEGEND[4];
+}
 
 /** A named charging location with its session count. */
 export interface LocationDatum {

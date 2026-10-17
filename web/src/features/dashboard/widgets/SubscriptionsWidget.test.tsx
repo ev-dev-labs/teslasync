@@ -33,7 +33,7 @@
  * controllable via hoisted mocks. `react-i18next` echoes each `t(key, fallback)`
  * fallback so assertions read against English copy. `useDateFormat` is stubbed
  * to a deterministic `fmt:<value>` formatter (and a `formatTime` used by the
- * freshness chip). `useMotionPreference` is stubbed so `DataFreshness` renders
+ * freshness chip). `useMotionPreference` is stubbed so `FreshnessDot` renders
  * without a provider. A `<MemoryRouter>` wraps every render because the error
  * panel (`QueryError`) calls `useNavigate` and `EmptyState` can render a `<Link>`.
  * The repo does not ship `@testing-library/user-event`, so interactions use
@@ -78,7 +78,7 @@ vi.mock('@/hooks/useDateFormat', () => ({
   }),
 }));
 
-// DataFreshness reads motion preference; stub so the chip renders provider-free.
+// FreshnessDot reads motion preference; stub so the chip renders provider-free.
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: false, durationMs: 250 }),
 }));
@@ -106,6 +106,9 @@ const tt = (_key: string, fallback: string) => fallback;
 // ════════════════════════════════════════════════════════════════════════════════
 
 describe('asString', () => {
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])('keeps nonfinite value %s unknown', value => {
+    expect(asString(value)).toBeNull();
+  });
   it('returns null for null, undefined and the empty string', () => {
     expect(asString(null)).toBeNull();
     expect(asString(undefined)).toBeNull();
@@ -330,12 +333,32 @@ beforeEach(() => {
 // ── Loading & error states ────────────────────────────────────────────────────
 
 describe('SubscriptionsWidget — loading & error states', () => {
-  it('renders only a skeleton (no title or content) while loading', () => {
+  it('keeps a null vendor payload partial instead of asserting there are no subscriptions', () => {
+    setQuery({ data: makeEnvelope(null) });
+    const { container } = renderWidget(FULL);
+    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
+    expect(screen.queryByText('No subscriptions')).not.toBeInTheDocument();
+    expect(screen.getByText('This widget has no qualifying data yet.')).toBeInTheDocument();
+  });
+
+  it('retries vehicle discovery instead of the disabled subscriptions request', () => {
+    const refetchVehicles = vi.fn();
+    const refetchSubscriptions = vi.fn();
+    vehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('Vehicles unavailable'), refetch: refetchVehicles });
+    setQuery({ refetch: refetchSubscriptions });
+    renderWidget(FULL);
+    expect(subscriptionsMock).toHaveBeenCalledWith(undefined);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(refetchVehicles).toHaveBeenCalledOnce();
+    expect(refetchSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it('retains the heading and shows a skeleton instead of content while loading', () => {
     setQuery({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: /Subscriptions/i })).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: /Subscriptions/i })).toBeInTheDocument();
     expect(screen.queryByText('No subscriptions')).toBeNull();
   });
 
@@ -374,6 +397,7 @@ describe('SubscriptionsWidget — compact layout', () => {
     });
     renderWidget(COMPACT);
 
+    expect(screen.getByRole('heading', { name: 'Subscriptions', level: 3 })).toBeInTheDocument();
     // Only the future-dated subscription is active → count of 1, not 2.
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('active')).toBeInTheDocument();

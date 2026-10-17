@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Database, ExternalLink } from 'lucide-react';
-import { GlassPanel, PanelTitle, Badge, Caption, Text } from '@/components/ui';
+import { Badge, Caption, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { DateTime } from '@/components/data-display';
 import type { ServiceIntelligenceSource } from '@/api/hooks/useServiceIntelligence';
 import { PanelState } from './PanelState';
@@ -22,11 +23,8 @@ export function SourceFreshnessPanel({
 }: SourceFreshnessPanelProps) {
   const { t } = useTranslation();
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('serviceIntelligence.sources.title', 'Source freshness')}
-      </PanelTitle>
+    <LayoutCard title={t('serviceIntelligence.sources.title', 'Source freshness')}
+      actions={<Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -93,6 +91,6 @@ export function SourceFreshnessPanel({
           ))}
         </ol>
       </PanelState>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

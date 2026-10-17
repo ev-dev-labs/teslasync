@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { DriveFsdInsight } from '@/types/fsd';
 import type { DriveStats } from './types';
 import { interpretDriveDebrief } from './drivePhysicsDebrief';
+import type { DriveEnergyStats } from './energyEvidence';
 
 const stats = (overrides: Partial<DriveStats> = {}): DriveStats => ({
   maxSpd: 70,
@@ -36,6 +37,36 @@ const stats = (overrides: Partial<DriveStats> = {}): DriveStats => ({
 });
 
 describe('interpretDriveDebrief', () => {
+  it.each([
+    [undefined, 2, null],
+    [4, undefined, null],
+    [NaN, 2, null],
+    [4, Infinity, null],
+    [0, 0, null],
+    [4, 0, 0],
+    [0, 2, 1],
+    [-1, 2, 2],
+    [-2, 2, null],
+    [4, -1, -1 / 3],
+    [0.25, 0.125, 1 / 3],
+    [Number.MAX_VALUE, Number.MAX_VALUE, null],
+  ])('keeps energy %s and regen %s distinct from unknown', (energyWh, regenWh, expected) => {
+    const input: DriveEnergyStats = {
+      ...stats(),
+      energyEvidence: {
+        energyWh: energyWh ?? null, regenWh: regenWh ?? null,
+        energySource: 'observed', regenSource: 'observed', hasPower: false,
+      },
+    };
+    const debrief = interpretDriveDebrief(input, [], undefined);
+    if (expected == null) expect(debrief.regenShare).toBeNull();
+    else expect(debrief.regenShare).toBeCloseTo(expected);
+  });
+
+  it('does not infer energy from absent stats', () => {
+    expect(interpretDriveDebrief(null, [], undefined).regenShare).toBeNull();
+  });
+
   it('tells launch + regen + honest missing pads/thermal', () => {
     const debrief = interpretDriveDebrief(stats(), [{
       time: '10:01',

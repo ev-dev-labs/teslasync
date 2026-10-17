@@ -34,6 +34,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { AiFeatureId } from '@/ai/features'
 
 // Configurable i18n dictionary — empty by default so every `t(key, fb)`
@@ -251,6 +252,59 @@ describe('AIFeatureToggleList — resilience', () => {
     expect(
       screen.getByText('No AI features are available yet.'),
     ).toBeInTheDocument()
+  })
+
+  describe('AIFeatureToggleList — mobile controls', () => {
+    it('allocates mobile targets while retaining desktop sizes and wrapping labels', () => {
+      i18nState.dict['ai.settings.feature.chatbot-llm.description'] = 'Technical details. '.repeat(20)
+      renderList()
+
+      expect(screen.getByRole('searchbox', { name: 'Search AI features' }))
+        .toHaveClass('min-h-11', 'md:min-h-10')
+      const categories = screen.getByRole('group', { name: 'Feature categories' })
+      expect(categories).toHaveClass('flex-wrap')
+      for (const button of categories.querySelectorAll('button')) {
+        expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-9', 'max-w-full', 'whitespace-normal')
+      }
+      expect(screen.getByRole('button', { name: 'More detail' }))
+        .toHaveClass('h-auto', 'min-h-11', 'md:min-h-6', 'max-w-full', 'whitespace-normal')
+      expect(screen.getByRole('switch', { name: 'LLM Chatbot' }))
+        .toHaveClass('h-11', 'min-w-11', 'md:h-6')
+    })
+
+    it('keeps search, category selection, full descriptions and switches keyboard-operable', async () => {
+      const user = userEvent.setup()
+      const description = 'Technical details. '.repeat(20)
+      i18nState.dict['ai.settings.feature.chatbot-llm.description'] = description
+      const { onToggle } = renderList()
+
+      await user.tab()
+      expect(screen.getByRole('searchbox', { name: 'Search AI features' })).toHaveFocus()
+      await user.type(screen.getByRole('searchbox'), 'chat')
+      expect(screen.getAllByRole('switch')).toHaveLength(1)
+      await user.clear(screen.getByRole('searchbox'))
+      await user.tab()
+      expect(screen.getByRole('button', { name: 'All' })).toHaveFocus()
+      await user.tab()
+      await user.tab()
+      expect(screen.getByRole('button', { name: 'Chat & help' })).toHaveFocus()
+      await user.keyboard('{Enter}')
+      expect(screen.getByRole('button', { name: 'Chat & help' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getAllByRole('switch')).toHaveLength(2)
+
+      const detail = screen.getByRole('button', { name: 'More detail' })
+      detail.focus()
+      await user.keyboard('{Enter}')
+      expect(screen.getByRole('button', { name: 'Less detail' })).toHaveAttribute('aria-expanded', 'true')
+      expect(document.getElementById('ai-feature-desc-chatbot-llm')).not.toHaveClass('line-clamp-2')
+      expect(document.getElementById('ai-feature-desc-chatbot-llm')?.textContent).toBe(description)
+      await user.tab()
+      expect(screen.getByRole('switch', { name: 'LLM Chatbot' })).toHaveFocus()
+      await user.keyboard(' ')
+      expect(onToggle).toHaveBeenCalledExactlyOnceWith('chatbot-llm', true)
+      await user.keyboard('{Enter}')
+      expect(onToggle).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('degrades to all-off when values is undefined instead of throwing', () => {

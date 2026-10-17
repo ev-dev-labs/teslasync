@@ -2,7 +2,8 @@ import { Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { Text } from '@/components/ui';
 import { CarbonSourceRow } from './CarbonSourceRow';
 import type { CarbonQueryStates, CarbonSectionProps } from './types';
 
@@ -56,14 +57,10 @@ export function CarbonSourceScopeLedger({
       data-testid="carbon-source-scope"
       aria-label={t('carbon.source.aria', 'Carbon source and query scope ledger')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Database
-            className="h-4 w-4 text-[var(--text-muted)]"
-            aria-hidden="true"
-          />
-          {t('carbon.source.title', 'Source, query status, and scope ledger')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('carbon.source.title', 'Source, query status, and scope ledger')}
+        actions={<Database className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <div className="grid gap-3 lg:grid-cols-2">
           {sources.map((source) => (
             <CarbonSourceRow
@@ -103,7 +100,7 @@ export function CarbonSourceScopeLedger({
             )}
           </AlertBanner>
         ) : null}
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

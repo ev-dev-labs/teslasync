@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // SearchHit is one entity result returned by the global /search endpoint.
@@ -35,6 +36,20 @@ type SearchHit struct {
 	URL      string     `json:"url"`
 	Score    float64    `json:"score"`
 	When     *time.Time `json:"when,omitempty"`
+}
+
+// SearchCompleteness reports failed sources and reached limits, not an
+// unbounded total. Reaching a limit means more matches may exist.
+type SearchCompleteness struct {
+	FailedTypes       []string `json:"failed_types"`
+	LimitReachedTypes []string `json:"limit_reached_types"`
+	TotalLimitReached bool     `json:"total_limit_reached"`
+}
+
+type SearchResponse struct {
+	Hits         []SearchHit        `json:"hits"`
+	Query        string             `json:"query"`
+	Completeness SearchCompleteness `json:"completeness"`
 }
 
 // SearchType identifiers — kept as exported constants so the test file and
@@ -114,16 +129,21 @@ const (
 // Search handles GET /api/v1/search?q=...&types=...&limit=N.
 //
 // Returns 200 with `{ hits: [], query: "..." }` whenever the query is
-// shorter than minQueryRunes — the frontend treats this as an empty
+// shorter than minQueryRunes Unicode code points after trimming — the frontend treats this as an empty
 // state, not an error, so the palette can issue requests speculatively
 // without surfacing 4xx flickers in DevTools.
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "search.Search")
+	defer span.End()
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 
 	// Empty / too-short queries: return empty hits with a 200 so the
 	// palette can poll without churning error states.
 	if utf8.RuneCountInString(q) < minQueryRunes {
-		httpx.WriteJSON(w, http.StatusOK, map[string]any{"hits": []SearchHit{}, "query": q})
+		httpx.WriteJSON(w, http.StatusOK, SearchResponse{
+			Hits: []SearchHit{}, Query: q,
+			Completeness: SearchCompleteness{FailedTypes: []string{}, LimitReachedTypes: []string{}},
+		})
 		return
 	}
 
@@ -137,28 +157,30 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		idHint = v
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), searchTimeout)
+	ctx, cancel := context.WithTimeout(ctx, searchTimeout)
 	defer cancel()
 
-	hits := h.runSubSearches(ctx, q, idHint, perTypeLimit, requestedTypes)
+	hits, completeness := h.runSubSearches(ctx, q, idHint, perTypeLimit, requestedTypes)
 	rankAndCap(hits, maxTotalHits)
+	completeness.TotalLimitReached = len(hits) >= maxTotalHits
 	if len(hits) > maxTotalHits {
 		hits = hits[:maxTotalHits]
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"hits": hits, "query": q})
+	httpx.WriteJSON(w, http.StatusOK, SearchResponse{Hits: hits, Query: q, Completeness: completeness})
 }
 
 // runSubSearches fans out one goroutine per requested entity type and
 // collects partial successes. A failed sub-search is logged and skipped
-// — never propagated to the response — so a single broken table never
-// blanks out the entire palette.
-func (h *Handler) runSubSearches(ctx context.Context, q string, idHint int64, limit int, types map[string]struct{}) []SearchHit {
+// with its type reported in completeness metadata, so a single broken table
+// never blanks out the entire palette.
+func (h *Handler) runSubSearches(ctx context.Context, q string, idHint int64, limit int, types map[string]struct{}) ([]SearchHit, SearchCompleteness) {
 	var (
 		wg      sync.WaitGroup
 		mu      sync.Mutex
 		results []SearchHit
 	)
+	completeness := SearchCompleteness{FailedTypes: []string{}, LimitReachedTypes: []string{}}
 
 	run := func(name string, fn func(context.Context, string, int64, int) ([]SearchHit, error)) {
 		if _, ok := types[name]; !ok {
@@ -172,10 +194,16 @@ func (h *Handler) runSubSearches(ctx context.Context, q string, idHint int64, li
 				if ctx.Err() == nil {
 					log.Warn().Err(err).Str("type", name).Msg("search: sub-query failed")
 				}
+				mu.Lock()
+				completeness.FailedTypes = append(completeness.FailedTypes, name)
+				mu.Unlock()
 				return
 			}
 			mu.Lock()
 			results = append(results, res...)
+			if len(res) >= limit {
+				completeness.LimitReachedTypes = append(completeness.LimitReachedTypes, name)
+			}
 			mu.Unlock()
 		}()
 	}
@@ -191,7 +219,9 @@ func (h *Handler) runSubSearches(ctx context.Context, q string, idHint int64, li
 	run(SearchTypeTrip, h.s.SearchTrips)
 
 	wg.Wait()
-	return results
+	sort.Strings(completeness.FailedTypes)
+	sort.Strings(completeness.LimitReachedTypes)
+	return results, completeness
 }
 
 // rankAndCap sorts hits in-place by (Score DESC, When DESC, Type, Title, ID)

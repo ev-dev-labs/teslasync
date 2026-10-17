@@ -13,11 +13,12 @@
  * The centroid tests double as a regression guard: a null/NaN coordinate must
  * neither drag the centroid toward (0,0) nor poison it into a NaN center.
  */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import React from 'react';
 
 import type { TeslaChargingSession } from '@/api/hooks/useCharging';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 interface CapturedPoint {
   id: number;
@@ -105,17 +106,6 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useFormatting', () => ({
-  useFormatting: () => ({
-    formatCurrency: (amount: number, decimals = 2) => `$${amount.toFixed(decimals)}`,
-    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
-    currencySymbol: '$',
-    costPerKwh: 0.12,
-    costPerDistanceUnit: () => null,
-    estimateGasCost: () => null,
-  }),
-}));
-
 import TeslaChargingSessionsMap from '../TeslaChargingSessionsMap';
 
 const baseSession: TeslaChargingSession = {
@@ -150,6 +140,8 @@ describe('TeslaChargingSessionsMap', () => {
   beforeEach(() => {
     captured.map = null;
     captured.cluster = null;
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
   });
 
   it('renders an accessible map container with default structural props when there are no sessions', () => {
@@ -165,7 +157,7 @@ describe('TeslaChargingSessionsMap', () => {
 
     expect(captured.cluster).not.toBeNull();
     expect(captured.cluster!.points).toHaveLength(0);
-    expect(captured.cluster!.defaultColor).toBe('#22d3ee');
+    expect(captured.cluster!.defaultColor).toBe('var(--semantic-info)');
     expect(captured.cluster!.maxClusterRadius).toBe(60);
   });
 
@@ -179,6 +171,42 @@ describe('TeslaChargingSessionsMap', () => {
     expect(captured.map!.center).toEqual([20, 30]);
     expect(captured.cluster!.points).toHaveLength(2);
     expect(captured.cluster!.points.map((p) => p.id)).toEqual([1, 2]);
+  });
+
+  it('uses the restrained DOM marker role without overriding populated points or popups', () => {
+    render(<TeslaChargingSessionsMap sessions={[makeSession()]} />);
+
+    expect(captured.cluster!.defaultColor).toBe('var(--semantic-info)');
+    expect(captured.cluster!.maxClusterRadius).toBe(60);
+    expect(captured.cluster!.points).toHaveLength(1);
+    expect(captured.cluster!.points[0]).toEqual({
+      id: 1000,
+      lat: 37.7,
+      lng: -122.4,
+      popupHtml: expect.stringContaining('Supercharger SF'),
+      ariaLabel: 'Supercharger SF charging session',
+    });
+    expect(captured.cluster!.points[0].popupHtml).toContain('53.50 kWh');
+    expect(captured.cluster!.points[0].popupHtml).toContain('$12.50');
+    expect(captured.cluster!.points[0].popupHtml).toContain('<p>v3</p>');
+    expect(captured.cluster!.points[0]).not.toHaveProperty('color');
+  });
+
+  it('updates populated session points and popups while retaining shared marker paint', () => {
+    const { rerender } = render(<TeslaChargingSessionsMap sessions={[makeSession()]} />);
+    rerender(<TeslaChargingSessionsMap sessions={[
+      makeSession({ session_id: 2000, site_location_name: 'Next site', latitude: 40, longitude: -70 }),
+    ]} />);
+
+    expect(captured.map!.center).toEqual([40, -70]);
+    expect(captured.cluster!.defaultColor).toBe('var(--semantic-info)');
+    expect(captured.cluster!.points).toHaveLength(1);
+    expect(captured.cluster!.points[0]).toMatchObject({
+      id: 2000, lat: 40, lng: -70, ariaLabel: 'Next site charging session',
+    });
+    expect(captured.cluster!.points[0].popupHtml).toContain('Next site');
+    expect(captured.cluster!.points[0].popupHtml).not.toContain('Supercharger SF');
+    expect(captured.cluster!.points[0].popupHtml).not.toMatch(/box-shadow|text-shadow|drop-shadow/);
   });
 
   it('ignores null and NaN coordinates when computing the centroid and points (regression)', () => {
@@ -219,10 +247,11 @@ describe('TeslaChargingSessionsMap', () => {
     expect(point.lng).toBe(-122.4);
 
     expect(point.popupHtml).toContain('Supercharger SF');
-    expect(point.popupHtml).toContain('53.5 kWh');
+    expect(point.popupHtml).toContain('53.50 kWh');
     expect(point.popupHtml).toContain('$12.50');
     expect(point.popupHtml).toContain('v3');
-    expect(point.popupHtml).toContain('text-transform:uppercase');
+    expect(point.popupHtml).toContain('<p>v3</p>');
+    expect(point.popupHtml).not.toContain('text-transform:uppercase');
 
     expect(point.ariaLabel).toBe('Supercharger SF charging session');
   });
@@ -241,6 +270,41 @@ describe('TeslaChargingSessionsMap', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;b&gt;');
   });
+
+  it('formats each recorded currency with effective locale and precision, preserving signs and IDs', () => {
+    const sessions = [
+      makeSession({ session_id: 41, currency_code: ' eur ', total_cost: -1234.5678 }),
+      makeSession({ session_id: 42, currency_code: 'GBP', total_cost: 0 }),
+    ];
+    render(<TeslaChargingSessionsMap sessions={sessions} />);
+
+    expect(captured.cluster!.points[0].popupHtml).toContain('-€1,234.57');
+    expect(captured.cluster!.points[1].popupHtml).toContain('£0.00');
+
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(3);
+    });
+
+    expect(captured.cluster!.points.map(point => point.id)).toEqual([41, 42]);
+    expect(captured.cluster!.points[0].popupHtml).toContain('-1.234,568\u00a0€');
+    expect(captured.cluster!.points[1].popupHtml).toContain('0,000\u00a0£');
+  });
+
+  it.each([null, '', ' ', 'XXX', 'XTS', 'ZZZ', '<b>USD</b>'])(
+    'qualifies unknown currency %s without assuming the user currency',
+    currency_code => {
+      render(<TeslaChargingSessionsMap sessions={[
+        makeSession({ session_id: 55, currency_code, total_cost: -12.5 }),
+      ]} />);
+
+      const point = captured.cluster!.points[0];
+      expect(point.id).toBe(55);
+      expect(point.popupHtml).toContain('<p>-12.50 · Unknown currency</p>');
+      expect(point.popupHtml).not.toContain('$');
+      expect(point.popupHtml).not.toContain('<b>');
+    },
+  );
 
   it('falls back to "Unknown" when the session has no site name', () => {
     render(<TeslaChargingSessionsMap sessions={[makeSession({ site_location_name: '' })]} />);

@@ -1,0 +1,358 @@
+{
+  "item": "audit-page-014",
+  "page": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+  "routes": ["/admin/telemetry/coverage"],
+  "purpose": "Operator inspection of the package-derived Fleet Telemetry routing and subscription configuration snapshot, destination fan-out, orphan routing entries and per-category field evidence.",
+  "primaryGoal": "Determine which catalogue fields are routed, subscribed or orphaned, and inspect their destinations, typed columns and signal_log dual writes without confusing configuration coverage with observed vehicle telemetry.",
+  "dataSources": [
+    {
+      "name": "Fleet Telemetry coverage snapshot",
+      "hook": "useFleetTelemetryCoverage",
+      "owner": "web\\src\\api\\hooks\\useFleetTelemetry.ts",
+      "file": "web\\src\\api\\hooks\\useFleetTelemetry.ts",
+      "line": 35,
+      "endpoint": "GET /api/v1/tesla/fleet-telemetry/coverage",
+      "requestPath": "/tesla/fleet-telemetry/coverage",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3583,
+        "handlerLine": 3595,
+        "handler": "fleetTelemetryHandler.Coverage",
+        "detail": "Nested /coverage GET registration; rate limited to 60 requests per minute. Router comments at 1539-1543 identify a DB-free embedded routing map and teslaconfig.Builder configuration source."
+      },
+      "queryKey": ["fleet-telemetry", "coverage"],
+      "policy": "STALE_TIMES.SLOW; forwards TanStack Query AbortSignal; inherited retry/cache behavior was not independently inspected.",
+      "shapeEvidence": {
+        "file": "web\\src\\api\\types.ts",
+        "line": 3175,
+        "ranges": ["3175-3181", "3184-3189", "3192-3196"]
+      },
+      "payload": ["categories", "destination_totals", "orphan_fields"],
+      "normalization": "Hook lines 43-46 default missing categories/orphans to [] and destinations to {}. No vehicle/date scope or measured SI quantity is introduced.",
+      "sourceOwnership": "Backend configuration snapshot, not runtime stream health. Handler implementation, effective authentication and actual response correctness were not exercised.",
+      "derivedConsumers": [
+        "Page lines 98-126: sorted destination counts and case-insensitive category/field/destination/column search.",
+        "CoverageOperationalBrief.tsx lines 11-46: six count/percentage metrics from the same snapshot.",
+        "CoverageCategory.tsx lines 16-71: field filtering, destination counts and five-column field matrix."
+      ]
+    },
+    {
+      "name": "Presentation preferences",
+      "owner": "Existing useNumberFormatting/useOperationalMetrics hooks",
+      "file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx",
+      "line": 51,
+      "detail": "Saved numeric precision feeds the percentage metric; fmtInt renders destination counts. No new preference source, formatting engine or query was inspected or proposed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "kind": "layout",
+      "props": ["title", "subtitle", "query", "dataSources", "secondaryActions", "children"],
+      "usedBy": ["FleetTelemetryCoveragePage"],
+      "dependsOn": ["web\\src\\components\\layout\\PageContainer.tsx"],
+      "evidence": "PageLayout lines 9-14 forwards to PageContainer and full-width min-w-0 container. PageContainer lines 222 and 253 retain shared freshness and source notices."
+    },
+    {
+      "name": "LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "kind": "composite",
+      "props": ["title", "children"],
+      "usedBy": ["destination breakdown", "reading legend", "CoverageCategory"],
+      "dependsOn": ["existing Card", "existing Heading"],
+      "evidence": "LayoutCard lines 16-35 and 57-60 provide named card, wrapping heading and content surface. Reuse, not a new card implementation."
+    },
+    {
+      "name": "Masonry",
+      "owner": "web\\src\\components\\layout\\Masonry.tsx",
+      "kind": "layout",
+      "props": ["className", "children"],
+      "usedBy": ["category detail band"],
+      "dependsOn": [],
+      "evidence": "Page lines 401-407; Masonry lines 24-35 document column-major order and preserve whole direct children."
+    },
+    {
+      "name": "CoverageOperationalBrief / OperationalBrief",
+      "owner": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx",
+      "kind": "domain adapter",
+      "props": ["query"],
+      "usedBy": ["coverage summary"],
+      "dependsOn": [
+        "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts",
+        "existing useOperationalMetrics",
+        "web\\src\\api\\dataState.ts"
+      ],
+      "evidence": "Adapter lines 49-73 preserves scope, provenance, freshness and retained-data messages. Shared OperationalBrief lines 153-159 and 233-266 retain review-details action and metric drawer."
+    },
+    {
+      "name": "CoverageCategory / DataTable",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx",
+      "kind": "domain adapter",
+      "props": ["category", "filter"],
+      "usedBy": ["every returned matching category"],
+      "dependsOn": ["web\\src\\components\\ui\\DataTable.tsx", "LayoutCard"],
+      "evidence": "Category lines 98-106 set stable tableId, filtered data, complete filterData, five columns, mobile allow-list and stable field keys. Existing DataTable owns sort, filters, exports, column preferences and resizing; do not replace it."
+    },
+    {
+      "name": "EmbeddedChart / existing chart barrel",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "kind": "composite",
+      "props": ["title", "ariaLabel", "empty", "emptyMessage", "fluid", "height", "data", "dataColumns", "children"],
+      "usedBy": ["destination distribution"],
+      "dependsOn": ["existing ChartContainer", "web\\src\\lib\\tokens.ts"],
+      "evidence": "Page lines 181-239; EmbeddedChart lines 19-40 forwards children and fixed-height semantics to ChartContainer with export/fullscreen disabled by default."
+    },
+    {
+      "name": "Existing UI / feedback / motion primitives",
+      "owner": "Existing category barrels @/components/ui, @/components/feedback, @/components/motion",
+      "kind": "primitives",
+      "props": ["Button loading/disabled/icon", "Input value/onChange/aria-label", "Badge variant", "Text/Caption typography", "QueryError error/onRetry", "FadeIn delay"],
+      "usedBy": ["refresh", "filter", "legend", "orphan warning", "loading/error/empty branches"],
+      "dependsOn": ["web\\src\\components\\motion\\FadeIn.tsx"],
+      "evidence": "Page imports lines 38-76 use category barrels. FadeIn lines 23-34 uses existing reduced-motion preference; actual motion behavior unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+      "line": 113,
+      "rule": "MDC-002 / search predicate consistency",
+      "detail": "Page category selection and CoverageCategory field selection repeat field/destination/column matching but differ for category-name matches. A category-only query keeps its card while its table says no fields match.",
+      "fix": "Use one feature-owned matching policy that explicitly preserves category-name and per-field search semantics; retain both result counts and table value filters. No cross-page shared search abstraction is justified by this audit.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["CoverageCategory.tsx:17-25", "CoverageCategory.tsx:92-106"]
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx",
+      "line": 70,
+      "rule": "MDC-031 / information hierarchy",
+      "detail": "The identical provenance is supplied to OperationalBrief and repeated immediately as a caption at line 71. The shared brief consumes provenance in its narrative/details rather than ignoring it.",
+      "fix": "Review deliberate summary-versus-detail placement and avoid redundant visible explanation without deleting the package-only provenance or drawer details.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; all viewport behavior unverified",
+    "sourceStrategy": [
+      "Page lines 162-170: one-column destination/legend grid, with hero spanning two of three columns at xl.",
+      "Page lines 339-360: filter stacks below sm and becomes a row above sm.",
+      "Page lines 401-407: category masonry uses one column, two at 2xl and three at 3xl; shared implementation documents column-major order.",
+      "Badge wrappers on page lines 242 and 329 and category lines 79-88 preserve wrapping for destination/orphan identifiers."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx",
+        "line": 104,
+        "rule": "MDC-023 / MDC-043 / preserve full mobile evidence",
+        "detail": "mobileColumns only includes field, destination and subscribed; column and also_signal_log are hidden below md. No mobilePresentation or expansion body is passed. DataTable lines 724-725 apply hidden md:table-cell and lines 1385-1396 require explicit presentation/expansion for alternate detail access.",
+        "fix": "Use the existing DataTable mobilePresentation/full-details contract or preserve all five columns with horizontal scrolling. Keep tableId, loaded matching-row export scope, all value filters, sorting and column preferences.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\DataTable.tsx:235-248", "web\\src\\components\\ui\\DataTable.tsx:724-725", "web\\src\\components\\ui\\DataTable.tsx:1385-1396"]
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+        "line": 210,
+        "rule": "MDC-034 / MDC-043 / narrow chart allocation",
+        "detail": "The Y axis reserves 148px plus left/right margins, independent of the allocated card width. At 320px this leaves limited bar/label room; clipping or usability is a risk, not a measured failure.",
+        "fix": "Verify long destination identifiers and complete chart-table alternatives at narrow widths; use existing chart sizing contracts rather than removing destinations or reducing data.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "status": "source inspection only; keyboard, screen reader, focus, target size and composed contrast unverified",
+    "observed": [
+      "Localized Refresh text and decorative aria-hidden icons, page lines 140-152.",
+      "Localized routing section aria-label and chart ariaLabel/dataColumns, page lines 163 and 183-192.",
+      "Destination text-list fallback supplies counts independent of chart color, page lines 239-247.",
+      "Filter has localized aria-label, page lines 342-353.",
+      "CoverageOperationalBrief lines 59-60 uses status/alert roles for retained source and errors.",
+      "Shared LayoutCard associates heading with card via useId, lines 19 and 28-38.",
+      "Shared FadeIn source disables entrance initialization with reduced preference; no browser/OS mode was tested."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+        "line": 356,
+        "rule": "MDC-040 / search result feedback",
+        "detail": "The category result caption updates with local search but has no explicit status/live-region semantics. PageContainer's query announcement does not describe local filter changes.",
+        "fix": "Give the localized category result count a polite status role using existing typography props; avoid duplicate announcements with table value-filter feedback.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Page line 129 guards firstLoad with isLoading && !data; chart uses ChartSkeleton at 177-179 and category band uses ListSkeleton at 367-373. Summary uses DataState initial status for metric loading at adapter line 62.",
+    "success": "All six summary metrics, destination chart/text counts, static reading legend, optional orphan warning, filter and category tables use the same snapshot.",
+    "empty": "Chart empty message at 184-185; category-empty message at 381-391; filtered-empty message at 392-399; per-category no-match at category lines 92-95.",
+    "fatalError": "deriveDataState fatalError is used at page lines 94-95, chart line 177 and category lines 374-380. Explicit retry uses the existing refetch.",
+    "refreshError": "Retained data remains visible because fatalError is null with data. Summary adapter lines 56-60 exposes retained status and refresh error; PageLayout retains query/source props.",
+    "staleOffline": "DataState lines 244-250 classifies paused retained data as stale; summary status/freshness and shared notices receive the query. Offline presentation, paused initial load and recovery were not exercised.",
+    "disabled": "Refresh is disabled while fetching and has background loading state at page lines 145-147.",
+    "partialUnknown": "Single configured source; no explicit partial source is supplied. Absent query data yields null summary metrics; resolved empty catalogue retains documented 0% convention. Hook normalizes missing collections, so malformed response versus legitimate empty cannot be distinguished here.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx",
+        "line": 77,
+        "rule": "MDC-026 / MDC-045 / unknown is not zero",
+        "detail": "category.total_fields ?? 0 displays a missing runtime field as a measured zero even though its TypeScript contract requires a number. This is defensive malformed-payload behavior, not proof that the backend currently omits it.",
+        "fix": "Use an existing unknown placeholder for absent totals without changing valid zero values or the field-count calculations; preserve source total rather than silently replacing it with a new calculation.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+      "line": 228,
+      "rule": "MDC-010 / MDC-034 / mission 43 restrained color",
+      "detail": "One count series assigns a different chartTokens.series hue by destination rank. The shared palette at tokens.ts:401 has eight saturated hues, so destinations can form a rainbow and change color when ranking changes. This is a source-level decoration concern, not a screenshot finding.",
+      "fix": "Prefer a restrained existing semantic chart color for this single series; preserve count ordering, all bars, labels, legend text and user chart/theme preferences. Do not invent a palette or globally reset saved color choices.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\lib\\tokens.ts:383-401"]
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+      "line": 217,
+      "rule": "MDC-010 / MDC-012 / theme-aware hover treatment",
+      "detail": "Tooltip cursor uses literal white rgba(255,255,255,0.04), not a theme-aware surface token. It is a low-opacity hover overlay, not opaque pure-white body text; effective contrast or visual noise was not measured.",
+      "fix": "Use the current neutral chart/surface treatment for hover without changing tooltip content or counts.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+      "line": 90,
+      "rule": "MDC-046 / test override isolation",
+      "detail": "The live query always mounts before testHookOverride is selected at line 91. An override replaces presentation but does not disable the live query subscription/request. Existing behavior is source-confirmed; a network request was not observed.",
+      "fix": "If retaining this testing seam, isolate query orchestration from the injected presentation result using the existing architecture and unchanged production key, cancellation and policy. Do not assume the override guarantees a network-free test.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "rationale": "Preserve full mobile field evidence and reconcile category search before presentation polish. No runtime outage, security defect or mounted accessibility acceptance was established.",
+    "order": ["mobile full-detail access", "search consistency and result announcement", "unknown-total handling", "restrained chart/hover treatment", "test seam isolation"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "detail": "The page already uses existing layout, OperationalBrief, DataTable, chart frame, source-state and typography owners. Duplicate local search logic is reported above, not evidence for a new shared library. Existing DataTable props can address the mobile gap without shared source edits.",
+    "scopeLimit": "Only direct page-specific dependencies were inspected; no app-wide duplicate-component or consumer inventory was attempted."
+  },
+  "preservation": {
+    "sourceHash": "75ABD06AC57B9062345645A0479F9DC2021F0AE3744E572BEA3273278FCB9F58",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 413,
+    "extractedComponentLineCounts": {
+      "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx": 113,
+      "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx": 73
+    },
+    "pagePlusInspectedDomainComponentsLineCount": 599,
+    "sectionCount": 5,
+    "sectionCountingMethod": "Five numbered functional bands in current page source; primary bento contains two separate cards. Category card count is response-dependent.",
+    "sections": [
+      {"name": "Coverage summary", "count": 1, "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx", "line": 155, "preserve": "Six raw-derived metrics, precision, descriptions, denominator, source status, freshness, provenance and review-details drawer."},
+      {"name": "Destination breakdown and reading legend", "count": 2, "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx", "line": 160, "preserve": "All destination bars and counts, responsive height, text fallback, three explanatory legend items, and dual-write fan-out explanation."},
+      {"name": "Orphan-fields drift warning", "count": 1, "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx", "line": 300, "preserve": "Conditional presence when orphan_fields is nonempty, every orphan identifier and complete deployment-drift explanation. Absence is not an omitted feature."},
+      {"name": "Filter toolbar and category result count", "count": 1, "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx", "line": 337, "preserve": "Controlled case-insensitive trimmed search, category/field/destination/column matching and shown/total count."},
+      {"name": "Per-category evidence detail", "count": "one per filtered category", "file": "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx", "line": 366, "preserve": "Category title, source total, sorted destination counts and all field/destination/column/dual-write/subscribed cells; loading/error/empty/no-match branches."}
+    ],
+    "sourceComponentCounts": {
+      "GlassPanelInPage": 2,
+      "LayoutCardInPage": 2,
+      "LayoutCardInCategoryAdapter": 1,
+      "EmbeddedChartInPage": 1,
+      "literalChartContainerInPage": 0,
+      "DataTableInCategoryAdapter": 1,
+      "OperationalBriefInAdapter": 1
+    },
+    "actions": [
+      "Refresh and every fatal-error Retry invoke the original refetch; fetching disables Refresh.",
+      "Local text search and clearing it restore original categories; per-table value filters remain independent.",
+      "Existing DataTable sorting for field/destination/column/subscribed, value filters, column persistence/resizing/reordering and matching-loaded-row CSV/JSON exports remain owned by DataTable.",
+      "Stable table IDs coverage:fields:${category.category}, stable row keys ${category.category}:${row.field}, and existing data-testid identities must survive.",
+      "OperationalBrief Review details opens existing shared metric/narrative drawer and retains all source explanations.",
+      "Do not add subscribe, configuration-write, vehicle/date selectors, chart fullscreen or chart export actions: these are not page capabilities in this source."
+    ],
+    "dataBehavior": [
+      "One package configuration snapshot; no per-vehicle last-payload timestamp or fields-seen-in-range claim.",
+      "Destination totals can exceed unique routed-field count because dual writes include both primary destination and signal_log.",
+      "Counts use locale formatting; subscription percentage uses saved precision. Unknown snapshot is null, resolved empty catalogue retains documented zero-percent convention.",
+      "Unfiltered summary and destination/orphan evidence remain global to the snapshot when category/field search changes.",
+      "Keep source arrays/order, derived descending destination counts, nullable column dash, dual-write dash and subscribed yes/no meanings.",
+      "Retained successful snapshot stays mounted during background fetch/error/paused states; fatal failures alone replace source content.",
+      "No raw physical SI value is converted or modified; no new wire/cache shape, backend endpoint or query policy is authorized."
+    ]
+  },
+  "evidenceLimits": {
+    "auditType": "atomic Phase0 source-only",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified at every requested width",
+    "routeMount": "Assigned route recorded exactly; frontend routing implementation and actual mounted reachability were not inspected.",
+    "backend": "Only matching router block/comments read; handler/runtime configuration/authentication and actual payloads unverified.",
+    "checks": [
+      {
+        "command": "PowerShell Get-FileHash -Algorithm SHA256 and Get-Content line counts on the assigned page and two inspected domain adapters",
+        "exitCode": 0,
+        "output": "Page SHA256=75ABD06AC57B9062345645A0479F9DC2021F0AE3744E572BEA3273278FCB9F58; lines=413; CoverageCategory=113; CoverageOperationalBrief=73."
+      },
+      {
+        "command": "PowerShell scoped regex counts on FleetTelemetryCoveragePage.tsx",
+        "exitCode": 0,
+        "output": "staticInlineStyle=0; directLibraryImport=0; legacyApiImport=0; neon=0; glow=0; fixedWhite=1. Initial case-insensitive rawControls=2 counted component names; corrected case-sensitive raw-control count=0.",
+        "limit": "Regex source counts are not a full syntax-aware violations audit; white count is the chart hover overlay, not opaque white text."
+      }
+    ],
+    "notRun": [
+      "audit.sh: inspected only; script unconditionally runs project TypeScript, outside this atomic source-only assignment.",
+      "TypeScript, lint, build, tests, browser automation, screenshots and production requests.",
+      "Git commands, repository-wide inventories, runtime/visual acceptance and historical line-count parity."
+    ],
+    "writeScope": ["docs\\frontend-audits\\audit-page-014.json", ".agent-status\\audit-page-014.txt"],
+    "assumptions": [
+      "Current source is the preservation baseline; no historical source was used.",
+      "Mission application-wide inspection belongs to the aggregate audit/foundations owner, not this atomic page worker.",
+      "No new shared component is justified from one page; reuse existing DataTable/chart/layout/stat owners and report integration concerns."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts",
+    "web\\src\\api\\hooks\\useFleetTelemetry.ts",
+    "web\\src\\api\\types.ts",
+    "internal\\api\\router.go",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\Masonry.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx"
+  ]
+}

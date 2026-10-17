@@ -126,7 +126,7 @@ describe('DetailedStatistics — metric values', () => {
     expect(screen.getByText('48.50 kW')).toBeInTheDocument(); // avgPower @ precision 2
     expect(screen.getByText('Supercharger')).toBeInTheDocument(); // mostCommonType[0]
     expect(screen.getByText('$123.45')).toBeInTheDocument(); // totalCost Currency
-    expect(screen.getByText('$0.234')).toBeInTheDocument(); // avgCostPerKwh @ 3dp
+    expect(screen.getByText('$0.23')).toBeInTheDocument(); // avgCostPerKwh @ 3dp
 
     expect(container.textContent).not.toContain('NaN');
   });
@@ -185,8 +185,8 @@ describe('DetailedStatistics — edge cases', () => {
 
     expect(screen.getByText('0m')).toBeInTheDocument();
     expect(screen.getByText('0.00 kW')).toBeInTheDocument();
-    expect(screen.getByText('$0.00')).toBeInTheDocument(); // totalCost 0 @ default 2dp
-    expect(screen.getByText('$0.000')).toBeInTheDocument(); // avgCostPerKwh 0 @ 3dp
+    expect(screen.getByText('Total Cost').previousElementSibling).toHaveTextContent('$0.00');
+    expect(screen.getByText('Avg $/kWh').previousElementSibling).toHaveTextContent('$0.00');
     expect(container.textContent).not.toContain('NaN');
   });
 

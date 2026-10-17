@@ -1,0 +1,1049 @@
+{
+  "item": "phase6-qa-charging-tesla-charging-history",
+  "status": "DONE",
+  "result": "source-only QA artifact complete; confirmed findings and conditional candidates; NOT application acceptance",
+  "startedUTC": "2026-10-14T00:48:01.149Z",
+  "reportedUTC": "2026-10-14T01:03:02.473546+00:00",
+  "returnDeadlineUTC": "2026-10-14T01:05:28Z",
+  "hardDeadlineUTC": "2026-10-14T01:10:28Z",
+  "page": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+  "routes": [
+    "/tesla-charging-history"
+  ],
+  "routeEvidence": [
+    "web/src/App.tsx:59,810",
+    "web/src/lib/routeLoaders.ts:19",
+    "web/src/lib/routeRegistry.ts:248",
+    "web/src/lib/workspaceScope.ts:70,130,162-166"
+  ],
+  "exactItem": {
+    "queueFile": "migration-queue.md",
+    "line": 375,
+    "status": "[~]",
+    "attempt": 1,
+    "actor": "20c99475-32c7-4711-bfc0-a7d9b84f9271",
+    "dependsOn": "phase5-page-charging-tesla-charging-history",
+    "acceptedSourceCommit": "5eb945fb59392fc709c127f50a40ec4101f88bd4",
+    "historyLine": 1839,
+    "commitEvidence": "Queue receipt only; no Git command or fresh commit verification",
+    "initialQueueLine": 360,
+    "initialHistoryLine": 1824,
+    "queueCheckUTC": "2026-10-14T01:03:02.473515+00:00"
+  },
+  "existingReportNoChangeNoDuplicateCheck": {
+    "reportExisted": false,
+    "logExisted": false,
+    "checkedBeforeWrites": true,
+    "sourceChangeNeeded": "No source writes are authorized; findings go to narrow parent followups. Existing Phase5 acceptance is not reopened.",
+    "historicalReport": "docs/frontend-audits/audit-page-089.json",
+    "historicalReportUse": "Preservation and root cross-reference only; no rewrite or redispatch",
+    "closedPhases": "0-5 preserved; Phase6 unfinished; Phase7 NOTRUN"
+  },
+  "currentPins": [
+    {
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "sha256": "1f477b4487fd462abc72ebbdfaad94c3d99be424ab4863166f9d39e2646664a2",
+      "lineCount": 660,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/features/charging/components/SitePriceRadar.tsx",
+      "sha256": "97328036b594bd0d515bc2e646a56faa8cff832db8b776dbe56d7dbff1175685",
+      "lineCount": 83,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+      "lineCount": 73,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/api/hooks/useCharging.ts",
+      "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+      "lineCount": 643,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/hooks/useVehicleVinFilter.ts",
+      "sha256": "a7810eef50ada532b72536f378499ac1f307eae2dc79935f1d3893b6a3e299b5",
+      "lineCount": 84,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lineCount": 174,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lineCount": 1898,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "lineCount": 694,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lineCount": 65,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "lineCount": 106,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lineCount": 148,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lineCount": 462,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/lib/currencyFormat.ts",
+      "sha256": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "lineCount": 271,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lineCount": 458,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/api/offlineCache.ts",
+      "sha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "lineCount": 185,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/lib/operationalMode.ts",
+      "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "lineCount": 89,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lineCount": 17,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lineCount": 259,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lineCount": 1707,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "lineCount": 165,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "lineCount": 93,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lineCount": 919,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "lineCount": 127,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "lineCount": 289,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lineCount": 5363,
+      "scope": "whole-file fingerprint; only cited/read ranges semantically reviewed"
+    }
+  ],
+  "confirmedIssueCount": 12,
+  "issues": [
+    {
+      "id": "TH01",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 69,
+      "rule": "unknown-as-zero",
+      "confidence": "high-source",
+      "severity": "high",
+      "detail": "Monthly and site spend substitute 0 for nullable total_due (69,89); an entirely unpriced month/site becomes a numeric zero. Partial duration sums missing/invalid durations as 0 (147) without missing-count context. Numeric sorts also equate missing energy/cost with recorded zero (317,320). Row-level null displays are correctly distinct.",
+      "fix": "Preserve recorded zero and signed known amounts; keep absent facts unknown and expose recorded subtotal/missing counts for partial aggregates. Use a deliberate missing-value sort order. Do not invent complete totals.",
+      "evidence": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:69,89,147,317,320,393",
+        "web/src/api/hooks/useCharging.ts:172-175"
+      ],
+      "priorAuditRelationship": "Carry forward audit-page-089 unknown-evidence root; refreshed current citations, not a Phase0 rerun.",
+      "runtimeReproduced": false,
+      "owner": "page/direct-part"
+    },
+    {
+      "id": "TH02",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 89,
+      "rule": "currency-denomination",
+      "confidence": "high-source",
+      "severity": "high",
+      "detail": "Local month/site sums discard currency_code and are formatted with the saved symbol, without FX conversion. For missing row currency, currencyCodeFromSymbol guesses an ISO code from a preference (105,234). Thus source denomination can be relabeled or heterogeneous bills combined. This is a frontend mechanism, not a claim that real history contains mixed currencies.",
+      "fix": "Keep per-currency/unknown-denomination evidence and avoid guessed FX or ISO identity. Reuse existing currency formatting with established source codes; retain all rows and signed amounts. Server summary/ranking normalization requires separate evidence.",
+      "evidence": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:61-73,84-96,105,228-234,499,532",
+        "web/src/hooks/useFormatting.ts:54-56",
+        "web/src/lib/currencyFormat.ts:153-194"
+      ],
+      "priorAuditRelationship": "Existing audit-page-089 local currency root, now source-confirmed formatter boundary; server normalization stays candidate.",
+      "runtimeReproduced": false,
+      "owner": "integration"
+    },
+    {
+      "id": "TH03",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 608,
+      "rule": "export-source-evidence-loss",
+      "confidence": "high-source",
+      "severity": "high",
+      "detail": "The table exportRow provides currency and pricing_type, but DataTable serializes only visible column keys; neither is a column, so standard CSV/JSON loses denomination/pricing metadata while exporting raw cost/rate. Dedicated selected CSV includes them, but replaces commas/quotes/newlines in the location value with spaces (354), irreversibly altering source text despite later CSV escaping.",
+      "fix": "Preserve both export actions/scopes and source values; provide an explicit export schema/mapping that includes denomination/pricing metadata, and quote CSV without altering location text. Prefer the existing controller only with exact schema parity.",
+      "evidence": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:176-276,345-365,608-617",
+        "web/src/components/ui/DataTable.tsx:891-918"
+      ],
+      "priorAuditRelationship": "Refines audit-page-089 export/schema divergence; one preservation root with two concrete serializer effects, not duplicate export tasks.",
+      "runtimeReproduced": false,
+      "owner": "page/direct-part"
+    },
+    {
+      "id": "TH04",
+      "file": "web/src/features/charging/components/SitePriceRadar.tsx",
+      "line": 35,
+      "rule": "independent-source-trust",
+      "confidence": "high-source",
+      "severity": "high",
+      "detail": "Price Radar uses isError to replace its rows even when the independent ranking query retains data. It has no retained-refresh warning or paused/unavailable distinction. The historical source correctly uses fatalError and retains its own sections, so these sources have inconsistent trust handling.",
+      "fix": "Adapt the existing ranking query through useDataState and existing retained/paused notices. Replace only fatal no-data content and keep its independent retry and neighbors.",
+      "evidence": [
+        "web/src/features/charging/components/SitePriceRadar.tsx:21,33-42,44-79",
+        "web/src/api/dataState.ts:234-255",
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:121-122,431-435"
+      ],
+      "priorAuditRelationship": "Exact remaining Price Radar trust root already described in audit-page-089; no separate global trust engine.",
+      "runtimeReproduced": false,
+      "owner": "page/direct-part"
+    },
+    {
+      "id": "TH05",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 218,
+      "rule": "missing-server-read-bounds",
+      "confidence": "high-source",
+      "severity": "high",
+      "detail": "History and ranking read APIs accept VIN/enabled only; their query keys and URLs omit both workspace instants. Page filtering affects only returned history rows, while Price Radar is unbounded and the server summary stays lifetime. Precise local exclusive bounds and the KPI scope explanation are present, but they do not establish complete bounded server results.",
+      "fix": "Continue the existing G090/G094 integration requirement: first establish backend supported names, exclusive bound semantics, ordering and completeness. Then separately lease typed hook/caller integration if needed. Preserve distinct lifetime summary and loaded-row scopes; never guess endpoint parameters or totals.",
+      "evidence": [
+        "web/src/api/hooks/useCharging.ts:218-226,255-262",
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:115,127-142,455,543",
+        "docs/frontend-inventory.md:445,449"
+      ],
+      "priorAuditRelationship": "Existing inventory G090/G094 requirement; no fresh global API proposal and no alleged real-data truncation.",
+      "runtimeReproduced": false,
+      "owner": "integration"
+    },
+    {
+      "id": "TH06",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 242,
+      "rule": "live-only-mutation",
+      "confidence": "high-source",
+      "severity": "high",
+      "detail": "History refresh POST omits requiresLiveMode. request() defaults that flag false and operationalMode skips refusal when it is false; this path is not covered by offline unsafe patterns. The page checks history fetch pause/pending, not as_of mode. In an online historical/as_of view the source path has no live-only request guard. No POST was run.",
+      "fix": "Opt this exact mutation into the existing live-mode request guard and align page disabled/explanatory behavior with the existing operational-mode owner. Preserve manual sync, optional VIN/bounds, real outcomes and success-only invalidation; no offline queue.",
+      "evidence": [
+        "web/src/api/hooks/useCharging.ts:230-250",
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:170-172,416-420",
+        "web/src/api/client.ts:348-372",
+        "web/src/lib/operationalMode.ts:66-80",
+        "web/src/api/offlineCache.ts:50-74"
+      ],
+      "priorAuditRelationship": "New exact guard manifestation; advanced causal live-guard work has different source claims and does not cover useCharging.",
+      "runtimeReproduced": false,
+      "owner": "integration"
+    },
+    {
+      "id": "TH07",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 56,
+      "rule": "hardcoded-string",
+      "confidence": "high-source",
+      "severity": "medium",
+      "detail": "formatDurationMinutes emits literal h/m suffixes with unlocalized numeric interpolation at 56-57. It is used in table cells, mobile values and the duration KPI. One localization root, two literal template sites; these are authored display units, not backend identifiers.",
+      "fix": "Reuse existing localized duration/number formatting while preserving positive-duration rounding and hour/minute information. Request only proven missing canonical copy under a separate catalog lease, if needed.",
+      "evidence": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:52-57,207,284,394"
+      ],
+      "priorAuditRelationship": "Exact existing audit-page-089 duration localization root; canonical catalog presence was not inspected.",
+      "runtimeReproduced": false,
+      "owner": "page/direct-part"
+    },
+    {
+      "id": "TH08",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 182,
+      "rule": "date-display-preferences",
+      "confidence": "high-source",
+      "severity": "medium",
+      "detail": "Table dates, mobile dates, selection labels and Last synced call the pure formatDateTime without opts, selecting browser locale/timezone rather than saved settings. Price Radar renders last_visit as the raw source string. Existing useDateFormat already binds saved locale and timezone; no such binding reaches these displays.",
+      "fix": "Adopt the existing preference-bound formatter for displayed instants and source date labels, preserving UTC export timestamps and existing range semantics. Do not silently redefine monthly bucket timezone or invent 12/24h support beyond the formatter API.",
+      "evidence": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:36,179-182,283,442,628",
+        "web/src/features/charging/components/SitePriceRadar.tsx:50-54",
+        "web/src/lib/dateFormat.ts:43-63",
+        "web/src/hooks/useDateFormat.ts:75-96"
+      ],
+      "priorAuditRelationship": "Newly traced current display boundary; advanced evidence-date item queue:334 owns different files and is not an exact duplicate.",
+      "runtimeReproduced": false,
+      "owner": "integration"
+    },
+    {
+      "id": "TH09",
+      "file": "web/src/features/charging/components/SitePriceRadar.tsx",
+      "line": 29,
+      "rule": "icon-boundary",
+      "confidence": "high-source",
+      "severity": "medium",
+      "detail": "Price Radar renders Lucide BadgePercent directly at 29 and 40 rather than through the existing Icon owner. Its title glyph also uses fixed cyan-300 instead of the restrained role. Named route-local Lucide imports are acceptable; the rendered boundary is the issue. No contrast failure is claimed.",
+      "fix": "Render these same glyphs through existing Icon with semantic sizes and neutral/appropriate role styling; preserve title, empty state and meaning. No new icon family or shared component.",
+      "evidence": [
+        "web/src/features/charging/components/SitePriceRadar.tsx:2,29,40",
+        "docs/frontend-design-contract.md:237-253"
+      ],
+      "priorAuditRelationship": "Remaining direct-part presentation root; page glyphs and single solid chart hue are already adopted.",
+      "runtimeReproduced": false,
+      "owner": "page/direct-part"
+    },
+    {
+      "id": "TH10",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 558,
+      "rule": "filtered-empty-state",
+      "confidence": "high-source",
+      "severity": "medium",
+      "detail": "The sessions panel uses entries.length===0 after range filtering, but its hasData message says no Tesla history yet and asks to import. With existing allEntries outside the chosen range this describes no records instead of no matches in the window. The separate search-no-match message is correct.",
+      "fix": "Distinguish authoritative lifetime-empty, range-empty, search-empty and unavailable; keep the sessions shell visible and expose an appropriate scope recovery action without forcing a sync.",
+      "evidence": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:126,133-142,555-558,651-654"
+      ],
+      "priorAuditRelationship": "New exact range-empty manifestation; no new generic empty-state component.",
+      "runtimeReproduced": false,
+      "owner": "page/direct-part"
+    },
+    {
+      "id": "TH11",
+      "file": "web/src/features/charging/components/SitePriceRadar.tsx",
+      "line": 74,
+      "rule": "displayed-subset-superlative",
+      "confidence": "high-source",
+      "severity": "medium",
+      "detail": "Ranking rows are sliced to the first eight (23). The spread then compares first and last of that slice but labels the last as priciest without saying displayed subset. For a cheapest-first source with more than eight sites, that is not the priciest source site. Completeness of any real response is untested.",
+      "fix": "Keep the eight-row presentation; calculate an all-source comparison only if its source scope is established, or label the spread explicitly as among displayed sites. Retain unpriced counts and source ordering.",
+      "evidence": [
+        "web/src/features/charging/components/SitePriceRadar.tsx:23,73-76",
+        "web/src/api/hooks/useCharging.ts:254"
+      ],
+      "priorAuditRelationship": "Prior audit records spread within eight, not corrected unqualified wording; one exact domain-copy/calculation need.",
+      "runtimeReproduced": false,
+      "owner": "page/direct-part"
+    },
+    {
+      "id": "TH12",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 108,
+      "rule": "vehicle-prerequisite-trust",
+      "confidence": "high-source",
+      "severity": "high",
+      "detail": "Only vehicle isLoading is consumed. An initial fleet-query failure finishes loading but leaves vehicle/VIN unresolved; history and radar still enable, and undefined VIN means fleet-wide request. A persisted or URL vehicle selection can therefore become an implicit fleet request without a vehicle-source error/retry. Explicit vin=* fleet selection is valid and must remain separate.",
+      "fix": "Carry vehicle query trust and explicit fleet-versus-unresolved scope into enablement and visible prerequisite feedback. Preserve valid VIN bookmark promotion, deliberate fleet mode and retained usable vehicle scope; do not broaden on prerequisite failure.",
+      "evidence": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:108-115,170-172,543",
+        "web/src/hooks/useSelectedVehicle.ts:71-76,157-160",
+        "web/src/hooks/useVehicleVinFilter.ts:58-65,79",
+        "web/src/api/hooks/useCharging.ts:220-225,257-262"
+      ],
+      "priorAuditRelationship": "New prerequisite failure mechanism at existing VIN owner; this is not authorization/privacy bypass proof.",
+      "runtimeReproduced": false,
+      "owner": "integration"
+    }
+  ],
+  "candidateCount": 7,
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 218,
+      "rule": "full-range-completeness",
+      "confidence": "unconfirmed-backend",
+      "detail": "No limit/offset/total/exhaustion contract is available in this hook. Whether entries contain all local records, summary normalizes currency, or ranking ordering is guaranteed requires backend evidence; router wiring alone proves none of these. No real history accessed."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 376,
+      "rule": "source-sync-freshness",
+      "confidence": "medium-source-unconfirmed-semantics",
+      "detail": "Last synced comes from first range-filtered entry, so the label can change/disappear with the window. No source-global timestamp/ordering/fetched_at semantics were established. Keep row metadata; do not promote it to global freshness without integration evidence."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 528,
+      "rule": "signed-cost-accessible-bar",
+      "confidence": "conditional-source",
+      "detail": "Signed known bills survive arithmetic/currency text/export, but MetricBar.tsx:53-62 clamps negative numeric/ARIA progress to zero. If valid credits reach a ranked site, visible negative amount and aria-valuenow=0 conflict. Reachability/domain credit policy and composed assistive output NOTRUN; preserve physical sign, do not clamp source money."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 274,
+      "rule": "native-download-base",
+      "confidence": "conditional-host",
+      "detail": "Invoice href is same-origin /api/v1 and bypasses apiUrl base/demo routing (client.ts:88-92). Encoding and new-tab protections are present; remote/native/download authentication behavior NOTRUN. Not a double-prefix request violation."
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 248,
+      "rule": "pricing-unit-meaning",
+      "confidence": "unconfirmed-integration",
+      "detail": "rate_base is displayed with pricing_type or kWh, but source currency/unit/pricing denominator guarantees were not verified. Wh energy stays raw on hook/cache/export and converts only at display; no guessed rate-unit conversion is authorized."
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 64,
+      "rule": "month-timezone-palette-preference",
+      "confidence": "conditional-source",
+      "detail": "Month buckets use browser getFullYear/getMonth and YYYY-MM labels; chart fill is chartTokens.series[0]. Intended bucket timezone and effective saved chart preference behavior require the existing chart/range owners, not a local palette or silently rebucketed totals."
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/charging/components/SitePriceRadar.tsx",
+      "line": 46,
+      "rule": "native-mobile-a11y",
+      "confidence": "NOTRUN",
+      "detail": "Price Radar truncates long labels and keeps price shrink-0; actual overflow, full visual text reachability, focus, RTL, 200% text, composed contrast, forced colors, touch targets and screen-reader output are unmeasured. Mobile adapter source includes all-column invoice details; no device acceptance inferred."
+    }
+  ],
+  "counts": {
+    "countingUnit": "Deduplicated source finding roots, not literal sites or failed tests; conditional candidates excluded",
+    "byRule": {
+      "unknown-as-zero": 1,
+      "currency-denomination": 1,
+      "export-source-evidence-loss": 1,
+      "independent-source-trust": 1,
+      "missing-server-read-bounds": 1,
+      "live-only-mutation": 1,
+      "hardcoded-string": 1,
+      "date-display-preferences": 1,
+      "icon-boundary": 1,
+      "filtered-empty-state": 1,
+      "displayed-subset-superlative": 1,
+      "vehicle-prerequisite-trust": 1
+    },
+    "byFile": {
+      "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx": 7,
+      "web/src/features/charging/components/SitePriceRadar.tsx": 3,
+      "web/src/api/hooks/useCharging.ts": 2
+    },
+    "sections": 5,
+    "summaryMetrics": 6,
+    "tableColumns": 7,
+    "actionFamilies": 15,
+    "productionFilesPinned": 27,
+    "filesRead": 43,
+    "nativeDiscovered": null,
+    "nativeExecuted": null,
+    "nativePassed": null,
+    "nativeFailed": null,
+    "nativeSkipped": null,
+    "testDiscovered": null,
+    "testExecuted": null,
+    "testPassed": null,
+    "testFailed": null,
+    "testSkipped": null
+  },
+  "sections": [
+    {
+      "name": "Charging summary metrics",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 449,
+      "metricCount": 6,
+      "states": "source-shaped loading; missing/partial/retained readings; fatal retry footer; explicit lifetime versus loaded scope"
+    },
+    {
+      "name": "Monthly spending",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 468,
+      "states": "loading/fatal retry/empty/retained chart; data alternative/export/fullscreen configured"
+    },
+    {
+      "name": "Top locations",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 511,
+      "states": "loading/fatal retry/empty/retained ranking; top6 by spend"
+    },
+    {
+      "name": "Price Radar",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 543,
+      "componentFile": "web/src/features/charging/components/SitePriceRadar.tsx",
+      "states": "independent loading/error/retry/empty; first8; trust defect TH04"
+    },
+    {
+      "name": "Charging sessions",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 550,
+      "states": "loading/fatal retry/range-empty/search-empty/retained rows; 7-column mobile full details configured"
+    }
+  ],
+  "actions": [
+    {
+      "name": "Copy page link",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 405
+    },
+    {
+      "name": "Select vehicle or explicit fleet",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 407
+    },
+    {
+      "name": "Refresh from Tesla",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 416
+    },
+    {
+      "name": "History source retry",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 457
+    },
+    {
+      "name": "Monthly fullscreen/export/data alternative",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 480
+    },
+    {
+      "name": "Independent Price Radar retry",
+      "file": "web/src/features/charging/components/SitePriceRadar.tsx",
+      "line": 36
+    },
+    {
+      "name": "Location search/remembered scope",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 563
+    },
+    {
+      "name": "Remove search chip/clear all",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 571
+    },
+    {
+      "name": "Date/energy/cost sorting and URL direction",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 293
+    },
+    {
+      "name": "Value filters",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 589
+    },
+    {
+      "name": "Column visibility/reorder",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 600
+    },
+    {
+      "name": "Pagination 25/50/100 and virtualized contained scroll",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 598
+    },
+    {
+      "name": "Per-session invoice new-tab download",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 260
+    },
+    {
+      "name": "Matching/selected loaded table CSV/JSON export",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 606
+    },
+    {
+      "name": "Multi-selection and dedicated selected CSV",
+      "file": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+      "line": 619
+    }
+  ],
+  "dataSources": [
+    {
+      "name": "Imported Tesla billing history",
+      "hook": "useTeslaChargingHistory",
+      "endpoint": "GET /api/v1/tesla/charging/history?vin=<optional>",
+      "scope": "VIN or deliberate fleet; historical source; lifetime summary versus locally windowed loaded records",
+      "router": "internal/api/router.go:3584-3587"
+    },
+    {
+      "name": "Independent realized site prices",
+      "hook": "useChargingSiteRanking",
+      "endpoint": "GET /api/v1/tesla/charging/history/sites?vin=<optional>",
+      "scope": "unbounded source; first8 display; independent trust",
+      "router": "internal/api/router.go:3587"
+    },
+    {
+      "name": "Manual Tesla import refresh",
+      "hook": "useRefreshTeslaChargingHistory",
+      "endpoint": "POST /api/v1/tesla/charging/history/refresh",
+      "scope": "optional vin/start_time/end_time; success invalidates both source key families; live guard gap",
+      "router": "internal/api/router.go:3588"
+    },
+    {
+      "name": "Invoice download",
+      "hook": "getTeslaChargingInvoiceURL",
+      "endpoint": "GET /api/v1/tesla/charging/invoice/{contentID}",
+      "scope": "opaque ID encoded, has_invoice + ID required; native/base behavior unknown",
+      "router": "internal/api/router.go:3590"
+    },
+    {
+      "name": "Vehicle prerequisite",
+      "hook": "useVehicles/useVehicleVinFilter",
+      "endpoint": "GET /api/v1/vehicles",
+      "scope": "global numeric bridge; vin=* explicit fleet; promotion/cleanup effects are selection synchronization, not fetch-useeffect"
+    }
+  ],
+  "preservation": {
+    "currentPageLines": 660,
+    "phase0HistoricalPageLines": 629,
+    "phase0SourceHash": "59519f81efee4a85c40ec1baffd829485144cb1d1ed56a12d427d2cbe21deeff",
+    "historicalFloor70Percent": 441,
+    "currentToHistoricalLineRatio": 1.0492845786963434,
+    "currentDirectFeatureLines": 816,
+    "sectionCount": 5,
+    "componentCounts": {
+      "PageLayout": 1,
+      "LayoutCard": 3,
+      "ChargingSummaryBrief": 1,
+      "EmbeddedChart": 1,
+      "SitePriceRadar": 1,
+      "DataTable": 1,
+      "SectionErrorBoundary": 5
+    },
+    "columnNames": [
+      "Date",
+      "Location",
+      "Duration",
+      "Energy",
+      "Cost",
+      "Rate",
+      "Invoice"
+    ],
+    "rawSI": "usage_wh/total_wh remain raw Wh in wire/cache/export and useUnits converts at display. Duration derived in minutes, exposed to StatMetric in seconds. Rate-base unit guarantee unknown.",
+    "sign": "Known zero and signed money survive row display/export/local addition. Negative progress/ARIA compatibility remains conditional C03. Invalid/nonpositive elapsed times remain unknown, not negative measured duration.",
+    "preferences": "Preserve settings precision/locale/currency and stable table/chart/workspace IDs; display date/duration gaps TH07/TH08 remain. No preference reset/rename.",
+    "sourceParityLimit": "Counts/source pins and current coverage are not an immutable Phase5 diff or native no-data-loss certificate; no Git/original-test execution permitted."
+  },
+  "resolvedHistoricalFindings": [
+    {
+      "root": "Precise local analysis bounds",
+      "evidence": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:129-142",
+      "disposition": "Uses startInstant/endInstantExclusive; old local midnight reconstruction issue no longer applies. Server read-bound gap remains TH05."
+    },
+    {
+      "root": "Duplicate workspace vehicle selector",
+      "evidence": "web/src/lib/workspaceScope.ts:130",
+      "disposition": "Route deliberately disables header vehicle scope; local VIN/fleet selection is required, not a duplicate."
+    },
+    {
+      "root": "Missing mobile full details/invoice",
+      "evidence": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:279-291,591; DataTable.tsx:1406-1409; MobileDataTableAdapter.tsx:150-169",
+      "disposition": "Mobile adapter allColumns details render every original column and invoice; source issue resolved, mounted reachability NOTRUN."
+    },
+    {
+      "root": "Invoice/refresh target sizes",
+      "evidence": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:264,421",
+      "disposition": "Explicit 44px minimum classes now present; actual rectangles/focus NOTRUN."
+    },
+    {
+      "root": "Rainbow/gradient location and monthly spending decoration",
+      "evidence": "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx:501,530-531",
+      "disposition": "Single canonical series and solid location fill present; no old rainbow/gradient finding repeated."
+    },
+    {
+      "root": "PageContainer/import/raw HTML/static styles",
+      "evidence": "C01 raw counts and PageLayout.tsx:11",
+      "disposition": "PageLayout is existing PageContainer adapter; feature barrels and source-shaped persistent sections used; no restricted literal matches in the three render files. This is not zero total violations."
+    }
+  ],
+  "sourceAccessibility": {
+    "positives": [
+      "Localized vehicle label, chart ariaLabel/dataColumns, row selection name and invoice name",
+      "Page-layout and five named section error boundaries remain",
+      "Mobile full details retain all seven columns, including rate/invoice; contained scroll/load-more configured",
+      "Explicit mobile min-height controls; decorative page icons use shared Icon"
+    ],
+    "limits": [
+      "No source claim of actual accessible focus/contrast/touch/keyboard/OS forced colors/reduced motion/mobile device acceptance",
+      "Price Radar direct icon boundary TH09; signed bar compatibility C03; identical invoice label needs contextual/native review, not a new unconfirmed violation"
+    ]
+  },
+  "responsive": {
+    "sourceStrategy": "min-w-0 full-width layout; single-column to 2xl three-column; sessions/spending span two; vehicle/search controls stack below sm; chart 224 mobile/288 desktop; mobile adapter modal full-details and load-more",
+    "verifiedWidths": [],
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "nativeStatus": "NOTRUN"
+  },
+  "needs": [
+    {
+      "id": "N01",
+      "issueIds": [
+        "TH05"
+      ],
+      "name": "Existing G090/G094 bounded read/completeness contract",
+      "existingOwners": [
+        "web/src/api/hooks/useCharging.ts"
+      ],
+      "kind": "integration-evidence-first",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N02",
+      "issueIds": [
+        "TH01"
+      ],
+      "name": "History unknown/partial numeric rollups and missing sort order",
+      "existingOwners": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx"
+      ],
+      "kind": "narrow-page-fix",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N03",
+      "issueIds": [
+        "TH02"
+      ],
+      "name": "History source-denomination preservation",
+      "existingOwners": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx"
+      ],
+      "kind": "narrow-page-fix; server monetary contracts remain unknown",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N04",
+      "issueIds": [
+        "TH03"
+      ],
+      "name": "History export schema/source-text parity",
+      "existingOwners": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx"
+      ],
+      "kind": "narrow-page-export-fix",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N05",
+      "issueIds": [
+        "TH04"
+      ],
+      "name": "Price Radar retained/paused independent trust",
+      "existingOwners": [
+        "web/src/features/charging/components/SitePriceRadar.tsx"
+      ],
+      "kind": "narrow-direct-part-fix",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N06",
+      "issueIds": [
+        "TH06"
+      ],
+      "name": "History refresh live-only request and action guard",
+      "existingOwners": [
+        "web/src/api/hooks/useCharging.ts",
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx"
+      ],
+      "kind": "narrow-hook-caller-guard-fix",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N07",
+      "issueIds": [
+        "TH07",
+        "TH08"
+      ],
+      "name": "History/Radar display duration/date preferences",
+      "existingOwners": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+        "web/src/features/charging/components/SitePriceRadar.tsx"
+      ],
+      "kind": "two serialized local adoptions; conditional exact catalog prerequisite only",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N08",
+      "issueIds": [
+        "TH10",
+        "TH12"
+      ],
+      "name": "History range-empty and vehicle prerequisite states",
+      "existingOwners": [
+        "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx"
+      ],
+      "kind": "narrow-scope-state-fix",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    },
+    {
+      "id": "N09",
+      "issueIds": [
+        "TH09",
+        "TH11"
+      ],
+      "name": "Price Radar Icon boundary and displayed-spread wording",
+      "existingOwners": [
+        "web/src/features/charging/components/SitePriceRadar.tsx"
+      ],
+      "kind": "narrow-direct-part-presentation-fix",
+      "queueDisposition": "PROPOSAL_ONLY; parent must deduplicate/lease before dispatch; no queue edit",
+      "dedup": "Current Phase6 exact-owner/reference scan matches only this QA row (queue:360); prior audit/inventory roots reused, not new component campaigns.",
+      "acceptance": "Cover exact source mechanism with separately authorized covering proof; runtime/native acceptance remains distinct. Overlapping page/hook/Radar repairs must be serialized."
+    }
+  ],
+  "needsCount": 9,
+  "priorityFixes": [
+    "Live-only refresh guard and unresolved vehicle scope",
+    "Unknown/denomination/export evidence preservation",
+    "Independent Price Radar trust and bounded read contract",
+    "Preference-aware dates/duration and honest range/subset empty/price copy"
+  ],
+  "checks": [
+    {
+      "id": "C01",
+      "command": "Inline Python bounded regex checks on the three rendering files plus Tesla hook lines156-275, owner counts, pins and exact Phase6 queue-reference dedup",
+      "exitCode": 0,
+      "rawOutput": "COMMAND C01: inline Python bounded source regex/section/pin/queue checks; no application execution\nUTC 2026-10-14T00:55:43.556308+00:00\nPrecheck: exact report absent; exact log absent; .gitignore:80 logs/ applies (no Git command)\nFILE web/src/features/charging/pages/TeslaChargingHistoryPage.tsx lines=660 SHA256=1f477b4487fd462abc72ebbdfaad94c3d99be424ab4863166f9d39e2646664a2\nstatic-inline-style-candidate matches=0\nraw-html matches=0\ndirect-library-import matches=0\nold-api-import matches=0\nfetch-useeffect-candidate matches=0\nhardcoded-jsx-text-candidate matches=0\nhidden-section-candidate matches=0\ncamelcase-url-param-candidate matches=0\ndouble-prefix-request-candidate matches=0\nFILE web/src/features/charging/components/SitePriceRadar.tsx lines=83 SHA256=97328036b594bd0d515bc2e646a56faa8cff832db8b776dbe56d7dbff1175685\nstatic-inline-style-candidate matches=0\nraw-html matches=0\ndirect-library-import matches=0\nold-api-import matches=0\nfetch-useeffect-candidate matches=0\nhardcoded-jsx-text-candidate matches=0\nhidden-section-candidate matches=0\ncamelcase-url-param-candidate matches=0\ndouble-prefix-request-candidate matches=0\nFILE web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx lines=73 SHA256=b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c\nstatic-inline-style-candidate matches=0\nraw-html matches=0\ndirect-library-import matches=0\nold-api-import matches=0\nfetch-useeffect-candidate matches=0\nhardcoded-jsx-text-candidate matches=0\nhidden-section-candidate matches=0\ncamelcase-url-param-candidate matches=0\ndouble-prefix-request-candidate matches=0\nOWNER PageLayout count=1\nOWNER LayoutCard count=3\nOWNER ChargingSummaryBrief count=1\nOWNER EmbeddedChart count=1\nOWNER SitePriceRadar count=1\nOWNER DataTable count=1\nOWNER SectionErrorBoundary count=5\nmissing-page-container: literal PageContainer absent in page; acceptable PageLayout forwards to PageContainer at PageLayout.tsx:11; NOT a violation\nhardcoded-string extra source review: page:56 `${h}h ${m}m`; page:57 `${m}m` -> one duration-localization root, two literal sites\nTesla history hook lines156-275 double-prefix-request-candidate matches=0\nTesla history hook lines156-275 camelcase-url-param-candidate matches=0\nTesla history hook lines156-275 fetch-useeffect-candidate matches=0\nEXCEPTION invoice URL useCharging.ts:274 is a direct href, not request(); full API prefix is intentional\nEXCEPTIONS raw HTML/direct imports inside shared components are not feature violations; computed MetricBar style is dynamic\nPhase6 exact-owner/reference dedup matches=1\nqueue:360 [~] phase6-qa-charging-tesla-charging-history\nSource scope: history hook lacks read bounds; completeness/order/currency guarantees NOT established by router declarations\nSOURCE SECTIONS=5; SUMMARY METRICS=6; TABLE COLUMNS=7; route=/tesla-charging-history; page current660 vs Phase0 historical629\nNOTRUN: native/browser/API/real history; tests/tsc/lint/build/full suites; native and test counts are null, not zero-pass\nEXIT C01=0 (source check execution only, not clean application acceptance)\n",
+      "meaning": "Executed source checks, NOT a clean application gate"
+    },
+    {
+      "id": "P01",
+      "command": "rg -n --no-heading exact history task patterns",
+      "exitCode": 1,
+      "limit": "Fallback Select-String and bounded Python were run; no zero-match inference from this failure.",
+      "rawOutputExcerpt": "rg: The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program."
+    },
+    {
+      "id": "P02",
+      "command": "Python queue dedup probe using c[4]",
+      "exitCode": 0,
+      "limit": "Wrong column was type, not files; EMPTY first result INVALID for dedup. Corrected c[5]/any-column exact scans ran later.",
+      "rawOutputExcerpt": "EXACT RELATED REPAIR ITEMS\nRELATED SHARED ROOT ITEM IDS"
+    },
+    {
+      "id": "P03",
+      "command": "Python broad router/source pin probe before UTF-8 stdout correction",
+      "exitCode": 1,
+      "limit": "Stopped before pins; later UTF-8 exact router/pin recovery exited0. No partial success claimed.",
+      "rawOutputExcerpt": "UnicodeEncodeError: 'charmap' codec can't encode character '\\u256c' in position 31: character maps to <undefined>"
+    },
+    {
+      "id": "P04",
+      "command": "Initial root/docs/existing-log-directory inspection",
+      "exitCode": 1,
+      "limit": "Initial existence inference was subsequently verified with Path.exists; this exit is retained, not called a successful check.",
+      "rawOutputAvailability": "Original tool transcript; no full copy retained in this artifact. Numeric exit1 is retained; no success inferred."
+    },
+    {
+      "id": "C03",
+      "command": "Inline Python report citation-text/count review",
+      "exitCode": 0,
+      "rawOutputAvailability": "Tool transcript; final citation starts corrected in C04; no code execution"
+    }
+  ],
+  "evidenceLimits": {
+    "mode": "Read-only current source/direct rendered parts/hooks/router; only assigned report and ignored log written",
+    "native": "NOTRUN",
+    "browser": "NOTRUN",
+    "API": "NOTRUN",
+    "realHistory": "NOTRUN",
+    "TypeScript": "NOTRUN (npx tsc --noEmit not executed)",
+    "lint": "NOTRUN",
+    "tests": "NOTRUN",
+    "build": "NOTRUN",
+    "fullSuites": "NOTRUN",
+    "catalog": "NOT READ/NOT MODIFIED; canonical key/plural closure unknown",
+    "backend": "Route declarations only, not handlers/database queries/auth/currency normalization/completeness",
+    "sourceCoverage": "filesRead is actual read/search paths; whole-file hashes do not mean every support-file line audited. Page and two direct feature parts read in full; complete design contract2539 lines read. Latest handoff recovery section read; older receipts are historical.",
+    "inspections": "Some exploratory Select-String outputs were tool-truncated; they are not clean-gate evidence. Broad vin substring probe returned driving false positives; exact-owner dedup supersedes it.",
+    "acceptance": "No accepted Phase0-5 reopened, fake fixture/application/native acceptance, production action or source change. Report DONE is artifact-only."
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/session-handoff.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/CONTRIBUTING.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-audits/audit-page-089.json",
+    "docs/frontend-audits/phase6-qa-charging-charging-list.json",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".gitignore",
+    ".editorconfig",
+    "web/src/features/charging/pages/TeslaChargingHistoryPage.tsx",
+    "web/src/features/charging/components/SitePriceRadar.tsx",
+    "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+    "web/src/api/hooks/useCharging.ts",
+    "web/src/hooks/useVehicleVinFilter.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/currencyFormat.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/api/client.ts",
+    "web/src/api/offlineCache.ts",
+    "web/src/lib/operationalMode.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.tsx",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/App.tsx",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/routeRegistry.ts",
+    "internal/api/router.go"
+  ],
+  "release": {
+    "authorizedWrites": [
+      "docs/frontend-audits/phase6-qa-charging-tesla-charging-history.json",
+      "web/logs/phase6-qa-charging-tesla-charging-history.log"
+    ],
+    "sourceWrites": false,
+    "sourceWriteLease": "None acquired; report/log writes released at final receipt",
+    "queueWrites": false,
+    "GitCommands": false,
+    "subagents": false,
+    "installs": false,
+    "servers": false,
+    "Docker": false,
+    "heartbeat": false,
+    "commands": "All reads/checks bounded; no remaining session-owned check process intended",
+    "native": "NOTRUN",
+    "releasedUTC": "2026-10-14T01:03:02.473546+00:00"
+  },
+  "artifactValidation": {
+    "status": "PASS",
+    "command": "C04 inline Python json/count/citation/current-SHA256/queue-identity/release assertions; final reparse",
+    "exitCode": 0,
+    "checkedUTC": "2026-10-14T01:02:13.309328+00:00",
+    "matchingPins": 27,
+    "limitations": "Artifact validation only, NOT runtime/native/TypeScript/application acceptance",
+    "lastMetadataValidation": {
+      "command": "C05 final current queue line/history identity refresh and post-write JSON read",
+      "exitCode": 0,
+      "checkedUTC": "2026-10-14T01:03:02.473546+00:00",
+      "sourcePinsReceipt": "C04 27/27 matching at 2026-10-14T01:02:13Z; no fresh source re-audit"
+    }
+  },
+  "filesReadRanges": {
+    "docs/frontend-design-contract.md": "1-2539, complete",
+    "docs/session-handoff.md": "1-240 (latest recovery and relevant historical receipts), plus exact pattern searches",
+    "docs/frontend-mission.md": "0-2 principles/contracts; 14-37; 43-46 acceptance, read through line1540",
+    "docs/frontend-inventory.md": "Exact current/history page and G090/G094 rows144,445,449,1221-1222 via search",
+    "migration-queue.md": "Exact item/current history and matching ownership/root rows; not a whole queue acceptance",
+    "web/src/api/hooks/useCharging.ts": "1-290 (history/ranking/invoice types and hooks); remainder fingerprint only",
+    "web/src/hooks/useRangeState.ts": "1-190,293-367,650-694 plus targeted source searches",
+    "web/src/api/client.ts": "1-230,335-408 plus targeted source searches",
+    "web/src/components/ui/DataTable.tsx": "875-943,1390-1435 plus mobile/export/selection source searches",
+    "web/src/components/layout/PageContainer.tsx": "236-264 plus query/error/children targeted source searches",
+    "web/src/App.tsx": "50-65,800-817 plus exact route matches",
+    "internal/api/router.go": "3570-3600 and exact prefix/handler wiring searches only; no backend implementation audit",
+    "docs/frontend-audits/phase6-qa-charging-charging-list.json": "1-250 only; related context, not accepted-page re-audit"
+  }
+}

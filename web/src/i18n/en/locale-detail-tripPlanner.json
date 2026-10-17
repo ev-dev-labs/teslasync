@@ -1,0 +1,129 @@
+{
+  "tripPlanner": {
+    "aiAgent": {
+      "title": "Draft a plan with Helix",
+      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
+      "badge": "Helix",
+      "generateButton": "Draft a plan",
+      "noVehicle": "Select a vehicle to let Helix draft a trip plan.",
+      "noOrigin": "Set a starting point for Helix to plan the route from.",
+      "noDestination": "Set a destination for Helix to plan the route to."
+    },
+    "socChart": {
+      "title": "Battery along route",
+      "empty": "Plan a trip to see the SOC curve",
+      "aria": "Planned route battery state-of-charge area chart",
+      "col": {
+        "distance": "Distance ({{unit}})",
+        "soc": "SOC %"
+      },
+      "socAxis": "SOC %",
+      "socSeries": "SOC",
+      "minArrival": "Min {{soc}}%",
+      "stopLabel": "⚡ Stop {{n}}"
+    },
+    "legs": {
+      "title": "Route breakdown",
+      "empty": "Plan a trip to see the route breakdown",
+      "distance": "Distance",
+      "duration": "Duration",
+      "energy": "Energy",
+      "soc": "Battery",
+      "recommended": "Recommended stop point — actual charger locations may vary",
+      "chargeStop": "Charging stop"
+    },
+    "map": {
+      "origin": "Origin",
+      "destination": "Destination",
+      "empty": "Enter origin and destination to see the route",
+      "regionLabel": "Trip route map",
+      "chargeStop": "Charge stop",
+      "chargeSummary": "{{from}}% → {{to}}% ({{min}} min)"
+    },
+    "title": "Trip planner",
+    "share": {
+      "title": "Shared destination",
+      "loading": "Importing the destination shared with TeslaSync…",
+      "coordinates": "Destination coordinates imported. Review the route settings before planning.",
+      "text": "Destination prefilled. Choose a matching search result to confirm its coordinates.",
+      "errorTitle": "Shared destination unavailable",
+      "error": "The shared item was empty, expired, or could not be read. Share it again or enter the destination manually."
+    },
+    "speed": {
+      "relaxed": "Relaxed (−20%)",
+      "normal": "Normal",
+      "brisk": "Brisk (+10%)",
+      "fast": "Fast (+20%)"
+    },
+    "subtitle": "Plan your route with range estimation and charging stops",
+    "form": {
+      "title": "Plan your trip",
+      "origin": "Enter starting location...",
+      "from": "From",
+      "destination": "Enter destination...",
+      "to": "To",
+      "vehicle": "Vehicle",
+      "currentSOC": "Current SOC",
+      "minArrival": "Min arrival SOC",
+      "drivingSpeed": "Driving speed",
+      "planning": "Planning...",
+      "planTrip": "Plan trip",
+      "sendToCar": "Send to car",
+      "vehicleBattery": "Vehicle at {{level}}%",
+      "error": "Failed to compute trip plan. Please try again.",
+      "commandError": "Could not send the destination to the vehicle. Try Send to Car again."
+    },
+    "stats": {
+      "distance": "Distance",
+      "totalTime": "Total time",
+      "drivingTime": "Driving",
+      "chargingTime": "Charging",
+      "energy": "Energy",
+      "cost": "Est. cost",
+      "title": "Trip summary"
+    },
+    "weather": {
+      "title": "Weather impact",
+      "factor": "Efficiency factor: {{factor}}×"
+    },
+    "brief": {
+      "noPlan": "No computed route yet",
+      "scopeUnknown": "Last computed plan; submitted route labels were not returned",
+      "description": "Route estimates from the current plan, not recorded travel or a billing quote.",
+      "provenance": "Deterministic trip-plan response using the submitted route, battery level, and preferences.",
+      "refreshing": "Recomputing; showing the last computed plan",
+      "costDescription": "Estimated EV cost and gasoline equivalent from the current trip-plan comparison; original price and vehicle-economy assumptions are retained."
+    },
+    "notFeasible": "This trip may not be feasible with the current battery level and available charging options. Consider starting with a higher SOC or adjusting your preferences.",
+    "insights": {
+      "title": "Trip Insights",
+      "empty": "Plan a trip to see feasibility, estimates, and weather impact.",
+      "feasible": "Trip is feasible",
+      "infeasible": "Trip may not be feasible",
+      "feasibleNote": "Reaches the destination above your minimum arrival SOC.",
+      "infeasibleNote": "Start with a higher SOC or add charging headroom.",
+      "noWeather": "No significant weather impact expected.",
+      "weatherUnavailable": "Weather impact is unavailable for this plan."
+    },
+    "disclaimer": "This is an estimate based on straight-line distance (×1.3 driving factor) and your vehicle's historical efficiency. Actual results may vary due to route geometry, traffic, elevation, and conditions.",
+    "cost": {
+      "detail": "{{gallons}} gal avoided · {{pct}} cheaper · @ ${{price}}/gal, {{mpg}} mpg",
+      "ev": "EV",
+      "gas": "Gas",
+      "saved": "Saved",
+      "title": "Trip Cost vs Gas",
+      "empty": "Plan a trip to compare EV charging cost against gasoline."
+    },
+    "copilot": {
+      "comfortable": "You will make it",
+      "tight": "Tight — drive gently",
+      "chargeNow": "Charge first",
+      "title": "Trip Copilot",
+      "remainingKm": "Remaining (km)",
+      "check": "Will I make it?",
+      "error": "Confidence check failed",
+      "empty": "Enter remaining distance for a live arrival verdict.",
+      "detail": "Arrival ~{{soc}}% · {{margin}} kWh margin"
+    }
+  }
+}

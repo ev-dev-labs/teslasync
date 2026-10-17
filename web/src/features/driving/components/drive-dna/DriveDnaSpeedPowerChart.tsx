@@ -6,7 +6,7 @@ import { ChartContainer } from '@/components/charts';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertDurationFromSI,
   convertPowerFromSI,
@@ -17,6 +17,7 @@ import type { DriveDnaModel } from '../../lib/driveDNA';
 import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import { DriveDnaSpeedPowerPlot } from './DriveDnaSpeedPowerPlot';
 import type { DriveDnaSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveDnaSpeedPowerChartProps {
   model: DriveDnaModel;
@@ -29,6 +30,7 @@ export function DriveDnaSpeedPowerChart({
   state,
   units,
 }: DriveDnaSpeedPowerChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -104,7 +106,7 @@ export function DriveDnaSpeedPowerChart({
             label: elapsedLabel,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 2)} ${units.unitPrefs.duration}`
+                ? `${fmtNumber(value)} ${units.unitPrefs.duration}`
                 : '—',
           },
           {
@@ -112,7 +114,7 @@ export function DriveDnaSpeedPowerChart({
             label: speedName,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 1)} ${units.unitPrefs.speed}`
+                ? `${fmtNumber(value)} ${units.unitPrefs.speed}`
                 : '—',
           },
           {
@@ -120,7 +122,7 @@ export function DriveDnaSpeedPowerChart({
             label: powerName,
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 1)} ${units.unitPrefs.power}`
+                ? `${fmtNumber(value)} ${units.unitPrefs.power}`
                 : '—',
           },
         ]}

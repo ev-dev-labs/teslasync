@@ -1,17 +1,18 @@
 import { useTranslation } from 'react-i18next';
 import { Users, Mail, Clock, AlertTriangle } from 'lucide-react';
 
-import { MetricCard } from '@/components/data-display';
+import { StatStrip } from '@/components/data-display';
 
 interface AccessKpiBandProps {
   /** Total drivers currently shared on the vehicle. */
-  drivers: number;
+  drivers: number | null | undefined;
   /** Total share invitations (all statuses). */
-  invitations: number;
+  invitations: number | null | undefined;
   /** Invitations still awaiting acceptance. */
-  pending: number;
+  pending: number | null | undefined;
   /** Pending invitations expiring within the next 7 days. */
-  expiringSoon: number;
+  expiringSoon: number | null | undefined;
+  retained?: boolean;
 }
 
 /**
@@ -19,40 +20,28 @@ interface AccessKpiBandProps {
  * invitation counts derived from the same hook data the tables render, so the
  * numbers never disagree with the detail bands below.
  */
-export function AccessKpiBand({ drivers, invitations, pending, expiringSoon }: AccessKpiBandProps) {
+export function AccessKpiBand({ drivers, invitations, pending, expiringSoon, retained = false }: AccessKpiBandProps) {
   const { t } = useTranslation();
 
   return (
-    // Defensive: honour the "band never disappears" contract — every count
-    // collapses to 0 rather than rendering a blank card value if handed a
-    // partial/undefined figure (e.g. a mid-flight or malformed hook payload).
     <section
       aria-label={t('vehicleAccess.kpis', 'Access summary')}
-      className="grid grid-cols-2 gap-4 lg:grid-cols-4"
     >
-      <MetricCard
-        label={t('vehicleAccess.kpi.drivers', 'Drivers')}
-        value={drivers ?? 0}
-        icon={<Users className="h-5 w-5" aria-hidden="true" />}
-        color="cyan"
-      />
-      <MetricCard
-        label={t('vehicleAccess.kpi.invitations', 'Invitations')}
-        value={invitations ?? 0}
-        icon={<Mail className="h-5 w-5" aria-hidden="true" />}
-        color="blue"
-      />
-      <MetricCard
-        label={t('vehicleAccess.kpi.pending', 'Pending')}
-        value={pending ?? 0}
-        icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-        color="amber"
-      />
-      <MetricCard
-        label={t('vehicleAccess.kpi.expiringSoon', 'Expiring Soon')}
-        value={expiringSoon ?? 0}
-        icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-        color="red"
+      <StatStrip
+        id="vehicle-access-summary"
+        retained={retained}
+        period={{ kind: 'snapshot', label: t('vehicleAccess.snapshot', 'Latest access records'), observedAt: null,
+          provenance: `${t('dataSources.labels.vehicleDrivers', 'Vehicle drivers')} / ${t('dataSources.labels.shareInvitations', 'Share invitations')}` }}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'drivers', label: t('vehicleAccess.kpi.drivers', 'Drivers'), rawValue: drivers ?? null,
+            context: <Users className="h-5 w-5" aria-hidden="true" /> },
+          { metricId: 'count', occurrenceId: 'invitations', label: t('vehicleAccess.kpi.invitations', 'Invitations'), rawValue: invitations ?? null,
+            context: <Mail className="h-5 w-5" aria-hidden="true" /> },
+          { metricId: 'count', occurrenceId: 'pending', label: t('vehicleAccess.kpi.pending', 'Pending'), rawValue: pending ?? null,
+            context: <Clock className="h-5 w-5" aria-hidden="true" /> },
+          { metricId: 'count', occurrenceId: 'expiring', label: t('vehicleAccess.kpi.expiringSoon', 'Expiring soon'), rawValue: expiringSoon ?? null,
+            context: <AlertTriangle className="h-5 w-5" aria-hidden="true" /> },
+        ]}
       />
     </section>
   );

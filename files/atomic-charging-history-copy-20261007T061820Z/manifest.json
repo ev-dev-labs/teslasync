@@ -1,0 +1,78 @@
+{
+  "recordedUtc": "2026-10-07T06:22:01.673004+00:00",
+  "actualStartUtc": "2026-10-07T06:16:45.6726814Z",
+  "hardStopUtc": "2026-10-07T06:36:45.6726814Z",
+  "branch": "fix/dashboard-followups",
+  "headAtStart": "da775cf8d1aedd76630a43002134ff1904c00ad9",
+  "inheritedDirtySource": true,
+  "preimageSha256": "385915f9ac5f8e8269e83ee9e63323e78e849779c4810bff8c69068d91e0178e",
+  "focusedTestPreimage": {
+    "state": "absent",
+    "confirmedUtc": "2026-10-07T06:18:20.6229591Z"
+  },
+  "current": [
+    {
+      "path": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "sha256": "48363a49c739cf503d58de885dd9748a1e757e6cb7a71f211b8e748247576cfc",
+      "bytes": 43940
+    },
+    {
+      "path": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.catalogCopy.test.tsx",
+      "sha256": "52a01d2d52fb36daaa41da53a86e96ddbf3b51864757052325e841d2a01e672f",
+      "bytes": 9222
+    }
+  ],
+  "originalTestCurrentHashes": [
+    {
+      "path": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.test.tsx",
+      "sha256": "8b56c9d418e199cc8e6bbcbb883397ea0cdb3058b7ad7ff3d6bf6d9a7f639283",
+      "workerWrites": false
+    },
+    {
+      "path": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.mobile-grid.test.tsx",
+      "sha256": "2e506844fb58172b4dcba1ad6ca038d502d32da38f7f2cd65a38c9cc41b465c7",
+      "workerWrites": false
+    },
+    {
+      "path": "web\\src\\features\\charging\\pages\\ChargingListPage.test.tsx",
+      "sha256": "fffe8412fb1fa427efb0ad06750854dd1dcc8707fbf7a089d64340cc553bd1fe",
+      "workerWrites": false
+    }
+  ],
+  "exactFourSubstitutionsOnlyAgainstDirtyPreimage": true,
+  "sourceLinesBefore": 1046,
+  "sourceLinesAfter": 1046,
+  "authoredUniqueTestCases": 3,
+  "canonicalReadOnlyReceipt": {
+    "path": "web\\src\\i18n\\en.json",
+    "sha256": "b648678625ec3ea384b4b0c00f4194446042c84524a1c0e3807499782d78e09a",
+    "recordedUtc": "2026-10-07T06:22:01.673004+00:00",
+    "requestedLeavesObserved": {
+      "operations.charging.sessionsLoading": "Updating",
+      "operations.charging.returnedSessionsTitle": "Cost, energy, and session evidence in one operating view",
+      "operations.charging.returnedSessionsDescription": "The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.",
+      "operations.charging.returnedSessionsProvenance": "Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display."
+    },
+    "parentIntegrationClaim": "Values observed read-only, not authored or validated by this worker"
+  },
+  "releaseReport": {
+    "path": "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\catalog-conflict-reconciliation-20261007T061146Z\\latest-directive-and-source-task-release.json",
+    "sha256": "5faf6ba18477def08ef590d5a43c56ec0241bcaa3a198d9f0778946150b1be25",
+    "originalReadOnlyTaskClock": "Not reset; this is a fresh explicitly approved writer assignment"
+  },
+  "executed": {
+    "typecheck": false,
+    "lint": false,
+    "build": false,
+    "tests": false,
+    "officialAudit": false,
+    "browser": false,
+    "preview": false,
+    "install": false,
+    "commit": false,
+    "push": false,
+    "deploy": false,
+    "nestedDelegation": false
+  },
+  "technicalAcceptance": "NOT RUN: source-only assignment explicitly forbids validators/tests/browser/preview"
+}

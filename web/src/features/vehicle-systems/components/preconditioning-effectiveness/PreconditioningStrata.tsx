@@ -1,16 +1,9 @@
 import { Flame, Snowflake } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+import { LayoutCard, Grid } from '@/components/layout';
+import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
+
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import {
   preconditioningEvidenceLabel,
@@ -22,6 +15,7 @@ import type {
   PreconditioningQueryState,
   TemperatureDeltaFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningStrataProps {
   summary: PreconditioningSummary;
@@ -34,15 +28,12 @@ export function PreconditioningStrata({
   state,
   formatDelta,
 }: PreconditioningStrataProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
     <section data-testid="preconditioning-strata">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Snowflake className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('preconditioningEffectiveness.strata.title', 'Hot and cold strata')}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.strata.title', 'Hot and cold strata')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.strata.subtitle',
@@ -107,9 +98,9 @@ export function PreconditioningStrata({
                           'preconditioningEffectiveness.strata.confidence',
                           '{{confidence}} combined confidence from balance {{balance}} and volume {{volume}}.',
                           {
-                            confidence: fmtPercent(row.confidence * 100, 0),
-                            balance: fmtPercent(row.balanceConfidence * 100, 0),
-                            volume: fmtPercent(row.volumeConfidence * 100, 0),
+                            confidence: fmtPercent(row.confidence * 100),
+                            balance: fmtPercent(row.balanceConfidence * 100),
+                            volume: fmtPercent(row.volumeConfidence * 100),
                           },
                         )
                       : t(
@@ -122,7 +113,7 @@ export function PreconditioningStrata({
             })}
           </Grid>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

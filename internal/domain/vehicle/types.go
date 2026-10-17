@@ -7,21 +7,29 @@ import (
 )
 
 type Vehicle struct {
-	ID            string    `json:"id" db:"id"`
-	UserID        string    `json:"userId" db:"user_id"`
-	VIN           string    `json:"vin" db:"vin"`
-	DisplayName   string    `json:"displayName" db:"display_name"`
-	Model         string    `json:"model" db:"model"`
-	Year          int       `json:"year" db:"year"`
-	Color         string    `json:"color" db:"color"`
-	FSMState      fsm.State `json:"fsmState" db:"fsm_state"`
-	SubFSMState   fsm.State `json:"subFsmState,omitempty" db:"sub_fsm_state"`
-	OdometerMiles float64   `json:"odometerMiles" db:"odometer_miles"`
-	BatteryLevel  int       `json:"batteryLevel" db:"battery_level"`
-	RangeMiles    float64   `json:"rangeMiles" db:"range_miles"`
-	IsCharging    bool      `json:"isCharging" db:"is_charging"`
-	Latitude      float64   `json:"latitude" db:"latitude"`
-	Longitude     float64   `json:"longitude" db:"longitude"`
-	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt     time.Time `json:"updatedAt" db:"updated_at"`
+	ID          string     `json:"id" db:"id"`
+	TeslaID     int64      `json:"tesla_id" db:"tesla_id"`
+	VIN         string     `json:"vin" db:"vin"`
+	DisplayName string     `json:"display_name" db:"display_name"`
+	Model       *string    `json:"model" db:"model"`
+	OptionCodes *string    `json:"option_codes" db:"option_codes"`
+	Color       *string    `json:"color" db:"color"`
+	TrimLevel   *string    `json:"trim_level" db:"trim_level"`
+	EnrolledAt  time.Time  `json:"enrolled_at" db:"enrolled_at"`
+	ArchivedAt  *time.Time `json:"archived_at" db:"archived_at"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at" db:"updated_at"`
+	Timezone    string     `json:"timezone" db:"timezone"`
+
+	// Lifecycle working data is not vehicle metadata. It must never be
+	// projected from vehicles or exposed as fabricated current measurements.
+	Year          int       `json:"-" db:"-"`
+	FSMState      fsm.State `json:"-" db:"-"`
+	SubFSMState   fsm.State `json:"-" db:"-"`
+	OdometerMiles float64   `json:"-" db:"-"`
+	BatteryLevel  int       `json:"-" db:"-"`
+	RangeMiles    float64   `json:"-" db:"-"`
+	IsCharging    bool      `json:"-" db:"-"`
+	Latitude      float64   `json:"-" db:"-"`
+	Longitude     float64   `json:"-" db:"-"`
 }

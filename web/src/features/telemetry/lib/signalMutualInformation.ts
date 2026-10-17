@@ -10,14 +10,9 @@
  * Pure and React-free.
  */
 
-export interface MutualInformationSample {
-  timestamp?: string;
-  ts?: string;
-  valueNum?: number | null;
-  value_numeric?: number | null;
-  valueBool?: boolean | null;
-  value_bool?: boolean | null;
-}
+import { toSignalHistoryMeasurements, type SignalHistorySample } from './signalHistorySamples';
+
+export type MutualInformationSample = SignalHistorySample;
 
 export interface TimedValue {
   ms: number;
@@ -96,30 +91,7 @@ function quantile(values: readonly number[], probability: number): number {
 }
 
 export function toTimedValues(samples: readonly MutualInformationSample[]): TimedValue[] {
-  const points: TimedValue[] = [];
-  for (const sample of samples) {
-    const timestamp = sample.timestamp ?? sample.ts;
-    if (timestamp == null) continue;
-    const numeric = sample.valueNum ?? sample.value_numeric;
-    const boolean = sample.valueBool ?? sample.value_bool;
-    const value =
-      typeof numeric === 'number' && Number.isFinite(numeric)
-        ? numeric
-        : typeof boolean === 'boolean'
-          ? boolean ? 1 : 0
-          : null;
-    const ms = Date.parse(timestamp);
-    if (value == null || !Number.isFinite(ms)) continue;
-    points.push({ ms, value });
-  }
-  points.sort((a, b) => a.ms - b.ms);
-  const deduped: TimedValue[] = [];
-  for (const point of points) {
-    const prior = deduped[deduped.length - 1];
-    if (prior?.ms === point.ms) prior.value = point.value;
-    else deduped.push(point);
-  }
-  return deduped;
+  return toSignalHistoryMeasurements(samples, true);
 }
 
 /** Median positive sampling interval, robust to an isolated reporting gap. */

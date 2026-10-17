@@ -17,7 +17,9 @@ export function KnowledgeCitations({ evidence, answer }: KnowledgeCitationsProps
   return (
     <section className="mt-3 border-t border-[var(--border-subtle)] pt-3"
       aria-label={t('chatbot.knowledge.title', 'Retrieved documentation')}>
-      <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}
+      <Button type="button" variant="ghost" size="sm" wrapLabel
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+        onClick={() => setExpanded(!expanded)}
         aria-expanded={expanded}>
         {t('chatbot.knowledge.inspect', 'Inspect retrieved sources')} ({evidence.length})
       </Button>

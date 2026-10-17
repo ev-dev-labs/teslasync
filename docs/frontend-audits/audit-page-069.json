@@ -1,0 +1,578 @@
+{
+  "item": "audit-page-069",
+  "phase": 0,
+  "page": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+  "routes": [
+    "/energy"
+  ],
+  "purpose": "Vehicle energy intelligence combining measured drive consumption, recorded charging costs, configured gasoline comparison, charging patterns and separate parked-drain/lifetime sources.",
+  "primaryGoal": "Review consumption, efficiency and trustworthy cost exposure in the shared workspace window, then investigate linked temperature, speed, route or charging-session evidence.",
+  "identity": {
+    "root": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+    "routeEvidence": "web\\src\\App.tsx:69,607",
+    "workspaceEvidence": "web\\src\\lib\\workspaceScope.ts:45",
+    "mode": "read-only source audit; only report and heartbeat writes"
+  },
+  "dataSources": [
+    {
+      "hook": "useEnergyStats",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 34,
+      "endpoint": "/vehicles/{vehicleID}/energy?start={calendarDate}",
+      "route": "internal\\api\\router.go:3339",
+      "owner": "energyHandler.Stats",
+      "pageCall": "web\\src\\features\\battery\\pages\\EnergyPage.tsx:158",
+      "behavior": "Selected vehicle; only start in request/query identity; daily_breakdown filtered locally by calendar start/end. SI energy_wh, distance_m and efficiency_wh_per_m. Abort signal forwarded; STANDARD stale policy.",
+      "backendLimits": "Handler/repository date filtering, timezone, daily bucketing and completeness not inspected or exercised."
+    },
+    {
+      "hook": "useChargingSessionsPaginated",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 122,
+      "endpoint": "/charging?vehicle_id={id}&limit=100&offset=0&start={calendarDate}&end={calendarDate}",
+      "route": "internal\\api\\router.go:3502-3503",
+      "owner": "chargingHandler.ListByVehicle",
+      "pageCall": "web\\src\\features\\battery\\pages\\EnergyPage.tsx:167",
+      "behavior": "getChargingSessions at useCharging.ts:32-43; safeArray response selection; FAST stale policy; abort forwarded. Patterns/costs use returned 100 sessions; table displays first 15. Cap and incomplete cost coverage explicitly disclosed.",
+      "backendLimits": "Actual server date inclusivity/order/pagination completeness unverified."
+    },
+    {
+      "hook": "useChargingTelemetryLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 473,
+      "endpoint": "/charging-telemetry/latest?vehicle_id={id}",
+      "route": "internal\\api\\router.go:4128-4130",
+      "owner": "chargingTelemetryHandler.Latest",
+      "behavior": "Enabled only for positive vehicle ID; nullable signal-history response; no polling override supplied. Lifetime energy rendered with explicit kWh source claim at EnergyPage.tsx:1129-1133.",
+      "backendLimits": "lifetime_energy_used has no unit documentation in inspected ChargingTelemetry interface (api/types.ts:2217); source unit/freshness not proven."
+    },
+    {
+      "hook": "useVampireDrainStats",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 114,
+      "endpoint": "/vampire-drain/stats?vehicle_id={id}",
+      "route": "internal\\api\\router.go:4174-4186",
+      "owner": "vampireDrainHandler.Stats",
+      "behavior": "Separate 90-day parked non-charging historical window declared by hook/page; source route comments describe FSM parked windows plus BatteryLevel/ChargeState signal history. Not attributed to selected range or cause.",
+      "backendLimits": "Computation and finite-value validation not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle/useRangeState/useUnits/useFormatting/useNumberFormatting/useTimezone/useSavedViewUrl/useHiddenSeries/useDataState",
+      "owner": "Existing application workspace, formatting, persistence and trust hooks",
+      "behavior": "No competing page vehicle/date picker. Typed display-only SI conversion; configured gas estimate; persisted /energy views and three hidden-series identities. Four independent source trust adapters and stale warnings.",
+      "backendLimits": "Settings, selector and formatting hook internals not comprehensively traced; no runtime persistence or query acceptance."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout/LayoutCard/ChartCard",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "role": "Existing full-width layout, host surfaces, canonical embedded chart frames"
+    },
+    {
+      "name": "BatteryPanelGrid",
+      "owner": "web\\src\\features\\battery\\components\\modernization\\BatteryPanelGrid.tsx",
+      "role": "Domain adapter to CardGrid and existing placement context; no alternate sizing engine"
+    },
+    {
+      "name": "BatterySpecialistSummary/BatteryEvidenceBrief",
+      "owner": "web\\src\\features\\battery\\components\\modernization\\BatterySpecialistSummary.tsx",
+      "role": "Raw numerical validation with preserved specialist display through useOperationalMetrics and OperationalBrief"
+    },
+    {
+      "name": "OperationalBrief/MetricTile/Currency/DataFreshnessAuto/DataProvenanceBadge/SavedViewMenu",
+      "owner": "web\\src\\components\\data-display",
+      "role": "Existing narrative, source, formatting and persistence contracts; not all implementations inspected"
+    },
+    {
+      "name": "DataTable/Badge/Text/Caption/HelperText",
+      "owner": "web\\src\\components\\ui",
+      "role": "Category-owned table and typography; stable tableId and mobile column priorities"
+    },
+    {
+      "name": "ThresholdBar/ChartLegend/ChartTooltip/ChartGradient/ChartTimeRangeProvider",
+      "owner": "web\\src\\components\\charts",
+      "role": "Category-owned charts, synced cursors, accessible data/export inputs and series visibility"
+    },
+    {
+      "name": "QueryError/EmptyState/Skeleton/ChartBlockSkeleton/StaleRefreshWarning/AlertBanner/FadeIn",
+      "owner": "web\\src\\components\\feedback and web\\src\\components\\motion",
+      "role": "Independent source recovery, retained data and reduced-motion-aware entrance"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+      "line": 988,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Consumption/efficiency/cost evidence repeats across operational brief, specialist summary and hero. Existing BatteryEvidenceBrief already shares formatting/trust presentation; repetition is deliberate summary/detail until consumer research proves otherwise.",
+      "fix": "Reuse existing metric-reference/OperationalBrief pipeline; do not delete repeated source contexts or create another KPI component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "BatteryPanelGrid uses measured CardGrid placement; min-w-0 retained. Hero reflows 2 to 4 columns; links 1 to 3; charts have explicit mobile heights; charger panel stacks then becomes row; table prioritizes date/energy/cost.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "line": 1089,
+        "rule": "MDC-043/MDC-031",
+        "detail": "Hero keeps two metric columns at smallest widths, while cost comparisons keep a horizontal EV/arrow/gas row (CostComparisonCard.tsx:35). Long currency values/unit labels may need wrapping; no actual overflow demonstrated.",
+        "fix": "Exercise 320px allocated width, long locales and 200% text before choosing existing grid/reflow variants. Preserve all values and comparisons.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "testedViewports": [],
+    "viewportBehavior": "unverified"
+  },
+  "accessibility": {
+    "sourceStrengths": "Localized chart ariaLabel and dataColumns, link text, named group sections, decorative aria-hidden cues, shared DataTable and OperationalBrief semantics; FadeIn consumes existing motion preference.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "line": 1035,
+        "rule": "MDC-040",
+        "detail": "Three investigation links have min-h-11 but no explicit local focus-visible style; global focus styling may provide it. Source cannot establish actual keyboard focus visibility.",
+        "fix": "Verify shared native-link focus treatment on all three routes; adopt existing link/button chrome if needed without changing native navigation or scope.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "line": 1241,
+        "rule": "MDC-042",
+        "detail": "Chart series explicitly set animationDuration=800 in multiple panels; FadeIn honors reduced motion, but no page-level reduce flag or isAnimationActive bridge is visible. AREA_DEFAULTS/shared chart behavior not fully traced, so an actual motion violation is not claimed.",
+        "fix": "Verify existing chart motion policy covers bars/areas/lines/pie and preserve it via existing useMotionPreference; do not add a competing animation engine.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "effectiveContrast": "unverified",
+    "forcedColors": "unverified"
+  },
+  "states": {
+    "loading": "Page busy tied to stats only. Daily and hero sections use stats loading; charging charts/table use sessions loading; lifetime includes own skeleton.",
+    "empty": "Section-specific placeholders remain mounted. Cost/projection calculations withheld without complete recorded cost coverage. Charging losses explicitly unsupported.",
+    "error": "Stats and sessions/live fatal retries present; supporting failures produce non-blocking banner. Idle drain has no dedicated retry surface, only shared stale warning/partial banner.",
+    "staleOffline": "All four sources adapt useDataState and render StaleRefreshWarning; shared contract retains payload on refresh failure/offline pause.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "line": 860,
+        "rule": "MDC-026",
+        "detail": "Top OperationalBrief never receives loading, although shared OperationalBrief supports it. BatterySpecialistSummary loading at line 997 requires stats loading AND no sessions data; cached sessions can therefore expose summary derivations while primary stats are pending. Lifetime BatteryEvidenceBrief also omits loading despite adjacent source skeleton.",
+        "fix": "Pass source-specific initial loading into existing summary/brief contracts; retain usable neighbors and retained payload during background refresh.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "line": 736,
+        "rule": "MDC-026/MDC-045",
+        "detail": "Narrative formats totalCost (an empty reduction to zero) whenever drive stats exist, even if charging history is pending/failed or no session has recorded cost. Its narrative can claim recorded zero cost while the cost metric honestly shows an em dash.",
+        "fix": "Use existing costedSessions/source-trust coverage when deriving narrative text; distinguish observed zero from absent prices and keep cap/partial limitations.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "line": 308,
+        "rule": "MDC-026/MDC-045",
+        "detail": "Daily efficiency/distance, charging energy and time buckets substitute nullish measures with zero; charger classification falls back to Home/AC when charger metadata is absent (line 515). This can make missing observations look measured; actual backend nullability and classification coverage are unverified.",
+        "fix": "Keep null/unknown as missing at derivation/display boundaries, using typed source contracts rather than inventing measurements or charger classes.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+      "line": 1208,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Explicit electric cyan #00f0ff gradients/lines recur at lines 1317 and 1337; bands and bars use page-local hex choices, and charger fallback at line 542 is electric cyan. This bypasses restrained canonical palettes independently of saved chart preferences.",
+      "fix": "Consume existing semantic/chart color policy for defaults, retaining distinct series, thresholds and explicit user chart-color preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\modernization\\CostComparisonCard.tsx",
+      "line": 25,
+      "rule": "MDC-010/MDC-025",
+      "detail": "Cost comparison always selects neonColorMap.green for icon and savings chip; token map supplies bg-neon-green/ring-neon-green. Several hero readings and table cells also use color for unrelated quantities. Source indicates decorative accent pressure, not measured contrast failure.",
+      "fix": "Use neutral tokens for ordinary measurements and restrained success/warning only for actual savings state; keep signed savings and every numeric value.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+      "line": 1321,
+      "rule": "MDC-034/mission-28",
+      "detail": "Efficiency and distance series share one Y-axis despite differing units. Charging energy/session counts also share one Y-axis (lines 1406-1424); relative magnitudes depend on display units and may obscure comparison.",
+      "fix": "Review established dual-axis pattern used by daily energy/cost; preserve both series, tooltip units, hidden-series IDs and export columns. Do not change measurements.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+      "line": 144,
+      "rule": "MDC-032",
+      "detail": "Registered /energy workspace route consumes only calendar start/end, not useRangeState's precise startInstant/endInstantExclusive. Stats request sends start only; end applied client-side to daily rows, sessions send calendar bounds. Rolling Live/24h and timezone boundaries therefore cannot be carried through these calls.",
+      "fix": "Integration owner extends existing energy/charging typed bounds contracts where needed; page consumes both precise instants with workspace timezone semantics. Require server filtering for full aggregates, not just returned rows.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+      "line": 1131,
+      "rule": "MDC-045",
+      "detail": "Lifetime counter is rendered raw with literal kWh using metricId number. Inspected API type documents neither SI dimension nor source unit. Page's statement that BMS counter reports kWh is source assertion, not backend proof.",
+      "fix": "Verify canonical backend field/signal unit before modernization; retain known source display until verified. Never silently multiply/divide or introduce legacy adapters.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Workspace precise bounds and actual backend unit contract",
+      "Source-specific loading and missing-cost narrative",
+      "Missing measurements/classification and chart scale honesty",
+      "Restrained palette and focused responsive/accessibility runtime acceptance"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Precise energy workspace bounds in existing typed hook",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "operation": "extend existing contract; integration-owned",
+      "propsVariantsStates": "EnergyStatsWindow supports both RFC3339 lower bound and exclusive upper bound; query key includes both; request signal, enablement and inherited stale/retry policies preserved. Existing server handler capability is unknown, not invented.",
+      "usedBy": [
+        "/energy"
+      ],
+      "dependsOn": [
+        "Integration review of energyHandler.Stats bound filtering and daily bucket timezone semantics",
+        "Existing useRangeState precise instant contract"
+      ],
+      "evidence": "useEnergy.ts:32-45; EnergyPage.tsx:144-169; useRangeState.ts:111-123"
+    },
+    {
+      "name": "Reuse OperationalBrief loading and shared numeric trust; no new composite",
+      "existingOwnerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "operation": "reuse; shared source change not currently demonstrated",
+      "propsVariantsStates": "loading boolean suppresses numeric publication and review drawer measurements; retained flags remain independent; BatteryEvidenceBrief accepts loading and retained already.",
+      "usedBy": [
+        "Energy operational brief",
+        "Energy KPI summary",
+        "Energy lifetime metrics"
+      ],
+      "dependsOn": [
+        "Page-specific primary/supporting source trust mapping"
+      ],
+      "evidence": "OperationalBrief.tsx:61,118,182-190,257-262; BatteryEvidenceBrief.tsx:14-15,48"
+    },
+    {
+      "name": "Existing chart palette/motion policy",
+      "existingOwnerFile": "web\\src\\lib\\colors.ts",
+      "operation": "reuse existing owner; extension need not proven",
+      "propsVariantsStates": "Restrained default series colors with distinguishable labels/markers, thresholds and user-saved palette choices; existing motion preference must govern chart transitions without dropping series, brush, annotations or exports.",
+      "usedBy": [
+        "Four Energy charts",
+        "Efficiency thresholds"
+      ],
+      "dependsOn": [
+        "Verify existing chart defaults and saved preference bridge",
+        "Focused reduced-motion and contrast checks"
+      ],
+      "evidence": "EnergyPage.tsx:1208,1241,1317,1337,1415; frontend-design-contract.md MDC-034/MDC-042"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+      "line": 250,
+      "rule": "MDC-002/MDC-034",
+      "detail": "Page-local threshold and trend palette coexists with existing chart palette/tokens. No competing theme/query/selector/overlay system observed in inspected page.",
+      "fix": "Adopt existing palette policy, not a new provider or wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "5CC1A1FE3C6D131CE9A8AA2F9B0835FB46367E51AB054B96749137356330EC37",
+    "currentLineCount": 1584,
+    "sectionCount": 12,
+    "sectionNames": [
+      "Energy posture operational brief",
+      "Key energy metrics specialist summary",
+      "Efficiency driver investigation",
+      "Efficiency and cost overview",
+      "Lifetime metrics",
+      "Period cost comparison",
+      "Projected annual cost comparison",
+      "Daily consumption and charging cost chart",
+      "Efficiency and distance trend chart",
+      "Charging time-of-day chart",
+      "Charger-type breakdown chart",
+      "Recent charging sessions"
+    ],
+    "sourceElementCounts": {
+      "LayoutCard": 4,
+      "ChartCard": 4,
+      "CostComparisonCard": 2,
+      "OperationalBrief": 1,
+      "BatterySpecialistSummary": 1,
+      "BatteryEvidenceBrief": 2
+    },
+    "countMeaning": "12 primary evidence/surface blocks; inline BatteryEvidenceBrief instances reside within investigation/lifetime blocks and are not extra primary sections.",
+    "actions": [
+      "Saved view apply/menu for /energy and current URL query",
+      "Independent stats/session/live retries; retained-source refresh warnings",
+      "Temperature-impact, speed-profile and route-efficiency links",
+      "Operational evidence review drawer supplied by shared briefs",
+      "Four chart exports and accessible data-column tables",
+      "Daily chart annotations with vehicle/scope/chart identity",
+      "Three URL hidden-series identities",
+      "Synced hover/reference cursors and daily cost brush for more than 14 records",
+      "Charging detail links and DataTable pagination with battery:energy-sessions stable identity"
+    ],
+    "dataBehavior": [
+      "Raw SI remains on wire/cache; energy/distance/power/efficiency converted at display boundary only",
+      "Weighted drive efficiency and threshold values in Wh/m",
+      "CO2 estimate constant explicitly derived from measured drive energy; not an observed emission counter",
+      "Cost requires recorded finite session prices; savings and projections withheld if incomplete or session-cap reached",
+      "100-session analysis cap and first-15 recent table are current limitations; do not mistake pagination for full-range results",
+      "30/365-day straight-line projections and configured gas model remain estimates, not causal savings proof",
+      "Separate 90-day idle-drain context and BMS lifetime counter remain distinctly scoped",
+      "Unsupported charging loss remains explicitly unavailable",
+      "Locale/timezone, unit and currency preferences; workspace vehicle/range URL state; trust/persistence identities preserved",
+      "Independent section empty/loading/error/stale states and all source limitations survive"
+    ],
+    "sourceInventory": [
+      {
+        "path": "docs\\frontend-design-contract.md",
+        "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+        "lineCount": 394,
+        "inspection": "full source read"
+      },
+      {
+        "path": "docs\\frontend-worker-conventions.md",
+        "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+        "lineCount": 80,
+        "inspection": "full source read"
+      },
+      {
+        "path": "docs\\frontend-mission.md",
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "lineCount": 1593,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+        "lineCount": 141,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "sha256": "5CC1A1FE3C6D131CE9A8AA2F9B0835FB46367E51AB054B96749137356330EC37",
+        "lineCount": 1584,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\features\\battery\\components\\modernization\\BatteryPanelGrid.tsx",
+        "sha256": "2A9EFCA9C487E8A192BAC270B2350AA251FB67B0A7C68C1903C3860C283F8D1B",
+        "lineCount": 44,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\features\\battery\\components\\modernization\\BatterySpecialistSummary.tsx",
+        "sha256": "F1431D6AA325E610BE05BE785AC7D6C08DEC587672BECCA4E6C5C11F7AE33AC0",
+        "lineCount": 48,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\features\\battery\\components\\modernization\\CostComparisonCard.tsx",
+        "sha256": "6E33CF82C9988F08206633B8D106C555C1F53AAC537C84563FDCDC58BD95644E",
+        "lineCount": 76,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+        "sha256": "E954755F164A93FFB2E056CEA1385B2466C3964D92230A45A526CDD995816AA0",
+        "lineCount": 57,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useEnergy.ts",
+        "sha256": "3F688E068CBEC48FAFC1BA1A32E5F63090622C0232CE565B3BE5D39CDBA10A01",
+        "lineCount": 456,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useCharging.ts",
+        "sha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+        "lineCount": 643,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useVehicles.ts",
+        "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+        "lineCount": 1898,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\api\\types.ts",
+        "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+        "lineCount": 4194,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\api\\dataState.ts",
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "lineCount": 434,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\hooks\\useRangeState.ts",
+        "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "lineCount": 694,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "lineCount": 65,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+        "sha256": "504C70538B666ECCAC09537EF59BD5F1E3D3ED4D4930A8493D94B05C5C77FB0E",
+        "lineCount": 48,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\components\\data-display\\MetricTile.tsx",
+        "sha256": "99297C5403860D32FB892EDB3C57B9F7ACD5C6EEEE67778ABCCB79D9EE569239",
+        "lineCount": 93,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "sha256": "B24B19024EFFEBB6D8457171BE61E6899672CD8F668B41BB3814AEB29ADA42E5",
+        "lineCount": 303,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\components\\motion\\FadeIn.tsx",
+        "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "lineCount": 39,
+        "inspection": "full source read"
+      },
+      {
+        "path": "web\\src\\lib\\tokens.ts",
+        "sha256": "E5178C85697F9913646670F8023668B9574B6F5A281C947DDB51141CDBA5A5C9",
+        "lineCount": 441,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\lib\\colors.ts",
+        "sha256": "158B8058728E7AE5B5E83DD5E236B15C23B1A398B56C7ABEC91A629C160FF444",
+        "lineCount": 341,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "lineCount": 168,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "web\\src\\App.tsx",
+        "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+        "lineCount": 918,
+        "inspection": "relevant ranges or search matches only"
+      },
+      {
+        "path": "internal\\api\\router.go",
+        "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+        "lineCount": 5366,
+        "inspection": "relevant ranges or search matches only"
+      }
+    ],
+    "rootHashAtRelease": "5CC1A1FE3C6D131CE9A8AA2F9B0835FB46367E51AB054B96749137356330EC37"
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "serverBehavior": "Only route registration/comments inspected; no handler/repository execution or unit contract verification.",
+    "scope": "Assigned page and directly relevant dependencies only; no other pages, queue, Git operations, source changes or production mutations.",
+    "checks": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+        "exitCode": 0,
+        "output": "5CC1A1FE3C6D131CE9A8AA2F9B0835FB46367E51AB054B96749137356330EC37"
+      },
+      {
+        "command": "PowerShell Get-Content count and scoped Select-String patterns on EnergyPage.tsx",
+        "exitCode": 0,
+        "output": "lines=1584; style=1 (dynamic charger swatch); raw controls=0; direct recharts/react-leaflet/framer-motion imports=0; old relative api imports=0; LayoutCard=4; ChartCard=4; CostComparisonCard=2; OperationalBrief=1; BatterySpecialistSummary=1; BatteryEvidenceBrief=2"
+      },
+      {
+        "command": "audit-violations audit.sh; npx tsc --noEmit; full lint/build/tests",
+        "exitCode": null,
+        "output": "NOT RUN: assignment prohibits full gates; audit.sh unconditionally invokes project TypeScript. Scoped source inspection only, no blanket clean claim."
+      }
+    ],
+    "uninspectedDependencies": [
+      "Complete transitive barrels",
+      "DataTable internals",
+      "EmbeddedChart/full chart defaults",
+      "PageLayout internals",
+      "Settings and selected vehicle implementations",
+      "Backend handlers/repositories",
+      "All actual browser and authenticated route behavior"
+    ],
+    "historicalAcceptance": "Not borrowed as current proof."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\EnergyPage.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\BatteryPanelGrid.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\BatterySpecialistSummary.tsx",
+    "web\\src\\features\\battery\\components\\modernization\\CostComparisonCard.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\data-display\\MetricTile.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-069.json",
+    ".agent-status\\audit-page-069.txt"
+  ]
+}

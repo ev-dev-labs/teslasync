@@ -1,0 +1,172 @@
+import { useMemo } from 'react';
+import { ListTree } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
+import type { UnitFormatter } from '@/hooks/useUnits';
+import { formatDateTime } from '@/lib/dateFormat';
+import type { CapacityObservation, CapacityState, PackCapacityResult } from '../../lib/packCapacity';
+import type { PackCapacityQueryState } from '../pack-capacity';
+import { packCapacityNumber, packCapacityPercent } from '../pack-capacity/labels';
+import { PackCapacitySectionBody } from '../pack-capacity/PackCapacitySectionBody';
+
+interface DirectoryRow {
+  key: string;
+  observation: CapacityObservation;
+  state: CapacityState;
+}
+
+interface Props {
+  result: PackCapacityResult;
+  state: PackCapacityQueryState;
+  locale: string;
+  formatEnergy: UnitFormatter;
+}
+
+/** Same rows, columns, filters and ID; DataTable alone owns both presentations. */
+export function PackCapacityMeasurementDirectory({ result, state, locale, formatEnergy }: Props) {
+  const { t } = useTranslation();
+  const rows = useMemo<DirectoryRow[]>(
+    () => result.recentMeasurements.map((measurement, index) => ({
+      ...measurement,
+      key: `${measurement.observation.sessionId}:${measurement.observation.endMs}:${index}`,
+    })),
+    [result.recentMeasurements],
+  );
+  const columns = useMemo<Column<DirectoryRow>[]>(() => [
+    {
+      key: 'completed',
+      header: t('packCapacity.directory.completed', 'Completed'),
+      visibleOnMobile: true,
+      render: row => <Text variant="bodySm">{formatDateTime(new Date(row.observation.endMs), {
+        locale, tz: result.timeZone,
+      })}</Text>,
+    },
+    {
+      key: 'window',
+      filterValue: row => row.observation.socDeltaPct ?? null,
+      filterValueLabel: (_, row) => `${packCapacityNumber(row.observation.socDeltaPct, locale, 1)}pp`,
+      header: t('packCapacity.directory.window', 'SoC gain'),
+      align: 'right',
+      visibleOnMobile: true,
+      render: row => <Text variant="bodySm" className="font-mono tabular-nums">
+        {packCapacityNumber(row.observation.socDeltaPct, locale, 1)}pp
+      </Text>,
+    },
+    {
+      key: 'energy',
+      filterValue: row => row.observation.energyAddedWh ?? null,
+      filterValueLabel: (_, row) => formatEnergy(row.observation.energyAddedWh),
+      header: t('packCapacity.directory.energy', 'Energy added'),
+      align: 'right',
+      render: row => <Text variant="bodySm" className="font-mono tabular-nums">
+        {formatEnergy(row.observation.energyAddedWh)}
+      </Text>,
+    },
+    {
+      key: 'raw',
+      groupStart: true,
+      filterValue: row => row.observation.capacityWh ?? null,
+      filterValueLabel: (_, row) => formatEnergy(row.observation.capacityWh),
+      header: t('packCapacity.directory.raw', 'Raw capacity'),
+      align: 'right',
+      visibleOnMobile: true,
+      render: row => <Text variant="bodySm" className="font-mono tabular-nums">
+        {formatEnergy(row.observation.capacityWh)}
+      </Text>,
+    },
+    {
+      key: 'filtered',
+      filterValue: row => row.state.capacityWh ?? null,
+      filterValueLabel: (_, row) => formatEnergy(row.state.capacityWh),
+      header: t('packCapacity.directory.filtered', 'Filtered'),
+      align: 'right',
+      render: row => <Text variant="bodySm" className="font-mono tabular-nums">
+        {formatEnergy(row.state.capacityWh)}
+      </Text>,
+    },
+    {
+      key: 'sigma',
+      filterValue: row => row.state.sigmaWh ?? null,
+      filterValueLabel: (_, row) => formatEnergy(row.state.sigmaWh),
+      header: t('packCapacity.directory.sigma', 'Posterior sigma'),
+      align: 'right',
+      render: row => <Text variant="bodySm" className="font-mono tabular-nums">
+        {formatEnergy(row.state.sigmaWh)}
+      </Text>,
+    },
+    {
+      key: 'gain',
+      header: t('packCapacity.directory.gain', 'Gain'),
+      align: 'right',
+      render: row => <Text variant="bodySm" className="font-mono tabular-nums">
+        {packCapacityPercent(row.state.gain, locale, 1)}
+      </Text>,
+    },
+    {
+      key: 'innovation',
+      header: t('packCapacity.directory.innovation', 'Std. innovation'),
+      align: 'right',
+      render: row => <Text variant="bodySm" className="font-mono tabular-nums">
+        {packCapacityNumber(row.state.standardizedInnovation, locale, 2)}
+      </Text>,
+    },
+    {
+      key: 'location',
+      filterValue: row => row.observation.locationLabel ?? null,
+      header: t('packCapacity.directory.location', 'Location'),
+      render: row => <Text variant="bodySm">{row.observation.locationLabel ?? '—'}</Text>,
+    },
+  ], [formatEnergy, locale, result.timeZone, t]);
+
+  const displayValue = (row: DirectoryRow, key: string): string | null => {
+    switch (key) {
+      case 'completed': return formatDateTime(new Date(row.observation.endMs), { locale, tz: result.timeZone });
+      case 'window': return `${packCapacityNumber(row.observation.socDeltaPct, locale, 1)}pp`;
+      case 'energy': return formatEnergy(row.observation.energyAddedWh);
+      case 'raw': return formatEnergy(row.observation.capacityWh);
+      case 'filtered': return formatEnergy(row.state.capacityWh);
+      case 'sigma': return formatEnergy(row.state.sigmaWh);
+      case 'gain': return packCapacityPercent(row.state.gain, locale, 1);
+      case 'innovation': return packCapacityNumber(row.state.standardizedInnovation, locale, 2);
+      case 'location': return row.observation.locationLabel ?? '—';
+      default: return null;
+    }
+  };
+
+  return (
+    <section data-testid="pack-capacity-directory">
+      <GlassPanel className="min-w-0 p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t('packCapacity.directory.title', 'Recent measurement directory')}
+        </PanelTitle>
+        <Text as="p" variant="caption" className="mb-4">
+          {t('packCapacity.directory.subtitle', 'Newest qualified charging windows with raw evidence and each filter update exposed.')}
+        </Text>
+        <PackCapacitySectionBody result={result} state={state}>
+          <DataTable
+            enableValueFilters
+            tableId="battery:pack-capacity-directory"
+            variant="embedded"
+            columns={columns}
+            data={rows}
+            keyExtractor={row => row.key}
+            // The shared mobile adapter owns compact summaries below 640px.
+            // Its tablet/unmeasured table fallback must not hide raw fields.
+            mobileColumns={['completed', 'window', 'energy', 'raw', 'filtered', 'sigma', 'gain', 'innovation', 'location']}
+            mobilePresentation={{
+              roles: {
+                completed: 'title', raw: 'primary', window: 'meta',
+                energy: 'meta', filtered: 'meta', sigma: 'hidden',
+                gain: 'hidden', innovation: 'hidden', location: 'hidden',
+              },
+              displayValue,
+            }}
+            emptyMessage={t('packCapacity.directory.empty', 'No qualified capacity measurements are available.')}
+          />
+        </PackCapacitySectionBody>
+      </GlassPanel>
+    </section>
+  );
+}

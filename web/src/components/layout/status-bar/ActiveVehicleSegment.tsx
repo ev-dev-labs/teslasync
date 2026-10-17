@@ -1,12 +1,16 @@
 import { useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Check, ChevronUp } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
+import { Button } from '@/components/ui/Button';
+import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Popover } from '@/components/ui/Popover';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { useStatusBarPopover } from './StatusBarContext';
 
 /**
@@ -16,9 +20,8 @@ import { useStatusBarPopover } from './StatusBarContext';
  * opens a small popover with a list of all vehicles — picking one routes
  * the rest of the app via the shared selectedVehicle store.
  *
- * Hidden when only one vehicle is on the account (nothing to switch
- * between) and during the initial fleet-load to avoid flashing a
- * placeholder.
+ * A single vehicle has a static chip; an empty fleet is hidden to avoid
+ * flashing a placeholder during the initial fleet-load.
  */
 
 interface ActiveVehicleSegmentProps {
@@ -54,9 +57,11 @@ export function ActiveVehicleSegment({
   // render a literal "NaN%" / "NaN km".
   const metricsLabel = useMemo<string | null>(() => {
     if (!liveState) return null;
-    const battery = Number.isFinite(liveState.battery_level) ? liveState.battery_level : 0;
-    const ratedRangeM = Number.isFinite(liveState.rated_range) ? liveState.rated_range : 0;
-    const range = Math.round(convertDistanceFromSI(ratedRangeM, distanceLabel));
+    const battery = liveState.battery_level != null && Number.isFinite(liveState.battery_level)
+      ? liveState.battery_level : '—';
+    const ratedRangeM = liveState.rated_range;
+    const range = ratedRangeM != null && Number.isFinite(ratedRangeM)
+      ? Math.round(convertDistanceFromSI(ratedRangeM, distanceLabel)) : '—';
     return `${battery}% · ${range} ${distanceLabel}`;
   }, [liveState, distanceLabel]);
 
@@ -89,7 +94,7 @@ export function ActiveVehicleSegment({
 
   const vehicleOptions = (
     <div
-      className="max-h-[280px] overflow-y-auto p-1"
+      className="max-h-status-options overflow-y-auto p-1"
     >
       {vehicles.map((v) => {
         const selected = v.id === vehicleId;
@@ -106,28 +111,28 @@ export function ActiveVehicleSegment({
             size="sm"
             onClick={() => pick(v.id)}
             className={cn(
-              'flex h-auto min-h-9 w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left',
+              'flex h-auto min-h-11 md:min-h-9 w-full justify-start gap-2 rounded-shape-sm px-2 py-1.5 text-start',
               selected
-                ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
-                : 'text-[var(--text-secondary)]',
+                ? cn('bg-[var(--surface-2)]', typography.color.primary)
+                : typography.color.secondary,
             )}
           >
-            <Car className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden />
+            <Car className={cn('h-3.5 w-3.5 shrink-0', typography.color.muted)} aria-hidden />
             <Text
               as="span"
               size="xs"
               weight="medium"
-              className="min-w-0 flex-1 truncate text-left"
+              className="min-w-0 flex-1 whitespace-normal break-words text-start"
             >
               {name}
               {v.model && (
-                <Text as="span" size="2xs" color="muted" className="ml-1.5">
+                <Text as="span" variant="caption" className="ms-1.5">
                   {v.model}
                 </Text>
               )}
             </Text>
             {selected && (
-              <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-hidden />
+              <Check className={cn('h-3.5 w-3.5 shrink-0', typography.color.secondary)} aria-hidden />
             )}
           </Button>
         );
@@ -143,7 +148,7 @@ export function ActiveVehicleSegment({
       >
         <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-3">
           <PanelTitle>{t('statusBar.vehicle.switch', 'Switch vehicle')}</PanelTitle>
-          <Text as="span" size="2xs" color="muted" className="max-w-32 truncate">
+          <Text as="span" variant="caption" className="min-w-0 max-w-32 truncate" title={label}>
             {label}
           </Text>
         </div>
@@ -160,16 +165,17 @@ export function ActiveVehicleSegment({
         <span
           aria-label={`${t('statusBar.vehicle.aria', 'Active vehicle')}: ${label}`}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
-            'text-[var(--text-secondary)]',
+            'inline-flex min-w-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+            typography.size.xs,
+            typography.color.secondary,
           )}
         >
           <Car className="h-3 w-3 shrink-0" aria-hidden />
           {!iconOnly && (
             <>
-              <span className="font-medium truncate max-w-[160px]">{label}</span>
+              <Text as="span" size="xs" weight="medium" className="truncate max-w-active-vehicle-label">{label}</Text>
               {metricsLabel && (
-                <span className="text-[var(--text-muted)] shrink-0">· {metricsLabel}</span>
+                <Text as="span" variant="caption" className="shrink-0">· {metricsLabel}</Text>
               )}
             </>
           )}
@@ -191,18 +197,19 @@ export function ActiveVehicleSegment({
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
-            'text-[var(--text-secondary)]',
+            'h-auto min-h-11 md:min-h-5 min-w-11 md:min-w-0 gap-1.5 rounded-shape-sm px-1.5 py-0',
+            typography.size.xs,
+            typography.color.secondary,
           )}
         >
           <Car className="h-3 w-3 shrink-0" aria-hidden />
           {!iconOnly && (
             <>
-              <span className="font-medium truncate max-w-[140px]">{label}</span>
+              <Text as="span" size="xs" weight="medium" className="truncate max-w-active-vehicle-compact-label">{label}</Text>
               {metricsLabel && (
-                <span className="text-[var(--text-muted)] shrink-0">· {metricsLabel}</span>
+                <Text as="span" variant="caption" className="shrink-0">· {metricsLabel}</Text>
               )}
-              <ChevronUp className={cn('h-3 w-3 shrink-0 transition-transform', open ? '' : 'rotate-180')} aria-hidden />
+              <ChevronUp className={cn('h-3 w-3 shrink-0 transition-transform duration-fast ease-standard motion-reduce:transition-none', open ? '' : 'rotate-180')} aria-hidden />
             </>
           )}
         </Button>
@@ -215,7 +222,7 @@ export function ActiveVehicleSegment({
         side="top"
         align="end"
         ariaLabel={t('statusBar.vehicle.switch', 'Switch vehicle')}
-        className="min-w-[220px]"
+        className="min-w-vehicle-options"
       >
         {vehicleOptions}
       </Popover>

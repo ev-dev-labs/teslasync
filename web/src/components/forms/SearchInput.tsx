@@ -10,8 +10,11 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, X } from 'lucide-react';
-import { Input } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Text } from '@/components/ui/Typography';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import {
   recordSearch,
   getRecentSearches,
@@ -242,14 +245,14 @@ export function SearchInput({
   // as a *label* (which persists), then to a generic translated name,
   // so no call site can ship an unnamed search box.
   const accessibleName =
-    ariaLabel ?? placeholder ?? t('search.input.aria', 'Search');
+    ariaLabel ?? placeholder ?? t('search.input.label', 'Search query');
   const historyEnabled = Boolean(historyScope);
   const activeOptionId = activeIdx >= 0 ? `${listboxId}-opt-${activeIdx}` : undefined;
 
   return (
     <div
       ref={wrapperRef}
-      className={cn('relative', className)}
+      className={cn('relative min-w-0', className)}
       onBlur={historyEnabled ? handleWrapperBlur : undefined}
     >
       <Input
@@ -271,28 +274,30 @@ export function SearchInput({
         icon={<Search className="h-4 w-4" aria-hidden />}
         className="[&::-webkit-search-cancel-button]:hidden"
         suffix={local ? (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             type="button"
             onClick={handleClear}
-            className="touch-target-overlay rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={cn('touch-target-overlay h-6 w-6 p-0.5 hover:text-[var(--text-primary)]', typography.color.muted)}
             aria-label={label}
           >
-            <X className="h-3.5 w-3.5" />
-          </button>
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </Button>
         ) : undefined}
       />
       {dropdownVisible && (
         <div
-          className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] shadow-lg"
+          className="absolute inset-x-0 top-full z-30 mt-1 min-w-0 overflow-hidden rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-1)] shadow-e2"
         >
-          <div className="px-3 py-1.5 text-2xs uppercase tracking-wider text-[var(--text-muted)]">
+          <Text as="div" variant="caption" className="break-words px-3 py-2">
             {t('search.history.title', 'Recent searches')}
-          </div>
+          </Text>
           <ul
             id={listboxId}
             role="listbox"
             aria-label={t('search.history.title', 'Recent searches')}
-            className="max-h-64 overflow-y-auto py-1"
+            className="max-h-64 overflow-y-auto p-1"
           >
             {entries.map((entry, i) => {
               const optionId = `${listboxId}-opt-${i}`;
@@ -304,43 +309,51 @@ export function SearchInput({
                   role="option"
                   aria-selected={isActive}
                 >
-                  <div className="flex items-center gap-1 px-2">
-                    <button
+                  <div className="flex min-w-0 items-center gap-1 px-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => selectEntry(entry)}
                       onMouseEnter={() => setActiveIdx(i)}
                       className={cn(
-                        'flex flex-1 items-center gap-2 truncate rounded px-2 py-1.5 text-left text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-2)] focus:outline-none',
-                        isActive && 'bg-[var(--surface-2)]',
+                        'h-auto min-h-11 min-w-0 flex-1 justify-start px-2 py-1.5 text-start md:min-h-8',
+                        typography.role.body,
+                        typography.weight.regular,
+                        isActive && 'bg-[var(--control-bg)] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
                       )}
                     >
-                      <Search className="h-3.5 w-3.5 flex-shrink-0 text-[var(--text-muted)]" aria-hidden />
-                      <span className="truncate">{entry}</span>
-                    </button>
-                    <button
+                      <Search className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span className="min-w-0 break-words">{entry}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => handleRemoveEntry(entry)}
                       aria-label={t('search.history.removeAria', 'Remove "{{query}}" from search history', { query: entry })}
-                      className="touch-target-overlay rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={cn('h-11 w-11 shrink-0 p-1 hover:text-[var(--text-primary)] md:h-8 md:w-8', typography.color.muted)}
                     >
                       <X className="h-3 w-3" aria-hidden />
-                    </button>
+                    </Button>
                   </div>
                 </li>
               );
             })}
           </ul>
-          <div className="border-t border-[var(--glass-border)] px-2 py-1">
-            <button
+          <div className="border-t border-[var(--border-default)] px-2 py-1">
+            <Button
+              variant="ghost"
+              size="sm"
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleClearAll}
-              className="w-full rounded px-2 py-1 text-left text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={cn('h-auto min-h-11 w-full justify-start whitespace-normal break-words px-2 py-1 text-start hover:text-[var(--text-primary)] md:min-h-8', typography.role.caption, typography.weight.regular)}
             >
               {t('search.history.clear', 'Clear history')}
-            </button>
+            </Button>
           </div>
         </div>
       )}

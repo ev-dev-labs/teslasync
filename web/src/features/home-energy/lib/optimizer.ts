@@ -191,13 +191,13 @@ function normalizeInput(input: OrchestrationInput | null | undefined): Normalize
   const slotMinutesRaw = finiteOr(safeInput.slotMinutes, DEFAULT_SLOT_MINUTES);
   const slotMinutes = slotMinutesRaw > 0 ? slotMinutesRaw : DEFAULT_SLOT_MINUTES;
   if (slotMinutesRaw <= 0) {
-    warnings.push({ code: 'invalid_input', severity: 'warning', detail: 'slotMinutes must be positive; defaulted to 15' });
+    warnings.push({ code: 'invalid_input', severity: 'warning', reason: { id: 'slot_minutes_invalid', args: { defaultMinutes: DEFAULT_SLOT_MINUTES } }, detail: 'slotMinutes must be positive; defaulted to 15' });
   }
 
   const horizonRaw = finiteOr(safeInput.horizonSlots, 0);
   const horizonSlots = horizonRaw > 0 ? Math.min(MAX_HORIZON_SLOTS, Math.floor(horizonRaw)) : 0;
   if (horizonRaw <= 0) {
-    warnings.push({ code: 'invalid_input', severity: 'error', detail: 'horizonSlots must be a positive integer' });
+    warnings.push({ code: 'invalid_input', severity: 'error', reason: { id: 'horizon_slots_invalid' }, detail: 'horizonSlots must be a positive integer' });
   }
 
   const startTimeIso = typeof safeInput.startTimeIso === 'string' && !Number.isNaN(Date.parse(safeInput.startTimeIso))
@@ -215,13 +215,13 @@ function normalizeInput(input: OrchestrationInput | null | undefined): Normalize
   for (const v of rawVehicles as VehicleInput[]) {
     if (!v || typeof v.id !== 'string' || v.id.length === 0) {
       droppedVehicleCount += 1;
-      warnings.push({ code: 'invalid_input', severity: 'warning', detail: 'vehicle entry missing a valid id — dropped' });
+      warnings.push({ code: 'invalid_input', severity: 'warning', reason: { id: 'vehicle_id_missing' }, detail: 'vehicle entry missing a valid id — dropped' });
       continue;
     }
     const usableCapacityWh = finiteOr(v.usableCapacityWh, NaN);
     if (!(usableCapacityWh > 0)) {
       droppedVehicleCount += 1;
-      warnings.push({ code: 'invalid_input', severity: 'warning', vehicleId: v.id, detail: 'usableCapacityWh must be > 0 — vehicle dropped' });
+      warnings.push({ code: 'invalid_input', severity: 'warning', vehicleId: v.id, reason: { id: 'vehicle_capacity_invalid' }, detail: 'usableCapacityWh must be > 0 — vehicle dropped' });
       continue;
     }
     const maxChargePowerW = Math.max(0, finiteOr(v.maxChargePowerW, 0));
@@ -278,7 +278,7 @@ function normalizeInput(input: OrchestrationInput | null | undefined): Normalize
         });
       }
     } else {
-      warnings.push({ code: 'invalid_input', severity: 'warning', detail: 'powerwall.capacityWh must be > 0 — battery ignored' });
+      warnings.push({ code: 'invalid_input', severity: 'warning', reason: { id: 'powerwall_capacity_invalid' }, detail: 'powerwall.capacityWh must be > 0 — battery ignored' });
     }
   }
 

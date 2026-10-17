@@ -1,12 +1,12 @@
 // Behavioural coverage for the anomaly-timeline card.
 //
 // AnomalyTimelineCard is a pure presentational leaf: it maps one
-// AnomalyEntry onto a severity-toned <li> with a colour-independent
+// AnomalyEntry onto a neutral <li> with a colour-independent
 // SeverityBadge, a signal + type-label + z-score header, the detector
 // message, and a value/baseline footer. These tests pin:
 //   - rendered content (signal, message, localized type label, 2dp
 //     value/baseline, timestamp)
-//   - the severity -> tone branch (incl. the 'warning' -> 'warn' alias)
+//   - neutral card roles with semantic badge tones (incl. warning -> warn)
 //   - the z-score chip conditional (shown for z>0, hidden for range/0)
 //   - null-safety of the timestamp path (unparseable -> em-dash)
 //   - list-item semantics + severity-as-text (a11y: not colour-alone)
@@ -17,11 +17,32 @@
 // bundle is loaded. TimeStamp's locale/tz hooks are stubbed (they pull
 // TanStack Query + Router otherwise) exactly as TimeStamp's own test does.
 
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import type { UnitPref } from '@/lib/unitConversion';
 
 import type { AnomalyEntry } from '@/api/hooks/useAnomalies';
 import { AnomalyTimelineCard } from './AnomalyTimelineCard';
+
+const display = vi.hoisted((): { prefs: UnitPref } => ({
+  prefs: {
+    distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
+    energy: 'kWh', power: 'kW', duration: 'h', locale: 'en-US', precision: 2,
+  },
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: {
+      unit_of_length: display.prefs.distance,
+      unit_of_temp: display.prefs.temperature === '°F' ? 'F' : 'C',
+      unit_of_pressure: display.prefs.pressure,
+      locale: display.prefs.locale,
+      decimal_precision: display.prefs.precision,
+    },
+  }),
+}));
 
 vi.mock('@/hooks/useTimeFormatPreference', () => ({
   useTimeFormatPreference: () => 'relative',
@@ -59,7 +80,7 @@ function makeAnomaly(overrides: Partial<AnomalyEntry> = {}): AnomalyEntry {
 
 // Wrap in <ul> so the <li> resolves to the listitem role, matching how
 // AnomalyDashboardPage renders the timeline grid.
-function renderCard(anomaly: AnomalyEntry) {
+function renderCard(anomaly: ComponentProps<typeof AnomalyTimelineCard>['anomaly']) {
   return render(
     <ul>
       <AnomalyTimelineCard anomaly={anomaly} />
@@ -68,6 +89,76 @@ function renderCard(anomaly: AnomalyEntry) {
 }
 
 describe('AnomalyTimelineCard', () => {
+  beforeEach(() => {
+    display.prefs = {
+      distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
+      energy: 'kWh', power: 'kW', duration: 'h', locale: 'en-US', precision: 2,
+    };
+  });
+
+  it.each([
+    ['m', -1250, 500, '-1.25 km', '0.50 km'],
+    ['m/s', -1.25, 0.5, '-4.50 km/h', '1.80 km/h'],
+    ['°C', -12.25, 0, '-12.25°C', '0.00°C'],
+    ['Pa', 312500, 250000, '3.13 bar', '2.50 bar'],
+    ['kPa', -125.5, 0, '-1.26 bar', '0.00 bar'],
+    ['Wh', -1250, 500, '-1.25 kWh', '0.50 kWh'],
+    ['W', -1250, 500, '-1.25 kW', '0.50 kW'],
+    ['s', -4500, 1800, '-1.25 h', '0.50 h'],
+  ])('displays authoritative %s readings without changing raw evidence', (unit, value, baseline, reading, reference) => {
+    const anomaly = Object.freeze({ ...makeAnomaly({ value, baseline, z_score: 4.27 }), unit });
+    const { container } = renderCard(anomaly);
+    expect(container.textContent).toContain(reading);
+    expect(container.textContent).toContain(reference);
+    expect(container.textContent).toContain('4.27σ');
+    expect(anomaly.value).toBe(value);
+    expect(anomaly.baseline).toBe(baseline);
+  });
+
+  it('updates display preferences without altering SI readings or dimensionless z-score', () => {
+    const anomaly = Object.freeze({ ...makeAnomaly({ value: -12.5, baseline: 0, z_score: 3.125 }), unit: '°C' });
+    const { container, rerender } = renderCard(anomaly);
+    expect(container.textContent).toContain('-12.50°C');
+    display.prefs.temperature = '°F';
+    rerender(<ul><AnomalyTimelineCard anomaly={{ ...anomaly }} /></ul>);
+    expect(container.textContent).toContain('9.50°F');
+    expect(container.textContent).toContain('32.00°F');
+    expect(container.textContent).toContain('3.13σ');
+    expect(anomaly.value).toBe(-12.5);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])('keeps missing/invalid %s distinct from measured zero', value => {
+    const { container } = renderCard({ ...makeAnomaly(), unit: '°C', value, baseline: 0, z_score: value });
+    expect(container.textContent).toContain('Value: —');
+    expect(container.textContent).toContain('Baseline: 0.00°C');
+    expect(container.textContent).not.toContain('σ');
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])('keeps a missing/invalid baseline (%s) distinct from a measured zero value', baseline => {
+    const { container } = renderCard({ ...makeAnomaly(), unit: 'Pa', value: 0, baseline });
+    expect(container.textContent).toContain('Value: 0.00 bar');
+    expect(container.textContent).toContain('Baseline: —');
+  });
+
+  it('retains an unsupported authoritative unit as raw rather than guessing a converter', () => {
+    const { container } = renderCard({
+      ...makeAnomaly({ signal: 'ChargeRateMilePerHour', value: 1250.5, baseline: -0.125 }),
+      unit: 'm/h',
+    });
+    expect(container.textContent).toContain('Value: 1,250.50 m/h');
+    expect(container.textContent).toContain('Baseline: -0.13 m/h');
+    expect(container.textContent).not.toContain('mph');
+    expect(container.textContent).not.toContain('km/h');
+  });
+
+  it.each([undefined, '', 'unknown'])('does not guess units for an unspecified mapping (%s)', unit => {
+    const { container } = renderCard({ ...makeAnomaly({ signal: 'OutsideTemp', value: -0.125, baseline: 0 }), unit });
+    expect(container.textContent).toContain('Value: -0.13');
+    expect(container.textContent).toContain('Baseline: 0.00');
+    expect(container.textContent).not.toContain('°C');
+    expect(container.textContent).not.toContain('°F');
+  });
+
   it('renders the signal, message, localized type label and timestamp', () => {
     const { container } = renderCard(makeAnomaly());
     const text = container.textContent ?? '';
@@ -86,11 +177,11 @@ describe('AnomalyTimelineCard', () => {
     expect(text).toContain('2.00'); // fmtNumber(2, 2)
   });
 
-  it('shows the z-score sigma chip at one decimal when z_score > 0', () => {
+  it('shows the z-score sigma chip at the selected precision when z_score > 0', () => {
     const { container } = renderCard(makeAnomaly({ z_score: 4.27 }));
     const text = container.textContent ?? '';
-    expect(text).toContain('4.3\u03c3'); // fmtNumber(4.27, 1) = '4.3'
-    expect(text).not.toContain('4.27\u03c3');
+    expect(text).toContain('4.27\u03c3');
+    expect(text).not.toContain('4.3\u03c3');
   });
 
   it('hides the sigma chip for a range violation (z_score === 0)', () => {
@@ -100,16 +191,19 @@ describe('AnomalyTimelineCard', () => {
     expect(text).toContain('Range'); // anomaly.type.range label still shown
   });
 
-  it('maps each severity to its list-item tone (incl. the warning->warn alias)', () => {
-    const critical = renderCard(makeAnomaly({ severity: 'critical' })).container.querySelector('li');
-    expect(critical?.className).toContain('bg-red-500/10');
-    expect(critical?.className).toContain('border-red-500/30');
-
-    const warning = renderCard(makeAnomaly({ severity: 'warning' })).container.querySelector('li');
-    expect(warning?.className).toContain('bg-amber-500/10');
-
-    const info = renderCard(makeAnomaly({ severity: 'info' })).container.querySelector('li');
-    expect(info?.className).toContain('bg-sky-500/10');
+  it.each([
+    ['critical', 'danger'],
+    ['warning', 'warning'],
+    ['info', 'info'],
+  ] as const)('keeps the %s card neutral while preserving its badge tone', (severity, tone) => {
+    renderCard(makeAnomaly({ severity }));
+    const item = screen.getByRole('listitem');
+    expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(item.className).not.toContain('--semantic-');
+    expect(item).toHaveClass('flex', 'flex-col', 'gap-2', 'rounded-xl', 'border', 'p-4');
+    const badge = screen.getByText(new RegExp(`^${severity}$`, 'i'));
+    expect(badge.parentElement?.className).toContain(`bg-[var(--semantic-${tone}-bg)]`);
+    expect(screen.getByText('Statistical')).toHaveClass('bg-[var(--surface-2)]');
   });
 
   it('conveys severity as text on the badge, not by colour alone (a11y)', () => {

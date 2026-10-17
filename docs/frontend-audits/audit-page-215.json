@@ -1,0 +1,284 @@
+{
+  "item": "audit-page-215",
+  "page": "web\\src\\features\\trips\\pages\\TripListPage.tsx",
+  "routes": ["/trips"],
+  "purpose": "Browse stored multi-drive trips scoped by the workspace vehicle/date selection, compare loaded-page distance and energy, inspect trip summaries, save filter views and export loaded records.",
+  "primaryGoal": "Understand the selected trips without mistaking loaded-page aggregates, inferred pagination, unavailable measurements or historical records for complete fleet totals or live measurements.",
+  "dataSources": [
+    {
+      "name": "Stored trip list",
+      "hook": "useTrips({vehicle_id,limit,offset,start,end})",
+      "file": "web\\src\\api\\hooks\\useTrips.ts",
+      "line": 29,
+      "endpoint": "GET /api/v1/trips",
+      "sourceOwner": "internal\\api\\trip\\handler.go",
+      "evidence": ["web\\src\\features\\trips\\pages\\TripListPage.tsx:106-120", "web\\src\\api\\hooks\\useTrips.ts:29-42", "internal\\api\\router.go:4210", "internal\\api\\trip\\handler.go:110-146", "internal\\database\\trip\\repo.go:109-177"],
+      "behavior": "Query key ['trips', params]; request forwards AbortSignal and select:safeArray protects null arrays. Handler applies vehicle and pagination plus optional start/end to both fleet and vehicle repository paths. Rows are newest-started first, not ranked by distance. List returns an array without exact total metadata. Page derives historical DataState and never substitutes fatal failure for retained data.",
+      "units": "Distance metres, energy Wh, duration seconds remain raw on wire/cache; monetary cost retains current currency formatting. useUnits/useFormatting and convertDistanceFromSI operate at presentation boundaries.",
+      "runtimeVerified": false
+    },
+    {
+      "name": "Trip summary projection and availability",
+      "file": "internal\\database\\trip\\repo.go",
+      "line": 45,
+      "sourceOwner": "internal\\database\\trip\\repo.go",
+      "evidence": ["internal\\database\\trip\\repo.go:45-85", "internal\\api\\trip\\handler.go:51-107", "web\\src\\api\\types.ts:1615-1636"],
+      "behavior": "Totals are recomputed from joined drives, coalescing missing distance/energy/duration to zero. Charge count and cost are vehicle-scoped overlapping charging-session window aggregates, not explicit trip-charge membership. Open-trip aggregation uses NOW when ended_at is null. DTO carries nonnullable numeric totals, nullable name/end, aliases started_at/start_date and ended_at/end_date. No source-level availability flags or exact total count are supplied; frontend cannot recover missing constituent measurements from these aggregates.",
+      "runtimeVerified": false
+    },
+    {
+      "name": "Workspace scope",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "line": 656,
+      "sourceOwner": "web\\src\\lib\\workspaceScope.ts",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:74", "web\\src\\hooks\\useRangeState.ts:107-123,656-682", "web\\src\\hooks\\useSelectedVehicle.ts:47-89,113-129", "web\\src\\features\\trips\\pages\\TripListPage.tsx:89-113"],
+      "behavior": "/trips is range-enabled. Existing header owns range and vehicle; no duplicate selectors are rendered. Page currently consumes calendar start/end, not precise startInstant/endInstantExclusive. Vehicle precedence is URL, persisted valid vehicle, first vehicle; null may occur while fleet resolution is pending or fleet is empty, and page then omits vehicle_id. Date changes reset pagination; vehicle changes do not have a page-level reset.",
+      "runtimeVerified": false
+    },
+    {
+      "name": "Vehicle selection support",
+      "hook": "useVehicles() inside useSelectedVehicle()",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "internal\\api\\router.go",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:49-51", "web\\src\\api\\hooks\\useVehicles.ts:73-80", "internal\\api\\router.go:3319-3320"],
+      "behavior": "Existing vehicle-key query, FAST stale policy, AbortSignal and safeArray; selection support is not a separate trips measurement source. No fleet fetch or mutation was exercised."
+    },
+    {
+      "name": "Saved route views",
+      "hook": "useSavedViews('/trips'), useCreateSavedView, useUpdateSavedView, useDeleteSavedView, useSetDefaultSavedView",
+      "file": "web\\src\\api\\hooks\\useSavedViews.ts",
+      "line": 45,
+      "endpoints": ["GET /api/v1/saved-views?route=%2Ftrips", "POST /api/v1/saved-views", "PUT /api/v1/saved-views/{id}", "DELETE /api/v1/saved-views/{id}"],
+      "sourceOwner": "internal\\api\\router.go",
+      "evidence": ["web\\src\\features\\trips\\pages\\TripListPage.tsx:142-146", "web\\src\\components\\data-display\\SavedViewMenu.tsx:92-157", "web\\src\\api\\hooks\\useSavedViews.ts:45-51,69-82,98-113,125-142,158-169", "internal\\api\\router.go:3731-3736", "web\\src\\hooks\\useSavedViewUrl.ts:34-51"],
+      "behavior": "User-owned durable querystring snapshots support apply/clear, create, rename, delete, pin/default and auto-apply of a default only on an initially unfiltered URL. Existing shared mutation toasts/invalidation/broadcast and optimistic delete rollback remain. Audit did not execute any mutation."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-17", "web\\src\\components\\layout\\PageContainer.tsx:243-257", "web\\src\\features\\trips\\pages\\TripListPage.tsx:134-149"], "contract": "Canonical page width/header/action overflow/source notices/loading frame; do not duplicate shell scope or create a competing layout."},
+    {"name": "TripStatsBand / TripOperationalBrief / useOperationalMetrics", "kind": "domain and shared summary", "owner": "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx", "evidence": ["web\\src\\features\\trips\\pages\\TripListPage.tsx:229-298", "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx:11-34"], "contract": "Six numeric raw-source metrics with loaded-page scope/provenance, formatted unit/currency/count context and current OperationalBrief details affordance. Distinguish absent query from resolved zero."},
+    {"name": "TopTripsChart / ChartCard / EmbeddedChart / ChartContainer", "kind": "chart composite", "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "evidence": ["web\\src\\features\\trips\\pages\\TripListPage.tsx:305-397", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:13-47", "web\\src\\components\\charts\\EmbeddedChart.tsx:19-41", "web\\src\\components\\charts\\ChartContainer.tsx:417-428,451-452,637,806-823"], "contract": "Top ten loaded trips by distance; fixed 280px chart, real data/dataColumns accessibility fallback, shared tooltip/grid/axes, image exports plus explicit loaded-set CSV/JSON. Embedded fullscreen defaults false; no chart-native CSV without exportData."},
+    {"name": "TripEnergyPanel / MetricBar / LayoutCard", "kind": "ranked domain presentation", "owner": "web\\src\\components\\data-display\\MetricBar.tsx", "evidence": ["web\\src\\features\\trips\\pages\\TripListPage.tsx:407-444", "web\\src\\components\\data-display\\MetricBar.tsx:8-28,43-104"], "contract": "Six highest positive-energy loaded trips relative to largest energy, source names/values and display energy; MetricBar already supports missing values, solid fills, accessible names and reduced-motion animation."},
+    {"name": "TripCard / LayoutCard / InlineMetric / Badge / Text / Caption", "kind": "trip summary", "owner": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "evidence": ["web\\src\\features\\trips\\pages\\TripListPage.tsx:451-532", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-63"], "contract": "Trip identity, start date, elapsed/in-progress duration, drive/charge counts, distance, energy, derived efficiency and monetary cost; decorative route cue is hidden from assistive technology. Current card contains no navigation action."},
+    {"name": "CardGrid", "kind": "responsive composite", "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx", "evidence": ["web\\src\\components\\layout\\layout-reference\\CardGrid.tsx:25-44", "web\\src\\features\\trips\\pages\\TripListPage.tsx:197-203"], "contract": "Measured container policy, stable trip identity, third-sized packed items, min-w-0 and accessible group label; preserve every card rather than reducing mobile content."},
+    {"name": "Pagination", "kind": "shared control", "owner": "web\\src\\components\\ui\\Pagination.tsx", "evidence": ["web\\src\\components\\ui\\Pagination.tsx:10-31,49-60,76-137", "web\\src\\features\\trips\\pages\\TripListPage.tsx:122-126,210-220"], "contract": "Caller-owned total/page/size, localized range announcement, first/previous/number/next/last and direct jump, responsive targets and size options 25/50/100; current total contract assumes an actual count."},
+    {"name": "SavedViewMenu / useSavedViewUrl", "kind": "shared user preference", "owner": "web\\src\\components\\data-display\\SavedViewMenu.tsx", "evidence": ["web\\src\\components\\data-display\\SavedViewMenu.tsx:34-79,92-157", "web\\src\\hooks\\useSavedViewUrl.ts:34-51"], "contract": "Reuse route '/trips', canonical querystrings, default application, menus/dialogs/confirmations and current save/manage actions; do not invent another view store."},
+    {"name": "DataFreshnessAuto / DataSourceNotice / deriveDataState", "kind": "source trust", "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx", "evidence": ["web\\src\\features\\trips\\pages\\TripListPage.tsx:114-117,138-139", "web\\src\\api\\dataState.ts:191-270", "web\\src\\components\\feedback\\DataSourceNotice.tsx:72-114,117-190"], "contract": "Header freshness, historical source distinction, fatal versus retained refresh error, source recovery and offline/paused status; no query-policy changes."},
+    {"name": "FadeIn / PullToRefresh / QueryError / Skeleton / EmptyState", "kind": "motion/mobile/feedback", "owner": "web\\src\\components\\mobile\\PullToRefresh.tsx", "evidence": ["web\\src\\components\\mobile\\PullToRefresh.tsx:41-56,83-136", "web\\src\\components\\motion\\FadeIn.tsx:24-38", "web\\src\\features\\trips\\pages\\TripListPage.tsx:150-220"], "contract": "Coarse-pointer refresh at scroll top with settled-promise recovery, current reduced-motion handling, localized fatal/empty retry controls and section skeletons. No touch or keyboard acceptance claimed."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 55, "rule": "MDC-002/MDC-044 existing duration owner", "detail": "Page-local timestamp duration parser/formatter overlaps formatDurationRange in lib/dateFormat.ts:357-367. Local code correctly rounds total minutes before splitting hours, unlike helpers that independently round a remainder; substitution must not regress rollover.", "fix": "Reuse formatDurationRange only after preserving 59.7/119.7-minute carry, open-trip label, invalid-date dash and saved number/locale preferences in focused tests. Do not create a new formatter library.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 185, "rule": "MDC-026 independent recovery composition", "detail": "List, chart and energy panel repeat loading/error/empty/retry branches but share QueryError/Skeleton/EmptyState already. These are independent presentations of one query, not three queries or competing recovery infrastructure.", "fix": "Retain section states and consolidate only a demonstrated repeated presentation need through existing feedback owners; no speculative universal wrapper.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "verifiedAtRuntime": false,
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 162, "detail": "Primary chart/energy grid stacks below xl and uses chart span two of three at xl. Viewport classes differ from CardGrid's measured-container behavior."},
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 172, "detail": "List title/count flex-wrap; cards keep min-w-0, metadata/badges wrap, metric text uses break-words/overflow-wrap:anywhere."},
+      {"file": "web\\src\\components\\ui\\Pagination.tsx", "line": 47, "detail": "Shared pagination uses container-based control visibility, a reachable direct-jump form and 44px small-screen controls; not rendered in this audit."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 177, "rule": "MDC-026/MDC-043 skeleton geometry", "detail": "Loading grid uses viewport CARD_GRID while loaded cards use container-aware CardGrid; PageLayout.loading additionally replaces all child bands with the generic PageLoadSkeleton. Neither loaded trip structure nor six-metric/chart/energy geometry is maintained on first load.", "fix": "Use existing container-aware layout and contextual skeletons while keeping all band headings/source notices available; test narrow shell allocations and transitions, not only viewport width.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 384, "rule": "MDC-043/mission 27 chart label reachability", "detail": "Ten bars occupy 280px with an 80px category axis and 10px ticks; long trip names and a narrow chart allocation may truncate/skip labels. Overflow and readability are not visually verified.", "fix": "Exercise long translated/user names and 320px allocated width; preserve top-ten comparison and actual accessible data rows, and use existing frame sizing/label strategies rather than removing trips.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\components\\data-display\\MetricBar.tsx", "line": 68, "rule": "MDC-043 long ranked labels", "detail": "Energy ladder header uses a nonwrapping flex row with no local min-w-0/break-word policy for the source label and readout. TripEnergyPanel supplies arbitrary trip names; effective overflow is unverified.", "fix": "Validate long unbroken names in the shared MetricBar; if reproduced, make its existing header wrap or shrink labels safely without hiding the numeric value/name. Page must not fork MetricBar.", "owner": "shared", "confidence": "medium"}
+    ]
+  },
+  "accessibility": {
+    "runtimeVerified": false,
+    "keyboardVerified": false,
+    "contrastVerified": false,
+    "positiveEvidence": [
+      "Three localized section labels and CardGrid group label exist (TripListPage.tsx:153,161,171,198).",
+      "TopTripsChart supplies real data/dataColumns and localized ariaLabel; decorative download and route icons are aria-hidden (TripListPage.tsx:346-353,362,366,475-479).",
+      "Shared Pagination has nav name, aria-current, range live region, named buttons, jump validation and responsive target sizes (Pagination.tsx:50-60,76-137).",
+      "FadeIn and MetricBar explicitly consume motion preference (FadeIn.tsx:24-38; MetricBar.tsx:49,99-103)."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 393, "rule": "MDC-042 reduced JS chart motion", "detail": "Bar lacks isAnimationActive/motion-aware props. chartAnimation at line 378 is a static duration/easing object spread on BarChart rather than the animated Bar. Shared chartAnimationProps already exists in chartDefaults.tsx:53-61.", "fix": "Apply the existing chartAnimationProps contract to Bar, preserving series geometry and data; test reduced-motion and ordinary animation without relying on CSS to stop Recharts JS.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 470, "rule": "mission 1 primary goal / MDC-040 navigation reachability", "detail": "Trip cards expose identity/metrics but no Link, onClick or details action; /trips/:id is registered at App.tsx:677. This audit proves missing card navigation, not an existing action lost in migration.", "fix": "Integration owner should decide whether this list must expose the already-existing detail route; if approved, use a named native link composed with existing control chrome, not an unlabelled clickable div. Preserve current exports and metadata.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 361, "rule": "MDC-040 mobile target validation", "detail": "CSV/JSON use Button size sm with wrapping labels but no explicit page-level 44px override. Effective shared sizing/spacing exceptions and open chart toolbar reachability were not exercised.", "fix": "Measure actual export targets at narrow allocations and 200% text; reuse shared Button density/target policy if they fail rather than duplicating a button implementation.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "states": {
+    "runtimeVerified": false,
+    "inventory": [
+      {"name": "Initial loading", "evidence": "TripListPage.tsx:114-117,137,177-183; PageContainer.tsx:243-244", "behavior": "Page loading replaces all child bands with a generic two-panel skeleton. Feature-specific chart/energy/list skeletons remain coded but are hidden during normal first-load page suppression."},
+      {"name": "Fatal failure", "evidence": "TripListPage.tsx:116-117,185-186,372-375,421-422", "behavior": "QueryError offers refetch in list, chart and energy; summary receives missing values/failure source status instead of fabricated success."},
+      {"name": "Resolved empty array", "evidence": "TripListPage.tsx:120,188-196,258-287,358,423-429", "behavior": "Query hasData is true for []; loaded-page summary shows zero counts/totals, chart empty, energy unrankable, list no-records with Retry; pagination absent. This is distinct from no resolved query."},
+      {"name": "Retained refresh failure", "evidence": "dataState.ts:225-242; TripListPage.tsx:114-117,138-139; TripOperationalBrief.tsx:27-31", "behavior": "Retained records remain; summary shows retained source/freshness and shared source notice can offer recovery. Chart/cards do not become fatal-error placeholders."},
+      {"name": "Paused/offline", "evidence": "dataState.ts:191-220,245-249; DataSourceNotice.tsx:77-78,86-88; TripOperationalBrief.tsx:25-31", "behavior": "DataState records isRefreshBlocked; retained pause becomes stale, initial pause remains initial. Source notice distinguishes initial pause, but its hasData path reports ready without considering pause."},
+      {"name": "Open/in-progress trip", "evidence": "TripListPage.tsx:60,486-492; internal\\database\\trip\\repo.go:61-70", "behavior": "Null end_date gets localized In progress duration; date-range inclusion is trip-start based. No live trip telemetry or completion mutation is implied."},
+      {"name": "Loaded page without positive energy", "evidence": "TripListPage.tsx:409-413,423-429", "behavior": "Energy panel displays No energy data to rank yet for all-zero/nonpositive-energy loaded rows; cards/list and distance comparison remain."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 514, "rule": "MDC-026 measured zero versus unavailable", "detail": "Card efficiency renders '0 Wh/unit' when distance is zero, although energy divided by zero distance is undefined. Card cost displays a dash for every cost <=0, hiding genuine zero or signed source cost. Numeric fallback at lines 458-462 also erases malformed/missing inputs; current backend already coalesces aggregate availability.", "fix": "Keep zero cost visible and preserve signed monetary values according to existing currency semantics; show unavailable efficiency when denominator is not valid positive distance. Coordinate constituent availability with the data owner rather than inventing new cache values or reinterpreting SQL coalesced zero.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 272, "rule": "MDC-026 denominator/data trust", "detail": "Summary cost-per-100-distance context falls back to formatted currency zero when loaded distance is not positive, presenting an unavailable ratio as measured zero.", "fix": "Retain numeric source cost/distance and show a localized unavailable ratio explanation for a nonpositive/invalid denominator; keep actual zero numerator valid when distance is positive.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\components\\feedback\\DataSourceNotice.tsx", "line": 88, "rule": "MDC-026 paused retained-source distinction", "detail": "resolveDataSourceStatus returns ready for hasData + fetchStatus paused unless isError is also true. deriveDataState marks that same source stale/isRefreshBlocked. TripOperationalBrief shows retained source while the shared notice omits paused-offline recovery; actual offline composed UI remains unverified.", "fix": "Shared source-notice owner should represent retained-paused sources without dropping payloads, expose a retry where allowed and align labels with DataState. Do not turn paused into fatal failure or measured empty.", "owner": "shared", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 380, "rule": "MDC-010/MDC-034 restrained chart fills", "detail": "Distance bars use a gradient at opacity 0.8; energy MetricBar defaults gradient. DISTANCE_COLOR/ENERGY_COLOR are the current CB-safe blue/orange palette, not the legacy neon palette. Gradient decoration is source-confirmed, not a measured neon/glow defect.", "fix": "Prefer restrained solid shared chart fill and MetricBar fill='solid', keeping CB-safe distinctions and every comparison/readout. Use existing palette/tokens; do not reset persisted palette preferences or create new hex colors.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 476, "rule": "MDC-010/MDC-012 semantic restrained accents", "detail": "Every card repeats a cyan tinted/ringed decorative route icon, amber energy text and emerald cost text (lines 476-479,511,523), independent of source state/theme. These are toned fixed accents, not proof of neon or glow, but spend visual intensity on ordinary metadata.", "fix": "Use existing semantic surface/border/text-secondary/primary tokens for decorative route chrome and routine monetary/energy readouts; retain semantic info/success badges and chart series meaning. Check composed light/dark contrast before acceptance.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 505, "rule": "MDC-013 typography hierarchy", "detail": "Card values repeat ad-hoc size='sm' weight='semibold' instead of a role variant, despite using shared Text/MetricLabel/Caption. Current layout is not raw HTML typography and should not be replaced wholesale.", "fix": "Select existing metric/body role contracts with tabular numerals, unit readability and wrapping preserved; do not shrink all measurements or invent a page font scale.", "owner": "page", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 94, "rule": "MDC-032 workspace instant filtering", "detail": "Page takes start/end calendar strings and passes them at lines 111-112. useRangeState exposes rolling/timezone instants at lines 656-682; apiparams.ParseDateRange supports them and date-only input uses UTC days. Thus header 24h/live scope is not represented by precise rolling bounds and calendar scope ignores local timezone boundaries.", "fix": "Pass startInstant/endInstantExclusive through the existing useTrips start/end fields and use the same effective instant identity for pagination resets. Preserve header owner, URL preference semantics, full server filtering and inclusive-SQL adapter; do not add a page picker or client-only filtering.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 122, "rule": "MDC-026 truthful pagination / shared contract", "detail": "estimatedTotal is passed as exact total to Pagination, whose caption says Showing X-Y of total and whose last-page/direct-jump limits assume certainty. Full loaded page manufactures one extra record; an empty later page removes Pagination entirely at line 209, leaving no local Previous recovery.", "fix": "Preserve next/previous/size/direct-navigation capabilities while truthfully identifying unknown totals. Shared owner should accept an explicit unknown/estimated-total mode, or integration should provide genuine count metadata. Keep recovery reachable on an empty out-of-range page and do not label the estimate as an exact count.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 98, "rule": "MDC-032 scope change pagination", "detail": "previousRange/effect resets only startDate/endDate, not vehicleId. useSelectedVehicle writes a new vehicle while preserving unrelated page query parameters. Switching to a smaller vehicle result set can retain a high offset and yield an empty grid with pagination hidden.", "fix": "Coordinate atomic page reset with actual vehicle/effective-range changes while preserving explicitly restored saved-view pagination. Test vehicle switch, range commit, rolling clock refresh and saved-view apply rather than blindly clearing all URL state.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 92, "rule": "MDC-046 URL/server pagination agreement", "detail": "useUrlNumber accepts every finite value, including zero, negative and fractional sizes/pages (useUrlState.ts:168-181). useTrips omits nonpositive limit/offset, server falls back to limit 50 and caps accepted size at 1000, while shared Pagination separately sanitizes display. For example size=0 yields estimatedTotal=1 for a nonempty response even though the server returned its default-size window; fractional values also disagree with integer backend parsing.", "fix": "Validate page as a positive safe integer and size against the supported server/control contract before deriving request offset or count estimate, using existing URL mechanisms and preserving valid deep links. Do not weaken server validation.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 137, "rule": "MDC-031/MDC-026 source notice visibility", "detail": "PageLayout.loading removes children and DataSourceNotice through PageContainer's loading branch. The feature already owns contextual states but first-load suppression hides them, and shared header freshness alone does not prove an equivalent first-load offline recovery.", "fix": "Prefer non-destructive busy/announcement plus section skeletons/source notice instead of suppressing all bands; preserve loading announcements and layout identity. Verify initial pause behavior for the installed query version before claiming an offline defect.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 229, "rule": "MDC-002 page orchestrates domain presentation", "detail": "Page defines TripStatsBand, TopTripsChart, TripEnergyPanel and TripCard in the same 532-line file. Only one component is exported, so this is not a multiple-export violation, but parsing/ranking/formatting/export projection and JSX are coupled to the orchestrator.", "fix": "If decomposing, extract page-local domain components under this feature with typed props while retaining all section/action/data behavior and combined source inventory; reuse existing TripOperationalBrief and shared composites, not replacement wrappers.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Correct workspace instant forwarding and scope/pagination recovery while preserving header/URL ownership.",
+      "Make count uncertainty, zero monetary values and undefined efficiency truthful.",
+      "Retain sections during initial/loading/paused states and align shared retained-pause notice.",
+      "Use existing reduced-motion Bar contract; test narrow/long-label controls and chart fallback.",
+      "Remove repeated decorative accents and unnecessary gradients through existing tokens/contracts."
+    ],
+    "acceptance": "Source-only audit; implementation, runtime and visual acceptance are not established."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Truthful unknown-total pagination contract",
+      "owner": "web\\src\\components\\ui\\Pagination.tsx",
+      "file": "web\\src\\components\\ui\\Pagination.tsx",
+      "line": 10,
+      "rule": "MDC-023/MDC-026",
+      "detail": "Existing total:number contract and exact-count caption cannot represent the trip endpoint's known loaded count plus uncertain next page.",
+      "fix": "Extend the existing control only after integration chooses count metadata versus explicit uncertainty; no replacement paginator.",
+      "confidence": "high",
+      "propsVariantsStates": "Retain existing page/pageSize/onPageChange/onPageSizeChange exact-total mode; an additive explicit totalKind/hasNextPage contract must announce loaded/unknown totals, avoid invented last-page limits, preserve previous/next/size and any valid jump semantics, and remain reachable on an empty requested page.",
+      "usedBy": ["web\\src\\features\\trips\\pages\\TripListPage.tsx"],
+      "dependsOn": ["internal\\api\\trip\\handler.go array response/count ownership", "web\\src\\api\\hooks\\useTrips.ts request-window contract", "Existing localized pagination labels and keyboard/target policy"],
+      "acceptance": ["Exact-total callers unchanged", "Full loaded page is possibly truncated, not proof of another record", "Empty later page permits previous-page recovery", "Localized screen-reader caption is truthful"]
+    },
+    {
+      "name": "Retained paused query source notice",
+      "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+      "file": "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+      "line": 88,
+      "rule": "MDC-026",
+      "detail": "Retained paused sources are currently ready here but stale/refresh-blocked in deriveDataState.",
+      "fix": "Align paused-with-retained-data source semantics in the existing notice rather than adding a trip-local offline component.",
+      "confidence": "high",
+      "propsVariantsStates": "Existing sources[].query and retry callback; distinguish initial paused, retained paused, refreshing, refresh failure, ready and fatal failure. Keep retained payload visible and historical provenance intact; localize actual paused recovery without guessing connectivity.",
+      "usedBy": ["web\\src\\features\\trips\\pages\\TripListPage.tsx via PageLayout.dataSources", "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx state consistency"],
+      "dependsOn": ["web\\src\\api\\dataState.ts isRefreshBlocked/status", "PageContainer loading/busy visibility contract", "Existing source notice status/localization/retry semantics"],
+      "acceptance": ["Initial pause is unavailable/pending, not measured empty", "Retained pause preserves data and announces retained/offline status", "Ordinary ready and fatal failure behavior unchanged"]
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 50, "rule": "MDC-002 container policy reuse", "detail": "Loading CARD_GRID competes with measured CardGrid geometry used for the loaded list; reuse one existing layout strategy.", "fix": "Use the canonical container policy for loading and loaded cards; do not add another grid engine.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\pages\\TripListPage.tsx", "line": 55, "rule": "MDC-002 duration reuse", "detail": "Local formatDuration overlaps existing dateFormat duration functions; preserve documented rollover and open-trip rules before consolidation.", "fix": "Use the inspected formatDurationRange owner with preservation tests, not a third formatter.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "E9FCE0CD46A5693C271FCDC83B77CA56E3231B52BF7E489D96DCB0A251AC37A9",
+    "hashAlgorithm": "SHA-256",
+    "sourceFile": "web\\src\\features\\trips\\pages\\TripListPage.tsx",
+    "sourceHashMeaning": "Current repository-root file bytes, not a historical baseline or Git object.",
+    "lineCount": 532,
+    "minimumCombinedLinesForLaterModernization": 373,
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Trip summary KPI band", "line": 153, "count": 1, "contents": "Six metrics: total distance, energy, cost, trips, average distance per trip and charges; trip/drive/charge/cost-per-distance context, loaded-page date/vehicle scope, historical provenance and freshness."},
+      {"name": "Primary distance and energy breakdown", "line": 160, "count": 1, "contents": "Two independent panels: top-ten distance chart and top-six positive-energy ladder; loading/error/empty/retry and loaded-set exports remain."},
+      {"name": "All trips detail cards", "line": 171, "count": 1, "contents": "Heading, loaded row count, six initial skeleton cards, fatal/empty retry, all loaded card identities and metadata/metrics."},
+      {"name": "Pagination footer", "line": 209, "count": 1, "contents": "Conditionally visible current page/size/count/navigation; changing size atomically clears page. Preserve navigation capability while fixing uncertainty/recovery."}
+    ],
+    "sourceCounts": {"sectionElements": 3, "metricDefinitions": 6, "chartCardCallSites": 1, "layoutCardCallSites": 2, "glassPanelCallSites": 2, "cardGridCallSites": 1, "paginationCallSites": 1, "localPresentationFunctions": 4, "exportedPageComponents": 1},
+    "actions": [
+      "Shared header vehicle/date selection, rolling/custom URL ranges and existing preferences.",
+      "Saved views apply/clear/default auto-apply/create/rename/delete/pin/default and existing dialogs/announcements.",
+      "Header source freshness refresh affordance, section retry and coarse-pointer pull-to-refresh refetch.",
+      "Full loaded-set CSV download teslasync-trips-v2.csv with id/name/start_date/end_date/distance_m/energy_wh/cost/drives/charges.",
+      "Full loaded-set JSON download teslasync-trips.json preserving raw Trip shape, through current privacy redaction.",
+      "Canonical chart image export capabilities; no claim that fullscreen or chart-native CSV is enabled.",
+      "Pagination page/size, first/previous/number/next/last and shared jump form; valid URL restoration."
+    ],
+    "dataBehavior": [
+      "One historical trip query; retain query keys, cancellation, inherited retries/cache policy and null-array protection.",
+      "Workspace vehicle filter and both server date bounds; correct instant semantics without adding local controls.",
+      "Newest trip start order for cards; distance and energy rankings are copies and do not mutate source rows.",
+      "Summary/export scope is loaded page, not complete range/fleet. Distance chart top ten; energy ladder top six positive values.",
+      "All six summary metrics and every card date/duration/count/distance/energy/efficiency/cost survive; local duration carries rounded total minutes into hours.",
+      "Raw SI metres/Wh/seconds remain unchanged in JSON/cache/CSV; display conversions and current currency/number/date preferences only at render boundaries.",
+      "Backend aggregate zeros and overlapping charging-window cost/count remain documented; do not invent measurement availability.",
+      "Fatal error is distinct from retained refresh failure; resolved [] distinct from unresolved data; true zero distinct from unknown or undefined ratio.",
+      "No card detail navigation is currently implemented; do not claim it as an action preserved or removed."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-215.json", ".agent-status\\audit-page-215.txt"]
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source inspection of mounted /trips page and directly relevant presentation/data contracts. No Git operation, source/shared/config/catalog/queue edit, runtime request or production mutation.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "assistiveTechnology": "unverified",
+    "backendExecution": "unverified; SQL/handler source only",
+    "validation": [
+      {"command": "Get-FileHash 'web\\src\\features\\trips\\pages\\TripListPage.tsx' -Algorithm SHA256", "exitCode": 0, "output": "E9FCE0CD46A5693C271FCDC83B77CA56E3231B52BF7E489D96DCB0A251AC37A9; repeated readback identical"},
+      {"command": "(Get-Content 'web\\src\\features\\trips\\pages\\TripListPage.tsx').Count", "exitCode": 0, "output": "532"},
+      {"command": "Bounded Select-String source scan, with case-sensitive raw-control correction", "exitCode": 0, "output": "style=: 0; case-sensitive raw button/input/textarea/select/table: 0; direct recharts/react-leaflet/framer-motion imports: 0; text-white/#fff/glow/neon matches: 0; section: 3; GlassPanel: 2; ChartCard: 1; LayoutCard: 2. Initial case-insensitive raw-control scan matched two shared Button usages; corrected scan yields zero, not two violations."},
+      {"command": "Get-Content docs\\frontend-audits\\audit-page-215.json -Raw | ConvertFrom-Json; required-field/identity/issue-citation and live SHA256/line-count assertions", "exitCode": 0, "output": "PASS JSON schema/identity; 22 issue rows; preservation SHA256 E9FCE0CD46A5693C271FCDC83B77CA56E3231B52BF7E489D96DCB0A251AC37A9; 532 lines"},
+      {"command": "npx tsc --noEmit; full violations audit.sh; full lint/build", "exitCode": null, "output": "NOT RUN: assignment is Phase0 source-only with no heavy/full validation; audit.sh contains project-wide TypeScript and was inspected but not executed. No type/lint/build pass claimed."}
+    ],
+    "unknowns": [
+      "Current route is source-mounted via lazy import and SafeRoute, but browser/auth reachability was not exercised.",
+      "Actual rendered contrast, pure-white shared surfaces, glow, composed layout overflow and control target exceptions cannot be certified by the zero local regex counts.",
+      "OperationalBrief drawer internals and SavedViewMenu below the inspected range were not fully audited; named shared capabilities are existing composition contracts, not exercised acceptance.",
+      "Shared formatting/settings/request/privacy internals beyond directly inspected functions were not re-audited.",
+      "No exact-count API, trip-edit action, telemetry, replay or full-range export is invented."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-214.json",
+    "web\\src\\features\\trips\\pages\\TripListPage.tsx",
+    "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useTrips.ts",
+    "web\\src\\api\\hooks\\useSavedViews.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useSavedViewUrl.ts",
+    "web\\src\\hooks\\useUrlState.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\export.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\charts\\chartDefaults.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\SavedViewMenu.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\mobile\\PullToRefresh.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\trip\\handler.go",
+    "internal\\api\\apiparams\\params.go",
+    "internal\\database\\trip\\repo.go"
+  ]
+}

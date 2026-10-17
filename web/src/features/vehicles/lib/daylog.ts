@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { Icons } from '@/lib/icons';
-import { ymdInTz } from '@/lib/dateFormat';
+import { formatTime, ymdInTz } from '@/lib/dateFormat';
+import { getGlobalLocale } from '@/lib/numberFormat';
 import type { DayLogEvent, DayLogLayer } from '@/api/types';
 
 /** English fallbacks so tests and missing catalogs still read as labels. */
@@ -229,22 +230,29 @@ export function categoryOf(type: string): DayLogCategory {
 }
 
 /**
- * `HH:MM:SS` in the given IANA timezone. Falls back to the UTC clock
- * face when the zone is invalid so a bad setting never blanks the row.
+ * Saved-locale clock with seconds and an offset identifying repeated DST
+ * hours. The caller retains the original ISO timestamp as provenance.
+ * Invalid settings retain the raw instant rather than guessing its zone.
  */
-export function formatTimeSeconds(iso: string, tz?: string): string {
+export function formatTimeSeconds(iso: string | null | undefined, tz?: string): string {
+  if (!iso) return formatTime(iso);
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
+  if (Number.isNaN(d.getTime())) return formatTime(iso);
+  const locale = getGlobalLocale();
   try {
-    return new Intl.DateTimeFormat('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hourCycle: 'h23',
+    const time = formatTime(iso, {
+      locale,
+      tz: tz || undefined,
+      clock: { hour: '2-digit', minute: '2-digit', second: '2-digit' },
+    });
+    const offset = new Intl.DateTimeFormat(locale, {
       timeZone: tz || undefined,
-    }).format(d);
-  } catch {
-    return d.toISOString().slice(11, 19);
+      timeZoneName: 'shortOffset',
+    }).formatToParts(d).find((part) => part.type === 'timeZoneName')?.value;
+    return offset ? `${time} ${offset}` : time;
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    return iso;
   }
 }
 
@@ -288,7 +296,7 @@ export const DAY_LOG_ICON: Record<string, ComponentType<{ className?: string }>>
   parked: Icons.parking,
   online: Icons.activity,
   asleep: Icons.moon,
-  offline: Icons.wifiOff,
+  offline: Icons.cloudOff,
   state_change: Icons.info,
   locked: Icons.locked,
   unlocked: Icons.unlocked,

@@ -1,0 +1,2115 @@
+{
+  "item": "phase6-qa-notifications-inbox",
+  "attempt": 1,
+  "status": "RELEASED_SOURCE_QA_FINDINGS",
+  "source_before": [
+    {
+      "path": "web/src/features/notifications/pages/InboxPage.tsx",
+      "sha256": "1e96d8dddee87b99ee6cc913bc8556cb3a4a8e0178b796e571952bd5fd61bdd1",
+      "bytes": 5174
+    },
+    {
+      "path": "web/src/features/notifications/pages/InboxPage.test.tsx",
+      "sha256": "5b426a348f7ea94c645e9f30224765210172416ec970bed885c9abe61e7e975f",
+      "bytes": 20575
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxBody.tsx",
+      "sha256": "5e6ab221a751832e473457cf81a12571471198eb6d5ab92fb1e45e6dae16427a",
+      "bytes": 36020
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxBody.test.tsx",
+      "sha256": "2f2189a93cbaec607fd5d69f9f6f3a9a776564821cb4015b28e220e734688820",
+      "bytes": 58298
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxSummary.tsx",
+      "sha256": "ff9987b8bb9023fa6e6ce9a8b5671f5fa35e4cab4ff3dd6532f3f906fe240dee",
+      "bytes": 8709
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxSummary.test.tsx",
+      "sha256": "24cfdbd67a8d1aa32367c8baed72e79523242d8186fc86e870129d14dc3042c7",
+      "bytes": 14528
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationReportPanel.tsx",
+      "sha256": "7d275992d8b6ad2e8adf9337f6e36ca22740221d75af4f453b04d4d01272b08f",
+      "bytes": 10426
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationReportPanel.test.tsx",
+      "sha256": "2f2d0f74b80975135a2032df42263ce908859b1e110a59d5085f75bdfe151a87",
+      "bytes": 9560
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+      "sha256": "32b4d0d1945f55c94747ce3a001a9df150b779732cd089082ec132bde2a782c7",
+      "bytes": 10402
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationFilterBar.test.tsx",
+      "sha256": "52da58f54e3498f68fd71a32e371fe11134efd0f3b6a0fbe31a734098d1d9d67",
+      "bytes": 9974
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+      "sha256": "5c81bb9d540f08169fda7ac267beb20d7916cc829885ced26293f53a3878eb5d",
+      "bytes": 11330
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationGroupRow.test.tsx",
+      "sha256": "58c9822e97bfdc186af92c92a228b4468c0962fd40f3af63823ab6dc6958040a",
+      "bytes": 10562
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+      "sha256": "39435fabca4953ae96d0003741797a1b0fc381a260b0685bd177aad0a64f0201",
+      "bytes": 13690
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+      "sha256": "31bb7269144ac0b3b016106de76007b9957c1a19a3266bcd30de198288286199",
+      "bytes": 4069
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationInboxDelivery.tsx",
+      "sha256": "619258625a5ce341184dac031c48f7a22453f2b4cb6d8d57b08fe4797f14cdf0",
+      "bytes": 767
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationRow.tsx",
+      "sha256": "b51ca6ce721d502b3e564ef15c3dcfcbf204afafeaf9f032ba92afec50768b02",
+      "bytes": 6876
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationRow.test.tsx",
+      "sha256": "8338bc5c2f965a230f2013505d105eb0805bb49eaa6fc499e4f42e58a93a9867",
+      "bytes": 11263
+    },
+    {
+      "path": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "sha256": "842059d12208b1585c3dcd6137d9d4a1a09ab7d170c20c41b478103eee2536bb",
+      "bytes": 11321
+    },
+    {
+      "path": "web/src/features/notifications/components/AlertDetailDrawer.test.tsx",
+      "sha256": "b7a740f410c003ee5573d2f0ad7c39f4384934caddd2eed9c798c8d66d5ec21d",
+      "bytes": 4420
+    },
+    {
+      "path": "web/src/api/hooks/useNotifications.ts",
+      "sha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "bytes": 51833
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "bytes": 70205
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes": 2035
+    },
+    {
+      "path": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "bytes": 22200
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes": 18863
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "bytes": 6443
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "bytes": 3322
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes": 2095
+    },
+    {
+      "path": "web/src/lib/notificationEventType.ts",
+      "sha256": "e33707faaed2f80c4b0454122f53cd75635e66754cb51ef2ae2bd6fee86fcf86",
+      "bytes": 1098
+    },
+    {
+      "path": "web/src/lib/alertDrillthrough.ts",
+      "sha256": "7c881180e8efba91e056bae7cee0cfd7a40ac56a068da86ab0c9c7c5ca89be47",
+      "bytes": 4879
+    },
+    {
+      "path": "web/src/hooks/useProductPreferences.ts",
+      "sha256": "2f6dd2ac3e6492fa0de6ab60ce1a0f5bf9b626551b1c3caf876b58781e10f276",
+      "bytes": 1036
+    },
+    {
+      "path": "web/src/components/data-display/format/DateTime.tsx",
+      "sha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+      "bytes": 4940,
+      "baseline_note": "Added at first direct-support review; read-only"
+    },
+    {
+      "path": "web/src/lib/timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "bytes": 1863,
+      "baseline_note": "Added at first direct-support review; read-only"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes": 4093,
+      "baseline_note": "Added at first direct-support review; read-only"
+    },
+    {
+      "path": "web/src/components/ai/AIInboxAutoCategorization.tsx",
+      "sha256": "eb8d26ff632e2209fbebb4908b18683ad09813311e18148abc38951702f1e4bb",
+      "bytes": 11415,
+      "baseline_note": "Added at first direct-support review; read-only"
+    },
+    {
+      "path": "web/src/api/hooks/useOptimisticMutation.ts",
+      "sha256": "18091b5b0af174881d133d9ad794bbd52eae4477213a5fdafc3de8c883f90cdf",
+      "bytes": 6031,
+      "baseline_note": "Added at first direct-support review; read-only"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes": 68125,
+      "baseline_note": "Added at first direct-support review; read-only"
+    },
+    {
+      "path": "web/src/features/notifications/components/operationalbrief-all/NotificationBriefRawContracts.test.tsx",
+      "sha256": "9aa49b1e8bf2ac7e6594915fadd62f14d45e296ddea6425feb08dd3920540901",
+      "bytes": 7278,
+      "baseline_note": "Added at first direct-support review; read-only"
+    },
+    {
+      "path": "web/src/api/queryClient.ts",
+      "sha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "bytes": 3802,
+      "baseline_note": "Additional direct runtime-policy support pin at review; read-only"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174,
+      "baseline_note": "Additional direct runtime-policy support pin at review; read-only"
+    },
+    {
+      "path": "web/src/main.tsx",
+      "sha256": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+      "bytes": 10317,
+      "baseline_note": "Additional direct runtime-policy support pin at review; read-only"
+    }
+  ],
+  "commands_log": "web/logs/phase6-qa-notifications-inbox.log",
+  "started_at": "2026-10-14T02:00:08.5627040Z",
+  "reserved_at": "2026-10-14T01:57:57.687Z",
+  "return_by": "2026-10-14T02:17:57.687Z",
+  "hard_by": "2026-10-14T02:22:57.687Z",
+  "confirmedIssues": [
+    {
+      "id": "NI001",
+      "severity": "high",
+      "rule": "workspace-scope",
+      "title": "Alias lacks header range and can give list/report different defaults",
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 53,
+      "evidence": [
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 53,
+          "quote": "'/notifications/inbox',"
+        },
+        {
+          "file": "web/src/features/notifications/pages/InboxPage.tsx",
+          "line": 39,
+          "quote": "const { startInstant, endInstantExclusive, timezone } = useRangeState();"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 156,
+          "quote": "defaultPresetId: preferences.defaultAnalysisRange,"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "line": 301,
+          "quote": "const headerOwned = getWorkspaceRouteScope(pathname).range &&"
+        },
+        {
+          "file": "web/src/App.tsx",
+          "line": 623,
+          "quote": "<Route path=\"notifications\" element={<SafeRoute name=\"NotificationsInbox\"><InboxPage /></SafeRoute>} />"
+        }
+      ],
+      "mechanism": "RANGE_ENABLED_PATHS has /notifications/inbox but not the equally mounted /notifications. Header-owned defaults use product preferences; alias page defaults7d but body passes product default.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Without URL/shared stored dates and with defaultAnalysisRange=30d, reason through /notifications: header range=false; page/report7d versus body30d. Canonical inbox makes both header-owned. No navigation performed."
+      },
+      "fix": "Register alias in existing workspaceScope owner, preserving vehicle=false, both bounds and shared semantics.",
+      "need": "N01",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI002",
+      "severity": "high",
+      "rule": "initial-paused-trust",
+      "title": "No-data paused/idle sources are described as empty or active loading",
+      "file": "web/src/features/notifications/components/InboxSummary.tsx",
+      "line": 77,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/InboxSummary.tsx",
+          "line": 77,
+          "quote": "const firstLoad = query.isLoading && rows.length === 0;"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxSummary.tsx",
+          "line": 115,
+          "quote": "if (!firstLoad && stats.total === 0) {"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 259,
+          "quote": "const initialLoading = !listState.hasData && (isGrouped ? groupsLoading : isLoading);"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 814,
+          "quote": "{!isGrouped && !initialLoading && !listState.fatalError && rows.length === 0 && ("
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 248,
+          "quote": "{!membersLoading && !membersError && otherMembers.length === 0 && ("
+        },
+        {
+          "file": "web/src/features/notifications/pages/InboxPage.tsx",
+          "line": 94,
+          "quote": ") : !source.state.hasData ? ("
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59,
+          "quote": "if (!state.hasData) return null;"
+        }
+      ],
+      "mechanism": "isLoading is false for pending+paused/idle. Summary/list/member branches then claim no notifications/threads/members. Registries label every unresolved no-data state Loading, even paused; stale warning intentionally suppresses no-data notices.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Synthetic data=undefined,isPending=true,isLoading=false,fetchStatus=paused,error=null: evaluate false-empty summary/list/member branches and Loading Vehicles/Rules despite paused acquisition. Idle unresolved also becomes summary empty. NOT EXECUTED."
+      },
+      "fix": "Gate authoritative emptiness on resolved payload; use shared source state for initial-loading/paused/unknown/recovery, retaining shells and real empty arrays.",
+      "need": "N02",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI003",
+      "severity": "high",
+      "rule": "member-pagination",
+      "title": "Members inherit thread-list offset and have no independent pager",
+      "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+      "line": 90,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 90,
+          "quote": "} = useGroupMembers(group.group_key ?? null, filters, { enabled: expanded && !isSingleton });"
+        },
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 960,
+          "quote": "const merged: NotificationFilters = { ...filters, group_key: trimmed };"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 195,
+          "quote": "offset: (page - 1) * pageSize,"
+        }
+      ],
+      "mechanism": "The paged thread filters are merged unchanged into the distinct member result set. Only one bounded member array is mapped; there is no member pager/load-more. Removing latest from fetched members does not make them complete.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Reason from thread page2,size50 and a3-member thread: member request carries offset50, potentially returning no siblings. On page1 a >50-member thread has no route to older members. Backend result illustrative, not queried; forwarding/missing control source-confirmed."
+      },
+      "fix": "Separate typed member pagination from thread offset; retain both bounds, filters, keys, cancellation and complete reachability. Verify backend capability before choosing pagination strategy.",
+      "need": "N03",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI004",
+      "severity": "high",
+      "rule": "retained-source-trust",
+      "title": "Raw member error removes cached siblings and offers no Retry",
+      "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+      "line": 253,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 253,
+          "quote": "{!membersLoading && !membersError && otherMembers.map((m) => {"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 89,
+          "quote": "error: membersError,"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 239,
+          "quote": "{!membersLoading && membersError && ("
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.test.tsx",
+          "line": 258,
+          "quote": "it('shows an inline error when fetching members fails', async () => {"
+        }
+      ],
+      "mechanism": "Any raw error gates all member rows. The role=alert branch is text only; refetch is not retained/exposed. Failed refresh is therefore treated as fatal despite usable siblings.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Retained [latest,sibling] plus error=Error(refresh failed),isLoading=false: otherMembers contains sibling, but !membersError fails and no Retry callback appears. Source scenario, not mounted."
+      },
+      "fix": "Use existing useDataState/feedback, retain siblings on refresh failure, and expose per-member-source retry/provenance.",
+      "need": "N03",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI005",
+      "severity": "high",
+      "rule": "count-recovery-pagination",
+      "title": "Fatal initial count removes navigation without independent recovery",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 784,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 784,
+          "quote": "paginationControls={countData ? {"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 869,
+          "quote": "{countState.fatalError && <Text variant=\"bodySm\">{t('notifications.inbox.countError', 'Could not load the notification count: {{error}}', { error: String(countState.fatalError) })}</Text>}"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 870,
+          "quote": "{isGrouped && countData && countData.total > 0 && ("
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 716,
+          "quote": "<PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>"
+        }
+      ],
+      "mechanism": "Both pagers depend on countData. Fatal count is Text only and does not wire countState.retry/refetch. PullToRefresh refreshes only list/groups. Rows remain, but multi-page results can be stranded.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "List resolves50rows while count rejects before any total is retained: total-unavailable label, no next/page-size controls and no count Retry. No request made."
+      },
+      "fix": "Expose count-specific Retry and honest unknown-total paging/recovery, without inventing a denominator or removing evidence.",
+      "need": "N04",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI006",
+      "severity": "high",
+      "rule": "source-severity-identity",
+      "title": "Current rule severity overwrites persisted evidence; missing severity becomes info",
+      "file": "web/src/features/notifications/components/NotificationRow.tsx",
+      "line": 56,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationRow.tsx",
+          "line": 56,
+          "quote": "const severity = rule?.severity ?? log.severity ?? 'info';"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 520,
+          "quote": "severity: openedRule?.severity ?? openedLog.severity ?? '',"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+          "line": 177,
+          "quote": "render: log => ['info', 'warn', 'warning', 'critical'].includes(log.severity ?? '')"
+        }
+      ],
+      "mechanism": "Grouped rows prefer current mutable rule metadata over persisted event severity. Without either source they fabricate info, whereas flat/details preserve log severity/unknown.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Persisted critical log and later rule severity=info: grouped says info, flat says Critical. No-rule missing severity grouped also says info. Branch reasoning only."
+      },
+      "fix": "Keep persisted severity authoritative, distinguish current rule context, preserve aliases and render missing/unknown neutrally without changing raw data.",
+      "need": "N05",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI007",
+      "severity": "high",
+      "rule": "unknown-lifecycle",
+      "title": "Unresolved detail is synthesized as Open with an Acknowledge action",
+      "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "line": 72,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+          "line": 72,
+          "quote": "const isAcknowledged = Boolean(activeAlert?.acknowledged_at);"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 527,
+          "quote": "acknowledged_at: alertDetail.data?.acknowledged_at ?? null,"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+          "line": 103,
+          "quote": ": t('operations.alerts.lifecycleOpen', 'Open')"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+          "line": 151,
+          "quote": "primaryAction={"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+          "line": 156,
+          "quote": ": t('operations.alerts.acknowledge', 'Acknowledge alert'),"
+        }
+      ],
+      "mechanism": "Missing acknowledgement evidence becomes null in the synthetic summary. detail??alert is treated as known unacknowledged, showing Open/Awaiting acknowledgement and enabled primary action; audit loading/error does not gate it.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Synthetic rule log with detail undefined and pending/paused/fatal query: ack=null,isAcknowledged=false,Open,Acknowledge. No drawer/action invoked."
+      },
+      "fix": "Retain summary but show unknown lifecycle/owner and gate lifecycle writes until authoritative allowed state/pending status is available.",
+      "need": "N04",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI008",
+      "severity": "high",
+      "rule": "timezone-source-identity",
+      "title": "Row vehicle timestamps use the globally selected vehicle timezone",
+      "file": "web/src/features/notifications/components/NotificationRow.tsx",
+      "line": 77,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationRow.tsx",
+          "line": 77,
+          "quote": "const tzMode = vehicle ? 'vehicle' : 'user';"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationRow.tsx",
+          "line": 111,
+          "quote": "in={tzMode}"
+        },
+        {
+          "file": "web/src/components/data-display/format/DateTime.tsx",
+          "line": 88,
+          "quote": "const resolvedTz = useTimezone(effectiveMode);"
+        },
+        {
+          "file": "web/src/lib/timezone.ts",
+          "line": 48,
+          "quote": "const { vehicle } = useSelectedVehicle();"
+        }
+      ],
+      "mechanism": "Row vehicle merely selects mode; DateTime has no row identity prop and useTimezone reads global selection. Notifications hide global picker, but retained selection can differ from the displayed vehicle.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "RowA zone America/Los_Angeles, selectedB Europe/Berlin (or none/user override): grouped timestamp resolves B/user zone while row names A. Source reasoning; no settings changes."
+      },
+      "fix": "Use/disclose intended inbox zone consistently or supply actual row timezone through supported existing formatter boundary, not substituted global identity.",
+      "need": "N05",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI009",
+      "severity": "medium",
+      "rule": "datetime-i18n-preferences",
+      "title": "Summary/drawer dates bypass saved context; relative text remains English",
+      "file": "web/src/features/notifications/components/InboxSummary.tsx",
+      "line": 80,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/InboxSummary.tsx",
+          "line": 80,
+          "quote": "const lastReceivedValue = stats.lastTs > 0 ? formatRelativeTime(new Date(stats.lastTs)) : null;"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxSummary.tsx",
+          "line": 81,
+          "quote": "const lastReceivedSubtitle = stats.lastTs > 0 ? formatDateTime(new Date(stats.lastTs)) : undefined;"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+          "line": 134,
+          "quote": "value: formatDateTime(activeAlert?.created_at),"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 324,
+          "quote": "if (diffMin < 60) return `${diffMin}m ago`"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 58,
+          "quote": "return d.toLocaleString(intlLocale(opts), intlOpts({"
+        }
+      ],
+      "mechanism": "No locale/timezone options passed: absolute dates use browser defaults rather than saved context used by flat DateTime in=user. Shared formatRelativeTime emits English Just now/m ago/h ago.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Saved hypothetical de-DE/UTC and browser en-US/Los_Angeles: five-minute summary remains5m ago; absolute summary/drawer differs from user-mode flat UTC timestamp. No settings modified."
+      },
+      "fix": "Reuse preference-aware displays. Existing shared date helper owner phase6-fix-relative-future-dates remains exclusive; no duplicate helper rewrite.",
+      "need": "N02",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI010",
+      "severity": "medium",
+      "rule": "filter-scope-disclosure",
+      "title": "Multi-ID filters display only first vehicle/rule",
+      "file": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+      "line": 135,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+          "line": 135,
+          "quote": "const id = filters.vehicle_id[0];"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+          "line": 145,
+          "quote": "const id = filters.rule_id[0];"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+          "line": 224,
+          "quote": "value={filters.vehicle_id?.[0] ? String(filters.vehicle_id[0]) : ''}"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+          "line": 234,
+          "quote": "value={filters.rule_id?.[0] ? String(filters.rule_id[0]) : ''}"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 187,
+          "quote": "vehicle_id: vehicleIds.length ? vehicleIds : undefined,"
+        }
+      ],
+      "mechanism": "Body/hook retain and send all CSV array IDs. Selects/chips describe only index0, concealing active members in grouped/mobile and desktop source filters.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "URL vehicle_id=1,2&rule_id=10,20: requests retain both pairs; controls/chips show only1/10. Not navigated/queried."
+      },
+      "fix": "Disclose all IDs or truthful multi summary; retain single-choice change behavior and unknown #ID fallbacks, never discard URL members.",
+      "need": "N06",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI011",
+      "severity": "medium",
+      "rule": "loaded-versus-total-scope",
+      "title": "Grouped heading mixes full thread total with unlabeled loaded-page membership",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 632,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 632,
+          "quote": "{t('notifications.inbox.notificationCountLabel', '{{count}} notifications', { count: groupedNotificationCount })}"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 262,
+          "quote": "() => groups.reduce((total, group) => total + Math.max(0, group.count), 0),"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 627,
+          "quote": "? t('notifications.inbox.threadCountLabel', '{{count}} threads', { count: countData.total })"
+        }
+      ],
+      "mechanism": "Count hook removes pagination; countData.total is all matching threads, but membership sum uses only loaded groups. Adjacent text never labels the second quantity loaded/sample.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "100 matching threads,50 loaded groups count3 each yields100threads Ã‚Â·150notifications, though150 only covers loaded page. Illustrative source calculation, not data query."
+      },
+      "fix": "Label loaded-page membership explicitly; preserve real total and member-ID selection. Do not invent full member totals.",
+      "need": "N04",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI012",
+      "severity": "medium",
+      "rule": "chart-palette-preferences",
+      "title": "Report bars bypass saved chart palette",
+      "file": "web/src/features/notifications/components/NotificationReportPanel.tsx",
+      "line": 135,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationReportPanel.tsx",
+          "line": 135,
+          "quote": "<Bar dataKey=\"triggered\" name={t('notifications.report.triggered', 'Triggers recorded')} fill=\"#22d3ee\" hide={hiddenSeries?.isHidden('triggered') ?? false} />"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationReportPanel.tsx",
+          "line": 136,
+          "quote": "<Bar dataKey=\"deliveries\" name={t('notifications.report.deliveries', 'Channel deliveries')} fill=\"#a78bfa\" hide={hiddenSeries?.isHidden('deliveries') ?? false} />"
+        }
+      ],
+      "mechanism": "Series fills are constants despite canonical frame/hiddenSeries use; selected palette does not reach these props.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Any selected palette with different first two colors leaves both fixed fill props unchanged. No render/preference action; not measured contrast."
+      },
+      "fix": "Use current chart palette/tokens; preserve both series IDs, buckets, hiddenSeries, data alternative, export and chartKey.",
+      "need": "N07",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI013",
+      "severity": "medium",
+      "rule": "hardcoded-string",
+      "title": "Known grouped severity UI text bypasses i18n",
+      "file": "web/src/features/notifications/components/NotificationRow.tsx",
+      "line": 107,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationRow.tsx",
+          "line": 107,
+          "quote": "{severity}"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+          "line": 178,
+          "quote": "? <SeverityBadge severity={log.severity} size=\"sm\">{t(`notifications.inbox.filter.severity.${log.severity === 'warning' ? 'warn' : log.severity}`, log.severity === 'critical' ? 'Critical' : log.severity === 'info' ? 'Info' : 'Warn')}</SeverityBadge>"
+        }
+      ],
+      "mechanism": "Known wire values info/warn/critical render directly. Flat table already translates known severity labels. Unknown raw identifiers are an acceptable evidence fallback, not permission to skip known-label localization.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Known warn in non-English UI remains literal warn in grouped view while flat requests its existing translation key. Source comparison, not locale switch."
+      },
+      "fix": "Translate known severities through existing keys, preserving raw unknown values. Catalog changes parent-only.",
+      "need": "N05",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI014",
+      "severity": "medium",
+      "rule": "number-preferences",
+      "title": "Group unread count bypasses numeric preferences",
+      "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+      "line": 192,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 192,
+          "quote": "{group.unread_count}"
+        }
+      ],
+      "mechanism": "Raw React numeric text does not use selected number-format bridge, unlike summary metrics/report counts.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Hypothetical unread_count12345/de-DE emits12345 instead of locale grouping12.345. Source reasoning only."
+      },
+      "fix": "Use existing fmtInt/useNumberFormatting and maintain raw count/filter scope and accessible meaning.",
+      "need": "N03",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI015",
+      "severity": "medium",
+      "rule": "filtered-empty-state",
+      "title": "No-match filters are described as no notifications/threads yet",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 819,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 819,
+          "quote": ": t('notifications.inbox.empty.title', 'No notifications')}"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 824,
+          "quote": ": t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}"
+        },
+        {
+          "file": "web/src/features/notifications/components/InboxBody.tsx",
+          "line": 836,
+          "quote": "message={t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}"
+        }
+      ],
+      "mechanism": "Empty copy distinguishes archive/source=rule but not search/severity/vehicle/rule/read conditions. Successful filtered empty looks like absent population despite existing unfiltered backlog.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Summary populated but q=no-match evidence resolves[]: No notifications plus events-appear-when-triggered copy, or generic No threads. No request made."
+      },
+      "fix": "Distinguish no records from no matches; retain shell and allow optional-filter reset without resetting workspace bounds.",
+      "need": "N04",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    },
+    {
+      "id": "NI016",
+      "severity": "medium",
+      "rule": "theme-token-adoption",
+      "title": "Grouped chrome retains fixed white/cyan surfaces and focus ring",
+      "file": "web/src/features/notifications/components/NotificationRow.tsx",
+      "line": 85,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationRow.tsx",
+          "line": 85,
+          "quote": "'border-white/[0.06] hover:bg-white/[0.04]',"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationRow.tsx",
+          "line": 86,
+          "quote": "!isRead && 'bg-white/[0.03] border-l-2 border-l-cyan-400/70',"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 170,
+          "quote": "'border-cyan-400/30 bg-cyan-400/10 text-cyan-200',"
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+          "line": 171,
+          "quote": "'hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',"
+        }
+      ],
+      "mechanism": "Fixed white-alpha/cyan classes bypass current semantic surface/control/focus tokens and restrained theme decisions. Root archive link has already adopted shared chrome.",
+      "repro": {
+        "mode": "source-reasoned synthetic; NOT EXECUTED",
+        "steps": "Source classes unchanged across light/dark/custom themes. Effective contrast/focus/visual intensity NOT measured; no native visual failure asserted."
+      },
+      "fix": "Use existing semantic roles, preserving unread non-color meaning, metadata/disclosure and keyboard behavior; validate composed themes later.",
+      "need": "N05",
+      "sourceConfirmed": true,
+      "runtimeConfirmed": false
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "kind": "native-mobile",
+      "title": "Grouped quick-action touch discovery",
+      "file": "web/src/features/notifications/components/NotificationRow.tsx",
+      "line": 146,
+      "quote": "<div className=\"flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100\">",
+      "whyNotConfirmed": "No explicit touch visibility branch. Real hover/focus/touch behavior unmeasured; opacity alone does not prove unreachability.",
+      "status": "NOTRUN/evidence-limited",
+      "sourceConfirmedViolation": false
+    },
+    {
+      "id": "C02",
+      "kind": "native-target-a11y",
+      "title": "Target geometry, long text/RTL and zoom",
+      "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+      "line": 169,
+      "quote": "'h-auto gap-1 rounded-full border px-2 py-0.5 text-xs',",
+      "whyNotConfirmed": "Disclosure overrides height, flat action !min-h-9 and shared Button sm h-9. Actual hit areas/spacing exception/reflow unmeasured; do not assert native WCAG failure solely from classes.",
+      "status": "NOTRUN/evidence-limited",
+      "sourceConfirmedViolation": false
+    },
+    {
+      "id": "C03",
+      "kind": "conditional-backend-action-scope",
+      "title": "Global/group read and loaded-ID Undo",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 441,
+      "quote": "await bulkMarkReadMut.mutateAsync({ all: true });",
+      "whyNotConfirmed": "Preserved mark-all sends all:true but Undo tracks loaded unread IDs; group read only group_key, not dates. Backend/intended full scope and reversal not verified. Never silently narrow historical semantics or execute here.",
+      "status": "NOTRUN/evidence-limited",
+      "sourceConfirmedViolation": false
+    },
+    {
+      "id": "C04",
+      "kind": "conditional-backend-identity",
+      "title": "Log ID equals alert detail/lifecycle ID?",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 244,
+      "quote": "const alertDetail = useAlertDetail(openedLog?.alert_id != null ? openedLog.id : null);",
+      "whyNotConfirmed": "alert_id joins rules, log.id drives alert detail/lifecycle. Backend equivalence not inspected in web-only scope. Existing mapping retained; no guessed wrong-record claim/remap.",
+      "status": "NOTRUN/evidence-limited",
+      "sourceConfirmedViolation": false
+    },
+    {
+      "id": "C05",
+      "kind": "conditional-backend-bound",
+      "title": "Latest50 summary server default",
+      "file": "web/src/features/notifications/pages/InboxPage.tsx",
+      "line": 57,
+      "quote": "const summaryFilters = useMemo<NotificationFilters>(() => ({ archived: false }), []);",
+      "whyNotConfirmed": "Scope says Latest50 but no explicit limit. Server default/order not inspected. Independent bounded all-time intent is correctly disclosed, not a missing workspace filter violation.",
+      "status": "NOTRUN/evidence-limited",
+      "sourceConfirmedViolation": false
+    },
+    {
+      "id": "C06",
+      "kind": "conditional-url-contract",
+      "title": "URL page/read=false versus body state",
+      "file": "web/src/features/notifications/components/InboxBody.tsx",
+      "line": 161,
+      "quote": "const [page, setPage] = useState(1);",
+      "whyNotConfirmed": "Composition test preserves page=2/read=false bytes but body page is local and read URL enum accepts all/read/unread. Share/reload semantics/boolean aliases not established; not counted as confirmed regression. Typed API serialization of UI enums is correct.",
+      "status": "NOTRUN/evidence-limited",
+      "sourceConfirmedViolation": false
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "owner": "parent-assigned workspaceScope integration owner",
+      "files": [
+        "web/src/lib/workspaceScope.ts"
+      ],
+      "findings": [
+        "NI001"
+      ],
+      "queue": "No active exact-file repair found; new narrow residual, not redispatch of completed page migration."
+    },
+    {
+      "id": "N02",
+      "owner": "single page/summary initial-trust and datetime caller scope",
+      "files": [
+        "web/src/features/notifications/pages/InboxPage.tsx",
+        "web/src/features/notifications/components/InboxSummary.tsx"
+      ],
+      "findings": [
+        "NI002",
+        "NI009"
+      ],
+      "coordinate": "Body/member NI002 sites underN04/N03; drawer date underN04. Shared dateFormat owner phase6-fix-relative-future-dates/b3894716-4abc-4e57-bdc9-421e1804084a remains exclusive; no duplicate shared helper owner/clock reset."
+    },
+    {
+      "id": "N03",
+      "owner": "single group-row/member typed-query integration scope",
+      "files": [
+        "web/src/features/notifications/components/NotificationGroupRow.tsx",
+        "web/src/api/hooks/useNotifications.ts"
+      ],
+      "findings": [
+        "NI003",
+        "NI004",
+        "NI014",
+        "NI002",
+        "NI016"
+      ],
+      "coordinate": "Handle exact group-row theme site here; N05 cannot overlap. Verify server paging contract, no invented backend API."
+    },
+    {
+      "id": "N04",
+      "owner": "single InboxBody/AlertDetailDrawer source-state scope",
+      "files": [
+        "web/src/features/notifications/components/InboxBody.tsx",
+        "web/src/features/notifications/components/AlertDetailDrawer.tsx"
+      ],
+      "findings": [
+        "NI005",
+        "NI007",
+        "NI011",
+        "NI015",
+        "NI002",
+        "NI009",
+        "NI006"
+      ],
+      "coordinate": "Body synthetic severity and drawer timestamp sites here, row sitesN05. Preserve delete guards/read preferences/selection/action semantics. Further atomic splits must be sequential/exclusive."
+    },
+    {
+      "id": "N05",
+      "owner": "single NotificationRow identity/presentation scope",
+      "files": [
+        "web/src/features/notifications/components/NotificationRow.tsx"
+      ],
+      "findings": [
+        "NI006",
+        "NI008",
+        "NI013",
+        "NI016"
+      ],
+      "coordinate": "Group-row themeN03, body severityN04. Shared DateTime/timezone readonly absent separate authority; current supported formatter preferred."
+    },
+    {
+      "id": "N06",
+      "owner": "NotificationFilterBar scope disclosure",
+      "files": [
+        "web/src/features/notifications/components/NotificationFilterBar.tsx"
+      ],
+      "findings": [
+        "NI010"
+      ],
+      "coordinate": "Keep multi-ID arrays and single-select change contract; exact copy requests parent-only."
+    },
+    {
+      "id": "N07",
+      "owner": "NotificationReportPanel palette caller",
+      "files": [
+        "web/src/features/notifications/components/NotificationReportPanel.tsx"
+      ],
+      "findings": [
+        "NI012"
+      ],
+      "coordinate": "Reuse accepted palette/frame; no shared remigration, retain all report sections/series."
+    }
+  ],
+  "sectionActionAudit": [
+    {
+      "section": "Shell/navigation",
+      "evidence": "InboxPage:60-81; PageLayout:9-15",
+      "actions": [
+        "copy link",
+        "View archived"
+      ],
+      "disposition": "PageLayout delegates to PageContainer; localized title/subtitle and declared44px archive Link/reduced motion retained; NI001; actual navigation/clipboard NOTRUN.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Bounded unfiltered backlog",
+      "evidence": "InboxPage:55-58,83-85; InboxSummary:50-163",
+      "actions": [
+        "Review details",
+        "Retry/Refresh",
+        "empty Manage rules"
+      ],
+      "disposition": "Six metrics and unknown-severity attention retained. Intentional all-time unfiltered sample versus whole-period report, not complete total. Fatal/empty/retained supported; NI002/NI009, C05.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Independent vehicle/rule registries",
+      "evidence": "InboxPage:42-53,88-105",
+      "actions": [
+        "each Retry/Refresh"
+      ],
+      "disposition": "Separate identities, null normalized to unresolved, arrays/IDs retained on refresh, successful-empty labels; NI002 initial-paused labeling. Healthy notices omitted intentionally, not hidden business sections.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "URL/server filters and controls",
+      "evidence": "InboxBody:145-224,637-688; FilterBar:59-294; Table:73-86,148-220",
+      "actions": [
+        "severity",
+        "vehicle/rule/source",
+        "search/history",
+        "read state",
+        "clear chip/column/all",
+        "flat/group switch",
+        "page/page-size"
+      ],
+      "disposition": "Both shared instants feed typed list/count/groups. Count removes pagination; changes reset page/selection. Header vehicle=false makes local filter intentional; no duplicate range picker. NI001/NI005/NI010/NI015, C06.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Flat evidence table",
+      "evidence": "NotificationInboxTable:63-278; InboxBody:749-816",
+      "actions": [
+        "loaded-row selection",
+        "title/message/Inspect activation",
+        "expansion/details",
+        "context menu",
+        "density/resize/reorder/visibility",
+        "CSV/JSON loaded or selected export"
+      ],
+      "disposition": "Stable notifications:inbox identity and server filters. Mobile title includes time/status/read, expansion retains every detail/action. Retained list/selection declared; count recoveryNI005. No export/download.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Grouped evidence/members",
+      "evidence": "InboxBody:832-873; GroupRow:83-273; Row:53-194",
+      "actions": [
+        "latest/member selection",
+        "expand/collapse",
+        "Mark group read",
+        "read/unread/archive per member",
+        "activate/context/navigation"
+      ],
+      "disposition": "Opt-in grouping disables flat reads and read-on-open effect. Bulk selection uses member IDs. NI002/NI003/NI004/NI006/NI008/NI011/NI013/NI014/NI016; C01/C02/C03.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Read/bulk/lifecycle actions",
+      "evidence": "InboxBody:280-318,394-528,533-600,724-748; useNotifications:1019-1262",
+      "actions": [
+        "read-on-open/default-on opt-out",
+        "read-on-click",
+        "selected Mark read and Undo",
+        "global Mark all read and loaded-ID Undo",
+        "Archive",
+        "Restore archived support preserved",
+        "single/bulk confirmed Delete",
+        "acknowledge/reopen"
+      ],
+      "disposition": "All callbacks/effects inspected only. Production mutation defaults always/retry0: no offline replay allegation. Confirmations and success/error/undo paths retained. NI007; C03/C04 action/backend/capability execution NOTRUN.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Full notification/rule inspection",
+      "evidence": "NotificationInboxDetails:17-63; AlertDetailDrawer:71-276; InboxBody:694-714",
+      "actions": [
+        "close Modal/Drawer",
+        "full message/error",
+        "row actions",
+        "audit Retry",
+        "related vehicle/drives/charging/locations/service/telemetry",
+        "Investigate signal"
+      ],
+      "disposition": "Received/sent/scheduled/read/archive timestamps, latency,type,rule,vehicle,channel,severity,status,error preserved. Invalid/missing timestamps and missing latency em dash; zero latency numeric. Cached alert audit preserved with warning+Retry. NI006/NI007/NI009; overlay/focus native NOTRUN.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Complete period activity",
+      "evidence": "NotificationReportPanel:17-174; useNotifications:1273-1280",
+      "actions": [
+        "source Retry/Refresh",
+        "brief Review details",
+        "chart series hide/show/fullscreen/export/data alternative declarations",
+        "five breakdown table controls"
+      ],
+      "disposition": "Query key/request carry lower instant/exclusive upper/timezone. Five raw metrics; fanout excludes uncorrelated deliveries and zero denominator missing. Adaptive day/month/year buckets retain counts, two series and five persistent panels. Fatal/retained/loading/initial-paused represented; paletteNI012. Fleet/all-source period intentionally independent of evidence filters. Shared chart behavior not mounted.",
+      "execution": "NOTRUN"
+    },
+    {
+      "section": "Optional propose-only AI",
+      "evidence": "InboxBody:875-881; AIInboxAutoCategorization:80-104,173-205,236-248,257-312",
+      "actions": [
+        "Suggest categories",
+        "review proposal",
+        "Apply category rule IDs to URL"
+      ],
+      "disposition": "Current copy explicitly discloses independent recent-history/lookback7d, not workspace dates/archive state. Historical missing-disclosure issue not repeated. Feature guard/scope cancellation and proposal-only behavior preserved. No AI stream/network/subscription/action.",
+      "execution": "NOTRUN"
+    }
+  ],
+  "sourceStateMatrix": {
+    "summary": "loading six suppressed metric values; fatal local retry; retained stale warning/raw metrics; empty CTA; unresolved/initial-pausedNI002; datetimeNI009",
+    "registries": "each loading/fatal Retry/retained arrays+Refresh/authoritative empty independently; initial-paused misleading LoadingNI002",
+    "flat/groups": "loading skeletons and usable filters; fatal local Retry; retained warning/list and selection; filtered-emptyNI015; initial-pausedNI002",
+    "count": "unknown total explicit, no loaded-row denominator invented; retained warning; fatal recovery/pagingNI005; grouped scopeNI011",
+    "members": "fatal error without retry and cached siblings gatedNI004; unresolved emptyNI002; pagingNI003",
+    "alert detail": "audit initial skeleton/fatal Retry and retained trail warning; lifecycle unknownNI007; paused fetchStatus not forwarded",
+    "report": "initial loading suppressed values/5breakdown skeletons; fatal local Retry with persistent shells/missing values; retained complete report/warning; initial-paused Refresh paused + unavailable/missing, not zero; true empty five no-activity panels"
+  },
+  "ruleChecks": {
+    "commandEvidence": [
+      "shell2122 Python grep over eleven notification production files",
+      "shell2209 restricted notification hook request/serializer grep"
+    ],
+    "rawLog": "web/logs/phase6-qa-notifications-inbox.log",
+    "rawMatchCounts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section-candidate": 1,
+      "hardcoded-string-literal-candidate": 0,
+      "fetch-useeffect-candidate": 4
+    },
+    "manualDispositions": [
+      "One hidden-section candidate is an error-only report callout; normal report shells persist, not a hidden-section violation.",
+      "Four useEffects reset page/selection/expansion or preserve read-on-open mutation, not data loading.",
+      "PageLayout delegates to PageContainer; no missing-page-container finding.",
+      "Literal English grep does not detect semantic raw severity/helper relative English; NI009/NI013 remain confirmed.",
+      "No listed native form/table tags or static variable inline styles matched these feature sources; native shared Button is an acceptable primitive.",
+      "Typed read requests preserve AbortSignal, unprefixed paths, snake_case, distinct query keys and both bounds.",
+      "Dynamic styles/Recharts API props and shared-building-block direct imports are not flagged.",
+      "No Go files audited: backend rules out of web-only scope, NOTRUN."
+    ],
+    "scopeNotWholeRepository": true
+  },
+  "testDeclarations": {
+    "files": [
+      {
+        "file": "web/src/features/notifications/pages/InboxPage.test.tsx",
+        "declarationSites": 21,
+        "declarations": [
+          {
+            "line": 195,
+            "declaration": "it('renders the title heading, subtitle and sets the document title', () => {"
+          },
+          {
+            "line": 204,
+            "declaration": "it('exposes an accessible \"View archived\" link to the archived surface', () => {"
+          },
+          {
+            "line": 210,
+            "declaration": "it('reads the unfiltered active backlog for the summary band', () => {"
+          },
+          {
+            "line": 215,
+            "declaration": "it('passes archived=false plus the fetched vehicles & rules to InboxBody', () => {"
+          },
+          {
+            "line": 223,
+            "declaration": "it('passes the top date filter to notification activity', () => {"
+          },
+          {
+            "line": 231,
+            "declaration": "it('places evidence before the complete secondary report, without tabs or hidden analytics', () => {"
+          },
+          {
+            "line": 244,
+            "declaration": "it('renders the labelled summary landmark with every metric card', () => {"
+          },
+          {
+            "line": 252,
+            "declaration": "it('derives totals, unread-of-total and per-severity counts from the rows', () => {"
+          },
+          {
+            "line": 265,
+            "declaration": "it('shows the loading skeleton (never a blank panel) while fetching', () => {"
+          },
+          {
+            "line": 276,
+            "declaration": "it('surfaces a retryable error state and invokes refetch on retry', () => {"
+          },
+          {
+            "line": 289,
+            "declaration": "it('renders an empty state (never a blank panel) when the backlog is empty', () => {"
+          },
+          {
+            "line": 300,
+            "declaration": "it('defaults vehicles & rules to empty arrays when their hooks return no data', () => {"
+          },
+          {
+            "line": 311,
+            "declaration": "it('uses shared archive-link chrome with mobile targets, wrapping and a decorative icon', () => {"
+          },
+          {
+            "line": 321,
+            "declaration": "it('shows separate initial registry loading without removing evidence, report or backlog rows', () => {"
+          },
+          {
+            "line": 334,
+            "declaration": "it('keeps populated rule filters and notification rows while only the failed vehicle registry retries', () => {"
+          },
+          {
+            "line": 349,
+            "declaration": "it('keeps populated vehicle filters while only the failed rule registry retries', () => {"
+          },
+          {
+            "line": 363,
+            "declaration": "it('retains both registry arrays and IDs on refresh failure with independently scoped refresh actions', () => {"
+          },
+          {
+            "line": 380,
+            "declaration": "it('retains paused registry data without asserting offline or a failed request', () => {"
+          },
+          {
+            "line": 391,
+            "declaration": "it('distinguishes successfully empty registries from loading and failure without hiding other sections', () => {"
+          },
+          {
+            "line": 404,
+            "declaration": "it('normalizes null registries without reporting an authoritative empty response', () => {"
+          },
+          {
+            "line": 414,
+            "declaration": "it.each(["
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxBody.test.tsx",
+        "declarationSites": 43,
+        "declarations": [
+          {
+            "line": 279,
+            "declaration": "it('pages through older notifications instead of stopping at the first 50', async () => {"
+          },
+          {
+            "line": 295,
+            "declaration": "it('opens and marks read a channel-less system event without a rule', async () => {"
+          },
+          {
+            "line": 318,
+            "declaration": "it('filters rule-triggered history and opens the full text of a legacy delivery', async () => {"
+          },
+          {
+            "line": 342,
+            "declaration": "it('renders a column table, the count label, and fetches the SI-clean flat path by default', async () => {"
+          },
+          {
+            "line": 368,
+            "declaration": "it('shows a current-day Slack delivery without an alert rule and opens its detail', async () => {"
+          },
+          {
+            "line": 391,
+            "declaration": "it('shows five loading skeletons (never a blank panel) while the flat query is in flight', () => {"
+          },
+          {
+            "line": 405,
+            "declaration": "it('surfaces a retryable error and re-fires the request on Retry', async () => {"
+          },
+          {
+            "line": 415,
+            "declaration": "it('renders an honest empty state with a \"Configure alert rules\" CTA', async () => {"
+          },
+          {
+            "line": 428,
+            "declaration": "it('renders threads when requested and keeps the flat query disabled', async () => {"
+          },
+          {
+            "line": 457,
+            "declaration": "it('shows the thread-specific empty copy when there are no groups', async () => {"
+          },
+          {
+            "line": 468,
+            "declaration": "it('exports selected flat rows while retaining visible-scope controls', async () => {"
+          },
+          {
+            "line": 492,
+            "declaration": "it('exports grouped view as thread summaries with delivery metadata', async () => {"
+          },
+          {
+            "line": 528,
+            "declaration": "it('exposes accessible grouped/flat toggles and switches the rendered list', async () => {"
+          },
+          {
+            "line": 554,
+            "declaration": "it('hides the view toggle and swaps the bulk action set to Restore', async () => {"
+          },
+          {
+            "line": 570,
+            "declaration": "it('uses the archived-specific empty copy when there are no archived rows', async () => {"
+          },
+          {
+            "line": 581,
+            "declaration": "it('distinguishes selected loaded IDs from the filtered server total', async () => {"
+          },
+          {
+            "line": 596,
+            "declaration": "it('reports unknown result totals without inventing a loaded-row denominator', async () => {"
+          },
+          {
+            "line": 610,
+            "declaration": "it('uses member IDs, never thread totals or group keys, for grouped bulk selection', async () => {"
+          },
+          {
+            "line": 634,
+            "declaration": "it('drives the select-all header checkbox through none â†’ some (indeterminate) â†’ all', async () => {"
+          },
+          {
+            "line": 665,
+            "declaration": "it('bulk \"Mark read\" posts exactly the selected ids', async () => {"
+          },
+          {
+            "line": 689,
+            "declaration": "it('marks the unread rows read on open (flat, non-archived) by default', async () => {"
+          },
+          {
+            "line": 707,
+            "declaration": "it('respects the markOnOpen=false opt-out (no auto mark-read)', async () => {"
+          },
+          {
+            "line": 722,
+            "declaration": "it('fires the { all: true } variant from the header action', async () => {"
+          },
+          {
+            "line": 743,
+            "declaration": "it('honors the shared seven-day workspace range instead of querying all-time history', async () => {"
+          },
+          {
+            "line": 767,
+            "declaration": "it('respects an explicit inbox date range', async () => {"
+          },
+          {
+            "line": 775,
+            "declaration": "it('threads URL filters into the request as snake_case params without the /api/v1 prefix', async () => {"
+          },
+          {
+            "line": 791,
+            "declaration": "it('opens a per-row context menu with mark-read + delete items on right-click', async () => {"
+          },
+          {
+            "line": 807,
+            "declaration": "it.each(["
+          },
+          {
+            "line": 820,
+            "declaration": "it('retains confirmation-gated bulk delete', async () => {"
+          },
+          {
+            "line": 832,
+            "declaration": "it('retains rule inspection, server acknowledgement/reopen and view-context affordances', async () => {"
+          },
+          {
+            "line": 866,
+            "declaration": "it('retains cached rows and selection after a failed refresh, but reports initial failures locally', async () => {"
+          },
+          {
+            "line": 879,
+            "declaration": "it('sends server-owned search, severity, vehicle, rule, source and read conditions to both rows and count', async () => {"
+          },
+          {
+            "line": 897,
+            "declaration": "it('offers persistent keyboard resize, reorder and visibility without exhaustive page-local value filters', async () => {"
+          },
+          {
+            "line": 916,
+            "declaration": "it('exposes full metadata and every row action in a touch/keyboard expansion, with unknown distinct from zero', async () => {"
+          },
+          {
+            "line": 938,
+            "declaration": "it('restores archived evidence and marks a read row unread through expanded actions', async () => {"
+          },
+          {
+            "line": 950,
+            "declaration": "it('does not turn missing delivery latency into zero in full inspection', async () => {"
+          },
+          {
+            "line": 960,
+            "declaration": "it('keeps notification evidence usable when the independent period report fails', async () => {"
+          },
+          {
+            "line": 980,
+            "declaration": "it.each([false, true])('keeps server-owned filters in headers and resets pagination (archived=%s)', async archived => {"
+          },
+          {
+            "line": 1038,
+            "declaration": "it('changes server-owned page size and resets the notification offset', async () => {"
+          },
+          {
+            "line": 1054,
+            "declaration": "it('keeps all filters and reset available from the visible mobile Notification header', async () => {"
+          },
+          {
+            "line": 1104,
+            "declaration": "it('preserves usable header filters during initial request failure', async () => {"
+          },
+          {
+            "line": 1116,
+            "declaration": "it('confirm-gates the single-row delete from the context menu', async () => {"
+          },
+          {
+            "line": 1139,
+            "declaration": "it('does not delete when the single-row confirm is cancelled', async () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxSummary.test.tsx",
+        "declarationSites": 17,
+        "declarations": [
+          {
+            "line": 102,
+            "declaration": "it('retains compact metrics after a failed cached refresh', () => {"
+          },
+          {
+            "line": 113,
+            "declaration": "it('renders a six-card skeleton grid inside the labelled region on first load', () => {"
+          },
+          {
+            "line": 125,
+            "declaration": "it('keeps the KPI cards on screen during a background refetch that has data', () => {"
+          },
+          {
+            "line": 139,
+            "declaration": "it('renders a QueryError alert and retries on demand when the query fails', () => {"
+          },
+          {
+            "line": 154,
+            "declaration": "it('counts accepted warning aliases without changing source rows or unknown severity', () => {"
+          },
+          {
+            "line": 171,
+            "declaration": "it('does not reinterpret other unknown active severity values as confirmed critical or info', () => {"
+          },
+          {
+            "line": 183,
+            "declaration": "it('keeps archive timestamps, normalized counts and bounded all-time provenance', () => {"
+          },
+          {
+            "line": 201,
+            "declaration": "it('retains cached metrics and explicit paused trust instead of claiming a loaded fresh sample', () => {"
+          },
+          {
+            "line": 210,
+            "declaration": "it('preserves the active empty-state action destination', () => {"
+          },
+          {
+            "line": 216,
+            "declaration": "it('preserves the archived empty-state action destination', () => {"
+          },
+          {
+            "line": 225,
+            "declaration": "it('shows an empty-state placeholder when the backlog is empty', () => {"
+          },
+          {
+            "line": 233,
+            "declaration": "it('treats an idle query with undefined data as empty (null-safety)', () => {"
+          },
+          {
+            "line": 243,
+            "declaration": "it('aggregates totals, unread count, severity buckets and last-received time', () => {"
+          },
+          {
+            "line": 266,
+            "declaration": "it('reports a fully-read backlog as zero unread while keeping the total', () => {"
+          },
+          {
+            "line": 281,
+            "declaration": "it('handles unknown severities and missing timestamps without miscounting', () => {"
+          },
+          {
+            "line": 299,
+            "declaration": "it('exposes the band as a labelled region with decorative icons', () => {"
+          },
+          {
+            "line": 311,
+            "declaration": "it('reviews the bounded sample, unread denominator, full timestamp, and severity uncertainty in the real drawer', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationReportPanel.test.tsx",
+        "declarationSites": 8,
+        "declarations": [
+          {
+            "line": 63,
+            "declaration": "it('keeps every breakdown row in the shared evidence table engine', () => {"
+          },
+          {
+            "line": 72,
+            "declaration": "it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {"
+          },
+          {
+            "line": 90,
+            "declaration": "it('excludes unattributed historical deliveries from the fan-out ratio', () => {"
+          },
+          {
+            "line": 102,
+            "declaration": "it('aggregates long all-time windows without dropping older daily counts', () => {"
+          },
+          {
+            "line": 123,
+            "declaration": "it('keeps all breakdown panels visible with no activity', () => {"
+          },
+          {
+            "line": 134,
+            "declaration": "it('shows loading and error feedback rather than success-shaped zero counts', () => {"
+          },
+          {
+            "line": 153,
+            "declaration": "it('retains the complete cached report when a background refresh fails', () => {"
+          },
+          {
+            "line": 166,
+            "declaration": "it('reviews raw-count evidence, attribution limits, HTTP scope, and exact exclusive bounds in the actual drawer', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationFilterBar.test.tsx",
+        "declarationSites": 17,
+        "declarations": [
+          {
+            "line": 54,
+            "declaration": "it('renders a labelled severity group with pressed state driven by filters', () => {"
+          },
+          {
+            "line": 63,
+            "declaration": "it('adds a severity when an inactive chip is clicked', () => {"
+          },
+          {
+            "line": 72,
+            "declaration": "it('removes only the toggled severity when several are active', () => {"
+          },
+          {
+            "line": 80,
+            "declaration": "it('clears the severity key entirely when the last active chip is toggled off', () => {"
+          },
+          {
+            "line": 92,
+            "declaration": "it('reflects the active vehicle and emits a single-element vehicle_id on change', () => {"
+          },
+          {
+            "line": 104,
+            "declaration": "it('clears vehicle_id when \"All vehicles\" is chosen', () => {"
+          },
+          {
+            "line": 112,
+            "declaration": "it('labels a vehicle with no display name using its #id', () => {"
+          },
+          {
+            "line": 118,
+            "declaration": "it('emits a single-element rule_id when a rule is selected', () => {"
+          },
+          {
+            "line": 129,
+            "declaration": "it('emits the typed query after the debounce window', async () => {"
+          },
+          {
+            "line": 140,
+            "declaration": "it('treats a whitespace-only query as cleared', async () => {"
+          },
+          {
+            "line": 153,
+            "declaration": "it('does not duplicate the header date control', () => {"
+          },
+          {
+            "line": 160,
+            "declaration": "it('renders chips and removing one clears just that key, preserving the rest', () => {"
+          },
+          {
+            "line": 180,
+            "declaration": "it('clears optional filters while preserving the shared date range', () => {"
+          },
+          {
+            "line": 204,
+            "declaration": "it('falls back to a #id chip when the filtered vehicle is unknown', () => {"
+          },
+          {
+            "line": 212,
+            "declaration": "it('renders no active-filter chips and no pressed severity when filters are empty', () => {"
+          },
+          {
+            "line": 222,
+            "declaration": "it.each(['severity', 'source', 'search'] as const)('renders only the requested %s controls without a second chip rail', section => {"
+          },
+          {
+            "line": 230,
+            "declaration": "it('clears mobile read-state along with business filters without changing workspace bounds or archive scope', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationGroupRow.test.tsx",
+        "declarationSites": 7,
+        "declarations": [
+          {
+            "line": 144,
+            "declaration": "it('renders one row with a \"+N similar\" chip when count > 1', () => {"
+          },
+          {
+            "line": 166,
+            "declaration": "it('expanding the row fetches and renders sibling members', async () => {"
+          },
+          {
+            "line": 203,
+            "declaration": "it('clicking \"Mark group read\" calls useBulkMarkRead with { group_key }', async () => {"
+          },
+          {
+            "line": 226,
+            "declaration": "it('hides \"Mark group read\" when unread_count is 0', () => {"
+          },
+          {
+            "line": 241,
+            "declaration": "it('renders singleton groups without grouping chrome', () => {"
+          },
+          {
+            "line": 258,
+            "declaration": "it('shows an inline error when fetching members fails', async () => {"
+          },
+          {
+            "line": 280,
+            "declaration": "it('toggle has aria-expanded that flips on click', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationRow.test.tsx",
+        "declarationSites": 15,
+        "declarations": [
+          {
+            "line": 120,
+            "declaration": "it('renders a Web-Push-only event without a channel delivery row', () => {"
+          },
+          {
+            "line": 136,
+            "declaration": "it('renders severity, title, message, vehicle name, and rule name', () => {"
+          },
+          {
+            "line": 146,
+            "declaration": "it('reflects the selected prop on both the row and the checkbox', () => {"
+          },
+          {
+            "line": 177,
+            "declaration": "it('toggling the checkbox fires onSelectionChange with (id, checked) but not onActivate', () => {"
+          },
+          {
+            "line": 189,
+            "declaration": "it('clicking the row body fires onActivate with the log', () => {"
+          },
+          {
+            "line": 197,
+            "declaration": "it('uses a native action button for keyboard access without nesting selection controls', () => {"
+          },
+          {
+            "line": 212,
+            "declaration": "it('shows \"Mark as read\" only while unread and wired, firing onMarkRead(id)', () => {"
+          },
+          {
+            "line": 222,
+            "declaration": "it('shows \"Mark as unread\" only while read and wired, firing onMarkUnread(id)', () => {"
+          },
+          {
+            "line": 233,
+            "declaration": "it('shows \"Archive\" only when not archived, firing onArchive(id)', () => {"
+          },
+          {
+            "line": 241,
+            "declaration": "it('shows \"Restore\" only when archived, firing onUnarchive(id)', () => {"
+          },
+          {
+            "line": 252,
+            "declaration": "it('omits the quick-action buttons entirely when no handlers are supplied', () => {"
+          },
+          {
+            "line": 259,
+            "declaration": "it('drills through to the mapped context page for a known rule signal', () => {"
+          },
+          {
+            "line": 268,
+            "declaration": "it('hides the drill-through link and rule chip when there is no rule', () => {"
+          },
+          {
+            "line": 276,
+            "declaration": "it('hides the vehicle chip when the row has no vehicle', () => {"
+          },
+          {
+            "line": 283,
+            "declaration": "it('degrades a blank title to an em-dash without dropping the message', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/AlertDetailDrawer.test.tsx",
+        "declarationSites": 3,
+        "declarations": [
+          {
+            "line": 75,
+            "declaration": "it.each(["
+          },
+          {
+            "line": 88,
+            "declaration": "it('shows lifecycle, owner, signal evidence, response guidance, note, and audit history', () => {"
+          },
+          {
+            "line": 117,
+            "declaration": "it('keeps cached audit evidence visible when a background refresh fails', () => {"
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/notifications/components/operationalbrief-all/NotificationBriefRawContracts.test.tsx",
+        "declarationSites": 4,
+        "declarations": [
+          {
+            "line": 68,
+            "declaration": "it('normalizes measured milliseconds to canonical latency seconds without changing specialist display', () => {"
+          },
+          {
+            "line": 80,
+            "declaration": "it('retains derived timestamp latency and distinguishes measured zero from missing measurements', () => {"
+          },
+          {
+            "line": 101,
+            "declaration": "it('keeps independent configuration counts numeric and missing tab settings unknown', () => {"
+          },
+          {
+            "line": 112,
+            "declaration": "it('preserves linked-delivery attribution and leaves a zero-trigger denominator missing', () => {"
+          }
+        ]
+      }
+    ],
+    "fileCount": 9,
+    "declarationSites": 135,
+    "executed": 0,
+    "discovered": "NOTRUN",
+    "passed": "NOTRUN",
+    "failed": "NOTRUN",
+    "skipped": "NOTRUN",
+    "note": "Static declaration sites, not expanded it.each cases or runner discovery. Original source/tests unchanged. Page/body/translation/chart mocks do not establish fresh live/non-English/native acceptance. Summary idle-undefined test currently encodes false empty; seeNI002. Group tests cover initial error but not retained/paged/paused members."
+  },
+  "documentsRead": {
+    "orchestrator": "docs/orchestrator-loop.md FULL",
+    "design": "docs/frontend-design-contract.md core1-654, all applicable state/scope/prefs/mobile/a11y/evidence decisions; later unrelated geometry/annotation addenda not applicable",
+    "mission": "relevant principles and15/16/22-25/30/31/43-45",
+    "inventory": "docs/frontend-inventory.md audit-page-149/G141; relevant historical component inventory and audit-page-149.json",
+    "handoff": "docs/session-handoff.md current recovery/conventions + exact inbox references; old receipts historical only",
+    "queue": "current header, exact attempt1/reservation and direct support repair-owner search. Queue changed externally from line70 to91; no writes.",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md relevant sections",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      "ancestor AGENTS discovery none found"
+    ],
+    "supplementaryHistoricalOnly": [
+      "agent-loop-playbook.md",
+      "shared-library-loop.md",
+      ".agents/state.md; superseded, no work reopened"
+    ]
+  },
+  "limitations": {
+    "acceptance": "SOURCE QA ONLY. No fresh technical/native/application/page pass.",
+    "NOTRUN": [
+      "Vitest/fresh tests/passing reruns",
+      "lint/build/official-audit runners",
+      "npx tsc --noEmit or scoped/global compiler",
+      "browser/Edge/Playwright/screenshots/DOM mount",
+      "API/backend/router/HTTP/network/server access",
+      "real or synthetic notification delivery/user change",
+      "read-status/archive/delete/acknowledge/reopen/AI/permission/subscription",
+      "settings/storage/clipboard/download/export actions",
+      "native touch/keyboard/focus/screenreader/contrast/forced-colors/RTL/200%text/light-dark-custom/reduced-motion matrix",
+      "backend totals/default-limit/member-pagination/ID equivalence/capability acceptance"
+    ],
+    "preferenceLimits": "Locale/timezone source mismatches and raw grouped unread are confirmed; explicit12/24h/date-pattern and report-axis preference behavior not certified.",
+    "hashBoundaries": "Initial root/document reads preceded before pins. Core pins captured before subsequent support/test semantic review; newly discovered direct support pins captured at review. Equality proves boundary byte preservation, not absence of transient external edits.",
+    "scope": "Every business section/action source mapped. Shared heavy internals/backend/mobile geometry/complete extreme-data cases not executed.",
+    "safety": "Only two designated artifacts writable. No code/test/catalog/Git writes, subagents, installs, servers or helpers. No mutation/notification/user/API/browser/network operation invoked."
+  },
+  "failedCommands": [
+    {
+      "shellId": "1964",
+      "exit": 1,
+      "failure": "rg unavailable"
+    },
+    {
+      "shellId": "2009",
+      "exit": 1,
+      "failure": "cp1252 UnicodeEncodeError; UTF8 stdout corrected"
+    },
+    {
+      "shellId": "2058",
+      "exit": 1,
+      "failure": "short queue row IndexError; len guard corrected"
+    },
+    {
+      "shellId": "2094",
+      "exit": 1,
+      "failure": "PermissionError appending log while transcript locks it; no JSON write occurred"
+    },
+    {
+      "shellId": "2374",
+      "exit": 1,
+      "failure": "Process launch failed: The filename or extension is too long. (os error206); large serialization command never ran, split into bounded artifact writes"
+    }
+  ],
+  "loggingNotes": [
+    "Early Start-Transcript omitted native output; preserved tool outputs1979/1996/2033 recovered into authorized log. Later native stdout piped through Out-Host.",
+    "shell2069 selected transcript command text as alleged baseline block; invalid. Actual2033 JSON hashes recovered from original tool output used.",
+    "Missing guessed paths DateTime.tsx/date-time/DateTime.tsx/hooks/useTimezone.ts/hooks/useOptimisticMutation.ts reported; actual direct owners located/read.",
+    "All command failures retained; inspection corrections are not test reruns. No test result invented."
+  ],
+  "confirmedIssueCount": 16,
+  "conditionalCandidateCount": 6,
+  "needsCount": 7,
+  "summary": {
+    "confirmed": 16,
+    "conditionalNative": 6,
+    "byRule": {
+      "workspace-scope": 1,
+      "initial-paused-trust": 1,
+      "member-pagination": 1,
+      "retained-source-trust": 1,
+      "count-recovery-pagination": 1,
+      "source-severity-identity": 1,
+      "unknown-lifecycle": 1,
+      "timezone-source-identity": 1,
+      "datetime-i18n-preferences": 1,
+      "filter-scope-disclosure": 1,
+      "loaded-versus-total-scope": 1,
+      "chart-palette-preferences": 1,
+      "hardcoded-string": 1,
+      "number-preferences": 1,
+      "filtered-empty-state": 1,
+      "theme-token-adoption": 1
+    },
+    "bySeverity": {
+      "high": 8,
+      "medium": 8
+    },
+    "filesWithMostPrimaryFindings": [
+      {
+        "file": "web/src/features/notifications/components/NotificationRow.tsx",
+        "count": 4
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxBody.tsx",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/notifications/components/InboxSummary.tsx",
+        "count": 2
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationReportPanel.tsx",
+        "count": 1
+      }
+    ],
+    "priorities": [
+      "Alias/default/bounds parity",
+      "Member pagination and retained trust",
+      "Initial-paused/unknown and count recovery",
+      "Persisted source severity/timezone/lifecycle identity",
+      "Filter/scope disclosure and preference-aware presentation"
+    ]
+  },
+  "phase": 6,
+  "mode": "read-only finished-page source QA",
+  "routes": [
+    "/notifications",
+    "/notifications/inbox"
+  ],
+  "writableArtifacts": [
+    "docs/frontend-audits/phase6-qa-notifications-inbox.json",
+    "web/logs/phase6-qa-notifications-inbox.log"
+  ],
+  "sourceWriteRelease": true,
+  "releasedAt": "2026-10-14T02:18:05.444462+00:00",
+  "pinChecks": {
+    "status": "PASS",
+    "checked": 43,
+    "matched": 43,
+    "mismatched": 0,
+    "drift": [],
+    "evidenceLinesChecked": 66,
+    "checkedAt": "2026-10-14T02:18:05.444462+00:00"
+  },
+  "finalJsonParse": "PASS: parsed before and after final serialization",
+  "source_after": [
+    {
+      "path": "web/src/features/notifications/pages/InboxPage.tsx",
+      "sha256": "1e96d8dddee87b99ee6cc913bc8556cb3a4a8e0178b796e571952bd5fd61bdd1"
+    },
+    {
+      "path": "web/src/features/notifications/pages/InboxPage.test.tsx",
+      "sha256": "5b426a348f7ea94c645e9f30224765210172416ec970bed885c9abe61e7e975f"
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxBody.tsx",
+      "sha256": "5e6ab221a751832e473457cf81a12571471198eb6d5ab92fb1e45e6dae16427a"
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxBody.test.tsx",
+      "sha256": "2f2189a93cbaec607fd5d69f9f6f3a9a776564821cb4015b28e220e734688820"
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxSummary.tsx",
+      "sha256": "ff9987b8bb9023fa6e6ce9a8b5671f5fa35e4cab4ff3dd6532f3f906fe240dee"
+    },
+    {
+      "path": "web/src/features/notifications/components/InboxSummary.test.tsx",
+      "sha256": "24cfdbd67a8d1aa32367c8baed72e79523242d8186fc86e870129d14dc3042c7"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationReportPanel.tsx",
+      "sha256": "7d275992d8b6ad2e8adf9337f6e36ca22740221d75af4f453b04d4d01272b08f"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationReportPanel.test.tsx",
+      "sha256": "2f2d0f74b80975135a2032df42263ce908859b1e110a59d5085f75bdfe151a87"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationFilterBar.tsx",
+      "sha256": "32b4d0d1945f55c94747ce3a001a9df150b779732cd089082ec132bde2a782c7"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationFilterBar.test.tsx",
+      "sha256": "52da58f54e3498f68fd71a32e371fe11134efd0f3b6a0fbe31a734098d1d9d67"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationGroupRow.tsx",
+      "sha256": "5c81bb9d540f08169fda7ac267beb20d7916cc829885ced26293f53a3878eb5d"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationGroupRow.test.tsx",
+      "sha256": "58c9822e97bfdc186af92c92a228b4468c0962fd40f3af63823ab6dc6958040a"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+      "sha256": "39435fabca4953ae96d0003741797a1b0fc381a260b0685bd177aad0a64f0201"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
+      "sha256": "31bb7269144ac0b3b016106de76007b9957c1a19a3266bcd30de198288286199"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationInboxDelivery.tsx",
+      "sha256": "619258625a5ce341184dac031c48f7a22453f2b4cb6d8d57b08fe4797f14cdf0"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationRow.tsx",
+      "sha256": "b51ca6ce721d502b3e564ef15c3dcfcbf204afafeaf9f032ba92afec50768b02"
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationRow.test.tsx",
+      "sha256": "8338bc5c2f965a230f2013505d105eb0805bb49eaa6fc499e4f42e58a93a9867"
+    },
+    {
+      "path": "web/src/features/notifications/components/AlertDetailDrawer.tsx",
+      "sha256": "842059d12208b1585c3dcd6137d9d4a1a09ab7d170c20c41b478103eee2536bb"
+    },
+    {
+      "path": "web/src/features/notifications/components/AlertDetailDrawer.test.tsx",
+      "sha256": "b7a740f410c003ee5573d2f0ad7c39f4384934caddd2eed9c798c8d66d5ec21d"
+    },
+    {
+      "path": "web/src/api/hooks/useNotifications.ts",
+      "sha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b"
+    },
+    {
+      "path": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+    },
+    {
+      "path": "web/src/lib/notificationEventType.ts",
+      "sha256": "e33707faaed2f80c4b0454122f53cd75635e66754cb51ef2ae2bd6fee86fcf86"
+    },
+    {
+      "path": "web/src/lib/alertDrillthrough.ts",
+      "sha256": "7c881180e8efba91e056bae7cee0cfd7a40ac56a068da86ab0c9c7c5ca89be47"
+    },
+    {
+      "path": "web/src/hooks/useProductPreferences.ts",
+      "sha256": "2f6dd2ac3e6492fa0de6ab60ce1a0f5bf9b626551b1c3caf876b58781e10f276"
+    },
+    {
+      "path": "web/src/components/data-display/format/DateTime.tsx",
+      "sha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8"
+    },
+    {
+      "path": "web/src/lib/timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9"
+    },
+    {
+      "path": "web/src/components/ai/AIInboxAutoCategorization.tsx",
+      "sha256": "eb8d26ff632e2209fbebb4908b18683ad09813311e18148abc38951702f1e4bb"
+    },
+    {
+      "path": "web/src/api/hooks/useOptimisticMutation.ts",
+      "sha256": "18091b5b0af174881d133d9ad794bbd52eae4477213a5fdafc3de8c883f90cdf"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c"
+    },
+    {
+      "path": "web/src/features/notifications/components/operationalbrief-all/NotificationBriefRawContracts.test.tsx",
+      "sha256": "9aa49b1e8bf2ac7e6594915fadd62f14d45e296ddea6425feb08dd3920540901"
+    },
+    {
+      "path": "web/src/api/queryClient.ts",
+      "sha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c"
+    },
+    {
+      "path": "web/src/main.tsx",
+      "sha256": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04"
+    }
+  ]
+}

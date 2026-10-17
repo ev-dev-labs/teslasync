@@ -14,8 +14,8 @@
 //     the gate is real — title / badge / description / textarea /
 //     enabled button all present);
 //   - the message body shaping contract: a typed question serializes
-//     as `{ message: '<trimmed>' }`, an empty OR whitespace-only
-//     textarea serializes as `{}` (the deterministic "give a glance
+//     with display preferences; an empty OR whitespace-only
+//     textarea omits the message (the deterministic "give a glance
 //     summary" default-prompt path), and surrounding whitespace is
 //     trimmed off before it hits the wire;
 //   - the SSE wiring contract (exactly one POST to the registered
@@ -325,6 +325,26 @@ describe('AIWatchFaceNLResponse — AI-off visibility gate (ADR-015)', () => {
 })
 
 describe('AIWatchFaceNLResponse — message body shaping + SSE wiring', () => {
+  it('sends imperial display preferences without adding range conversions to the question', async () => {
+    mockUseSettings.mockReturnValue(settingsPayload({
+      ai_mode: 'cloud',
+      ai_features: { 'watch-face-nl-response': true },
+      unit_of_length: 'mi',
+      unit_of_temp: 'F',
+    }))
+    const calls = installStreamingFetch(
+      sseFrame('delta', { text: 'You have 1 mile of range.' }) + sseFrame('done', { finish_reason: 'stop' }),
+    )
+    render(<AIWatchFaceNLResponse />)
+    await typeQuestion('what is my range?')
+    await clickAsk()
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(parseBody(calls[0].init)).toEqual({
+      message: 'what is my range?', unit_of_length: 'mi', unit_of_temp: 'F',
+    })
+    await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('You have 1 mile of range.'))
+  })
+
   it('POSTs exactly once to the registered route with the trimmed message and the SSE headers, then renders the first delta', async () => {
     enableFeature()
     const sseBody =
@@ -348,7 +368,7 @@ describe('AIWatchFaceNLResponse — message body shaping + SSE wiring', () => {
     // The body carries the typed message verbatim — proves the surface
     // feeds the handler parser the same shape the Go test exercises.
     expect(typeof init?.body).toBe('string')
-    expect(parseBody(init)).toEqual({ message: 'how is my battery doing?' })
+    expect(parseBody(init)).toEqual({ message: 'how is my battery doing?', unit_of_length: 'km', unit_of_temp: 'C' })
     const headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/event-stream')
     expect(headers.get('Content-Type')).toBe('application/json')
@@ -365,23 +385,23 @@ describe('AIWatchFaceNLResponse — message body shaping + SSE wiring', () => {
     )
   })
 
-  it('POSTs {} when the message is empty (deterministic default-summary path)', async () => {
+  it('omits the message but sends display preferences for the default summary', async () => {
     enableFeature()
     const calls = installStreamingFetch(sseFrame('done', { finish_reason: 'stop' }))
 
     render(<AIWatchFaceNLResponse />)
 
     // No typing — the glance-style one-tap summary. The button must be
-    // enabled and the body must serialize as the empty object.
+    // enabled and the body retains preferences without a message.
     const button = askButton()
     expect(button).not.toBeDisabled()
     await clickAsk()
 
     await waitFor(() => expect(calls).toHaveLength(1))
-    expect(parseBody(calls[0].init)).toEqual({})
+    expect(parseBody(calls[0].init)).toEqual({ unit_of_length: 'km', unit_of_temp: 'C' })
   })
 
-  it('POSTs {} when the message is whitespace-only (trim collapses to the default path)', async () => {
+  it('omits a whitespace-only message while retaining display preferences', async () => {
     enableFeature()
     const calls = installStreamingFetch(sseFrame('done', { finish_reason: 'stop' }))
 
@@ -391,8 +411,8 @@ describe('AIWatchFaceNLResponse — message body shaping + SSE wiring', () => {
     await clickAsk()
 
     await waitFor(() => expect(calls).toHaveLength(1))
-    // trimmedMessage.length === 0 → message omitted → `{}` on the wire.
-    expect(parseBody(calls[0].init)).toEqual({})
+    // The omitted message selects the default summary.
+    expect(parseBody(calls[0].init)).toEqual({ unit_of_length: 'km', unit_of_temp: 'C' })
   })
 
   it('trims surrounding whitespace off the message before sending', async () => {
@@ -405,7 +425,7 @@ describe('AIWatchFaceNLResponse — message body shaping + SSE wiring', () => {
     await clickAsk()
 
     await waitFor(() => expect(calls).toHaveLength(1))
-    expect(parseBody(calls[0].init)).toEqual({ message: 'is the car locked?' })
+    expect(parseBody(calls[0].init)).toEqual({ message: 'is the car locked?', unit_of_length: 'km', unit_of_temp: 'C' })
   })
 })
 

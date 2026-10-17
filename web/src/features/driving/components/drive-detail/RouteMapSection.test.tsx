@@ -40,10 +40,11 @@
  * `fireEvent` (repo convention — `@testing-library/user-event` is not installed).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { RouteMapSection } from './RouteMapSection';
+import { formatDateTime } from '@/lib/dateFormat';
 import {
   SPEED_SEGMENT_LOW_MPS,
   SPEED_SEGMENT_MED_MPS,
@@ -51,6 +52,7 @@ import {
 } from './constants';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import type { DriveDetail, DrivePosition } from '@/types/driving';
 import type { FsdEvidenceInterval } from '@/types/fsd';
 import type { RoutePoint, SpeedSegment } from './types';
@@ -61,6 +63,13 @@ const mapCtl = vi.hoisted(() => ({
   setView: vi.fn(),
 }));
 const unitCtl = vi.hoisted(() => ({ speed: 'km/h' as 'km/h' | 'mph' }));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ locale: 'de-DE', settings: { tz_display_default: 'user', timezone_user: 'America/Los_Angeles' } }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -191,8 +200,8 @@ const END: [number, number] = [47.44, -122.3];
 const CENTER: [number, number] = [47.52, -122.31];
 const SPREAD_TRAIL: [number, number][] = [START, END];
 const SEGMENTS: SpeedSegment[] = [
-  { positions: [START, [47.52, -122.31]], color: '#10b981' },
-  { positions: [[47.52, -122.31], END], color: '#ef4444' },
+  { positions: [START, [47.52, -122.31]], color: chartTokens.series[1] },
+  { positions: [[47.52, -122.31], END], color: chartTokens.series[3] },
 ];
 
 interface RenderOpts {
@@ -204,6 +213,7 @@ interface RenderOpts {
   speedSegments?: SpeedSegment[];
   routePoints?: RoutePoint[];
   fsdEvidence?: FsdEvidenceInterval[];
+  embedded?: boolean;
 }
 
 function renderSection(opts: RenderOpts = {}) {
@@ -217,6 +227,7 @@ function renderSection(opts: RenderOpts = {}) {
       speedSegments={opts.speedSegments as never}
       routePoints={opts.routePoints}
       fsdEvidence={opts.fsdEvidence}
+      embedded={opts.embedded}
     />,
   );
 }
@@ -238,10 +249,60 @@ beforeEach(() => {
   unitCtl.speed = 'km/h';
 });
 
+describe('RouteMapSection — saved date preferences', () => {
+  it.each(['2026-04-02T00:30:00Z', 'invalid', ''])('formats %s without changing UTC provenance', (startTs) => {
+    renderMeaningfulRoute({ startTs, endTs: '2026-04-02T08:30:00Z' });
+    const start = screen.getAllByTestId('popup')[0].querySelector('time');
+    expect(start).toHaveTextContent(formatDateTime(startTs, { locale: 'de-DE', tz: 'America/Los_Angeles' }));
+    expect(start).toHaveAttribute('datetime', startTs);
+    expect(start).toHaveAttribute('title', startTs);
+    expect(screen.getAllByTestId('popup')[1].querySelector('time')).toHaveTextContent('2. Apr. 2026');
+  });
+});
+
+/* ── ENDPOINTS WITHOUT A RECORDED PATH ─────────────────────────────────────── */
+describe('RouteMapSection — start/end pins when the route path is not recorded', () => {
+  it('joins both recorded endpoints with a dashed straight line and says the path was not recorded', () => {
+    renderSection({ drive: makeDrive({ positions: [] }), trail: [], speedSegments: [] });
+    expect(screen.getByRole('region', { name: 'Route map' })).toHaveAttribute('data-route-mode', 'endpoints');
+    expect(screen.getByTestId('map-container')).toBeInTheDocument();
+    const pins = screen.getAllByTestId('circle-marker');
+    expect(pins.map((pin) => pin.getAttribute('data-center'))).toEqual(['[47.6,-122.33]', '[47.44,-122.3]']);
+    expect(within(pins[0]).getByText('Start')).toBeInTheDocument();
+    expect(within(pins[1]).getByText('End')).toBeInTheDocument();
+    const line = screen.getByTestId('polyline');
+    expect(line).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('route-not-recorded')).toHaveTextContent('Route path not recorded');
+    expect(screen.queryByText('No route data available for this drive')).toBeNull();
+  });
+
+  it('shows the single recorded endpoint without inventing a line', () => {
+    renderSection({ drive: makeDrive({ positions: [], endLat: null, endLon: null }), trail: [], speedSegments: [] });
+    expect(screen.getAllByTestId('circle-marker')).toHaveLength(1);
+    expect(screen.queryByTestId('polyline')).toBeNull();
+    expect(screen.getByTestId('route-not-recorded')).toBeInTheDocument();
+  });
+
+  it('ignores the (0, 0) no-fix placeholder as an endpoint', () => {
+    renderSection({ drive: makeDrive({ positions: [], startLat: 0, startLon: 0, endLat: 0, endLon: 0 }), trail: [], speedSegments: [] });
+    expect(screen.getByText('No route data available for this drive')).toBeInTheDocument();
+    expect(screen.queryByTestId('map-container')).toBeNull();
+  });
+
+  it('renders only the map body, without its own panel heading, when embedded in the hero', () => {
+    renderSection({ drive: makeDrive({ positions: [] }), trail: [], speedSegments: [], embedded: true });
+    expect(screen.getByTestId('drive-route-map')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Route' })).toBeNull();
+    expect(screen.getByTestId('route-not-recorded')).toBeInTheDocument();
+  });
+});
+
 /* ── EMPTY / NULL-SAFETY ───────────────────────────────────────────────────── */
 describe('RouteMapSection — empty + null-safety', () => {
-  it('renders the no-route placeholder (never a blank map) when the trail is empty', () => {
-    renderSection({ drive: makeDrive({ positions: [] }), trail: [], speedSegments: [] });
+  const noCoordinates = { positions: [], startLat: null, startLon: null, endLat: null, endLon: null };
+
+  it('renders the no-route placeholder only when there are no coordinates at all', () => {
+    renderSection({ drive: makeDrive(noCoordinates), trail: [], speedSegments: [] });
 
     expect(screen.getByText('No route data available for this drive')).toBeInTheDocument();
     // No leaflet container and no viewport side effects when there is nothing to plot.
@@ -255,7 +316,7 @@ describe('RouteMapSection — empty + null-safety', () => {
   it('tolerates an undefined trail and speedSegments without throwing (?? [] hardening)', () => {
     // A partial hook shape must degrade to the empty state, not crash on .length/.map.
     expect(() =>
-      renderSection({ drive: makeDrive({ positions: [] }), trail: undefined, speedSegments: undefined }),
+      renderSection({ drive: makeDrive(noCoordinates), trail: undefined, speedSegments: undefined }),
     ).not.toThrow();
 
     expect(screen.getByText('No route data available for this drive')).toBeInTheDocument();
@@ -265,6 +326,12 @@ describe('RouteMapSection — empty + null-safety', () => {
 
 /* ── MEANINGFUL ROUTE (km) ─────────────────────────────────────────────────── */
 describe('RouteMapSection — meaningful route (km)', () => {
+  it('matches speed swatches to shared route bands and includes the high-band boundary', () => {
+    const { container } = renderMeaningfulRoute();
+    expect(Array.from(container.querySelectorAll('rect')).map((rect) => rect.getAttribute('fill')))
+      .toEqual([chartTokens.series[1], chartTokens.series[0], chartTokens.series[2], chartTokens.series[3]]);
+    expect(screen.getByText(`≥${fmtNumber(convertSpeedFromSI(SPEED_SEGMENT_HIGH_MPS, 'km/h'))}`)).toBeInTheDocument();
+  });
   it('renders the map, tile layer and one polyline per speed segment', () => {
     renderMeaningfulRoute();
 
@@ -277,8 +344,8 @@ describe('RouteMapSection — meaningful route (km)', () => {
 
     const polylines = screen.getAllByTestId('polyline');
     expect(polylines).toHaveLength(2);
-    expect(polylines[0]).toHaveAttribute('data-color', '#10b981');
-    expect(polylines[1]).toHaveAttribute('data-color', '#ef4444');
+    expect(polylines[0]).toHaveAttribute('data-color', chartTokens.series[1]);
+    expect(polylines[1]).toHaveAttribute('data-color', chartTokens.series[3]);
   });
 
   it('renders start and end markers (with popups) and no stationary marker/banner', () => {
@@ -286,8 +353,8 @@ describe('RouteMapSection — meaningful route (km)', () => {
 
     const markers = screen.getAllByTestId('circle-marker');
     const colors = markers.map((m) => m.getAttribute('data-color'));
-    expect(colors).toContain('#10b981'); // start
-    expect(colors).toContain('#ef4444'); // end
+    expect(colors).toContain(chartTokens.series[1]); // start
+    expect(colors).toContain(chartTokens.series[3]); // end
     // Popups carry the exact "Start"/"End" labels…
     expect(screen.getByText('Start')).toBeInTheDocument();
     expect(screen.getByText('End')).toBeInTheDocument();
@@ -335,7 +402,7 @@ describe('RouteMapSection — meaningful route (km)', () => {
     });
 
     expect(screen.getAllByTestId('polyline')).toHaveLength(3);
-    expect(screen.getAllByTestId('polyline')[2]).toHaveAttribute('data-color', '#c084fc');
+    expect(screen.getAllByTestId('polyline')[2]).toHaveAttribute('data-color', chartTokens.series[4]);
     expect(screen.getByText(/Approximate area where the FSD counter increased/)).toBeInTheDocument();
     expect(screen.getByText(/not an exact FSD-active segment/)).toBeInTheDocument();
   });
@@ -363,7 +430,7 @@ describe('RouteMapSection — meaningful route (km)', () => {
     });
 
     expect(screen.getAllByTestId('polyline')).toHaveLength(1);
-    expect(screen.getByTestId('polyline')).toHaveAttribute('data-color', '#c084fc');
+    expect(screen.getByTestId('polyline')).toHaveAttribute('data-color', chartTokens.series[4]);
   });
 
   it('shows the bottom Start and End labels for a completed drive', () => {
@@ -371,8 +438,9 @@ describe('RouteMapSection — meaningful route (km)', () => {
 
     // The bottom row labels carry the "<label>: <time>" shape (distinct from the
     // bare popup labels above).
-    expect(screen.getByText(/^Start:/)).toBeInTheDocument();
-    expect(screen.getByText(/^End:/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Start:/)).toBeNull();
+    expect(screen.queryByText(/^End:/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Journey details' })).toHaveAttribute('href', '#journey');
   });
 
   it('exposes the interactive map as a named region', () => {
@@ -391,7 +459,7 @@ describe('RouteMapSection — in-progress drive', () => {
     // The bottom "End: <time>" label is gated on a real endTs…
     expect(screen.queryByText(/^End:/)).toBeNull();
     // …while the start label is unconditional.
-    expect(screen.getByText(/^Start:/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Journey details' })).toHaveAttribute('href', '#journey');
   });
 });
 
@@ -419,7 +487,7 @@ describe('RouteMapSection — stationary GPS cluster', () => {
     expect(screen.getByText('Last known location')).toBeInTheDocument();
     const marker = screen.getByTestId('circle-marker');
     expect(marker).toHaveAttribute('data-center', JSON.stringify(ANCHOR));
-    expect(marker).toHaveAttribute('data-color', '#22d3ee');
+    expect(marker).toHaveAttribute('data-color', chartTokens.series[0]);
     // …and neither the polyline segments, the trip markers, nor the legend show.
     expect(screen.queryByTestId('polyline')).toBeNull();
     expect(screen.queryByText('Start')).toBeNull();

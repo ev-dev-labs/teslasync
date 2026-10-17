@@ -10,13 +10,13 @@ import (
 
 // DashboardStats holds aggregated dashboard metrics.
 type DashboardStats struct {
-	TotalVehicles         int     `json:"totalVehicles"`
-	TotalM                float64 `json:"totalM"`
-	TotalEnergyWh         float64 `json:"totalEnergyWh"`
-	TotalChargingSessions int     `json:"totalChargingSessions"`
-	TotalTrips            int     `json:"totalTrips"`
-	AvgEfficiency         float64 `json:"avgEfficiency"`
-	TotalCostCents        int     `json:"totalCostCents"`
+	TotalVehicles         int      `json:"total_vehicles"`
+	TotalM                float64  `json:"total_m"`
+	TotalEnergyWh         float64  `json:"total_energy_wh"`
+	TotalChargingSessions int      `json:"total_charging_sessions"`
+	TotalTrips            int      `json:"total_trips"`
+	AvgEfficiency         *float64 `json:"avg_efficiency"`
+	TotalCostCents        int      `json:"total_cost_cents"`
 }
 
 // Service provides dashboard aggregation use cases.
@@ -39,9 +39,10 @@ func New(
 	}
 }
 
-// GetStats returns aggregated dashboard statistics for a user.
-func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats, error) {
-	vehicles, err := s.vehicleRepo.GetByUserID(ctx, userID)
+// GetStats aggregates the installation's shared fleet. Authorization belongs
+// to the HTTP caller, not an invented vehicles.user_id predicate.
+func (s *Service) GetStats(ctx context.Context) (*DashboardStats, error) {
+	vehicles, err := s.vehicleRepo.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("loading vehicles for dashboard: %w", err)
 	}
@@ -56,7 +57,7 @@ func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats,
 	for _, v := range vehicles {
 		trips, err := s.tripRepo.ListByDateRange(ctx, v.ID, monthAgo, now)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("loading trips for vehicle %s: %w", v.ID, err)
 		}
 		stats.TotalTrips += len(trips)
 		for _, t := range trips {
@@ -66,7 +67,7 @@ func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats,
 
 		sessions, err := s.chargingRepo.ListByDateRange(ctx, v.ID, monthAgo, now)
 		if err != nil {
-			continue
+			return nil, fmt.Errorf("loading charging sessions for vehicle %s: %w", v.ID, err)
 		}
 		stats.TotalChargingSessions += len(sessions)
 		for _, cs := range sessions {
@@ -75,7 +76,8 @@ func (s *Service) GetStats(ctx context.Context, userID string) (*DashboardStats,
 	}
 
 	if stats.TotalM > 0 {
-		stats.AvgEfficiency = stats.TotalEnergyWh / stats.TotalM
+		efficiency := stats.TotalEnergyWh / stats.TotalM
+		stats.AvgEfficiency = &efficiency
 	}
 
 	return stats, nil

@@ -9,8 +9,13 @@ import {
   SHELL_FOCUSABLE_SELECTOR,
   __getOverlayClaimCountForTests,
   activateShellOverlayGuard,
+  focusShellOverlayEntry,
   getShellFocusableElements,
   hideBackgroundFrom,
+  isShellPortalActive,
+  isShellFocusTarget,
+  registerShellPortal,
+  restoreShellFocus,
   trapFocusWithin,
 } from '../shellFocusTrap'
 
@@ -91,9 +96,193 @@ describe('getShellFocusableElements', () => {
     expect(getShellFocusableElements(null)).toEqual([])
   })
 
+  it('excludes descendants of hidden or inert ancestors', () => {
+    mount(`
+      <div id="panel">
+        <button id="visible">visible</button>
+        <div aria-hidden="true"><button id="aria-hidden">hidden</button></div>
+        <div inert><button id="inert">inert</button></div>
+        <div hidden><button id="hidden">hidden</button></div>
+        <div style="display: none"><button id="display-none">hidden</button></div>
+        <div style="visibility: hidden"><button id="invisible">hidden</button></div>
+      </div>
+    `)
+    expect(getShellFocusableElements(document.getElementById('panel'))).toHaveLength(1)
+    expect(getShellFocusableElements(document.getElementById('panel'))[0].id).toBe('visible')
+  })
+
+  it('allows an explicitly visible child of a visibility-hidden ancestor in the fallback', () => {
+    mount(`
+      <div id="panel">
+        <div style="visibility: hidden">
+          <button id="visible-child" style="visibility: visible">visible</button>
+        </div>
+      </div>
+    `)
+    const button = document.getElementById('visible-child')
+    Object.defineProperty(button, 'checkVisibility', { value: undefined })
+    expect(getShellFocusableElements(document.getElementById('panel'))).toEqual([button])
+  })
+
+  it('uses native visibility checking when the browser supplies it', () => {
+    mount('<div id="panel"><button id="not-rendered">hidden</button></div>')
+    const visibility = vi.fn().mockReturnValue(false)
+    Object.defineProperty(document.getElementById('not-rendered'), 'checkVisibility', {
+      value: visibility,
+    })
+    expect(getShellFocusableElements(document.getElementById('panel'))).toEqual([])
+    expect(visibility).toHaveBeenCalledWith({ checkVisibilityCSS: true })
+  })
+
   it('agrees with the Modal selector contract', () => {
     expect(SHELL_FOCUSABLE_SELECTOR).toContain('button:not(:disabled)')
     expect(SHELL_FOCUSABLE_SELECTOR).toContain('[tabindex]:not([tabindex="-1"])')
+  })
+})
+
+describe('shell focus lifecycle', () => {
+  function setup() {
+    mount(`
+      <button id="trigger">search</button>
+      <button id="fallback">open drawer</button>
+      <div id="panel" tabindex="-1"><button id="entry">close</button></div>
+    `)
+    return {
+      trigger: document.getElementById('trigger') as HTMLButtonElement,
+      fallback: document.getElementById('fallback') as HTMLButtonElement,
+      panel: document.getElementById('panel') as HTMLElement,
+      entry: document.getElementById('entry') as HTMLButtonElement,
+    }
+  }
+
+  it.each(['hidden', 'inert', 'aria-hidden', 'disabled', 'detached', 'display', 'visibility'])(
+    'rejects a %s return target and selects the visible fallback after guard release',
+    kind => {
+      const { trigger, fallback, panel, entry } = setup()
+      if (kind === 'aria-hidden') trigger.setAttribute(kind, 'true')
+      else if (kind === 'detached') trigger.remove()
+      else if (kind === 'display') trigger.style.display = 'none'
+      else if (kind === 'visibility') trigger.style.visibility = 'hidden'
+      else trigger.setAttribute(kind, '')
+      const focus = vi.spyOn(trigger, 'focus')
+      const release = track(activateShellOverlayGuard({ focusContainer: panel }))
+      entry.focus()
+      expect(isShellFocusTarget(fallback)).toBe(false)
+      release()
+      restoreShellFocus(panel, trigger, fallback)
+      expect(focus).not.toHaveBeenCalled()
+      expect(fallback).toHaveFocus()
+    },
+  )
+
+  it('keeps programmatic tabindex=-1 invokers valid without adding them to Tab order', () => {
+    const { panel } = setup()
+    expect(isShellFocusTarget(panel)).toBe(true)
+    expect(getShellFocusableElements(document.body)).not.toContain(panel)
+  })
+
+  it('does not steal outside intentional focus or a navigation handoff', () => {
+    const { trigger, fallback, panel } = setup()
+    fallback.focus()
+    restoreShellFocus(panel, trigger)
+    expect(fallback).toHaveFocus()
+    fallback.blur()
+    restoreShellFocus(panel, null, fallback)
+    expect(document.body).toHaveFocus()
+  })
+
+  it('does not restore behind a new modal even before that modal acquires focus', () => {
+    const { trigger, fallback, panel } = setup()
+    const modal = document.createElement('div')
+    modal.setAttribute('role', 'dialog')
+    modal.setAttribute('aria-modal', 'true')
+    document.body.append(modal)
+    restoreShellFocus(panel, trigger, fallback)
+    expect(document.body).toHaveFocus()
+  })
+
+  it('does not restore to an unavailable fallback', () => {
+    const { trigger, fallback, panel } = setup()
+    trigger.hidden = true
+    fallback.disabled = true
+    const focus = vi.spyOn(fallback, 'focus')
+    restoreShellFocus(panel, trigger, fallback)
+    expect(focus).not.toHaveBeenCalled()
+    expect(document.body).toHaveFocus()
+  })
+
+  it('repairs rejected commit-time entry in exactly one layout frame', () => {
+    const { panel, entry } = setup()
+    const nativeFocus = entry.focus.bind(entry)
+    const focus = vi.spyOn(entry, 'focus').mockImplementationOnce(() => {}).mockImplementation(nativeFocus)
+    let frame: FrameRequestCallback | undefined
+    const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+      frame = callback
+      return 1
+    })
+    try {
+      track(focusShellOverlayEntry(panel, () => entry))
+      expect(document.body).toHaveFocus()
+      expect(raf).toHaveBeenCalledTimes(1)
+      frame?.(0)
+      expect(entry).toHaveFocus()
+      expect(focus).toHaveBeenCalledTimes(2)
+      expect(raf).toHaveBeenCalledTimes(1)
+    } finally {
+      raf.mockRestore()
+    }
+  })
+
+  it.each(['outside', 'interior', 'modal', 'detached'])(
+    'does not reclaim entry after %s focus/lifecycle intent changes',
+    kind => {
+      const { fallback, panel, entry } = setup()
+      let frame: FrameRequestCallback | undefined
+      const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+        frame = callback
+        return 1
+      })
+      const focus = vi.spyOn(entry, 'focus').mockImplementation(() => {})
+      try {
+        track(focusShellOverlayEntry(panel, () => entry))
+        if (kind === 'outside') fallback.focus()
+        if (kind === 'interior') panel.focus()
+        if (kind === 'modal') {
+          const modal = document.createElement('div')
+          modal.setAttribute('role', 'dialog')
+          modal.setAttribute('aria-modal', 'true')
+          document.body.append(modal)
+        }
+        if (kind === 'detached') panel.remove()
+        const active = document.activeElement
+        frame?.(0)
+        expect(document.activeElement).toBe(active)
+        expect(focus).toHaveBeenCalledTimes(1)
+      } finally {
+        raf.mockRestore()
+      }
+    },
+  )
+
+  it('cancels the entry intent even if an already captured frame callback runs after cleanup', () => {
+    const { panel, entry } = setup()
+    let frame: FrameRequestCallback | undefined
+    const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+      frame = callback
+      return 82
+    })
+    const caf = vi.spyOn(window, 'cancelAnimationFrame')
+    const focus = vi.spyOn(entry, 'focus').mockImplementation(() => {})
+    try {
+      const cancel = track(focusShellOverlayEntry(panel, () => entry))
+      cancel()
+      expect(caf).toHaveBeenCalledWith(82)
+      frame?.(0)
+      expect(focus).toHaveBeenCalledTimes(1)
+    } finally {
+      raf.mockRestore()
+      caf.mockRestore()
+    }
   })
 })
 
@@ -182,6 +371,111 @@ describe('trapFocusWithin', () => {
     ;(document.getElementById('outside') as HTMLElement).focus()
     track(trapFocusWithin(document.getElementById('panel') as HTMLElement))
     expect(document.activeElement?.id).toBe('outside')
+  })
+
+  it('does not steal Tab from a nested portaled modal', () => {
+    setup()
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
+    dialog.innerHTML = '<button id="modal-first">first</button><button id="modal-last">last</button>'
+    document.body.append(dialog)
+    ;(document.getElementById('modal-first') as HTMLElement).focus()
+    pressTab()
+    expect(document.activeElement?.id).toBe('modal-first')
+    ;(document.getElementById('modal-last') as HTMLElement).focus()
+    pressTab(true)
+    expect(document.activeElement?.id).toBe('modal-last')
+
+    dialog.remove()
+    ;(document.getElementById('last') as HTMLElement).focus()
+    pressTab()
+    expect(document.activeElement?.id).toBe('first')
+  })
+
+  it('traps a modal whose semantic dialog is inside the focus boundary', () => {
+    mount(`
+      <div id="panel">
+        <div role="dialog" aria-modal="true">
+          <button id="first">first</button><button id="last">last</button>
+        </div>
+      </div>
+    `)
+    track(trapFocusWithin(document.getElementById('panel')))
+    ;(document.getElementById('last') as HTMLElement).focus()
+    pressTab()
+    expect(document.activeElement?.id).toBe('first')
+  })
+})
+
+describe('shell-owned nonmodal portals', () => {
+  function setup() {
+    mount(`
+      <div id="panel">
+        <button id="before">before</button>
+        <button id="anchor">view settings</button>
+        <button id="after">after</button>
+      </div>
+      <main id="background">background</main>
+      <div id="popover" role="dialog" aria-modal="false">
+        <input id="date" /><button id="apply">apply</button>
+      </div>
+    `)
+    const panel = document.getElementById('panel') as HTMLElement
+    const anchor = document.getElementById('anchor') as HTMLElement
+    const popover = document.getElementById('popover') as HTMLElement
+    const close = vi.fn()
+    const unregister = track(registerShellPortal(popover, anchor, close))
+    const release = track(activateShellOverlayGuard({ focusContainer: panel }))
+    return { panel, anchor, popover, close, unregister, release }
+  }
+
+  it('preserves an owned existing portal and lets its interior Tab remain native', () => {
+    const { panel, anchor, popover } = setup()
+    expect(popover).not.toHaveAttribute('inert')
+    expect(document.getElementById('background')).toHaveAttribute('inert')
+    expect(isShellPortalActive(panel, anchor)).toBe(true)
+    const date = document.getElementById('date') as HTMLElement
+    anchor.focus()
+    pressTab()
+    expect(date).toHaveFocus()
+    pressTab()
+    expect(date).toHaveFocus()
+  })
+
+  it('returns forward focus after the owning trigger and closes only its popup', () => {
+    const { close } = setup()
+    ;(document.getElementById('apply') as HTMLElement).focus()
+    pressTab()
+    expect(document.activeElement?.id).toBe('after')
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('returns reverse focus to the owning trigger without escaping the drawer', () => {
+    const { anchor, close } = setup()
+    ;(document.getElementById('date') as HTMLElement).focus()
+    pressTab(true)
+    expect(anchor).toHaveFocus()
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('dismisses owned popups when the outer overlay closes and restores its background', () => {
+    const { close, release } = setup()
+    release()
+    expect(close).toHaveBeenCalledOnce()
+    expect(document.getElementById('background')).not.toHaveAttribute('inert')
+    release()
+    expect(close).toHaveBeenCalledOnce()
+  })
+
+  it('restores portal ownership markers safely after a replacement registration', () => {
+    const { panel, anchor, popover, unregister } = setup()
+    const replacement = track(registerShellPortal(popover, anchor, vi.fn()))
+    unregister()
+    expect(isShellPortalActive(panel, anchor)).toBe(true)
+    replacement()
+    expect(isShellPortalActive(panel, anchor)).toBe(false)
+    expect(popover).not.toHaveAttribute('data-shell-portal')
   })
 })
 

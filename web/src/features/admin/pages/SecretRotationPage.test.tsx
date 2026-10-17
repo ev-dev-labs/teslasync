@@ -18,8 +18,7 @@
  *     KPI band must NOT surface fabricated "0.00 tracked / 0.00 overdue"
  *     totals that would falsely reassure an operator no secret is overdue.
  *  9. Zero tracked secrets renders empty states for every section.
- * 10. Over-long kind labels are truncated in the summary cards but preserved
- *     in the detail table.
+ * 10. Over-long kind identities remain complete in summary text and the table.
  * 11. A zero-age / zero-threshold secret still renders its urgency bar
  *     (no divide-by-zero).
  * 12. The header freshness control refetches on click.
@@ -30,7 +29,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -150,20 +149,57 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
-  return render(
+  const rendered = render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <SecretRotationPage />
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...rendered, client }
+}
+
+async function waitForSummary() {
+  await waitFor(() => expect(
+    screen.getByTestId('secret-rotation-summary').querySelector('[data-operational-metric]'),
+  ).toHaveAttribute('data-value-state', 'value'))
 }
 
 beforeEach(() => {
   mockedRequest.mockReset()
 })
 
+describe('SecretRotationPage retained source', () => {
+  it('keeps the complete table, both chart alternatives and urgency after refresh failure', async () => {
+    mockedRequest.mockResolvedValue(makeResponse())
+    const { client } = renderPage()
+    await screen.findByRole('heading', { name: 'Rotation status' })
+    await waitFor(() => expect(screen.getAllByText('broker-1').length).toBeGreaterThan(0))
+    mockedRequest.mockRejectedValue(new Error('refresh unavailable'))
+    await act(async () => { await client.invalidateQueries() })
+    await waitFor(() => expect(client.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
+    expect(screen.getAllByRole('heading', { name: 'Secret age by kind' }).filter(heading => heading.hasAttribute('data-card-title'))).toHaveLength(1)
+    expect(screen.getAllByRole('heading', { name: 'Severity mix' }).filter(heading => heading.hasAttribute('data-card-title'))).toHaveLength(1)
+    expect(screen.getByRole('heading', { name: 'Rotation urgency' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Expiry watch' })).toBeInTheDocument()
+    expect(screen.getAllByText('broker-1').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('secret-rotation-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true')
+    expect(screen.getByTestId('secret-rotation-summary').querySelectorAll('[data-value-state="value"]')).toHaveLength(6)
+  })
+})
+
 describe('SecretRotationPage', () => {
+  it('opens the shared operational review drawer with credential identity and signed expiry semantics', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await waitForSummary()
+    fireEvent.click(within(screen.getByTestId('secret-rotation-summary')).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog')
+    expect(within(drawer).getAllByText('Tesla refresh token').length).toBeGreaterThan(0)
+    expect(within(drawer).getByText(/Negative values mean already expired/)).toBeInTheDocument()
+    expect(within(drawer).getAllByText(/server-computed per-kind thresholds/).length).toBeGreaterThan(0)
+  })
+
   it('renders skeleton placeholders while the query is loading', () => {
     let resolve: (v: SecretRotationResponse) => void = () => {}
     mockedRequest.mockReturnValueOnce(
@@ -175,12 +211,13 @@ describe('SecretRotationPage', () => {
     const { container } = renderPage()
 
     // Title chrome is always present; the KPI cards are not — the band is
-    // still showing its six pulse skeletons.
+    // still showing its six static skeletons.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Secret Rotation' }),
+      screen.getByRole('heading', { level: 1, name: 'Secret rotation' }),
     ).toBeInTheDocument()
-    expect(screen.queryByText('Tracked secrets')).toBeNull()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('secret-rotation-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('secret-rotation-summary').querySelectorAll('[data-operational-value]')).toHaveLength(0)
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0)
 
     // Settle the promise so React-Query teardown is clean.
     resolve(makeResponse([]))
@@ -191,19 +228,20 @@ describe('SecretRotationPage', () => {
 
     renderPage()
 
-    await waitFor(() =>
-      expect(screen.getByText('Tracked secrets')).toBeInTheDocument(),
-    )
+    await waitForSummary()
 
     // total (3) + distinctKinds (3) drive the "Tracked secrets" subtitle.
     expect(screen.getByText('3 kinds tracked')).toBeInTheDocument()
     // okPct = round(1/3 * 100) = 33.
     expect(screen.getByText('33% of tracked')).toBeInTheDocument()
     // oldest picks the LARGEST age (200), not the smallest.
-    expect(screen.getByText('200.00 d')).toBeInTheDocument()
+    const summary = screen.getByTestId('secret-rotation-summary')
+    const oldest = within(summary).getByText('Oldest secret').closest('[data-operational-metric]')
+    expect(oldest?.querySelector('[data-operational-value]')).toHaveTextContent('200.00 d')
     // soonest expiry picks the SMALLEST days-to-expiry (3), not the largest (45).
     expect(screen.getByText('Soonest expiry')).toBeInTheDocument()
-    expect(screen.getAllByText('3.00 d').length).toBeGreaterThan(0)
+    const expiry = within(summary).getByText('Soonest expiry').closest('[data-operational-metric]')
+    expect(expiry?.querySelector('[data-operational-value]')).toHaveTextContent('3.00 d')
     // The oldest/soonest subtitle resolves the friendly kind label.
     expect(screen.getAllByText('Tesla refresh token').length).toBeGreaterThan(0)
   })
@@ -235,9 +273,7 @@ describe('SecretRotationPage', () => {
 
     renderPage()
 
-    await waitFor(() =>
-      expect(screen.getByText('Tracked secrets')).toBeInTheDocument(),
-    )
+    await waitForSummary()
     expect(screen.queryByText('Overdue rotations')).toBeNull()
   })
 
@@ -265,9 +301,7 @@ describe('SecretRotationPage', () => {
 
     renderPage()
 
-    await waitFor(() =>
-      expect(screen.getByText('Tracked secrets')).toBeInTheDocument(),
-    )
+    await waitForSummary()
 
     expect(
       screen.getByRole('region', { name: 'Rotation summary' }),
@@ -276,12 +310,12 @@ describe('SecretRotationPage', () => {
     // Charts are announced to assistive tech via role=img + descriptive labels.
     expect(
       screen.getByRole('img', {
-        name: /horizontal bar chart of the oldest tracked secrets/i,
+        name: /horizontal bar chart of the oldest Tracked secrets/i,
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('img', {
-        name: /donut chart of tracked secrets grouped by rotation severity/i,
+        name: /donut chart of Tracked secrets grouped by rotation severity/i,
       }),
     ).toBeInTheDocument()
 
@@ -298,9 +332,7 @@ describe('SecretRotationPage', () => {
 
     // Gate on a post-load KPI card — the panel titles below render even while
     // the section bodies are still skeletons, so waiting on them would race.
-    await waitFor(() =>
-      expect(screen.getByText('Tracked secrets')).toBeInTheDocument(),
-    )
+    await waitForSummary()
 
     // Urgency bar sublabels read "age / critical" per secret.
     expect(screen.getByText('Rotation urgency')).toBeInTheDocument()
@@ -328,7 +360,7 @@ describe('SecretRotationPage', () => {
       expect(screen.getByText('Feature not supported')).toBeInTheDocument(),
     )
     expect(
-      screen.getByText(/rotation tracker is not configured on this deployment/i),
+      screen.getByText(/rotation tracker is Not configured on this deployment/i),
     ).toBeInTheDocument()
     // 503 is a graceful "not wired" state — never a red error panel.
     expect(screen.queryByText("Can't reach server")).toBeNull()
@@ -345,10 +377,10 @@ describe('SecretRotationPage', () => {
     // The KPI band must not lie with "0.00 tracked / 0.00 overdue" cards when
     // the fetch failed — that would tell a security operator nothing is
     // overdue while the data never loaded. Every KPI label lives only in the
-    // summary band, so their absence proves the band collapsed to an error.
-    expect(screen.queryByText('Tracked secrets')).toBeNull()
-    expect(screen.queryByText('Healthy')).toBeNull()
-    expect(screen.queryByText('Oldest secret')).toBeNull()
+    // summary band; canonical tiles retain their labels and mark values missing.
+    const tiles = screen.getByTestId('secret-rotation-summary').querySelectorAll('[data-operational-metric]')
+    expect(tiles).toHaveLength(6)
+    for (const tile of tiles) expect(tile).toHaveAttribute('data-value-state', 'missing')
     // A hard failure is distinct from the 503 not-configured state.
     expect(screen.queryByText('Feature not supported')).toBeNull()
   })
@@ -373,13 +405,14 @@ describe('SecretRotationPage', () => {
     // KPI placeholders degrade gracefully rather than vanishing.
     expect(screen.getByText('No data')).toBeInTheDocument()
     expect(screen.getByText('No expiry tracked')).toBeInTheDocument()
-    // Counts collapse to "0.00" rather than disappearing.
-    expect(screen.getAllByText('0.00').length).toBeGreaterThan(0)
+    // Counts retain literal measured zero, while ages/expiry remain unknown.
+    const tiles = screen.getByTestId('secret-rotation-summary').querySelectorAll('[data-operational-metric]')
+    expect([...tiles].slice(0, 4).every(tile => tile.querySelector('[data-operational-value]')?.textContent === '0')).toBe(true)
+    expect([...tiles].slice(4).every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true)
   })
 
-  it('truncates over-long kind labels in the summary cards but not the table', async () => {
+  it('preserves full over-long kind identities in summary text and the table', async () => {
     const LONG = 'x'.repeat(30)
-    const TRUNCATED = `${LONG.slice(0, 21)}\u2026`
 
     mockedRequest.mockResolvedValueOnce(
       makeResponse([
@@ -394,13 +427,11 @@ describe('SecretRotationPage', () => {
 
     renderPage()
 
-    await waitFor(() =>
-      expect(screen.getByText('Oldest secret')).toBeInTheDocument(),
-    )
+    await waitForSummary()
 
-    // Summary cards clip the 30-char label to 21 chars + ellipsis…
-    expect(screen.getAllByText(TRUNCATED).length).toBeGreaterThan(0)
-    // …while the full label is preserved in the detail table.
+    const oldestCard = screen.getByText('Oldest secret').closest<HTMLElement>('[data-operational-metric]')
+    if (!oldestCard) throw new Error('Oldest secret metric must remain mounted')
+    expect(within(oldestCard).getByText(LONG)).toBeInTheDocument()
     const table = within(
       screen.getByRole('region', { name: 'Rotation status' }),
     ).getByRole('table')
@@ -424,9 +455,7 @@ describe('SecretRotationPage', () => {
 
     // Gate on the post-load KPI card so the urgency bar has replaced its
     // loading skeleton before we assert its readout.
-    await waitFor(() =>
-      expect(screen.getByText('Tracked secrets')).toBeInTheDocument(),
-    )
+    await waitForSummary()
     expect(screen.getByText('Rotation urgency')).toBeInTheDocument()
 
     // The urgency bar still renders its readout for an all-zero secret
@@ -444,9 +473,7 @@ describe('SecretRotationPage', () => {
 
     renderPage()
 
-    await waitFor(() =>
-      expect(screen.getByText('Tracked secrets')).toBeInTheDocument(),
-    )
+    await waitForSummary()
 
     const refresh = screen.getByRole('button', { name: /refresh/i })
     const before = mockedRequest.mock.calls.length

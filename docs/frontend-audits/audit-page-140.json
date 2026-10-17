@@ -1,0 +1,222 @@
+{
+  "item": "audit-page-140",
+  "phase": 0,
+  "auditMode": "read-only source inspection",
+  "page": {
+    "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx",
+    "name": "LegacyAlertRulesRedirect",
+    "classification": "mounted legacy-route compatibility redirect; not a visual page",
+    "sourceMounted": true,
+    "runtimeMounted": "unverified",
+    "scope": "Only this redirect and narrowly necessary routing, destination query parsing, existing redirect tests and governing documentation."
+  },
+  "routes": [
+    {
+      "path": "/alert-rules",
+      "registration": { "file": "web\\src\\App.tsx", "line": 621 },
+      "lazyImport": { "file": "web\\src\\App.tsx", "line": 202 },
+      "parent": { "path": "/", "component": "Layout", "file": "web\\src\\App.tsx", "line": 573 },
+      "wrapper": "SafeRoute name=\"LegacyAlertRulesRedirect\"",
+      "target": "/notifications/rules",
+      "targetRegistration": { "file": "web\\src\\App.tsx", "line": 629 },
+      "targetComponent": "AlertRulesPage",
+      "targetLazyImport": { "file": "web\\src\\App.tsx", "line": 195 },
+      "redirectExpression": "to={`/notifications/rules${search}${hash}`} replace",
+      "evidence": { "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx", "line": 12 },
+      "runtimeReachability": "unverified; registration is source evidence, not an exercised application route"
+    }
+  ],
+  "purpose": "Retain /alert-rules bookmarks, email links and other legacy entry points by forwarding them to the existing canonical notifications rule-management route without dropping query strings or fragments.",
+  "primaryGoal": "Reach the canonical rules surface with the same URL search and hash, replacing the legacy history entry rather than adding a redirect bounce on Back.",
+  "dataSources": [
+    {
+      "name": "React Router location",
+      "hook": "useLocation",
+      "owner": "react-router-dom",
+      "fieldsRead": ["search", "hash"],
+      "knownEndpoints": [],
+      "sourceOwnership": "Router location supplies URL strings; the redirect performs no API reads or writes and owns no business data.",
+      "evidence": { "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx", "line": 11 },
+      "backendBehavior": "Not applicable to this module. Destination API behavior is outside this bounded audit and was not inspected."
+    }
+  ],
+  "components": [
+    {
+      "name": "LegacyAlertRulesRedirect",
+      "category": "feature-owned compatibility module",
+      "owner": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx",
+      "evidence": { "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx", "line": 10 },
+      "presentation": "Returns only Navigate; no page header, panels, tables, forms, metrics or charts."
+    },
+    {
+      "name": "Navigate",
+      "category": "existing routing primitive",
+      "owner": "react-router-dom",
+      "props": ["to: fixed canonical pathname + original search + original hash", "replace: true"],
+      "evidence": { "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx", "line": 12 }
+    },
+    {
+      "name": "SafeRoute",
+      "category": "application integration wrapper",
+      "owner": "web\\src\\App.tsx",
+      "evidence": { "file": "web\\src\\App.tsx", "line": 367 },
+      "composition": "ErrorBoundary keyed/reset by pathname, containing SuspenseProgressBoundary with PageLoadSkeleton fallback at lines 374-375.",
+      "verification": "Composition inspected; fallback rendering and recovery not exercised."
+    },
+    {
+      "name": "Layout",
+      "category": "existing shell/layout owner",
+      "owner": "web\\src\\components\\layout\\Layout.tsx",
+      "evidence": { "file": "web\\src\\App.tsx", "line": 573 },
+      "verification": "Parent route registration inspected only; Layout implementation not read."
+    }
+  ],
+  "duplicatedPatterns": [],
+  "responsive": {
+    "applicability": "No module-owned visual geometry or controls; visual reflow, table adaptation, touch targets and density are not applicable to the redirect itself.",
+    "issues": [],
+    "viewportTesting": "unverified at every contract width: 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920 and 2560",
+    "integrationLimit": "Shell, lazy-loading fallback and destination remain visible integration surfaces; their responsiveness is neither inspected nor accepted by this redirect audit."
+  },
+  "accessibility": {
+    "applicability": "No module-owned text, controls, landmarks, focusable elements, animations or accessible labels.",
+    "issues": [],
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "not applicable to module-owned content; composed shell/fallback/destination contrast unverified",
+    "focus": "No local focus handling; App mounts RouteFocusManager at line 551 and RouteAnnouncer at line 546. Their implementations and actual redirect behavior were not exercised.",
+    "hashLanding": "Hash-string forwarding is source-confirmed. Actual anchor existence, scrolling, focus and announcement at the destination are unverified.",
+    "evidence": [
+      { "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx", "line": 12 },
+      { "file": "web\\src\\App.tsx", "line": 546 },
+      { "file": "web\\src\\App.tsx", "line": 551 }
+    ]
+  },
+  "states": {
+    "loading": {
+      "local": "not applicable; no data fetching or loading state",
+      "integration": "Lazy import at App.tsx:202 is wrapped by SafeRoute at App.tsx:621. SafeRoute uses SuspenseProgressBoundary/PageLoadSkeleton at App.tsx:375.",
+      "runtime": "unverified"
+    },
+    "empty": { "local": "not applicable; URL forwarding does not render a data collection", "destination": "outside scope" },
+    "error": {
+      "local": "No local error or retry UI.",
+      "integration": "SafeRoute's ErrorBoundary is keyed and reset by pathname at App.tsx:374; rendered failure and recovery behavior unverified.",
+      "destination": "outside scope"
+    },
+    "offline": { "local": "not applicable; no module network request", "integration": "Cold lazy-chunk availability and destination network behavior unverified; no claim of offline reachability." },
+    "stale": { "local": "not applicable; no module cache or retained measurement" },
+    "unknown": { "local": "not applicable; no module measurement or business-state classification" },
+    "partial": { "local": "not applicable; no combined data sources" }
+  },
+  "visualIssues": [],
+  "architectureIssues": [],
+  "priority": {
+    "level": "low",
+    "disposition": "preserve compatibility redirect; no UI redesign or shared component needed",
+    "rationale": "This mounted legacy surface is intentionally nonvisual. Replacing it with an invented page would violate mission section 0 preservation and MDC-030 route/alias obligations."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "classification": "compatibility alias, not a competing rules page",
+    "confirmed": [],
+    "canonicalOwner": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+    "canonicalMount": { "file": "web\\src\\App.tsx", "line": 629 },
+    "limit": "No repository-wide duplication audit was performed. The scoped route registrations establish this shim and its target, not the absence of all other implementations."
+  },
+  "preservation": {
+    "sourceFile": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx",
+    "sourceSha256": "510fa18c198e317743748994eefde8445d3418e28a6a94ed03a6cdd82e904d3b",
+    "hashAlgorithm": "SHA-256 of file bytes",
+    "currentLineCount": 13,
+    "sections": [],
+    "sectionCount": 0,
+    "glassPanelCount": 0,
+    "chartContainerCount": 0,
+    "actions": [
+      {
+        "name": "automatic canonical-route redirect",
+        "trigger": "module mounting at /alert-rules",
+        "target": "/notifications/rules + search + hash",
+        "history": "replace, not push",
+        "evidence": { "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx", "line": 12 }
+      }
+    ],
+    "dataBehavior": [
+      "Read search and hash directly from useLocation; concatenate them in search-then-hash order.",
+      "Do not parse, decode, re-encode, reorder, whitelist or rename query parameters in this shim.",
+      "Preserve the incoming hash string; do not claim this alone proves an anchor exists or scrolls correctly.",
+      "Keep the fixed internal canonical pathname and replace semantics.",
+      "Keep the /alert-rules mount, lazy import and canonical /notifications/rules registration.",
+      "No hooks fetching API data, endpoints, mutation actions, SI fields, display conversions, query caches, exports or persisted preferences exist locally."
+    ],
+    "compatibility": {
+      "query": "All router-provided search text is forwarded unchanged by module code, including unrecognized names and encoded values.",
+      "hash": "Router-provided hash text is forwarded unchanged after search.",
+      "historyState": "Not read or explicitly forwarded: useLocation destructures only search/hash and Navigate receives no state prop. Do not claim location.state preservation.",
+      "pathname": "Legacy pathname is replaced with the fixed canonical pathname; no wildcard or path-parameter translation is implemented.",
+      "destinationQueryBoundary": {
+        "evidence": { "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx", "line": 122 },
+        "detail": "The narrowly inspected destination editor selector reads searchParams.get('rule'). Existing redirect tests use rule_id as an opaque forwarded parameter, not as proof that rule_id selects an editor.",
+        "classification": "semantic compatibility limit, not an established redirect bug",
+        "preserve": "Do not invent rule_id-to-rule translation or assert support for unknown legacy parameter semantics; historical producer requirements and downstream behavior remain unverified."
+      },
+      "examples": [
+        { "input": "/alert-rules", "sourceDerivedTarget": "/notifications/rules" },
+        { "input": "/alert-rules?rule=42#configure", "sourceDerivedTarget": "/notifications/rules?rule=42#configure" },
+        { "input": "/alert-rules?q=a%20b&tag=%23urgent", "sourceDerivedTarget": "/notifications/rules?q=a%20b&tag=%23urgent" }
+      ]
+    },
+    "existingTests": {
+      "file": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.test.tsx",
+      "execution": "not run; inspected only",
+      "cases": [
+        { "line": 77, "behavior": "bare legacy route to canonical route with empty search/hash" },
+        { "line": 90, "behavior": "opaque search parameter forwarding" },
+        { "line": 101, "behavior": "encoded search values retained" },
+        { "line": 111, "behavior": "hash forwarded" },
+        { "line": 120, "behavior": "combined search/hash retained in order" },
+        { "line": 129, "behavior": "replace history entry; Back returns to /start" }
+      ],
+      "limits": "MemoryRouter test source uses a synthetic destination probe, not the production AlertRulesPage or application shell. Auth, real browser history, anchor behavior and production mount are not established."
+    }
+  },
+  "evidenceLimits": {
+    "sourceSnapshotUtc": "2026-10-07T07:02:56.6571740Z",
+    "method": "Direct file/range reads and narrowly scoped text search; no Git, source changes, agents, browser, full-repository lint/build, TypeScript or test suite.",
+    "runtime": "unverified; no application launched or route exercised",
+    "visual": "not applicable to local content; shell, fallback and destination unverified",
+    "backend": "No endpoint is called by this module. No backend source read or destination API contract audit performed.",
+    "scopeExclusions": ["Destination page visual/data audit", "Layout and shared accessibility-manager implementations", "Server rewrite and authentication behavior", "Other legacy redirect implementations", "External bookmark/email producer history"],
+    "sourceOnlyConclusion": "No local visual or architecture defect established in the inspected 13-line redirect. Empty issue arrays are scoped source findings, not runtime acceptance or whole-app clearance.",
+    "inspectionReceipts": [
+      { "command": "Get-FileHash -Path 'web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx' -Algorithm SHA256", "exitCode": 0, "output": "SHA256 510FA18C198E317743748994EEFDE8445D3418E28A6A94ED03A6CDD82E904D3B" },
+      { "command": "(Get-Content -Path 'web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx').Count", "exitCode": 0, "output": "13" },
+      { "command": "Initial combined PowerShell hash/count probe", "exitCode": 1, "output": "No output returned; no evidence claimed from this failed probe. Simpler hash/count command succeeded." },
+      { "command": "Inline Python report validation and scoped regex counts via PowerShell", "exitCode": 0, "output": "JSON schema required fields: PASS\nSource hash and 13-line preservation baseline: PASS\nGlassPanel: 0\nChartContainer: 0\nraw controls: 0\ninline styles: 0\ndata fetch patterns: 0\nTest source line count: 146\nRuntime/tests/TypeScript/lint/build: NOT RUN (read-only audit)" }
+    ],
+    "governingReferences": [
+      "docs\\frontend-worker-conventions.md:43-80 Phase 0 report and evidence contract",
+      "docs\\frontend-mission.md:19-105 sections 0/1",
+      "docs\\frontend-mission.md:145-207 architecture",
+      "docs\\frontend-mission.md:340-363 visual intensity",
+      "docs\\frontend-mission.md:529-580 responsive/mobile",
+      "docs\\frontend-mission.md:703-777 loading/empty/error/offline",
+      "docs\\frontend-mission.md:920-1000 accessibility/motion/data separation",
+      "docs\\frontend-design-contract.md MDC-001, MDC-002, MDC-026, MDC-030, MDC-040, MDC-043, MDC-046 and MDC-070"
+    ]
+  },
+  "filesRead": [
+    { "path": "docs\\frontend-worker-conventions.md", "ranges": ["1-80"] },
+    { "path": "docs\\frontend-design-contract.md", "ranges": ["1-394"] },
+    { "path": "docs\\frontend-mission.md", "ranges": ["1-240", "339-365", "529-580", "703-777", "920-1007"] },
+    { "path": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.tsx", "ranges": ["1-13"] },
+    { "path": "web\\src\\features\\notifications\\components\\LegacyAlertRulesRedirect.test.tsx", "ranges": ["1-146"] },
+    { "path": "web\\src\\App.tsx", "ranges": ["180-210", "350-381", "480-535", "537-574", "600-638"] },
+    { "path": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx", "ranges": ["115-129"], "limit": "Only destination query-selector integration read; no page audit." }
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-140.json",
+    ".agent-status\\audit-page-140.txt"
+  ]
+}

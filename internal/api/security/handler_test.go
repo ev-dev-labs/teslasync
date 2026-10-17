@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -60,6 +61,51 @@ func newSecurityRequest(vehicleID, target string) *http.Request {
 		target = "/security?vehicle_id=" + vehicleID
 	}
 	return httptest.NewRequest(http.MethodGet, target, nil)
+}
+
+func TestSecurityHandler_History_UsesExactWorkspaceBounds(t *testing.T) {
+	tests := []struct {
+		name  string
+		start string
+		end   string
+	}{
+		{"historical month", "2020-02-01T00:00:00-08:00", "2020-03-01T00:00:00-08:00"},
+		{"DST shortened day", "2026-03-08T00:00:00-08:00", "2026-03-09T00:00:00-07:00"},
+		{"rolling interval", "2026-03-08T15:30:12Z", "2026-03-09T15:30:12Z"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wantFrom, err := time.Parse(time.RFC3339, tt.start)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantEnd, err := time.Parse(time.RFC3339, tt.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var gotFrom, gotTo time.Time
+			fake := &fakeStateReader{
+				timelineFn: func(_ context.Context, vehicleID int64, _ []signal.FieldMapping, from, to time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+					if vehicleID != 42 {
+						t.Fatalf("vehicleID = %d, want 42", vehicleID)
+					}
+					gotFrom, gotTo = from, to
+					return nil, nil
+				},
+			}
+			params := url.Values{"vehicle_id": {"42"}, "start": {tt.start}, "end": {tt.end}}
+			rec := httptest.NewRecorder()
+			NewSecurityHandler(fake, newTestLiveStateReader(fake)).List(
+				rec, newSecurityRequest("42", "/security?"+params.Encode()),
+			)
+			if rec.Code != http.StatusOK || fake.gotTimelineCalls != 1 {
+				t.Fatalf("status = %d, calls = %d, body = %s", rec.Code, fake.gotTimelineCalls, rec.Body.String())
+			}
+			if !gotFrom.Equal(wantFrom) || !gotTo.Equal(wantEnd.Add(-time.Microsecond)) {
+				t.Fatalf("bounds = [%s, %s], want [%s, %s)", gotFrom, gotTo, wantFrom, wantEnd)
+			}
+		})
+	}
 }
 
 // TestSecurityHandler_History_CarriesForwardLockState is the wire-up +

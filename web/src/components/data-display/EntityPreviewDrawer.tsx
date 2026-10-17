@@ -1,16 +1,10 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import {
-  Badge,
-  Button,
-  BUTTON_BASE,
-  BUTTON_VARIANTS,
-  Drawer,
-  MetricLabel,
-  PanelTitle,
-  Text,
-} from '@/components/ui'
+import { Badge } from '../ui/Badge'
+import { Button, BUTTON_BASE, BUTTON_VARIANTS } from '../ui/Button'
+import { Drawer } from '../ui/Drawer'
+import { MetricLabel, PanelTitle, Text } from '../ui/Typography'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
 
@@ -83,20 +77,22 @@ export function EntityPreviewDrawer({
       description={description}
       headerMeta={
         statusLabel ? (
-          <Badge variant={statusTone} size="sm" dot>
-            {statusLabel}
+          <Badge variant={statusTone} size="sm" dot className="min-w-0 max-w-full">
+            <span className="min-w-0 whitespace-normal break-words">{statusLabel}</span>
           </Badge>
         ) : undefined
       }
       size="lg"
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" wrapLabel className="min-h-11" onClick={onClose}>
             {t('common.close', 'Close')}
           </Button>
           {primaryAction && (
             <Button
               type="button"
+              wrapLabel
+              className="min-h-11"
               icon={<Icons.forward className="h-4 w-4" aria-hidden="true" />}
               onClick={handlePrimaryAction}
             >
@@ -113,19 +109,19 @@ export function EntityPreviewDrawer({
             {fields.map((field) => (
               <div key={field.key} className="min-w-0 bg-[var(--surface-2)] p-3">
                 <dt>
-                  <MetricLabel>{field.label}</MetricLabel>
+                  <MetricLabel className="break-words">{field.label}</MetricLabel>
                 </dt>
                 <Text
                   as="dd"
                   size="sm"
-                  weight="semibold"
+                  weight="medium"
                   color="primary"
                   className="mt-1 break-words tabular-nums"
                 >
                   {field.value}
                 </Text>
                 {field.detail && (
-                  <Text as="p" size="2xs" color="muted" className="mt-1">
+                  <Text as="p" variant="caption" className="mt-1 whitespace-pre-wrap break-words">
                     {field.detail}
                   </Text>
                 )}
@@ -148,17 +144,21 @@ export function EntityPreviewDrawer({
                   className={cn(
                     BUTTON_BASE,
                     BUTTON_VARIANTS.outline,
-                    'h-10 justify-start px-3 text-sm',
+                    'min-h-11 min-w-0 max-w-full justify-start whitespace-normal px-3 py-2 text-start',
                   )}
                   onClick={() => {
                     action.onNavigate?.()
                     onClose()
                   }}
                 >
-                  {action.icon ?? (
-                    <Icons.forward className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  {action.label}
+                  <span className="inline-flex shrink-0">
+                    {action.icon ?? (
+                      <Icons.forward className="h-4 w-4" aria-hidden="true" />
+                    )}
+                  </span>
+                  <Text variant="bodySm" className="min-w-0 break-words">
+                    {action.label}
+                  </Text>
                 </Link>
               ))}
             </nav>

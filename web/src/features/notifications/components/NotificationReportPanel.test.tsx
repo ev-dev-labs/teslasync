@@ -1,31 +1,69 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import type { NotificationReport } from '@/api/types';
+import type { ChartContainerProps } from '@/components/charts';
+
+const chartBoundary = vi.hoisted(() => ({
+  container: vi.fn(),
+  isHidden: vi.fn<(key: string) => boolean>(() => false),
+}));
 
 vi.mock('@/api/hooks/useNotifications', () => ({ useNotificationReport: vi.fn() }));
+vi.mock('@/hooks/useChartPalette', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/hooks/useChartPalette')>(),
+  useChartPalette: vi.fn(),
+}));
 vi.mock('@/components/charts', () => ({
-  ChartContainer: ({ title, data }: { title: string; data: unknown[] }) => (
-    <div>{title}<output data-testid="timeline-buckets">{JSON.stringify(data)}</output></div>
+  ChartContainer: (props: ChartContainerProps) => {
+    chartBoundary.container(props);
+    return (
+      <div>
+        {props.title}<output data-testid="timeline-buckets">{JSON.stringify(props.data)}</output>
+        {typeof props.children === 'function' ? props.children({
+          annotations: [],
+          hidden: false,
+          hiddenSeries: {
+            hidden: new Set<string>(),
+            isHidden: chartBoundary.isHidden,
+            toggle: vi.fn(),
+            reset: vi.fn(),
+          },
+        }) : props.children}
+      </div>
+    );
+  },
+  Bar: (props: { dataKey: string; name: string; fill: string; hide: boolean }) => (
+    <output data-testid={`timeline-series-${props.dataKey}`}>{JSON.stringify(props)}</output>
   ),
-  Bar: () => null,
-  BarChart: () => null,
+  BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
   ChartLegend: () => null,
   ChartTooltip: () => null,
-  ResponsiveContainer: () => null,
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Tooltip: () => null,
   XAxis: () => null,
   YAxis: () => null,
 }));
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
-}));
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const translations = createInstance();
+  await translations.init({
+    lng: 'en', fallbackLng: 'en', resources: {},
+    interpolation: { escapeValue: false },
+  });
+  const t = translations.getFixedT('en');
+  return { useTranslation: () => ({ t }) };
+});
 
 import { useNotificationReport } from '@/api/hooks/useNotifications';
+import { resolveChartPalette, useChartPalette } from '@/hooks/useChartPalette';
 import { NotificationReportPanel } from './NotificationReportPanel';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const useReport = vi.mocked(useNotificationReport);
+const usePalette = vi.mocked(useChartPalette);
 const report: NotificationReport = {
   from: '2026-01-01',
   to: '2026-01-30',
@@ -49,25 +87,82 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  chartBoundary.container.mockClear();
+  chartBoundary.isHidden.mockReset().mockReturnValue(false);
+  usePalette.mockReset().mockReturnValue(resolveChartPalette('cb_safe'));
   useReport.mockReturnValue({ data: report, isLoading: false, isError: false } as ReturnType<typeof useNotificationReport>);
 });
 
 describe('NotificationReportPanel', () => {
+  it.each(['cb_safe', 'neon', undefined, 'unknown'])('uses the accepted saved palette for both series (%s)', (preference) => {
+    const palette = resolveChartPalette(preference);
+    usePalette.mockReturnValue(palette);
+    renderPanel();
+    expect(usePalette).toHaveBeenCalled();
+    expect(JSON.parse(screen.getByTestId('timeline-series-triggered').textContent ?? '')).toEqual({
+      dataKey: 'triggered', name: 'Triggers recorded', fill: palette[0], hide: false,
+    });
+    expect(JSON.parse(screen.getByTestId('timeline-series-deliveries').textContent ?? '')).toEqual({
+      dataKey: 'deliveries', name: 'Channel deliveries', fill: palette[1], hide: false,
+    });
+  });
+
+  it('updates saved palette colors without resetting series visibility or chart evidence/export contracts', () => {
+    chartBoundary.isHidden.mockImplementation(key => key === 'triggered');
+    const view = renderPanel();
+    usePalette.mockReturnValue(resolveChartPalette('neon'));
+    view.rerender(<MemoryRouter><NotificationReportPanel fromInstant="2026-01-01T08:00:00Z" toExclusive="2026-01-31T08:00:00Z" timezone="America/Los_Angeles" /></MemoryRouter>);
+    const palette = resolveChartPalette('neon');
+    expect(JSON.parse(screen.getByTestId('timeline-series-triggered').textContent ?? '')).toMatchObject({ fill: palette[0], hide: true });
+    expect(JSON.parse(screen.getByTestId('timeline-series-deliveries').textContent ?? '')).toMatchObject({ fill: palette[1], hide: false });
+    expect(chartBoundary.isHidden).toHaveBeenCalledWith('triggered');
+    expect(chartBoundary.isHidden).toHaveBeenCalledWith('deliveries');
+    const props = chartBoundary.container.mock.calls.at(-1)?.[0] as ChartContainerProps;
+    expect(props.chartKey).toBe('notification-activity');
+    expect(props.ariaLabel).toBe('Daily notification triggers and channel deliveries');
+    expect(props.data).toEqual([{ period: '2026-01-01', triggered: 3, deliveries: 5 }]);
+    expect(props.dataColumns).toEqual([
+      { key: 'period', label: 'Period' },
+      { key: 'triggered', label: 'Triggers recorded' },
+      { key: 'deliveries', label: 'Channel deliveries' },
+    ]);
+    expect(props.exportable).toBeUndefined();
+    expect(props.exportData).toBeUndefined();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+  });
+
+  it('keeps every breakdown row in the shared evidence table engine', () => {
+    renderPanel();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+    const sources = screen.getByRole('table', { name: 'Trigger sources' });
+    expect(within(sources).getAllByRole('row')).toHaveLength(report.by_source.length + 1);
+    expect(within(sources).getByRole('cell', { name: 'System' })).toBeInTheDocument();
+    expect(within(sources).getByRole('cell', { name: '2' })).toHaveClass('text-right', 'tabular-nums');
+  });
+
   it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {
     renderPanel();
     expect(useReport).toHaveBeenCalledWith('2026-01-01T08:00:00Z', '2026-01-31T08:00:00Z', 'America/Los_Angeles');
     expect(screen.queryByText('Choose date range')).not.toBeInTheDocument();
     expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
-    expect(screen.getByText('Outbound HTTP calls').closest('[data-role="metric-card"]')).toHaveTextContent('11');
-    expect(screen.getByText(/Outbound HTTP calls include retries and failures/)).toBeInTheDocument();
-    expect(screen.getByText(/Compare with Notifications under API Logs’ By Service/)).toBeInTheDocument();
-    expect(screen.getByText('1.7')).toBeInTheDocument();
+    expect(screen.getByText('Outbound HTTP calls').closest('[data-operational-metric]')).toHaveTextContent('11');
+    const brief = screen.getByTestId('notification-report-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      const httpGroup = within(drawer).getByRole('group', { name: 'Outbound HTTP calls' });
+      expect(httpGroup).toHaveTextContent('Outbound HTTP calls include retries and failures');
+      expect(httpGroup).toHaveTextContent('Compare with Notifications under API Logs’ By Service');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
+    expect(screen.getByText('1.67')).toBeInTheDocument();
     expect(screen.getByText('Deliveries without a linked trigger')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Alert')).toBeInTheDocument();
-    expect(screen.getByText('System Mqtt Outage')).toBeInTheDocument();
-    expect(screen.getByText('Delivery outcomes')).toBeInTheDocument();
+    expect(screen.getByText('System MQTT outage')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery outcomes' })).toBeInTheDocument();
     expect(screen.getByText('Daily activity')).toBeInTheDocument();
   });
 
@@ -78,9 +173,17 @@ describe('NotificationReportPanel', () => {
       isError: false,
     } as ReturnType<typeof useNotificationReport>);
     renderPanel();
-    expect(screen.getByText('1.0')).toBeInTheDocument();
-    expect(screen.getByText('Deliveries without a linked trigger').closest('[data-role="metric-card"]')).toHaveTextContent('2');
-    expect(screen.getByText(/Older deliveries without an event identifier appear only in delivery counts/)).toBeInTheDocument();
+    expect(screen.getByText('1.00')).toBeInTheDocument();
+    expect(screen.getByText('Deliveries without a linked trigger').closest('[data-operational-metric]')).toHaveTextContent('2');
+    const brief = screen.getByTestId('notification-report-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Triggers recorded' }))
+        .toHaveTextContent('Older deliveries without an event identifier appear only in delivery counts');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
   it('aggregates long all-time windows without dropping older daily counts', () => {
@@ -118,11 +221,50 @@ describe('NotificationReportPanel', () => {
   it('shows loading and error feedback rather than success-shaped zero counts', () => {
     useReport.mockReturnValue({ data: undefined, isLoading: true, isError: false } as ReturnType<typeof useNotificationReport>);
     const view = renderPanel();
-    expect(screen.queryByText('Triggers recorded')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('notification-report-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(screen.getByRole('heading', { name: 'Delivery outcomes' })).toBeInTheDocument();
     view.unmount();
     useReport.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: new Error('offline'), refetch: vi.fn() } as ReturnType<typeof useNotificationReport>);
     renderPanel();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    const unavailable = screen.getByTestId('notification-report-brief');
+    assertOperationalMetricUnavailable(unavailable, 'Triggers recorded');
+    expect(unavailable.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Trigger sources' })).toBeInTheDocument();
+  });
+
+  it('retains the complete cached report when a background refresh fails', () => {
+    useReport.mockReturnValue({
+      data: report, dataUpdatedAt: Date.now(), isLoading: false, isError: true,
+      error: new Error('refresh offline'), refetch: vi.fn(),
+    } as ReturnType<typeof useNotificationReport>);
+    renderPanel();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+    expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
+    expect(screen.getByText('System MQTT outage')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('reviews raw-count evidence, attribution limits, HTTP scope, and exact exclusive bounds in the actual drawer', () => {
+    renderPanel();
+    const brief = screen.getByTestId('notification-report-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(brief.querySelector('[data-operational-metric="report-fanout"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('1.67');
+    expect(drawer).toHaveTextContent('Older deliveries without an event identifier');
+    expect(drawer).toHaveTextContent('Outbound HTTP calls include retries and failures');
+    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z');
+    expect(drawer).toHaveTextContent('2026-01-31T08:00:00Z');
+    expect(drawer).toHaveTextContent('America/Los_Angeles');
+    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z to 2026-01-31T08:00:00Z (exclusive) · America/Los_Angeles');
+    fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
+    expect(screen.getAllByRole('table')).toHaveLength(5);
   });
 });

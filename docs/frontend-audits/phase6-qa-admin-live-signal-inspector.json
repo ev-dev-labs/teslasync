@@ -1,0 +1,517 @@
+{
+  "item": "phase6-qa-admin-live-signal-inspector",
+  "mode": "READ_ONLY_SOURCE_QA",
+  "delivery": "DONE",
+  "sourceQaResult": "FAIL",
+  "pageAcceptance": "NOTRUN",
+  "summary": {
+    "checks": 34,
+    "sourcePass": 22,
+    "sourceFail": 6,
+    "notRun": 6,
+    "confirmedIssues": 6,
+    "candidates": 5,
+    "nativePasses": 0,
+    "applicationChanges": 0
+  },
+  "startedAt": "2026-10-13T09:20:29.7277874-07:00",
+  "returnDeadline": "2026-10-13T09:40:09.326-07:00",
+  "hardDeadline": "2026-10-13T09:45:09.326-07:00",
+  "route": "/admin/live-signals",
+  "page": "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx",
+  "report": "docs\\frontend-audits\\phase6-qa-admin-live-signal-inspector.json",
+  "rawLog": "web\\logs\\phase6-qa-admin-live-signal-inspector.log",
+  "scope": {
+    "applicationFilesReadOnly": true,
+    "applicationFilesWritten": [],
+    "allowedWrites": [
+      "docs\\frontend-audits\\phase6-qa-admin-live-signal-inspector.json",
+      "web\\logs\\phase6-qa-admin-live-signal-inspector.log"
+    ],
+    "browserUsed": false,
+    "apiRequestsMade": 0,
+    "realLiveIdentitiesAccessed": false,
+    "nativeStatus": "NOTRUN",
+    "gitSubagentsInstallsHelpersExtensionsServersDockerFullSuites": "NOTRUN",
+    "limitations": "PASS means the specified inspected source contract holds, not mounted, visual, native, network or complete application acceptance. Reproduction procedures below are source-derived synthetic procedures, not executed browser/API/test cases."
+  },
+  "instructionsRead": [
+    "migration-queue.md:148-185,205,1533",
+    "docs\\orchestrator-loop.md:1-278",
+    "docs\\frontend-design-contract.md:MDC-001,002,020-026,032-033,040-047,060,070",
+    "docs\\frontend-mission.md:0-4,7-24",
+    "docs\\session-handoff.md:1-200",
+    "docs\\frontend-inventory.md:73",
+    "docs\\frontend-audits\\audit-page-018.json:1-240",
+    ".github\\instructions\\react-frontend.instructions.md:1-260",
+    ".github\\instructions\\frontend-si-cutover.instructions.md:1-91",
+    ".github\\instructions\\observability.instructions.md:1-45",
+    ".github\\instructions\\unit-conversion.instructions.md:1-207"
+  ],
+  "instructionPrecedence": "The active SI cutover and design contract require raw SI on wire/cache and display-boundary conversion; the older source-unit examples in unit-conversion.instructions.md are not authority to introduce legacy conversion. This report changes no units or source. The assigned source-only/no-helper/no-unchanged-passing-rerun contract prevents skill shell helpers, native workflow, full gates and redundant typecheck.",
+  "sourceScope": [
+    "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\index.ts",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalToolbar.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts",
+    "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-h-q\\liveSignalMetrics.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts:1-290",
+    "web\\src\\api\\hooks\\useVehicles.ts:1-170",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts:1-270",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\api\\client.ts:1-300",
+    "web\\src\\lib\\resilience.ts:19-41",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx:1-259",
+    "web\\src\\components\\data-display\\SourceLayerBadge.tsx",
+    "web\\src\\components\\data-display\\TimeStamp.tsx",
+    "web\\src\\components\\data-display\\LiveIndicator.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx:1-342",
+    "web\\src\\components\\ui\\DataTable.tsx:714-726,1038-1185",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\i18n\\en.json",
+    "internal\\api\\router.go:551,3362-3363,4929-4930",
+    "internal\\api\\signalinspect\\handler.go:507-650",
+    "internal\\signal\\live_store.go:246-266"
+  ],
+  "historicalEvidence": {
+    "originalAudit": "docs\\frontend-audits\\audit-page-018.json",
+    "acceptedMigration": "migration-queue.md:1533",
+    "sourceOnlyReceipt": "Historical accepted page 188 versus 175 lines and four sections; original test assertions retained. Final tests had external catalog startup exit 1 with zero cases; added SSE/manual-motion cases were unexecuted. This is not a test pass.",
+    "technicalGate": "docs\\session-handoff.md:66-70 records the prior requested build and literal npx tsc --noEmit exits 0; neither was freshly executed here or upgraded to native acceptance.",
+    "noUnchangedPassingReruns": true
+  },
+  "checks": [
+    {
+      "id": "ownership-and-privacy",
+      "status": "PASS",
+      "evidence": ["migration-queue.md:148-185,205", ".gitignore:80"],
+      "result": "Only the assigned report and ignored web logs were written; no browser/API/live identity/source/test/catalog/config access through execution or mutation. Source files were read only."
+    },
+    {
+      "id": "route-and-local-vehicle-scope",
+      "status": "PASS",
+      "evidence": ["web\\src\\App.tsx:276,712", "web\\src\\lib\\routeRegistry.ts:37", "web\\src\\lib\\workspaceScope.ts:99-101,154-168", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:48-51,80-84"],
+      "result": "Actual route is /admin/live-signals. Admin disables the global vehicle picker; required local selector uses canonical useSelectedVehicle rather than a second local state. Current snapshot has no date window; no date picker/range claim."
+    },
+    {
+      "id": "vehicle-identity-cache-and-cancellation",
+      "status": "PASS",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:61-81,123-137", "web\\src\\api\\hooks\\useTelemetry.ts:14,127-164", "web\\src\\api\\hooks\\useVehicles.ts:73-80"],
+      "result": "URL/store/fleet reconciliation and deliberate URL/store selection preserved. Live query key includes vehicleId; enablement requires a truthy vehicleId and enabled flag; AbortSignal reaches request. No keepPreviousData bridge across different vehicles."
+    },
+    {
+      "id": "fleet-loading-and-failure-recovery",
+      "status": "FAIL",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50,65-74,168-173", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:48,58-59,99"],
+      "issue": "LSI-02"
+    },
+    {
+      "id": "foreground-polling-policy",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:49-52", "web\\src\\api\\hooks\\useTelemetry.ts:151-163", "web\\src\\api\\queryPolicy.ts:89,115-126,264-279"],
+      "result": "Page requests 1000 ms cadence; hook narrows staleTime to requested cadence and shared policy clamps polling to at least 1000 ms. Background polling remains false. Retry is ambient QueryClient-owned. Actual timer/network behavior NOTRUN."
+    },
+    {
+      "id": "first-load-loading",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:58-68", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx:65-74", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx:53-54"],
+      "result": "Selected vehicle plus isLoading renders source-shaped section skeletons and loading Brief, not fabricated measured values. Initial paused loading is separately failed."
+    },
+    {
+      "id": "fatal-first-load-error",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\dataState.ts:203-219", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:60-61,143-154", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx:44-52"],
+      "result": "Only fatalError without retained data selects per-source QueryError and retry. Persistent section shells/summary are not removed through a page-wide error prop."
+    },
+    {
+      "id": "authoritative-empty-versus-missing-metrics",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:126", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx:38-40", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\liveSignalMetrics.ts:12-36"],
+      "result": "Supplied signals={} produces five known zero counts and unknown freshest age; absent signals makes all six metrics missing. Empty/error/prerequisite explanations stay in persistent panels. Empty source copy's Redis-specific assertion is not authority for a paused request."
+    },
+    {
+      "id": "retained-refresh-failure",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\dataState.ts:223-245", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:54-68", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx:65-74", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:58-73"],
+      "result": "Refresh errors keep payload/rows, render retained warning and retry, and do not replace usable sections with fatal error. Last assembly time remains snapshot metadata, not current telemetry freshness."
+    },
+    {
+      "id": "retained-empty-refresh-failure",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:67-68", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx:54-74"],
+      "result": "Retained-empty keeps its explicit empty body and one empty-body retry in each dependent source; SourceContent receives retained rather than erasing it."
+    },
+    {
+      "id": "paused-initial-source",
+      "status": "FAIL",
+      "evidence": ["web\\src\\api\\dataState.ts:190-219", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:58-68,179-182"],
+      "issue": "LSI-01"
+    },
+    {
+      "id": "paused-retained-payload",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\dataState.ts:247-255", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:62-68", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx:44,70-72"],
+      "result": "Existing data remains visible as retained/retained-empty when paused. Precise paused/offline reason is not forwarded; source warnings are generic. No false fatal-server-error assertion is made in this branch."
+    },
+    {
+      "id": "persistent-sections-and-actions",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:94-112,120-186", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx:86-152", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx:75-145"],
+      "result": "Four functional sections remain: six-metric Brief, four source buckets/proportions, kind chart/accessible data, filterable snapshot. Vehicle selection and manual refresh retained; retry per dependent source. No global data/empty gate."
+    },
+    {
+      "id": "page-line-count-and-section-baseline",
+      "status": "PASS",
+      "evidence": ["migration-queue.md:1533", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:1-188", "web\\logs\\phase6-qa-admin-live-signal-inspector.log"],
+      "result": "Actual page=188 versus historical page baseline=175, above 70%. Same four semantic sections. Nine page/direct-feature production files total 1216 lines. Scan found 2 section tags, 3 local GlassPanel openings and 1 EmbeddedChart; Brief's shared OperationalBrief supplies the fourth functional panel."
+    },
+    {
+      "id": "combined-original-feature-line-baseline",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:1533", "docs\\frontend-audits\\audit-page-018.json"],
+      "reason": "Original combined page-plus-components line baseline was not supplied; Git/history retrieval forbidden. No invented combined preservation percentage."
+    },
+    {
+      "id": "snapshot-versus-wire-trust",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:85-92", "web\\src\\components\\data-display\\LiveIndicator.tsx:39-57", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx:41-43,62-67"],
+      "result": "SSE connection is visibly/ARIA labeled independently from REST query. Brief states count coverage and value age are independent of poll success; no historical completeness/confidence invented."
+    },
+    {
+      "id": "source-provenance-semantics",
+      "status": "FAIL",
+      "evidence": ["internal\\api\\signalinspect\\handler.go:529,601-623", "internal\\signal\\live_store.go:246-266", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\liveSignalMetrics.ts:15-17", "web\\src\\components\\data-display\\SourceLayerBadge.tsx:39-44"],
+      "issue": "LSI-06"
+    },
+    {
+      "id": "unknown-measurement-timestamp",
+      "status": "FAIL",
+      "evidence": ["internal\\api\\signalinspect\\handler.go:562-571,612-618", "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts:127-140", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:168-175", "web\\src\\components\\data-display\\TimeStamp.tsx:42-58"],
+      "issue": "LSI-04"
+    },
+    {
+      "id": "raw-si-value-fidelity",
+      "status": "PASS",
+      "evidence": ["internal\\api\\signalinspect\\handler.go:562-568", "web\\src\\api\\hooks\\useTelemetry.ts:127-164", "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts:127-142", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:57-69"],
+      "result": "Backend value is v.Raw, hook returns it without physical conversion, row adapter preserves value, and diagnostic table stringifies without rounding or zero coalescing. Null, undefined, false, signed numbers and zero remain distinct. No deprecated converters found in nine scoped files. These are raw diagnostic values, not user-unit measurements."
+    },
+    {
+      "id": "physical-display-and-age-boundary",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\operationalbrief-h-q\\liveSignalMetrics.ts:28-36", "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts:230-238", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx:31-36"],
+      "result": "Freshest age converts ms to canonical seconds for latency metric, then specialist display formatter uses compact age notation. Unknown age stays missing. Table deliberately preserves raw values rather than claiming converted speed/temperature units. Missing explicit raw-SI/unit legend is a candidate, not proven write/display corruption."
+    },
+    {
+      "id": "filter-sort-pagination-source-scope",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:75-107,111-178,199-217", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:54-55"],
+      "result": "Name search is trim/case-insensitive; name and timestamp sorting retain source order semantics and invalid dates sort safely. Value filters receive original rows, table receives name-filtered/sorted rows; stable name keys and persisted tableId remain. Pagination is loaded-snapshot scope only; Brief totals use unfiltered rows. Filtered no-match is distinct from empty source."
+    },
+    {
+      "id": "canonical-i18n-presence",
+      "status": "FAIL",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts:94-102", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx:41-46", "web\\src\\i18n\\en.json:11011-11096"],
+      "issue": "LSI-05",
+      "counts": {"checked": 67, "present": 56, "missing": 11},
+      "result": "Actual read-only canonical traversal checks static admin.liveSignals literals plus all eight Brief status cases. Dynamic malformed-kind keys and other locales are not certified."
+    },
+    {
+      "id": "source-accessible-names-and-alternatives",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:85-102,122,136-139", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalToolbar.tsx:62-66", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:182-196", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx:74-83,107-112", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx:97-108"],
+      "result": "Refresh/picker/search have localized accessible names, sections are named, decorative search/icons are hidden, source distribution has textual counts and named image semantics, and chart supplies data columns. This does not certify native focus, keyboard, screen-reader output, composed contrast or mobile reachability."
+    },
+    {
+      "id": "source-responsive-shells",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:79,97,138-139,161", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalToolbar.tsx:61", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx:86,127"],
+      "result": "Wrapping action rail, full-width narrow picker, stacked breakdowns below xl, two/four source-tile columns, responsive padding and 44px narrow manual refresh declared. Actual geometry NOTRUN."
+    },
+    {
+      "id": "mobile-all-row-fields-reachable",
+      "status": "FAIL",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:76,137-176,199-217", "web\\src\\components\\ui\\DataTable.tsx:714-725,1086-1095,1153-1179"],
+      "issue": "LSI-03"
+    },
+    {
+      "id": "manual-refresh-reduced-motion",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:45,103-108"],
+      "result": "Page uses existing useMotionPreference, omits refresh spin when reduce=true and includes CSS motion-reduce safety. Shared SSE reconnect animation is separately a candidate; native motion check NOTRUN."
+    },
+    {
+      "id": "guideline-scoped-source-scans",
+      "status": "PASS",
+      "evidence": ["web\\logs\\phase6-qa-admin-live-signal-inspector.log", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx:120"],
+      "counts": {"staticInlineVarMatchingLines": 0, "rawHtmlCaseSensitiveMatchingLines": 0, "directLibrariesMatchingLines": 0, "oldApiImportsMatchingLines": 0, "deprecatedConvertersMatchingLines": 0, "neonBodyMatchingLines": 0, "dynamicInlineWidthAllowed": 1},
+      "result": "Direct scoped Select-String audit, not skill-script/full audit pass. Initial shell rg command failed exit 1; first raw-HTML Select-String was case-insensitive and incorrectly matched three shared components. Only that invalid category was corrected with -CaseSensitive. Tool rg also returned No matches found; no passing source/test rerun."
+    },
+    {
+      "id": "api-path-method-and-response-agreement",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\hooks\\useTelemetry.ts:31-48,71-78,131-133", "web\\src\\api\\hooks\\useVehicles.ts:74-80", "web\\src\\api\\client.ts:79-99", "internal\\api\\router.go:551,3362-3363,4929-4930", "internal\\api\\signalinspect\\handler.go:514-545,560-572"],
+      "result": "GET /signals/{vehicleID}/live matches /signals/{vehicleID} mount plus /live. GET /vehicles matches /vehicles plus /. Both hook paths omit /api/v1 and have no query parameters; double-prefix and camelCase parameters=0 for these two paths only. Live payload vehicle_id/count/at/signals and envelope kind/value/ts/timestamp/source/age_ms agree structurally. Runtime availability/auth/SI normalization NOTRUN; source classification truth failed separately."
+    },
+    {
+      "id": "observability-source-boundary",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:14-40", "web\\src\\api\\hooks\\useTelemetry.ts:131-133,153-164", ".github\\instructions\\observability.instructions.md:16"],
+      "result": "Inspected page delegates reads to typed hook and contains no per-page RUM bootstrap or logging of vehicle payloads. Existing backend span/SLO instrumentation was not audited or changed."
+    },
+    {
+      "id": "typescript-fresh",
+      "status": "NOTRUN",
+      "evidence": ["docs\\session-handoff.md:66-70", "migration-queue.md:148-158"],
+      "command": "npx tsc --noEmit",
+      "reason": "Source-only documentation output; prior accepted technical gate already ran this unchanged command. No full-repository gate or unchanged passing rerun authorized. No fresh compilation claim."
+    },
+    {
+      "id": "tests-build-lint-fresh",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:1533", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.test.tsx:102-112,316-434,452-482"],
+      "reason": "No source/test changes or test execution. Existing mocked test bodies were read as intent only, not executed proof; prior zero-case failure and unexecuted new cases remain unverified. No helper/runner retry/full suite."
+    },
+    {
+      "id": "native-responsive-matrix",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-design-contract.md:506-533,595-603", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:217"],
+      "widths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "reason": "Browser/native access explicitly forbidden. No screenshots, rendered geometry, safe-area, overflow, row-field interaction or dark/light/custom theme verification."
+    },
+    {
+      "id": "native-a11y-keyboard-focus-screen-reader",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-design-contract.md:524-533", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:94-112", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:187-217"],
+      "reason": "No mounted keyboard, focus/restoration, screen-reader/live-region, touch hit testing, 200% text, RTL, long-label, contrast/forced-colors or reduced-motion/low-bandwidth acceptance. Source ARIA/classes alone cannot pass these checks."
+    },
+    {
+      "id": "runtime-api-freshness-and-state-matrix",
+      "status": "NOTRUN",
+      "evidence": ["internal\\api\\signalinspect\\handler.go:514-545", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:58-68"],
+      "reason": "No live API, identities, authentication, polling observations, source topology, paused/retained mounted reproduction, tenant authorization or actual unit normalization exercised."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "LSI-01",
+      "severity": "medium",
+      "title": "An initial paused request is presented as an empty Redis snapshot",
+      "proof": "SOURCE_PROVEN",
+      "evidence": ["web\\src\\api\\dataState.ts:190-219", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:58-68,179-182", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx:38-40"],
+      "mechanism": "Without data or error, deriveDataState returns initial and isRefreshBlocked=true for fetchStatus=paused. TanStack pending+paused is not isLoading. Page ignores initial/isRefreshBlocked, sees no rows and isLoading=false, and selects empty. The detail panel then asserts Redis has no snapshot even though no request succeeded.",
+      "syntheticReproduction": [
+        "Use a valid selected synthetic vehicle.",
+        "Supply query data=undefined, error=null, isError=false, isLoading=false, isFetching=false, isPending=true, fetchStatus=paused.",
+        "Trace page status: no vehicle=false; fatalError=false; rows=0; isLoading=false; stale=false => empty.",
+        "Expected: paused/offline initial-source guidance without claiming authoritatively empty Redis. Source-selected actual body is the Redis empty message."
+      ],
+      "reproductionExecution": "NOTRUN",
+      "narrowFixNeed": "Page-only trust discrimination must use initial/isRefreshBlocked before empty, with localized paused guidance in its existing source adapter. Preserve retained rows and retained-empty behavior; no hook policy rewrite."
+    },
+    {
+      "id": "LSI-02",
+      "severity": "medium",
+      "title": "Vehicle-list loading or failure can strand the page in no-vehicle guidance",
+      "proof": "SOURCE_PROVEN",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50,65-74,168-173", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:48,58-59,99", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx:54-56"],
+      "mechanism": "useSelectedVehicle consumes only fleet query data and returns vehicles=[] when undefined, without loading/error/retry metadata. With no valid URL/store ID, effectiveId=null. Page treats this exactly like an empty fleet, disables snapshot refresh, and renders selection guidance with no fleet-source retry. A failed GET /vehicles is not a known empty fleet.",
+      "syntheticReproduction": [
+        "Start without a selected URL/store vehicle.",
+        "Keep useVehicles data undefined while loading, then return isError=true with data still undefined.",
+        "Trace hook result: vehicleId=null and vehicles=[] in both states.",
+        "Expected: fleet loading then recoverable fleet error; source output remains Select vehicle with empty options, snapshot refresh disabled, and no fleet retry."
+      ],
+      "reproductionExecution": "NOTRUN",
+      "narrowFixNeed": "Expose/consume fleet trust through an explicitly owned hook/page integration, or observe the existing fleet query on this page. Keep canonical selected-vehicle ownership; distinguish fleet loading/failure from genuinely empty fleet."
+    },
+    {
+      "id": "LSI-03",
+      "severity": "high",
+      "title": "Mobile snapshot rows lose all per-signal trust metadata",
+      "proof": "SOURCE_PROVEN",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:76,137-176,199-217", "web\\src\\components\\ui\\DataTable.tsx:714-725,1086-1095,1153-1179"],
+      "mechanism": "Caller allows only name/value on mobile. DataTable applies hidden md:table-cell to kind/source/timestamp. No mobilePresentation, expandable, renderExpanded or row-detail contract is supplied; hidden metadata cells therefore have no row-level mobile disclosure. Aggregate source counts cannot identify which visible reading is stale or unknown.",
+      "syntheticReproduction": [
+        "Use a mixed fresh/stale/unknown synthetic snapshot.",
+        "At a viewport below 768px, inspect declared classes: all kind/source/last-update cells are hidden.",
+        "Attempt row detail: caller declares none, so there is no path to those original row fields.",
+        "Expected: every row's kind/source/freshness remains reachable through existing typed mobile summary/detail support."
+      ],
+      "reproductionExecution": "NOTRUN; CSS/source behavior is proven, rendered/native geometry is not",
+      "narrowFixNeed": "LiveSignalsTable-only adoption of existing DataTable mobilePresentation/detail or complete-field contained-scroll behavior; retain five fields, stable keys, sorting, filters and pagination. Do not patch shared DataTable to guess a domain detail."
+    },
+    {
+      "id": "LSI-04",
+      "severity": "medium",
+      "title": "Unknown zero timestamps become a concrete year-1 Last update",
+      "proof": "SOURCE_PROVEN",
+      "evidence": ["internal\\api\\signalinspect\\handler.go:562-571,612-618", "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts:127-140", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:168-175", "web\\src\\components\\data-display\\TimeStamp.tsx:42-58", "web\\src\\lib\\dateFormat.ts:120-134"],
+      "mechanism": "For a zero Go time.Time, backend emits timestamp and ts as 0001-01-01T00:00:00Z, omits age_ms, and reports l2/unknown freshness. Adapter preserves that nonempty string. Table chooses TimeStamp because it is truthy; TimeStamp only rejects null/unparseable values, so the valid year-1 sentinel is formatted as a concrete old date, not unknown.",
+      "syntheticReproduction": [
+        "Use envelope {value:0, source:l2, timestamp:0001-01-01T00:00:00Z, ts:0001-01-01T00:00:00Z} with age_ms absent.",
+        "rowFromEntry preserves timestamp; timestamp renderer takes TimeStamp branch.",
+        "Expected: unknown Last update with no fabricated age/date. Source chain instead renders a valid year-1 date and tooltip."
+      ],
+      "reproductionExecution": "NOTRUN",
+      "narrowFixNeed": "Normalize the existing unknown-time sentinel in the inspector row adapter or explicitly owned wire-contract boundary without replacing zero values or losing valid timestamps. Cover unknown timestamps and existing legacy-source behavior."
+    },
+    {
+      "id": "LSI-05",
+      "severity": "medium",
+      "title": "Eleven kind/source label keys are absent from canonical English",
+      "proof": "EXECUTED_CANONICAL_KEY_PRESENCE_SCAN",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts:94-102", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx:41-46", "web\\src\\i18n\\en.json:11011-11096", "web\\logs\\phase6-qa-admin-live-signal-inspector.log"],
+      "missingKeys": [
+        "admin.liveSignals.kind.boolean",
+        "admin.liveSignals.kind.compound",
+        "admin.liveSignals.kind.enum",
+        "admin.liveSignals.kind.numeric",
+        "admin.liveSignals.kind.other",
+        "admin.liveSignals.kind.text",
+        "admin.liveSignals.kind.time",
+        "admin.liveSignals.source.l1",
+        "admin.liveSignals.source.l2",
+        "admin.liveSignals.source.stale",
+        "admin.liveSignals.source.unknown"
+      ],
+      "mechanism": "Kind metadata and source label metadata call translation with these keys and English fallbacks. Actual canonical traversal found no leaves for these eleven keys. Fallback rendering is not complete catalog localization.",
+      "syntheticReproduction": ["Traverse each listed dot-separated key in parsed canonical web\\src\\i18n\\en.json; all eleven are missing."],
+      "reproductionExecution": "PASS for presence scan; runtime locale rendering NOTRUN",
+      "narrowFixNeed": "Orchestrator-owned canonical eleven-leaf catalog addition and normal admin split projection, with bounded existing catalog validation; no page rewrite or catalog baseline bypass."
+    },
+    {
+      "id": "LSI-06",
+      "severity": "medium",
+      "title": "Fresh Redis reads are described as verified in-process L1 provenance",
+      "proof": "SOURCE_PROVEN_CONTRACT_MISMATCH",
+      "evidence": ["internal\\signal\\live_store.go:246-266", "internal\\api\\signalinspect\\handler.go:529,601-623", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\liveSignalMetrics.ts:15-17", "web\\src\\components\\data-display\\SourceLayerBadge.tsx:39-44"],
+      "mechanism": "Distributed GetAll merges L1 and L2 and returns fresh Redis-only values. Handler explicitly lacks per-signal source and maps every recent nonzero timestamp to l1. UI then labels the count Fresh in-process and badge tooltip Read from the in-process SignalStore. Backend l1 means fresh/L1-equivalent here, not proof that the read was satisfied from L1.",
+      "syntheticReproduction": [
+        "Source scenario: local L1 has no field; L2 returns a field timestamped within two minutes.",
+        "Distributed GetAll returns the L2 field; classifyLiveSource returns l1 solely from timestamp.",
+        "Page computes live count and renders Fresh in-process/L1 tooltip.",
+        "Expected: age-confirmed freshness without invented storage provenance, unless backend explicitly supplies actual per-field layer."
+      ],
+      "reproductionExecution": "NOTRUN; no actual cache topology or live vehicle inspected",
+      "narrowFixNeed": "One explicit frontend/API provenance agreement decision: retain freshness classification but accurately describe L1-equivalent/actual-layer unknown, or expose real source at an owned backend boundary. No page-local inference from polling/SSE health."
+    }
+  ],
+  "candidatesNotConfirmed": [
+    {
+      "id": "C-01",
+      "title": "Raw-value semantics and units are not explicitly labeled",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:124-135", "web\\src\\api\\hooks\\useTelemetry.ts:31-48"],
+      "reason": "Table deliberately renders raw diagnostic values and receives no unit_kind. This proves neither wrong physical conversion nor signed/zero corruption. A raw-SI legend/units decision needs product/catalog metadata ownership; actual upstream SI normalization NOTRUN."
+    },
+    {
+      "id": "C-02",
+      "title": "Theme contrast and fixed presentation colors need native verification",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:57-69", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx:41-46,108,132", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx:117-129"],
+      "reason": "Fixed syntax colors, white-alpha surfaces and chart cursor are source candidates. No composed light/dark/custom/forced-colors contrast, chart-label clipping or rendered overflow was measured; no numeric contrast failure asserted."
+    },
+    {
+      "id": "C-03",
+      "title": "Search sizing and RTL placement need native/source adoption review",
+      "evidence": ["web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx:182-195", "web\\src\\components\\ui\\Input.tsx:29-33,44"],
+      "reason": "Search inherits md Input min-h-10 (40px rather than declared 44px mobile target), and icon/padding use left-3/pl-9 rather than logical start. Actual hit area, text scaling, browser RTL and spacing exceptions NOTRUN. Picker and manual refresh already declare 44px narrow sizing."
+    },
+    {
+      "id": "C-04",
+      "title": "SSE reconnect spinner may miss low-bandwidth/reduced-motion handling",
+      "evidence": ["web\\src\\components\\data-display\\LiveIndicator.tsx:59-80,108-117", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:45,103-108"],
+      "reason": "Page refresh respects motion preference; shared LiveIndicator's reconnect glyph directly uses animate-spin. Global OS CSS suppression and native low-bandwidth behavior were not exercised, so no blanket motion pass."
+    },
+    {
+      "id": "C-05",
+      "title": "Snake_case dictionary signal names can gain duplicate camel aliases",
+      "evidence": ["web\\src\\api\\client.ts:278-286", "web\\src\\lib\\resilience.ts:22-38", "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts:147-153"],
+      "reason": "Recursive camelCaseKeys aliases arbitrary map keys while rowsFromResponse iterates every signals key; an underscored key could become two counted rows. Actual current production signal-name occurrence and incoming payloads were not inspected; report as conditional candidate, not observed count corruption."
+    }
+  ],
+  "commands": [
+    {
+      "operation": "clock",
+      "command": "Get-Date -Format o; Get-Location",
+      "exitCode": 0,
+      "output": "2026-10-13T09:20:29.7277874-07:00; D:\\repos\\teslasync\\web"
+    },
+    {
+      "operation": "first scoped rg shell probe",
+      "command": "rg --no-heading -n -- style=\\{\\{ $files",
+      "exitCode": 1,
+      "output": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "note": "Tool rg remains available; this failed executable probe produced no successful audit counts."
+    },
+    {
+      "operation": "scoped scans, frame counts and fingerprints",
+      "command": "Select-String -Path $files -Pattern $entry.Value; Get-Content -LiteralPath $f; Get-FileHash -LiteralPath $f -Algorithm SHA256",
+      "exitCode": 0,
+      "bindings": "Nine exact production files, patterns, numbered matches, counts and SHA256 outputs are retained in the raw log. Dynamic percent width is allowed. Initial raw HTML case-insensitivity was corrected once, not counted as a defect."
+    },
+    {
+      "operation": "correct raw HTML configuration",
+      "command": "Select-String -Path $files -Pattern '<(?:button|input|textarea|select|table)\\b' -CaseSensitive",
+      "exitCode": 0,
+      "matchingLines": 0,
+      "note": "Only the invalid case-insensitive category was rerun. Independently, built-in rg with this pattern returned No matches found."
+    },
+    {
+      "operation": "canonical catalog read-only key presence",
+      "command": "Get-Content -Raw -LiteralPath src\\i18n\\en.json | ConvertFrom-Json -AsHashtable -Depth 100",
+      "exitCode": 0,
+      "note": "Dot-path traversal over 67 extracted/static-plus-status keys: 56 present, 11 missing; missing names emitted verbatim to log. Presence scan found a source issue, not a full catalog/runtime pass."
+    },
+    {
+      "operation": "scoped route agreement",
+      "command": "Select-String -Path ..\\internal\\api\\router.go -Pattern 'r.Route\\(\"/signals/\\{vehicleID\\}\"','r.Get\\(\"/live\", h.LiveState','vehicleHandler.List','r.Route\\(\"/vehicles\"'",
+      "exitCode": 0,
+      "output": "router.go:551 /live; router.go:4929 /signals/{vehicleID}; router.go:3362 /vehicles; router.go:3363 GET / vehicleHandler.List",
+      "note": "No requests issued; two actual page-source hook paths only. Skill verify shell helper NOTRUN."
+    },
+    {
+      "operation": "numbered issue evidence",
+      "command": "Get-Content -LiteralPath $r[0]; emit exact known source ranges to logs\\phase6-qa-admin-live-signal-inspector.log",
+      "exitCode": 0,
+      "note": "Actual numbered source evidence retained. Tool output was truncated in display; the owned raw log is the persistent evidence, not an inferred terminal summary."
+    }
+  ],
+  "followUpNeeds": [
+    "Register narrow fixes for LSI-01 through LSI-06 without redispatching the accepted whole-page migration.",
+    "LSI-02 needs selected-vehicle/fleet trust ownership; LSI-05 is parent-only canonical/projection ownership; LSI-06 needs frontend/API source-semantics agreement.",
+    "LSI-03 and LSI-04 can be bounded inspector component/row-adapter fixes with covering regression cases; no source edits made in this QA.",
+    "Keep candidate geometry/contrast/RTL/motion/units/alias checks separate from proven defects.",
+    "Native/application acceptance remains NOTRUN; use only separately authorized privacy-safe native QA after actual owner release."
+  ],
+  "documentValidation": {
+    "jsonParse": "PASS",
+    "allowedCheckStatusesAndNonemptyEvidence": "PASS",
+    "inspectedSourcePins": 9,
+    "inspectedSourceDrift": 0,
+    "scopeScanExecutionFailurePreserved": true,
+    "initialCaseInsensitiveScanCorrectionPreserved": true,
+    "initialCitationBoundsFindings": 7,
+    "citationCorrections": "Corrected out-of-bounds citations, fleet return lines, ignored-log line and prior gate lines. Final document-only parse/bounds receipt is in the raw log.",
+    "finalCitationBoundsFindings": 0,
+    "finalClockProbeFailure": "Exit 1 after successful JSON/status/evidence/bounds validation: DateTime minus DateTimeOffset overload error while calculating elapsed time. Clock/release formatting alone was corrected; passing source/document checks were not rerun.",
+    "notATypecheckOrTestRun": true
+  },
+  "release": {
+    "allOwnershipReleasedOnReturn": true,
+    "sourceOwnershipAcquired": false,
+    "browserOwnershipAcquired": false,
+    "commandsAllBoundedAndCompleted": true,
+    "activeOwnedCommands": 0,
+    "postReturnWrites": "NONE; report and log ownership end at final delivery"
+  }
+}

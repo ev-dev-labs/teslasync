@@ -1,0 +1,321 @@
+{
+  "item": "audit-page-013",
+  "page": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx",
+  "routes": ["/fleet-api"],
+  "purpose": "Manage outbound Tesla Fleet API availability, automatic polling participation and runtime-published deployment endpoint metadata.",
+  "primaryGoal": "Independently allow manual routes and opt eligible routes into automatic polling without confusing suspension, availability and scheduling.",
+  "dataSources": [
+    {
+      "name": "application-settings",
+      "hook": "useSettings",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoint": "GET /api/v1/settings",
+      "queryKey": ["settings"],
+      "evidence": ["web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts:19-24", "web\\src\\api\\hooks\\useSettings.ts:15-31", "internal\\api\\router.go:3167,3659"],
+      "behavior": "Settings supply api_suspended. Read forwards AbortSignal; preserves inherited query policy."
+    },
+    {
+      "name": "polling-configuration",
+      "hook": "usePollingConfig",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoint": "GET /api/v1/settings/polling-config",
+      "queryKey": ["polling-config"],
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:282-325", "internal\\api\\router.go:3662"],
+      "behavior": "Returned catalog determines identity, method, path, category and pollability. Maps determine access and auto selection; SLOW staleTime and AbortSignal retained."
+    },
+    {
+      "name": "runtime-version",
+      "hook": "useVersionInfo",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoint": "GET /api/v1/system/version",
+      "queryKey": ["version"],
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:364-370", "internal\\api\\router.go:4352,4393"],
+      "behavior": "Chart/Go version, OS/architecture and endpoints map; STANDARD staleTime and optional refetch interval retained."
+    },
+    {
+      "name": "polling-settings-write",
+      "hook": "useUpdatePollingConfig",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoint": "PUT /api/v1/settings/polling-config",
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:327-346", "web\\src\\api\\pollingConfigUpdate.ts:3-44", "internal\\api\\router.go:3663"],
+      "behavior": "Live-only write; serializer removes catalog and filters alias map entries by valid catalog/pollable keys. Success updates cache, invalidates polling-config/capture-stats; localized success/error toasts."
+    },
+    {
+      "name": "resume-api-actions",
+      "hook": "useToggleAPISuspend",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoint": "POST /api/v1/settings/suspend-api",
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:260-279", "internal\\api\\router.go:3661"],
+      "behavior": "Page sends suspended=false only; live-only mutation with settings invalidation/broadcast and success/error toasts."
+    }
+  ],
+  "components": [
+    {"name": "FleetAPIPage / useFleetAPIPage", "owner": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx", "dependencyOwner": "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts", "role": "Thin mounted orchestrator plus domain state, filters, counts and mutations", "evidence": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:10-30"},
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "dependencyOwner": "web\\src\\components\\layout\\PageContainer.tsx", "role": "Existing full-width layout, localized header, aggregate freshness and independent source notices", "props": ["title", "subtitle", "query", "dataSources", "children"], "evidence": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:21-30; web\\src\\components\\layout\\PageContainer.tsx:253-254"},
+    {"name": "FleetAPIBrief / AdminSummary / OperationalBrief", "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\FleetAPIBrief.tsx", "dependencyOwner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx", "role": "Three typed metrics through useOperationalMetrics and shared OperationalBrief; no replacement KPI renderer needed", "props": ["controller", "metrics", "sourceStatus", "loading", "scope", "provenance"], "evidence": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\FleetAPIBrief.tsx:10-31; web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx:19-44"},
+    {"name": "FleetAPIPolling", "owner": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx", "role": "Master scheduler switch, polling explanation, emergency suspension notice and resume action", "props": ["controller"], "evidence": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:9-69"},
+    {"name": "FleetAPIEndpointControls / FleetAPIRouteActions / FleetAPIRouteCatalog", "owner": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIEndpointControls.tsx", "dependencyOwners": ["web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteActions.tsx", "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx"], "role": "Existing endpoint control card, bulk actions, search, grouping, sorting, category navigation and group tables", "props": ["controller", "pollingConfig"], "evidence": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIEndpointControls.tsx:18-51"},
+    {"name": "FleetEndpointTable / DataTable", "owner": "web\\src\\features\\admin\\components\\FleetEndpointTable.tsx", "dependencyOwner": "web\\src\\components\\ui\\DataTable.tsx", "role": "Sole table pipeline; five columns, value filters, stable IDs and inherited local-table export/persistence", "props": ["endpoints", "candidates", "access", "auto", "pollingEnabled", "pending", "tableId", "onEnable", "onAuto"], "evidence": "web\\src\\features\\admin\\components\\FleetEndpointTable.tsx:5-90"},
+    {"name": "FleetAPIConfiguredEndpoints / LayoutCard", "owner": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx", "dependencyOwner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "role": "Runtime version and four deployment-managed endpoint slots, each rendered using existing GlassPanel/Code", "props": ["controller", "title", "children"], "evidence": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx:10-64"},
+    {"name": "Existing category primitives", "owners": ["@/components/ui", "@/components/feedback", "@/components/motion"], "role": "Toggle, Button, Input, Select, Badge, GlassPanel, IconBox, typography, Skeleton, EmptyState, QueryError, InlineCallout and FadeIn are reused. No new primitive required.", "evidence": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx:2-5"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIEndpointControls.tsx",
+      "line": 14,
+      "rule": "MDC-002 / single domain derivation",
+      "detail": "pollingKnown repeats the controller's catalog/config availability expression in EndpointControls, Polling, RouteActions and Brief.",
+      "fix": "Consume controller.pollingKnown in these existing components; do not create a competing availability abstraction.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Route actions use sm:grid-cols-3 plus flex-wrap bulk controls; search uses min-w-0 flex-1.",
+      "Catalog group navigation wraps labels; sorting wraps and uses sm:ms-auto.",
+      "Configured endpoints use one column, md two columns and 2xl four columns; metadata breaks words/URLs.",
+      "All five table columns remain present; DataTable defaults to horizontal scrolling when no mobile adapter/column policy is supplied."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\FleetEndpointTable.tsx",
+        "line": 79,
+        "rule": "MDC-043 / mission 15 / intentional mobile table strategy",
+        "detail": "No mobilePresentation, mobileColumns or visibleOnMobile is supplied. Shared fallback retains the whole five-column table via horizontal scroll (DataTable.tsx:238-248).",
+        "fix": "Review fallback at required widths; if a card adapter is needed, reuse DataTable.mobilePresentation and preserve every method/path/access/auto field and action. Do not simply hide columns.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "viewportValidation": "UNVERIFIED: 320/375/390/430/768/1024/1280/1440/1920/2560, allocated container widths, long paths, RTL and 200% text were not exercised."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Switches have localized aria-labels including endpoint method/path; Toggle uses a real button, role=switch and aria-checked (Toggle.tsx:90-114).",
+      "Grouping/category controls use aria-pressed and route navigation has a localized aria-label (FleetAPIRouteCatalog.tsx:19-67).",
+      "Search and sort Select have localized accessible names; nonpollable dash has Not scheduled title/name.",
+      "LayoutCard associates its heading ID with its surface (LayoutCard.tsx:20-37)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\Toggle.tsx",
+        "line": 14,
+        "rule": "MDC-040 / 44px mobile target",
+        "detail": "sm track is h-5 w-9 and md h-6 w-11; these classes size the actual interactive button. Endpoint/bulk switches use sm and master uses md. Source dimensions are below the contract's 44px target height; spacing exceptions and effective hit regions are not measured.",
+        "fix": "Shared owner should retain track geometry while providing a 44px interactive hit target or document a measured spacing exception; preserve role, naming, disabled and click behavior.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx",
+        "line": 15,
+        "rule": "MDC-040 / named sections",
+        "detail": "The polling section has no aria-labelledby/aria-label connecting it to its PanelTitle, unlike LayoutCard's heading association.",
+        "fix": "Associate an explicit stable heading ID with the existing section; keep title and content intact.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx",
+        "line": 78,
+        "rule": "MDC-044 / localized names",
+        "detail": "Grouped section aria-label uses raw group while its visible heading uses groupLabel(group). Category navigation is localized but region name can remain backend English.",
+        "fix": "Use groupLabel(group) or associate the translated heading; retain raw group identity for tableId/filtering.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "validation": "UNVERIFIED: keyboard, focus, screen reader, effective contrast, forced colors, reduced motion and touch behavior. FadeIn is reused but its implementation was not inspected."
+  },
+  "states": {
+    "initialLoading": "Independent source skeletons: polling, route catalog and four configured endpoint slots. Brief skeleton only when neither settings nor polling has data and one is loading.",
+    "emptyUnavailable": "Catalog unavailable explains runtime update/restart with Retry. No search matches offers Clear search. Empty configured metadata explains deployment-managed configuration/restart. Polling missing config uses localized text.",
+    "fatalErrors": "Each section uses deriveDataState.fatalError and source-specific QueryError/refetch, not a single page-wide destructive error gate.",
+    "retainedRefresh": "deriveDataState distinguishes retained data from initial failure. Brief labels stale/refreshing/partial; PageLayout passes all three named sources to PageContainer's nonfatal DataSourceNotice. Retained catalog/config remains visible.",
+    "mutations": "Master, bulk and endpoint switches disabled while polling mutation pending; Resume disabled during suspension mutation. Hook owns live-only guard and success/error toasts.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx",
+        "line": 32,
+        "rule": "MDC-026 / retained data trust",
+        "detail": "Mutations spread retained pollingConfig and are disabled only by isPending. Catalog and bulk actions follow the same pattern; no page-level stale/offline guard is passed. Request requiresLiveMode is a safety guard, not evidence that a retained configuration is current.",
+        "fix": "Define an integration policy for retained configuration writes: preserve retained display, surface source-specific refresh warning and retry; avoid overwriting newer server state. Do not invent concurrency APIs or change live-only semantics.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "offlineValidation": "UNVERIFIED: offline/paused source transitions, mutation rejection, retained-source warning visibility and toast announcements were not exercised."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ui\\IconBox.tsx",
+      "line": 31,
+      "rule": "MDC-010 / mission 43 / unnecessary neon decoration",
+      "detail": "IconBox applies neonColorMap bg/ring/text. Page calls blue, cyan and dynamic green/blue at ConfiguredEndpoints:17, EndpointControls:20 and Polling:19. tokens.ts:21-26 maps those backgrounds/rings to neon classes. The glow entries exist in tokens but IconBox does NOT apply c.glow; no active glow is asserted.",
+      "fix": "Shared owner should provide restrained neutral/semantic IconBox presentation through existing tokens; preserve color/size compatibility and keep legitimate status meaning distinct from decoration.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteActions.tsx",
+      "line": 17,
+      "rule": "MDC-010 / semantic color hierarchy",
+      "detail": "Summary icons separately use emerald-400, cyan-300 and amber-300 although all three are routine configuration summaries. Shared Toggle also hardcodes cyan-500/600 (Toggle.tsx:123). Source has hue/saturation emphasis; actual perceptual noise and contrast remain unmeasured.",
+      "fix": "Prefer neutral icon tokens for ordinary summaries, retain amber only when paused is intentionally meaningful, and route switch emphasis through shared semantic tokens.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\FleetEndpointTable.tsx",
+      "line": 39,
+      "rule": "MDC-023 / export preservation",
+      "detail": "Access and auto columns have rich Toggle renderers but no exportValue. Rows are FleetEndpoint descriptors, not access/auto map values. Operation uses column key operation while raw field is key. DataTable exports visible columns by matching row[column.key] or rendered text (DataTable.tsx:881-892); switch renderers have no readable children, so exports cannot reliably contain actual boolean configuration. Operation JSON falls back to transformed display text.",
+      "fix": "Supply canonical exportValue callbacks for operation/access/auto, retaining null/not-scheduled semantics separately from false. Preserve method/path, table IDs, filtering and CSV/JSON actions; add focused export cases.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx",
+      "line": 55,
+      "rule": "MDC-001 / MDC-026 / complete metadata",
+      "detail": "hasConfiguredEndpoints checks any map key, but rendering filters only api/web/oauth_callback/tesla_api. A nonempty map containing only other keys takes the success branch with no endpoint cards, and additional published keys are not represented. Actual backend extra keys were not inspected.",
+      "fix": "Preserve all four established labeled slots; ensure the success/empty decision matches displayable entries and explicitly handle any additional published metadata rather than silently discarding it.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts",
+      "line": 15,
+      "rule": "MDC-026 / resilient catalog defaults",
+      "detail": "Default selectedGroup is fixed to Vehicle data. If a valid nonempty catalog lacks that category, endpointGroups is empty yet the message describes a search mismatch and Clear search cannot reset the group.",
+      "fix": "Keep the existing default for catalogs that contain it; provide a reset-to-all action/fallback for unavailable selected groups while preserving grouping and search semantics.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Already decomposed and using canonical layout, brief and table owners. Prioritize export data fidelity, unknown metadata/selected-group recovery, shared switch targets and subdued decorative icons before source-only polish.",
+    "acceptance": "Phase0 SOURCE audit complete only; page implementation/runtime acceptance is not claimed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained IconBox presentation",
+      "owner": "web\\src\\components\\ui\\IconBox.tsx",
+      "props": {"preserve": ["children", "color", "size", "className"], "need": "Neutral/semantic existing-token presentation without neon decorative backgrounds/rings; no new palette or parallel icon wrapper"},
+      "variants": ["sm", "md", "lg", "existing color compatibility"],
+      "states": ["decorative default", "semantic enabled/paused distinction", "light/dark/forced colors"],
+      "usedBy": ["FleetAPIPolling", "FleetAPIEndpointControls", "FleetAPIConfiguredEndpoints"],
+      "dependsOn": ["web\\src\\lib\\tokens.ts"],
+      "evidence": "web\\src\\components\\ui\\IconBox.tsx:23-34; web\\src\\lib\\tokens.ts:21-26",
+      "qualification": "Evidence is from three consumers within this page only; cross-page adoption and new API eligibility belong to the shared owner, not this audit."
+    },
+    {
+      "name": "Toggle hit-target and semantic emphasis",
+      "owner": "web\\src\\components\\ui\\Toggle.tsx",
+      "props": {"preserve": ["checked", "onChange", "disabled", "size", "label", "aria-label", "aria-labelledby", "aria-describedby"], "need": "44px reachable interactive height with unchanged visual track sizes and token-based semantic active/focus colors"},
+      "variants": ["sm", "md"],
+      "states": ["checked", "unchecked", "disabled", "focus-visible", "forced colors", "reduced motion"],
+      "usedBy": ["FleetAPIPolling", "FleetAPIRouteActions", "FleetEndpointTable"],
+      "dependsOn": ["existing control/focus semantic token contract"],
+      "evidence": "web\\src\\components\\ui\\Toggle.tsx:14-16,90-126",
+      "qualification": "Do not change density preferences or enlarge every track; measure effective hit targets and any WCAG spacing exception in shared validation."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "reuse": [
+      "PageLayout delegates to PageContainer; no second width/layout engine.",
+      "AdminSummary delegates to OperationalBrief/useOperationalMetrics; no parallel stats formatter.",
+      "FleetEndpointTable delegates to DataTable; reuse export, filters and opt-in mobile API rather than building another table.",
+      "All settings mutations remain in existing typed API hooks; no page fetch/useEffect pipeline."
+    ],
+    "limits": "No global duplicate-component search was performed; this report cannot establish absence of competing owners outside the inspected dependency graph."
+  },
+  "preservation": {
+    "sourceHash": "EC2C34487D7D95F8EFC0BFCC89287A42750425A2777B05720B22C20236AC02E6",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 33,
+    "pageSpecificLineCount": 792,
+    "lineCountScope": "33 page + 177 controller + 32 brief + 72 polling + 56 controls + 67 configured endpoints + 65 actions + 100 catalog + 90 table. Excludes shared AdminSummary/foundation owners.",
+    "sections": [
+      {"name": "Fleet API summary", "count": 1, "metrics": ["API status", "Endpoints enabled / total", "Selected for polling"], "evidence": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:27; FleetAPIBrief.tsx:10-31"},
+      {"name": "Tesla API polling", "count": 1, "content": ["Master switch", "Off-by-default semantics", "Active/on-demand explanations", "Emergency suspended-actions notice", "Resume API actions"], "evidence": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:28; FleetAPIPolling.tsx:15-69"},
+      {"name": "API endpoint controls", "count": 1, "content": ["Source count badge", "Access/auto/schedule summary", "All-route access", "Eligible-route auto selection", "Paused selection-retention hint", "Search", "Category/method grouping", "Five sort keys", "Direction switch", "All/groups navigation counts", "Dynamic per-group five-column tables", "Catalog/error/empty recovery"], "evidence": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:29; FleetAPIRouteCatalog.tsx:16-96"},
+      {"name": "API endpoints", "count": 1, "content": ["Runtime chart/Go/OS/architecture metadata", "API internal URL", "Web frontend URL", "OAuth callback URL", "Tesla Fleet API URL", "Deployment empty guidance"], "evidence": "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx:30; FleetAPIConfiguredEndpoints.tsx:15-64"}
+    ],
+    "sectionCount": 4,
+    "sourceFrameCounts": {"PageLayout": 1, "LayoutCard": 2, "GlassPanel": 2, "ChartContainer": 0, "note": "Literal source instances in page-specific presentation files; one GlassPanel repeats for configured endpoints. Runtime card/group counts depend on payload."},
+    "actions": [
+      "Enable/disable master automatic polling; does not disable manual requests or token refresh.",
+      "Resume previously suspended API actions (false payload only).",
+      "Enable/disable access per endpoint; disabling pollable endpoint access clears its auto selection.",
+      "Change auto selection only when master enabled and endpoint access allowed.",
+      "Bulk access all across entire catalog, not just current table/search; disabling clears pollable auto map.",
+      "Bulk auto all eligible routes across catalog; respect pollability/access/master state.",
+      "Search key/method/path/category; nonempty search switches selected group to all.",
+      "Switch category/method grouping; reset selected group to all.",
+      "Choose all/specific group; clears search.",
+      "Sort name/path/method/access/auto and toggle direction; state sorts initially descending.",
+      "Clear search on no matches and independently retry polling/settings/version failures.",
+      "Retain existing inherited DataTable value filtering, column/persistence controls and local CSV/JSON export; no row selection explicitly enabled."
+    ],
+    "dataBehavior": [
+      "Preserve catalog endpoint identities and raw maps; no fake catalog or backend capability guesses.",
+      "Preserve typed live-only writes and serializer allowlists, cache keys, invalidations, settings broadcast and localized mutation toasts.",
+      "Summary totals are full returned catalog counts, independent of table search/group filters. Unknown summary metrics remain undefined, not zero.",
+      "Preserve independent source rendering and retained data on refresh errors, source labels and source-specific retries.",
+      "No physical SI measurements are transformed here. Raw configuration/version metadata must remain intact; no legacy unit converter introduced.",
+      "Keep deployment metadata read-only, all explanatory notes, four existing endpoint labels and version context.",
+      "Keep stable tableId admin:fleet-endpoints:${groupBy}:${group}, keyExtractor endpoint.key and candidates scoped to the underlying group.",
+      "Preserve initial category grouping, Vehicle data default where valid, name ascending default and current search/group transitions.",
+      "Workspace vehicle/date controls are not added: this page manages global settings, not dated vehicle observations."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Only assigned page and concrete dependencies were inspected; router slices/searches were restricted to verifying its five actual API operations. Route array is the supplied assignment, not independently mounted-route proof.",
+    "runtime": "NOT RUN",
+    "visual": "NOT RUN; no screenshots, effective contrast or viewport acceptance claimed.",
+    "tests": "NOT RUN; no TypeScript, full-repository lint/build, Git or production mutations.",
+    "skillAudit": "audit-violations skill and its script read. Script execution omitted because its unconditional step 7 runs project TypeScript, outside this source-only assignment. Bounded regex counts were run instead.",
+    "sourceChecks": {
+      "command": "PowerShell Get-Content over the nine explicitly listed page-specific files; regex matches for style=, raw button/input/textarea/select/table, direct recharts/react-leaflet/framer-motion imports and neon/glow/white utility patterns",
+      "exitCode": 0,
+      "output": ["style=: 0", "raw control/table tags: 0", "direct chart/map/motion library imports: 0", "text-neon|bg-neon|shadow-glow|text-white|bg-white: 0"],
+      "qualification": "These are lexical counts, not a complete compliance pass; shared IconBox neon decoration and saturated Toggle tokens are separately traced above."
+    },
+    "backend": "Router path/method matches confirmed by source. Backend payload validation, scheduler implementation, catalog completeness, update atomicity/concurrency and deployment endpoint shape remain unknown; no capabilities invented.",
+    "sharedReadDepth": "Shared owner inspection is limited to directly relevant props/renderers and source search excerpts. OperationalBrief, motion, notices, export browser downloads and formatting internals were not exercised or fully audited."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\FleetAPIPage.tsx",
+    "web\\src\\features\\admin\\hooks\\useFleetAPIPage.ts",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\FleetAPIBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIPolling.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIEndpointControls.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIConfiguredEndpoints.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteActions.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\fleet-api\\FleetAPIRouteCatalog.tsx",
+    "web\\src\\features\\admin\\components\\FleetEndpointTable.tsx",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\pollingConfigUpdate.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\lib\\tokens.ts"
+  ]
+}

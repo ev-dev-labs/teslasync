@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
-  ChartContainer,
   ChartLegend,
   ChartTooltip,
   ComposedChart,
@@ -16,12 +15,10 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
-
-const DISTANCE_COLOR = '#22d3ee';
-const ENERGY_COLOR = '#f59e0b';
-const COUNT_COLOR = '#a78bfa';
 
 export function ShareCardMonthlyTrend({
   analysis,
@@ -29,6 +26,7 @@ export function ShareCardMonthlyTrend({
   display,
 }: ShareCardSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const distanceSeries = t('shareCard.monthly.distanceSeries', 'Distance');
   const energySeries = t('shareCard.monthly.energySeries', 'Energy');
   const countSeries = t('shareCard.monthly.countSeries', 'Drive count');
@@ -66,7 +64,9 @@ export function ShareCardMonthlyTrend({
       data-testid="share-card-monthly-trend"
       aria-label={t('shareCard.monthly.sectionAria', 'Selected-window monthly trend section')}
     >
-      <ChartContainer
+      <ChartCard
+        size="standard"
+        toolbar
         title={t('shareCard.monthly.title', 'Monthly distance, energy, and count trend')}
         subtitle={t(
           analysis.historyCapReached
@@ -125,7 +125,7 @@ export function ShareCardMonthlyTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
+                    tickFormatter={(value: number) => display.formatNumber(value)}
                   />
                   <YAxis
                     yAxisId="energy"
@@ -134,7 +134,7 @@ export function ShareCardMonthlyTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
+                    tickFormatter={(value: number) => display.formatNumber(value)}
                   />
                   <YAxis yAxisId="count" hide />
                   <Tooltip
@@ -142,14 +142,14 @@ export function ShareCardMonthlyTrend({
                       <ChartTooltip
                         valueFormatter={(value, name) =>
                           name === countSeries
-                            ? display.formatNumber(Number(value), 0)
+                            ? display.formatNumber(Number(value))
                             : name === energySeries
                               ? t('shareCard.units.energyDisplay', '{{value}} {{unit}}', {
-                                value: display.formatNumber(Number(value), 1),
+                                value: display.formatNumber(Number(value)),
                                 unit: display.energyUnit,
                               })
                               : t('shareCard.units.distanceDisplay', '{{value}} {{unit}}', {
-                                value: display.formatNumber(Number(value), 1),
+                                value: display.formatNumber(Number(value)),
                                 unit: display.distanceUnit,
                               })}
                       />
@@ -160,7 +160,7 @@ export function ShareCardMonthlyTrend({
                     yAxisId="distance"
                     dataKey="distance"
                     name={distanceSeries}
-                    fill={DISTANCE_COLOR}
+                    fill={palette[0]}
                     radius={[5, 5, 0, 0]}
                     hide={hiddenSeries?.isHidden('distance')}
                   />
@@ -168,7 +168,7 @@ export function ShareCardMonthlyTrend({
                     yAxisId="energy"
                     dataKey="energy"
                     name={energySeries}
-                    stroke={ENERGY_COLOR}
+                    stroke={palette[1]}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     connectNulls={false}
@@ -178,7 +178,7 @@ export function ShareCardMonthlyTrend({
                     yAxisId="count"
                     dataKey="driveCount"
                     name={countSeries}
-                    stroke={COUNT_COLOR}
+                    stroke={palette[2]}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     hide={hiddenSeries?.isHidden('driveCount')}
@@ -195,7 +195,7 @@ export function ShareCardMonthlyTrend({
             )}
           </ShareCardSectionBody>
         )}
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

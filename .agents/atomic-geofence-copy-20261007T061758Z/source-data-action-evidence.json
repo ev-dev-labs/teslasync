@@ -1,0 +1,58 @@
+{
+  "source": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+  "oldKey": "geofences.aiSuggest.pickHint",
+  "newKey": "geofences.aiSuggest.selectHint",
+  "oldCanonicalEnglish": "Paste a visited-location ID from the locations page to draft a zone around it.",
+  "oldSourceFallback": "Choose a visited location to propose a zone; review the draft before saving.",
+  "newSourceFallback": "Choose a visited location to propose a zone; review the draft before saving.",
+  "meaning": "Existing canonical paste-ID guidance conflicts with the actual named visited-place Select. A source-specific sibling matches the Select and existing review-before-create flow; old canonical value remains parent-owned and untouched.",
+  "proof": "Current page is byte-content-equivalent to its preserved preimage after only the approved key substitution",
+  "catalogReadSha256": "b648678625ec3ea384b4b0c00f4194446042c84524a1c0e3807499782d78e09a",
+  "catalogNewLeafAtReceipt": true,
+  "dataActionMap": [
+    {
+      "surface": "Visited candidate Select",
+      "data": "useVisitedPlaceCandidates; candidates filtered by nonblank name; numeric id parsed locally",
+      "action": "onChange sets aiLocationIdRaw, passed as locationId to AISuggestNewGeofences",
+      "unchanged": true
+    },
+    {
+      "surface": "Template choice from charging places directory",
+      "data": "ChargingPlacesWorkspace candidate id",
+      "action": "onSelectForTemplate sets aiLocationIdRaw",
+      "unchanged": true
+    },
+    {
+      "surface": "Apply AI draft",
+      "data": "Typed draft name, latitude, longitude, rounded radius",
+      "action": "applyAiDraftToForm opens existing create modal without persistence",
+      "unchanged": true
+    },
+    {
+      "surface": "Review/save",
+      "data": "Existing geofenceFormSchema and toGeofencePayload",
+      "action": "Explicit Create posts /geofences with charging flag; existing success/error callbacks retained",
+      "unchanged": true
+    },
+    {
+      "surface": "All other page behavior",
+      "data": "Geofence/candidate queries, metrics, vehicle scope, map capture, forms",
+      "action": "Create/edit/delete/bulk/dirty-discard/loading/error behavior unchanged",
+      "unchanged": true
+    }
+  ],
+  "focusedTest": {
+    "coverage": "Real i18next + actual canonical en.json; new leaf required and legacy leaf retained; shared Select chooses visited candidate; numeric id reaches assistant; applying draft opens prefilled modal without POST; explicit Create retains payload",
+    "file": "web\\src\\features\\maps\\pages\\GeofencesPage.catalogCopy.test.tsx",
+    "authoredCases": 1,
+    "executedCases": 0
+  },
+  "retainedOriginalTest": {
+    "unchanged": true,
+    "file": "web\\src\\features\\maps\\pages\\GeofencesPage.test.tsx",
+    "sha256": "4a74d779b624633c8f3855916455c24a2f1761a37868d7627e53414d72793e88"
+  },
+  "prohibitedCommandsExecuted": [],
+  "acceptance": "Source-only authored handoff. No TypeScript, lint, tests, build, audit, browser or preview executed.",
+  "receiptNote": "Initial PowerShell catalog read required -AsHashtable for existing differently-cased catalog keys; retry changed no product files."
+}

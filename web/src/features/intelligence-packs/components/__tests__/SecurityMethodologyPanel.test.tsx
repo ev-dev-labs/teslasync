@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 
 import { SecurityMethodologyPanel } from '../SecurityMethodologyPanel';
 import { PACK_CAPABILITY_CATALOG } from '../../lib/manifestTypes';
@@ -23,6 +23,10 @@ describe('SecurityMethodologyPanel', () => {
   it('shows the resource-ceiling/budget table and browser-support caveat', () => {
     render(<SecurityMethodologyPanel />);
     expect(screen.getByText('Resource ceilings & budgets in this build')).toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Resource ceilings & budgets in this build' });
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(8);
+    expect(within(table).getAllByRole('cell').every((cell) => cell.classList.contains('text-right')))
+      .toBe(true);
     expect(screen.getByText(/secure context/i)).toBeInTheDocument();
   });
 });

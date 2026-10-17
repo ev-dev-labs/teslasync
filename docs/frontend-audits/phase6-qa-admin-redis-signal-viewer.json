@@ -1,0 +1,358 @@
+{
+  "item": "phase6-qa-admin-redis-signal-viewer",
+  "phase": 6,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "page": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+  "routes": ["/redis-signals"],
+  "purpose": "Read-only finished-page QA of raw Redis L2 inspection, cache diagnostics and confirmed purge controls.",
+  "acceptance": {
+    "sourceReview": "Completed with confirmed source defects and separately identified candidates.",
+    "native": "NOTRUN",
+    "application": "NOTRUN",
+    "runtimeReproduction": "NOTRUN",
+    "warning": "PASS means only the specified source property or explicitly reused historical check. This report is not full native, live Redis, accessibility, mobile or application acceptance."
+  },
+  "contract": {
+    "authority": ["migration-queue.md:143-154", "migration-queue.md:206", "docs\\orchestrator-loop.md:111-149"],
+    "writes": [
+      "docs\\frontend-audits\\phase6-qa-admin-redis-signal-viewer.json",
+      "web\\logs\\phase6-qa-admin-redis-signal-viewer.log"
+    ],
+    "logIgnoreEvidence": ".gitignore:80",
+    "prohibitedOperationsPerformed": [],
+    "restrictions": "No browser, API requests, real Redis contents, mutations, source/test/catalog/config edits, Git, subagents, installs, helpers, extensions, servers, full suites or Docker.",
+    "clock": {
+      "startedAt": "2026-10-13T09:20:10.125-07:00",
+      "returnTarget": "2026-10-13T09:40:10.125-07:00",
+      "hardDeadline": "2026-10-13T09:45:10.125-07:00",
+      "lastInspectionClock": "2026-10-13T09:35:16.2809935-07:00",
+      "commandLimitMinutes": 8,
+      "commands": "All commands were synchronous bounded reads/searches or writes to the two owned artifacts; all finished. No background process was launched."
+    }
+  },
+  "evidenceReuse": {
+    "unchangedPassingChecksRerun": false,
+    "pageSha256": "1E40FB9F53351626FEDFB1C2FF832AD0AB82A864A13F0F12A88F121AF1AC4CBA",
+    "colocatedTestSha256": "BEAB7A8043580CF0CDFEF0D352359416B0183771789CFB4BE3E76B3E5627B802",
+    "identityReceipt": "logs\\phase5-page-admin-redis-signal-viewer.log",
+    "identityResult": "Current hashes match both final identities in the inherited receipt.",
+    "historicalLint": {
+      "command": "node node_modules\\eslint\\bin\\eslint.js src\\features\\admin\\pages\\RedisSignalViewerPage.tsx src\\features\\admin\\pages\\RedisSignalViewerPage.test.tsx --max-warnings=0",
+      "exit": 0,
+      "scope": "Historical final lint on the unchanged page/test; not freshly executed.",
+      "receipt": "logs\\phase5-page-admin-redis-signal-viewer.log"
+    },
+    "historicalStyle": {
+      "command": "node scripts\\frontend-qa.mjs scan --path src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+      "exit": 0,
+      "counts": {"candidate-violation": 0, "token-reference-review": 0, "token-owner-exemption": 0, "forced-colors-accessibility-review": 0},
+      "receipt": "logs\\phase5-page-admin-redis-signal-viewer-style.log",
+      "scope": "Unchanged page only; not visual acceptance."
+    },
+    "historicalPagePatterns": {
+      "staticInlineCssVariable": 0,
+      "rawControls": 0,
+      "directVendorImports": 0,
+      "oldApiImports": 0,
+      "doublePrefix": 0,
+      "camelCaseQueryParams": 0,
+      "receipt": "logs\\phase5-page-admin-redis-signal-viewer.log",
+      "caution": "Use the final case-sensitive rawControls=0 correction, not the earlier erroneous case-insensitive count6."
+    },
+    "historicalTests": {
+      "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\admin\\pages\\RedisSignalViewerPage.test.tsx --pool=forks --maxWorkers=2",
+      "exit": 1,
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedCases": 0,
+      "skippedCases": 0,
+      "receipt": "logs\\phase5-page-admin-redis-signal-viewer-tests-final.log",
+      "result": "Startup failure: generated locale-admin.json/runtime-manifest.json/usage-manifest.json invalid. No final cases executed; NOTPASS. Earlier passing cases are not a final result."
+    },
+    "historicalNative": "Not used as fresh evidence. This worker ran no browser, capture, API or Redis operation."
+  },
+  "sourceIdentities": {
+    "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx": "71E914C0B322853A8A0EECE218262852986DA5235DFFB1FA9DB04CA5174B1546",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx": "FC40BA091F62ECE4A1B3A62AE83341EE42A783F91C5845F41EF13F78A40A8C83",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts": "CCB3479B4D4958176225D129F1F5DE3B773E9D12BE26DF7151C78CA5C4AA2393",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts": "E39AB556A887957095776A4AF98A122C43BED2EDAF9A71B021D67E2CF9E3900C",
+    "web\\src\\api\\hooks\\useRedisSignals.ts": "B08F731CAA4B7D3EFEFE35F0B7852911CB66F9673850269CEC639F9B0074300F",
+    "web\\src\\api\\devtools.ts": "199A63E65265E4A2787F700C180042E22FAED5EB1E1D97F6027EF72DBCBF6F4C",
+    "internal\\api\\devtools\\handler.go": "E048820A3B441A44641E9E7A9FB65314F10AD0F67AE05BB223DB9D7F7C06BBCB",
+    "internal\\api\\router.go": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C"
+  },
+  "preservation": {
+    "originalInventory": "docs\\frontend-audits\\audit-page-019.json:357-385",
+    "originalPageLines": 661,
+    "currentPageLines": 638,
+    "minimumPageLines": 463,
+    "retainedPercent": 96.5,
+    "currentRelatedFeatureComponentLines": {
+      "RedisDiagnosticEmptyState.tsx": 359,
+      "RedisOperationalBrief.tsx": 42,
+      "redisMetrics.ts": 34,
+      "briefSourceStatus.ts": 16
+    },
+    "pagePlusRelatedComponentsLines": 1089,
+    "comparisonLimit": "No extraction or source rewrite by this item. The page alone exceeds70%; related components are counted explicitly but not substituted for the frozen original page baseline.",
+    "sections": [
+      {"name": "Cache metrics", "evidence": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:377", "contents": "Six operational metrics: total, number, string, boolean, L1 and L2; L1/L2 timestamp context."},
+      {"name": "Cached signals", "evidence": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:390", "contents": "Name/category filtering; four table columns; sorting, value filters, pagination, virtualization, exports, coordinate masking and empty diagnostics."},
+      {"name": "Cache diagnostics", "evidence": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:471", "contents": "Seven fields: mode, VIN, Redis key, L1 count, raw L2 count, L1 last seen, L2 last seen."},
+      {"name": "Signal categories", "evidence": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:518", "contents": "Five named category count/proportion bars."},
+      {"name": "Cache actions", "evidence": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:561", "contents": "L1/L2 impact explanation; per-vehicle and bounded-all purge entries; one shared danger dialog."}
+    ],
+    "sectionCount": 5,
+    "componentCounts": {"LayoutCard": 4, "RedisOperationalBrief": 1, "DataTable": 1, "ConfirmDialog": 1, "FadeIn": 5, "GlassPanelInPage": 0, "ChartContainer": 0},
+    "originalComponentCounts": {"LayoutCard": 4, "RedisOperationalBrief": 1, "DataTable": 1, "ConfirmDialog": 1, "FadeIn": 5, "GlassPanelInPage": 0, "ChartContainer": 0},
+    "actions": "Vehicle/URL/persisted scope, auto-refresh default off at5s when enabled, manual retry, name/category/value filters, sorting/paging/table preferences/export, recognized-coordinate reveal/copy, other-cache recovery and docs links, pinned-target per-vehicle purge and exact PURGE ALL confirmation.",
+    "sourceChanges": [],
+    "testsChanges": []
+  },
+  "checks": [
+    {"id": "scope", "status": "PASS", "basis": "source/artifact policy", "evidence": ["migration-queue.md:143-154", "migration-queue.md:206", ".gitignore:80"], "detail": "Only the assigned JSON and ignored web log are written. Queue and application files remain read-only."},
+    {"id": "preservation", "status": "PASS", "basis": "current counts and matching hash", "evidence": ["docs\\frontend-audits\\audit-page-019.json:357-385", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:377", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:390", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:471", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:518", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:561"], "detail": "638/661lines96.5%; five original section shells and action inventory remain; zero original page charts remain zero."},
+    {"id": "loading-fetching", "status": "PASS", "basis": "source branches only", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:379", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:423", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:480", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:525"], "detail": "Active initial fetch renders metric loading and section skeletons without fake data; paused initial fetch is separately FAIL."},
+    {"id": "initial-paused", "status": "FAIL", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:423", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:480", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:525", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:145"], "finding": "F01"},
+    {"id": "fatal-error", "status": "PASS", "basis": "source branches only", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:202", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:312", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:434", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:479", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:71"], "detail": "No-data HTTP/network failures use diagnostic explanations and individual refetch controls; section shells and actions remain."},
+    {"id": "retained-refresh-error", "status": "PASS", "basis": "source trust propagation only", "evidence": ["web\\src\\api\\dataState.ts:234", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:380", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82", "web\\src\\components\\layout\\PageContainer.tsx:253"], "detail": "Refresh failure does not set fatalError when payload exists; rows/metadata/counts remain, brief warns retained and shared notice supplies retry."},
+    {"id": "retained-paused", "status": "PASS", "basis": "source trust propagation only", "evidence": ["web\\src\\api\\dataState.ts:244", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:380", "web\\src\\components\\feedback\\DataSourceNotice.tsx:83", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts:11"], "detail": "Retained paused query is stale, not fabricated server error; summary now receives retained=true and shared notice labels Paused offline. Historical isError-only brief defect is no longer present."},
+    {"id": "other-cache-trust", "status": "FAIL", "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:64", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:158", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:289"], "finding": "F02"},
+    {"id": "fleet-trust", "status": "FAIL", "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50", "web\\src\\hooks\\useSelectedVehicle.ts:171", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:329"], "finding": "F03"},
+    {"id": "source-freshness", "status": "FAIL", "evidence": ["internal\\api\\devtools\\handler.go:1047", "internal\\api\\devtools\\handler.go:1086", "internal\\api\\devtools\\handler.go:1123", "web\\src\\components\\data-display\\DataFreshness.tsx:332"], "finding": "F11", "detail": "Fetch freshness is correctly query-age-based; it does not classify each Redis value as fresh/stale/unknown. Do not substitute successful HTTP fetch time or maximum field timestamp for per-value evidence."},
+    {"id": "unknown-vs-zero", "status": "FAIL", "evidence": ["internal\\api\\devtools\\handler.go:1056", "internal\\api\\devtools\\handler.go:1061", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts:26"], "finding": "F06"},
+    {"id": "optional-meta-render-guards", "status": "PASS", "basis": "actual optional-field branches", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:296", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:499", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:503", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts:13"], "detail": "Missing meta and omitted last-seen/VIN values have explicit placeholders. Empty signals map safely produces rows[]. This does not repair the optional TS wire contract or structured-value mismatch."},
+    {"id": "optional-wire-types", "status": "FAIL", "evidence": ["web\\src\\api\\devtools.ts:40", "internal\\api\\devtools\\handler.go:1005"], "finding": "F05"},
+    {"id": "raw-si-primitives", "status": "PASS", "basis": "source diagnostic behavior", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:121", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:281", "web\\src\\hooks\\useNumberFormatting.ts:39", "web\\src\\hooks\\useDateFormat.ts:74", ".github\\ARCHITECTURE.md:1118"], "detail": "Raw diagnostic primitives retain signs/zero/boolean/string source values and no misleading display-unit labels, factor conversion or deprecated helper is applied. Counts subscribe to locale preferences; last-seen formatting uses the existing locale/user-timezone hook. This is not a user-unit measurement chart. Upstream SI provenance and runtime timezone presentation were not revalidated."},
+    {"id": "structured-null-values", "status": "FAIL", "evidence": ["internal\\signal\\redis_cache.go:798", "web\\src\\api\\devtools.ts:35", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:121"], "finding": "F08"},
+    {"id": "numeric-types", "status": "FAIL", "evidence": ["internal\\signal\\redis_cache.go:762", "internal\\signal\\redis_cache.go:768", "internal\\signal\\redis_cache.go:774", "internal\\api\\devtools\\handler.go:1094"], "finding": "F07"},
+    {"id": "filter-scope", "status": "PASS", "basis": "source transformations only", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:276", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:289", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:449", "web\\src\\components\\ui\\DataTable.tsx:873"], "detail": "Case-insensitive name and category filtering derive from the selected vehicle's entire loaded map. Category counts use all rows, not the filtered/page slice; filtered no-match differs from source-empty. Export uses matching loaded rows, not fabricated server-wide totals."},
+    {"id": "vehicle-range-scope", "status": "PASS", "basis": "source route/hook agreement", "evidence": ["web\\src\\lib\\workspaceScope.ts:125", "web\\src\\hooks\\useSelectedVehicle.ts:74", "web\\src\\api\\hooks\\useRedisSignals.ts:63", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:328"], "detail": "Admin route intentionally hides global vehicle picker; required local picker is valid. Positive integer vehicle_id, vehicle-keyed query and preserved URL/persisted selection are used. Raw current cache inspector has no duplicated analysis date picker."},
+    {"id": "api-routes", "status": "PASS", "basis": "direct static path/method/parameter comparison", "evidence": ["web\\src\\api\\devtools.ts:69", "web\\src\\api\\devtools.ts:72", "web\\src\\api\\devtools.ts:88", "web\\src\\api\\devtools.ts:95", "internal\\api\\router.go:4817", "internal\\api\\router.go:4826"], "detail": "Existing GET/DELETE paths, snake_case vehicle_id and GET keys limit agree with router/handlers. Response type agreement is separately FAIL."},
+    {"id": "cancellation", "status": "FAIL", "evidence": ["web\\src\\api\\hooks\\useRedisSignals.ts:65", "web\\src\\api\\devtools.ts:69", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:66"], "finding": "F04"},
+    {"id": "purge-safety", "status": "PASS", "basis": "source only; no action executed", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:264", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:630", "web\\src\\components\\ui\\ConfirmDialog.tsx:137", "web\\src\\api\\devtools.ts:91", "web\\src\\lib\\operationalMode.ts:73", "internal\\api\\router.go:4824"], "detail": "ID/label pinned at dialog open; all-vehicle exact typed gate; pending blocks confirm/cancel; requests require live mode and reject as_of/offline before fetch; shared5/min limiter. L2-only explanation and bounded1000/has_more response remain."},
+    {"id": "mutation-results", "status": "PASS", "basis": "source only; no action executed", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:218", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:232", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:253"], "detail": "Distinct no-op/success/partial/error messages; success invalidations preserve key prefixes; catch keeps dialog target for retry and finally clears pending."},
+    {"id": "forms-names", "status": "PASS", "basis": "localized source labels and shared native semantics", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:330", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:394", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:404", "web\\src\\components\\ui\\Input.tsx:57", "web\\src\\components\\ui\\Select.tsx:59", "web\\src\\components\\ui\\Toggle.tsx:95"], "detail": "Vehicle/search/category/refresh/toggle are named; search/category visible labels use generated stable control IDs; native button/switch semantics remain. This is not keyboard/AT acceptance."},
+    {"id": "nested-docs-control", "status": "FAIL", "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:285", "web\\src\\components\\ui\\Button.tsx:65"], "finding": "F09"},
+    {"id": "i18n-numbers", "status": "FAIL", "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:309", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:335", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:412"], "finding": "F10"},
+    {"id": "mobile-field-reachability-source", "status": "PASS", "basis": "source props only", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:387", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:452", "web\\src\\components\\ui\\DataTable.tsx:724"], "detail": "All four fields now included in mobileColumns and no category hide class is supplied; table/side panels stack belowxl, filters/toolbars wrap. Historical mobile category removal is resolved in source, not proof of viewport containment."},
+    {"id": "motion-and-visual-source", "status": "PASS", "basis": "source and reused page style receipt", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:121", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:545", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:568", "web\\src\\components\\data-display\\MetricBar.tsx:84"], "detail": "Neutral typography/solid neutral bars/outline purge entry with danger dialog retained; shared metric motion respects reduce. No native contrast/theme/motion assertion."},
+    {"id": "scoped-patterns", "status": "PASS", "basis": "historical unchanged-page checks plus new dependency-only Select-String counts", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:13", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:6", "web\\src\\api\\hooks\\useRedisSignals.ts:1"], "detail": "Six named prohibited-pattern counts0 on directly reviewed local dependencies. Existing category barrels reused. Hook-ownership/cancellation defects are still reported; pattern counts are not whole-project cleanliness."},
+    {"id": "observability-privacy-source", "status": "PASS", "basis": "bounded source inspection", "evidence": [".github\\instructions\\observability.instructions.md:18", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:1", "web\\src\\components\\ui\\MaskedValue.tsx:85"], "detail": "No page RUM bootstrap or raw-signal console logging observed. Recognized coordinate values masked initially; reveal audit body contains kind/variant, not raw coordinates. Broader masking/export/privacy policy and telemetry trace acceptance are not certified."},
+    {"id": "native-widths-and-themes", "status": "NOTRUN", "evidence": ["docs\\frontend-design-contract.md:590", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:387"], "reason": "Browser expressly prohibited.320/375/390/430/768/1024/1280/1440/1920/2560, allocated-container widths, light/dark/custom, RTL, long text,200% scale and open overlays unexercised."},
+    {"id": "native-a11y", "status": "NOTRUN", "evidence": ["docs\\frontend-design-contract.md:524", "web\\src\\components\\ui\\ConfirmDialog.tsx:161"], "reason": "No keyboard, focus/restore/Escape, screen-reader, composed contrast, forced-colors, touch-target or reduced-motion browser tests."},
+    {"id": "api-redis-runtime", "status": "NOTRUN", "evidence": ["internal\\api\\devtools\\handler.go:1016", "internal\\api\\router.go:4817"], "reason": "No browser/API calls, Redis reads, real identities/contents or mutations; backend deployment/auth/capabilities/response samples remain unverified."},
+    {"id": "tests-current", "status": "NOTRUN", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.test.tsx:143"], "reason": "Read-only unchanged-source QA; no unchanged passing reruns or tests authored. Historical final run failed before discovery. New findings have source-trace repros, not executed reproductions."},
+    {"id": "typescript-current", "status": "NOTRUN", "evidence": ["migration-queue.md:149", "docs\\frontend-design-contract.md:592"], "reason": "npx tsc --noEmit is a parent-owned full gate, not run by this report-only worker. No claim current compiler passes."},
+    {"id": "full-gates-and-scripts", "status": "NOTRUN", "evidence": [".github\\skills\\audit-violations\\audit.sh:1", ".github\\skills\\verify-api-hooks\\SKILL.md:1", "docs\\orchestrator-loop.md:243"], "reason": "No full lint/tests/build/Docker. audit.sh invokes full TypeScript; verify.sh uses helper extraction. Both remain NOTRUN under this explicit no-full-gates/no-helpers scope. Direct source/router inspection and dependency grep evidence are recorded instead."}
+  ],
+  "findings": [
+    {
+      "id": "F01", "status": "FAIL", "confidence": "high", "severity": "P1", "owner": "page",
+      "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx", "line": 423,
+      "rule": "MDC-026 unknown/paused is not authoritatively empty",
+      "mechanism": "On initial offline/paused query data is undefined, isPending=true, isLoading=false and fetchStatus=paused. source.status is initial and brief loads, but three section branches test only isLoading. Table mounts the diagnostic with meta undefined and displays No signals cached; cache panel says diagnostics unavailable and category panel says no categorized signals despite no successful response.",
+      "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:379", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:423", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:480", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:525", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:145", "web\\src\\api\\dataState.ts:204"],
+      "repro": "Future isolated query-result fixture only: selected positive synthetic vehicle ID, data undefined, error null, isPending true, isLoading/isFetching false, fetchStatus paused. Trace/render the three sections; confirm no successful load occurred but their authoritative empty copy appears. Not executed here.",
+      "requestedFix": "Use derived initial/blocked state for all section bodies; show paused/pending explanation without starting the key-list empty diagnostic, preserving successful empty and retained states."
+    },
+    {
+      "id": "F02", "status": "FAIL", "confidence": "high", "severity": "P1", "owner": "existing diagnostic/key-hook integration",
+      "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx", "line": 158,
+      "rule": "MDC-026 independent loading/error/retained/retry",
+      "mechanism": "The independent keys query consumes only data/isError. isError forces otherKeys=[] even with retained keys; loading and fatal error both render no subsection. The main outer banner describes the selected cache, not this failed keys query. Page dataSources registers only redis-signals, so its shared retry does not cover keys.",
+      "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:64", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:158", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:289", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:368"],
+      "repro": "Future isolated keys-query fixture with populated retained keys plus isError=true while selected cache is successfully empty: existing other-vehicle recovery chips disappear. With data undefined and keys failure, no keys-specific error/retry is rendered. Not executed here.",
+      "requestedFix": "Existing useRedisSignals.ts should own the keys query; diagnostic should retain previous keys with independent loading/fatal/refresh/paused notices and individual retry."
+    },
+    {
+      "id": "F03", "status": "FAIL", "confidence": "high", "severity": "P2", "owner": "useSelectedVehicle integration",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts", "line": 50,
+      "rule": "MDC-026 every data source exposes trust/recovery",
+      "mechanism": "useSelectedVehicle discards fleet query status/error/refetch and normalizes vehicles undefined to[]. With no URL/stored selection an initial fleet failure produces null selection/empty options indistinguishable from no vehicles; page has no fleet retry or notice.",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50", "web\\src\\hooks\\useSelectedVehicle.ts:73", "web\\src\\hooks\\useSelectedVehicle.ts:171", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:329", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:418"],
+      "repro": "Future fixture: no URL/persisted vehicle and useVehicles initial error with data undefined. Trace returned null ID/[] and page select prompt with no fleet-specific error/retry. Not executed here.",
+      "requestedFix": "Expose additive fleet trust/refetch through the existing selector; distinguish initial fleet loading/failure/successful-empty in the local admin control."
+    },
+    {
+      "id": "F04", "status": "FAIL", "confidence": "high", "severity": "P2", "owner": "Redis hook/devtools integration",
+      "file": "web\\src\\api\\hooks\\useRedisSignals.ts", "line": 65,
+      "rule": "MDC-002/MDC-046 preserve request cancellation",
+      "mechanism": "Signal queryFn takes no QueryFunctionContext and getRedisSignals accepts no options; key query similarly calls getRedisSignalKeys(50) without signal. TanStack cancellation cannot reach request/fetch even though request supports AbortSignal. Vehicle-key separation prevents cross-key row mixing but does not cancel the obsolete request.",
+      "evidence": ["web\\src\\api\\hooks\\useRedisSignals.ts:65", "web\\src\\api\\devtools.ts:69", "web\\src\\api\\devtools.ts:72", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:66", "web\\src\\api\\client.ts:57"],
+      "repro": "Future request-spy fixture: start read then cancel/unmount/change selected vehicle; inspect options and signal.aborted. Current helpers never receive a signal. No request made here.",
+      "requestedFix": "Forward queryFn {signal} through both existing GET helpers, retaining enablement, keys, polling, stale/retry behavior and mutation semantics."
+    },
+    {
+      "id": "F05", "status": "FAIL", "confidence": "high", "severity": "P2", "owner": "typed devtools integration",
+      "file": "web\\src\\api\\devtools.ts", "line": 40,
+      "rule": "Exact JSON optionality",
+      "mechanism": "Frontend meta requires l1_last_seen_at/l2_last_seen_at:string|null and vehicle_vin:string. Backend omitempty pointers/string omit these keys when absent; omission is not JSON null. Page guards avoid the current display crash but interface contract is inaccurate.",
+      "evidence": ["web\\src\\api\\devtools.ts:40", "internal\\api\\devtools\\handler.go:1005", "internal\\api\\devtools\\handler.go:1006", "internal\\api\\devtools\\handler.go:1007"],
+      "repro": "Future serializer/type fixture with nil last-seen pointers and empty VIN: server JSON lacks these keys; current TS required-field model cannot represent that payload faithfully. No API call here.",
+      "requestedFix": "Align optional metadata fields with actual Go omitempty tags without fabricating timestamps, VIN or zeros."
+    },
+    {
+      "id": "F06", "status": "FAIL", "confidence": "high", "severity": "P1", "owner": "backend diagnostic availability integration",
+      "file": "internal\\api\\devtools\\handler.go", "line": 1056,
+      "rule": "MDC-026/MDC-033 unknown is not measured zero",
+      "mechanism": "RawFieldCount returns0+error when HLEN fails; handler discards that error and emits0. Optional nil signalStore also leaves l1Count at0. These best-effort unknowns become valid KPI/count values and may trigger L2 mirror failing diagnosis when L1 has data.",
+      "evidence": ["internal\\signal\\redis_cache.go:555", "internal\\api\\devtools\\handler.go:1056", "internal\\api\\devtools\\handler.go:1061", "internal\\api\\devtools\\handler.go:1064", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts:26", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:181"],
+      "repro": "Future fake-repository/cache handler fixture: GetAll succeeds, RawFieldCount fails, L1 contains one value; result reports raw L2 count0 and diagnostic selects mirror failure. Separate nil-L1 fixture reports measured0 despite unavailable store. No real Redis operation here.",
+      "requestedFix": "Backend owner exposes diagnostic availability/unknowns explicitly; existing typed adapter and diagnostic must not treat fallback0 as authoritative emptiness."
+    },
+    {
+      "id": "F07", "status": "FAIL", "confidence": "high", "severity": "P1", "owner": "backend Redis response discriminator",
+      "file": "internal\\api\\devtools\\handler.go", "line": 1094,
+      "rule": "API semantic type agreement",
+      "mechanism": "Typed Redis decoder returns int32, int64 and float32 for their canonical kinds. Handler recognizes only float64 as number and bool as boolean, so those valid numeric Go values are tagged string while JSON value remains numeric. Numeric/string KPI counts and type filtering become incorrect.",
+      "evidence": ["internal\\signal\\redis_cache.go:762", "internal\\signal\\redis_cache.go:768", "internal\\signal\\redis_cache.go:774", "internal\\api\\devtools\\handler.go:1094", "internal\\api\\devtools\\handler.go:1098", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts:12"],
+      "repro": "Future fake GetAll map with an int64(7) or float32(1.5): handler emits numeric JSON value with type string; redisMetrics places it in Strings, not Numbers. Source switch establishes mechanism; not executed here.",
+      "requestedFix": "Classify all supported canonical numeric kinds correctly at existing handler/model boundary and cover the exact discriminator cases."
+    },
+    {
+      "id": "F08", "status": "FAIL", "confidence": "high", "severity": "P1", "owner": "Redis response/page-value integration",
+      "file": "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx", "line": 121,
+      "rule": "Raw-value preservation and JSON/null type agreement",
+      "mechanism": "Decoder supports compound/generic JSON and legacy JSON objects/arrays; generic JSON null is possible. Handler Value interface{} emits these unchanged but tags them string. Frontend RedisSignalEntry excludes objects/arrays/null and String(row.value) turns objects into [object Object], arrays into ambiguous comma lists and null into literal null. Operator cannot inspect full structured cache value in the cell.",
+      "evidence": ["internal\\signal\\redis_cache.go:798", "internal\\signal\\redis_cache.go:809", "internal\\api\\devtools\\handler.go:1087", "internal\\api\\devtools\\handler.go:1098", "web\\src\\api\\devtools.ts:35", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:121"],
+      "repro": "Future synthetic JSON fixture only: signals.ExampleComposite={value:{example:1},type:'string'} or nested array/null. Trace current String conversion and incompatible entry type; object contents disappear from cell. No real signal contents used.",
+      "requestedFix": "Precisely type the actual supported JSON values/discriminator and render structured raw content with existing Code/Text primitives and explicit null/unknown semantics; preserve exports, source identity and masking policy."
+    },
+    {
+      "id": "F09", "status": "FAIL", "confidence": "high", "severity": "P2", "owner": "existing RedisDiagnosticEmptyState",
+      "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx", "line": 285,
+      "rule": "MDC-020/MDC-040 native navigation and nonnested interaction",
+      "mechanism": "Docs CTA places shared Button, which always emits button, inside an anchor. The resulting a>button has nested interactive elements and competing link/button semantics. No browser-specific keyboard consequence is claimed.",
+      "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:285", "web\\src\\components\\ui\\Button.tsx:65"],
+      "repro": "Future component render of a diagnostic branch with CTA; inspect resulting a>button structure and link/button accessibility tree. Source expansion confirms invalid nesting; runtime untested.",
+      "requestedFix": "Use one real anchor/navigation element with existing shared link-button styling; preserve href, target, rel, localized CTA, focus and hit target."
+    },
+    {
+      "id": "F10", "status": "FAIL", "confidence": "high", "severity": "P2", "owner": "page/diagnostic localization",
+      "file": "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx", "line": 309,
+      "rule": "MDC-044 localized fallback and numeric display",
+      "mechanism": "Other-cache fallback literally renders Vehicle ${id}; diagnostic metadata/chip counts render raw numbers. Category option suffix concatenates raw count instead of locale formatter/interpolation. Existing redis.vehicleFallback and fmtInt are already available elsewhere.",
+      "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:309", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:310", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:335", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:336", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:412", "web\\src\\i18n\\en.json:12309"],
+      "repro": "Future non-English locale fixture with absent display_name/VIN and large counts: fallback remains English and diagnostic/category counts bypass locale digits/grouping. No catalog changes or runtime locale test here.",
+      "requestedFix": "Reuse existing translated fallback and number formatting, preserving raw identifier semantics; parent catalog owner handles any required interpolation key."
+    },
+    {
+      "id": "F11", "status": "FAIL", "confidence": "high", "severity": "P2", "owner": "Redis diagnostic freshness integration",
+      "file": "internal\\api\\devtools\\handler.go", "line": 1086,
+      "rule": "Stale-versus-unknown per-value evidence without erasing raw cache data",
+      "mechanism": "Pass-through GetAll preserves stale/legacy values. Timestamp-aware GetAllValues is reduced to only maximum timestamp; no row timestamp/provenance is serialized. Fresh HTTP fetch of a mixed cache therefore cannot distinguish a stale row from a timestamp-less legacy row. A recent unrelated row can make l2_last_seen_at recent; decode/read failures and entirely legacy cache both yield missing L2 timestamp. Fetch-age chip is not evidence of datum age.",
+      "evidence": ["internal\\signal\\redis_cache.go:21", "internal\\signal\\redis_cache.go:493", "internal\\signal\\redis_cache.go:713", "internal\\api\\devtools\\handler.go:1047", "internal\\api\\devtools\\handler.go:1086", "internal\\api\\devtools\\handler.go:1123", "web\\src\\components\\data-display\\DataFreshness.tsx:332", ".github\\ARCHITECTURE.md:247"],
+      "repro": "Future fake timestamp-aware cache fixture with one recent envelope, one envelope older than2min and one zero-timestamp legacy entry. Current response contains all raw values but only newest timestamp, so the last two cannot be separately classified. Repeat with GetAllValues error to show unknown vs error collapse. Not executed here.",
+      "requestedFix": "Existing integration owner exposes per-value observed timestamp/provenance/read-availability, or explicitly presents freshness as unknown where contract cannot supply it. Preserve every stale/legacy raw value; do not turn the diagnostic endpoint into a fresh-only filter."
+    }
+  ],
+  "candidates": [
+    {"id": "C01", "status": "NOTRUN", "classification": "mobile target candidate, not measured failure", "evidence": ["web\\src\\components\\ui\\Button.tsx:37", "web\\src\\components\\ui\\MaskedValue.tsx:190", "web\\src\\components\\data-display\\DataFreshness.tsx:243", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:304"], "detail": "Default page buttons40px, masked reveal/copy overrides28px, compact freshness and recovery chips lack obvious44px mobile target. Actual targets/spacing exceptions depend on composed CSS/layout; native hit-area QA required."},
+    {"id": "C02", "status": "NOTRUN", "classification": "narrow-container overflow candidate", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:487", "web\\src\\components\\data-display\\KVList.tsx:47", "web\\src\\components\\data-display\\KVList.tsx:80"], "detail": "Page leaves KVList layout inline and wrap false. Long localized label/value/VIN/key and200% text may force overflow; no browser geometry or real identifier inspected. Use safe long synthetic text in future QA."},
+    {"id": "C03", "status": "NOTRUN", "classification": "privacy policy candidate, behavior source-confirmed", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:110", "web\\src\\components\\ui\\MaskedValue.tsx:196", "web\\src\\components\\ui\\DataTable.tsx:889", "web\\src\\components\\ui\\DataTable.tsx:907"], "detail": "Mask hides only recognized on-screen coordinate cells. Copy intentionally uses raw value; default CSV/JSON exports serialize raw values, including masked coordinates/compound data. No demonstrated disclosure or unauthorized-user exploit, and no raw values read. Preserve export capability pending explicit operator privacy naming/policy decision."},
+    {"id": "C04", "status": "NOTRUN", "classification": "diagnostic-cause correctness candidate", "evidence": ["web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:162", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx:202", ".github\\ARCHITECTURE.md:233"], "detail": "Local-mode copy claims no Redis writes, whereas architecture contract expressly establishes disabled distributed reads. Mirror/TTL root-cause labels are inferred from best-effort per-pod snapshots and time since L1 last seen, not verified writer/TTL status. Broader pipeline/config/TTL correctness was outside direct page QA."},
+    {"id": "C05", "status": "NOTRUN", "classification": "real catalog/runtime localization completeness", "evidence": ["web\\src\\i18n\\en.json:12201", "web\\src\\i18n\\en.json:12318", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:163"], "detail": "Canonical Redis block and critical search/category/fallback keys were inspected. All locale projections, dynamic category/brief keys, plural rules, RTL and runtime namespace loading were not exhaustively audited. Historical catalog startup failure is not claimed still present."},
+    {"id": "C06", "status": "NOTRUN", "classification": "virtualization/keyboard/scroll candidate", "evidence": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx:459", "web\\src\\components\\ui\\DataTable.tsx:1201", "web\\src\\components\\ui\\DataTable.tsx:1447"], "detail": "Existing virtualized row estimate48 and contained scrolling preserve four fields in source. Variable long cells, keyboard scroll reachability, large-table performance and allocated mobile card behavior remain unmeasured; no helper/virtualizer replacement is justified."}
+  ],
+  "apiAgreement": [
+    {"status": "PASS", "operation": "GET selected signals", "client": "web\\src\\api\\devtools.ts:69", "route": "internal\\api\\router.go:4817", "handler": "internal\\api\\devtools\\handler.go:1016", "url": "/dev-tools/redis-signals?vehicle_id={positiveInteger}", "scope": "Selected vehicle snapshot; no range or client unit conversion."},
+    {"status": "PASS", "operation": "GET populated-cache keys", "client": "web\\src\\api\\devtools.ts:72", "route": "internal\\api\\router.go:4818", "handler": "internal\\api\\devtools\\handler.go:1143", "url": "/dev-tools/redis-signals/keys?limit=50", "scope": "Bounded global list; current vehicle excluded locally, at most6 recovery chips. Returned total is not proven fleet total."},
+    {"status": "PASS", "operation": "DELETE pinned vehicle", "client": "web\\src\\api\\devtools.ts:88", "route": "internal\\api\\router.go:4825", "url": "/dev-tools/redis-signals?vehicle_id={pinnedId}", "runtime": "NOTRUN"},
+    {"status": "PASS", "operation": "DELETE bounded all", "client": "web\\src\\api\\devtools.ts:95", "route": "internal\\api\\router.go:4826", "url": "/dev-tools/redis-signals/keys", "response": "purged/scanned/limit/has_more agree; frontend uses purged/limit/has_more.", "runtime": "NOTRUN"},
+    {"status": "PASS", "operation": "GET fleet selector", "client": "web\\src\\api\\hooks\\useVehicles.ts:76", "route": "internal\\api\\router.go:3362", "url": "/vehicles", "detail": "Signal URL vehicle_id is snake_case and request adds /api/v1 exactly at client boundary."},
+    {"status": "PASS", "operation": "POST coordinate reveal audit", "client": "web\\src\\components\\ui\\MaskedValue.tsx:85", "route": "internal\\api\\router.go:3280", "url": "/audit/reveal", "detail": "Privacy primitive uses apiUrl; no coordinate in audit payload. No reveal/copy or POST executed."},
+    {"status": "FAIL", "operation": "Response JSON/value/metadata/freshness agreement", "findings": ["F05", "F06", "F07", "F08", "F11"], "detail": "Path match does not certify response type, diagnostic reliability or per-signal freshness."}
+  ],
+  "validation": {
+    "freshCommands": [
+      {"command": "Get-FileHash page and colocated test -Algorithm SHA256", "exit": 0, "result": "Exact inherited final identities matched."},
+      {"command": "Get-Content page total Count and Select-String -CaseSensitive section/component anchors", "exit": 0, "result": "638total lines; LayoutCard4, RedisOperationalBrief1, DataTable1, ConfirmDialog1, FadeIn5, GlassPanel0, ChartContainer0."},
+      {"command": "Select-String -CaseSensitive six prohibited patterns on five newly reviewed direct dependency files", "exit": 0, "counts": {"staticInlineCssVariable": 0, "rawControls": 0, "directVendorImports": 0, "oldApiImports": 0, "prefixedRequestCalls": 0, "camelCaseQueryParams": 0}, "scope": "Local diagnostic/brief/metric/status files and useRedisSignals.ts only; no page passing-check rerun."},
+      {"command": "Select-String -CaseSensitive exact issue and API route anchors", "exit": 0, "result": "Raw file:line outputs retained in ignored log."},
+      {"command": "Get-Content direct dependencies and Get-FileHash page/hooks/devtools/handler/router", "exit": 0, "result": "Current source identities and total line counts recorded."}
+    ],
+    "commandFailures": [
+      {"command": "Initial read-only probe including Select-String web\\.gitignore", "exit": 1, "cause": "web\\.gitignore absent; root .gitignore inspected subsequently. Not a QA or source failure."},
+      {"command": "Shell rg issue-anchor logging", "exit": 1, "cause": "rg binary not on PowerShell PATH. Tool functions.rg worked; standard Select-String produced raw log evidence. No install/helper attempted."}
+    ],
+    "unavailableInstruction": ".github\\prompts\\db-refactor\\phase-48-si-canonical\\0000-methodology.prompt.md did not exist at supplied path. No unit field or source edits; current frontend SI instruction and ADR-005 were read instead. No attempt to reconstruct absent file.",
+    "currentTests": {"status": "NOTRUN", "discovered": 0, "executed": 0, "passed": 0, "failed": 0, "skipped": 0},
+    "currentTypeScript": "NOTRUN",
+    "currentNative": "NOTRUN",
+    "reportValidation": "Final JSON parse, statuses, required finding mechanism/repro/evidence and exactfile:line existence/range validation are logged after report creation.",
+    "rawOutput": "web\\logs\\phase6-qa-admin-redis-signal-viewer.log",
+    "limitations": "Source repro steps are proposed isolated synthetic fixtures; no React renderer, tests, API, browser or Redis was run. This audit did not alter originals, catalogs or phase acceptance."
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-audits\\audit-page-019.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\ARCHITECTURE.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".gitignore",
+    "logs\\phase5-page-admin-redis-signal-viewer.log",
+    "logs\\phase5-page-admin-redis-signal-viewer-style.log",
+    "logs\\phase5-page-admin-redis-signal-viewer-tests-final.log",
+    "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx",
+    "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.test.tsx",
+    "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\RedisOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\redisMetrics.ts",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts",
+    "web\\src\\api\\hooks\\useRedisSignals.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\devtools.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\operationalMode.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\i18n\\en.json",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\data-display\\KVList.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MaskedValue.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\devtools\\handler.go",
+    "internal\\signal\\redis_cache.go"
+  ],
+  "needs": [
+    "Parent registers narrow fixes for source-confirmed F01-F11 at the existing page/diagnostic/hook/backend owners; no source or queue edits by QA worker.",
+    "Do not reopen resolved historical page noise/mobile category/retained-paused issues or rerun unchanged passing checks.",
+    "Separately authorized synthetic native matrix and covering regression checks; no real Redis data/captures or mutations.",
+    "Preserve raw SI cache inspection, retained values, original tests, five sections and guarded destructive actions; make freshness informative rather than filtering away stale/legacy rows."
+  ],
+  "ownershipRelease": {
+    "allOwnershipReleasedOnReturn": true,
+    "sourceWriteOwnership": "None acquired.",
+    "reportAndLog": "Released after final synchronous artifact validation and before terminal DONE.",
+    "commands": "All completed; no active session-owned command/service/helper/browser/native lock.",
+    "postReturnWrites": "None authorized or scheduled."
+  }
+}

@@ -1,20 +1,27 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useId } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { VisuallyHidden } from '@/components/a11y';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
-import { Skeleton } from '@/components/feedback';
-import { Badge, Button as ControlButton } from '@/components/ui';
+import { QueryError, Skeleton } from '@/components/feedback';
+import { Accordion, Badge, Text, Button as ControlButton } from '@/components/ui';
+import { deriveDataState } from '@/api/dataState';
 import { cn } from '@/lib/cn';
+import { isApiError } from '@/lib/resilience';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
-import { OperationalModeBadge } from '@/components/data-display';
+import { usePageTitle } from '@/hooks/usePageTitle';
+import { gaugeTone, severityTokens, typography } from '@/lib/tokens';
+import { OperationalModeBadge, ProgressRing } from '@/components/data-display';
 import {
   convertDistanceFromSI,
   convertTempFromSI,
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
 import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
-import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
+import { AIWatchFaceNLResponse } from '@/components/ai';
 
 /**
  * Watch-optimized page for Apple Watch / Wear OS.
@@ -22,7 +29,7 @@ import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
  * - Black OLED background
  * - Large battery gauge
  * - Tap-friendly status icons (44px+ targets)
- * - No scrolling — single screen
+ * - A single glance surface, with reachable scrolling on small/scaled displays
  * - Auto-refresh every 30s
  * EXCEPTION: watch/PWA route is chrome-less to fit 40-45mm wearable displays.
  *
@@ -35,25 +42,61 @@ import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
  *   BELOW the watch shell. withAiFeature returns null in off
  *   mode so the wearable chrome-less invariant holds (no second
  *   element in the doc flow at all). Desktop/tablet users who
- *   opt in can scroll to use the Helix panel; wearables never
- *   see it.
+ *   opt in can scroll to use the Helix panel, including on wearables.
  */
 export default function WatchFacePage() {
   const { t } = useTranslation();
+  const title = t('routes.watchFace', 'Watch face');
+  usePageTitle(title);
+  const readOnlyDescriptionId = useId();
   const { vehicleId: selectedVehicleId } = useSelectedVehicle();
   const vehicleId = selectedVehicleId ?? undefined;
-  const { data, isLoading, error } = useWatchSummary(vehicleId);
+  const summaryQuery = useWatchSummary(vehicleId);
+  const { data, isLoading } = summaryQuery;
+  const source = deriveDataState({ ...summaryQuery, data: data ?? undefined }, { provenance: 'live' });
   const commandMutation = useWatchCommand();
   const operationalMode = useOperationalMode();
   const { unitPrefs } = useUnits();
+  const { fmtInt } = useNumberFormatting();
+  const accessUnavailable = summaryQuery.availability === 'not-configured'
+    || summaryQuery.availability === 'prerequisite-error';
+  const canCommand = operationalMode.canWrite && !accessUnavailable;
+  const disabledReason = operationalMode.writeBlockReason
+    ?? (summaryQuery.availability === 'prerequisite-error'
+      ? t('watch:capability.readError', 'Watch access could not be checked')
+      : accessUnavailable ? t('watch:capability.notConfigured', 'Watch access is not configured') : undefined);
+  const accessOwnsDescription = accessUnavailable && operationalMode.writeBlockReason == null;
+  const accessNotice = accessUnavailable ? (
+    <div className="min-w-0 space-y-2 text-center">
+      <Text as="p" id={accessOwnsDescription ? readOnlyDescriptionId : undefined} variant="bodySm" className="break-words text-[var(--text-on-accent)]">
+        {summaryQuery.availability === 'prerequisite-error'
+          ? t('watch:capability.readError', 'Watch access could not be checked')
+          : t('watch:capability.notConfigured', 'Watch access is not configured')}
+      </Text>
+      <Text as="p" variant="caption" className="break-words text-[var(--text-on-accent)]">
+        {summaryQuery.availability === 'prerequisite-error'
+          ? t('watch:capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.')
+          : t('watch:capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.')}
+      </Text>
+      {summaryQuery.availability === 'prerequisite-error' ? (
+        <ControlButton wrapLabel variant="secondary" className="min-h-11" onClick={summaryQuery.recheckAvailability}>
+          {t('error.retry', 'Retry')}
+        </ControlButton>
+      ) : (
+        <Link to="/api-keys" className="inline-flex min-h-11 items-center underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+          {t('watch:capability.configure', 'Manage API keys')}
+        </Link>
+      )}
+    </div>
+  ) : null;
 
   const { mutate: sendWatchCommand } = commandMutation;
   const sendCommand = useCallback(
     (command: string) => {
-      if (!operationalMode.canWrite) return;
+      if (!canCommand || commandMutation.isPending) return;
       sendWatchCommand({ vehicleId, command });
     },
-    [operationalMode.canWrite, sendWatchCommand, vehicleId],
+    [canCommand, commandMutation.isPending, sendWatchCommand, vehicleId],
   );
 
   // Render the wearable WatchShell first as the primary surface;
@@ -62,19 +105,19 @@ export default function WatchFacePage() {
   // (withAiFeature returns null → the sibling is absent from the
   // DOM, preserving the wearable invariant).
   let watchContent: React.ReactNode;
-  if (isLoading) {
+  if (isLoading && !source.hasData && !source.isRefreshBlocked) {
     watchContent = (
       <div
         role="status"
         aria-busy="true"
         aria-label={t('watch.loading', 'Loading watch summary…')}
-        className="flex h-full flex-col items-center"
+        className="flex min-h-full shrink-0 flex-col items-center gap-2"
       >
         <Skeleton className="h-3 w-24" />
-        <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-1 shrink-0 items-center justify-center">
           <Skeleton rounded className="h-32 w-32" />
         </div>
-        <div className="flex gap-4 pb-2">
+        <div className="flex gap-2 pb-2">
           {Array.from({ length: 3 }).map((_, index) => (
             <Skeleton key={index} rounded className="h-11 w-11" />
           ))}
@@ -82,33 +125,65 @@ export default function WatchFacePage() {
         <Skeleton className="h-3 w-16" />
       </div>
     );
-  } else if (error || !data) {
+  } else if (!data && accessUnavailable) {
+    watchContent = accessNotice;
+  } else if (!data && !source.fatalError && (source.isRefreshBlocked || operationalMode.isReadOnly)) {
     watchContent = (
-      <p className="text-[var(--text-secondary)] text-sm text-center px-4">
-        {error ? String(error) : t('watch.noVehicle', 'No vehicle found')}
-      </p>
+      <div className="min-w-0 space-y-2 px-4 text-center">
+        {source.isRefreshBlocked ? (
+          <Badge variant="warning" size="sm" role="status">
+            {t('dataSources.status.paused', 'Refresh paused')}
+          </Badge>
+        ) : null}
+        {operationalMode.isReadOnly ? (
+          <>
+            <div className="flex justify-center">
+              <OperationalModeBadge compact />
+            </div>
+            <Text as="p" variant="bodySm" className="break-words text-[var(--text-on-accent)]">
+              {operationalMode.description}
+            </Text>
+          </>
+        ) : null}
+      </div>
+    );
+  } else if (source.fatalError || !data) {
+    watchContent = (
+      <div className="min-w-0 space-y-2">
+        {source.fatalError ? (
+          <WatchRecovery error={source.fatalError} onRetry={source.retry ?? undefined} />
+        ) : (
+          <Text as="p" variant="bodySm" className="break-words text-center text-[var(--text-on-accent)]">
+            {t('watch.noVehicle', 'No vehicle found')}
+          </Text>
+        )}
+      </div>
     );
   } else {
-    // SI boundary: backend `range_km` is in km, derived in
-    // watch_handler.go as RatedRange*1.60934. Multiply by 1000 before
-    // passing it to convertDistanceFromSI.
-    const displayRange = convertDistanceFromSI(
-      (data.range_km ?? 0) * 1000,
-      unitPrefs.distance,
-    );
+    const displayRange = Number.isFinite(data.range_m)
+      ? convertDistanceFromSI(data.range_m, unitPrefs.distance) : null;
     // SI boundary: backend `inside_temp_c` is already °C (SI for temp).
-    const displayInsideTemp = convertTempFromSI(
-      data.inside_temp_c ?? 0,
-      unitPrefs.temperature,
-    );
-    const batteryLevel = data.battery_level ?? 0;
+    const displayInsideTemp = Number.isFinite(data.inside_temp_c)
+      ? convertTempFromSI(data.inside_temp_c, unitPrefs.temperature) : null;
+    const batteryLevel = Number.isFinite(data.battery_level) ? data.battery_level : null;
 
     watchContent = (
       <>
+        {accessNotice}
         {/* Vehicle name */}
-        <div className="text-2xs text-[var(--text-muted)] text-center truncate px-2">
+        <Text variant="caption" className="min-w-0 break-words px-2 text-center text-[var(--text-on-accent)] [overflow-wrap:anywhere]">
           {data.vehicle_name}
-        </div>
+        </Text>
+        {(source.refreshError || source.isRefreshBlocked) && (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Badge variant="warning" size="sm" role="status">
+              {t('watch.cached', 'Cached')}
+            </Badge>
+          </div>
+        )}
+        {source.refreshError && !accessUnavailable ? (
+          <WatchRecovery error={source.refreshError} onRetry={source.retry ?? undefined} />
+        ) : null}
         {operationalMode.isReadOnly && (
           <div className="flex justify-center pt-1">
             <OperationalModeBadge compact />
@@ -116,7 +191,7 @@ export default function WatchFacePage() {
         )}
 
         {/* Battery gauge — center focus */}
-        <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+        <div className="flex flex-1 shrink-0 flex-col items-center justify-center">
           <BatteryGauge
             level={batteryLevel}
             rangeDisplay={displayRange}
@@ -125,13 +200,15 @@ export default function WatchFacePage() {
 
           {/* Charging status */}
           {data.is_charging && (
-            <div className="mt-2 flex items-center gap-1 text-emerald-400 text-xs">
-              <Zap className="h-3 w-3" />
-              <span>
-                {t('watch.timeToFull', '{{minutes}}m to full', {
-                  minutes: Math.round(data.time_to_full ?? 0),
-                })}
-              </span>
+            <div className="mt-2 flex min-w-0 items-center gap-1">
+              <Zap className={cn('h-3 w-3 shrink-0', severityTokens.success.fg)} aria-hidden="true" />
+              <Text variant="caption" className={cn('min-w-0 break-words', severityTokens.success.fg)}>
+                {data.time_to_full != null && Number.isFinite(data.time_to_full)
+                  ? t('watch.timeToFull', '{{minutes}}m to full', {
+                      minutes: fmtInt(data.time_to_full),
+                    })
+                  : t('watch.timeToFullUnknown', 'Time to full unknown')}
+              </Text>
             </div>
           )}
 
@@ -139,14 +216,14 @@ export default function WatchFacePage() {
           <Badge
             variant={watchStateVariant(data.state)}
             size="sm"
-            className={cn('mt-2 text-2xs font-medium', watchStateClassName(data.state))}
+            className="mt-2"
           >
-            {data.state}
+            {data.state ? t(`watch.state.${data.state}`, data.state) : t('common.unknown', 'Unknown')}
           </Badge>
         </div>
 
         {/* Quick action icons */}
-        <div className="flex justify-center gap-4 pb-2">
+        <div className="flex shrink-0 flex-wrap justify-center gap-2 pb-2">
           <StatusIcon
             icon={data.is_locked ? Lock : Unlock}
             active={data.is_locked}
@@ -158,13 +235,14 @@ export default function WatchFacePage() {
             }
             onClick={() => sendCommand(data.is_locked ? 'unlock' : 'lock')}
             loading={commandMutation.isPending}
-            disabled={!operationalMode.canWrite}
-            disabledReason={operationalMode.writeBlockReason ?? undefined}
+            disabled={!canCommand}
+            disabledReason={disabledReason}
+            describedBy={disabledReason ? readOnlyDescriptionId : undefined}
           />
           <StatusIcon
             icon={Thermometer}
             active={data.is_climate_on}
-            label={`${Math.round(displayInsideTemp)}°`}
+            label={displayInsideTemp == null ? '—' : `${fmtInt(displayInsideTemp)}°`}
             ariaLabel={
               data.is_climate_on
                 ? t('watch.action.climateOff', 'Turn climate off')
@@ -172,8 +250,9 @@ export default function WatchFacePage() {
             }
             onClick={() => sendCommand(data.is_climate_on ? 'climate_off' : 'climate_on')}
             loading={commandMutation.isPending}
-            disabled={!operationalMode.canWrite}
-            disabledReason={operationalMode.writeBlockReason ?? undefined}
+            disabled={!canCommand}
+            disabledReason={disabledReason}
+            describedBy={disabledReason ? readOnlyDescriptionId : undefined}
           />
           <StatusIcon
             icon={Shield}
@@ -186,11 +265,16 @@ export default function WatchFacePage() {
             }
           />
         </div>
+        {disabledReason && !accessOwnsDescription ? (
+          <Text as="p" id={readOnlyDescriptionId} variant="caption" className="break-words text-center text-[var(--text-on-accent)]">
+            {disabledReason}
+          </Text>
+        ) : null}
 
         {/* Last updated */}
-        <div className="text-2xs text-[var(--text-muted)] text-center">
-          {formatRelativeTime(data.last_updated)}
-        </div>
+        <Text as="div" variant="caption" className="text-center">
+          {formatRelativeTime(data.last_updated, (key, fallback, count) => t(key, fallback, { count }))}
+        </Text>
 
         {/* PWA meta tags (injected via effect) */}
         <WatchPWAMeta />
@@ -200,15 +284,17 @@ export default function WatchFacePage() {
 
   return (
     <>
-      <WatchShell>{watchContent}</WatchShell>
+      <WatchShell>
+        <VisuallyHidden as="h1">{title}</VisuallyHidden>
+        {watchContent}
+      </WatchShell>
       {/*
         Opt-in Helix narrator. Rendered as a sibling AFTER <WatchShell>
         so the chrome-less wearable
         layout above is unaffected. withAiFeature returns null
         when ai_mode='off' or the per-feature toggle is off,
-        keeping the wearable invariant ("single screen, no
-        scroll") intact. On desktop/tablet with AI on, this
-        panel renders below the watch shell for opt-in
+        keeping the deterministic wearable surface intact. With AI on,
+        this panel renders below the watch shell for opt-in
         natural-language Q&A about the current watch face.
       */}
       <AIWatchFaceNLResponse />
@@ -218,11 +304,36 @@ export default function WatchFacePage() {
 
 // --- Sub-components ---
 
+function WatchRecovery({ error, onRetry }: { error: Error; onRetry?: () => void }) {
+  const { t } = useTranslation();
+  // Only the bounded HTTP status is safe to disclose; messages, URLs and stacks
+  // can include the wearable key or private vehicle information.
+  const status = isApiError(error) && Number.isInteger(error.status)
+    && error.status >= 100 && error.status <= 599 ? error.status : null;
+
+  return (
+    <div className="min-w-0 space-y-2">
+      <QueryError error={error} onRetry={onRetry} compact className="mb-0 [&_button]:min-h-11" />
+      {status != null ? (
+        <Accordion
+          title={t('common.learnMore', 'Learn more')}
+          headerClassName="min-h-11 px-3 py-2"
+          bodyClassName="px-3 py-2"
+        >
+          <Text as="p" variant="caption" className="break-words">
+            {t('common.status', 'Status')}: HTTP {status}
+          </Text>
+        </Accordion>
+      ) : null}
+    </div>
+  );
+}
+
 function WatchShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen bg-black text-[var(--text-on-accent)] flex flex-col p-3 select-none overflow-hidden">
+    <main className="flex h-dvh min-w-0 flex-col gap-2 overflow-y-auto bg-black p-3 text-[var(--text-on-accent)] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]">
       {children}
-    </div>
+    </main>
   );
 }
 
@@ -231,37 +342,32 @@ export function BatteryGauge({
   rangeDisplay,
   distanceUnit,
 }: {
-  level: number;
-  rangeDisplay: number;
+  level: number | null;
+  rangeDisplay: number | null;
   distanceUnit: DistanceUnitPref;
 }) {
-  const color = getBatteryColor(level);
-  const dashLength = level * 2.64;
+  const { t } = useTranslation();
+  const { fmtPercent, fmtWithUnit } = useNumberFormatting();
+  const knownLevel = level != null && Number.isFinite(level);
+  const color = knownLevel ? getBatteryColor(level) : gaugeTone.neutral;
+  // Whole-number labels fit the watch; color and arc retain the raw measurement.
+  const levelLabel = knownLevel ? fmtPercent(level, 0) : '—';
+  const rangeLabel = rangeDisplay != null && Number.isFinite(rangeDisplay)
+    ? fmtWithUnit(rangeDisplay, distanceUnit, 0) : '—';
 
   return (
-    <div className="relative w-32 h-32">
-      <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-        {/* Background ring */}
-        <circle
-          cx="50" cy="50" r="42" fill="none"
-          stroke="rgba(255,255,255,0.1)" strokeWidth="8"
-        />
-        {/* Battery level arc */}
-        <circle
-          cx="50" cy="50" r="42" fill="none"
-          stroke={color}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={`${dashLength} 264`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-bold">{level}%</span>
-        <span className="text-2xs text-[var(--text-secondary)]">
-          {Math.round(rangeDisplay)} {distanceUnit}
-        </span>
-      </div>
-    </div>
+    <ProgressRing
+      value={knownLevel ? level : Number.NaN}
+      size={128}
+      strokeWidth={10}
+      color={color}
+      ariaLabel={t('watch.batteryGauge', 'Battery {{battery}}; range {{range}}', {
+        battery: knownLevel ? levelLabel : t('common.unknown', 'Unknown'),
+        range: rangeLabel,
+      })}
+      centerLabel={<Text variant="metricValue" className="text-[var(--text-on-accent)]">{levelLabel}</Text>}
+      centerSubLabel={<Text variant="caption" className="text-[var(--text-on-accent)]">{rangeLabel}</Text>}
+    />
   );
 }
 
@@ -271,7 +377,7 @@ export interface StatusIconProps {
   color?: 'emerald' | 'red' | 'amber';
   label?: string;
   /**
-   * Accessible name for the control. Icon-only buttons (lock, sentry) carry no
+   * Accessible name for the action or status. Icon-only lock/sentry icons carry no
    * visible text, so an explicit label is required for screen readers; when
    * omitted we fall back to the visible `label`.
    */
@@ -280,15 +386,30 @@ export interface StatusIconProps {
   loading?: boolean;
   disabled?: boolean;
   disabledReason?: string;
+  describedBy?: string;
 }
 
-export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClick, loading, disabled = false, disabledReason }: StatusIconProps) {
+export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClick, loading, disabled = false, disabledReason, describedBy }: StatusIconProps) {
   const colorClasses = {
-    emerald: 'text-emerald-400',
-    red: 'text-red-400',
-    amber: 'text-amber-400',
+    emerald: severityTokens.success.fg,
+    red: severityTokens.critical.fg,
+    amber: severityTokens.warn.fg,
   };
-  const activeColor = color ? colorClasses[color] : 'text-cyan-400';
+  const activeColor = color ? colorClasses[color] : severityTokens.info.fg;
+  const className = cn(
+    'flex h-auto min-h-11 min-w-11 w-11 shrink-0 flex-col items-center justify-center rounded-full px-0 py-0',
+    active ? activeColor : typography.color.muted,
+    'bg-[var(--surface-2)] forced-colors:text-[CanvasText]',
+  );
+  const content = (
+    <>
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {label && <Text variant="caption" className="mt-0.5" aria-hidden="true">{label}</Text>}
+    </>
+  );
+  if (!onClick) {
+    return <span role="img" aria-label={ariaLabel ?? label} className={className}>{content}</span>;
+  }
 
   return (
     <ControlButton
@@ -298,16 +419,12 @@ export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClic
       onClick={onClick}
       disabled={loading || disabled}
       title={disabled ? disabledReason : undefined}
-      className={cn(
-        'h-11 w-11 flex-col rounded-full px-0 py-0 font-normal transition-colors duration-normal',
-        active ? `bg-[var(--surface-2)] ${activeColor}` : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
-        onClick && 'active:scale-95',
-        (loading || disabled) && 'opacity-50',
-      )}
+      className={cn(className, typography.weight.regular)}
       aria-label={ariaLabel ?? label}
+      aria-describedby={describedBy}
+      aria-busy={loading || undefined}
     >
-      <Icon className="h-4 w-4" />
-      {label && <span className="text-2xs mt-0.5" aria-hidden="true">{label}</span>}
+      {content}
     </ControlButton>
   );
 }
@@ -369,9 +486,9 @@ export function WatchPWAMeta() {
 // --- Utilities ---
 
 export function getBatteryColor(level: number): string {
-  if (level > 40) return '#22c55e'; // green
-  if (level > 20) return '#f59e0b'; // amber
-  return '#ef4444'; // red
+  if (level > 40) return gaugeTone.success;
+  if (level > 20) return gaugeTone.warning;
+  return gaugeTone.danger;
 }
 
 export function watchStateVariant(state: string): 'info' | 'success' | 'neutral' {
@@ -383,9 +500,9 @@ export function watchStateVariant(state: string): 'info' | 'success' | 'neutral'
 export function watchStateClassName(state: string): string {
   switch (state) {
     case 'driving':
-      return 'bg-blue-500/20 text-blue-400';
+      return severityTokens.info.fg;
     case 'charging':
-      return 'bg-emerald-500/20 text-emerald-400';
+      return severityTokens.success.fg;
     case 'asleep':
       return 'bg-[var(--surface-2)] text-[var(--text-muted)]';
     case 'online':
@@ -395,15 +512,27 @@ export function watchStateClassName(state: string): string {
   }
 }
 
-export function formatRelativeTime(isoTimestamp: string): string {
+export function formatRelativeTime(
+  isoTimestamp: string,
+  translate?: (key: string, fallback: string, count?: number) => string,
+): string {
   if (!isoTimestamp) return '';
   const now = Date.now();
   const then = new Date(isoTimestamp).getTime();
   if (Number.isNaN(then)) return '';
   const diffSec = Math.floor((now - then) / 1000);
 
-  if (diffSec < 60) return 'just now';
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
+  // relative-time: watch face has no hover or focus, so the age must be visible
+  if (diffSec < 60) return translate?.('watch.updated.justNow', 'just now') ?? 'just now';
+  if (diffSec < 3600) {
+    const count = Math.floor(diffSec / 60);
+    return translate?.('watch.updated.minutesAgo', '{{count}}m ago', count) ?? `${count}m ago`;
+  }
+  if (diffSec < 86400) {
+    const count = Math.floor(diffSec / 3600);
+    return translate?.('watch.updated.hoursAgo', '{{count}}h ago', count) ?? `${count}h ago`;
+  }
+  const count = Math.floor(diffSec / 86400);
+  return translate?.('watch.updated.daysAgo', '{{count}}d ago', count) ?? `${count}d ago`;
 }
+

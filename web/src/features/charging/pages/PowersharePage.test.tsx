@@ -44,6 +44,8 @@ import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { DataStateSource } from '@/api/dataState';
+import type { Vehicle } from '@/types/vehicle';
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { SignalObservation } from '@/types/signals';
@@ -63,7 +65,8 @@ import {
 // call args (for param-wiring assertions) and routes by signal_name.
 const h = vi.hoisted(() => ({
   selectedVehicleId: 7 as number | null,
-  queries: {} as Record<string, unknown>,
+  vehiclesQuery: {} as DataStateSource<Vehicle[]>,
+  queries: {} as Record<string, QueryStub>,
   observe: vi.fn((_vehicleId: unknown, opts?: { signal_name?: string; limit?: number }) => {
     const name = opts?.signal_name ?? '';
     return (
@@ -114,13 +117,23 @@ vi.mock('@/api/hooks/useTelemetry', async (importOriginal) => {
   return { ...actual, useSignalObservations: h.observe };
 });
 
-vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({
-    vehicleId: h.selectedVehicleId,
-    vehicle: null,
-    vehicles: [],
-    setVehicleId: vi.fn(),
-  }),
+vi.mock('@/hooks/useSelectedVehicle', async () => {
+  const { deriveDataState } = await import('@/api/dataState');
+  return {
+    useSelectedVehicle: () => ({
+      vehicleId: h.selectedVehicleId,
+      vehicle: null,
+      vehicles: h.vehiclesQuery.data ?? [],
+      vehiclesState: deriveDataState(h.vehiclesQuery, {
+        unavailable: h.vehiclesQuery.isSuccess && h.vehiclesQuery.data?.length === 0,
+      }),
+      setVehicleId: vi.fn(),
+    }),
+  };
+});
+
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => ['var(--theme-primary)', 'var(--text-secondary)'],
 }));
 
 // The header vehicle picker owns its own store wiring (covered by its own
@@ -130,6 +143,9 @@ vi.mock('@/components/forms', () => ({
 }));
 
 import PowersharePage from './PowersharePage';
+import runtimeCardSource from '../components/powershare-modernization/RuntimeCard.tsx?raw';
+import snapshotCardSource from '../components/powershare-modernization/SnapshotCard.tsx?raw';
+import stopReasonCardSource from '../components/powershare-modernization/StopReasonCard.tsx?raw';
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion, reached via FadeIn
 // and the freshness chip). The chart/observer polyfills already live in
@@ -155,6 +171,7 @@ interface QueryStub {
   isFetching: boolean;
   isStale: boolean;
   dataUpdatedAt: number;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   refetch: () => void;
 }
 
@@ -199,7 +216,7 @@ function numObs(name: string, value: number | null, ts: string): SignalObservati
 // A fully-populated, "sharing to Home at 3.25 kW with 5.5h left" fleet.
 function readyFleet() {
   h.queries[POWERSHARE_SIGNALS.status] = makeQuery({
-    data: [textObs(POWERSHARE_SIGNALS.status, 'PowershareStatusActive', '2024-05-01T10:00:00Z')],
+    data: [textObs(POWERSHARE_SIGNALS.status, 'PowershareStateEnabled', '2024-05-01T10:00:00Z')],
   });
   h.queries[POWERSHARE_SIGNALS.type] = makeQuery({
     data: [textObs(POWERSHARE_SIGNALS.type, 'PowershareTypeHome', '2024-05-01T10:00:00Z')],
@@ -245,9 +262,16 @@ function renderPage() {
   );
 }
 
+const vehicle: Vehicle = {
+  id: 7, vehicle_id: 7, vin: 'fixture-vin', display_name: 'Fixture vehicle',
+  model: 'Cybertruck', trim_badging: '', exterior_color: '', wheel_type: '',
+  state: 'online', healthy: true, created_at: '', updated_at: '',
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   h.selectedVehicleId = 7;
+  h.vehiclesQuery = { data: [vehicle], isSuccess: true, refetch: vi.fn() };
   h.queries = {};
   readyFleet();
 });
@@ -257,8 +281,78 @@ afterEach(() => {
 });
 
 describe('PowersharePage', () => {
+  it.each([
+    ['RuntimeCard', runtimeCardSource],
+    ['SnapshotCard', snapshotCardSource],
+    ['StopReasonCard', stopReasonCardSource],
+  ])('%s uses the canonical layout category export', (_name, source) => {
+    expect(source).toMatch(/import \{ LayoutCard \} from '@\/components\/layout';/);
+    expect(source).not.toContain('@/components/layout/layout-reference');
+  });
+
+  it('shows vehicle lookup loading instead of a resolved empty selection', () => {
+    h.selectedVehicleId = null;
+    h.vehiclesQuery = { isLoading: true, isFetching: true };
+
+    renderPage();
+
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.queryByText('Select a vehicle to view its Powershare telemetry.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Signal Snapshot')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(h.observe.mock.calls.every(([id]) => id === undefined)).toBe(true);
+  });
+
+  it('surfaces initial vehicle lookup failure and retries that source only', () => {
+    h.selectedVehicleId = null;
+    const refetch = vi.fn();
+    h.vehiclesQuery = { isError: true, error: new Error('lookup failed'), refetch };
+
+    renderPage();
+
+    expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
+    expect(screen.queryByText('Select a vehicle to view its Powershare telemetry.')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    for (const query of Object.values(h.queries)) {
+      expect(query.refetch).not.toHaveBeenCalled();
+    }
+  });
+
+  it('distinguishes a paused vehicle lookup from loading and an empty fleet', () => {
+    h.selectedVehicleId = null;
+    h.vehiclesQuery = { isPending: true, fetchStatus: 'paused' };
+
+    const { container } = renderPage();
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByRole('status')).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByText('Select a vehicle to view its Powershare telemetry.')).not.toBeInTheDocument();
+    expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
+  });
+
+  it('retains populated telemetry when the vehicle lookup refresh fails', () => {
+    const refetch = vi.fn();
+    h.vehiclesQuery = {
+      data: [vehicle], isError: true, error: new Error('lookup refresh failed'), refetch,
+    };
+
+    renderPage();
+
+    const warning = within(screen.getByTestId('stale-refresh-warning'));
+    expect(warning.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Powershare metrics' })).toHaveTextContent('3.25 kW');
+    expect(screen.getByText('Signal Snapshot')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    fireEvent.click(warning.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the no-vehicle empty state (and no telemetry panels) when the fleet is empty', () => {
     h.selectedVehicleId = null;
+    h.vehiclesQuery = { data: [], isSuccess: true };
 
     renderPage();
 
@@ -269,7 +363,7 @@ describe('PowersharePage', () => {
 
     // None of the telemetry panels mount without a vehicle in scope.
     expect(screen.queryByText('Output Power Trend')).not.toBeInTheDocument();
-    expect(screen.queryByText('Live Session')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Powershare status' })).not.toBeInTheDocument();
     expect(screen.queryByText('Signal Snapshot')).not.toBeInTheDocument();
     // Vehicle selection belongs to the application header, not the page.
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
@@ -281,15 +375,16 @@ describe('PowersharePage', () => {
     // KPI band — humanised enums + SI-formatted numbers, scoped to its region
     // so the same values on sibling panels can't create a false positive.
     const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
-    expect(kpi.getByText('Active')).toBeInTheDocument();
+    expect(kpi.getByText('Enabled')).toBeInTheDocument();
     expect(kpi.getByText('Home')).toBeInTheDocument();
     expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
-    expect(kpi.getByText('5.5 h')).toBeInTheDocument();
+    expect(kpi.getByText('5.50 h')).toBeInTheDocument();
 
     // Every section renders (titles are unique per panel; stop reason is
     // identified by its help copy which only appears on its panel).
     expect(screen.getAllByText('Output Power Trend').length).toBeGreaterThan(0);
-    expect(screen.getByText('Live Session')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
+    expect(screen.queryByText(/live session|current sharing state|runtime at current output/i)).not.toBeInTheDocument();
     expect(screen.getAllByText('Remaining Runtime Trend').length).toBeGreaterThan(0);
     expect(screen.getByText('Signal Snapshot')).toBeInTheDocument();
     expect(
@@ -297,13 +392,13 @@ describe('PowersharePage', () => {
     ).toBeInTheDocument();
 
     // Derived state propagates beyond the KPI band into the live-session panel.
-    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Enabled').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('3.25 kW').length).toBeGreaterThanOrEqual(2);
 
     // a11y landmarks — the three labelled section regions.
     expect(screen.getByRole('region', { name: 'Powershare metrics' })).toBeInTheDocument();
     expect(
-      screen.getByRole('region', { name: 'Powershare output and live session' }),
+      screen.getByRole('region', { name: 'Powershare status' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('region', { name: 'Powershare runtime trend and stop reason' }),
@@ -337,13 +432,30 @@ describe('PowersharePage', () => {
 
     // Shell + panel titles still render above the skeletons.
     expect(screen.getByRole('heading', { level: 1, name: 'Powershare' })).toBeInTheDocument();
-    expect(screen.getByText('Live Session')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
 
     // KPI band degrades to "—" placeholders for all four metrics (never blank).
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
 
-    // One or more skeletons per panel — the animate-pulse marker.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1);
+    // Three static panel placeholders; each trend owns seven chart-shaped bars.
+    const skeleton = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(skeleton).length).toBeGreaterThanOrEqual(1);
+    expect(container.querySelectorAll(skeleton)).toHaveLength(3);
+    for (const [title, height] of [['Powershare status', 220], ['Stop Reason', 64], ['Signal Snapshot', 200]] as const) {
+      const card = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(card?.querySelectorAll(skeleton)).toHaveLength(1);
+      expect(card?.querySelector(skeleton)).toHaveStyle({ height: `${height}px` });
+    }
+    for (const title of ['Output Power Trend', 'Remaining Runtime Trend']) {
+      const card = screen.getAllByRole('heading', { name: title, exact: true })[0].closest('[data-card]');
+      const chart = card?.querySelector('[data-chart-state="loading"]');
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      const placeholder = chart?.querySelector('[data-testid="chart-skeleton"]');
+      expect(placeholder).toHaveAttribute('role', 'status');
+      expect(placeholder).toHaveAttribute('aria-busy', 'true');
+      expect(placeholder?.querySelectorAll(':scope > [aria-hidden="true"][class~="rounded-t"]'))
+        .toHaveLength(7);
+    }
 
     // No resolved values and no error copy leak while loading.
     expect(screen.queryByText('3.25 kW')).not.toBeInTheDocument();
@@ -382,14 +494,16 @@ describe('PowersharePage', () => {
 
     renderPage();
 
-    // `runtimeError` is `status ?? type ?? power ?? hours` — the stop signal is
-    // deliberately excluded — while `snapshotError` is a find() across ALL
-    // five. So exactly two panels blank: StopReasonPanel + SignalSnapshotPanel.
-    expect(screen.getAllByText(/Can't reach server/i)).toHaveLength(2);
+    // Only the failed stop source is fatal. The combined snapshot keeps the
+    // four healthy signals rather than discarding them because of one failure.
+    expect(screen.getAllByText(/Can't reach server/i)).toHaveLength(1);
+    const snapshot = within(screen.getByRole('table', { name: 'charging:powershare-signals' }));
+    expect(snapshot.getByText('3.25 kW')).toBeInTheDocument();
+    expect(snapshot.getByText('5.50 h')).toBeInTheDocument();
 
     // The live-session panel keeps rendering its ready content (StatusPill),
     // proving it was NOT gated on the stop-signal error. KPI + runtime = 2.
-    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Enabled').length).toBeGreaterThanOrEqual(2);
     // The power trend panel likewise stays healthy.
     expect(screen.getAllByText('Output Power Trend').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Remaining Runtime Trend').length).toBeGreaterThan(0);
@@ -403,7 +517,7 @@ describe('PowersharePage', () => {
     // Each panel owns its own contextual empty copy.
     expect(screen.getByText(/No power readings yet/i)).toBeInTheDocument();
     expect(screen.getByText(/No runtime readings yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/No live Powershare session/i)).toBeInTheDocument();
+    expect(screen.getAllByText('No Powershare signals received yet.')).toHaveLength(2);
     expect(screen.getByText(/No stop reason recorded/i)).toBeInTheDocument();
 
     // KPI band renders its "—" placeholders, and no error surfaces.
@@ -421,6 +535,208 @@ describe('PowersharePage', () => {
     for (const name of Object.values(POWERSHARE_SIGNALS)) {
       expect(h.queries[name].refetch).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it('keeps recorded values and both trends when a background refresh fails', () => {
+    const original = h.queries[POWERSHARE_SIGNALS.power];
+    h.queries[POWERSHARE_SIGNALS.power] = {
+      ...original, error: new Error('refresh failed'), isError: true,
+    };
+    renderPage();
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.getAllByText('Output Power Trend').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps the ready snapshot and runtime when one trend is still initially loading', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    });
+    renderPage();
+    expect(screen.getAllByText('Enabled').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('5.50 h').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('table', { name: 'charging:powershare-signals' })).toBeInTheDocument();
+  });
+
+  it('marks non-finite observations unknown instead of displaying measured zero', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      data: [numObs(POWERSHARE_SIGNALS.power, Number.NaN, '2024-05-01T10:02:00Z')],
+    });
+    renderPage();
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('—')).toBeInTheDocument();
+    expect(kpi.queryByText('0.00 kW')).not.toBeInTheDocument();
+    expect(screen.getByText(/No power readings yet/i)).toBeInTheDocument();
+  });
+
+  it('identifies initial summary loading while keeping unknown readings and every panel', () => {
+    setAll(() => makeQuery({
+      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    }));
+
+    renderPage();
+
+    const region = screen.getByRole('region', { name: 'Powershare metrics' });
+    const kpi = within(region);
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(kpi.getByText('Loading source measurements')).toBeInTheDocument();
+    expect(kpi.queryByText('No source measurements')).not.toBeInTheDocument();
+    expect(kpi.getAllByText('—')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Signal Snapshot' })).toBeInTheDocument();
+  });
+
+  it('keeps partial retained summary readings and the failed source retry independent', () => {
+    h.queries[POWERSHARE_SIGNALS.power].error = new Error('power refresh failed');
+    h.queries[POWERSHARE_SIGNALS.power].isError = true;
+    h.queries[POWERSHARE_SIGNALS.stopReason] = makeQuery({
+      error: new Error('stop unavailable'), isError: true, dataUpdatedAt: 0,
+    });
+
+    renderPage();
+
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('Retained source measurements')).toBeInTheDocument();
+    expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
+    expect(kpi.queryByText('Source measurements available')).not.toBeInTheDocument();
+    const snapshot = within(screen.getByRole('table', { name: 'charging:powershare-signals' }));
+    expect(snapshot.getByText('3.25 kW')).toBeInTheDocument();
+    expect(snapshot.getByText('5.50 h')).toBeInTheDocument();
+    const stop = screen.getByRole('heading', { name: 'Stop Reason' }).closest('[data-card]');
+    expect(stop).not.toBeNull();
+    fireEvent.click(within(stop as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(h.queries[POWERSHARE_SIGNALS.stopReason].refetch).toHaveBeenCalledTimes(1);
+    expect(h.queries[POWERSHARE_SIGNALS.power].refetch).not.toHaveBeenCalled();
+  });
+
+  it('identifies independently pending summary evidence without suppressing resolved neighbors', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    });
+
+    renderPage();
+
+    const region = screen.getByRole('region', { name: 'Powershare metrics' });
+    const kpi = within(region);
+    expect(region).not.toHaveAttribute('aria-busy');
+    expect(kpi.getByText('Some measurements unavailable')).toBeInTheDocument();
+    expect(kpi.getByText('Enabled')).toBeInTheDocument();
+    expect(kpi.getByText('5.50 h')).toBeInTheDocument();
+    expect(kpi.getByText('—')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'charging:powershare-signals' })).toBeInTheDocument();
+  });
+
+  it('retains paused recorded evidence without presenting it as fully available', () => {
+    h.queries[POWERSHARE_SIGNALS.hoursLeft].fetchStatus = 'paused';
+
+    renderPage();
+
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('Retained source measurements')).toBeInTheDocument();
+    expect(kpi.getByText('5.50 h')).toBeInTheDocument();
+    expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
+    expect(kpi.queryByText('Source measurements available')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+  });
+
+  it('explains authoritative empty snapshots while retaining all five signal identities', () => {
+    setAll(() => makeQuery({ data: [] }));
+
+    renderPage();
+
+    const snapshot = within(screen.getByRole('region', { name: 'Signal Snapshot' }));
+    expect(snapshot.getByText('No Powershare signals received yet.')).toBeInTheDocument();
+    const table = snapshot.getByRole('table', { name: 'charging:powershare-signals' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(5);
+    for (const label of ['Status', 'Type', 'Output Power', 'Hours Remaining', 'Stop Reason']) {
+      expect(within(table).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(table).getAllByText('—')).toHaveLength(10);
+  });
+
+  it('does not classify initially unresolved snapshots as authoritative empty', () => {
+    setAll(() => makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
+
+    renderPage();
+
+    const snapshot = within(screen.getByRole('region', { name: 'Signal Snapshot' }));
+    expect(snapshot.queryByText('No Powershare signals received yet.')).not.toBeInTheDocument();
+    expect(snapshot.getByRole('heading', { name: 'Signal Snapshot' })).toBeInTheDocument();
+  });
+
+  it('keeps the refresh control mobile-sized and every original source refresh action', () => {
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh Powershare data' });
+    expect(refresh).toHaveClass('h-11', 'min-h-11', 'min-w-11', 'md:h-10');
+    fireEvent.click(refresh);
+    for (const name of Object.values(POWERSHARE_SIGNALS)) {
+      expect(h.queries[name].refetch).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it.each([false, true])('distinguishes paused-without-data from successful empty observations (loading=%s)', (isLoading) => {
+    setAll(() => makeQuery({ fetchStatus: 'paused', isLoading, dataUpdatedAt: 0 }));
+    renderPage();
+
+    const card = screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]');
+    expect(card).not.toBeNull();
+    const runtime = within(card as HTMLElement);
+    expect(runtime.getAllByText('Refresh paused').length).toBeGreaterThan(0);
+    expect(runtime.queryByText('No Powershare signals received yet.')).not.toBeInTheDocument();
+    expect(runtime.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Powershare metrics' })).not.toHaveAttribute('aria-busy');
+  });
+
+  it('preserves recorded zero output and hours without claiming live activity', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      data: [numObs(POWERSHARE_SIGNALS.power, 0, '2024-05-01T10:02:00Z')],
+    });
+    h.queries[POWERSHARE_SIGNALS.hoursLeft] = makeQuery({
+      data: [numObs(POWERSHARE_SIGNALS.hoursLeft, 0, '2024-05-01T10:02:00Z')],
+    });
+    renderPage();
+
+    const card = screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]');
+    const runtime = within(card as HTMLElement);
+    expect(runtime.getByText('Enabled')).toBeInTheDocument();
+    expect(runtime.getByText('Home')).toBeInTheDocument();
+    expect(runtime.getByText('0.00 kW')).toBeInTheDocument();
+    expect(runtime.getByText('0.00 h')).toBeInTheDocument();
+    expect(runtime.queryByText('No Powershare signals received yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/live session|current sharing state/i)).not.toBeInTheDocument();
+  });
+
+  it('retains runtime observations on refresh failure, retries only the failed source, and recovers', () => {
+    h.queries[POWERSHARE_SIGNALS.status].error = new Error('status refresh failed');
+    h.queries[POWERSHARE_SIGNALS.status].isError = true;
+    const view = renderPage();
+    const runtimeCard = () => screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]') as HTMLElement;
+    const runtime = within(runtimeCard());
+    expect(runtime.getByText('Enabled')).toBeInTheDocument();
+    expect(runtime.getByText('Home')).toBeInTheDocument();
+    expect(runtime.getByText('3.25 kW')).toBeInTheDocument();
+    expect(runtime.getByText('5.50 h')).toBeInTheDocument();
+    fireEvent.click(runtime.getByRole('button', { name: 'Retry unavailable sources: Status' }));
+    expect(h.queries[POWERSHARE_SIGNALS.status].refetch).toHaveBeenCalledTimes(1);
+    for (const name of [POWERSHARE_SIGNALS.type, POWERSHARE_SIGNALS.power, POWERSHARE_SIGNALS.hoursLeft, POWERSHARE_SIGNALS.stopReason]) {
+      expect(h.queries[name].refetch).not.toHaveBeenCalled();
+    }
+    h.queries[POWERSHARE_SIGNALS.status].error = null;
+    h.queries[POWERSHARE_SIGNALS.status].isError = false;
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/charging/powershare']}>
+          <ToastProvider><PowersharePage /></ToastProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(within(runtimeCard()).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(within(runtimeCard()).getByText('Enabled')).toBeInTheDocument();
+    expect(screen.queryByText(/live session/i)).not.toBeInTheDocument();
   });
 });
 
@@ -455,12 +771,12 @@ describe('powershare derivation helpers', () => {
   });
 
   it('humanizeEnum strips the signal prefix, splits camelCase, and null-guards', () => {
-    expect(humanizeEnum('PowershareStatusActive', POWERSHARE_SIGNALS.status)).toBe('Active');
+    expect(humanizeEnum('PowershareStatusActive', POWERSHARE_SIGNALS.status)).toBe('PowershareStatusActive');
     expect(humanizeEnum('PowershareStopReasonUserRequest', POWERSHARE_SIGNALS.stopReason)).toBe(
-      'User Request',
+      'PowershareStopReasonUserRequest',
     );
-    // No matching prefix falls back to the generic "Powershare" strip / split.
-    expect(humanizeEnum('SomethingElse', 'NoMatch')).toBe('Something Else');
+    // Unknown enum identities remain intact rather than guessing at a label.
+    expect(humanizeEnum('SomethingElse', 'NoMatch')).toBe('SomethingElse');
     expect(humanizeEnum(null)).toBeNull();
   });
 

@@ -1,0 +1,24 @@
+[i18n-split] generated locale files are invalid (usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.
+
+⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯
+Error: Command failed: C:\Users\AtulM\AppData\Local\npm-cache\_npx\bac97da9607b7ef2\node_modules\node\bin\node.exe scripts/split-i18n-catalog.mjs --check
+    at genericNodeError (node:internal/errors:999:15)
+    at wrappedFn (node:internal/errors:544:14)
+    at checkExecSyncError (node:child_process:943:11)
+    at execFileSync (node:child_process:979:15)
+    at PluginContext.buildStart (file:///F:/github/TeslaSync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791004949316-71ab06af6934a.mjs:55:5)
+    at EnvironmentPluginContainer.hookParallel (file:///F:/github/TeslaSync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)
+    at EnvironmentPluginContainer.buildStart (file:///F:/github/TeslaSync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)
+    at file:///F:/github/TeslaSync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49
+    at initServer (file:///F:/github/TeslaSync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)
+    at _createServer (file:///F:/github/TeslaSync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {
+  status: 1,
+  signal: null,
+  output: [ null, null, null ],
+  pid: 33556,
+  stdout: null,
+  stderr: null
+}
+
+
+

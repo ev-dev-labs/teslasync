@@ -35,6 +35,7 @@ type RouterOptions struct {
 	GasPriceWorker    *worker.GasPriceWorker   // If set, enables gas price management endpoints
 	PollEngine        *polling.PollEngine      // If set, enables polling engine dashboard endpoints
 	SignalStore       *signal.Store            // If set, enables /internal/flush endpoint
+	LiveSignalStore   signal.LiveSignalStore   // Shared App read boundary, independent of telemetry ownership.
 	WebhookTrigger    apiwhrx.WebhookProcessor // If set, enables public webhook receiver endpoint
 	CacheStore        *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
 	DataRepairScanner *apidatarepair.Scanner   // If set, shared by manual and scheduled integrity scans

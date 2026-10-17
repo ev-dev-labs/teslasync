@@ -212,3 +212,157 @@ describe('resilientFetch — network failures are not expired sessions', () => {
     fetchMock.mockRestore()
   })
 })
+
+describe('resilientFetch — GET-only version diagnostic', () => {
+  it.each([
+    ['401', () => new Response(null, { status: 401 })],
+    ['403', () => new Response(null, { status: 403 })],
+    ['HTML login page', () => new Response('<title>Sign in</title>', {
+      headers: { 'Content-Type': 'text/html' },
+    })],
+    ['opaque redirect', () => {
+      const response = new Response(null)
+      Object.defineProperty(response, 'type', { value: 'opaqueredirect' })
+      return response
+    }],
+  ] as const)('uses supported GET to classify %s after an initial network TypeError', async (_label, authResponse) => {
+    const { resilientFetch } = await loadResilience()
+    const networkError = new TypeError('Failed to fetch')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
+      if (input === '/api/v1/vehicles') throw networkError
+      if (input !== '/api/v1/system/version') throw new Error('Unexpected diagnostic URL')
+      if (options?.method !== 'GET') {
+        return new Response(null, { status: 405, headers: { Allow: 'GET' } })
+      }
+      return authResponse()
+    })
+
+    try {
+      await expect(resilientFetch('/vehicles', { retries: 0 }))
+        .rejects.toMatchObject({ status: 401 })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/system/version', {
+        method: 'GET',
+        redirect: 'manual',
+      })
+      expect(assignSpy).toHaveBeenCalledTimes(1)
+      expect(purgeMock).toHaveBeenCalledTimes(1)
+      expect(ORDER.indexOf('purge')).toBeLessThan(ORDER.indexOf('navigate'))
+    } finally {
+      fetchMock.mockRestore()
+    }
+  })
+
+  it('retains the initiating request and its TypeError when supported GET returns healthy JSON', async () => {
+    const { resilientFetch } = await loadResilience()
+    const networkError = new TypeError('Failed to fetch')
+    const controller = new AbortController()
+    const body = JSON.stringify({ acknowledged: true })
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
+      if (input === '/api/v1/vehicles') throw networkError
+      if (input !== '/api/v1/system/version') throw new Error('Unexpected diagnostic URL')
+      if (options?.method !== 'GET') {
+        return new Response(null, { status: 405, headers: { Allow: 'GET' } })
+      }
+      return new Response(JSON.stringify({ app_version: 'test' }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    try {
+      await expect(resilientFetch('/vehicles', {
+        retries: 0,
+        timeout: 250,
+        method: 'POST',
+        body,
+        headers: { 'X-Diagnostic-Test': 'original' },
+        credentials: 'include',
+        signal: controller.signal,
+      })).rejects.toBe(networkError)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/vehicles', {
+        method: 'POST',
+        body,
+        headers: expect.any(Headers),
+        credentials: 'include',
+        signal: expect.any(AbortSignal),
+      })
+      expect(Array.from(new Headers(fetchMock.mock.calls[0][1]?.headers).entries()))
+        .toEqual([['x-diagnostic-test', 'original']])
+      expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/system/version', {
+        method: 'GET',
+        redirect: 'manual',
+      })
+      expect(controller.signal.aborted).toBe(false)
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(purgeMock).not.toHaveBeenCalled()
+    } finally {
+      fetchMock.mockRestore()
+    }
+  })
+
+  it('does not probe or reauthenticate after caller cancellation of an initial TypeError', async () => {
+    const { resilientFetch } = await loadResilience()
+    const controller = new AbortController()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      controller.abort()
+      throw new TypeError('Failed to fetch')
+    })
+
+    try {
+      await expect(resilientFetch('/vehicles', { retries: 0, signal: controller.signal }))
+        .rejects.toMatchObject({ name: 'AbortError' })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(purgeMock).not.toHaveBeenCalled()
+    } finally {
+      fetchMock.mockRestore()
+    }
+  })
+
+  it('does not issue a diagnostic request while the browser is offline', async () => {
+    const { resilientFetch, getConnectionStatus } = await loadResilience()
+    const onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+
+    try {
+      await expect(resilientFetch('/vehicles', { retries: 0 }))
+        .rejects.toMatchObject({ status: 0, message: 'No network connection' })
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(getConnectionStatus()).toBe('offline')
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(purgeMock).not.toHaveBeenCalled()
+    } finally {
+      fetchMock.mockRestore()
+      onlineSpy.mockRestore()
+    }
+  })
+
+  it('keeps timeout aborts distinct from network TypeErrors without a diagnostic request', async () => {
+    const { resilientFetch } = await loadResilience()
+    vi.useFakeTimers()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((_input, options) => (
+      new Promise<Response>((_resolve, reject) => {
+        options?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'))
+        }, { once: true })
+      })
+    ))
+
+    try {
+      const request = resilientFetch('/vehicles', { retries: 0, timeout: 25 })
+      const rejected = expect(request).rejects.toMatchObject({
+        status: 408,
+        message: 'Request timed out',
+      })
+      await vi.advanceTimersByTimeAsync(25)
+      await rejected
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(assignSpy).not.toHaveBeenCalled()
+      expect(purgeMock).not.toHaveBeenCalled()
+    } finally {
+      fetchMock.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+})

@@ -16,13 +16,14 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { FsdInsights } from '@/types/fsd';
 
 import { bucketSharePct, buildWeekdayPattern } from './helpers';
 import type { FsdSectionState } from './types';
 import { useFsdWeekdayLabel } from './useFsdWeekdayLabel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FsdWeekdayPatternProps {
   insights: FsdInsights | undefined;
@@ -37,6 +38,7 @@ interface FsdWeekdayPatternProps {
  * accessible name say so, and nothing here is presented as behaviour scoring.
  */
 export function FsdWeekdayPattern({ insights, state }: FsdWeekdayPatternProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const weekdayLabel = useFsdWeekdayLabel();
@@ -111,7 +113,7 @@ export function FsdWeekdayPattern({ insights, state }: FsdWeekdayPatternProps) {
             label: seriesName,
             format: (value) =>
               typeof value === 'number'
-                ? `${value.toFixed(1)} ${unitLabel}`
+                ? `${fmtNumber(value)} ${unitLabel}`
                 : t('fsd.notReported', 'Not reported'),
           },
           {
@@ -119,7 +121,7 @@ export function FsdWeekdayPattern({ insights, state }: FsdWeekdayPatternProps) {
             label: t('fsd.share.series', 'Self-driving share'),
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value, 1)}%`
+                ? `${fmtNumber(value)}%`
                 : t('fsd.notReported', 'Not reported'),
           },
           {
@@ -145,7 +147,7 @@ export function FsdWeekdayPattern({ insights, state }: FsdWeekdayPatternProps) {
                   valueFormatter={(value) =>
                     typeof value === 'number'
                       ? t('fsd.trend.value', '{{value}} {{unit}}', {
-                          value: value.toFixed(1),
+                          value: fmtNumber(value),
                           unit: unitLabel,
                         })
                       : t('fsd.notReported', 'Not reported')

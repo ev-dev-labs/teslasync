@@ -30,6 +30,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecurityEvent } from '@/types/admin';
+import { deriveDataState, type DataState } from '@/api/dataState';
 
 /* ── i18n: return the English fallback, interpolating {{vars}}. ────── */
 vi.mock('react-i18next', () => ({
@@ -101,16 +102,17 @@ function makeEvent(overrides: Partial<SecurityEvent> = {}): SecurityEvent {
 }
 
 interface RenderProps {
+  sourceState?: DataState<SecurityEvent[]>;
   history?: SecurityEvent[];
   isLoading?: boolean;
   error?: unknown;
   onRetry?: () => void;
 }
 
-function renderTable({ history = [], isLoading = false, error = null, onRetry }: RenderProps = {}) {
+function renderTable({ history = [], sourceState, isLoading = false, error = null, onRetry }: RenderProps = {}) {
   return render(
     <MemoryRouter>
-      <EventHistoryTable history={history} isLoading={isLoading} error={error} onRetry={onRetry} />
+      <EventHistoryTable history={history} sourceState={sourceState} isLoading={isLoading} error={error} onRetry={onRetry} />
     </MemoryRouter>,
   );
 }
@@ -128,10 +130,43 @@ afterEach(() => {
 /* ── Tests ────────────────────────────────────────────────────────── */
 
 describe('EventHistoryTable — structure', () => {
+  it('labels measured open, closed and unknown doors consistently in the value checklist', () => {
+    renderTable({ history: [
+      makeEvent({ id: 'closed', doorState: false }),
+      makeEvent({ id: 'open', doorState: true }),
+      makeEvent({ id: 'unknown', doorState: null }),
+    ] });
+    fireEvent.click(screen.getByRole('button', { name: 'Doors filter' }));
+    for (const label of ['Closed', 'Open', 'Unknown']) {
+      expect(screen.getByRole('checkbox', { name: label })).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getAllByTestId('ts')).toHaveLength(1);
+    expect(screen.getByText('Open')).toBeInTheDocument();
+    expect(screen.queryByText('Closed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+  });
+
+  it('keeps explicit false separate from an unknown lock value in the value checklist', () => {
+    renderTable({ history: [
+      makeEvent({ id: 'locked', locked: true }),
+      makeEvent({ id: 'unlocked', locked: false }),
+      makeEvent({ id: 'unknown', locked: null }),
+    ] });
+    fireEvent.click(screen.getByRole('button', { name: 'Lock filter' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Unlocked' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getAllByTestId('ts')).toHaveLength(1);
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+  });
+
   it('renders the panel title, all five column headers, and a data row', () => {
     renderTable({ history: [makeEvent({ locked: true, sentryMode: true })] });
 
-    expect(screen.getByText('Security Event History')).toBeInTheDocument();
+    expect(screen.getByText('Security event history')).toBeInTheDocument();
 
     // Every column header is present (Time is a sortable button, the rest spans).
     expect(screen.getByRole('button', { name: 'Time' })).toBeInTheDocument();
@@ -179,10 +214,10 @@ describe('EventHistoryTable — door + window branches', () => {
     renderTable({ history: [makeEvent()] });
 
     const door = screen.getByText('Closed', { exact: true });
-    expect(door.className).toContain('text-emerald-300');
+    expect(door.className).toContain('text-[var(--text-secondary)]');
 
-    const windows = screen.getByText('All Closed');
-    expect(windows.className).toContain('text-emerald-300');
+    const windows = screen.getByText('All closed');
+    expect(windows.className).toContain('text-[var(--text-secondary)]');
   });
 
   it('renders an open door (raw enum) and an interpolated window count in amber', () => {
@@ -191,11 +226,44 @@ describe('EventHistoryTable — door + window branches', () => {
     });
 
     const door = screen.getByText('DriverFrontOpen');
-    expect(door.className).toContain('text-amber-300');
+    expect(door.className).toContain('text-[var(--text-secondary)]');
 
     // 3 closed + 1 open → windowSummary interpolates "1 Open/Venting".
-    const windows = screen.getByText('1 Open/Venting');
-    expect(windows.className).toContain('text-amber-300');
+    const windows = screen.getByText('1 open/venting');
+    expect(windows.className).toContain('text-[var(--text-secondary)]');
+  });
+
+  describe('EventHistoryTable — evidence and mobile preservation', () => {
+    it('keeps unknown lock, Sentry, doors and windows separate from measured false', () => {
+      renderTable({ history: [makeEvent({
+        locked: null, sentryMode: null, doorState: null,
+        fdWindow: null, fpWindow: null, rdWindow: null, rpWindow: null,
+      })] });
+      expect(screen.getAllByText('Unknown')).toHaveLength(4);
+      expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+      expect(screen.queryByText('Off')).not.toBeInTheDocument();
+    });
+
+    it('keeps historical door and window cells accessible below md without dropping other cells', () => {
+      renderTable({ history: [makeEvent({ doorState: 'DriverFrontOpen', fdWindow: 'Open' })] });
+      for (const text of ['DriverFrontOpen', '1 open/venting']) {
+        expect(screen.getByText(text).closest('td')).not.toHaveClass('hidden');
+      }
+      expect(screen.getByText('DriverFrontOpen').closest('tr')?.querySelectorAll('td')).toHaveLength(5);
+    });
+
+    it('does not claim authoritative emptiness when the first read is paused', () => {
+      renderTable({ sourceState: deriveDataState<SecurityEvent[]>({ fetchStatus: 'paused' }) });
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      expect(screen.queryByText('No security events recorded yet.')).not.toBeInTheDocument();
+    });
+
+    it('preserves loaded rows under paused history trust', () => {
+      const history = [makeEvent()];
+      renderTable({ history, sourceState: deriveDataState({ data: history, fetchStatus: 'paused' }, { provenance: 'historical' }) });
+      expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+    });
   });
 });
 
@@ -221,10 +289,20 @@ describe('EventHistoryTable — loading + error states', () => {
   it('renders the skeleton (not the table) while loading', () => {
     const { container } = renderTable({ history: [], isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const panel = screen.getByText('Security event history').closest('[data-print-card]');
+    const skeleton = panel?.querySelector('.space-y-2[aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton?.children).toHaveLength(8);
+    for (const [index, line] of Array.from(skeleton?.children ?? []).entries()) {
+      expect(line).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(line).toHaveStyle({ width: index === 7 ? '60%' : '100%' });
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByTestId('ts')).toBeNull();
+    expect(screen.queryByText('No security events recorded yet.')).toBeNull();
     // The panel chrome is still present so the surface never goes blank.
-    expect(screen.getByText('Security Event History')).toBeInTheDocument();
+    expect(screen.getByText('Security event history')).toBeInTheDocument();
   });
 
   it('an error wins over a concurrent loading flag and suppresses the table + skeleton', () => {
@@ -237,7 +315,8 @@ describe('EventHistoryTable — loading + error states', () => {
     // QueryError's network branch (jsdom is "online" → not-found/5xx skipped).
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.space-y-2[aria-hidden="true"]')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('invokes onRetry when the error banner Retry button is clicked', () => {

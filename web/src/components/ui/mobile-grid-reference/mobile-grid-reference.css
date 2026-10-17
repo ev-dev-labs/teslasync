@@ -1,0 +1,65 @@
+/* Isolated review candidate. No existing DataTable/Table/Pagination selector is targeted. */
+.mgr-host { container: mobile-grid-reference / inline-size; }
+.mgr-mobile { display: none; }
+@container mobile-grid-reference (width < 640px) {
+  .mgr-desktop { display: none; }
+  .mgr-mobile {
+    display: block;
+    --mgr-card-pad: 12px 14px;
+    --mgr-card-radius: 12px;
+    --mgr-title-size: 15px;
+    --mgr-primary-size: 16px;
+    --mgr-meta-label-size: 11px;
+    --mgr-meta-value-size: 14px;
+    --mgr-group-header-size: 13px;
+    --mgr-control-h: 40px;
+    --mgr-tap-min: 44px;
+    --mgr-gap: 8px;
+    /* Parent shell owns nav/status offsets; candidate adds only device safe area. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mgr-group { border-radius: var(--mgr-card-radius); }
+  .mgr-card { padding: var(--mgr-card-pad); min-height: 106px; max-height: 150px; }
+  .mgr-title { font-size: var(--mgr-title-size); font-weight: 600; line-height: 20px; }
+  .mgr-primary { font-size: var(--mgr-primary-size); font-weight: 600; line-height: 22px; }
+  .mgr-meta-label { font-size: var(--mgr-meta-label-size); font-weight: 400; line-height: 16px; color: var(--text-muted); }
+  .mgr-meta-value { font-size: var(--mgr-meta-value-size); font-weight: 500; line-height: 20px; }
+  .mgr-group-header { font-size: var(--mgr-group-header-size); font-weight: 600; line-height: 20px; }
+  .mgr-progress { height: 5px; }
+  .mgr-kv { height: 48px; padding: 4px 14px; }
+  .mgr-skeleton { height: 106px; }
+  .mgr-state { min-height: 106px; }
+  .mgr-selection { bottom: var(--shell-chrome-bottom, 0px); }
+  .mgr-row, .mgr-mobile button {
+    scroll-margin-bottom: calc(var(--shell-chrome-bottom, 0px) + 44px + env(safe-area-inset-bottom, 0px));
+  }
+  /* 44px actual, non-overlapping targets; inset 2px top/bottom creates 40px chrome.
+     Search input has a 44px focus/hit region with a 40px painted background. */
+  .mgr-control {
+    min-height: var(--mgr-tap-min); min-width: var(--mgr-tap-min);
+    height: var(--mgr-tap-min);
+    border-top-width: 2px; border-bottom-width: 2px;
+    border-top-color: transparent; border-bottom-color: transparent;
+    background-clip: padding-box;
+  }
+  .mgr-search input {
+    height: var(--mgr-tap-min); min-width: 44px;
+    border-top: 2px solid transparent; border-bottom: 2px solid transparent;
+    background-clip: padding-box;
+  }
+}
+/* Modal's portal escapes the size container. Adapt ONLY this candidate's sort
+   sheet to bottom placement at every viewport width (including narrow panels).
+   Shared Modal owns focus trap/Escape/backdrop/restore. No new motion is added. */
+div.fixed:has(.mgr-sort-sheet) > div.relative {
+  align-items: flex-end; padding: 0;
+}
+.mgr-sort-sheet {
+  border-radius: 12px 12px 0 0 !important;
+  max-height: min(80dvh, 640px) !important;
+  max-width: 640px !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mgr-mobile *, .mgr-sort-sheet * { animation: none !important; transition: none !important; }
+}

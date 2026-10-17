@@ -164,9 +164,23 @@ describe('CostSummaryCards — state priority', () => {
   it('renders the skeleton grid (aria-hidden, no tiles) while loading with no stats yet', () => {
     const { container } = renderCards({ coreStats: null, isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelectorAll('[data-print-card] > [aria-hidden="true"]')).toHaveLength(18);
     const grid = container.querySelector('[aria-hidden="true"]');
     expect(grid).not.toBeNull();
+    expect(grid).toHaveClass('grid', 'grid-cols-2', 'gap-3', 'sm:gap-4', 'lg:grid-cols-3', 'xl:grid-cols-6');
+    const panels = grid?.querySelectorAll('[data-print-card]') ?? [];
+    expect(panels).toHaveLength(6);
+    for (const panel of panels) {
+      const placeholders = panel.querySelectorAll('[aria-hidden="true"]');
+      expect(placeholders).toHaveLength(3);
+      expect(placeholders[0]).toHaveStyle('height: 12px; width: 60%');
+      expect(placeholders[1]).toHaveStyle('height: 24px; width: 80%');
+      expect(placeholders[2]).toHaveStyle('height: 10px; width: 40%');
+      for (const placeholder of placeholders) {
+        expect(placeholder).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+      }
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     // Loading strictly precedes the empty / data branches.
     expect(screen.queryByText('Total Cost')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
@@ -176,7 +190,7 @@ describe('CostSummaryCards — state priority', () => {
     const { container } = renderCards({ coreStats: FULL_STATS, isLoading: true });
 
     // A background refetch must NOT flash the skeleton over existing data.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.getByText('Total Cost')).toBeInTheDocument();
     expect(screen.getByText('$123.45')).toBeInTheDocument();
   });
@@ -189,7 +203,7 @@ describe('CostSummaryCards — state priority', () => {
     expect(screen.getByText(/no charging sessions in the selected range/i)).toBeInTheDocument();
     // No tiles, no skeleton.
     expect(screen.queryByText('Total Cost')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 });
 
@@ -204,17 +218,17 @@ describe('CostSummaryCards — populated tiles', () => {
 
     // Avg $/kWh — 3dp currency.
     expect(screen.getByText('Avg $/kWh')).toBeInTheDocument();
-    expect(screen.getByText('$0.123')).toBeInTheDocument();
+    expect(screen.getByText('$0.12')).toBeInTheDocument();
 
     // Cost Per Mile — 3dp currency + "per mi" subtitle.
     expect(screen.getByText('Cost Per Mile')).toBeInTheDocument();
-    expect(screen.getByText('$0.050')).toBeInTheDocument();
+    expect(screen.getByText('$0.05')).toBeInTheDocument();
     expect(screen.getByText('per mi')).toBeInTheDocument();
 
     // Total Energy — kWh value + gal-equiv subtitle.
     expect(screen.getByText('Total Energy')).toBeInTheDocument();
-    expect(screen.getByText('250.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('7.5 gal equiv')).toBeInTheDocument();
+    expect(screen.getByText('250.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('7.50 gal equiv')).toBeInTheDocument();
 
     // Gas Savings — currency value + "vs $/gal" subtitle.
     expect(screen.getByText('Gas Savings $')).toBeInTheDocument();
@@ -223,7 +237,7 @@ describe('CostSummaryCards — populated tiles', () => {
 
     // Savings % — 1dp percent.
     expect(screen.getByText('Savings %')).toBeInTheDocument();
-    expect(screen.getByText('38.3%')).toBeInTheDocument();
+    expect(screen.getByText('38.30%')).toBeInTheDocument();
   });
 
   it('switches the distance tile to the metric label + unit when isMiles is false', () => {
@@ -293,9 +307,9 @@ describe('CostSummaryCards — null-safety hardening', () => {
 
     // count survives; everything else degrades to a formatted zero.
     expect(screen.getByText('3 sessions')).toBeInTheDocument();
-    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('0.0 gal equiv')).toBeInTheDocument();
-    expect(screen.getByText('0.0%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.00 gal equiv')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
     // totalCost + savings both render "$0.00".
     expect(screen.getAllByText('$0.00').length).toBeGreaterThanOrEqual(2);
     expect(container.textContent).not.toMatch(/NaN/);

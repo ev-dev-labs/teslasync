@@ -28,7 +28,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const { successToast, errorToast } = vi.hoisted(() => ({
@@ -107,7 +107,7 @@ function callAt(idx = 0): { path: string; opts: ReqOpts } {
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, retryDelay: 1, gcTime: 0 },
       mutations: { retry: false },
     },
   });
@@ -151,17 +151,134 @@ beforeEach(() => {
   successToast.mockReset();
   errorToast.mockReset();
   sessionStorage.clear();
+  sessionStorage.setItem(WATCH_KEY_STORAGE, 'synthetic-default-key');
   originalLocation = window.location;
   setSearch('');
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: originalLocation,
   });
   sessionStorage.clear();
 });
+
+describe('watch prerequisite read failures and recovery', () => {
+    const hooks = [
+      { name: 'summary', hook: useWatchSummary, payload: sampleSummary },
+      { name: 'complication', hook: useWatchComplication, payload: sampleComplication },
+    ] as const;
+
+    it.each(hooks)('reports denied session reads without crashing, polling, or claiming a missing key: $name', async ({ hook }) => {
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Synthetic storage read denied', 'SecurityError');
+      });
+      vi.useFakeTimers();
+      try {
+        const { result, rerender, unmount } = renderHook(() => hook(7), { wrapper });
+        expect(result.current.availability).toBe('prerequisite-error');
+        expect(result.current.availabilityError?.message).toBe('Watch access could not be checked');
+        expect(result.current.isLoading).toBe(false);
+        expect(result.current.isSuccess).toBe(false);
+        const error = result.current.availabilityError;
+        rerender();
+        expect(result.current.availabilityError).toBe(error);
+        await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
+        expect(mockedRequest).not.toHaveBeenCalled();
+        unmount();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it.each(hooks)('distinguishes an unexpected read failure and recovers to genuinely absent without requesting: $name', ({ hook }) => {
+      sessionStorage.clear();
+      const read = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('Synthetic session read failure');
+      });
+      const { result } = renderHook(() => hook(7), { wrapper });
+      expect(result.current.availability).toBe('prerequisite-error');
+      expect(result.current.availabilityError).toBeInstanceOf(Error);
+      act(() => {
+        read.mockRestore();
+        result.current.recheckAvailability();
+      });
+      expect(result.current.availability).toBe('not-configured');
+      expect(result.current.availabilityError).toBeNull();
+      expect(result.current.isSuccess).toBe(false);
+      expect(mockedRequest).not.toHaveBeenCalled();
+    });
+
+    it.each(hooks)('recovers a denied read to the existing configured session key through local retry: $name', async ({ hook, payload }) => {
+      const read = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Synthetic storage read denied', 'SecurityError');
+      });
+      mockedRequest.mockResolvedValue(payload);
+      const { result } = renderHook(() => hook(7), { wrapper });
+      expect(result.current.availability).toBe('prerequisite-error');
+      act(() => {
+        read.mockRestore();
+        result.current.recheckAvailability();
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.availability).toBe('configured');
+      expect(result.current.availabilityError).toBeNull();
+      expect(result.current.data).toBe(payload);
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+      expect(callAt().opts.headers?.get('X-API-Key')).toBe('synthetic-default-key');
+      expect(callAt().opts.skipAuthRefresh).toBe(true);
+    });
+
+    it.each(hooks)('preserves URL-key precedence when only the stored-key read is denied: $name', async ({ hook, payload }) => {
+      setSearch('?key=synthetic-url-prerequisite-key');
+      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new DOMException('Synthetic stored-key read denied', 'SecurityError');
+      });
+      mockedRequest.mockResolvedValue(payload);
+      const { result } = renderHook(() => hook(7), { wrapper });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.availability).toBe('configured');
+      expect(result.current.availabilityError).toBeNull();
+      expect(callAt().opts.headers?.get('X-API-Key')).toBe('synthetic-url-prerequisite-key');
+    });
+
+    it.each(hooks)('reports URL-key persistence denial, stops retries and polling, and recovers without bypassing persistence: $name', async ({ hook, payload }) => {
+      setSearch('?key=synthetic-url-persist-key');
+      const persist = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('Synthetic storage persistence denied', 'SecurityError');
+      });
+      mockedRequest.mockResolvedValue(payload);
+      const { result, unmount } = renderHook(() => hook(7), { wrapper });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.availability).toBe('prerequisite-error');
+      expect(result.current.availabilityError?.message).toBe('Watch access could not be checked');
+      expect(result.current.error?.name).toBe('WatchPrerequisiteError');
+      expect(result.current.isSuccess).toBe(false);
+      expect(persist).toHaveBeenCalledTimes(1);
+      expect(mockedRequest).not.toHaveBeenCalled();
+      vi.useFakeTimers();
+      try {
+        await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
+        expect(persist).toHaveBeenCalledTimes(1);
+        expect(mockedRequest).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+      act(() => {
+        persist.mockRestore();
+        result.current.recheckAvailability();
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.availability).toBe('configured');
+      expect(result.current.availabilityError).toBeNull();
+      expect(sessionStorage.getItem(WATCH_KEY_STORAGE)).toBe('synthetic-url-persist-key');
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+      expect(callAt().opts.headers?.get('X-API-Key')).toBe('synthetic-url-persist-key');
+      unmount();
+    });
+  });
 
 // ---------------------------------------------------------------------------
 // watchKeys — query-key factory
@@ -207,6 +324,39 @@ describe('WatchSummary / WatchComplication shapes', () => {
 // ---------------------------------------------------------------------------
 // useWatchSummary
 // ---------------------------------------------------------------------------
+
+describe('watch query cancellation', () => {
+  const hooks = [
+    { name: 'summary', hook: useWatchSummary, path: '/watch/summary' },
+    { name: 'complication', hook: useWatchComplication, path: '/watch/complication' },
+  ] as const;
+
+  it.each(hooks)('forwards and aborts scoped in-flight reads on vehicle changes and unmount: $name', async ({ hook, path }) => {
+    mockedRequest.mockImplementation(() => new Promise(() => {}));
+    const { rerender, unmount } = renderHook(({ vehicleId }) => hook(vehicleId), {
+      wrapper,
+      initialProps: { vehicleId: 7 },
+    });
+
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    expect(callAt().path).toBe(`${path}?vehicle_id=7`);
+    const firstSignal = callAt().opts.signal;
+    expect(firstSignal).toBeInstanceOf(AbortSignal);
+    expect(firstSignal?.aborted).toBe(false);
+
+    rerender({ vehicleId: 9 });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(firstSignal?.aborted).toBe(true);
+    expect(callAt(1).path).toBe(`${path}?vehicle_id=9`);
+    const nextSignal = callAt(1).opts.signal;
+    expect(nextSignal).toBeInstanceOf(AbortSignal);
+    expect(nextSignal).not.toBe(firstSignal);
+    expect(nextSignal?.aborted).toBe(false);
+
+    unmount();
+    expect(nextSignal?.aborted).toBe(true);
+  });
+});
 
 describe('useWatchSummary', () => {
   it('GETs /watch/summary with vehicle_id, skips the auth refresh, and threads the AbortSignal', async () => {
@@ -272,10 +422,108 @@ describe('useWatchSummary', () => {
   });
 
   it('omits the X-API-Key header entirely when no key is available', async () => {
+    sessionStorage.clear();
     mockedRequest.mockResolvedValueOnce(sampleSummary);
-    renderHook(() => useWatchSummary(3), { wrapper });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
-    expect(callAt().opts.headers?.has('X-API-Key')).toBe(false);
+    const { result } = renderHook(() => useWatchSummary(3), { wrapper });
+    expect(result.current.availability).toBe('not-configured');
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(result.current.isLoading).toBe(false);
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+});
+
+describe('watch read availability', () => {
+  const hooks = [
+    { name: 'summary', hook: useWatchSummary },
+    { name: 'complication', hook: useWatchComplication },
+  ] as const;
+
+  it.each(hooks)('gates automatic reads and polling without a configured key: $name', async ({ hook }) => {
+    sessionStorage.clear();
+    vi.useFakeTimers();
+    try {
+      const { result, unmount } = renderHook(() => hook(7), { wrapper });
+      await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
+      expect(result.current.availability).toBe('not-configured');
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.isError).toBe(false);
+      expect(result.current.isSuccess).toBe(false);
+      expect(result.current.data).toBeUndefined();
+      expect(mockedRequest).not.toHaveBeenCalled();
+      unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(hooks)('reconciles session key addition and removal on storage notifications: $name', async ({ hook }) => {
+    sessionStorage.clear();
+    mockedRequest.mockResolvedValue(sampleSummary);
+    const { result } = renderHook(() => hook(7), { wrapper });
+    expect(result.current.availability).toBe('not-configured');
+    act(() => {
+      sessionStorage.setItem(WATCH_KEY_STORAGE, 'synthetic-added-key');
+      window.dispatchEvent(new StorageEvent('storage', { key: WATCH_KEY_STORAGE }));
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.availability).toBe('configured');
+    expect(callAt().opts.headers?.get('X-API-Key')).toBe('synthetic-added-key');
+    act(() => {
+      sessionStorage.removeItem(WATCH_KEY_STORAGE);
+      window.dispatchEvent(new StorageEvent('storage', { key: WATCH_KEY_STORAGE }));
+    });
+    expect(result.current.availability).toBe('not-configured');
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(result.current.data).toBe(sampleSummary);
+  });
+
+  it('reconciles URL navigation and same-tab key changes on focus without persisting during render', async () => {
+    sessionStorage.clear();
+    const persist = vi.spyOn(Storage.prototype, 'setItem');
+    mockedRequest.mockResolvedValue(sampleSummary);
+    const { result } = renderHook(() => useWatchSummary(7), { wrapper });
+    expect(persist).not.toHaveBeenCalled();
+    act(() => {
+      setSearch('?key=synthetic-navigation-key');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callAt().opts.headers?.get('X-API-Key')).toBe('synthetic-navigation-key');
+    expect(sessionStorage.getItem(WATCH_KEY_STORAGE)).toBe('synthetic-navigation-key');
+    act(() => {
+      setSearch('');
+      sessionStorage.clear();
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(result.current.availability).toBe('not-configured');
+    persist.mockRestore();
+  });
+
+  it.each(hooks)('keeps nonempty invalid or expired keys as real authentication failures: $name', async ({ hook }) => {
+    sessionStorage.setItem(WATCH_KEY_STORAGE, 'synthetic-invalid-key');
+    const authError = Object.assign(new Error('Invalid or expired API key'), { status: 401 });
+    mockedRequest.mockRejectedValue(authError);
+    const { result } = renderHook(() => hook(7), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.availability).toBe('configured');
+    expect(result.current.error).toBe(authError);
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.data).toBeUndefined();
+    expect(callAt().opts.skipAuthRefresh).toBe(true);
+    expect(callAt().opts.headers?.get('X-API-Key')).toBe('synthetic-invalid-key');
+  });
+
+  it.each(hooks)('stops an automatic retry when the existing session key disappears during a failed read: $name', async ({ hook }) => {
+    mockedRequest.mockImplementationOnce(() => {
+      sessionStorage.removeItem(WATCH_KEY_STORAGE);
+      window.dispatchEvent(new StorageEvent('storage', { key: WATCH_KEY_STORAGE }));
+      return Promise.reject(new Error('Synthetic failed in-flight read'));
+    });
+    const { result } = renderHook(() => hook(7), { wrapper });
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
+    await waitFor(() => expect(result.current.availability).toBe('not-configured'));
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(result.current.isSuccess).toBe(false);
   });
 });
 

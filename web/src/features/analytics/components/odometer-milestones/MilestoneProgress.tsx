@@ -1,22 +1,19 @@
-import { Flag, Gauge } from 'lucide-react';
+import { Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ProgressRing } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { LayoutCard } from '@/components/layout';
 import {
-  GlassPanel,
   HelpTooltip,
-  PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
-
-const DETAIL_COLUMNS = { default: 2, lg: 4 } as const;
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MilestoneProgressProps {
   summary: OdometerMilestoneResult;
@@ -27,6 +24,7 @@ export function MilestoneProgress({
   summary,
   state,
 }: MilestoneProgressProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistanceKm } = useOdometerMilestoneDisplay();
   const { segment, primaryPace, accounting } = summary;
@@ -48,7 +46,7 @@ export function MilestoneProgress({
               'Forecast evidence uses {{count}} drives across {{days}} observed days; projections can change.',
               {
                 count: primaryPace.sampleCount,
-                days: fmtNumber(primaryPace.observedDays, 1),
+                days: fmtNumber(primaryPace.observedDays),
               },
             )
           : t(
@@ -64,27 +62,24 @@ export function MilestoneProgress({
       )}
       data-testid="milestone-progress"
     >
-      <GlassPanel className="p-4 sm:p-6">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Flag className="h-4 w-4 text-amber-300" aria-hidden="true" />
-          {t('milestones.progress.title', 'Progress to the next round number')}
-          <HelpTooltip
+      <LayoutCard title={t('milestones.progress.title', 'Progress to the next round number')}
+        actions={<HelpTooltip
             size="sm"
             i18nKey="help.milestones.body"
-            defaultValue="Calibration is the odometer immediately before the chronologically first row in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit."
+            defaultValue="Calibration is the odometer immediately before the chronologically first eligible drive in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit."
             ariaLabel={t(
               'help.milestones.iconLabel',
               'More info about milestone math',
             )}
-          />
-        </PanelTitle>
+          />}
+      >
         <MilestoneSectionBody state={state}>
           <div className="grid items-center gap-6 lg:grid-cols-[auto_1fr]">
             <ProgressRing
               value={percent}
               size={136}
               strokeWidth={9}
-              centerLabel={`${fmtNumber(percent, 1)}%`}
+              centerLabel={`${fmtNumber(percent)}%`}
               centerSubLabel={t(
                 'milestones.progress.complete',
                 'complete',
@@ -92,10 +87,13 @@ export function MilestoneProgress({
               ariaLabel={t(
                 'milestones.progress.aria',
                 '{{percent}} percent progress toward the next milestone',
-                { percent: fmtNumber(percent, 1) },
+                { percent: fmtNumber(percent) },
               )}
             />
-            <Grid cols={DETAIL_COLUMNS} gap={3}>
+            <dl
+              data-layout="responsive-columns"
+              className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4"
+            >
               {[
                 {
                   key: 'previous',
@@ -125,7 +123,7 @@ export function MilestoneProgress({
                   key={item.key}
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <Text variant="caption">{item.label}</Text>
+                  <Text as="dt" variant="caption">{item.label}</Text>
                   <Text
                     as="dd"
                     size="sm"
@@ -137,7 +135,7 @@ export function MilestoneProgress({
                   </Text>
                 </div>
               ))}
-            </Grid>
+            </dl>
           </div>
           <div className="mt-5 flex gap-2 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3">
             <Gauge
@@ -147,7 +145,7 @@ export function MilestoneProgress({
             <Text variant="bodySm">{evidence}</Text>
           </div>
         </MilestoneSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

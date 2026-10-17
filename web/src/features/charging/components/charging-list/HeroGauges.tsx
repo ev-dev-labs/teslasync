@@ -5,6 +5,7 @@ import { MetricTile } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import type { ChargingStats } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HeroGaugesProps {
   stats: ChargingStats | null;
@@ -32,6 +33,7 @@ const DC_FAST_KW = 150;
  * the 250 kW Supercharger peak.
  */
 export function HeroGauges({ stats }: HeroGaugesProps) {
+  const { precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   const { currencySymbol } = useFormatting();
 
@@ -95,7 +97,7 @@ export function HeroGauges({ stats }: HeroGaugesProps) {
             bands={powerBands}
             label={t('charging.gauges.avgPower', 'Avg Power')}
             unit="kW"
-            decimals={0}
+            decimals={displayPrecision}
             className="col-span-2 sm:col-span-1"
           />
           <MetricTile

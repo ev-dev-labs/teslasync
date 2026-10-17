@@ -1,0 +1,543 @@
+{
+  "item": "phase6-qa-battery-energy-flow",
+  "status": "DONE_SOURCE_QA",
+  "sourceVerdict": "Deterministic source defects and separately unpromoted candidates recorded; no application or native acceptance.",
+  "scope": {
+    "page": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+    "route": "/energy-flow",
+    "mode": "READ_ONLY_SOURCE_QA",
+    "requestTimestampUtc": "2026-10-13T21:21:02.545Z",
+    "timestampMeaning": "Supplied request timestamp, not a measured worker-creation, inspection-completion or file-mtime timestamp.",
+    "budget": "Original creation-relative 20-minute return / 25-minute hard budget; no restart, reset, retry or delegation.",
+    "writes": [
+      "docs\\frontend-audits\\phase6-qa-battery-energy-flow.json",
+      "web\\logs\\phase6-qa-battery-energy-flow.log"
+    ],
+    "sourceTestCatalogSharedGlobalQueueGitWrites": 0,
+    "shellCommandsExecuted": 0,
+    "agentsSpawned": 0,
+    "browserApiNativeActions": 0
+  },
+  "preflight": {
+    "existingReport": "view returned path does not exist before inspection",
+    "existingLog": "view returned path does not exist before inspection",
+    "registeredQueueRow": "migration-queue.md:336; [ ] phase6-qa-battery-energy-flow; dependency phase5-page-battery-energy-flow",
+    "dependency": "migration-queue.md:1737; [x] phase5-page-battery-energy-flow",
+    "parentOnly": "Queue/status/dispatch/acceptance/commit remain parent-owned; no scheduled-health or orchestrator work followed."
+  },
+  "identity": {
+    "page": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+    "actualMount": "web\\src\\App.tsx:74,821 uses lazy(routeLoaders.EnergyFlow) under SafeRoute",
+    "loader": "web\\src\\lib\\routeLoaders.ts:29 imports ../features/battery/pages/EnergyFlowPage",
+    "registry": "web\\src\\lib\\routeRegistry.ts:124 declares /energy-flow",
+    "workspace": "web\\src\\lib\\workspaceScope.ts includes /energy-flow in RANGE_ENABLED_PATHS; neither disabled-vehicle list excludes this path",
+    "currentSourceHash": null,
+    "currentSourceHashStatus": "NOTRUN: no shell/hash command authorized; no historical hash presented as current identity",
+    "currentPageLineCount": 809,
+    "directSupportLineCounts": {
+      "web\\src\\features\\battery\\components\\energy-flow-modernization\\SectionState.tsx": 52,
+      "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx": 58
+    },
+    "pagePlusTwoDirectSupportLines": 919,
+    "identityLimit": "Live read snapshots and exact line anchors, not a repository-wide quiescent hash lock or deployed-build identity."
+  },
+  "historicalProofs": [
+    {
+      "origin": "migration-queue.md:1737",
+      "timestampUtc": "2026-10-12T17:53:11.623Z",
+      "hashKind": "recorded accepted source commit",
+      "hash": "cf0706c5ccf34fa4d950f7c045dbef0c003e9864",
+      "freshPass": false
+    },
+    {
+      "origin": "docs\\frontend-audits\\audit-page-067.json:preservation",
+      "timestampUtc": null,
+      "timestampLimit": "No timestamp supplied by the inspected historical report.",
+      "hashKind": "historical page SHA256",
+      "hash": "BE8E756A5B8681172003E01160E34D6F23CA54CB633C2715A95E8B35E0F6DF6D",
+      "freshPass": false
+    }
+  ],
+  "guidance": {
+    "read": [
+      "docs\\frontend-design-contract.md:1-240,400-590",
+      "docs\\frontend-mission.md:1-220",
+      "docs\\frontend-inventory.md:1-58 and the displayed inventory excerpt",
+      "docs\\frontend-worker-conventions.md:1-170",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md:1-280",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\ARCHITECTURE.md:1106-1149"
+    ],
+    "conflictResolution": "Current design MDC-045 and ADR-005 SI-in/display-out govern. Older source-unit/legacy-converter examples in unit-conversion/react instructions are not authorization to guess units or reintroduce legacy helpers.",
+    "missingReference": ".github\\prompts\\db-refactor\\phase-48-si-canonical\\0000-methodology.prompt.md was requested with view and returned path does not exist; no content reconstructed and no unit/source edit attempted.",
+    "skillsLoaded": ["audit-violations", "verify-api-hooks"],
+    "scripts": "NOTRUN: audit.sh includes prohibited TypeScript; verify.sh and all command-based gates are outside this source-only assignment. Direct view/rg inspection is separately identified evidence."
+  },
+  "sectionLines": [
+    {
+      "name": "Energy summary metrics",
+      "cardLine": 454,
+      "stateLine": 460,
+      "source": "stats",
+      "retained": "Six metric identities remain outside the notice boundary at 457: total energy, total charged, distance, efficiency, estimated CO2 and period."
+    },
+    {
+      "name": "Energy flow diagram",
+      "cardLine": 477,
+      "stateLine": 484,
+      "source": "flow",
+      "retained": "Grid, charging connector, battery SOC/remaining-energy, driving connector and motor are retained in source. Unsupported motor/driving readings are explicit N/A, not modeled telemetry."
+    },
+    {
+      "name": "Live power",
+      "cardLine": 543,
+      "stateLine": 545,
+      "source": "flow",
+      "retained": "DC, AC, HVAC and accessory rows; unsupported HVAC/accessory values remain N/A."
+    },
+    {
+      "name": "Daily energy usage",
+      "cardLine": 589,
+      "stateLine": 590,
+      "chartLine": 599,
+      "source": "stats",
+      "retained": "Display kWh area series, localized name and chart data-table alternative."
+    },
+    {
+      "name": "Efficiency metrics",
+      "cardLine": 642,
+      "stateLine": 643,
+      "source": "stats",
+      "retained": "Whole-Wh distance-aware efficiency/rating, estimated CO2 and average energy per day."
+    },
+    {
+      "name": "Daily distance",
+      "cardLine": 665,
+      "stateLine": 666,
+      "chartLine": 675,
+      "source": "stats",
+      "retained": "Distance converted from meters at render; km/mi axis-series/data-table labels."
+    },
+    {
+      "name": "Daily efficiency",
+      "cardLine": 713,
+      "stateLine": 714,
+      "chartLine": 723,
+      "source": "stats",
+      "retained": "Existing positive-only Wh/km or Wh/mi series and data alternative; zero/missing-day semantics remain candidate C05."
+    },
+    {
+      "name": "Daily energy history",
+      "cardLine": 764,
+      "stateLine": 765,
+      "tableLine": 775,
+      "source": "stats",
+      "retained": "Date, energy, distance and efficiency; shared value filters, sorting, pagination and mobile details."
+    }
+  ],
+  "preservation": {
+    "countMethod": "Actual rg tool source counts; no preservation helper or Git history command.",
+    "current": {
+      "LayoutCard": 8,
+      "EmbeddedChart": 3,
+      "SectionState": 8,
+      "GlassPanelTemplate": 1,
+      "DataTable": 1,
+      "visualBands": 5
+    },
+    "baseline": "Historical audit-page-067 inventory: page 835 lines, eight named cards, three chart frames, one history table, five visual bands. This is inventory context, not historical runtime proof.",
+    "comparison": "Current page alone is 809 versus historical page 835, above the 70% page-only lower bound. Current page plus two inspected support files totals 919. Original whole-feature composed total was not independently established; no whole-feature preservation gate claimed.",
+    "identities": [
+      "vehicle-energy-summary",
+      "vehicle-energy-flow",
+      "energy-flow.range",
+      "battery:energy-flow-history",
+      "energy-flow-daily-energy-usage",
+      "energy-flow-daily-distance",
+      "energy-flow-daily-efficiency"
+    ],
+    "noNewCapabilityClaim": "No driving/regen power or HVAC/accessory producer exists in the inspected EnergyFlowData contract. Retain supported readings and explicit unsupported states; do not derive motor/regen power from pack current/voltage or rename negative charging as regeneration."
+  },
+  "dataSources": [
+    {
+      "hook": "useEnergyStats(activeId, days)",
+      "pageLine": 246,
+      "hookFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "hookLines": [33, 48],
+      "path": "/vehicles/{vehicleID}/energy?days=N",
+      "router": "internal\\api\\router.go:3362,3370,3382",
+      "wire": "internal\\api\\energy\\handler.go:52-69,144-154",
+      "policy": "Raw typed response; cancellation signal forwarded; vehicle plus days/start-derived window in key; enabled only for non-null vehicle; STANDARD staleTime.",
+      "bounds": "Both canonical bounds are missing; confirmed F01.",
+      "units": "Historical named Wh, m and Wh/m fields are converted at presentation. Service/repository producer calculations were not executed or independently unit-audited."
+    },
+    {
+      "hook": "useEnergyFlow(activeId)",
+      "pageLine": 251,
+      "hookFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "hookLines": [94, 104],
+      "path": "/vehicles/{vehicleID}/energy/flow",
+      "router": "internal\\api\\router.go:3362,3370,3383",
+      "wire": "internal\\api\\energyflow\\handler.go:52-94",
+      "policy": "Vehicle key, non-null enablement, AbortSignal, REALTIME polling, retry false and STATIC staleTime. Independent of historical range.",
+      "units": "Existing handler declares and emits legacy kW response, not a raw canonical-W API; confirmed F03. EnergyRemaining units remain C01."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "severity": "P1",
+      "rule": "MDC-032 / MDC-045 / shared workspace both-bounds contract",
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "lines": [228, 236, 237, 238, 239, 246],
+      "mechanism": "Page discards startInstant/endInstantExclusive and passes only inclusive date-count days. useEnergyStats keys numeric windows by days; handler reads only start or days. Same-length distinct calendar selections share the same historical query/results; rolling 24h/timezone instants are lost.",
+      "deterministicSourceExample": "For the same vehicle, from=2026-09-01/to=2026-09-07 and from=2026-10-01/to=2026-10-07 both produce days=7 and the same energy-stats key. This is arithmetic/key inspection, not an executed endpoint reproduction.",
+      "corroboration": [
+        "web\\src\\api\\hooks\\useEnergy.ts:33-48",
+        "web\\src\\hooks\\useRangeState.ts:111-125",
+        "internal\\api\\energy\\handler.go:60-68"
+      ],
+      "mitigationRetained": "Page 398-402 honestly labels this a trailing window with unknown bounded coverage; that disclaimer is not both-bound filtering.",
+      "minimalFollowup": "Integration-owned extension of this existing handler/service/hook to both RFC3339 [from,to) bounds, plus this caller consuming the existing canonical instants. Preserve trailing support, timezone, raw SI, vehicle key and cancellation; no local picker or loaded-page filtering.",
+      "owner": "existing energy range integration and exact page caller",
+      "runtimeEvidence": "NOTRUN",
+      "confidence": "high"
+    },
+    {
+      "id": "F02",
+      "severity": "P1",
+      "rule": "MDC-026 / MDC-045 / independent measured-fact provenance",
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "lines": [406, 407, 408, 409],
+      "mechanism": "Summary labels Total energy and Total charged as distinct energy facts, without describing that the inspected wire projects both from the same stats.TotalEnergy. Their equality is guaranteed by serialization, not independent consumption/charging measurement.",
+      "deterministicSourceExample": "For any service TotalEnergy X, handler writes total_energy_used_wh=X and total_energy_charged_wh=X. Mock fixtures supplying 42000/55500 or 21000/27000 bypass that handler and cannot establish source independence.",
+      "corroboration": [
+        "internal\\api\\energy\\handler.go:137-148",
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.test.tsx:193-196",
+        "web\\src\\features\\battery\\components\\energy-flow-modernization\\EnergyFlowModernization.test.tsx:34-35"
+      ],
+      "minimalFollowup": "Keep both metric identities and explain the known shared-source alias in their existing context/review details. Any distinct consumed/charged producer requires separately authorized integration with measured semantics; do not relabel or invent values in this report.",
+      "owner": "exact page evidence/provenance caller; producer semantics separately unverified",
+      "runtimeEvidence": "NOTRUN; no actual charging/consumption correctness claimed",
+      "confidence": "high"
+    },
+    {
+      "id": "F03",
+      "severity": "P1",
+      "rule": "ADR-005 / MDC-045 / SI on wire, display-only conversion",
+      "file": "internal\\api\\energyflow\\handler.go",
+      "lines": [60, 61, 62, 66, 86, 87],
+      "mechanism": "Handler explicitly preserves a legacy kW response contract, dividing its documented canonical-W live values by 1000 before serialization. Hook returns those unsuffixed numbers verbatim; page appends kW directly. This existing wire path is not the mandated raw-SI/display-only contract.",
+      "deterministicSourceExample": "The inspected serializer applies v/1000 to each AC/DC channel before HTTP output. Existing fixtures and page consume that kW-shaped contract. No assertion that a specific current vehicle sample is W, or that its ingestion units are correct, is made.",
+      "corroboration": [
+        "web\\src\\types\\energy.ts:205-213",
+        "web\\src\\api\\hooks\\useEnergy.ts:94-104",
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:109-111,502-503,559,564",
+        "internal\\tesla\\protomodel\\signal_metadata_gen.go:1443,1445 reports UnitKindNone"
+      ],
+      "minimalFollowup": "Separately authorized SI owner must prove AC/DC ingest semantics and coordinate this existing handler, types, fixtures and page display formatters as one exact contract cutover. Do not multiply/divide current hook values again, introduce dual-shape adapters or guess EnergyRemaining units.",
+      "owner": "existing SI/wire integration, not this report worker",
+      "runtimeEvidence": "NOTRUN; upstream producer numeric truth remains unverified",
+      "confidence": "high for the documented legacy wire contract"
+    },
+    {
+      "id": "F04",
+      "severity": "P2",
+      "rule": "MDC-026 / unknown is not measured zero",
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "lines": [335, 336, 337],
+      "mechanism": "History's numeric sort accessors normalize null/undefined to 0, while its display/filter branches preserve unknown as dash/null. Missing and genuine zero compare identically; their existing input/date order breaks the tie rather than a missing-value policy.",
+      "deterministicSourceExample": "Within the page's explicitly supported missing-value branch, energy_wh=null and energy_wh=0 both supply accessor value 0 to useSortToggle; its comparator returns 0. Same mechanism applies to distance and efficiency.",
+      "corroboration": [
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:355-382",
+        "web\\src\\components\\ui\\DataTable.tsx:1675-1683",
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.test.tsx:350-366 explicitly authors missing numeric rows"
+      ],
+      "limit": "Conditional source-logic finding only. DailyEnergy declares non-null numbers; no production null row or malformed producer response was observed.",
+      "minimalFollowup": "Exact page-owned nullable comparator with explicit stable missing ordering in both directions; preserve raw row/filter values, default date descending and shared controller. Producer nullability/type reconciliation is separate.",
+      "owner": "exact page sort adapter",
+      "runtimeEvidence": "NOTRUN",
+      "confidence": "high for conditional comparison mechanism"
+    },
+    {
+      "id": "F05",
+      "severity": "P2",
+      "rule": "MDC-044 / locale and numeric plural contract",
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "lines": [424, 425, 426],
+      "mechanism": "Period specialist formatter uses String(raw / 86400), bypassing existing locale number formatting, and always translates the fixed days unit without a numeric plural count. The inspected English leaf is days. A one-day selection therefore yields 1 days, and grouped/localized day numbers cannot follow preference changes.",
+      "deterministicSourceExample": "period_days=1 becomes raw duration 86400 then value '1' plus unit 'days'. formatMetric forwards specialist formatted strings unchanged; it does not rescue number localization or plural agreement.",
+      "corroboration": [
+        "web\\src\\lib\\metric-reference\\formatMetric.ts:57-61",
+        "web\\src\\lib\\operationalMetrics.tsx:16,43-45",
+        "web\\src\\hooks\\useNumberFormatting.ts:27-39",
+        "web\\src\\i18n\\en.json:36003-36093 energyFlow.units.days"
+      ],
+      "minimalFollowup": "Use existing fmtInt/fmtNumber for the numeric presentation and separately serialized canonical day-unit plural leaves with raw numeric count. Preserve raw period_days and duration seconds, exact metric identity and trailing coverage warning; no new formatter or catalog ownership assumed.",
+      "owner": "exact page formatter plus serialized canonical catalog owner",
+      "runtimeEvidence": "NOTRUN; no locale/browser acceptance",
+      "confidence": "high"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "kind": "producer-unit",
+      "anchors": [
+        "internal\\api\\energyflow\\handler.go:69-70,88",
+        "internal\\tesla\\protomodel\\signal_metadata_gen.go:1566",
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:510-511"
+      ],
+      "observation": "EnergyRemaining is passed through; generated metadata has UnitKindNone; page labels it kWh. The inspected chain does not establish Wh versus kWh.",
+      "neededEvidence": "Explicit upstream signal semantics and normalization/writer evidence before any conversion.",
+      "notPromoted": "No guessed units, extra /1000, production mis-scaling or producer repair claim."
+    },
+    {
+      "id": "C02",
+      "kind": "producer-freshness",
+      "anchors": [
+        "internal\\api\\energyflow\\handler.go:85-94",
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:253",
+        "web\\src\\api\\dataState.ts:206-210"
+      ],
+      "observation": "Wire contains readings but no observation timestamp/source identity; client trust tracks HTTP dataUpdatedAt. Successful polling is not proof of a new vehicle measurement.",
+      "neededEvidence": "Existing LiveStateReader freshness semantics, source observation metadata and authorized runtime evidence.",
+      "notPromoted": "No claim that current values are stale or that live-state layering is defective."
+    },
+    {
+      "id": "C03",
+      "kind": "producer-sign-and-unsupported-flow",
+      "anchors": [
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:110-111,162-163,503,525-536",
+        "web\\src\\types\\energy.ts:205-213"
+      ],
+      "observation": "Charging uses signed AC+DC sum but magnitude for active styling, with fixed forward arrow orientation. Driving/motor are explicitly unsupported. There is no regen field or established reverse-flow sign contract.",
+      "neededEvidence": "Producer physical sign/channel simultaneity contract before considering direction-aware rendering or a separately approved regeneration source.",
+      "notPromoted": "Negative charging does not automatically mean regen; pack current times voltage is not accepted motor/regen evidence. No omitted original regen capability was established."
+    },
+    {
+      "id": "C04",
+      "kind": "malformed-input-boundary",
+      "anchors": [
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:110-111,119-123,132-136,278-282,333",
+        "web\\src\\types\\energy.ts:16-35"
+      ],
+      "observation": "Null arrays fall back to []; non-array daily_breakdown would reach map/slice, and positive Infinity passes the efficiency filter before scaleEfficiency returns null. Summed flow operands have no finite-number check.",
+      "neededEvidence": "Authorized synthetic boundary execution plus exact producer/type contract; HTTP JSON cannot directly carry Infinity.",
+      "notPromoted": "No malformed-production payload, application crash, NaN/Infinity telemetry occurrence or current test failure claimed."
+    },
+    {
+      "id": "C05",
+      "kind": "domain-zero-missing-efficiency",
+      "anchors": [
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:128-136,322-324,714-720",
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.test.tsx:373-381"
+      ],
+      "observation": "Efficiency chart drops zero/missing/nonpositive dates while history retains them. Existing authored fixture intentionally expects positive-only filtering.",
+      "neededEvidence": "Determine whether zero efficiency is a measured valid fact, undefined zero-distance calculation or producer sentinel before changing the chart contract.",
+      "notPromoted": "Do not silently replace retained assertions or present every zero as unknown; no producer meaning inferred."
+    },
+    {
+      "id": "C06",
+      "kind": "producer-enum-localization",
+      "anchors": [
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:478-480",
+        "internal\\api\\energyflow\\handler.go:81-82",
+        "web\\src\\i18n\\en.json:36003-36093"
+      ],
+      "observation": "Raw charge_state becomes a dynamic translation key and exact Charging controls the success badge. Page-specific catalog covers labels but not an explicit charge-state enum mapping.",
+      "neededEvidence": "Exact returned charge-state vocabulary and localized known/unknown enum policy across loaded catalogs.",
+      "notPromoted": "No actual untranslated production state, incorrect producer enum or current wrong badge asserted."
+    },
+    {
+      "id": "C07",
+      "kind": "runtime-native-accessibility-responsive",
+      "anchors": [
+        "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx:162-163,494,599-615,775-799",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:27-40",
+        "web\\src\\components\\ui\\DataTable.tsx:1408"
+      ],
+      "observation": "Source provides semantic titles/chart alternatives, container stacking and mobile details, but no native geometry, keyboard, contrast, RTL or text-scale measurements were taken.",
+      "neededEvidence": "Separately authorized native matrix at 320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocated cards, long labels, RTL/200% text, themes, forced colors, reduced motion, focus and reachable recovery/details.",
+      "notPromoted": "No guessed clipping, failed WCAG ratio, lost mobile distance field or native/full-page pass."
+    }
+  ],
+  "stateContracts": {
+    "loading": "SectionState.tsx:42 skeleton only without retained data; summary preserves metric identities and uses BatteryEvidenceBrief loading. Other enclosing cards are unconditional.",
+    "fatal": "SectionState.tsx:34 uses state.fatalError; PageLayout is not given page-level error/loading/empty that would erase independent neighbors.",
+    "retainedRefreshFailure": "api/dataState.ts keeps data, exposes refreshError and downgrades live provenance to cached; SectionState.tsx:44 renders StaleRefreshWarning before retained content.",
+    "paused": "SectionState.tsx:35-41 explicitly explains initial paused without readings; retained paused follows nonblocking warning/content.",
+    "empty": "Each of eight cards receives its own empty/no-vehicle reason and source-local callback. Empty history does not hide live flow; empty flow does not hide stats.",
+    "unknownVsZero": "computeChargePower requires both known channels; known 0+0 remains 0. SOC null renders dash rather than zero gauge. Historical conversion keeps null energy/distance as gaps. Numeric metrics reuse finite/missing validation. F04 and C04/C05 describe remaining bounds.",
+    "noVehicle": "Both hooks receive null and are disabled; eight shells provide /onboarding recovery through SectionState. No page-owned selector duplicates workspace scope.",
+    "sourceIndependence": "Two named PageContainer sources; stats retries invoke refetchStats and flow retries invoke refetchFlow. Historical range does not retime live flow.",
+    "recoveryLimit": "All statements are branch/source inspection, not clicks or mounted recovery execution."
+  },
+  "actions": {
+    "retained": [
+      "Shared header range and vehicle selection",
+      "Per-source retry/refresh callbacks",
+      "No-vehicle Set up TeslaSync link to /onboarding",
+      "Existing OperationalBrief review details",
+      "History sorting/value filters/pagination",
+      "Mobile row details with distance/energy/efficiency and shared close action",
+      "Chart data-table alternatives"
+    ],
+    "explicitlyDisabled": "All three chart callers keep exportable=false and fullscreen=false; no missing export/fullscreen regression claimed.",
+    "liveWriteSafety": "Page imports read hooks only; no vehicle command, mutation or real energy action executed."
+  },
+  "sourceAccessibilityAndMobile": {
+    "observed": [
+      "LayoutCard associates aria-labelledby with generated Heading IDs; titles wrap.",
+      "EmbeddedChart forwards title/ariaLabel/dataColumns into existing ChartContainer, not an unframed replacement.",
+      "History supplies a caption and shared table controller.",
+      "Flow diagram stacks at allocated-container 640px and changes arrow orientation.",
+      "PageLayout min-w-0 and CardGrid allocated-width packing are retained.",
+      "History mobile card display supplies all four field roles; DataTable forwards allColumns, so mobileColumns omission alone does not establish distance loss.",
+      "Current page/support have no old opacity dimming or inline-glow style openings; actual contrast is still unknown."
+    ],
+    "acceptance": "NOTRUN: browser/native/assistive-technology/geometry/contrast proof prohibited"
+  },
+  "fixtureInspection": {
+    "files": [
+      "web\\src\\features\\battery\\pages\\EnergyFlowPage.test.tsx",
+      "web\\src\\features\\battery\\components\\energy-flow-modernization\\EnergyFlowModernization.test.tsx"
+    ],
+    "sourceBodyCounts": [28, 7],
+    "sourceBodiesTotal": 35,
+    "executed": 0,
+    "status": "NOTRUN",
+    "observedCoverageIntent": "Existing authored cases cover display conversions, unknown/zero, independent retained/fatal/paused/loading/empty states, eight shells, retries and mobile details.",
+    "limits": "Hook mocks and synthetic payloads cannot prove actual bounds, wire units, distinct charged/used measurements, producer freshness, native geometry or deployed acceptance. Legacy page fixture mounts a synthetic /battery/energy entry; modernization fixture explicitly mounts /energy-flow. Neither fixture was run."
+  },
+  "checks": [
+    {"id": "S01", "status": "SOURCE_OBSERVED", "check": "Existing report/log and registered item/dependency inspected before source work."},
+    {"id": "S02", "status": "SOURCE_OBSERVED_WITH_LIMIT", "check": "Design/mission/current inventory/frontend/SI guidance read; missing methodology reference recorded."},
+    {"id": "S03", "status": "SOURCE_OBSERVED", "check": "Actual lazy route/loader/registry and workspace range/vehicle policy traced."},
+    {"id": "S04", "status": "SOURCE_OBSERVED", "check": "809 page lines, 919 including two direct supports; eight shells, three frames, eight local trust boundaries and one history table."},
+    {"id": "S05", "status": "SOURCE_OBSERVED", "check": "Both consumed energy hook paths match router registrations; cancellation/key/enablement inspected."},
+    {"id": "S06", "status": "SOURCE_DEFECT", "check": "Historical both-bound/instant semantics not propagated; F01."},
+    {"id": "S07", "status": "SOURCE_DEFECT", "check": "Two historical energy facts share one wire value without caller alias context; F02."},
+    {"id": "S08", "status": "SOURCE_DEFECT_WITH_PRODUCER_LIMIT", "check": "Legacy live power wire documented and serialized in kW; F03; upstream units and EnergyRemaining not guessed."},
+    {"id": "S09", "status": "SOURCE_OBSERVED", "check": "Historical display-only conversion and saved distance/locale preferences retained; no legacy converter callers found."},
+    {"id": "S10", "status": "SOURCE_DEFECT_CONDITIONAL", "check": "Missing-vs-zero numeric sort comparison collapses values in supported null branch; F04; production nulls unobserved."},
+    {"id": "S11", "status": "SOURCE_OBSERVED_WITH_CANDIDATES", "check": "Charging/driving/unsupported regen and physical sign inspected; no fabricated channel or sign semantics; C01/C03/C05."},
+    {"id": "S12", "status": "SOURCE_OBSERVED", "check": "Per-source loading/fatal/retained/paused/empty/no-vehicle/recovery branches and independent callbacks retained."},
+    {"id": "S13", "status": "SOURCE_DEFECT", "check": "Period formatting bypasses number locale and plural count; F05; named page English catalog subtree inspected read-only."},
+    {"id": "S14", "status": "SOURCE_OBSERVED", "check": "Direct scoped rg scans found no raw controls, inline style openings, direct chart/map/motion imports or old API imports; hook prefix/camelCase URL scan found no match."},
+    {"id": "S15", "status": "SOURCE_OBSERVED_NOT_NATIVE", "check": "Shared semantic headings, chart alternatives, mobile allColumns/details, container stacking and persistent action identities inspected."},
+    {"id": "S16", "status": "SOURCE_OBSERVED_NOT_EXECUTED", "check": "35 authored fixture bodies inspected/countable; zero executions; malformed boundaries and current runtime remain candidates."}
+  ],
+  "sourcePatternEvidence": {
+    "tool": "functions.rg, not shell, lint, audit.sh or a test runner",
+    "applicationScope": [
+      "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "web\\src\\features\\battery\\components\\energy-flow-modernization\\SectionState.tsx",
+      "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx"
+    ],
+    "rawControls": {"count": 0, "rawOutput": "No matches found."},
+    "inlineStyleOpenings": {"count": 0, "rawOutput": "No matches found."},
+    "directChartMapMotionImports": {"count": 0, "rawOutput": "No matches found."},
+    "oldApiImports": {"count": 0, "rawOutput": "No matches found."},
+    "hookPrefixAndCamelCaseUrlScan": {
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "count": 0,
+      "rawOutput": "No matches found.",
+      "limit": "URL-pattern source scan; only the two consumed functions have route/semantic review."
+    },
+    "legacyFetchSseAnyScan": {
+      "rawOutput": "D:\\repos\\teslasync\\web\\src\\features\\battery\\components\\energy-flow-modernization\\SectionState.tsx:11: * or any neighboring source; the enclosing card is always mounted. */",
+      "classification": "Comment-only match for English word any; no matched any type/legacy converter/fetch/new EventSource/dangerouslySetInnerHTML.",
+      "limit": "Pattern evidence is not a global zero-violations or compiler claim."
+    }
+  },
+  "NOTRUN": [
+    {"id": "N01", "check": "npx tsc --noEmit", "reason": "Explicitly prohibited source-only command; no clean-compiler claim."},
+    {"id": "N02", "check": "lint", "reason": "Explicitly prohibited; scoped rg results are not lint."},
+    {"id": "N03", "check": "build", "reason": "Explicitly prohibited; no bundle/deployed-build acceptance."},
+    {"id": "N04", "check": "targeted tests", "reason": "Explicitly prohibited; all 35 counted authored bodies remain unexecuted."},
+    {"id": "N05", "check": "audit.sh", "reason": "Command-based script also invokes prohibited TypeScript."},
+    {"id": "N06", "check": "verify-api-hooks verify.sh", "reason": "No scripts authorized; direct two-hook/router source matching only."},
+    {"id": "N07", "check": "full suite and global gates", "reason": "Parent-only and prohibited; no whole-application acceptance."},
+    {"id": "N08", "check": "browser/native/visual/accessibility/mobile matrix", "reason": "No native grant; no capture, clicks, geometry, contrast or focus measurements."},
+    {"id": "N09", "check": "real energy API/data/actions and producer evidence", "reason": "Prohibited; no real identities, payloads, requests, mutations or sign/unit/freshness measurements."},
+    {"id": "N10", "check": "Docker/server/install/helpers/extensions/Discord/scheduled health", "reason": "Explicitly prohibited and not needed; no processes or agents started."},
+    {"id": "N11", "check": "current SHA256/Git/deployed source identity", "reason": "No shell/Git command authorized; historical hashes not upgraded to current."},
+    {"id": "N12", "check": "original whole-feature preservation helper", "reason": "No helper/history command authorized; current line/section source counts only."}
+  ],
+  "counts": {
+    "sourceChecksRecorded": 16,
+    "sourceFindings": 5,
+    "unpromotedCandidates": 7,
+    "notRunChecks": 12,
+    "sectionShells": 8,
+    "chartFrames": 3,
+    "sourceFixtureBodies": 35,
+    "testsExecuted": 0,
+    "runtimeNativeChecksExecuted": 0,
+    "ownedArtifacts": 2
+  },
+  "inspectedFiles": [
+    "migration-queue.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-inventory.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-067.json",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\ARCHITECTURE.md",
+    "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+    "web\\src\\features\\battery\\pages\\EnergyFlowPage.test.tsx",
+    "web\\src\\features\\battery\\components\\energy-flow-modernization\\SectionState.tsx",
+    "web\\src\\features\\battery\\components\\energy-flow-modernization\\EnergyFlowModernization.test.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\operationalMetrics.tsx",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routeLoaders.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\api\\client.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\i18n\\en.json",
+    "internal\\api\\router.go",
+    "internal\\api\\energy\\handler.go",
+    "internal\\api\\energyflow\\handler.go",
+    "internal\\tesla\\protomodel\\signal_metadata_gen.go"
+  ],
+  "inspectionLimits": [
+    "Partial, task-relevant ranges and rg anchors, not exhaustive reads of all listed large files or unrelated hook exports.",
+    "No service/repository/telemetry-producer traversal beyond directly relevant wire and metadata; unknown units, signs, totals and sample freshness remain explicit.",
+    "No shell commands, script helpers, tests, lint, compiler, build, Git, API, browser, native or background process.",
+    "No current hash lock; source-only line anchors can drift under independent writers.",
+    "English page subtree inspected; split catalog generation, other locales and live i18n loading were not validated.",
+    "DONE applies only to completed source QA report/log delivery, not defect repairs, native QA, full-page acceptance or a phase gate."
+  ],
+  "release": {
+    "allClaims": "RELEASED",
+    "reportAndLog": "RELEASED",
+    "sourceTestCatalogGlobalClaims": "NONE_ACQUIRED",
+    "browserNativeApiProcessClaims": "NONE_ACQUIRED",
+    "noPostReturnWrites": true,
+    "parentOnlyQueueStatusDispatchCommit": true
+  }
+}

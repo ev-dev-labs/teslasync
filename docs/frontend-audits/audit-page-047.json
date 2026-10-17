@@ -1,0 +1,360 @@
+{
+  "item": "audit-page-047",
+  "page": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+  "routes": ["/mileage-budget"],
+  "purpose": "Estimate lease/warranty distance-allowance pacing and overage from selected-vehicle drive history and editable owner terms.",
+  "primaryGoal": "Compare observed term driving against allowance, inspect cumulative monthly pacing and bounded projections, and edit the independent lease/warranty business term.",
+  "auditMode": "Phase 0 read-only source audit; only this report and heartbeat written.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id={selectedVehicleId}&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "ownership": "Driving query hook; driveHandler.ListByVehicle",
+      "behavior": "Isolated ['drives', vehicleId, 'history', limit] cache identity, enabled only with vehicle ID, MODERATE staleTime, safeArray selection and request cancellation signal. No date bounds or pagination traversal. Model filters returned rows to configured term. Backend ordering, coverage and data quality were not inspected or exercised."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-78; internal\\api\\router.go:3319-3320",
+      "ownership": "Existing workspace vehicle hook and vehicleHandler.List",
+      "behavior": "URL path/query, persisted selection, then first vehicle; resolves known IDs against fleet. Page does not create a second vehicle selector. Fleet query loading/error metadata is not returned through SelectedVehicleResult."
+    },
+    {
+      "hook": "useMileageBudget",
+      "file": "web\\src\\features\\analytics\\hooks\\useMileageBudget.ts",
+      "line": 93,
+      "endpoint": null,
+      "ownership": "Page-specific owner configuration",
+      "behavior": "Browser-profile terms persisted under teslasync:mileage-budget:v1; defaults 15000 km/year, January 1 current year, 36 months and 0.1 currency/km. Same-tab subscriptions and cross-tab storage updates; in-memory fallback when storage writes fail. Not per-vehicle. Existing kilometre/rate config is distinct from SI drive API values; do not silently migrate stored values."
+    },
+    {
+      "hook": "computeMileageBudget / useUnits / useFormatting",
+      "file": "web\\src\\features\\analytics\\lib\\mileageBudget.ts",
+      "line": 72,
+      "endpoint": null,
+      "ownership": "Pure feature model and existing display-formatting hooks",
+      "behavior": "Reads Drive.distanceM, derives meter totals/projections and kilometre monthly points, converts only caller chart/form display to saved distance preference. Currency is formatted through existing hook. Clock is captured once per page mount. Formatting-hook internals and their indirect settings requests were not inspected."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:9-15; LayoutCard.tsx:17-63; MileageBudgetPage.tsx:105-110,148",
+      "contract": "Reuse full-width container adapter, query/dataSources wiring and named term card; no alternate page or card system. PageContainer internals not inspected."
+    },
+    {
+      "name": "MileageBudgetBrief / OperationalBrief",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBudgetBrief.tsx",
+      "evidence": "MileageBudgetBrief.tsx:23-78",
+      "contract": "Four raw numeric metrics via useOperationalMetrics; source loading, retained/capped labels, independent event-term scope/provenance and fatal retry surface. Preserve occurrence IDs and specialist distance/currency formatters."
+    },
+    {
+      "name": "Input / HelpTooltip",
+      "owner": "web\\src\\components\\ui\\Input.tsx",
+      "evidence": "Input.tsx:29-34,52-60,87-108; MileageBudgetPage.tsx:149-202",
+      "contract": "Four shared labeled native inputs, suffixes and contextual explanation. Input supports controlled value, error, hint, generated identity and size variants. HelpTooltip internals uninspected."
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "evidence": "MetricBar.tsx:7-28,44-63,79-89; MileageBudgetPage.tsx:205-232",
+      "contract": "Two named progress displays; nullable unknown reading, forced-color track and reduced-motion pipeline. Existing fill='solid' supports restrained presentation without shared modification."
+    },
+    {
+      "name": "ChartCard / EmbeddedChart / ChartContainer / category chart primitives",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "evidence": "ChartCard.tsx:13-43; EmbeddedChart.tsx:19-40; ChartContainer.tsx:174-186,227-228,692-710,806-823; MileageBudgetPage.tsx:239-303",
+      "contract": "Canonical loading/error/retry/empty states, accessible data columns, explicit 340px chart, exportable=true, stable mileage-budget key, two series and legend. Embedded fullscreen defaults false. Do not claim fullscreen was enabled by this page."
+    },
+    {
+      "name": "StaleRefreshWarning / deriveDataState / NoVehicleSelected / FadeIn / useHiddenSeries",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "evidence": "dataState.ts:190-260; StaleRefreshWarning.tsx:57-119; NoVehicleSelected.tsx:43-82; FadeIn.tsx:23-33; useHiddenSeries.ts:63-99",
+      "contract": "Retained history survives refresh failure/offline; retry remains available. No-vehicle route offers onboarding recovery. Entry motion honors existing reduction hook. hidden_mileage-budget URL state retains used/allowed toggles. Preserve these owners."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+      "line": 61,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Allowance and rate controls have parallel display-to-config parsing/conversion, but different physical semantics. No independently inspected production consumer establishes a need for a new universal editor.",
+      "fix": "Keep typed page-local form derivation or reuse existing Input; do not introduce a second unit-conversion engine or speculative shared editor.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "MileageBudgetPage.tsx:147 stacks at base widths and uses viewport xl three-column split; chart child has min-w-0 at 238.",
+      "PageLayout.tsx:12 creates an allocated-width container, but this page uses viewport rather than container breakpoints.",
+      "Input.tsx:95 uses w-full; chart uses ResponsiveContainer and shared ChartCard sizing."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+        "line": 147,
+        "rule": "MDC-031 / MDC-043",
+        "detail": "xl:grid-cols-3 and xl:col-span-2 respond to viewport width, not allocated shell width. Existing PageLayout already offers container context; side navigation can narrow the analytical canvas independently.",
+        "fix": "Use existing container-aware layout/CardGrid contract for the one-third terms/two-thirds chart relationship; preserve all four fields, both progress indicators and chart actions at narrow allocation.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+        "line": 158,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "All four Inputs omit size, inheriting md min-h-10 (40px), below the stronger 44px mobile target. No spacing-exception or actual composed target measurement was exercised.",
+        "fix": "Use an existing size/class option with verified 44px mobile targets without changing saved density; test localized suffixes, date control and 320px allocated width.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "acceptance": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560; no viewport, RTL, long-label or text-zoom exercise."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Input.tsx:54-69 associates generated IDs with labels; page supplies localized labels for all four controls.",
+      "MileageBudgetPage.tsx:244-256 supplies chart ariaLabel and 264-274 supplies data-table columns.",
+      "MetricBar.tsx:56-63 supplies progressbar name/range and distinguishes no reading.",
+      "MileageBudgetPage.tsx:153 names contextual help; FadeIn.tsx:25-33 respects motion reduction."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+        "line": 264,
+        "rule": "MDC-034 / MDC-040 / MDC-045",
+        "detail": "Chart values are rounded km or mi, but YAxis, tooltip series names, chart ariaLabel and dataColumns do not identify the selected distance unit. Export/table numeric columns are labeled only Driven/Allowed. Model/chart rounding is existing behavior, not permission to claim source-precision export.",
+        "fix": "Add localized selected-unit context to axes, tooltip, accessible numeric column labels and existing chart metadata; keep current data/series and export capability, and do not modify SI API/cache values.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "acceptance": "UNVERIFIED keyboard order, focus, native date interaction, screen-reader output, effective contrast, forced colors, reduced-motion runtime and export/table interaction."
+  },
+  "states": {
+    "sourceEvidence": [
+      "MileageBudgetPage.tsx:100-102 derives loading/fatal error from historical DataState; chart receives source.fatalError and retry at 256-258.",
+      "StaleRefreshWarning is outside content replacement at page line 112; retained data remain available.",
+      "Cap warning appears only after a nonfatal resolved source; MileageBudgetBrief withholds pace/projections for cap and describes observed window.",
+      "NoVehicleSelected branch at 95-97 preserves onboarding recovery."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBudgetBrief.tsx",
+        "line": 50,
+        "rule": "MDC-026 / MDC-033: unavailable projection is not zero",
+        "detail": "For the first seven elapsed days the model returns projectedTotalM=null but projectedOverageM=0 (mileageBudget.ts:131-132). Brief then publishes zero currency and 'no overage projected' despite withholding the total-distance projection.",
+        "fix": "Gate projected overage/caption on a known projectedTotalM in addition to source/cap checks, presenting localized insufficient-observation context. Preserve an actual computed zero after projection becomes available.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\lib\\mileageBudget.ts",
+        "line": 102,
+        "rule": "MDC-026 / MDC-045: unknown measurement is not zero",
+        "detail": "Nonfinite distanceM is coerced to zero and negative distance is clamped to zero before totals and projections. The TypeScript contract says number but does not prove observed validity of returned payloads.",
+        "fix": "Track invalid/missing distance evidence separately and expose partial/unknown derivation rather than interpreting bad readings as measured zero; retain valid rows and do not invent backend corrections.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+        "line": 99,
+        "rule": "MDC-026 / mission 23",
+        "detail": "Successful [] is hasData=true in deriveDataState (dataState.ts:190-191). Model synthesizes monthly zero-used points, so a sufficiently old empty term can show a normal chart and zero forecasts rather than a no-returned-history explanation. An empty successful response's real-world driving coverage is not established.",
+        "fix": "Give no returned/in-term drive evidence an explicit explanatory state while retaining term controls and allowance context; distinguish observed zero from absence and preserve working/retained data.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+      "line": 205,
+      "rule": "MDC-010 / mission 7",
+      "detail": "Two progress tracks inherit MetricBar fill='gradient'; chart uses blue observed area and amber dashed allowance with low fill opacity. No page neon/fixed-white text or glow was found in the scoped source scan. Effective saturation/contrast remains unmeasured.",
+      "fix": "Prefer existing fill='solid' for progress and subdued reference styling; retain semantic over-pace warning and all chart series. Do not change persisted theme/palette choices or establish new hex colors.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBudgetBrief.tsx",
+      "line": 69,
+      "rule": "MDC-044 / mission 26",
+      "detail": "Scope concatenates raw ISO date strings and a full ISO term-end timestamp, while chart months are raw yyyy-mm strings. Existing behavior is explicit but not localized/contextual date presentation.",
+      "fix": "Use current date-formatting policy for visible business-term/month labels without changing stored termStartIso, event identity, underlying timestamps or export identity.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+      "line": 165,
+      "rule": "MDC-046: preserve synchronized configuration",
+      "detail": "Allowance and rate are uncontrolled defaultValue fields keyed only by distance preference (165,195). useMileageBudget cross-tab storage updates recompute metrics without remounting those fields, so displayed terms can disagree with active calculations.",
+      "fix": "Use controlled draft values synchronized to real config updates, retaining editing ergonomics, display conversion and offline/cross-tab persistence.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+      "line": 185,
+      "rule": "MDC-021: consistent field validation",
+      "detail": "Term input advertises max=120 but onChange accepts any integer >=1; model validator only requires finite >=1 and can accept fractional months from storage (mileageBudget.ts:65). Invalid edits in other controls are silently ignored without supplied Input error/hint.",
+      "fix": "Align UI/model validation and localized feedback using existing Input contract; explicitly resolve intended valid term domain before rejecting existing saved data. Do not silently reset terms or change business defaults.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\lib\\mileageBudget.ts",
+      "line": 104,
+      "rule": "MDC-032 / MDC-044: consistent calendar semantics",
+      "detail": "Term boundaries/month loop use browser-local Date, but drive month keys take the ISO timestamp substring, commonly a UTC month. Near a timezone month boundary, a drive can pass local term filtering yet be assigned outside generated local buckets, causing monthly cumulative chart and usedM summary disagreement.",
+      "fix": "Reconcile month bucketing with the explicitly established business-term timezone using current date mechanisms; test timezone/month/DST boundaries. Preserve independent term dates instead of replacing them with workspace analysis range.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+      "line": 46,
+      "rule": "MDC-026 / MDC-032",
+      "detail": "nowMs is fixed for the mounted page; new drive refetches and term edits reuse that clock. Calendar elapsed days/allowance can remain anchored to an earlier time through a long-running tab.",
+      "fix": "Preserve the injected pure model clock but explicitly refresh the current-time anchor through existing timing/date policy when needed; retain deterministic tests and distinguish source freshness from calculation time.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "rule": "MDC-026 / MDC-045: bounded evidence",
+      "detail": "One 1000-row observed request has no explicit term bounds or coverage metadata. Cap handling correctly withholds claims, but an uncapped response alone does not prove complete vehicle history. Backend coverage/order were not verified.",
+      "fix": "Retain cap guards and observed-history provenance. If full-term completeness is required, coordinate the existing hook/backend owner for actual coverage or bounded term traversal; do not manufacture completeness or guess backend capabilities.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-confirmed projection trust, synchronized configuration and calendar-bucket risks precede visual cleanup; existing shared primitives already cover most presentation needs.",
+    "order": ["Projection/unknown evidence", "Term configuration and month consistency", "Unit-labeled chart and explicit empty evidence", "Allocated-width layout and restrained progress"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "findings": [],
+    "evidence": "Page uses existing PageLayout/LayoutCard/ChartCard/OperationalBrief/Input/MetricBar/trust owners. No new presentation library is necessary. Page-local business config/model is not a competing workspace range owner.",
+    "sharedDependencies": [
+      {
+        "name": "Existing Input controlled value/error/hint/size contract",
+        "owner": "web\\src\\components\\ui\\Input.tsx",
+        "propsVariantsStates": ["value", "onChange", "error", "hint", "size", "label", "suffix"],
+        "usedBy": ["web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx"],
+        "dependsOn": ["Preserve useMileageBudget storage semantics; no shared edit identified"]
+      },
+      {
+        "name": "Existing chart evidence/units/export contract",
+        "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+        "propsVariantsStates": ["metadata.unitLabel", "dataColumns", "ariaLabel", "loading", "empty", "error", "onRetry", "exportable"],
+        "usedBy": ["web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx"],
+        "dependsOn": ["ChartCard forwarding; typed display-only distance values; no shared edit identified"]
+      },
+      {
+        "name": "Observed history completeness integration, conditional",
+        "owner": "web\\src\\api\\hooks\\useDriving.ts",
+        "propsVariantsStates": ["existing vehicleId and limit", "future explicit coverage only if backend establishes it"],
+        "usedBy": ["web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx"],
+        "dependsOn": ["driveHandler.ListByVehicle coverage contract, uninspected", "No new backend capability assumed"]
+      }
+    ]
+  },
+  "preservation": {
+    "sourceHash": "E310DB087D0A53C8A9C335D7765A7D71C3C5EA5E74E3034F8C4830BBB992AAAB",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Raw bytes of exact page path relative to Git root",
+    "lineCount": 311,
+    "sections": [
+      {"name": "Mileage budget summary metrics", "count": 1, "metricCount": 4, "evidence": "MileageBudgetPage.tsx:130-142; MileageBudgetBrief.tsx:23-57"},
+      {"name": "Allowance terms", "count": 1, "fieldCount": 4, "progressCount": 2, "evidence": "MileageBudgetPage.tsx:148-235"},
+      {"name": "Distance vs allowance / Observed distance vs allowance", "count": 1, "seriesCount": 2, "evidence": "MileageBudgetPage.tsx:239-303"}
+    ],
+    "sectionCount": 3,
+    "componentCounts": {"PageLayout": 1, "LayoutCardExplicit": 1, "ChartCard": 1, "GlassPanelInPage": 0, "ChartContainerExplicitInPage": 0, "OperationalBriefInFeatureDependency": 1},
+    "actions": [
+      "Edit annual distance allowance in saved display units",
+      "Edit independent business term start date",
+      "Edit term month length",
+      "Edit overage fee per saved display distance unit",
+      "Open contextual allowance/projection help",
+      "Toggle used/allowed via URL-persisted chart legend",
+      "Use canonical chart export and accessible data-table capability",
+      "Retry fatal history load and stale refresh without losing retained evidence",
+      "Follow no-vehicle onboarding recovery"
+    ],
+    "dataBehavior": [
+      "Selected vehicle remains owned by shared workspace hook. /mileage-budget has vehicle=true and range=false in workspaceScope; no duplicate vehicle/date-range picker should be added.",
+      "Term start and duration are independent business dates, not shared analysis range; retain them even during workspace modernization.",
+      "Keep observed history cap=1000 and suppress capped pace/projections; label observed returned distance honestly.",
+      "Keep meter distance from Drive API/cache, existing config storage key/shape/defaults, km monthly model shape and display-only conversion. SI cutover of persisted config is not authorized here.",
+      "Keep linear projection's seven-day guard, term filtering/clamping, both series, progress, all four summary metrics, explanations and currency formatting; correct unknown-state presentation without deleting capabilities.",
+      "Keep mileage-budget chartKey, hidden_mileage-budget URL toggles and summary occurrence IDs.",
+      "Keep source loading/fatal/stale/offline distinction, independent editable terms, retry and no-vehicle recovery."
+    ],
+    "routeEvidence": "web\\src\\App.tsx:139,841; web\\src\\lib\\workspaceScope.ts:22-77,169-183"
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED; no browser or app interaction performed.",
+    "visualKeyboardContrastViewport": "UNVERIFIED; source does not establish actual mounted behavior, touch reachability, contrast, focus or ten-width acceptance.",
+    "validation": "No TypeScript, tests, full build or lint run: read-only Phase 0 prohibits these gates. Skill audit.sh was inspected but not executed because it unconditionally runs TypeScript. Existing mileageBudget.test.ts was read, not run; it pins first-week zero overage model value but does not establish correct unavailable UI.",
+    "scopedScan": {
+      "command": "PowerShell Get-Content exact page -Raw; [regex]::Matches counts for style=\\{\\{, raw controls, direct chart/map/motion library imports and fixed neon/white/gray text",
+      "exitCode": 0,
+      "actualOutput": ["inline styles: 0", "raw controls: 0", "direct library imports: 0", "fixed neon/white text: 0"],
+      "scope": "Exact page only; not an all-rule/shared/frontend clean certificate."
+    },
+    "toolErrors": "One evidence PowerShell command failed parsing before execution and was corrected. One ChartContainer regex search failed on an unescaped brace and was corrected. Initial assigned report did not exist; this audit creates it.",
+    "backend": "Router path registration inspected only. Handler/query ordering, coverage, time bounds and payload quality not audited or exercised.",
+    "indirectDependencies": "useUnits/useFormatting/useOperationalMetrics internals, catalogs, global palette, ChartTooltip/ChartLegend/HelpTooltip internals, PageContainer and shell guards are not fully traced; owner/API usage identified without borrowing runtime acceptance.",
+    "writeScope": ["docs\\frontend-audits\\audit-page-047.json", ".agent-status\\audit-page-047.txt"],
+    "noSourceMutation": "No source/shared/queue/Git operations, package installation, production mutations or unrelated page audit."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-045.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBudgetBrief.tsx",
+    "web\\src\\features\\analytics\\lib\\mileageBudget.ts",
+    "web\\src\\features\\analytics\\lib\\mileageBudget.test.ts",
+    "web\\src\\features\\analytics\\hooks\\useMileageBudget.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

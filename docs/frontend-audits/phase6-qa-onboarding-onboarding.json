@@ -1,0 +1,1724 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-onboarding-onboarding",
+  "phase": 6,
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS_NOT_RUNTIME_ACCEPTANCE",
+  "page": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+  "routes": [
+    "/onboarding"
+  ],
+  "startedAt": "2026-10-14T02:09:33.762Z",
+  "firstCommandObservedAt": "2026-10-14T02:09:45.196Z",
+  "reservedAt": "2026-10-14T02:04:58.538Z",
+  "returnDeadline": "2026-10-14T02:24:58.538Z",
+  "hardDeadline": "2026-10-14T02:29:58.538Z",
+  "authoredAt": "2026-10-14T02:23:47.848864Z",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-onboarding-onboarding.json",
+    "web/logs/phase6-qa-onboarding-onboarding.log"
+  ],
+  "scope": "READONLY accepted page/direct supports/existing declarations; only exact JSON/log writable. No runtime acceptance.",
+  "sourceWriteRelease": true,
+  "artifactWriteRelease": true,
+  "commandRelease": true,
+  "confirmedFindings": [
+    {
+      "id": "OB-001",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 67,
+      "related": [
+        "web/src/features/onboarding/pages/OnboardingPage.tsx:67-71,83,96,114,283-297",
+        "web/src/features/onboarding/components/Stepper.tsx:59-61,90,95-99,121,151"
+      ],
+      "rule": "unknown-as-incomplete",
+      "contract": "MDC-025/026/040",
+      "priority": "medium",
+      "mechanism": "Absent data becomes false/0 and three false done flags. Stepper lacks unknown: first row is In progress, later rows Not started, despite missing-status notice acknowledging no known anchors.",
+      "repro": "SOURCE-ONLY NOT EXECUTED: data=undefined with initial fetching, paused or fatal query. Trace first-current/two-pending ARIA labels. Active Connect/Skip exploration is not proof of incompletion.",
+      "fix": "Keep rows and allowed exploration; represent unknown evidence separately in status/ARIA, not false completion or hidden checklist.",
+      "tests": [
+        "web/src/features/onboarding/pages/OnboardingPage.test.tsx:364 (preserves controls, not unknown labels)",
+        "web/src/features/onboarding/components/Stepper.test.tsx:84 (current/pending labels only)"
+      ],
+      "ownerNeeds": [
+        "N1",
+        "N2"
+      ],
+      "prior": "Residual unknown-state mechanism from audit-page-152; new missing banner is acknowledged.",
+      "confidence": "source-confirmed mechanism; repro not executed"
+    },
+    {
+      "id": "OB-002",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 289,
+      "related": [
+        "web/src/features/onboarding/pages/OnboardingPage.tsx:203-205,283-295,319",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:59-80,92-98"
+      ],
+      "rule": "paused-refresh-feedback",
+      "contract": "MDC-026/044; mission25",
+      "priority": "medium",
+      "mechanism": "Initial paused flag exists only as data-refresh-blocked, with no readable deferred-refresh explanation. Retained paused uses generic stale/unavailable text. Footer still promises automatic30-second refresh while incomplete. No device-offline inference is justified.",
+      "repro": "SOURCE-ONLY NOT EXECUTED: fetchStatus=paused,error=null,isFetching=false, first no data then retained incomplete status. Neither branch explains deferred refresh.",
+      "fix": "Provide localized caller-specific deferred feedback and qualify polling; retain data/manual recovery and avoid fabricated auth/device outage.",
+      "tests": [
+        "web/src/features/onboarding/pages/OnboardingPage.test.tsx:384 (retained flag/no device claim); no dedicated initial-paused declaration"
+      ],
+      "ownerNeeds": [
+        "N1"
+      ],
+      "confidence": "source-confirmed mechanism; repro not executed"
+    },
+    {
+      "id": "OB-003",
+      "file": "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx",
+      "line": 76,
+      "related": [
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx:71-83,123-126,178-182",
+        "web/src/api/hooks/useOnboarding.ts:19,68-75"
+      ],
+      "rule": "unknown-telemetry-as-waiting",
+      "contract": "MDC-025/026/044",
+      "priority": "medium",
+      "mechanism": "Explicit telemetry health unknown falls through to Waiting / No signals received yet when hasData=true. Normalizer preserves explicit unknown even alongside supplied last telemetry timestamp.",
+      "repro": "SOURCE-ONLY NOT EXECUTED: typed props hasData=true,telemetryHealth=unknown,lastTelemetryAt=2026-01-01T00:00:00Z. Summary simultaneously claims no signals yet and last telemetry at that time. Production emission is NOT observed.",
+      "fix": "Neutral explicit unknown; no-signals wording only for authoritative absence. Preserve supplied time, valid zero and durable completion.",
+      "tests": [
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.test.tsx:68 pins unknown as Waiting;86 covers absent response, not unknown with timestamp"
+      ],
+      "ownerNeeds": [
+        "N3"
+      ],
+      "confidence": "source-confirmed mechanism; repro not executed"
+    },
+    {
+      "id": "OB-004",
+      "file": "web/src/features/onboarding/components/Stepper.tsx",
+      "line": 134,
+      "related": [
+        "web/src/features/onboarding/components/Stepper.tsx:90,131-135",
+        "web/src/features/onboarding/pages/OnboardingPage.tsx:61-65",
+        "web/src/hooks/useMotionPreference.ts:44-48"
+      ],
+      "rule": "unnecessary-motion",
+      "contract": "MDC-016/042; mission31",
+      "priority": "medium",
+      "mechanism": "Every current step spins infinitely even idle account/guide actions; only OS motion-reduce safety exists. Stepper does not consume combined reduce, so low-bandwidth-only mode cannot suppress this animation.",
+      "repro": "SOURCE-ONLY NOT EXECUTED: incomplete status,isFetching=false; current marker still animate-spin. OS no-preference plus low-bandwidth reduce=true stops page refresh icons but not Stepper.",
+      "fix": "Static idle current marker; justified busy feedback honors existing combined motion preference and keeps current/done/pending meaning.",
+      "tests": [
+        "web/src/features/onboarding/components/Stepper.test.tsx:199 pins spinner/OS class",
+        "web/src/features/onboarding/pages/OnboardingPage.test.tsx:343 checks refresh icons, not current glyph"
+      ],
+      "ownerNeeds": [
+        "N2"
+      ],
+      "confidence": "source-confirmed mechanism; repro not executed"
+    },
+    {
+      "id": "OB-005",
+      "file": "web/src/features/onboarding/components/Stepper.tsx",
+      "line": 65,
+      "related": [
+        "web/src/features/onboarding/components/Stepper.tsx:65-66,144",
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx:132"
+      ],
+      "rule": "fixed-status-color",
+      "contract": "MDC-010/025; mission5/7",
+      "priority": "medium",
+      "mechanism": "Fixed emerald/cyan indicator fills/borders/text and emerald connector, plus emerald/amber summary glyphs, bypass existing theme semantic roles. Four source statements; not four independent findings. No measured contrast or literal glow failure is claimed.",
+      "repro": "SOURCE-ONLY NOT EXECUTED: saved/light/custom palette; class literals remain fixed rather than source-meaning semantic roles. Unknown summary health also receives amber pending glyph.",
+      "fix": "Existing success/info/neutral roles only; preserve thresholds, saved palettes, forced colors, text and icons.",
+      "occurrenceStatements": 4,
+      "prior": "Accepted semantic setup-ring gaugeTone is preserved and NOT recounted; neutral resources/preview remain accepted.",
+      "ownerNeeds": [
+        "N2",
+        "N3"
+      ],
+      "confidence": "source-confirmed mechanism; repro not executed"
+    },
+    {
+      "id": "OB-006",
+      "file": "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx",
+      "line": 151,
+      "related": [
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx:151-188",
+        "web/src/components/data-display/OperationalBrief.tsx:96,108-119,291-314",
+        "web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.tsx:44-64"
+      ],
+      "rule": "summary-details-parity",
+      "contract": "MDC-025/026/033",
+      "priority": "medium",
+      "mechanism": "Caller supplies neither attention nor narrative. Shared default attention=[] leads drawer to say No current attention items while same page reports stale telemetry and live service needs attention.",
+      "repro": "SOURCE-ONLY NOT EXECUTED: setupComplete=true,teslaConnected=true,vehicleCount=1,telemetryHealth=stale,hasData=true. Trace Review details rendering: Interrupted plus runtime warning versus no attention items.",
+      "fix": "Caller supplies source-backed existing attention/narrative or unassessed qualification; no shared default rewrite, invented cause/score, or duplicate toast.",
+      "tests": [
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.test.tsx:148 covers drawer metrics/provenance/Escape/focus, not stale attention parity"
+      ],
+      "ownerNeeds": [
+        "N3"
+      ],
+      "confidence": "source-confirmed mechanism; repro not executed"
+    },
+    {
+      "id": "OB-007",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 203,
+      "related": [
+        "web/src/components/layout/PageContainer.tsx:136-142,163-166",
+        "web/src/hooks/useStatusAnnouncer.ts:282-305"
+      ],
+      "rule": "initial-outcome-announcement-not-wired",
+      "contract": "MDC-026/040",
+      "priority": "low",
+      "mechanism": "busy correctly sets aria-busy, but no loading/error passed to PageLayout. PageContainer supplies false loading/error to useLoadAnnouncement on every render, so initial falling-edge loaded announcement never dispatches. Other route/error announcements are not claimed absent.",
+      "repro": "SOURCE-ONLY NOT EXECUTED: initial isLoading true->false; busy changes, announcement input remains false. Assistive-technology output NOTRUN.",
+      "fix": "One existing initial-outcome announcement path without replacing progressively visible sections. Do not simply pass loading=true to PageContainer because it hides all children. Preserve dedup/rate limit and silent polling ticks.",
+      "tests": [
+        "web/src/features/onboarding/pages/OnboardingPage.test.tsx:343 asserts busy, not outcome announcement"
+      ],
+      "prior": "Old missing busy finding partly fixed; missing busy is NOT counted.",
+      "ownerNeeds": [
+        "N1"
+      ],
+      "confidence": "source-confirmed mechanism; repro not executed"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C1",
+      "file": "web/src/components/forms/PersonaSelect.tsx",
+      "line": 95,
+      "type": "conditional/native-mobile",
+      "mechanism": "size auto -> Select.tsx38 min-h-d-row; index.css236-241 compact32px, without mobile44 floor. Intrinsic select/padding/zoom size NOT measured.",
+      "repro": "NOTRUN compact density at320/375/390/430/640/767, long translated options and root scaling.",
+      "owner": "Separately leased Select/PersonaSelect owner; no global density reset."
+    },
+    {
+      "id": "C2",
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "line": 201,
+      "type": "conditional/native-mobile",
+      "mechanism": "Subtitle help uses sm:h-9 sm:w-9 from640px, before md768 mobile limit:36x36 declaration at16px root; actual target/spacing NOT measured.",
+      "repro": "NOTRUN onboarding header at640-767px: bounds/focus clearance.",
+      "owner": "Separate PageContainer target fix if proven; completed phase3-page-container is not redispatched."
+    },
+    {
+      "id": "C3",
+      "file": "web/src/features/onboarding/components/OnboardingResources.tsx",
+      "line": 145,
+      "related": [
+        "web/src/features/onboarding/pages/OnboardingPage.tsx:277",
+        "canonical onboarding.resources.privacy/onboarding.intro.desc",
+        "App.tsx:538-543"
+      ],
+      "type": "privacy-copy/integration",
+      "mechanism": "Absolute no data ever leaves claim exists canonically and in fallback. Fleet authorization and policy-gated global reporters are declared; actual egress classifications/consent/deployment NOT inspected or exercised.",
+      "repro": "NOTRUN privacy owner reconciles precise storage/collection/egress promise without real auth/token/network actions.",
+      "owner": "One bounded product/privacy copy decision plus parent canonical integration."
+    },
+    {
+      "id": "C4",
+      "file": "web/src/features/onboarding/components/OnboardingFeaturePreview.tsx",
+      "line": 46,
+      "related": [
+        "web/src/features/onboarding/components/OnboardingFeaturePreview.tsx:58-59",
+        "web/src/features/onboarding/pages/OnboardingPage.tsx:307"
+      ],
+      "type": "capability-copy/integration",
+      "mechanism": "Every trip logged / vehicle-control unlock promises are informational; no role/device entitlement is consulted. Actual backend/device capabilities unknown; there are no commands in tiles.",
+      "repro": "NOTRUN product owner determines illustrative capability versus universal guarantee.",
+      "owner": "Same bounded copy/product review as C3; no speculative permission checks."
+    },
+    {
+      "id": "C5",
+      "file": "web/src/api/hooks/useOnboarding.ts",
+      "line": 61,
+      "related": [
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx:123"
+      ],
+      "type": "partial/malformed-payload",
+      "mechanism": "Intentional pessimistic gate normalization makes missing fields false/0. Successful partial status hasData=true can present synthetic zero as measured; production partial emission unproved.",
+      "repro": "NOTRUN declared partial fixture {tesla_connected:true}; distinguish UI provenance from gate safety.",
+      "owner": "One conditional hook/display integration; preserve durable routing precedence and original tests."
+    },
+    {
+      "id": "C6",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 114,
+      "related": [
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx:39-42",
+        "web/src/api/hooks/useOnboarding.ts:68-75"
+      ],
+      "type": "response-coherence",
+      "mechanism": "Checklist done uses data_flowing, summary count uses health===healthy; inconsistent typed fields can diverge, live backend consistency unknown.",
+      "repro": "NOTRUN setup_complete=false,tesla_connected=true,vehicle_count=1,data_flowing=true,telemetry_health=unknown -> telemetry row done but progress2/3.",
+      "owner": "Same conditional hook/display integration as C5, not another competing owner."
+    },
+    {
+      "id": "C7",
+      "file": "web/src/features/onboarding/hooks/useOnboardingSkip.ts",
+      "line": 19,
+      "related": [
+        "useOnboardingSkip.ts:26-28,46-57",
+        "web/src/lib/productPreferences.ts:207-232",
+        "web/src/features/onboarding/pages/OnboardingPage.tsx:340-341"
+      ],
+      "type": "conditional-persistence-feedback",
+      "mechanism": "Failed storage write keeps in-memory skip/preferences without persistent durability feedback. Current-tab best effort is intentional; cross-reload failure not exercised.",
+      "repro": "NOTRUN reject storage writes then reload in authorized test environment; audit never accessed browser localStorage.",
+      "owner": "Bounded local-persistence feedback only if product requires a durability promise."
+    },
+    {
+      "id": "C8",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 231,
+      "related": [
+        "web/src/features/onboarding/components/Stepper.tsx:143"
+      ],
+      "type": "inherited-design/scanner-debt",
+      "mechanism": "minmax(280px,420px) page grid and min-h-[28px] connector remain arbitrary geometry. Queue/handoff retain historical page style exit1; no fresh scanner or clipping evidence.",
+      "repro": "NOTRUN design owner resolves exact source-equivalent naming, later narrow-container/200%-text native proof. No rounding/waiver.",
+      "owner": "Precise design disposition then disjoint adoption leases; no accepted-page remigration."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N1",
+      "proposedItem": "phase6-fix-onboarding-page-trust-feedback",
+      "files": [
+        "web/src/features/onboarding/pages/OnboardingPage.tsx",
+        "web/src/features/onboarding/pages/OnboardingPage.test.tsx"
+      ],
+      "findings": [
+        "OB-001",
+        "OB-002",
+        "OB-007"
+      ],
+      "prerequisite": "Accepted/released N2 optional unknown presentation if needed; catalog prerequisites conditional and parent-only.",
+      "status": "NEEDS_NEW_NARROW_QUEUE_LEASE_NOT_CREATED"
+    },
+    {
+      "id": "N2",
+      "proposedItem": "phase6-fix-onboarding-stepper-trust-motion-roles",
+      "files": [
+        "web/src/features/onboarding/components/Stepper.tsx",
+        "web/src/features/onboarding/components/Stepper.test.tsx"
+      ],
+      "findings": [
+        "OB-001",
+        "OB-004",
+        "OB-005"
+      ],
+      "prerequisite": "Backward-compatible API preserves callers/IDs/CTA ordering; root never waits on page acceptance.",
+      "status": "NEEDS_NEW_NARROW_QUEUE_LEASE_NOT_CREATED"
+    },
+    {
+      "id": "N3",
+      "proposedItem": "phase6-fix-onboarding-summary-trust-details",
+      "files": [
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx",
+        "web/src/features/onboarding/components/OnboardingSetupStatusBand.test.tsx"
+      ],
+      "findings": [
+        "OB-003",
+        "OB-005",
+        "OB-006"
+      ],
+      "prerequisite": "Existing Brief attention/narrative/semantic APIs; separate parent copy lease only if new keys actually missing.",
+      "status": "NEEDS_NEW_NARROW_QUEUE_LEASE_NOT_CREATED"
+    }
+  ],
+  "counts": {
+    "confirmedFindings": 7,
+    "conditionalCandidates": 8,
+    "deduplicatedConfirmedOwnerNeeds": 3,
+    "commandFailures": 2,
+    "beforeAfterPins": 76,
+    "pinMismatches": 0,
+    "contentSections": 7,
+    "actionDeclarations": 16,
+    "canonicalKeysChecked": 96,
+    "canonicalKeysMissing": 0,
+    "testFilesWithDeclarations": 10,
+    "testDeclarationSites": 122,
+    "testsExecuted": 0,
+    "testsDiscovered": "NOTRUN",
+    "testsPassed": "NOTRUN",
+    "testsFailed": "NOTRUN",
+    "testsSkipped": "NOTRUN",
+    "currentComposedSourceLines": 1108,
+    "byRule": {
+      "unknown-as-incomplete": 1,
+      "paused-refresh-feedback": 1,
+      "unknown-telemetry-as-waiting": 1,
+      "unnecessary-motion": 1,
+      "fixed-status-color": 1,
+      "summary-details-parity": 1,
+      "initial-outcome-announcement-not-wired": 1
+    },
+    "byPrimaryFile": {
+      "web/src/features/onboarding/pages/OnboardingPage.tsx": 3,
+      "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx": 2,
+      "web/src/features/onboarding/components/Stepper.tsx": 2
+    }
+  },
+  "finalValidation": {
+    "jsonParse": "PASS",
+    "pinCheck": "PASS",
+    "ownedPaths": "PASS exact2 allowlist",
+    "releaseAt": "2026-10-14T02:24:58.322223Z",
+    "runtimeAcceptance": false
+  },
+  "sourceTestHashes": [
+    {
+      "file": "web/e2e/dashboard-onboarding-attribution.smoke.spec.ts",
+      "before": "6837f3c9d3e2ced570285e3a838e63ec868503f3f57aca25da8bd57a912a6dff",
+      "after": "6837f3c9d3e2ced570285e3a838e63ec868503f3f57aca25da8bd57a912a6dff",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "before": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "after": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useOnboarding.test.tsx",
+      "before": "e9d1c25fcb0435f90895742fc31e613a73cff03d2d805eaf04b086f85a24f1be",
+      "after": "e9d1c25fcb0435f90895742fc31e613a73cff03d2d805eaf04b086f85a24f1be",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useOnboarding.ts",
+      "before": "59ff1acad2ca5f291f13686cb831109c4850775912a8d7ee34ef10e51e9bdb4e",
+      "after": "59ff1acad2ca5f291f13686cb831109c4850775912a8d7ee34ef10e51e9bdb4e",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "before": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "after": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/AlertBanner.tsx",
+      "before": "3ec7f4f4e2d04ac7e52815db60382cb5812fa2ed42eee0f6209816f3616e00a9",
+      "after": "3ec7f4f4e2d04ac7e52815db60382cb5812fa2ed42eee0f6209816f3616e00a9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "before": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "after": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/forms/PersonaSelect.tsx",
+      "before": "dc01558a505f75cfcfe3dc5628faf9cfb530c9e1fe090da9095dabd4420a5be3",
+      "after": "dc01558a505f75cfcfe3dc5628faf9cfb530c9e1fe090da9095dabd4420a5be3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "before": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "after": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/GlassPanel.tsx",
+      "before": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+      "after": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "before": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "after": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/TourLauncher.test.tsx",
+      "before": "adeffcc4be7b678ffeb60c87df26db4e5ac526ec3ec374b3d8d10c9c47300a78",
+      "after": "adeffcc4be7b678ffeb60c87df26db4e5ac526ec3ec374b3d8d10c9c47300a78",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/TourLauncher.tsx",
+      "before": "a95bbb0f00b5386ca122bec922064c9ac3df7d3cb4049b6c6de8e228ce9df71d",
+      "after": "a95bbb0f00b5386ca122bec922064c9ac3df7d3cb4049b6c6de8e228ce9df71d",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/__tests__/checklist.test.ts",
+      "before": "4b2e242d032987a4ed17c3df7fccd81353bf0b68a01d330da311513d67ec4361",
+      "after": "4b2e242d032987a4ed17c3df7fccd81353bf0b68a01d330da311513d67ec4361",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/__tests__/completion.test.tsx",
+      "before": "9e5dd10f07193c59d80608af27b66bc98c30b1200cb3f0980cc024e010f9ee70",
+      "after": "9e5dd10f07193c59d80608af27b66bc98c30b1200cb3f0980cc024e010f9ee70",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/__tests__/taskOnboardingHost.test.tsx",
+      "before": "fd1bd35e20f40fa8b02f613263e5a2c6fc31e3cc189f51afa49943292eb80594",
+      "after": "fd1bd35e20f40fa8b02f613263e5a2c6fc31e3cc189f51afa49943292eb80594",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/__tests__/taskOnboardingReactivity.test.tsx",
+      "before": "7cdf84a7da30b0b7c61f2eb0c4f4332391d826ac73c6c6dc45989652a445f292",
+      "after": "7cdf84a7da30b0b7c61f2eb0c4f4332391d826ac73c6c6dc45989652a445f292",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/__tests__/tours.test.ts",
+      "before": "a65a7c77659728f481faba233b20a5a9b905c2ac4475736e5a3b5293c9d034dc",
+      "after": "a65a7c77659728f481faba233b20a5a9b905c2ac4475736e5a3b5293c9d034dc",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/checklist.ts",
+      "before": "7a776491d6f9b1d107da4c6febed6879d7f35fb443bc63639d67c65b92f44270",
+      "after": "7a776491d6f9b1d107da4c6febed6879d7f35fb443bc63639d67c65b92f44270",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/completion.ts",
+      "before": "ec58024712defdf9a8e46db708b239c3d137e3c41663d750ce7ad9967512ed02",
+      "after": "ec58024712defdf9a8e46db708b239c3d137e3c41663d750ce7ad9967512ed02",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.test.tsx",
+      "before": "5a27b0ee921564586e4bcfa057572e0888c504da71999a82f6d029857ef6e237",
+      "after": "5a27b0ee921564586e4bcfa057572e0888c504da71999a82f6d029857ef6e237",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "before": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "after": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingFeaturePreview.test.tsx",
+      "before": "434d46b575b3a8ad103f6e5c062d44fa623950b1680fb644913ed93d1364c6bb",
+      "after": "434d46b575b3a8ad103f6e5c062d44fa623950b1680fb644913ed93d1364c6bb",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingFeaturePreview.tsx",
+      "before": "d9c4983291746efb8a9b5b9b0117b090f288d024aee4cd8477d4f73c42581f3e",
+      "after": "d9c4983291746efb8a9b5b9b0117b090f288d024aee4cd8477d4f73c42581f3e",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingGate.test.tsx",
+      "before": "f2a2234b3bc3d5dd13a40719ba6d1b05469eb916f5353271b1fd4e29f1c1ca0b",
+      "after": "f2a2234b3bc3d5dd13a40719ba6d1b05469eb916f5353271b1fd4e29f1c1ca0b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingGate.tsx",
+      "before": "c5a27a9428a338985eba249724c4baff5b74909a6df0a757b25e3b94974f8274",
+      "after": "c5a27a9428a338985eba249724c4baff5b74909a6df0a757b25e3b94974f8274",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingResources.test.tsx",
+      "before": "1f46bfcf8f39c20a56d4c8281d2d34153e850045b8270d31913dccb9adffaba6",
+      "after": "1f46bfcf8f39c20a56d4c8281d2d34153e850045b8270d31913dccb9adffaba6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingResources.tsx",
+      "before": "725745c251d95b9eb9eedc9c33fd4e075c926ba90ef6bc6da15728fa62cde047",
+      "after": "725745c251d95b9eb9eedc9c33fd4e075c926ba90ef6bc6da15728fa62cde047",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.test.tsx",
+      "before": "2c444f0bd3927e7392c272c10e260f10f1b94bd3556a6e22f468a79bf390699d",
+      "after": "2c444f0bd3927e7392c272c10e260f10f1b94bd3556a6e22f468a79bf390699d",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.tsx",
+      "before": "d0ab3ed14186663e97da403c8dfb10a4c20725428865651c3deba103908a814b",
+      "after": "d0ab3ed14186663e97da403c8dfb10a4c20725428865651c3deba103908a814b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingSetupStatusBand.test.tsx",
+      "before": "9c13bb3cd775ada4a062f2ddffd1d03477f0efc95d64dad97f7b0c6fbb82f5f6",
+      "after": "9c13bb3cd775ada4a062f2ddffd1d03477f0efc95d64dad97f7b0c6fbb82f5f6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx",
+      "before": "f21aa48c2faf8896616df65a93352efc626eb89e80aa58069bc95883220c615a",
+      "after": "f21aa48c2faf8896616df65a93352efc626eb89e80aa58069bc95883220c615a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingStatusCard.test.tsx",
+      "before": "0118a0b3dd6dd5413cb495e2c6c6b9d4f70fa2e9fb20960b30e1dd7f25f4c59a",
+      "after": "0118a0b3dd6dd5413cb495e2c6c6b9d4f70fa2e9fb20960b30e1dd7f25f4c59a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingStatusCard.tsx",
+      "before": "c13db2793ec47732aaf09828bd013d8b44e43d61c626749e6232a8057dcaf977",
+      "after": "c13db2793ec47732aaf09828bd013d8b44e43d61c626749e6232a8057dcaf977",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/Stepper.test.tsx",
+      "before": "bb3586280e1e2a76bf9b017c6c23e1bfff501f463cb8f5ea5832a2e3c2d5f1c6",
+      "after": "bb3586280e1e2a76bf9b017c6c23e1bfff501f463cb8f5ea5832a2e3c2d5f1c6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/Stepper.tsx",
+      "before": "b3ea5a17ba4086492cd1577a9643faced9c3ef3d9a2d1761c108cb49e2e6a5a3",
+      "after": "b3ea5a17ba4086492cd1577a9643faced9c3ef3d9a2d1761c108cb49e2e6a5a3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/TaskOnboardingHint.tsx",
+      "before": "8de3d0f48b6499dc386653fa65d9814aab506ec4602b967f882faef7e5de7ddc",
+      "after": "8de3d0f48b6499dc386653fa65d9814aab506ec4602b967f882faef7e5de7ddc",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/TaskOnboardingHost.tsx",
+      "before": "a449494e7fff8fdd566e0e1c1aea5e6d287856b32be9fde9939aadf417269762",
+      "after": "a449494e7fff8fdd566e0e1c1aea5e6d287856b32be9fde9939aadf417269762",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/hooks/useCachedOnboardingEvidence.test.tsx",
+      "before": "3a8aa7287dd77a0a306d42e0e1ad7fec64ac86e1e264cd8e453bf7d3ce069731",
+      "after": "3a8aa7287dd77a0a306d42e0e1ad7fec64ac86e1e264cd8e453bf7d3ce069731",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/hooks/useCachedOnboardingEvidence.ts",
+      "before": "4c120682fcaed9552b432b2d0d2ea1572944e13f4586630f75233c4dcf64bb62",
+      "after": "4c120682fcaed9552b432b2d0d2ea1572944e13f4586630f75233c4dcf64bb62",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/hooks/useOnboardingSkip.test.ts",
+      "before": "fce01b18032b4d5492b54014daa2f615717cbd2f2dcf24e9cfa560d44ce1701f",
+      "after": "fce01b18032b4d5492b54014daa2f615717cbd2f2dcf24e9cfa560d44ce1701f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/hooks/useOnboardingSkip.ts",
+      "before": "828d0f63ffb2a9412cc4d22ec3097143f6aae3768ce591af71b34491de650ba4",
+      "after": "828d0f63ffb2a9412cc4d22ec3097143f6aae3768ce591af71b34491de650ba4",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/hooks/useTaskOnboarding.ts",
+      "before": "67baf986494086a865b17b7aac3cedef8865a4075dd066ef1a0416ea1e1c4e7b",
+      "after": "67baf986494086a865b17b7aac3cedef8865a4075dd066ef1a0416ea1e1c4e7b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/pages/OnboardingPage.test.tsx",
+      "before": "42817857fa869d9c4032908bced47891de0304619c9c48e36e6ad09e44783b26",
+      "after": "42817857fa869d9c4032908bced47891de0304619c9c48e36e6ad09e44783b26",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "before": "4382ed5103b15136f7d7ebeca75b59038f1bc6d919e1664062937e33700d47d8",
+      "after": "4382ed5103b15136f7d7ebeca75b59038f1bc6d919e1664062937e33700d47d8",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tourSteps.test.ts",
+      "before": "9a166b142caf5fec132e1fe7c971bbfa5cfdad006bc6ce1edf8a77253b55c28a",
+      "after": "9a166b142caf5fec132e1fe7c971bbfa5cfdad006bc6ce1edf8a77253b55c28a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tourSteps.ts",
+      "before": "7622adf93b14aac110f97b90304d1b4e37d34eed995b2e3a8d159a2de8a424e2",
+      "after": "7622adf93b14aac110f97b90304d1b4e37d34eed995b2e3a8d159a2de8a424e2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/alertsTour.test.ts",
+      "before": "5802d3b927bb16f54c9edebc693fabb70ed8ce50dacf57c742537fc2dfd3a553",
+      "after": "5802d3b927bb16f54c9edebc693fabb70ed8ce50dacf57c742537fc2dfd3a553",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/alertsTour.ts",
+      "before": "12c795fee8d434a21b3250d43aff80710da7c1bbbb6b2f9d6d546d7f3d459e00",
+      "after": "12c795fee8d434a21b3250d43aff80710da7c1bbbb6b2f9d6d546d7f3d459e00",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/automationsTour.test.ts",
+      "before": "d17b55f31f758318a558ecea9f72bb2e4f781929a75d2e15bf16a025fc6e5555",
+      "after": "d17b55f31f758318a558ecea9f72bb2e4f781929a75d2e15bf16a025fc6e5555",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/automationsTour.ts",
+      "before": "283a200be1fef4746a24120b8cbe67b1e5e8a885d7436611cbdec51f3e975b53",
+      "after": "283a200be1fef4746a24120b8cbe67b1e5e8a885d7436611cbdec51f3e975b53",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/chargingTour.test.ts",
+      "before": "909a66c591e5dfa975482e917f5b13135b1a11ccab92fb9d2e6ab36fe85f7148",
+      "after": "909a66c591e5dfa975482e917f5b13135b1a11ccab92fb9d2e6ab36fe85f7148",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/chargingTour.ts",
+      "before": "0b7df9b3af8479b49bbcfee37e34a50044ca8c4db9f4a64c96de4e3a74d8eb4f",
+      "after": "0b7df9b3af8479b49bbcfee37e34a50044ca8c4db9f4a64c96de4e3a74d8eb4f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/debuggerTour.test.ts",
+      "before": "be7913547bf90d59fdd55b0603eb13245ac7dc10f13e08e30d79baf10902597c",
+      "after": "be7913547bf90d59fdd55b0603eb13245ac7dc10f13e08e30d79baf10902597c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/debuggerTour.ts",
+      "before": "fa22aae3892410a54de6982639777229a53cb97a97823936bdcbfdc36635d326",
+      "after": "fa22aae3892410a54de6982639777229a53cb97a97823936bdcbfdc36635d326",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/drivesTour.test.ts",
+      "before": "4ec14f3a3ec321c1c98a86216c3e69868f8507d540388ab97147b10914a5a1a7",
+      "after": "4ec14f3a3ec321c1c98a86216c3e69868f8507d540388ab97147b10914a5a1a7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/drivesTour.ts",
+      "before": "ee9835c9edb760d7bab62df0527ad1310b1d2f3bda3009919293824d9745da55",
+      "after": "ee9835c9edb760d7bab62df0527ad1310b1d2f3bda3009919293824d9745da55",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/mainTour.test.ts",
+      "before": "3badb6329e42e92b0c02d905fefdb504258e9b90fba809088a3bce468850081c",
+      "after": "3badb6329e42e92b0c02d905fefdb504258e9b90fba809088a3bce468850081c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/mainTour.ts",
+      "before": "2b83219e6ce8fde0f9178f44674e2ad3ce3f09d91d5da8b4541a371f2f20ba14",
+      "after": "2b83219e6ce8fde0f9178f44674e2ad3ce3f09d91d5da8b4541a371f2f20ba14",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/settingsTour.test.ts",
+      "before": "257029dc36b0e0a5a475797e7749659a32ab9d4e20913334a0723cc065fcca30",
+      "after": "257029dc36b0e0a5a475797e7749659a32ab9d4e20913334a0723cc065fcca30",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/settingsTour.ts",
+      "before": "617aeb3b6ae91e8e120d186624346898cb948c63f691c067c9bd8849f7561e15",
+      "after": "617aeb3b6ae91e8e120d186624346898cb948c63f691c067c9bd8849f7561e15",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/vehiclesTour.test.ts",
+      "before": "4d68d9081d024403bb39f18f0ac8c96f7c9f828b34d52152d42f0cdcdc98499a",
+      "after": "4d68d9081d024403bb39f18f0ac8c96f7c9f828b34d52152d42f0cdcdc98499a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/onboarding/tours/vehiclesTour.ts",
+      "before": "542f6bce01bbb2b0e23739d3e4d49a68d8e7b29c9be149c6e2f8680b0adfd549",
+      "after": "542f6bce01bbb2b0e23739d3e4d49a68d8e7b29c9be149c6e2f8680b0adfd549",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "before": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "after": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useProductPreferences.test.ts",
+      "before": "cc943e2c8c293bed409910d0309faab76fc623e7367ec6ab542a27b645da1a39",
+      "after": "cc943e2c8c293bed409910d0309faab76fc623e7367ec6ab542a27b645da1a39",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useProductPreferences.ts",
+      "before": "2f6dd2ac3e6492fa0de6ab60ce1a0f5bf9b626551b1c3caf876b58781e10f276",
+      "after": "2f6dd2ac3e6492fa0de6ab60ce1a0f5bf9b626551b1c3caf876b58781e10f276",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useStatusAnnouncer.ts",
+      "before": "378541442b5b9cbd5534efa3df15152e0207fa330d9a5473ce7419937b009508",
+      "after": "378541442b5b9cbd5534efa3df15152e0207fa330d9a5473ce7419937b009508",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "after": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/index.css",
+      "before": "dd11232a7d6cb103a0656db6c1e548541a991245c4df18633a6ac0ac1eb8e037",
+      "after": "dd11232a7d6cb103a0656db6c1e548541a991245c4df18633a6ac0ac1eb8e037",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/productPreferences.ts",
+      "before": "78e8e94e131663e3eb7b9e231ce2ab47721e1becc890b2a449be7a317583b548",
+      "after": "78e8e94e131663e3eb7b9e231ce2ab47721e1becc890b2a449be7a317583b548",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "before": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "after": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "before": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "after": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "unchanged": true
+    }
+  ],
+  "pinDrift": [],
+  "testDeclarations": [
+    {
+      "file": "web/src/features/onboarding/pages/OnboardingPage.test.tsx",
+      "sites": [
+        {
+          "line": 159,
+          "declaration": "it('renders the welcome heading and three setup steps', () => {"
+        },
+        {
+          "line": 167,
+          "declaration": "it('owns a touch-friendly viewport scroller because the global body is non-scrolling', () => {"
+        },
+        {
+          "line": 175,
+          "declaration": "it('shows the Continue button only when onboarding is complete', () => {"
+        },
+        {
+          "line": 180,
+          "declaration": "it('shows the Continue button once is_complete is true', async () => {"
+        },
+        {
+          "line": 199,
+          "declaration": "it('renders the connect Tesla CTA on the first step when no token', async () => {"
+        },
+        {
+          "line": 208,
+          "declaration": "it('Check again button calls refetch', async () => {"
+        },
+        {
+          "line": 215,
+          "declaration": "it('shows the Skip for now button when not complete and skips on click', async () => {"
+        },
+        {
+          "line": 226,
+          "declaration": "it('hides the Skip for now button once onboarding is complete', () => {"
+        },
+        {
+          "line": 241,
+          "declaration": "it('advances the in-progress indicator when the first anchor is satisfied', () => {"
+        },
+        {
+          "line": 254,
+          "declaration": "it('keeps configured users complete and explains a telemetry outage', () => {"
+        },
+        {
+          "line": 274,
+          "declaration": "it('retains setup status, current-step action and every section after a background error', () => {"
+        },
+        {
+          "line": 288,
+          "declaration": "it('migrates only the existing setup summary while preserving profile, checklist and resource controls', () => {"
+        },
+        {
+          "line": 302,
+          "declaration": "it('renders the telemetry guide as one named native link without a nested button', () => {"
+        },
+        {
+          "line": 321,
+          "declaration": "it('uses neutral decorative icons and reachable mobile setup and footer actions', () => {"
+        },
+        {
+          "line": 343,
+          "declaration": "it('keeps refresh controls disabled and preserves sections while reduced-motion refresh is busy', () => {"
+        },
+        {
+          "line": 364,
+          "declaration": "it('explains unresolved initial setup without hiding any steps or exploration controls', () => {"
+        },
+        {
+          "line": 384,
+          "declaration": "it('retains paused setup status and current-step refresh without claiming a device outage', () => {"
+        },
+        {
+          "line": 398,
+          "declaration": "it('keeps failed initial setup explainable and recoverable without removing neighboring sections', () => {"
+        }
+      ],
+      "count": 18,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/features/onboarding/components/Stepper.test.tsx",
+      "sites": [
+        {
+          "line": 73,
+          "declaration": "it('renders an accessible ordered list with every step title and description', () => {"
+        },
+        {
+          "line": 84,
+          "declaration": "it('marks the first not-done row as current and announces per-state SR status', () => {"
+        },
+        {
+          "line": 98,
+          "declaration": "it('renders a CTA only for the current step', () => {"
+        },
+        {
+          "line": 108,
+          "declaration": "it('invokes the current step onClick when its default CTA is activated', () => {"
+        },
+        {
+          "line": 118,
+          "declaration": "it('disables the default CTA when the step marks it disabled', () => {"
+        },
+        {
+          "line": 128,
+          "declaration": "it('uses the renderCta render-prop for the current step and suppresses the default button', () => {"
+        },
+        {
+          "line": 142,
+          "declaration": "it('shows no current row and no CTA once every step is done', () => {"
+        },
+        {
+          "line": 154,
+          "declaration": "it('renders an empty state instead of a list when there are no steps', () => {"
+        },
+        {
+          "line": 162,
+          "declaration": "it('tolerates undefined steps without throwing (null-safety)', () => {"
+        },
+        {
+          "line": 169,
+          "declaration": "it('numbers only the pending rows and gives every row a stable id', () => {"
+        },
+        {
+          "line": 180,
+          "declaration": "it('preserves completed rows after a missing anchor and moves only the first unfinished action', () => {"
+        },
+        {
+          "line": 199,
+          "declaration": "it('keeps LI ids and distinct check, spinner and pending markers in a contained layout', () => {"
+        },
+        {
+          "line": 219,
+          "declaration": "it('preserves caller-owned internal, external and custom actions only for the current row', () => {"
+        },
+        {
+          "line": 262,
+          "declaration": "it('does not invoke the action renderer when the current row has no action', () => {"
+        }
+      ],
+      "count": 14,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingResources.test.tsx",
+      "sites": [
+        {
+          "line": 29,
+          "declaration": "it('renders the panel heading and the privacy reassurance note', () => {"
+        },
+        {
+          "line": 42,
+          "declaration": "it('labels the navigation landmark for assistive technology', () => {"
+        },
+        {
+          "line": 52,
+          "declaration": "it('renders exactly three resource links, each with a title and description', () => {"
+        },
+        {
+          "line": 66,
+          "declaration": "it('routes the Tesla account link through the SPA router (internal, no new tab)', () => {"
+        },
+        {
+          "line": 77,
+          "declaration": "it('opens the setup guide as an external link in a new tab with a safe rel', () => {"
+        },
+        {
+          "line": 89,
+          "declaration": "it('opens the documentation as an external link in a new tab', () => {"
+        },
+        {
+          "line": 97,
+          "declaration": "it('announces to screen readers that external links open a new tab (WCAG G201)', () => {"
+        },
+        {
+          "line": 113,
+          "declaration": "it('marks every decorative icon as aria-hidden so none pollute the a11y tree', () => {"
+        },
+        {
+          "line": 122,
+          "declaration": "it('keeps every link keyboard-focusable with a visible focus ring', () => {"
+        },
+        {
+          "line": 135,
+          "declaration": "it('activates the internal link on click without throwing', () => {"
+        },
+        {
+          "line": 146,
+          "declaration": "it('forwards a custom className onto the GlassPanel root', () => {"
+        },
+        {
+          "line": 154,
+          "declaration": "it('renders without a className prop (default branch)', () => {"
+        },
+        {
+          "line": 166,
+          "declaration": "it('wraps every full resource label with neutral row chrome and theme-aware focus', () => {"
+        },
+        {
+          "line": 195,
+          "declaration": "it('retains localized long labels, native destinations and new-tab disclosures', async () => {"
+        }
+      ],
+      "count": 14,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingFeaturePreview.test.tsx",
+      "sites": [
+        {
+          "line": 47,
+          "declaration": "it('keeps all four decorative feature glyphs neutral and non-focusable', () => {"
+        },
+        {
+          "line": 74,
+          "declaration": "it('uses only neutral hover borders without adding interactive preview actions', () => {"
+        },
+        {
+          "line": 92,
+          "declaration": "it('renders every feature card with its title and description', () => {"
+        },
+        {
+          "line": 104,
+          "declaration": "it('renders each feature title as a level-3 panel heading', () => {"
+        },
+        {
+          "line": 117,
+          "declaration": "it('exposes the grid as an accessible list with a descriptive label', () => {"
+        },
+        {
+          "line": 126,
+          "declaration": "it('marks the leading icons as decorative so screen readers skip them', () => {"
+        },
+        {
+          "line": 137,
+          "declaration": "it('merges a custom className onto the grid while keeping base layout classes', () => {"
+        },
+        {
+          "line": 148,
+          "declaration": "it('renders safely without a className and defaults to the four-column grid', () => {"
+        },
+        {
+          "line": 157,
+          "declaration": "it('requests the expected i18n keys with English fallbacks', () => {"
+        }
+      ],
+      "count": 9,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.test.tsx",
+      "sites": [
+        {
+          "line": 36,
+          "declaration": "it('keeps all three wrapping mobile targets and original recovery destinations', async () => {"
+        },
+        {
+          "line": 72,
+          "declaration": "it('retains a stale observation and only telemetry recovery when authorization is available', () => {"
+        },
+        {
+          "line": 88,
+          "declaration": "it('retains authorization recovery without asserting unknown telemetry is stale', () => {"
+        },
+        {
+          "line": 102,
+          "declaration": "it('retains the stale warning without inventing an observation time', () => {"
+        },
+        {
+          "line": 111,
+          "declaration": "it.each(["
+        }
+      ],
+      "count": 5,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingSetupStatusBand.test.tsx",
+      "sites": [
+        {
+          "line": 68,
+          "declaration": "it('retains genuine zero counts, their denominator and source status captions', () => {"
+        },
+        {
+          "line": 86,
+          "declaration": "it('does not turn an absent response into disconnected statuses or measured zero', () => {"
+        },
+        {
+          "line": 100,
+          "declaration": "it('marks the loading root busy without exposing fabricated operational values', () => {"
+        },
+        {
+          "line": 108,
+          "declaration": "it('retains completed setup during a telemetry outage without claiming live health', () => {"
+        },
+        {
+          "line": 123,
+          "declaration": "it('distinguishes retained source data from a currently healthy fetch', () => {"
+        },
+        {
+          "line": 131,
+          "declaration": "it('retains fatal-error recovery beside missing summary values', () => {"
+        },
+        {
+          "line": 139,
+          "declaration": "it('keeps invalid numerical counts invalid rather than coercing them to status text', () => {"
+        },
+        {
+          "line": 148,
+          "declaration": "it('opens the real Review details drawer with original captions, gauge and provenance and closes on Escape', async () => {"
+        },
+        {
+          "line": 171,
+          "declaration": "it.each(["
+        },
+        {
+          "line": 235,
+          "declaration": "it('keeps missing setup unknown without a success ring even when completion is supplied', () => {"
+        },
+        {
+          "line": 245,
+          "declaration": "it('retains source warning and retry beside a confirmed semantic ring during refresh failure', () => {"
+        }
+      ],
+      "count": 11,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/features/onboarding/components/OnboardingGate.test.tsx",
+      "sites": [
+        {
+          "line": 81,
+          "declaration": "it('redirects to /onboarding (replace) when incomplete, not skipped, on a gated path', () => {"
+        },
+        {
+          "line": 87,
+          "declaration": "it('renders nothing — the gate is a side-effect-only component', () => {"
+        },
+        {
+          "line": 92,
+          "declaration": "it('does not redirect while the status request is loading', () => {"
+        },
+        {
+          "line": 98,
+          "declaration": "it('does not redirect when the status request has errored (avoid trapping on a flaky backend)', () => {"
+        },
+        {
+          "line": 104,
+          "declaration": "it('does not redirect when status data has not arrived yet', () => {"
+        },
+        {
+          "line": 110,
+          "declaration": "it('does not redirect once onboarding is complete', () => {"
+        },
+        {
+          "line": 116,
+          "declaration": "it('does not redirect a configured installation when telemetry is stale', () => {"
+        },
+        {
+          "line": 127,
+          "declaration": "it('does not redirect when the user has chosen \"Skip for now\"', () => {"
+        },
+        {
+          "line": 135,
+          "declaration": "it.each(["
+        },
+        {
+          "line": 150,
+          "declaration": "it('still redirects from a look-alike path that only shares a prefix substring', () => {"
+        },
+        {
+          "line": 158,
+          "declaration": "it('matches an exact allow-listed path', () => {"
+        },
+        {
+          "line": 164,
+          "declaration": "it('matches nested paths under an allow-listed prefix', () => {"
+        },
+        {
+          "line": 170,
+          "declaration": "it('matches public share links via the trailing-slash prefix', () => {"
+        },
+        {
+          "line": 175,
+          "declaration": "it('rejects paths that only share a prefix substring', () => {"
+        },
+        {
+          "line": 182,
+          "declaration": "it('rejects the bare /s route without a share token', () => {"
+        },
+        {
+          "line": 186,
+          "declaration": "it('rejects unrelated and empty paths', () => {"
+        },
+        {
+          "line": 194,
+          "declaration": "it('exposes the six documented bypass roots', () => {"
+        },
+        {
+          "line": 205,
+          "declaration": "it('treats a representative path under every declared prefix as allowed', () => {"
+        }
+      ],
+      "count": 18,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/features/onboarding/hooks/useOnboardingSkip.test.ts",
+      "sites": [
+        {
+          "line": 16,
+          "declaration": "it('reads false by default', () => {"
+        },
+        {
+          "line": 22,
+          "declaration": "it('skip() persists to localStorage and updates state', () => {"
+        },
+        {
+          "line": 32,
+          "declaration": "it('unskip() clears localStorage and updates state', () => {"
+        },
+        {
+          "line": 44,
+          "declaration": "it('hydrates true when localStorage already has the flag', () => {"
+        }
+      ],
+      "count": 4,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/api/hooks/useOnboarding.test.tsx",
+      "sites": [
+        {
+          "line": 78,
+          "declaration": "it('exports a stable readonly status key tuple', () => {"
+        },
+        {
+          "line": 84,
+          "declaration": "it('is the documented 30s cadence', () => {"
+        },
+        {
+          "line": 90,
+          "declaration": "it('passes a complete payload through and prefers the backend is_complete', () => {"
+        },
+        {
+          "line": 94,
+          "declaration": "it('keeps is_complete=true from the backend even if anchors disagree', () => {"
+        },
+        {
+          "line": 108,
+          "declaration": "it('prefers durable setup_complete over a conflicting compatibility alias', () => {"
+        },
+        {
+          "line": 123,
+          "declaration": "it('recomputes setup completion from the three anchors for a legacy payload', () => {"
+        },
+        {
+          "line": 136,
+          "declaration": "it('recomputes is_complete=false when a vehicle is missing and flag omitted', () => {"
+        },
+        {
+          "line": 145,
+          "declaration": "it('defaults every anchor pessimistically for a partial payload', () => {"
+        },
+        {
+          "line": 158,
+          "declaration": "it('returns an all-false status for undefined input', () => {"
+        },
+        {
+          "line": 171,
+          "declaration": "it('returns an all-false status for null input', () => {"
+        },
+        {
+          "line": 184,
+          "declaration": "it('keeps a configured installation complete when live telemetry is stale', () => {"
+        },
+        {
+          "line": 204,
+          "declaration": "it('stops polling once setup is complete', () => {"
+        },
+        {
+          "line": 208,
+          "declaration": "it('keeps polling at the 30s cadence while incomplete', () => {"
+        },
+        {
+          "line": 219,
+          "declaration": "it('keeps polling for an undefined payload (loading / error)', () => {"
+        },
+        {
+          "line": 223,
+          "declaration": "it('stops polling when all anchors are set but the flag was omitted', () => {"
+        },
+        {
+          "line": 235,
+          "declaration": "it('resolves the normalised status payload', async () => {"
+        },
+        {
+          "line": 243,
+          "declaration": "it('calls request() against /onboarding/status with an AbortSignal', async () => {"
+        },
+        {
+          "line": 256,
+          "declaration": "it('normalises a partial backend payload into a pessimistic status', async () => {"
+        },
+        {
+          "line": 274,
+          "declaration": "it('continues polling after setup when requested by a runtime-health consumer', async () => {"
+        },
+        {
+          "line": 285,
+          "declaration": "it('surfaces transport failures as ApiError so the gate stays pessimistic', async () => {"
+        }
+      ],
+      "count": 20,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    },
+    {
+      "file": "web/src/hooks/useProductPreferences.test.ts",
+      "sites": [
+        {
+          "line": 25,
+          "declaration": "it('uses production-safe defaults when no preference is stored', () => {"
+        },
+        {
+          "line": 30,
+          "declaration": "it('persists same-tab updates and notifies every consumer', () => {"
+        },
+        {
+          "line": 59,
+          "declaration": "it('preserves sequential in-memory updates when storage writes fail', () => {"
+        },
+        {
+          "line": 91,
+          "declaration": "it('accepts a real cross-tab update after an in-memory write failure', () => {"
+        },
+        {
+          "line": 127,
+          "declaration": "it('keeps a failed reset authoritative for later in-memory updates', () => {"
+        },
+        {
+          "line": 156,
+          "declaration": "it('falls back field-by-field when persisted data is corrupted', () => {"
+        },
+        {
+          "line": 177,
+          "declaration": "it('recovers from malformed JSON without throwing', () => {"
+        },
+        {
+          "line": 186,
+          "declaration": "it('applies cross-tab storage updates', () => {"
+        },
+        {
+          "line": 212,
+          "declaration": "it('resets every preference as one atomic update', () => {"
+        }
+      ],
+      "count": 9,
+      "execution": "NOTRUN; parameterized sites are not runtime discovered cases"
+    }
+  ],
+  "sectionCoverage": [
+    {
+      "section": "Setup status",
+      "pageLine": 208,
+      "mechanism": "Four raw metrics: progress/3 and ring, Tesla auth, vehicles, telemetry. Scope installation, last telemetry not fetch time; details retains full metrics/provenance. Initial skeleton/null readings; fatal retry; retained data kept; durable completion survives outages."
+    },
+    {
+      "section": "Runtime health",
+      "pageLine": 222,
+      "mechanism": "Optional confirmed auth/stale-telemetry recovery notice after durable setup only; reconnect/system/alerts navigation. Unknown alone does not assert outage."
+    },
+    {
+      "section": "Workspace profile",
+      "pageLine": 230,
+      "mechanism": "Four typed persona options, stable ID/label/hint; patch persona only in versioned local store, preserving landing/vehicle/range/help/release preferences. No server role change. Always rendered."
+    },
+    {
+      "section": "Checklist",
+      "pageLine": 261,
+      "mechanism": "Three fixed anchors, full descriptions, first-not-done CTA only. Durable completion wins; no whole-page/null gate. Unknown/pause/motion residuals separately reported."
+    },
+    {
+      "section": "Resources",
+      "pageLine": 300,
+      "mechanism": "Three complete wrapping native/router links, safe new-tab name/rel/focus declarations and full localized privacy reassurance."
+    },
+    {
+      "section": "Capability preview",
+      "pageLine": 308,
+      "mechanism": "Four noninteractive tracking/drives/charging/control tiles; neutral icons/hover, glow none; no command handlers."
+    },
+    {
+      "section": "Footer",
+      "pageLine": 314,
+      "mechanism": "Polling or durable-ready copy; fetching-disabled Check again; local skip then /; completed-only Continue /. Wrapping min-h-11 page actions retained."
+    }
+  ],
+  "actionCoverage": [
+    {
+      "action": "Review details",
+      "file": "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx",
+      "line": 151,
+      "mechanism": "Shared Brief local drawer opens",
+      "executed": false
+    },
+    {
+      "action": "Close details/Escape",
+      "file": "web/src/features/onboarding/components/OnboardingSetupStatusBand.tsx",
+      "line": 151,
+      "mechanism": "Shared Drawer onClose; focus native proof NOTRUN",
+      "executed": false
+    },
+    {
+      "action": "Primary use",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 256,
+      "mechanism": "Four enum options; local updatePreferences persona patch",
+      "executed": false
+    },
+    {
+      "action": "Connect account",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 133,
+      "mechanism": "navigate /tesla-account; current row only",
+      "executed": false
+    },
+    {
+      "action": "Vehicle Refresh",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 179,
+      "mechanism": "status refetch, disabled isFetching",
+      "executed": false
+    },
+    {
+      "action": "Telemetry guide",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 143,
+      "mechanism": "native /docs/fleet-telemetry-setup; safe new tab/named IDs",
+      "executed": false
+    },
+    {
+      "action": "Resource account",
+      "file": "web/src/features/onboarding/components/OnboardingResources.tsx",
+      "line": 122,
+      "mechanism": "SPA /tesla-account",
+      "executed": false
+    },
+    {
+      "action": "Resource guide",
+      "file": "web/src/features/onboarding/components/OnboardingResources.tsx",
+      "line": 126,
+      "mechanism": "native guide new tab",
+      "executed": false
+    },
+    {
+      "action": "Resource docs",
+      "file": "web/src/features/onboarding/components/OnboardingResources.tsx",
+      "line": 126,
+      "mechanism": "native /docs/ new tab",
+      "executed": false
+    },
+    {
+      "action": "Reconnect",
+      "file": "web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.tsx",
+      "line": 83,
+      "mechanism": "navigate /tesla-account only auth recovery",
+      "executed": false
+    },
+    {
+      "action": "System status",
+      "file": "web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.tsx",
+      "line": 97,
+      "mechanism": "navigate /system-status only stale telemetry",
+      "executed": false
+    },
+    {
+      "action": "Health alerts",
+      "file": "web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.tsx",
+      "line": 110,
+      "mechanism": "navigate /notifications/channels, not configuration mutation",
+      "executed": false
+    },
+    {
+      "action": "Check again",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 326,
+      "mechanism": "refetch, fetching-disabled, reduced-motion icon",
+      "executed": false
+    },
+    {
+      "action": "Skip",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 339,
+      "mechanism": "local skip flag then navigate /; not server completion",
+      "executed": false
+    },
+    {
+      "action": "Continue",
+      "file": "web/src/features/onboarding/pages/OnboardingPage.tsx",
+      "line": 357,
+      "mechanism": "durable-complete-only navigate /",
+      "executed": false
+    },
+    {
+      "action": "Header help",
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "line": 195,
+      "mechanism": "Localized subtitle Tooltip; no clipboard action",
+      "executed": false
+    }
+  ],
+  "requiredReading": {
+    "soleLoop": "docs/orchestrator-loop.md fully read; supersedes historical root playbooks also read",
+    "designContract": "docs/frontend-design-contract.md fully read in ranges",
+    "mission": "docs/frontend-mission.md fully read in ranges",
+    "inventory": "OnboardingPage/audit-page-152 row",
+    "handoff": "Current recovery plus Onboarding source-only18/18 attempt2 receipt and unaccepted geometry",
+    "instructions": [
+      ".github/copilot-instructions.md relevant frontend/integrity",
+      ".github/instructions/react-frontend.instructions.md fully read",
+      "migration-queue.md exact row/current read-only QA contract"
+    ]
+  },
+  "queue": {
+    "exactEntry": {
+      "line": 136,
+      "row": "| [~] | 6 | phase6-qa-onboarding-onboarding | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-onboarding-onboarding.json; web\\logs\\phase6-qa-onboarding-onboarding.log | phase5-page-onboarding-onboarding | 1 | reserved02:04:58.538Z; actor pending | - | OnboardingPage/direct supports; source-only, no enrollment/auth/token/settings/network/device actions. |"
+    },
+    "dependency": "phase5-page-onboarding-onboarding [x]",
+    "edited": false,
+    "deduplication": "Existing phase6-onboarding-health-touch/resource-noise/preview-icons/setup-ring [x] objectives preserved; no redispatch. New residuals share one proposed page/Stepper/summary owner each. No lease or queue row created; reservation is not running census."
+  },
+  "ruleScan": {
+    "scope": "10 exact direct production files; logged regex scans, manually reviewed; not official lint",
+    "matches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidates": 1,
+      "missing-page-container-candidates": 1,
+      "fetch-useeffect-candidates": 1
+    },
+    "exceptions": [
+      "Generic request syntax false hardcoded candidate",
+      "PageLayout forwards PageContainer: accepted composition",
+      "Storage resync/routing useEffect is not data loading",
+      "Shared primitive native HTML and motion boundary expected",
+      "Optional runtime notice/current CTA visibility is not a hidden independent source section",
+      "Native guide anchor fixed; old nested button NOT counted",
+      "Semantic setup ring/neutral resources/preview/mobile recovery fixes preserved"
+    ],
+    "confirmedRegexCandidates": 0,
+    "backendRules": "NOT_APPLICABLE; no backend audit or route/capability guarantees verified"
+  },
+  "readinessValidationConfirmation": {
+    "readiness": "Durable setup_complete wins over alias; hook legacy anchor fallback preserved; outages do not re-enroll. No auth/token/device actions performed.",
+    "scopeIdentity": "Installation-level status key [onboarding,status], no vehicle/range picker. Persona is not permission. App567/routeLoaders123 actual standalone lazy onboarding declaration; recovery destinations App626/690/904. Native/auth route access NOTRUN.",
+    "validation": "Persona sanitized to four enums; no account/enrollment form. Payload/partial coherence conditional only.",
+    "confirmation": "No enrollment/command/delete/settings-mutation confirmation here. Navigation/local preferences/status read are source declarations only; no handler activated.",
+    "copyFeedback": "96 unique referenced canonical keys checked,0 missing; no generated/cold-real-i18n acceptance. No clipboard action; canonical privacy/polling/no-attention strings inspected.",
+    "trust": "Retained payload kept, fatalError only without data; missing numeric null vs genuine0 preserved. Last telemetry never fetch time. Paused/outcome exceptions reported.",
+    "mobileA11y": "h-dvh own scroller/pb-safe, wrapping grids/full labels, min-h-11 page/resource/recovery controls, localized semantic lists/nav/headings/stableIDs, safe native new-tab guide, combined motion on page/FadeIn; declaration proof only.",
+    "preferences": "Local versioned persona patch preserves other fields; failed-write in-memory fallback/cross-tab declarations; skip distinct from durable completion and gate bypasses missing/error status."
+  },
+  "historicalEvidence": {
+    "page": "Queue/handoff18/18 and lint0 at835233a2d are historical, not fresh reruns; native incomplete/page geometry scanner1 preserved.",
+    "e2e": "dashboard-onboarding-attribution.smoke.spec.ts is opt-in5235 mocked dashboard-widget diagnostic, not OnboardingPage acceptance; read only.",
+    "preservation": "Current six-file composed1108lines. Original immutable baseline comparison/70%-gate and preservation CLI NOTRUN; no baseline regenerated."
+  },
+  "notRun": [
+    "ALL fresh tests/lint/build/global TypeScript including npx tsc --noEmit; no passing reruns",
+    "Official scanners/preservation helpers/i18n generator/catalog guards",
+    "Any network/API/browser requests or actual enrollment/auth/token/settings/localStorage/device actions",
+    "Servers, installs, helpers, subagents, Git writes/stage/commit/push",
+    "Native screen-reader/keyboard/focus/contrast/forced-colors/theme/RTL/200%-text/mobile-safe-area matrix320/375/390/430/768/1024/1280/1440/1920/2560 and narrow containers",
+    "Backend authorization/capability/payload/timing guarantees; original semantic preservation"
+  ],
+  "commands": [
+    {
+      "shellId": 2247,
+      "command": "Get-Date/root/audit listing",
+      "exit": 0
+    },
+    {
+      "shellId": 2248,
+      "command": "initial read-only git status and onboarding listing",
+      "exit": 0
+    },
+    {
+      "shellId": 2254,
+      "command": "document/instruction locator",
+      "exit": 0
+    },
+    {
+      "shellId": 2261,
+      "command": "broad context search, tool-truncated",
+      "exit": 0
+    },
+    {
+      "shellId": 2272,
+      "command": "inline queue/hash scan; console UnicodeEncodeError after log write",
+      "exit": 1
+    },
+    {
+      "shellId": 2284,
+      "command": "encoding correction/full mission bounded context",
+      "exit": 0
+    },
+    {
+      "shellId": 2291,
+      "command": "instruction locator/document sizes",
+      "exit": 0
+    },
+    {
+      "shellId": 2303,
+      "command": "direct hashes/declarations/queue",
+      "exit": 0
+    },
+    {
+      "shellId": 2319,
+      "command": "rule grep/owner scan",
+      "exit": 0
+    },
+    {
+      "shellId": 2332,
+      "command": "bounded owner/grep raw replay",
+      "exit": 0
+    },
+    {
+      "shellId": 2346,
+      "command": "shared rendering pins",
+      "exit": 0
+    },
+    {
+      "shellId": 2354,
+      "command": "sole-loop locator/exact lines",
+      "exit": 0
+    },
+    {
+      "shellId": 2358,
+      "command": "predecessor/token declarations",
+      "exit": 0
+    },
+    {
+      "shellId": 2382,
+      "command": "density/owner pins",
+      "exit": 0
+    },
+    {
+      "shellId": 2406,
+      "command": "canonical96 key checks/excerpts",
+      "exit": 0
+    },
+    {
+      "shellId": 2441,
+      "command": "anchored declaration/route/copy scan",
+      "exit": 0
+    },
+    {
+      "shellId": 2450,
+      "command": "exact findings/composed1108 lines",
+      "exit": 0
+    },
+    {
+      "shellId": 2476,
+      "command": "route-loader/destination declarations",
+      "exit": 0
+    },
+    {
+      "shellId": 2517,
+      "command": "overlong JSON authoring command rejected OS206 before execution",
+      "exit": 1
+    },
+    {
+      "shellId": 2533,
+      "command": "bounded allowed JSON write part1",
+      "exit": 0
+    }
+  ],
+  "commandNotes": [
+    "Raw checks/exits/exact recent inline commands in assigned log; source views were read-only tool reads, not validators.",
+    "Initial read-only Git status before sole worker contract read; no subsequent Git operation or writes.",
+    "API unanchored21 included comment line10; corrected anchored20 used. Parameterization not runtime discovery.",
+    "Large tool-truncated output replaced with bounded source/context reads; complete raw logged scans retained.",
+    "Both actual command failures preserved:2272 encoding and2517 OS length; neither is hidden or counted as test failure."
+  ],
+  "completedAt": "2026-10-14T02:24:58.322223Z"
+}

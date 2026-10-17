@@ -1,0 +1,13 @@
+{
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    },
+    "generic": "No data available yet.",
+    "label": {
+      "prerequisite": "What has to happen first",
+      "likelyCause": "Most likely reason"
+    }
+  }
+}

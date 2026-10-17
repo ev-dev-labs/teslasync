@@ -1,0 +1,475 @@
+[     237ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'join-ad-interest-group'. @ :0
+[     237ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'run-ad-auction'. @ :0
+[    8115ms] [WARNING] Something has shimmed the React DevTools global hook (__REACT_DEVTOOLS_GLOBAL_HOOK__). Fast Refresh is not compatible with this shim and will be disabled. @ http://127.0.0.1:5219/@react-refresh:341
+[   16695ms] [INFO] 🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙 @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-RMV57XKV.js?v=4187ffe5:1802
+[   16702ms] [INFO] [rum] VITE_OTLP_HTTP_ENDPOINT not set; OpenTelemetry RUM disabled. @ http://127.0.0.1:5219/src/main.tsx:51
+[  245957ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'join-ad-interest-group'. @ :0
+[  245957ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'run-ad-auction'. @ :0
+[  246332ms] [WARNING] Something has shimmed the React DevTools global hook (__REACT_DEVTOOLS_GLOBAL_HOOK__). Fast Refresh is not compatible with this shim and will be disabled. @ http://127.0.0.1:5219/@react-refresh:341
+[  246910ms] [INFO] 🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙 @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-RMV57XKV.js?v=4187ffe5:1802
+[  246917ms] [INFO] [rum] VITE_OTLP_HTTP_ENDPOINT not set; OpenTelemetry RUM disabled. @ http://127.0.0.1:5219/src/main.tsx:51
+[  247384ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/admin/rbac/matrix:0
+[  247440ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/rbac/matrix:0
+[  247617ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/notifications/unread-count:0
+[  247627ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  247636ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  247638ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/auth/session:0
+[  247699ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/rbac/matrix:0
+[  247878ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5219/api/v1/push/public-key:0
+[  248124ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  248172ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5219/api/v1/push/public-key:0
+[  249434ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost DriveDetailPage DriveDetailPage 
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249531ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost SilentCounterPanel SilentCounterPanel 
+    at SilentCounterPanel (http://127.0.0.1:5219/src/features/driving/components/drive-detail/SilentCounterPanel.tsx:27:38)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at div
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249602ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost DriveLedgerCompactPanel DriveLedgerCompactPanel 
+    at DriveLedgerCompactPanel (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveLedgerCompactPanel.tsx:26:43)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at div
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249631ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost GearTheaterPanel GearTheaterPanel 
+    at GearTheaterPanel (http://127.0.0.1:5219/src/features/driving/components/drive-detail/GearTheaterPanel.tsx:25:36)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at div
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249664ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost RoadAnomalyPanel RoadAnomalyPanel 
+    at RoadAnomalyPanel (http://127.0.0.1:5219/src/features/driving/components/drive-detail/RoadAnomalyPanel.tsx:29:36)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at div
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249666ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost WhyEndedPanel WhyEndedPanel 
+    at WhyEndedPanel (http://127.0.0.1:5219/src/features/driving/components/drive-detail/WhyEndedPanel.tsx:38:33)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at div
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249700ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost ShareDriveDialog ShareDriveDialog 
+    at ShareDriveDialog (http://127.0.0.1:5219/src/features/driving/components/ShareDriveDialog.tsx:26:36)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249841ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/drives/1/shares:0
+[  249949ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost HeroGauges HeroGauges 
+    at HeroGauges (http://127.0.0.1:5219/src/features/driving/components/drive-detail/HeroGauges.tsx:32:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  249973ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost ForwardRef(ChartContainer2) ForwardRef(ChartContainer2) 
+    at ChartContainer2 (http://127.0.0.1:5219/src/components/charts/ChartContainer.tsx:79:7)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at FadeIn (http://127.0.0.1:5219/src/components/motion/FadeIn.tsx:20:26)
+    at DriveOverviewChart (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveOverviewChart.tsx:45:38)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at div
+    at ChartTimeRangeProvider (http://127.0.0.1:5219/src/components/charts/ChartTimeRangeContext.tsx:32:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  250071ms] [ERROR] Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render%s TaskOnboardingHost MapTileLayer MapTileLayer 
+    at MapTileLayer (http://127.0.0.1:5219/src/components/maps/MapTileLayer.tsx:63:32)
+    at div
+    at MapContainerComponent (http://127.0.0.1:5219/node_modules/.vite/deps/react-leaflet.js?v=4187ffe5:545:34)
+    at div
+    at div
+    at _c (http://127.0.0.1:5219/src/components/ui/GlassPanel.tsx:33:11)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at FadeIn (http://127.0.0.1:5219/src/components/motion/FadeIn.tsx:20:26)
+    at RouteMapSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/RouteMapSection.tsx:70:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SectionErrorBoundary (http://127.0.0.1:5219/src/components/feedback/SectionErrorBoundary.tsx:22:3)
+    at section
+    at DriveDetailSection (http://127.0.0.1:5219/src/features/driving/components/drive-detail/DriveDetailSection.tsx:22:3)
+    at div
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at PageErrorBoundary (http://127.0.0.1:5219/src/components/feedback/PageErrorBoundary.tsx:18:37)
+    at div
+    at PageContainer (http://127.0.0.1:5219/src/components/layout/PageContainer.tsx:53:3)
+    at DriveDetailPage (http://127.0.0.1:5219/src/features/driving/pages/DriveDetailPage.tsx:60:18)
+    at Suspense
+    at SuspenseProgressBoundary (http://127.0.0.1:5219/src/components/feedback/SuspenseProgressBoundary.tsx:21:3)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5)
+    at SafeRoute (http://127.0.0.1:5219/src/App.tsx:517:29)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Outlet (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7630:26)
+    at div
+    at MotionDOMComponent (http://127.0.0.1:5219/node_modules/.vite/deps/framer-motion.js?v=4187ffe5:9370:40)
+    at RouteTransition (http://127.0.0.1:5219/src/components/motion/RouteTransition.tsx:31:35)
+    at div
+    at main
+    at div
+    at div
+    at WorkspaceScopeProvider (http://127.0.0.1:5219/src/hooks/useWorkspaceScope.tsx:31:3)
+    at BreadcrumbOverridesProvider (http://127.0.0.1:5219/src/components/layout/BreadcrumbOverridesContext.tsx:22:47)
+    at Layout (http://127.0.0.1:5219/src/components/layout/Layout.tsx:663:24)
+    at RenderedRoute (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:6758:26)
+    at Routes (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7700:3)
+    at App (http://127.0.0.1:5219/src/App.tsx:600:20)
+    at TypographyAgentProvider (http://127.0.0.1:5219/src/components/typography-agent/TypographyAgentProvider.tsx:68:43)
+    at OperationalModeProvider (http://127.0.0.1:5219/src/hooks/useOperationalMode.tsx:43:43)
+    at ToastProvider (http://127.0.0.1:5219/src/components/feedback/Toast.tsx:72:33)
+    at SelectedVehicleProvider (http://127.0.0.1:5219/src/store/selectedVehicle.tsx:52:43)
+    at FontProvider (http://127.0.0.1:5219/src/components/ui/FontProvider.tsx:291:32)
+    at ThemeProvider (http://127.0.0.1:5219/src/components/ui/ThemeProvider.tsx:289:33)
+    at NavigationGuardProvider (http://127.0.0.1:5219/src/components/feedback/NavigationGuardProvider.tsx:28:43)
+    at Router (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:7639:13)
+    at BrowserRouter (http://127.0.0.1:5219/node_modules/.vite/deps/react-router-dom.js?v=4187ffe5:10958:3)
+    at QueryClientProvider (http://127.0.0.1:5219/node_modules/.vite/deps/@tanstack_react-query.js?v=4187ffe5:26:30)
+    at ErrorBoundary (http://127.0.0.1:5219/src/components/feedback/ErrorBoundary.tsx:11:5) @ http://127.0.0.1:5219/node_modules/.vite/deps/chunk-H343HIDT.js?v=4187ffe5:520
+[  277937ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  277944ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/alerts?severity=warn&read=false&archived=false&limit=51:0
+[  278230ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  278254ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  307972ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  308295ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  308321ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  337569ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/onboarding/status:0
+[  338016ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  338399ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  338443ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  338483ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://127.0.0.1:5219/api/v1/system/version:0
+[  339723ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  367619ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/onboarding/status:0
+[  368039ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  368170ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/alerts:0
+[  368190ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/alerts?severity=warn&read=false&archived=false&limit=51:0
+[  368282ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/data-repair/cases/stats:0
+[  369762ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  369793ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  398057ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  399811ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  399831ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  428097ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  429853ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  429871ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  458130ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  458358ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5219/api/v1/alerts:0
+[  459900ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  459922ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  488159ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  489951ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  489969ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  518182ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://127.0.0.1:5219/api/v1/system/health:0
+[  520000ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0
+[  520020ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://127.0.0.1:5219/api/v1/admin/impersonate:0

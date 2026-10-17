@@ -137,6 +137,35 @@ describe('normalizeMaintenance', () => {
     const evidence = normalizeMaintenance(items, records, 'day')!;
     expect(evidence.categories).toEqual(['tires']);
   });
+
+  it('excludes unreviewed free text without losing populated service facts', () => {
+    const privateRecord = { ...records[0]!, notes: 'Call owner at 555-0100; serviced at 123 Main St' };
+    expect(normalizeMaintenance(items, [privateRecord], 'day')).toMatchObject({
+      scheduled_item_count: 1,
+      service_record_count: 1,
+      categories: ['tires'],
+      service_records: [{ item_id: 'tire-rotation', date: '2023-06-15', odometer_m: 15500, notes: '' }],
+    });
+  });
+
+  it('requires consent and record-specific review, and uses reviewed text rather than raw notes', () => {
+    const record = { ...records[0]!, notes: 'Rotated tires at the owner home address' };
+    const reviewedNotes = new Map([[record, {
+      sourceNotes: record.notes, reviewedText: 'Rotated all four tires',
+    }]]);
+    expect(normalizeMaintenance(items, [record], 'day', { consent: false, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('');
+    expect(normalizeMaintenance(items, [record], 'day', { consent: true, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('Rotated all four tires');
+    expect(normalizeMaintenance(items, [{ ...record, notes: 'Updated private note' }], 'day', {
+      consent: true, reviewedNotes,
+    })?.service_records[0]?.notes).toBe('');
+    expect(normalizeMaintenance(items, [records[0]!], 'day', { consent: true, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('');
+    record.notes = 'Changed in place after review';
+    expect(normalizeMaintenance(items, [record], 'day', { consent: true, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('');
+  });
 });
 
 describe('normalizeSoftwareUpdates', () => {
@@ -157,6 +186,39 @@ describe('normalizeSoftwareUpdates', () => {
     expect(evidence.update_count).toBe(3);
     expect(evidence.installed_versions).toHaveLength(2);
   });
+
+  it.each(['day', 'exact'] as const)('applies %s precision to installation instants without changing populated facts', (precision) => {
+    const evidence = normalizeSoftwareUpdates(updates, precision)!;
+    expect(evidence).toEqual({
+      update_count: 3,
+      latest_version: '2024.5.3',
+      installed_versions: [
+        { version: '2024.2.1', installed_at: precision === 'day' ? '2024-02-01' : '2024-02-01T00:00:00Z' },
+        { version: '2024.5.3', installed_at: precision === 'day' ? '2024-05-10' : '2024-05-10T00:00:00Z' },
+      ],
+    });
+    expect(updates[0]?.installedAt).toBe('2024-02-01T00:00:00Z');
+  });
+
+  it('defaults to day precision when existing callers omit the selection', () => {
+    expect(normalizeSoftwareUpdates(updates)?.installed_versions[0]?.installed_at).toBe('2024-02-01');
+  });
+
+  it('selects the latest version before coarsening installation instants on the same day', () => {
+    const sameDay = [
+      { ...updates[0]!, installedAt: '2024-05-10T08:00:00Z' },
+      { ...updates[1]!, installedAt: '2024-05-10T19:00:00Z' },
+      { ...updates[2]!, status: 'installed' as const, installedAt: null },
+    ];
+    expect(normalizeSoftwareUpdates(sameDay, 'day')).toEqual({
+      update_count: 3,
+      latest_version: '2024.5.3',
+      installed_versions: [
+        { version: '2024.2.1', installed_at: '2024-05-10' },
+        { version: '2024.5.3', installed_at: '2024-05-10' },
+      ],
+    });
+  });
 });
 
 describe('normalizeWarranty', () => {
@@ -165,7 +227,7 @@ describe('normalizeWarranty', () => {
     expect(normalizeWarranty({ data: null, fetched_at: null }, 'day')).toBeNull();
   });
 
-  it('scrubs sensitive keys from the opaque warranty payload', () => {
+  it('projects a bounded warranty plan while excluding identity fields', () => {
     const evidence = normalizeWarranty(
       { data: { plan: 'Basic', vin: 'should-be-dropped', owner_email: 'x@example.com' }, fetched_at: '2024-01-01T00:00:00Z' },
       'day',
@@ -175,6 +237,42 @@ describe('normalizeWarranty', () => {
     expect(evidence.data?.plan).toBe('Basic');
     expect(evidence.fetched_at).toBe('2024-01-01');
   });
+
+  it('does not trust benign key names for free text or nested warranty content', () => {
+    const data = {
+      plan: 'Basic',
+      description: 'Owner Jane, 123 Main St',
+      notes: 'Token secret-value',
+      coverage: [{ label: 'Driver Jane', value: '555-0100' }],
+      status: 'Contact x@example.com',
+    };
+    expect(normalizeWarranty({ data, fetched_at: null }, 'day')?.data).toEqual({ plan: 'Basic' });
+    expect(data.description).toBe('Owner Jane, 123 Main St');
+  });
+
+  it.each(['day', 'exact'] as const)('excludes opaque business dates at %s precision rather than guessing string semantics', (precision) => {
+    const data = {
+      plan: 'Battery',
+      coverage_start_date: '2024-01-01',
+      coverage_end_date: '2032-01-01T12:34:56Z',
+      expires: 'Eight years from delivery',
+      coverage: { date: '2032-01-01' },
+    };
+    expect(normalizeWarranty({
+      data, fetched_at: '2024-06-15T10:30:45.123Z',
+    }, precision)).toEqual({
+      data: { plan: 'Battery' },
+      fetched_at: precision === 'day' ? '2024-06-15' : '2024-06-15T10:30:45.123Z',
+    });
+    expect(data.coverage_end_date).toBe('2032-01-01T12:34:56Z');
+  });
+
+  it.each(['Basic at 123 Main St', { notes: 'owner identity' }, ['Basic'], null, 1])(
+    'rejects an uncontracted warranty plan value (%s)',
+    (plan) => {
+      expect(normalizeWarranty({ data: { plan }, fetched_at: null }, 'day')?.data).toEqual({});
+    },
+  );
 });
 
 const drives: Drive[] = [
@@ -263,6 +361,52 @@ describe('normalizeChargingHistory', () => {
   it('averages peak power directly in watts (already SI)', () => {
     const evidence = normalizeChargingHistory(sessions, 'day')!;
     expect(evidence.avg_peak_power_w).toBeCloseTo((120000 + 7000) / 2);
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '', '0', false])(
+    'keeps missing or invalid measurements (%s) unknown rather than zero or partial totals',
+    (value) => {
+      const unknown = Object.assign({}, sessions[0]!, {
+        total_energy_added_wh: value, peak_power_w: value, cost: value, cost_decimal: value,
+      });
+      for (const input of [[unknown], [sessions[1]!, unknown]]) {
+        expect(normalizeChargingHistory(input, 'day')).toMatchObject({
+          total_energy_added_wh: null, avg_peak_power_w: null, total_cost: null,
+          observed_session_count: input.length,
+        });
+      }
+    },
+  );
+
+  it('retains measured zero even when the legacy cost alias is absent', () => {
+    const zero = { ...sessions[0]!, total_energy_added_wh: 0, peak_power_w: 0, cost: undefined, cost_decimal: 0 };
+    expect(normalizeChargingHistory([zero], 'day')).toMatchObject({
+      total_energy_added_wh: 0, avg_peak_power_w: 0, total_cost: 0,
+    });
+  });
+
+  it('preserves signed and fractional measurements without assuming currency or rounding', () => {
+    const input = [
+      { ...sessions[0]!, total_energy_added_wh: 10.75, peak_power_w: 2.5, cost: -2.25 },
+      { ...sessions[1]!, total_energy_added_wh: -0.25, peak_power_w: -0.5, cost: undefined, cost_decimal: 0.125 },
+    ];
+    const evidence = normalizeChargingHistory(input, 'day')!;
+    expect(evidence).toMatchObject({
+      total_energy_added_wh: 10.5, avg_peak_power_w: 1, total_cost: -2.125,
+    });
+    expect(evidence).not.toHaveProperty('currency');
+    expect(evidence).not.toHaveProperty('cost_currency');
+  });
+
+  it('preserves a measured zero cost alias instead of replacing it with another cost', () => {
+    expect(normalizeChargingHistory([{ ...sessions[0]!, cost: 0, cost_decimal: 12.5 }], 'day')?.total_cost).toBe(0);
+  });
+
+  it('keeps aggregate overflow unknown', () => {
+    const large = { ...sessions[0]!, total_energy_added_wh: Number.MAX_VALUE, peak_power_w: Number.MAX_VALUE, cost: Number.MAX_VALUE };
+    expect(normalizeChargingHistory([large, large], 'day')).toMatchObject({
+      total_energy_added_wh: null, avg_peak_power_w: null, total_cost: null,
+    });
   });
 });
 

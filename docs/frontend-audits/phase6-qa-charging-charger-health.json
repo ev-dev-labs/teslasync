@@ -1,0 +1,559 @@
+{
+  "item": "phase6-qa-charging-charger-health",
+  "status": "DONE",
+  "mode": "bounded source-only QA",
+  "startedUtc": "2026-10-13T22:27:18.267Z",
+  "allowedWrites": [
+    "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charger-health.json",
+    "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charger-health.log"
+  ],
+  "acceptedReceipt": {
+    "queueLine": 1762,
+    "commit": "182dcbe773a7fad58de01ca1f6c1839d28ea2543",
+    "sourceAcceptance": "no change needed",
+    "pageLines": 64,
+    "composedLines": 414,
+    "composedDefinition": "Page + Stats + Chart + Locations + SourceNotice; ChargingSummaryBrief adds 73 supporting lines, not a new section.",
+    "sections": 3,
+    "metrics": 4,
+    "locationFacts": 9,
+    "priorCapture": "FAILED: malformed caller; no PNG",
+    "priorTests": "NOTRUN; named colocated test absent",
+    "nativeAcceptance": "NOT ACCEPTED",
+    "noPhase5Rework": true
+  },
+  "registration": {
+    "queueLine": 335,
+    "statusObserved": "pending registered item",
+    "queueEdited": false,
+    "inventory": "docs/frontend-inventory.md:134,438-440,1207-1208",
+    "priorAudit": "docs/frontend-audits/audit-page-079.json",
+    "instructions": [
+      "docs/orchestrator-loop.md (sole playbook)",
+      "docs/frontend-design-contract.md:419-542",
+      "docs/frontend-mission.md:19-40,529-596,812-844",
+      ".github/copilot-instructions.md:1-139",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md (historical; canonical-SI cutover takes precedence)"
+    ],
+    "instructionDiscovery": "No AGENTS.md found in probed ancestors or web/src recursive filename search."
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/features/charging/pages/ChargerHealthPage.tsx",
+      "sha256": "96e48ee8744e140c89e33d52c5ba389676662e85336ed31b39f5473c88063149",
+      "lines": 64,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthStats.tsx",
+      "sha256": "4ba61d0646770428b82553124c8841fede817fea31485bd8f90e9178a2c9f25d",
+      "lines": 102,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx",
+      "sha256": "266ae05a4e5714b41844d6f646f4bdbb507d0f99c8cead2fb8c41de5bb95ef8a",
+      "lines": 88,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx",
+      "sha256": "5af2f0898f8ffccb328ff85317c1a181aa75ad27542e8e4614ed2e471e88dfea",
+      "lines": 126,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthSourceNotice.tsx",
+      "sha256": "c9fd2dec7c14f76291921c601f4a8bfecfb5018f36226284db24b3931b19c4b7",
+      "lines": 34,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+      "lines": 73,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/features/charging/lib/chargerHealth.ts",
+      "sha256": "70800381956be6c591a0ba02c93b16571156e916fd91a3bd8147d65787cf0677",
+      "lines": 335,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/features/charging/components/charger-health-modernization/index.ts",
+      "sha256": "4fff3cdcf1387e252247b750d12c15e830967c33f0412497bb6d8dd30ef4ca8e",
+      "lines": 3,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/api/hooks/useCharging.ts",
+      "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+      "lines": 643,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/types/charging.ts",
+      "sha256": "225cbafafd597261abe9222b68f7578565280625602863ba10ade878268b0720",
+      "lines": 355,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines": 1006,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "lines": 165,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "lines": 146,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "lines": 439,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/lib/resilience.ts",
+      "sha256": "e100c50c5ce8080aadde8badbf083254f1ed4730978e52fa4b690876cd2f0bca",
+      "lines": 1008,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "internal/handler/v1/charging_handler.go",
+      "sha256": "1ecc05a61cb77d41f07c1e52bba5b434fe8155a2cd4126c9e14f3f1445f51644",
+      "lines": 60,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "internal/domain/charging/types.go",
+      "sha256": "805595f294934db3b20abe138d90b8871e3f283c1c6eb2389fce26b550663e19",
+      "lines": 25,
+      "inspection": "Full core source; supporting shared/backend files inspected only at relevant ranges."
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "lines": 106,
+      "inspection": "Relevant supporting ranges only."
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines": 24,
+      "inspection": "Relevant supporting ranges only."
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lines": 321,
+      "inspection": "Relevant supporting ranges only."
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lines": 4194,
+      "inspection": "Relevant supporting ranges only."
+    }
+  ],
+  "scans": [
+    {
+      "rule": "static-inline-style",
+      "pattern": "style\\s*=\\s*\\{\\{",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "raw-html",
+      "pattern": "<(button|input|textarea|select|table)(\\s|>)",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "direct-library-import",
+      "pattern": "from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "old-api-import",
+      "pattern": "from\\s+['\\\"](\\.\\./api|\\.\\./\\.\\./api)['\\\"]",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "double-prefix",
+      "pattern": "/api/v1/",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "camelcase-param",
+      "pattern": "[?&][a-z][A-Za-z]*[A-Z][A-Za-z]*=",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "hidden-section",
+      "pattern": "\\{\\s*(data|summary|sessionsQuery\\.data)\\s*&&\\s*<",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "hardcoded-jsx-text-candidate",
+      "pattern": ">\\s*[A-Za-z][^<{]*<",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    },
+    {
+      "rule": "fetch-useeffect",
+      "pattern": "\\b(fetch\\s*\\(|useEffect\\s*\\()",
+      "matches": 0,
+      "exit": 0,
+      "interpretation": "Lexical candidate scan only; manual source review below supersedes zero literal matches."
+    }
+  ],
+  "rawEvidenceLog": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charger-health.log",
+  "checks": {
+    "sourceScansExit": 0,
+    "sourceMechanismScanExit": 0,
+    "pinStabilityExit": 0,
+    "sourcePinsUnchanged": "6/6 core compared with first observed SHA256",
+    "queueRootScanExit": 0,
+    "queuedFixMatches": 0,
+    "globalTypeScript": "NOTRUN: explicitly forbidden",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "auditWrapper": "NOTRUN",
+    "browser": "NOTRUN",
+    "native": "NOTRUN",
+    "realAPI": "NOTRUN",
+    "Git": "NOTRUN",
+    "testCounts": {
+      "discovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "commandLimitSeconds": 180,
+    "failedCommands": 0,
+    "largeReadLimitation": "Several initial combined documentation/source reads were tool-truncated; relevant source and contract ranges were subsequently read separately. No full repository coverage claimed.",
+    "artifactSkeletonSerializeExit": 0,
+    "finalSerializeReparseExit": 0,
+    "sourcePinVerificationExit": 0
+  },
+  "exceptions": [
+    "PageLayout forwards to PageContainer (PageLayout.tsx:10-15), so absence of literal PageContainer in page is not a violation.",
+    "Recharts tick/fill/margin/label API props and conditional palette lookups are allowed, not static-inline-style violations.",
+    "Shared component raw HTML and lifecycle useEffect are building blocks, not page raw-control or data-fetch violations.",
+    "All three shells persist for selected vehicle: page lines45,55,60; Locations lines94-123 gates content, not shell; no-vehicle onboarding is explicit route prerequisite.",
+    "One actual charging-session query supplies three sections; independent source trust does not mean inventing three independent queries."
+  ],
+  "findings": [
+    {
+      "id": "F01",
+      "rule": "evidence-denominator",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthStats.tsx",
+      "line": 44,
+      "related": [
+        "web/src/features/charging/lib/chargerHealth.ts:240-243,262,301-302,333 web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx:37-39,57-61"
+      ],
+      "title": "Scorable-session caption counts tapered sessions; Visits/Energy/Last visit describe only model-admitted history",
+      "mechanism": "usable increments after location/time/energy/duration admission but before tapered sessions are removed from clean. The metric calls usableSessions scorable; ratedSessions is clean.length. Site.sessions, totalEnergyWh and lastSeen derive from admitted metrics, not every returned visit. Dropped observations are not disclosed by these fact labels.",
+      "repro": "Source-only hypothetical input: one named site with four valid untapered sessions, one valid 85%-95% tapered session, one short session and one session without location. totalSessions=7, usableSessions=5, site.sessions=5, ratedSessions=4. Caption says 5 scorable sessions even though only 4 can score; Visits shows 5, not 7. No fixture executed.",
+      "fix": "An exclusively authorized followup should label model-admitted versus clean/scorable denominators and disclose excluded history; preserve specialist filters, original query and raw measurements.",
+      "disposition": "New precise source finding; no matching queued source fix root found; no queue edit.",
+      "confidence": "confirmed static dataflow"
+    },
+    {
+      "id": "F02",
+      "rule": "unknown-zero",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx",
+      "line": 41,
+      "related": [
+        "web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx:42,62,74 web/src/features/charging/lib/chargerHealth.ts:283-292 web/src/features/charging/components/charger-health-modernization/ChargerHealthStats.tsx:19,78-80"
+      ],
+      "title": "Location cost renders known modeled zero as the same dash as unrated unknown",
+      "mechanism": "cost tests hoursLostPerYear > 0 and otherwise returns an em dash. The model initializes healthy and unrated sites to zero; the metric band correctly uses benchmark availability to distinguish null from zero, but the location cost ignores that distinction.",
+      "repro": "Source-only: a rated healthy site has modeled hoursLostPerYear=0, while an unrated site also carries the zero sentinel. Both render Costs you = dash on desktop and all-fields mobile details; the metric band shows numeric zero when judged sites exist. A positive 0.4 estimate rounds to visible 0 h/year, exposing inconsistent zero policy. No runtime executed.",
+      "fix": "Use evidence eligibility separately from numeric sign; present an explicit modeled-zero/no modeled loss state for rated sites and unknown for unrated sites without claiming actual measured loss.",
+      "disposition": "New precise source finding; no queue edit.",
+      "confidence": "confirmed static branch"
+    },
+    {
+      "id": "F03",
+      "rule": "source-trust-physical-identity",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx",
+      "line": 88,
+      "related": [
+        "web/src/features/charging/lib/chargerHealth.ts:128-143,267,300 web/src/features/charging/pages/ChargerHealthPage.tsx:38-39 web/src/features/charging/components/charger-health-modernization/ChargerHealthStats.tsx:96-97"
+      ],
+      "title": "Grouping help promises physical-stall recognition unsupported by the model",
+      "mechanism": "Help claims the same physical stall is recognised across visits and AC/DC are labelled separately. Actual identity is lowercased place name or a 0.01-degree rounded coordinate cell; there is no stall identifier. A single grouped site gets one kind from any admitted session peak >25kW. The inferred-condition disclaimer is correct but does not make physical identity guarantees true.",
+      "repro": "Source-only: two distinct stalls sharing start_place=Station A are grouped under place:station a; one AC-like and one DC-like observation produce one group labeled DC. Coordinate-only neighboring stalls can also share one cell. The subtitle says a stall cannot hide despite missing/excluded observations. This is a copy/model contradiction, not evidence any real charger is faulty.",
+      "fix": "An authorized copy followup should describe approximate location aggregation and inferred class, avoid physical-stall identity/detection guarantees, and retain the explicit session-derived condition disclaimer.",
+      "disposition": "New precise source-copy finding; no queue edit.",
+      "confidence": "confirmed static identity mechanism"
+    },
+    {
+      "id": "F04",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx",
+      "line": 36,
+      "related": [
+        "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx:33,55-61 web/src/components/charts/ChartContainer.tsx:921-933 web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx:17-18,32"
+      ],
+      "title": "Chart accessible fallback exposes raw English status tokens instead of translated labels",
+      "mechanism": "exportData stringifies status and is also passed as data. Status column supplies no format callback. Shared accessible fallback uses String(raw), displaying healthy/degrading/degraded even though location badges use t(chargerHealth.status.*).",
+      "repro": "Source-only: one rated degrading site with a non-English UI locale reaches the fallback Status cell as literal degrading. Only the column heading is translated. Same data feed is used for CSV; stable CSV enum policy remains an integration decision. No browser/CSV export executed.",
+      "fix": "Localize the user-facing accessible status cell at display boundary; explicitly preserve or separately define existing CSV enum semantics, chart scope and ordering.",
+      "disposition": "New exact i18n path; zero hardcoded-JSX scan is not zero i18n violations.",
+      "confidence": "confirmed prop-to-fallback dataflow"
+    },
+    {
+      "id": "F05",
+      "rule": "locale-number-display",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx",
+      "line": 58,
+      "related": [
+        "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx:30-32,59-60 web/src/components/charts/ChartContainer.tsx:925-933 web/src/hooks/useUnits.ts:125,137"
+      ],
+      "title": "Chart fallback numeric columns bypass locale-aware formatting",
+      "mechanism": "ratio/baseline/recent columns have neither kind nor format. Shared fallback formats finite numeric values only when col.kind exists; otherwise String(raw) produces locale-independent decimal dots. Locations use preference-aware formatPower. Source W and ratio are not corrupted.",
+      "repro": "Source-only: ratio=87.5 and baseline=11.1 in a de-DE display preference reach fallback as 87.5 and 11.1 rather than localized comma decimals. Setting a preference does not affect String(raw). No runtime executed.",
+      "fix": "Use existing ChartContainer display column formatting at render boundary, retaining source W, existing historical kW export values and precision/scope unless the integration owner authorizes a contract change.",
+      "disposition": "Partly inherited chart fallback/export display-boundary debt from audit-page-079 architectureIssues[2]; attach this exact mechanism to that root, not a duplicate formatting campaign.",
+      "confidence": "confirmed static fallback branch"
+    },
+    {
+      "id": "F06",
+      "rule": "date-preference-display",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx",
+      "line": 40,
+      "related": [
+        "web/src/lib/dateFormat.ts:29-50,75-82",
+        "web/src/hooks/useSettings.ts:47,49",
+        "web/src/hooks/useUnits.ts:125"
+      ],
+      "title": "Last visit ignores saved locale and timezone display options",
+      "mechanism": "formatDateShort is called without opts. Its Intl locale is undefined and timezone override is absent, so date uses browser defaults, while adjacent power/energy fields consume saved locale through useUnits. No saved timezone/display-mode operand is passed.",
+      "repro": "Source-only: with saved locale de-DE and browser en-US, Last visit follows browser month labels while power/energy follow saved locale. With a midnight-adjacent UTC session and a configured user timezone differing from the browser, the calendar date can differ. Exact native DateTime policy and browser behavior were not executed.",
+      "fix": "An authorized followup should reuse existing date/preference ownership for the date operand rather than introduce a new converter; keep the observed history timestamp and query bounds unchanged.",
+      "disposition": "New precise source preference path; source-only repro, no native confirmation.",
+      "confidence": "confirmed missing explicit preference operand"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "severityIfConfirmed": "high",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 59,
+      "related": [
+        "internal/api/router.go:5034",
+        "internal/handler/v1/charging_handler.go:24-46",
+        "internal/domain/charging/types.go:11-24",
+        "web/src/types/charging.ts:15-47",
+        "web/src/features/charging/lib/chargerHealth.ts",
+        ":128-175",
+        "web/src/lib/resilience.ts:27-41"
+      ],
+      "title": "Registered session DTO lacks the model location/field contract",
+      "mechanism": "Real handler returns domain DTO using startedAt/completedAt/energyAddedWh/battery-level fields and no location; model requires place/coordinates before computing any metric. Inspected camelCaseKeys only adds snake-to-camel aliases, not inverse aliases, location or semantic field renames.",
+      "reproToValidate": "Integration-owned synthetic payload contract test should follow actual Respond envelope and service/repository output through request, safeArray and analysis. No actual payload, repository completeness or transport execution inspected; do not assert production rows are lost.",
+      "disposition": "Inherited unresolved integration root: audit-page-079 architectureIssues[0], requiredSharedChanges[0], frontend-inventory G083. Reuse this owner/root; no endpoint substitution or Phase5 rework.",
+      "status": "candidate pending wire/integration validation"
+    },
+    {
+      "id": "C02",
+      "severityIfConfirmed": "medium",
+      "file": "web/src/features/charging/lib/chargerHealth.ts",
+      "line": 285,
+      "related": [
+        "web/src/features/charging/lib/chargerHealth.ts:263,283-292 web/src/features/charging/components/charger-health-modernization/ChargerHealthStats.tsx:28-30,81 web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx:41-42"
+      ],
+      "title": "Annualization reliability for tightly clustered or truncated admitted observations",
+      "mechanism": "Annual energy uses admitted totalEnergyWh / max(1, first-to-last start-day span) *365, including admitted tapered energy while power baselines use clean sessions. Four observations in one day can project that day to a year. Metric explanation calls it annualized, not measured; observation coverage and sampling reliability are not established.",
+      "reproToValidate": "Domain owner should assess dense one-day samples, sparse visits, missing/excluded events and partial returned-history coverage against intended unchanged estimator; no executable fixture or policy assertion run.",
+      "disposition": "Candidate only: specialist behavior is frozen, not a proven wrong formula or authorization to rewrite it.",
+      "status": "candidate pending domain/coverage decision"
+    },
+    {
+      "id": "C03",
+      "severityIfConfirmed": "medium",
+      "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx",
+      "line": 69,
+      "related": [
+        "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx:53,68-70,72,81-82 web/src/lib/tokens.ts:396-399 web/src/components/charts/ChartContainer.tsx:849-945 web/src/components/ui/MobileDataTableAdapter.tsx:88,133-157"
+      ],
+      "title": "Dense-chart/mobile/contrast and semantic-palette acceptance remains unvalidated",
+      "mechanism": "Chart keeps fixed height340, small angled/truncated labels, every rated site, no page-specific dense-site strategy or visible status legend. Healthy uses palette2, degrading3, degraded5; tokens are now restrained light-dark values, not the older saturated hex palette. Accessible data table and complete location mobile detail path exist in source.",
+      "reproToValidate": "Only future authorized native QA can establish 320px allocated width, long labels/many sites, RTL, zoom, forced colors, composed-theme contrast, touch targets and keyboard/focus restoration. No physical/native failure is asserted.",
+      "disposition": "Inherited audit-page-079 responsive/accessibility/semantic palette roots; do not duplicate prior root or repeat its obsolete saturation statement. Native validation is explicitly NOTRUN.",
+      "status": "candidate pending authorized native validation"
+    }
+  ],
+  "summary": {
+    "confirmedFindings": 6,
+    "newPreciseSourceRoots": 5,
+    "inheritedReconfirmedRoot": 1,
+    "candidates": 3,
+    "byRule": {
+      "evidence-denominator": 1,
+      "unknown-zero": 1,
+      "source-trust-physical-identity": 1,
+      "hardcoded-string": 1,
+      "locale-number-display": 1,
+      "date-preference-display": 1
+    },
+    "filesWithMostIssues": [
+      {
+        "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthLocations.tsx",
+        "primaryFindings": 3
+      },
+      {
+        "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthChart.tsx",
+        "primaryFindings": 2
+      },
+      {
+        "file": "web/src/features/charging/components/charger-health-modernization/ChargerHealthStats.tsx",
+        "primaryFindings": 1
+      }
+    ],
+    "priority": "Preserve accepted source. Integration owner first resolves existing C01 wire/source root; authorized followups address F01 denominators, F02 zero evidence and F03 physical-identity guarantees, then display/i18n preferences. C02/C03 need domain/native validation, not invented source fixes.",
+    "acceptance": "DONE audit only; not release/application/native acceptance."
+  },
+  "limits": [
+    "Every repro is a source-path thought experiment, NOT an executed runtime/test/browser fixture.",
+    "No actual wire payload, physical charger identity/fault, API completeness/retention guarantees, native capture, contrast, keyboard/focus, 320px/zoom/RTL or touch behavior validated.",
+    "No accepted source/test/backend/API/catalog/config/queue/other-doc changes authorized or made.",
+    "No historical Git comparison; parity evidence is current counts versus immutable accepted queue receipt."
+  ],
+  "claims": {
+    "source": "RELEASED",
+    "tests": "RELEASED",
+    "report": "RELEASED",
+    "log": "RELEASED",
+    "JSON": "RELEASED",
+    "browser": "RELEASED (none acquired)",
+    "commands": "RELEASED at bounded synchronous command completion",
+    "postReturnWrites": "NONE; no post-return tools or ACK work",
+    "releaseUtc": "2026-10-13T22:36:19.1948833Z"
+  },
+  "reviewedContracts": {
+    "healthEvidence": "Session energy Wh and duration seconds derive positive mean W; clean high-quantile baseline, last up-to-five clean mean, thresholds .9/.75, four-clean minimum. No nameplate or hardware diagnostic proof; missing/negative/subthreshold energy and bad durations are excluded, not coerced to zero.",
+    "unknownZero": "No payload -> metric null; loaded [] -> truthful tracked-site zero, other benchmark-dependent metrics null; unknown sites use neutral status/dash baseline; recent is shown only with ratedSessions>0. Underperforming and annual-loss zero are known only if at least one judged site. F02 flags row-level inconsistency.",
+    "SIAndSigns": "Specialist keeps Wh/W/s and positive charging energy; negative energy/nonpositive power are rejected, not absolute-valued. Aggregate annual hours are converted to seconds only for shared duration metric. Location power/energy useUnits; chart explicitly preserves historical kW boundary/export operands. Currency cost is not inferred: Costs you is modeled time, not money.",
+    "scopeAndBounds": "Page consumes selected vehicle and useChargingSessions only (page18-27, hook56-64). AbortSignal/vehicle cache identity retained; real /charging-sessions handler registered by router5034. Header route /charger-health is absent from RANGE_ENABLED_PATHS (workspaceScope23-77) and not vehicle-disabled. Thus no header-owned range is implied/ignored here: frozen observed history has no start/end query bounds, and Stats period is explicitly unknown Returned charging history. No date controls/limits/history-hook substitution added; backend completeness unknown.",
+    "trust": "Single historical query; deriveDataState hasData=data!==undefined, fatal only without retained data, stale on refresh failure or pause (dataState190-254). Page loading excludes fatal/paused; chart receives fatalError only, each shell has source notice; stale keeps metrics/chart/rows and Retry forwards refetch. Paused notice says connect/resume, not proven device offline. No all-page error/empty gate.",
+    "actions": "Source notice retry -> state.retry -> void source.refetch (dataState201-204). Chart receives source retry and existing ChartContainer export/fallback actions; no new device/vehicle mutation. Location table is nonsearchable/nonpaginated/exportable=false, help and shared mobile Quick view remain available in source. No action/export executed.",
+    "i18n": "Page, panel, actions, explanations and location-status strings use t with fallbacks; manual F04 identifies raw chart status path missed by literal JSX scan. Canonical catalog completeness/plural behavior not checked; no catalog modifications.",
+    "a11yMobile": "PageLayout forwards PageContainer route-focus heading and aria-busy; ChartContainer has localized ariaLabel and numeric/status alternative table. Locations uses 3-column card strategy; DataTable allColumns=columns (1408) and mobile modal maps allColumns (148-153), preserving all9 facts despite hidden card metadata. Shared mobile quick-view/close targets declare min-h/min-w11. Focus, touch, contrast, native forced colors and actual width behavior NOTRUN."
+  },
+  "deduplication": {
+    "matchingQueuedFixRoots": 0,
+    "method": "Actual queue item/file fields, not incidental notes; narrow health/useCharging/types paths. Raw match receipt in log.",
+    "existingRoots": [
+      "audit-page-079 / G083: wire/source contract (C01)",
+      "audit-page-079 architectureIssues[2]: historical chart fallback/export display boundary (F05)",
+      "audit-page-079 responsive/accessibility and requiredSharedChanges[2]: dense chart/semantic palette (C03)",
+      "audit-page-079 architectureIssues[1] / G084: deep layout/stat-reference imports remain inherited boundary observations; no library imports or new queue finding counted"
+    ],
+    "newQueueEntries": 0,
+    "queueWritable": false
+  },
+  "releaseUtc": "2026-10-13T22:36:19.1948833Z"
+}

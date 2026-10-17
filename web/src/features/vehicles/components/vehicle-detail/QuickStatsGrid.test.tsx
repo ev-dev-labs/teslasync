@@ -16,32 +16,26 @@
 //   - every visible label resolved through i18n (no raw English literals), and
 //   - a11y: every decorative glyph is aria-hidden.
 //
-// react-i18next is mocked so `t(key, fallback)` returns the English fallback AND
-// records the exact key/fallback each string wires to (mirrors the sibling
-// ClimateSection test). useUnits is mocked with echo formatters so the precise
-// SI value + options routed to each formatter is provable, with no unit maths in
-// the test. The real MetricCard renders, proving the tiles and semantic colour
-// metadata mount. Nothing here touches the network — QuickStatsGrid receives
-// its data as props. The pure helpers (batteryColor / formatBatteryLevel) are
-// also unit tested directly so every export is covered.
+// Real OperationalBrief and canonical conversions render. Converter spies
+// record untouched SI inputs; source contexts and battery colour survive.
+// Prop-driven source data never touches the network.
 
 import type { ReactNode } from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { fireEvent, render, screen, cleanup, within } from '@testing-library/react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 const { mockT, formatDistance, formatSpeed, formatTemperature } = vi.hoisted(() => ({
-  mockT: vi.fn((_key: string, fallback?: string) => fallback ?? _key),
-  // Mirror the real lib formatters: nullish/NaN → em-dash, else an echo with the
-  // unit suffix so the exact SI value routed to each tile is provable.
-  formatDistance: vi.fn((v: number | null | undefined) =>
-    v == null || Number.isNaN(v) ? '—' : `${v} km`,
-  ),
-  formatSpeed: vi.fn((v: number | null | undefined) =>
-    v == null || Number.isNaN(v) ? '—' : `${v} km/h`,
-  ),
-  formatTemperature: vi.fn((v: number | null | undefined) =>
-    v == null || Number.isNaN(v) ? '—' : `${v}°C`,
-  ),
+  mockT: vi.fn((_key: string, fallback?: unknown, values?: Record<string, unknown>) => {
+    let out = typeof fallback === 'string' ? fallback : _key
+    if (values) {
+      for (const [k, v] of Object.entries(values)) out = out.replace(`{{${k}}}`, String(v))
+    }
+    return out
+  }),
+  formatDistance: vi.fn(),
+  formatSpeed: vi.fn(),
+  formatTemperature: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -50,12 +44,25 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }))
 
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ formatDistance, formatSpeed, formatTemperature }),
-}))
+// Observe the raw inputs to the real canonical display converters, not an echo UI.
+vi.mock('@/lib/unitConversion', async importActual => {
+  const actual = await importActual<typeof import('@/lib/unitConversion')>()
+  return { ...actual,
+    convertDistanceFromSI: (...args: Parameters<typeof actual.convertDistanceFromSI>) => {
+      formatDistance(args[0]); return actual.convertDistanceFromSI(...args)
+    },
+    convertSpeedFromSI: (...args: Parameters<typeof actual.convertSpeedFromSI>) => {
+      formatSpeed(args[0]); return actual.convertSpeedFromSI(...args)
+    },
+    convertTempFromSI: (...args: Parameters<typeof actual.convertTempFromSI>) => {
+      formatTemperature(args[0]); return actual.convertTempFromSI(...args)
+    },
+  }
+})
 
 import { QuickStatsGrid, batteryColor, formatBatteryLevel } from './QuickStatsGrid'
 import type { VehicleState, VehicleStatus } from '@/api/types'
+import { statText } from '../statstrip-vehicle-detail/testQueries'
 
 // A fully-populated live state with distinctive SI magnitudes so each tile's
 // routed value is unambiguous in assertions.
@@ -94,15 +101,32 @@ function renderGrid(
 function metricCard(label: string): HTMLElement {
   const card = screen
     .getByText(label)
-    .closest<HTMLElement>('[data-role="metric-card"]')
+    .closest<HTMLElement>('[data-operational-metric]')
   expect(card).not.toBeNull()
   return card as HTMLElement
 }
 
 function metricColor(label: string): string | null {
-  return metricCard(label)
-    .querySelector('[data-role="metric-icon"]')
-    ?.getAttribute('data-color') ?? null
+  const brief = screen.getByTestId('vehicle-quick-stats-summary')
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  const group = within(drawer).getByRole('group', { name: label })
+  const color = group.querySelector('[data-battery-color]')?.getAttribute('data-battery-color') ?? null
+  fireEvent.keyDown(drawer, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  return color
+}
+
+function speedGroup(): HTMLElement {
+  const brief = screen.getByTestId('vehicle-quick-stats-summary')
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  return within(screen.getByRole('dialog')).getByRole('group', { name: 'Speed' })
+}
+
+function closeDrawer() {
+  const drawer = screen.getByRole('dialog')
+  fireEvent.keyDown(drawer, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 }
 
 beforeEach(() => {
@@ -144,8 +168,8 @@ describe('batteryColor', () => {
 
 describe('formatBatteryLevel', () => {
   it('appends a percent sign to a finite level, including the falsy 0', () => {
-    expect(formatBatteryLevel(72)).toBe('72%')
-    expect(formatBatteryLevel(0)).toBe('0%')
+    expect(formatBatteryLevel(72)).toBe('72.00%')
+    expect(formatBatteryLevel(0)).toBe('0.00%')
   })
 
   it('renders an em-dash for missing / non-finite levels (never "null%")', () => {
@@ -156,6 +180,48 @@ describe('formatBatteryLevel', () => {
 })
 
 describe('QuickStatsGrid', () => {
+  it('updates the same eight tiles through charge boundaries without rerouting any formatter', () => {
+    const original = { ...fullState }
+    const { rerender } = render(<QuickStatsGrid state={original} status="driving" />)
+    expect(document.querySelector('[data-testid="vehicle-quick-stats-summary"][data-operational-brief]')).not.toBeNull()
+    const cards = Array.from(document.querySelectorAll('[data-operational-metric]'))
+    const value = (label: string, text: string) =>
+      expect(within(metricCard(label)).getByText(statText(text))).toBeInTheDocument()
+
+    for (const [level, color] of [[50, 'cyan'], [20, 'red'], [0, 'red'], [51, 'green']] as const) {
+      const next = {
+        ...original,
+        battery_level: level,
+        rated_range: 123456,
+        odometer: 789012,
+        speed: 0,
+        inside_temp: 0,
+        outside_temp: -7,
+        power: 0,
+      }
+      formatDistance.mockClear()
+      formatSpeed.mockClear()
+      formatTemperature.mockClear()
+      rerender(<QuickStatsGrid state={next} status="charging" />)
+      const updatedCards = Array.from(document.querySelectorAll('[data-operational-metric]'))
+      expect(updatedCards).toHaveLength(8)
+      updatedCards.forEach((card, index) => expect(card).toBe(cards[index]))
+      expect(metricColor('Battery')).toBe(color)
+      value('Battery', `${level.toFixed(2)}%`)
+      value('Range', '123.46 km')
+      value('Odometer', '789.01 km')
+      value('Speed', '0.00 km/h')
+      value('Inside temp', '0.00°C')
+      value('Outside temp', '-7.00°C')
+      value('Power', '0.00 kW')
+      value('State', 'charging')
+      expect(formatDistance.mock.calls).toEqual([[123456], [789012]])
+      expect(formatSpeed.mock.calls).toEqual([[0]])
+      expect(formatTemperature.mock.calls).toEqual([[0], [-7]])
+    }
+    expect(original).toEqual(fullState)
+  })
+
   it('renders all eight KPI tiles with their labels and formatted values', () => {
     renderGrid()
 
@@ -164,65 +230,69 @@ describe('QuickStatsGrid', () => {
       'Range',
       'Odometer',
       'Speed',
-      'Inside Temp',
-      'Outside Temp',
+      'Inside temp',
+      'Outside temp',
       'Power',
       'State',
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
 
-    // Battery routed through formatBatteryLevel.
-    expect(screen.getByText('72%')).toBeInTheDocument()
+    // Shared numeric formatting preserves the measured percentage.
+    expect(screen.getByText(statText('72.00%'))).toBeInTheDocument()
     // Power formatted with the kW suffix at global precision (2).
-    expect(screen.getByText('45.50 kW')).toBeInTheDocument()
+    expect(screen.getByText(statText('0.05 kW'))).toBeInTheDocument()
     // Status echoed into the State tile.
     expect(screen.getByText('driving')).toBeInTheDocument()
   })
 
-  it('routes distance + speed + temperature tiles through the useUnits formatters with SI values at precision 0', () => {
+  it('routes distance + speed + temperature through canonical conversions with untouched SI values and saved precision', () => {
     renderGrid()
 
     // rated_range and odometer both go through the distance formatter.
-    expect(formatDistance).toHaveBeenCalledWith(320000, { precision: 0 })
-    expect(formatDistance).toHaveBeenCalledWith(15000000, { precision: 0 })
-    expect(formatSpeed).toHaveBeenCalledWith(25, { precision: 0 })
+    expect(formatDistance).toHaveBeenCalledWith(320000)
+    expect(formatDistance).toHaveBeenCalledWith(15000000)
+    expect(formatSpeed).toHaveBeenCalledWith(25)
     expect(formatTemperature).toHaveBeenCalledWith(21)
     expect(formatTemperature).toHaveBeenCalledWith(8)
 
-    // The echoed formatter output is what actually renders.
-    expect(screen.getByText('320000 km')).toBeInTheDocument()
-    expect(screen.getByText('15000000 km')).toBeInTheDocument()
-    expect(screen.getByText('25 km/h')).toBeInTheDocument()
-    expect(screen.getByText('21°C')).toBeInTheDocument()
-    expect(screen.getByText('8°C')).toBeInTheDocument()
+    // The real converted output, not fixture text, renders.
+    expect(screen.getByText(statText('320.00 km'))).toBeInTheDocument()
+    expect(screen.getByText(statText('15,000.00 km'))).toBeInTheDocument()
+    expect(screen.getByText(statText('90.00 km/h'))).toBeInTheDocument()
+    expect(screen.getByText(statText('21.00°C'))).toBeInTheDocument()
+    expect(screen.getByText(statText('8.00°C'))).toBeInTheDocument()
   })
 
   it('renders a 0 °C temperature verbatim — the formatter guard must not swallow the falsy 0', () => {
     renderGrid({ inside_temp: 0 })
     expect(formatTemperature).toHaveBeenCalledWith(0)
-    expect(screen.getByText('0°C')).toBeInTheDocument()
+    expect(screen.getByText(statText('0.00°C'))).toBeInTheDocument()
   })
 
   it('shows the Driving subtitle when moving and Parked when stopped', () => {
     renderGrid({ speed: 42 })
-    expect(screen.getByText('Driving')).toBeInTheDocument()
-    expect(screen.queryByText('Parked')).toBeNull()
+    const drivingGroup = speedGroup()
+    expect(drivingGroup).toHaveTextContent('Driving')
+    expect(drivingGroup).not.toHaveTextContent('Parked')
+    closeDrawer()
     expect(mockT).toHaveBeenCalledWith('common.driving', 'Driving')
 
     cleanup()
     mockT.mockClear()
 
     renderGrid({ speed: 0 })
-    expect(screen.getByText('Parked')).toBeInTheDocument()
-    expect(screen.queryByText('Driving')).toBeNull()
+    const parkedGroup = speedGroup()
+    expect(parkedGroup).toHaveTextContent('Parked')
+    expect(parkedGroup).not.toHaveTextContent('Driving')
+    closeDrawer()
     expect(mockT).toHaveBeenCalledWith('common.parked', 'Parked')
   })
 
   it('applies the red accent ring only when the battery is critical (<=20%)', () => {
     renderGrid({ battery_level: 12 })
     expect(metricColor('Battery')).toBe('red')
-    expect(screen.getByText('12%')).toBeInTheDocument()
+    expect(screen.getByText(statText('12.00%'))).toBeInTheDocument()
 
     cleanup()
 
@@ -235,26 +305,26 @@ describe('QuickStatsGrid', () => {
       renderGrid({ battery_level: null, power: null }),
     ).not.toThrow()
 
-    // Battery + power both collapse to the em-dash placeholder…
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2)
+    // Battery + power are both omitted with a counted explanation…
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-quick-stats-summary'), 'Battery')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-quick-stats-summary'), 'Power')
     // …never the literal broken strings.
     expect(screen.queryByText('null%')).toBeNull()
-    expect(screen.queryByText('0.00 kW')).toBeNull()
-    // The battery tile with an unknown level uses the neutral cyan accent.
-    expect(metricColor('Battery')).toBe('cyan')
+    expect(screen.queryByText(statText('0.00 kW'))).toBeNull()
+    // The omitted battery tile carries no accent in the UI; unknown levels stay neutral cyan.
+    expect(batteryColor(null)).toBe('cyan')
   })
 
   it('renders a 0% battery verbatim with the red critical accent (not an em-dash)', () => {
     renderGrid({ battery_level: 0 })
-    expect(screen.getByText('0%')).toBeInTheDocument()
+    expect(screen.getByText(statText('0.00%'))).toBeInTheDocument()
     expect(metricColor('Battery')).toBe('red')
   })
 
   it('falls back to an em-dash when the status is blank (never a blank State tile)', () => {
     renderGrid({}, '' as VehicleStatus)
-    // The State label is still present with an em-dash value.
-    expect(screen.getByText('State')).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
+    // The State tile is omitted with a counted explanation, never blank.
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-quick-stats-summary'), 'State')
   })
 
   it('wires every tile label to its i18n key (no raw English labels)', () => {
@@ -265,8 +335,8 @@ describe('QuickStatsGrid', () => {
       ['common.range', 'Range'],
       ['common.odometer', 'Odometer'],
       ['common.speed', 'Speed'],
-      ['common.insideTemp', 'Inside Temp'],
-      ['common.outsideTemp', 'Outside Temp'],
+      ['common.insideTemp', 'Inside temp'],
+      ['common.outsideTemp', 'Outside temp'],
       ['common.power', 'Power'],
       ['common.state', 'State'],
     ]
@@ -278,11 +348,21 @@ describe('QuickStatsGrid', () => {
   it('marks every decorative glyph aria-hidden', () => {
     const { container } = renderGrid()
 
-    const svgs = Array.from(container.querySelectorAll('svg'))
-    // One glyph per tile = eight decorative icons.
-    expect(svgs.length).toBeGreaterThanOrEqual(8)
-    for (const svg of svgs) {
+    // The face keeps only the Review-details action glyph; metric glyphs moved into drawer groups.
+    const faceSvgs = Array.from(container.querySelectorAll('svg'))
+    expect(faceSvgs.length).toBe(1)
+    for (const svg of faceSvgs) {
       expect(svg).toHaveAttribute('aria-hidden', 'true')
     }
+    const brief = screen.getByTestId('vehicle-quick-stats-summary')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    const drawerSvgs = Array.from(drawer.querySelectorAll('[role="group"] svg'))
+    expect(drawerSvgs.length).toBe(8)
+    for (const svg of drawerSvgs) {
+      expect(svg).toHaveAttribute('aria-hidden', 'true')
+    }
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

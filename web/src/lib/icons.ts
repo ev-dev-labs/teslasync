@@ -67,6 +67,7 @@ import {
   Clock,
   Cloud,
   CloudLightning,
+  CloudOff,
   CloudRain,
   Copy,
   Cpu,
@@ -212,8 +213,6 @@ import {
   Volume2,
   VolumeX,
   Wallet,
-  Wifi,
-  WifiOff,
   Wind,
   Workflow,
   Wrench,
@@ -379,8 +378,8 @@ export const Icons = {
   power: Power,
   radio: Radio,
   radioTower: RadioTower,
-  wifi: Wifi,
-  wifiOff: WifiOff,
+  // No Wi-Fi glyphs: live streams use radio, offline uses cloudOff (audit:freshness-actions).
+  cloudOff: CloudOff,
   heart: Heart,
   heartPulse: HeartPulse,
 

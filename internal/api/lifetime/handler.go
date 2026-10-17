@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -142,10 +143,11 @@ type LifetimeStatsResult struct {
 	HomesEquivalentDays float64 `json:"homes_equivalent_days"`
 
 	// Timeline
-	FirstDriveDate      *string `json:"first_drive_date"`
-	OwnershipDays       int     `json:"ownership_days"`
-	MostActiveDayOfWeek string  `json:"most_active_day_of_week"`
-	MostActiveHour      int     `json:"most_active_hour"`
+	FirstDriveDate          *string `json:"first_drive_date"`
+	OwnershipDays           int     `json:"ownership_days"`
+	MostActiveDayOfWeek     string  `json:"most_active_day_of_week"`
+	MostActiveHour          int     `json:"most_active_hour"`
+	MostActiveHourAvailable bool    `json:"most_active_hour_available"`
 
 	// Personal records
 	LongestDriveRecord PersonalRecord `json:"longest_drive_record"`
@@ -241,11 +243,13 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 
 	// Savings.
 	var gasPrice, gasEfficiencyMPG float64
+	var gasUnit string
 	if err := db.Pool.QueryRow(ctx,
 		`SELECT
 			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
-			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
-	).Scan(&gasPrice, &gasEfficiencyMPG); err != nil && err != pgx.ErrNoRows {
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25),
+			COALESCE((SELECT value_text FROM settings WHERE key = 'gas_unit'), 'gallon')`,
+	).Scan(&gasPrice, &gasEfficiencyMPG, &gasUnit); err != nil && err != pgx.ErrNoRows {
 		log.Warn().Err(err).Msg("lifetime: failed to get settings")
 	}
 	if gasPrice <= 0 {
@@ -254,16 +258,7 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 	if gasEfficiencyMPG <= 0 {
 		gasEfficiencyMPG = 25
 	}
-	var gasEquivalentCost, totalSavings float64
-	if totalDistKm > 0 {
-		totalMiles := totalDistKm / 1.60934
-		gallonsUsed := totalMiles / gasEfficiencyMPG
-		gasEquivalentCost = gallonsUsed * gasPrice
-		totalSavings = gasEquivalentCost - totalChargingCost
-		if totalSavings < 0 {
-			totalSavings = 0
-		}
-	}
+	gasEquivalentCost, totalSavings := lifetimeSavings(totalDistKm, totalChargingCost, gasPrice, gasEfficiencyMPG, gasUnit)
 
 	// CO₂ offset.
 	co2OffsetKg := totalDistKm * 0.192
@@ -290,7 +285,6 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 
 	// Most active day-of-week + hour.
 	mostActiveDOW := ""
-	mostActiveHour := 0
 	dowQuery := `
 		SELECT EXTRACT(DOW FROM started_at)::int as dow, COUNT(*) as cnt
 		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
@@ -309,17 +303,14 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 	}
 	hourQuery := `
 		SELECT EXTRACT(HOUR FROM started_at)::int as hr, COUNT(*) as cnt
-		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
+		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0 AND started_at IS NOT NULL`
 	hourArgs := []interface{}{}
 	if vehicleID > 0 {
 		hourQuery += " AND vehicle_id = $1"
 		hourArgs = append(hourArgs, vehicleID)
 	}
-	hourQuery += " GROUP BY hr ORDER BY cnt DESC LIMIT 1"
-	var hrIdx, hrCnt int
-	if err := db.Pool.QueryRow(ctx, hourQuery, hourArgs...).Scan(&hrIdx, &hrCnt); err == nil {
-		mostActiveHour = hrIdx
-	}
+	hourQuery += " GROUP BY hr ORDER BY cnt DESC, hr ASC LIMIT 1"
+	mostActiveHour, mostActiveHourAvailable := readMostActiveHour(db.Pool.QueryRow(ctx, hourQuery, hourArgs...))
 
 	// Personal records: longest drive.
 	longestRec := PersonalRecord{Value: longestDriveKm}
@@ -412,10 +403,11 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 		DaysOnRoad:          safeFloat(math.Round(daysOnRoad*100) / 100),
 		HomesEquivalentDays: safeFloat(math.Round(homesEquivalentDays*100) / 100),
 
-		FirstDriveDate:      firstDriveDateStr,
-		OwnershipDays:       ownershipDays,
-		MostActiveDayOfWeek: mostActiveDOW,
-		MostActiveHour:      mostActiveHour,
+		FirstDriveDate:          firstDriveDateStr,
+		OwnershipDays:           ownershipDays,
+		MostActiveDayOfWeek:     mostActiveDOW,
+		MostActiveHour:          mostActiveHour,
+		MostActiveHourAvailable: mostActiveHourAvailable,
 
 		LongestDriveRecord: longestRec,
 		HighestSpeedRecord: speedRec,
@@ -423,6 +415,44 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 
 		Achievements: achievements,
 	}, nil
+}
+
+func lifetimeSavings(distanceKm, chargingCost, pricePerUnit, efficiencyMPG float64, gasUnit string) (float64, float64) {
+	if distanceKm <= 0 {
+		return 0, 0
+	}
+	fuelUsed := distanceKm / 1.60934 / efficiencyMPG
+	if strings.EqualFold(strings.TrimSpace(gasUnit), "liter") {
+		// Match the US gallon conversion used by TCO and the gas-price worker.
+		fuelUsed *= 3.785411784
+	}
+	gasCost := fuelUsed * pricePerUnit
+	return gasCost, math.Max(0, gasCost-chargingCost)
+}
+
+// The producer returns an hour bucket, not an instant or a documented zone.
+// Preserve it without synthesizing a date or applying the user's timezone.
+func readMostActiveHour(row pgx.Row) (int, bool) {
+	var hour *int
+	var count int
+	if err := row.Scan(&hour, &count); err != nil {
+		if err != pgx.ErrNoRows {
+			log.Warn().Err(err).Msg("lifetime: failed to get most active hour")
+		}
+		return 0, false
+	}
+	if hour == nil || *hour < 0 || *hour > 23 || count <= 0 {
+		log.Warn().Msg("lifetime: invalid most active hour evidence")
+		return 0, false
+	}
+	return *hour, true
+}
+
+func (s *LifetimeStatsResult) mostActiveHourValue() *int {
+	if !s.MostActiveHourAvailable {
+		return nil
+	}
+	return &s.MostActiveHour
 }
 
 // computeAchievementsList computes progress without persistence; the
@@ -505,8 +535,8 @@ func (h *Handler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 	}
 	stats.Achievements = h.evaluateAchievements(ctx, vehicleID, fieldValues)
 
-	// Preserve the legacy JSON shape exactly (key names + ordering are
-	// unchanged from the pre-refactor handler).
+	// Keep the hour metric present, but unknown rather than midnight when
+	// its source evidence is absent or failed.
 	result := map[string]interface{}{
 		"total_drives":         stats.TotalDrives,
 		"total_distance_km":    stats.TotalDistanceKm,
@@ -530,10 +560,11 @@ func (h *Handler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 		"days_on_road":          stats.DaysOnRoad,
 		"homes_equivalent_days": stats.HomesEquivalentDays,
 
-		"first_drive_date":        stats.FirstDriveDate,
-		"ownership_days":          stats.OwnershipDays,
-		"most_active_day_of_week": stats.MostActiveDayOfWeek,
-		"most_active_hour":        stats.MostActiveHour,
+		"first_drive_date":           stats.FirstDriveDate,
+		"ownership_days":             stats.OwnershipDays,
+		"most_active_day_of_week":    stats.MostActiveDayOfWeek,
+		"most_active_hour":           stats.mostActiveHourValue(),
+		"most_active_hour_available": stats.MostActiveHourAvailable,
 
 		"longest_drive_record": stats.LongestDriveRecord,
 		"highest_speed_record": stats.HighestSpeedRecord,

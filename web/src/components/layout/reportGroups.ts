@@ -8,22 +8,22 @@ import {
 export const REPORT_GROUPS = [
   {
     primary: '/statistics',
-    label: 'Fleet Insights',
+    label: 'Fleet insights',
     labelKey: 'nav.reportGroups.fleetInsights',
     pages: [
       { to: '/statistics', label: 'Statistics', labelKey: 'nav.items.statistics' },
       { to: '/analytics', label: 'Analytics', labelKey: 'nav.items.analytics' },
-      { to: '/period-compare', label: 'Period Comparison', labelKey: 'nav.items.period-compare' },
+      { to: '/period-compare', label: 'Period comparison', labelKey: 'nav.items.period-compare' },
     ],
   },
   {
     primary: '/efficiency',
-    label: 'Driving Efficiency',
+    label: 'Driving efficiency',
     labelKey: 'nav.reportGroups.drivingEfficiency',
     pages: [
       { to: '/efficiency', label: 'Efficiency', labelKey: 'nav.items.efficiency' },
-      { to: '/temperature-impact', label: 'Temperature Impact', labelKey: 'nav.items.temperature-impact' },
-      { to: '/drive-archetypes', label: 'Drive Archetypes', labelKey: 'nav.items.drive-archetypes' },
+      { to: '/temperature-impact', label: 'Temperature impact', labelKey: 'nav.items.temperature-impact' },
+      { to: '/drive-archetypes', label: 'Drive archetypes', labelKey: 'nav.items.drive-archetypes' },
     ],
   },
   {
@@ -31,8 +31,8 @@ export const REPORT_GROUPS = [
     label: 'Costs',
     labelKey: 'nav.reportGroups.costs',
     pages: [
-      { to: '/cost-analysis', label: 'Cost Analysis', labelKey: 'nav.items.cost-analysis' },
-      { to: '/tco', label: 'Cost of Ownership', labelKey: 'nav.items.tco' },
+      { to: '/cost-analysis', label: 'Cost analysis', labelKey: 'nav.items.cost-analysis' },
+      { to: '/tco', label: 'Cost of ownership', labelKey: 'nav.items.tco' },
     ],
   },
 ] as const

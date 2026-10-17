@@ -71,7 +71,28 @@ describe('LoadingSkeleton — default structure', () => {
 
   it('animates every placeholder (Skeleton adds animate-pulse)', () => {
     const { container } = render(<LoadingSkeleton />);
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(10);
+    // Historical case title retained; the shared Skeleton contract is now static.
+    const placeholders = screen.getByRole('status').querySelectorAll(
+      '[class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders.length).toBeGreaterThan(10);
+    expect(placeholders).toHaveLength(32);
+    placeholders.forEach((placeholder) => {
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toHaveClass('rounded');
+    });
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+    expect(container.querySelectorAll('.h-8.w-48')).toHaveLength(1);
+    expect(container.querySelectorAll('.h-4.w-72')).toHaveLength(1);
+    expect(container.querySelectorAll('.h-10.w-48')).toHaveLength(1);
+    expect(container.querySelectorAll('.h-10.w-64')).toHaveLength(1);
+    expect(container.querySelectorAll('.h-3.w-16')).toHaveLength(6);
+    expect(container.querySelectorAll('.h-7.w-20')).toHaveLength(6);
+    expect(container.querySelectorAll('.h-64.w-full')).toHaveLength(1);
+    expect(container.querySelectorAll('.h-52.w-full')).toHaveLength(1);
+    expect(container.querySelectorAll('.h-48.w-full')).toHaveLength(2);
+    expect(container.querySelectorAll('.h-3.w-20')).toHaveLength(4);
+    expect(container.querySelectorAll('.h-7.w-16')).toHaveLength(4);
   });
 });
 

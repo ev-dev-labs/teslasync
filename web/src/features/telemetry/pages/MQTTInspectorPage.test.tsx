@@ -5,7 +5,7 @@
  *   1. A four-tile KPI band (streaming vehicles / total signals / batches /
  *      signals-per-sec) that collapses to '—' while the status query loads.
  *   2. A hero throughput chart that accumulates a live *delta* series from
- *      successive `totalSignals` readings — it stays a "Collecting…"
+ *      successive successful broker receipts — it stays a "Collecting…"
  *      placeholder until more than two points have been observed.
  *   3. A connection panel (broker / uptime / topic patterns) with its own
  *      loading / error / empty branches.
@@ -27,9 +27,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+
+const translationFixture = vi.hoisted(() => ({
+  messages: {} as Record<string, string>,
+  calls: vi.fn(),
+  timeZone: 'UTC',
+}));
 
 vi.mock('react-i18next', async () => {
   const actual =
@@ -37,8 +43,15 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        translationFixture.calls(key, options);
+        const pluralKey = options?.count === 1 ? `${key}_one` : `${key}_other`;
+        const defaultValue = options?.count === 1 && typeof options.defaultValue_one === 'string'
+          ? options.defaultValue_one : typeof fallback === 'string' ? fallback : key;
+        const message = translationFixture.messages[pluralKey] ?? translationFixture.messages[key] ?? defaultValue;
+        return message.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) =>
+          options?.[name] == null ? match : String(options[name]));
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -54,9 +67,25 @@ vi.mock('@/api/hooks/useTelemetry', async () => {
   return { ...actual, useMQTTStatus: vi.fn() };
 });
 
+vi.mock('@/hooks/useDateFormat', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useDateFormat')>('@/hooks/useDateFormat');
+  return {
+    ...actual,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => {
+      const formatters = actual.useDateFormat(...args);
+      return { ...formatters, formatTime: (...values: Parameters<typeof formatters.formatTime>) =>
+        formatters.formatTime(values[0], { ...values[1], tz: translationFixture.timeZone }) };
+    },
+  };
+});
+
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
+import * as apiClient from '@/api/client';
+import { camelCaseKeys } from '@/lib/resilience';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import MQTTInspectorPage from './MQTTInspectorPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const mockUseMQTTStatus = useMQTTStatus as unknown as ReturnType<typeof vi.fn>;
 
@@ -108,39 +137,105 @@ function makeStatus(overrides: Partial<TestStatus> = {}): TestStatus {
   };
 }
 
-type QueryStub = { data?: unknown; isLoading?: boolean; error?: unknown };
+type QueryStub = {
+  data?: unknown;
+  isLoading?: boolean;
+  error?: unknown;
+  refetch?: () => unknown;
+  isFetching?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+  dataUpdatedAt?: number;
+  isSuccess?: boolean;
+};
+
+let receiptTime = 0;
 
 function setQuery(stub: QueryStub) {
   mockUseMQTTStatus.mockReturnValue({
     data: stub.data,
     isLoading: stub.isLoading ?? false,
     error: stub.error ?? null,
+    refetch: stub.refetch,
+    isFetching: stub.isFetching ?? false,
+    fetchStatus: stub.fetchStatus ?? 'idle',
+    dataUpdatedAt: stub.dataUpdatedAt ?? (stub.data == null ? 0 : receiptTime += 5_000),
+    isSuccess: stub.isSuccess ?? (stub.data != null && !stub.error),
   });
 }
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const ui = (
+  const tree = () => (
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/mqtt-inspector']}>
         <MQTTInspectorPage />
       </MemoryRouter>
     </QueryClientProvider>
   );
-  return { ui, ...render(ui) };
+  const ui = tree();
+  const result = render(ui);
+  return { ui, ...result, rerenderPage: () => result.rerender(tree()) };
+}
+
+const MQTT_LABELS = ['Streaming vehicles', 'Total signals', 'Total batches', 'Signals / sec'];
+
+function expectHiddenFieldCount(summary: HTMLElement, expected: string) {
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
   mockUseMQTTStatus.mockReset();
+  translationFixture.messages = {};
+  translationFixture.calls.mockClear();
+  translationFixture.timeZone = 'UTC';
+  receiptTime = Date.now() - 100_000;
   setQuery({ data: makeStatus() });
 });
 
 afterEach(() => {
   __resetTitleStoreForTests();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('MQTTInspectorPage — connected happy path', () => {
+  it('opens the real operational review with complete cumulative counters and the rate-versus-delta caveat', () => {
+    renderPage();
+    const summary = screen.getByTestId('mqtt-summary');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Total signals')).toBeInTheDocument();
+    expect(within(drawer).getByText('Total batches')).toBeInTheDocument();
+    expect(drawer).toHaveTextContent('12,445');
+    expect(drawer).toHaveTextContent('not the throughput chart’s per-poll deltas');
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+  });
+
+  it('uses the canonical strip for broker counters, not throughput deltas, without losing any inspector section', () => {
+    const { container } = renderPage();
+    const summary = screen.getByTestId('mqtt-summary');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(within(summary).getByText('Signals / sec').closest('[data-operational-metric]')).toHaveTextContent('Signals / sec');
+    expect(summary).not.toHaveTextContent('Latest broker status snapshot');
+    expect(summary).not.toHaveTextContent('not the throughput chart’s per-poll deltas');
+    assertOperationalBriefDisclosure(summary, 'Latest broker status snapshot');
+    assertOperationalBriefDisclosure(summary, 'not the throughput chart’s per-poll deltas', { region: 'drawer', contains: true });
+    expect(container.querySelector('[data-role="metric-card"]')).toBeNull();
+    expect(container.querySelector('[data-stat-strip]')).toBeNull();
+    expect(screen.getAllByText('Signal throughput').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Connection')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
+    expect(screen.getByText('Refreshes every 5s')).toBeInTheDocument();
+  });
+
   it('renders the connected badge, connection details, KPI totals, and vehicle count', () => {
     setQuery({ data: makeStatus() });
     renderPage();
@@ -166,7 +261,7 @@ describe('MQTTInspectorPage — connected happy path', () => {
     setQuery({ data: makeStatus() });
     renderPage();
 
-    expect(document.title).toContain('MQTT Inspector');
+    expect(document.title).toContain('MQTT inspector');
 
     // The opt-in AI card is gated off by the global useSettings stub.
     expect(
@@ -179,15 +274,23 @@ describe('MQTTInspectorPage — connected happy path', () => {
 });
 
 describe('MQTTInspectorPage — loading state', () => {
-  it('shows placeholder KPI values and a disconnected chip while the query loads', () => {
+  it('shows placeholder KPI values and unknown connectivity while the query loads', () => {
     setQuery({ data: undefined, isLoading: true });
     renderPage();
 
-    // All four MetricCards render the em-dash placeholder while loading.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    // While loading, the brief omits all four tiles and discloses the pending snapshot in the drawer.
+    const summary = screen.getByTestId('mqtt-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(summary).toHaveTextContent('No metric values are available yet.');
+    for (const label of MQTT_LABELS) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount(summary, '4 empty fields are hidden.');
+    assertOperationalBriefDisclosure(summary, 'Loading');
 
-    // No status yet → connected defaults to false.
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    // No snapshot is not evidence of a disconnected broker.
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
 
     // The vehicle-count header span only renders once vehicles exist.
     expect(screen.queryByText(/\d+ vehicles/i)).not.toBeInTheDocument();
@@ -195,6 +298,22 @@ describe('MQTTInspectorPage — loading state', () => {
 });
 
 describe('MQTTInspectorPage — error state', () => {
+  it('retains counters, connection, throughput and vehicle details after a failed status refresh', () => {
+    const status = makeStatus();
+    setQuery({ data: status, error: new Error('refresh unavailable') });
+    renderPage();
+    const summary = screen.getByTestId('mqtt-summary');
+    expect(summary).not.toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(summary, 'Showing retained measurements');
+    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(screen.getByText('12,445')).toBeInTheDocument();
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByText(/2 vehicles/i)).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText(/Unable to load MQTT status/)).toBeNull();
+  });
+
   it('surfaces the top error banner (with the message) and per-panel QueryErrors', () => {
     setQuery({ data: undefined, error: new Error('boom') });
     renderPage();
@@ -214,11 +333,32 @@ describe('MQTTInspectorPage — error state', () => {
       screen.getAllByText(/Check your internet connection/i).length,
     ).toBeGreaterThanOrEqual(1);
 
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
   });
 });
 
 describe('MQTTInspectorPage — connected but empty', () => {
+  it('distinguishes absent status from an observed empty broker snapshot', () => {
+    setQuery({ data: undefined });
+    const { unmount } = renderPage();
+    const absentSummary = screen.getByTestId('mqtt-summary');
+    expect(absentSummary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(absentSummary).toHaveTextContent('No metric values are available yet.');
+    for (const label of MQTT_LABELS) {
+      assertOperationalMetricUnavailable(absentSummary, label);
+    }
+    expectHiddenFieldCount(absentSummary, '4 empty fields are hidden.');
+    assertOperationalBriefDisclosure(absentSummary, 'Broker snapshot unavailable');
+    unmount();
+    setQuery({ data: makeStatus({ vehicles: [] }) });
+    renderPage();
+    const summary = screen.getByTestId('mqtt-summary');
+    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(summary.querySelector('[data-value-state="missing"]')).toBeNull();
+    assertOperationalBriefDisclosure(summary, 'Broker snapshot available');
+  });
+
   it('renders topic + vehicle empty states without a stale badge', () => {
     setQuery({
       data: makeStatus({ topics: [], vehicles: [] }),
@@ -245,7 +385,8 @@ describe('MQTTInspectorPage — connected but empty', () => {
     expect(
       screen.getByText(/No vehicles currently streaming/i),
     ).toBeInTheDocument();
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
   });
 });
 
@@ -297,7 +438,7 @@ describe('MQTTInspectorPage — stale detection', () => {
     renderPage();
 
     expect(screen.getByText(/1 stale/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 vehicles/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 vehicle$/i)).toBeInTheDocument();
   });
 });
 
@@ -345,16 +486,20 @@ describe('MQTTInspectorPage — throughput accumulation', () => {
     );
     const { rerender } = render(tree());
 
-    // First point recorded → still a placeholder (length 1).
+    // First successful receipt is a baseline, not a synthetic zero point.
     expect(
       screen.getByText(/Collecting throughput data/i),
     ).toBeInTheDocument();
 
     setQuery({ data: withTotal(250) });
-    rerender(tree()); // second point (length 2)
+    rerender(tree()); // first observed interval
 
     setQuery({ data: withTotal(400) });
-    rerender(tree()); // third point (length 3) → chart branch
+    rerender(tree()); // second observed interval
+    expect(screen.getByText(/Collecting throughput data/i)).toBeInTheDocument();
+
+    setQuery({ data: withTotal(550) });
+    rerender(tree()); // third observed interval → chart branch
 
     expect(
       screen.queryByText(/Collecting throughput data/i),
@@ -363,5 +508,578 @@ describe('MQTTInspectorPage — throughput accumulation', () => {
     expect(
       document.querySelector('.recharts-responsive-container'),
     ).not.toBeNull();
+  });
+});
+
+describe('MQTTInspectorPage — contract adoption', () => {
+  function useMobileWidth() {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, bottom: 640, right: 375,
+      width: 375, height: 640, toJSON: () => ({}),
+    });
+  }
+
+  it('keeps every vehicle field reachable in named mobile details', () => {
+    useMobileWidth();
+    const vehicle = makeStatus().vehicles?.[0];
+    setQuery({ data: makeStatus({ vehicles: vehicle ? [vehicle] : [] }) });
+    renderPage();
+
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    expect(table).toHaveAttribute('data-mobile-table');
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const fields: Record<string, string | RegExp> = {
+      VIN: '5YJ3E1EA1NF000001',
+      State: 'online',
+      Signals: '12,345',
+      Batches: '678',
+      'Sig/sec': '3.4',
+      'Last received': 'just now',
+      Status: 'Live',
+    };
+    for (const [label, value] of Object.entries(fields)) {
+      const field = within(details).getByText(label, { selector: 'dt' }).parentElement;
+      expect(field).toHaveTextContent(value);
+    }
+    const footer = details.querySelector<HTMLElement>('[data-modal-footer="true"]');
+    if (!footer) throw new Error('Mobile details footer is missing');
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('telemetry/+/errors')).toBeInTheDocument();
+  });
+
+  it('offers one explicit fatal-source refresh without hiding inspector sections', () => {
+    const refetch = vi.fn();
+    setQuery({ error: new Error('broker read unavailable'), refetch });
+    renderPage();
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    fireEvent.click(refresh);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    for (const title of ['Signal throughput', 'Connection', 'Vehicle breakdown']) {
+      expect(screen.getAllByText(title).length).toBeGreaterThanOrEqual(1);
+    }
+    const summary = screen.getByTestId('mqtt-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(summary).toHaveTextContent('No metric values are available yet.');
+    for (const label of MQTT_LABELS) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount(summary, '4 empty fields are hidden.');
+  });
+
+  it('disables fatal-source refresh during an in-flight retry', () => {
+    const refetch = vi.fn();
+    setQuery({ error: new Error('broker read unavailable'), refetch, isFetching: true });
+    renderPage();
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { id: 'reported connected', connected: true, label: 'Connected' },
+    { id: 'reported disconnected', connected: false, label: 'Disconnected' },
+    { id: 'unreported connection', connected: undefined, label: 'Unknown' },
+  ])('shows only source-backed connectivity for $id', ({ connected, label }) => {
+    setQuery({ data: makeStatus({ connected }) });
+    renderPage();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    if (connected === undefined) {
+      expect(screen.queryByText('Connected')).not.toBeInTheDocument();
+      expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
+    }
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+  });
+
+  it('retains source-backed connectivity, counters and mobile details when refresh is paused', () => {
+    useMobileWidth();
+    const status = makeStatus({ connected: false, vehicles: makeStatus().vehicles?.slice(0, 1) });
+    setQuery({ data: status, fetchStatus: 'paused' });
+    renderPage();
+    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('mqtt-summary'), 'Showing retained measurements');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('12,345');
+    expect(screen.getByRole('dialog')).toHaveTextContent('678');
+  });
+
+  it.each([
+    { id: 'invalid timestamp', received: 'not-a-timestamp', label: 'Unknown', stale: false },
+    { id: 'future timestamp', received: '2030-01-01T00:01:00.000Z', label: 'Unknown', stale: false },
+    { id: 'exact freshness boundary', received: '2029-12-31T23:58:00.000Z', label: 'Live', stale: false },
+    { id: 'past freshness boundary', received: '2029-12-31T23:57:59.999Z', label: 'Stale', stale: true },
+    { id: 'missing timestamp', received: undefined, label: 'Stale', stale: true },
+  ])('keeps freshness status and stale count consistent for $id', ({ received, label, stale }) => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2030-01-01T00:00:00.000Z'));
+    useMobileWidth();
+    setQuery({ data: makeStatus({ vehicles: [{
+      vin: 'DRILL-FRESHNESS-ONLY', state: 'online',
+      signalCount: 12, batchCount: 3, signalsPerSecond: 1,
+      lastReceived: received,
+    }] }) });
+    renderPage();
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const statusField = within(details).getByText('Status', { selector: 'dt' }).parentElement;
+    expect(statusField).toHaveTextContent(label);
+    if (stale) expect(screen.getByText('1 stale vehicle')).toBeInTheDocument();
+    else expect(screen.queryByText('1 stale vehicle')).not.toBeInTheDocument();
+    if (label === 'Unknown') expect(within(details).queryByText('Live')).not.toBeInTheDocument();
+  });
+});
+
+describe('MQTTInspectorPage — causal freshness clock', () => {
+  it('ages the same retained array coherently in header, mobile row, filter and already-open details', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime('2030-01-01T00:00:00Z');
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, bottom: 640, right: 375,
+      width: 375, height: 640, toJSON: () => ({}),
+    });
+    const status = makeStatus({ vehicles: [{
+      vin: 'CLOCK-ONLY', state: 'online', signalCount: 10, batchCount: 1,
+      lastReceived: '2029-12-31T23:58:10Z',
+    }] });
+    setQuery({ data: status, fetchStatus: 'paused', dataUpdatedAt: Date.now() - 5_000 });
+    const { rerenderPage, unmount } = renderPage();
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    expect(within(table).getByText('Live')).toBeInTheDocument();
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const statusField = within(details).getByText('Status', { selector: 'dt' }).parentElement;
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(statusField).toHaveTextContent('Live'); // Exactly 120s remains live.
+    expect(screen.queryByText('1 stale vehicle')).not.toBeInTheDocument();
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(statusField).toHaveTextContent('Stale');
+    expect(screen.getByText('1 stale vehicle')).toBeInTheDocument();
+    expect(within(table).getByText('Stale')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(translationFixture.calls).toHaveBeenCalledWith('mqtt.staleVehicleCount',
+      expect.objectContaining({ count: 1, formattedCount: '1' }));
+    const footer = details.querySelector<HTMLElement>('[data-modal-footer="true"]');
+    if (!footer) throw new Error('Details footer missing');
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(within(table).getByRole('button', { name: 'Status filter' }));
+    expect(screen.getByRole('checkbox', { name: 'Stale' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Live' })).not.toBeInTheDocument();
+    rerenderPage();
+    expect(screen.getByText('1 stale vehicle')).toBeInTheDocument();
+    unmount();
+  });
+});
+
+describe('MQTTInspectorPage — successful receipt samples', () => {
+  const at = Date.parse('2030-01-01T00:00:00Z');
+  const snapshot = (count: number | undefined, vin = 'RECEIPT-ONLY') => makeStatus({
+    vehicles: [{ vin, signalCount: count, batchCount: 1, lastReceived: freshIso() }],
+  });
+  const sampleRows = () => {
+    const table = screen.queryByRole('table', { name: 'Signal throughput — data table' });
+    if (!table) return [];
+    return within(table).getAllByRole('row').slice(1).map(row =>
+      within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent));
+  };
+
+  it('requires a successful receipt, records true zeros including structurally shared data, and keeps elapsed windows', () => {
+    const status = snapshot(0);
+    setQuery({ data: status, dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    expect(sampleRows()).toEqual([]);
+    for (const [offset, window] of [[5_000, '5'], [12_000, '7'], [20_000, '8']] as const) {
+      setQuery({ data: status, dataUpdatedAt: at + offset });
+      rerenderPage();
+      expect(sampleRows().slice(-1)[0]).toEqual([window, '0']);
+    }
+    expect(screen.queryByText(/Collecting throughput data/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/not a server throughput or signals-per-second measurement/)).toBeInTheDocument();
+  });
+
+  it('does not sample rerenders, changed query objects, request starts, paused refreshes or failures', () => {
+    const status = snapshot(100);
+    setQuery({ data: status, dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    for (const query of [
+      { data: snapshot(999), dataUpdatedAt: at },
+      { data: status, dataUpdatedAt: at, isFetching: true, fetchStatus: 'fetching' as const },
+      { data: status, dataUpdatedAt: at, fetchStatus: 'paused' as const },
+      { data: status, dataUpdatedAt: at, error: new Error('retained failure') },
+      { data: snapshot(500), dataUpdatedAt: at + 10_000, isSuccess: false },
+    ]) {
+      setQuery(query);
+      rerenderPage();
+      expect(sampleRows()).toEqual([]);
+    }
+    setQuery({ data: snapshot(130), dataUpdatedAt: at + 30_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['30', '30']]);
+  });
+
+  it('does not create samples on precision, locale or formatter changes and updates existing time labels only', () => {
+    const preferences = getFormatterPreferences();
+    setQuery({ data: snapshot(100), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: snapshot(110), dataUpdatedAt: at + 5_000 });
+    rerenderPage();
+    const before = sampleRows();
+    const firstReceiptTime = () => {
+      const table = screen.getByRole('table', { name: 'Signal throughput — data table' });
+      return within(table).getAllByRole('row')[1].querySelector('td')?.textContent;
+    };
+    const beforeTime = firstReceiptTime();
+    try {
+      act(() => { setGlobalLocale('ar-EG'); setGlobalPrecision(3); });
+      translationFixture.timeZone = 'America/New_York';
+      rerenderPage();
+      expect(sampleRows()).toEqual(before);
+      expect(firstReceiptTime()).not.toEqual(beforeTime);
+      translationFixture.messages['mqtt.time'] = 'Receipt time';
+      rerenderPage();
+      expect(sampleRows()).toEqual(before);
+    } finally {
+      act(() => { setGlobalLocale(preferences.locale); setGlobalPrecision(preferences.precision); });
+    }
+  });
+
+  it('keeps reset, missing counter and changed vehicle scope as gaps, then rebases without invented zero', () => {
+    setQuery({ data: snapshot(100), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    const observations: [number | undefined, string, string][] = [
+      [110, 'RECEIPT-ONLY', '10'], [0, 'RECEIPT-ONLY', '—'],
+      [0, 'RECEIPT-ONLY', '0'], [undefined, 'RECEIPT-ONLY', '—'],
+      [5, 'RECEIPT-ONLY', '—'], [8, 'RECEIPT-ONLY', '3'],
+      [20, 'OTHER-SCOPE', '—'], [22, 'OTHER-SCOPE', '2'],
+    ];
+    observations.forEach(([count, vin, expected], index) => {
+      setQuery({ data: snapshot(count, vin), dataUpdatedAt: at + (index + 1) * 5_000 });
+      rerenderPage();
+      expect(sampleRows().slice(-1)[0]).toEqual(['5', expected]);
+    });
+    expect(sampleRows()).toHaveLength(8);
+  });
+
+  it('rebases a backwards receipt clock with an explicit unknown window instead of manufacturing a rate', () => {
+    setQuery({ data: snapshot(100), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: snapshot(110), dataUpdatedAt: at - 1_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['—', '—']]);
+    setQuery({ data: snapshot(120), dataUpdatedAt: at + 4_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['—', '—'], ['5', '10']]);
+  });
+
+  it('preserves a per-vehicle reset gap even when another counter masks it in the fleet total', () => {
+    const pair = (first: number, second: number) => makeStatus({ vehicles: [
+      { vin: 'RESET-A', signalCount: first, batchCount: 1 },
+      { vin: 'RESET-B', signalCount: second, batchCount: 1 },
+    ] });
+    setQuery({ data: pair(100, 0), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: pair(0, 120), dataUpdatedAt: at + 5_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['5', '—']]);
+    setQuery({ data: pair(2, 123), dataUpdatedAt: at + 10_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['5', '—'], ['5', '5']]);
+  });
+});
+
+describe('MQTTInspectorPage — localized complete messages', () => {
+  it.each([
+    { seconds: 3599.9, label: '59m' },
+    { seconds: 3600, label: '1h 0m' },
+    { seconds: 7199.9, label: '1h 59m' },
+    { seconds: 7200, label: '2h 0m' },
+    { seconds: 0, label: '0m' },
+  ])('formats the complete uptime without minute overflow at $seconds seconds', ({ seconds, label }) => {
+    setQuery({ data: makeStatus({ uptimeSeconds: seconds }) });
+    renderPage();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByText(/1h 60m/)).not.toBeInTheDocument();
+  });
+
+  it('localizes all uptime/count digits and permits translated word order and singular vehicle phrasing', () => {
+    const preferences = getFormatterPreferences();
+    translationFixture.messages = {
+      'mqtt.vehicleCount_one': 'Vehicle: {{formattedCount}}',
+      'mqtt.staleVehicleCount_one': 'Stale: {{formattedCount}}',
+      'mqtt.uptimeHoursMinutes': '{{minutes}}min / {{hours}}hr',
+    };
+    setQuery({ data: makeStatus({ uptimeSeconds: 7200, vehicles: [{
+      vin: 'LOCALE-ONLY', signalCount: 0, batchCount: 0, lastReceived: staleIso(),
+    }] }) });
+    const { rerenderPage } = renderPage();
+    try {
+      act(() => { setGlobalLocale('ar-EG'); });
+      rerenderPage();
+      expect(screen.getByText('٠min / ٢hr')).toBeInTheDocument();
+      expect(screen.getByText('Vehicle: ١')).toBeInTheDocument();
+      expect(screen.getByText('Stale: ١')).toBeInTheDocument();
+      expect(translationFixture.calls).toHaveBeenCalledWith('mqtt.vehicleCount',
+        expect.objectContaining({ count: 1, formattedCount: '١' }));
+    } finally {
+      act(() => { setGlobalLocale(preferences.locale); });
+    }
+  });
+});
+
+describe('MQTTInspectorPage — independent aggregate missingness', () => {
+  const metric = (label: string) => {
+    const summary = screen.getByTestId('mqtt-summary');
+    const element = within(summary).getByText(label).closest('[data-operational-metric]');
+    if (!(element instanceof HTMLElement)) throw new Error(`Missing metric: ${label}`);
+    return element;
+  };
+
+  it.each([
+    { field: 'signalCount', label: 'Total signals', known: ['Total batches', 'Signals / sec'] },
+    { field: 'batchCount', label: 'Total batches', known: ['Total signals', 'Signals / sec'] },
+    { field: 'signalsPerSecond', label: 'Signals / sec', known: ['Total signals', 'Total batches'] },
+  ] as const)('does not publish a complete $label aggregate when one returned vehicle omits $field', ({ field, label, known }) => {
+    const vehicles = makeStatus().vehicles!;
+    const incomplete = { ...vehicles[1], [field]: undefined };
+    setQuery({ data: makeStatus({ vehicles: [vehicles[0], incomplete] }) });
+    renderPage();
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalMetricUnavailable(summary, label);
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
+    expect(metric('Streaming vehicles')).toHaveAttribute('data-value-state', 'value');
+    for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
+    const notice = screen.getByTestId('mqtt-partial-measurements');
+    expect(notice).toHaveAttribute('data-data-state', 'partial');
+    expect(within(notice).getByText(label)).toBeInTheDocument();
+    expect(within(notice).getByText('Unknown')).toBeInTheDocument();
+    for (const name of known) expect(within(notice).queryByText(name)).toBeNull();
+    assertOperationalBriefDisclosure(summary, 'Partial data');
+    assertOperationalBriefDisclosure(summary, 'Broker snapshot available', { absent: true });
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
+  });
+
+  describe('MQTTInspectorPage — Q01 raw transport presence integration', () => {
+    const metric = (label: string) => {
+      const element = within(screen.getByTestId('mqtt-summary')).getByText(label).closest('[data-operational-metric]');
+      if (!(element instanceof HTMLElement)) throw new Error(`Missing metric: ${label}`);
+      return element;
+    };
+
+    async function mountRawStatus(raw: unknown) {
+      const actual = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>('@/api/hooks/useTelemetry');
+      const request = vi.spyOn(apiClient, 'request').mockResolvedValue(camelCaseKeys(raw));
+      let query: ReturnType<typeof actual.useMQTTStatus> | undefined;
+      mockUseMQTTStatus.mockImplementation(() => {
+        query = actual.useMQTTStatus();
+        return query;
+      });
+      const page = renderPage();
+      await waitFor(() => expect(query?.isSuccess).toBe(true));
+      return {
+        ...page,
+        request,
+        async refresh(payload: unknown, error?: Error) {
+          if (!query) throw new Error('Missing actual MQTT query');
+          if (error) request.mockRejectedValueOnce(error);
+          else request.mockResolvedValue(camelCaseKeys(payload));
+          await act(async () => { await query?.refetch(); });
+          // The query cache notification lands after the refetch promise
+          // resolves; flush it so the page reflects the new receipt.
+          await act(async () => {});
+        },
+      };
+    }
+
+    it.each([
+      { field: 'signal_count', label: 'Total signals', known: ['Total batches', 'Signals / sec'] },
+      { field: 'batch_count', label: 'Total batches', known: ['Total signals', 'Signals / sec'] },
+      { field: 'signals_per_second', label: 'Signals / sec', known: ['Total signals', 'Total batches'] },
+    ])('withholds only $label after the actual hook receives raw omitted $field and retains that distinction on failure', async ({ field, label, known }) => {
+      const incomplete: Record<string, unknown> = {
+        signal_count: 10, batch_count: 2, signals_per_second: 3, state: 'online', last_received: freshIso(),
+      };
+      delete incomplete[field];
+      const raw = {
+        connected: false, broker: 'fixture-broker', uptime_seconds: 60, topics: ['telemetry/+/v/+'],
+        vehicles: {
+          ZERO: { signal_count: 0, batch_count: 0, signals_per_second: 0, last_received: freshIso() },
+          PARTIAL: incomplete,
+        },
+      };
+      const page = await mountRawStatus(raw);
+      expect(page.request.mock.calls[0][0]).toBe('/telemetry');
+      expect(page.request.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+      const summary = screen.getByTestId('mqtt-summary');
+      assertOperationalMetricUnavailable(summary, label);
+      expectHiddenFieldCount(summary, '1 empty field is hidden.');
+      expect(metric('Streaming vehicles')).toHaveTextContent('2');
+      for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByTestId('mqtt-partial-measurements')).toHaveTextContent(label);
+      expect(screen.getByText('Disconnected')).toBeInTheDocument();
+      expect(screen.getByText('fixture-broker')).toBeInTheDocument();
+      expect(screen.getByText('1m')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
+      await page.refresh(raw, new Error('Q01 transport refresh unavailable'));
+      await waitFor(() => expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument());
+      assertOperationalBriefDisclosure(screen.getByTestId('mqtt-summary'), 'Showing retained measurements');
+      assertOperationalMetricUnavailable(screen.getByTestId('mqtt-summary'), label);
+      for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    });
+
+    it.each([
+      { id: 'absent', vehicles: undefined },
+      { id: 'unsupported', vehicles: 'oops' },
+    ])('keeps every aggregate unknown for a raw $id container and recovers observed emptiness', async ({ vehicles }) => {
+      const page = await mountRawStatus({ connected: true, broker: 'fixture-broker', vehicles });
+      const summary = screen.getByTestId('mqtt-summary');
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+      expect(summary).toHaveTextContent('No metric values are available yet.');
+      for (const label of MQTT_LABELS) {
+        assertOperationalMetricUnavailable(summary, label);
+      }
+      expectHiddenFieldCount(summary, '4 empty fields are hidden.');
+      assertOperationalBriefDisclosure(summary, 'Partial data');
+      expect(screen.getByText('Connected')).toBeInTheDocument();
+      expect(screen.getByText('fixture-broker')).toBeInTheDocument();
+      await page.refresh({ connected: true, vehicles: [] });
+      await waitFor(() => expect(metric('Streaming vehicles')).toHaveTextContent('0'));
+      for (const label of ['Streaming vehicles', 'Total signals', 'Total batches', 'Signals / sec']) {
+        expect(metric(label)).toHaveAttribute('data-value-state', 'value');
+        expect(metric(label)).toHaveTextContent('0');
+      }
+      expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
+    });
+
+    it.each(['missing count', 'unknown container'])('breaks raw %s comparability and rebases recovery before publishing a later measured delta', async missing => {
+      let at = Date.now() - 30_000;
+      vi.spyOn(Date, 'now').mockImplementation(() => at);
+      const raw = (count: number) => ({ connected: true, vehicles: [{ vin: 'RAW-A', signal_count: count, batch_count: 0, signals_per_second: 0 }] });
+      const page = await mountRawStatus(raw(10));
+      const rows = () => within(screen.getByRole('table', { name: 'Signal throughput — data table' }))
+        .getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent));
+      at += 5_000;
+      await page.refresh(missing === 'missing count'
+        ? { connected: true, vehicles: [{ vin: 'RAW-A', batch_count: 0, signals_per_second: 0 }] }
+        : { connected: true });
+      await waitFor(() => expect(rows()).toEqual([['5', '—']]));
+      at += 5_000;
+      await page.refresh(raw(20));
+      await waitFor(() => expect(rows()).toEqual([['5', '—'], ['5', '—']]));
+      at += 5_000;
+      await page.refresh(raw(23));
+      await waitFor(() => expect(rows()).toEqual([['5', '—'], ['5', '—'], ['5', '3']]));
+      expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
+    });
+  });
+
+  it('keeps measured zeros distinct from an omitted rate and recovers each aggregate after a complete receipt', () => {
+    const incomplete = makeStatus({ vehicles: [
+      { vin: 'MISSING-RATE', signalCount: 0, batchCount: 0, lastReceived: freshIso() },
+    ] });
+    setQuery({ data: incomplete });
+    const { rerenderPage } = renderPage();
+    for (const label of ['Total signals', 'Total batches']) {
+      expect(metric(label)).toHaveAttribute('data-value-state', 'value');
+      expect(metric(label)).toHaveTextContent('0');
+    }
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalMetricUnavailable(summary, 'Signals / sec');
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
+    setQuery({ data: makeStatus({ vehicles: [
+      { ...incomplete.vehicles![0], signalsPerSecond: 0 },
+    ] }) });
+    rerenderPage();
+    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('Signals / sec')).toHaveTextContent('0');
+    expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
+    assertOperationalBriefDisclosure(screen.getByTestId('mqtt-summary'), 'Broker snapshot available');
+  });
+
+  it.each([
+    { id: 'failed refresh', error: new Error('partial refresh rejected'), fetchStatus: 'idle' as const },
+    { id: 'paused refresh', error: undefined, fetchStatus: 'paused' as const },
+  ])('retains partial measurements and independent connectivity during $id without promoting unknown totals', ({ error, fetchStatus }) => {
+    const vehicles = makeStatus().vehicles!;
+    const status = makeStatus({ connected: false, vehicles: [
+      vehicles[0], { ...vehicles[1], signalsPerSecond: undefined },
+    ] });
+    const at = Date.now() - 5_000;
+    setQuery({ data: status, dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: status, dataUpdatedAt: at, error, fetchStatus });
+    rerenderPage();
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalBriefDisclosure(summary, 'Showing retained measurements');
+    assertOperationalMetricUnavailable(summary, 'Signals / sec');
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
+    expect(metric('Total signals')).toHaveTextContent('12,445');
+    expect(metric('Total batches')).toHaveTextContent('683');
+    expect(screen.getByTestId('mqtt-partial-measurements')).toHaveTextContent('Signals / sec');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(screen.queryByText('Connected')).toBeNull();
+    expect(screen.queryByText(/Unable to load MQTT status/)).toBeNull();
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+  });
+
+  it('keeps counter-based throughput and all seven mobile fields usable when only aggregate rate coverage is missing', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, bottom: 640, right: 375,
+      width: 375, height: 640, toJSON: () => ({}),
+    });
+    const at = Date.now() - 30_000;
+    const snapshot = (signalCount: number) => makeStatus({ vehicles: [{
+      vin: 'COUNTERS-WITHOUT-RATE', state: 'online', signalCount, batchCount: 0,
+      lastReceived: freshIso(),
+    }] });
+    setQuery({ data: snapshot(10), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    for (let index = 1; index <= 3; index += 1) {
+      setQuery({ data: snapshot(10 + index * 5), dataUpdatedAt: at + index * 5_000 });
+      rerenderPage();
+    }
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalMetricUnavailable(summary, 'Signals / sec');
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
+    const history = screen.getByRole('table', { name: 'Signal throughput — data table' });
+    const intervals = within(history).getAllByRole('row').slice(1).map(row =>
+      within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent));
+    expect(intervals).toEqual([['5', '5'], ['5', '5'], ['5', '5']]);
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const fields = {
+      VIN: 'COUNTERS-WITHOUT-RATE', State: 'online', Signals: '25', Batches: '0',
+      'Sig/sec': '—', 'Last received': 'just now', Status: 'Live',
+    };
+    for (const [label, value] of Object.entries(fields)) {
+      expect(within(details).getByText(label, { selector: 'dt' }).parentElement).toHaveTextContent(value);
+    }
+    expect(within(details).getAllByRole('term')).toHaveLength(7);
+  });
+
+  it('does not certify a fleet aggregate whose returned numeric evidence is invalid or whose count sum is unsafe', () => {
+    const status = makeStatus({ vehicles: [
+      { vin: 'NUMERIC-A', signalCount: Number.MAX_SAFE_INTEGER, batchCount: -1, signalsPerSecond: Number.POSITIVE_INFINITY },
+      { vin: 'NUMERIC-B', signalCount: 1, batchCount: 2, signalsPerSecond: 0 },
+    ] });
+    setQuery({ data: status });
+    renderPage();
+    const summary = screen.getByTestId('mqtt-summary');
+    for (const label of ['Total signals', 'Total batches', 'Signals / sec']) {
+      assertOperationalMetricUnavailable(summary, label);
+      expect(within(screen.getByTestId('mqtt-partial-measurements')).getByText(label)).toBeInTheDocument();
+    }
+    expectHiddenFieldCount(summary, '3 empty fields are hidden.');
+    expect(metric('Streaming vehicles')).toHaveAttribute('data-value-state', 'value');
+    expect(screen.getByText('Connected')).toBeInTheDocument();
   });
 });

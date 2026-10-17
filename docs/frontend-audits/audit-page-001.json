@@ -1,0 +1,399 @@
+{
+  "item": "audit-page-001",
+  "phase": 0,
+  "page": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx",
+  "routes": [
+    {
+      "path": "/action-center",
+      "file": "web\\src\\App.tsx",
+      "line": 762,
+      "detail": "SafeRoute wraps the lazy ActionCenter page; lazy import is at line 228. Actual authenticated route mount was not exercised."
+    }
+  ],
+  "purpose": "Prioritized decision inbox derived from existing evidence, with source coverage, recommendation explanations and reversible inbox-state decisions.",
+  "primaryGoal": "Review ranked recommendations, inspect evidence and source limitations, open the source, then acknowledge, snooze, dismiss or restore inbox state without controlling the vehicle.",
+  "dataSources": [
+    {
+      "hook": "useActionCenter(filter)",
+      "file": "web\\src\\api\\hooks\\useActionCenter.ts",
+      "line": 37,
+      "endpoint": "GET /api/v1/action-center",
+      "routeEvidence": { "file": "internal\\api\\router.go", "line": 3919 },
+      "owner": "actionCenterHandler.List; implementation and providers not inspected",
+      "contract": "Typed ActionCenterResponse: items, total, limit, offset, generated_at, summary and provider_status. Query key includes filter; signal is forwarded. Query parameters are vehicle_id, priority, source_feature, state, limit and offset.",
+      "limits": "Backend calculations, aggregation coverage, authorization and actual response payloads are unverified. Summary describes provider-specific windows and counts before priority/source/state/pagination filters; this is frontend copy, not independent backend proof."
+    },
+    {
+      "hook": "useActionCenterHistory(recommendation.id, open)",
+      "file": "web\\src\\api\\hooks\\useActionCenter.ts",
+      "line": 45,
+      "endpoint": "GET /api/v1/action-center/{recommendationID}/history?limit=25&offset=0",
+      "routeEvidence": { "file": "internal\\api\\router.go", "line": 3920 },
+      "owner": "actionCenterHandler.History",
+      "contract": "Recommendation-specific key, encoded ID, open-only enablement and cancellation signal. Exposes items and total; presentation currently renders only the first 25 events."
+    },
+    {
+      "hook": "useApplyActionCenterAction()",
+      "file": "web\\src\\api\\hooks\\useActionCenter.ts",
+      "line": 77,
+      "endpoint": "POST /api/v1/action-center/{recommendationID}/actions",
+      "routeEvidence": { "file": "internal\\api\\router.go", "line": 3922 },
+      "owner": "actionCenterHandler.ApplyAction",
+      "contract": "requiresLiveMode, networkMode always, fingerprint, action, expected_version, confirmed and snoozed_until; cancel list queries, snapshot/optimistic state update, rollback on failure, authoritative replacement on success, list/history invalidation.",
+      "limits": "Server-side concurrency, mutation outcomes and rate limiting were not exercised; router shows LimitByIP(30, time.Minute) at line 3921."
+    },
+    {
+      "hook": "useSelectedVehicle()",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": null,
+      "owner": "Existing selected-vehicle store and useVehicles dependency",
+      "contract": "Path/query/store/first-vehicle precedence; setter writes persisted selection and URL. Returns vehicles as an array, but does not expose fleet loading/error to this page. Underlying vehicle endpoint was not traced.",
+      "scopeEvidence": { "file": "web\\src\\lib\\workspaceScope.ts", "line": 110 },
+      "limits": "Header vehicle scope is intentionally disabled on /action-center; local vehicle selection must be retained. The route is not range-enabled and the inspected inbox hook has no date bounds; do not add an invented date filter."
+    },
+    {
+      "hook": "useDataState(query) and useOperationalMode()",
+      "file": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx",
+      "line": 38,
+      "endpoint": null,
+      "owner": "Existing trust adapter and operational-mode context",
+      "contract": "Main list uses inferred provenance, fatalError and retained-data warning. Operational mode disables inbox mutations for cached/as-of views; navigation remains available. No new query-state, preference or authorization owner is needed."
+    }
+  ],
+  "components": [
+    { "name": "PageLayout", "category": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": { "file": "web\\src\\components\\layout\\index.ts", "line": 8 }, "usage": "Title/subtitle, query, copyLink and refresh/provenance secondary actions. Preserve existing migrated layout; internals not inspected." },
+    { "name": "OperationalBrief/useOperationalMetrics", "category": "data-display composite", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "evidence": { "file": "web\\src\\features\\action-center\\components\\ActionCenterSummary.tsx", "line": 88 }, "usage": "Existing migrated six-count summary, source scope, generated time, provenance and narrative. Preserve raw metrics and current bridge; no replacement KPI system." },
+    { "name": "OperationalNarrativeDetails", "category": "data-display composite", "owner": "web\\src\\components\\data-display\\OperationalNarrativeDetails.tsx", "evidence": { "file": "web\\src\\features\\action-center\\components\\RecommendationDetails.tsx", "line": 127 }, "usage": "Recommendation rationale, confidence basis, limitations, evidence records and provenance. Internals not inspected." },
+    { "name": "Button/Select/Badge/GlassPanel/Pagination/Accordion/ConfirmDialog", "category": "ui primitives and composites", "owner": "web\\src\\components\\ui", "usage": "Reuse category barrel and existing APIs. Button supports wrapLabel and native attributes; Select supports explicit IDs and native labels; Pagination has mobile container rules and 44px controls; ConfirmDialog owns pending cancellation/loading guards." },
+    { "name": "Skeleton/QueryError/EmptyState/StaleRefreshWarning/useToast", "category": "feedback", "owner": "web\\src\\components\\feedback", "usage": "Existing loading, recovery, retained-data and success/error/undo feedback; no second toast or error framework." },
+    { "name": "FadeIn", "category": "motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "evidence": { "file": "web\\src\\components\\motion\\FadeIn.tsx", "line": 23 }, "usage": "Four entrance wrappers; existing reduced-motion path uses initial=false and preference-derived duration. Browser behavior unverified." },
+    { "name": "ActionCenterFilters/ActionCenterSummary/ProviderStatusPanel/RecommendationList/RecommendationCard/RecommendationDetails/ActionConfirmation", "category": "domain", "owner": "web\\src\\features\\action-center\\components", "usage": "Page-specific orchestration/presentation; keep domain logic here and preserve extracted architecture." }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+      "line": 102,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Two hand-styled rank/confidence tiles repeat local surface, label and value presentation beside an already-migrated shared operational summary.",
+      "fix": "Evaluate existing numeric StatStrip/StatGroup or typography/surface primitives; keep rank score, rounded confidence percent and confidence label. Do not recalculate rank or replace supported specialist semantics with generic metrics.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\action-center\\components\\ProviderStatusPanel.tsx",
+      "line": 50,
+      "rule": "MDC-015",
+      "detail": "Provider rows and rank tiles independently author rounded fixed-white sub-surfaces.",
+      "fix": "Reuse current neutral surface tokens/primitives, not a new universal provider-card composite. No second independent production consumer was inspected to justify a new shared component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": [
+      "Filters stack at base, become two columns at sm and four at xl (ActionCenterFilters.tsx:80).",
+      "Provider rows use one column then two at md (ProviderStatusPanel.tsx:46).",
+      "Recommendation header stacks until lg; actions wrap (RecommendationCard.tsx:67,118).",
+      "Details impact/scoring stack until lg (RecommendationDetails.tsx:129).",
+      "Pagination uses container queries and mobile 44px controls (Pagination.tsx:46-50)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+        "line": 101,
+        "rule": "MDC-043/MDC-040",
+        "detail": "min-w-48 score group plus p-6 card padding and fixed-size action labels needs narrow-container/long-content review. No overflow or clipping is claimed from source alone.",
+        "fix": "Exercise all ten contract widths, allocated shell widths, 200% text, RTL and long titles/labels; retain all evidence and actions. Use existing wrapLabel and min-w-0/wrapping APIs as needed.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "Named summary/list/details sections and article title association; decorative action/refresh icons use aria-hidden.",
+      "Select uses native label association and focus-visible treatment; shared Button has focus and aria-busy.",
+      "Priority/state/provider labels accompany color; Accordion and ConfirmDialog are reused rather than independently implemented.",
+      "Existing FadeIn reduced-motion source retained; actual keyboard, modal focus restoration and screen-reader announcements untested."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+        "line": 123,
+        "rule": "MDC-040",
+        "detail": "Recommendation actions use size=sm (Button.tsx:38 h-9, 36px); filter clear uses the same size (ActionCenterFilters.tsx:76). This is below the contract's stronger 44px mobile default; WCAG failure is not asserted without spacing measurement.",
+        "fix": "Use existing Button className/wrapLabel to provide min-h-11 on mobile without losing labels or increasing desktop defaults globally; test pointer spacing and keyboard focus.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+        "line": 127,
+        "rule": "MDC-040/MDC-026",
+        "detail": "Read-only reason is provided only through title on disabled buttons, which shared Button removes from pointer interaction and native disabled controls remove from normal tab order.",
+        "fix": "Render a localized visible reason adjacent to the action group and associate it with the group; keep disabled buttons and existing live-mode guard.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Select.tsx",
+        "line": 59,
+        "rule": "MDC-021/MDC-044",
+        "detail": "Implicit Select identity still derives from translated labels. ActionCenterFilters supplies labels without explicit IDs (line 81); identity can change on language change. Duplicate IDs are a general shared risk, not proven for this page's four distinct labels.",
+        "fix": "Shared owner should review stable useId fallback consistent with current Input/Textarea migration, preserving explicit caller IDs, help and descriptions; alternatively explicit stable page IDs can bound this page's identity. Do not rewrite global selectors or persistence.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Summary receives loading only without retained data; provider skeleton and two recommendation-card skeletons remain visible. Filters and pagination mount independently.",
+    "empty": "RecommendationList.tsx:54-64 supplies Inbox clear, filter explanation and clear action; provider panel separately explains absent status; summary passes undefined raw values, not fabricated zeros.",
+    "fatalError": "Page passes actionCenterState.fatalError to RecommendationList and offers refetch; summary and provider sections remain mounted.",
+    "refreshFailure": "Main page uses StaleRefreshWarning and preserves query.data and actions (ActionCenterPage.tsx:197-233). Existing tests describe this behavior but were not executed.",
+    "partialUnavailable": "Summary maps missing summary or incomplete provider coverage to unavailable/partial (ActionCenterSummary.tsx:69-75); provider available/degraded/unavailable statuses and limitations remain.",
+    "offlineReadOnly": "OperationalModeProvider.tsx:72-87 disables writes in cached mode; card buttons are disabled, source navigation stays available. Shell offline presentation was not inspected.",
+    "mutation": "Confirmation stays pending while mutation isPending; success toast, 5-second undo affordance and error toast are preserved. Snooze means exactly 24 hours in page source.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\action-center\\components\\RecommendationDetails.tsx",
+        "line": 176,
+        "rule": "MDC-026",
+        "detail": "History branches on history.error before rendering retained history.data, so a failed background refresh replaces usable history with QueryError.",
+        "fix": "Use existing useDataState(history), fatalError and StaleRefreshWarning for the history section; retain events and individual retry. No shared trust API change is necessary.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx",
+        "line": 238,
+        "rule": "MDC-026",
+        "detail": "Pagination always receives total ?? 0, displaying a zero-result count during initial loading/fatal failure even though total is unknown.",
+        "fix": "Keep pagination capability but suppress/skeleton its count until a response exists; retain old count on refresh failure. Use existing loading/trust source, not zero as missing data.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+      "line": 65,
+      "rule": "MDC-010/MDC-015; mission section 7",
+      "detail": "Every recommendation requests cyan or purple glow/hover chrome, including ordinary items. GlassPanel.tsx:31-35 shows this now means tinted hover borders, NOT a demonstrated luminous bloom; do not misreport a neon shadow.",
+      "fix": "Prefer neutral hover borders, reserving semantic priority communication for labeled badges. Retain user-selected themes and shared GlassPanel migration.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+      "line": 104,
+      "rule": "MDC-010/MDC-012/MDC-013",
+      "detail": "Rank and confidence both use bright fixed cyan-200; scoring repeats cyan-300 in RecommendationDetails.tsx:157 and provider icon uses cyan-300 at ProviderStatusPanel.tsx:30. Neutral informational values gain excessive accent emphasis and bypass theme text roles.",
+      "fix": "Use shared metric/typography roles and semantic token emphasis only where needed; retain numeric values, confidence label and rank basis. Effective contrast and perceived saturation need rendered theme review.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\action-center\\components\\ProviderStatusPanel.tsx",
+      "line": 50,
+      "rule": "MDC-010/MDC-012/MDC-015",
+      "detail": "Fixed-white border/background decoration here and RecommendationCard.tsx:102,106 bypasses neutral theme surfaces; provider limitations use fixed bright amber-200 at line 69. These are translucent white treatments, not pure-white text. No literal neon class or text-white was found in the bounded page/components scan.",
+      "fix": "Use current surface/border/text roles; keep semantic limitation status without making every limitation luminous. Preserve all limitations and provider findings.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+      "line": 88,
+      "rule": "MDC-013",
+      "detail": "Hand-authored h3/p typography and repeated text-size/weight classes bypass existing role wrappers; ProviderStatusPanel.tsx:53,63,69 does the same. Shared OperationalBrief migration should not be reverted to match these local tiles.",
+      "fix": "Use Heading/Text/PanelTitle/Caption/MetricValue as applicable with semantic as overrides; preserve article IDs and section hierarchy.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "line": 68,
+      "rule": "MDC-010/MDC-020/MDC-040",
+      "detail": "ActionConfirmation.tsx:32 uses warning for every state change, including restore. Shared warning confirmation uses solid amber-500 plus text-primary, not a dedicated on-accent role; saturated emphasis and composed contrast require review, not an assumed contrast failure.",
+      "fix": "Shared owner should review warning foreground/chrome while retaining warning semantics and all confirmation/loading/focus behavior. Do not add a speculative new dialog variant from one page alone.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx",
+      "line": 61,
+      "rule": "MDC-032/MDC-046",
+      "detail": "Local concrete vehicle choice writes global store/URL, but All vehicles and both clear paths remove only filter.vehicle_id (ActionCenterFilters.tsx:70,87; page:233). useSelectedVehicle still retains a concrete ID. Returning to the route seeds that persisted vehicle, potentially disagreeing with the previous all-vehicle inbox scope.",
+      "fix": "Resolve the intended fleet-local selector contract without removing it: header scope is explicitly disabled. Define whether local changes should affect global selection, and preserve all-vehicle selection/clear semantics; test clearing, navigation away/back and URL synchronization. Do not simply call setVehicleId(null), because the hook falls back to the first vehicle.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\action-center\\components\\RecommendationDetails.tsx",
+      "line": 45,
+      "rule": "MDC-044",
+      "detail": "Projected risk_level is appended as a raw enum in an otherwise localized impact list; cost uses Intl locale undefined (line 22) and a raw minor-unit fallback (line 27), not the current shared preference bridge.",
+      "fix": "Localize risk enum through existing catalogs and assess existing formatting/currency APIs without changing cost_minor wire values or inventing currency precision. Preserve unsupported currency fallback explicitly; backend currency conventions were not verified.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useActionCenter.ts",
+      "line": 53,
+      "rule": "MDC-026/MDC-046; source coverage",
+      "detail": "History request is fixed to 25/0 and details ignore history.total. Recommendation freshness, related_sources and source_url are typed but not rendered by the inspected feature. This is an existing coverage limitation, not permission to erase currently displayed content or claim full history.",
+      "fix": "Record these limits for integration ownership; preserve existing first-page history and navigation behavior. Do not expand hooks/backend capability during presentation-only work without assignment.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Protect retained action history and unknown result counts first; then correct scope synchronization and read-only reason accessibility. Visual cleanup is bounded because layout, operational summary, narrative, trust and motion foundations are already migrated.",
+    "order": ["retained-history/unknown-count states", "fleet-local scope contract", "mobile targets and accessible read-only explanation", "neutral surfaces/typography/accent cleanup", "centralized rendered QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Select stable implicit field identity review",
+      "file": "web\\src\\components\\ui\\Select.tsx",
+      "line": 59,
+      "rule": "MDC-021",
+      "detail": "Current labeled implicit IDs remain translation-derived while the contract's Input/Textarea migration uses stable React identity.",
+      "fix": "Shared owner reviews stable useId fallback, with explicit ID compatibility and association regressions; page worker must not edit this shared primitive.",
+      "owner": "shared",
+      "confidence": "high",
+      "existingOwnerFile": "web\\src\\components\\ui\\Select.tsx",
+      "propsVariantsStates": ["id", "label", "help.for", "aria-describedby", "error/hint", "required", "ref", "value/change", "language changes", "duplicate labels"],
+      "usedBy": ["ActionCenterFilters vehicle/priority/source/state fields (confirmed); additional consumers not inspected"],
+      "dependsOn": ["MDC-021/MDC-022 identity contract", "shared owner compatibility inventory", "focused real-i18n association tests and centralized validation"],
+      "authorization": "Reported requirement, not permission to expand this audit's write scope."
+    },
+    {
+      "name": "Existing ConfirmDialog warning chrome review",
+      "file": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "line": 68,
+      "rule": "MDC-010/MDC-020/MDC-040",
+      "detail": "Warning variant hardcodes saturated amber and theme-dependent primary text.",
+      "fix": "Review existing semantic warning/on-accent roles on actual themes before any shared adjustment; preserve API and safety behavior. No new composite/variant is justified by this one-page scope.",
+      "owner": "shared",
+      "confidence": "medium",
+      "existingOwnerFile": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "propsVariantsStates": ["variant=warning/danger", "open", "loading", "confirmDisabled", "confirmLabel/cancelLabel", "typed confirmation", "silenceKey", "Escape/backdrop cancellation", "focus restoration"],
+      "usedBy": ["ActionConfirmation (confirmed); other production consumers unverified"],
+      "dependsOn": ["composed theme/contrast review", "shared semantic token owner", "second independent consumer evidence before API expansion", "existing Modal focus contract and regression preservation"],
+      "authorization": "Review candidate; no verified contrast failure and no speculative neutral variant request."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+      "line": 101,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Local rank/confidence tiles coexist with the existing operational metric bridge used by the summary.",
+      "fix": "Prefer proven shared metric/typography support; keep specialist semantics if equivalence is unproved. No new stats implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "BDAC67427269B2E79E0313A5E6CC331D7A50336B1537E225C5B242FFE1FDA300",
+    "hashAlgorithm": "SHA-256 of exact page bytes via Get-FileHash",
+    "currentLineCount": 259,
+    "componentLineCounts": { "ActionCenterFilters.tsx": 135, "ActionCenterSummary.tsx": 121, "ActionConfirmation.tsx": 46, "ProviderStatusPanel.tsx": 79, "RecommendationCard.tsx": 153, "RecommendationDetails.tsx": 206, "RecommendationList.tsx": 83 },
+    "pagePlusPresentationLineCount": 1082,
+    "sectionCount": 4,
+    "sectionCountDefinition": "Four always-mounted major content groups; auxiliary header, pagination and conditional confirmation counted separately. Recommendation details contain three named subordinate sections plus narrative.",
+    "sections": [
+      { "name": "Decision queue overview", "file": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx", "line": 198, "count": 1, "preserve": "Six raw state/priority counts, missing versus zero, generated time, vehicle scope, before-filter scope, provider-window limitation, trust/provenance and review-details narrative." },
+      { "name": "Filter decisions", "file": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx", "line": 212, "count": 1, "preserve": "Vehicle including All vehicles; four priorities; nine source features; open/acknowledged/snoozed/dismissed/all states; clear action." },
+      { "name": "Source coverage", "file": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx", "line": 219, "count": 1, "preserve": "Every returned provider status, finding count, all limitations, skeleton and absent-status explanation." },
+      { "name": "Prioritized recommendations", "file": "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx", "line": 225, "count": 1, "preserve": "Every returned card, priority/source/state/impact badge, title/summary/rationale, vehicle/expiry, raw rank, confidence percent/label and safe state actions." }
+    ],
+    "subsections": ["Evidence/confidence/limitations/provenance narrative", "Projected impact and basis", "Scoring basis", "Action history"],
+    "auxiliarySections": ["Header refresh/provenance/copy link", "Pagination", "Conditional inbox-action confirmation", "Mutation success/error/undo toast"],
+    "sourceComponentCounts": { "pageFadeIn": 4, "pageGlassPanel": 0, "featureGlassPanelCallSites": 3, "pageChartContainer": 0, "featureChartContainer": 0 },
+    "actions": [
+      "Refresh evidence/refetch and fatal list retry",
+      "Copy link via existing PageLayout",
+      "Select vehicle/priority/source/state and clear filters from toolbar or empty state",
+      "Change page and page size (25/50/100), preserving limit/offset",
+      "Open/close summary review details through existing OperationalBrief",
+      "Expand/collapse recommendation evidence/scoring/outcomes",
+      "Retry action-history request",
+      "Acknowledge, snooze exactly 24 hours, dismiss or restore when safe_actions/current state allow",
+      "Open source navigation_path only when navigate is a safe action",
+      "Confirm/cancel action; keep dialog busy during mutation",
+      "Undo non-restore success with returned fingerprint/version; report undo success/error"
+    ],
+    "dataBehavior": [
+      "Keep initial state=open, limit=50, offset=0 and selected vehicle initialization.",
+      "Retain vehicle-change offset reset and filter/page-size offset semantics until explicitly reviewed integration fix.",
+      "Keep typed snake_case payloads, SI energy_wh/time_s and cost_minor/currency untouched in hooks/cache; energy display uses useUnits.",
+      "Keep inferred trust, returned generation time, partial coverage disclosure and unknown summary values distinct from zero.",
+      "Keep query keys, cancellation signals, history enablement, optimistic snapshots/rollback, version concurrency fields and list/history invalidation.",
+      "Keep existing read-only guard, live-mode request requirement and source-only navigation.",
+      "Preserve all current modernization: PageLayout, OperationalBrief/useOperationalMetrics, OperationalNarrativeDetails, category barrels, data-trust adapter, reduced-motion primitive and shared dialogs/pagination."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; only assigned report and heartbeat written. No Git, source/UI edits, agents, backend mutations, browser sessions or full-repository lint/build.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED; color/glow findings are source risks, not screenshot proof.",
+    "keyboardScreenReaderFocus": "UNVERIFIED",
+    "contrastForcedColors": "UNVERIFIED; no numeric contrast claim.",
+    "viewportThemesRtlTextZoom": "UNVERIFIED",
+    "backend": "Only three exact router declarations inspected; no provider/service/DB behavior or real payload verified.",
+    "tests": "NOTRUN. ActionCenterPage.test.tsx lines 1-260 inspected as preservation context only; mocked tests are not live acceptance.",
+    "typescriptLintBuild": "NOTRUN by bounded Phase 0 assignment. Skill audit.sh inspected but not executed because it invokes project TypeScript; only bounded source-pattern scans performed.",
+    "sourcePatternAudit": {
+      "scope": "Assigned page and seven presentation .tsx files; exact PowerShell/Python source scan output returned by tool, exit 0.",
+      "counts": { "inlineStyleCallSites": 0, "rawButtonInputTextareaSelectTable": 0, "directRechartsLeafletFramerImports": 0, "legacyRelativeApiImports": 0, "literalNeon": 0, "fixedWhiteSurfaceClassOccurrences": 4, "glowPropCallSites": 1 },
+      "hookCounts": { "literalDoubleApiPrefix": 0, "literalCamelCaseQueryAssignments": 0 },
+      "limits": "Regex counts are not comprehensive quality, runtime or endpoint-contract acceptance. Actual hook query builder and three router declarations were also read.",
+      "failedAttempt": "First PowerShell regex-count command failed at parse time with Missing ')' in method call, exit 1; rerun as Python via PowerShell succeeded, exit 0."
+    },
+    "documentationRead": "Worker conventions entire; design contract entire in ranged reads; mission sections 0/1, architecture, visual intensity/surfaces, responsive/mobile, loading/empty/error/offline, accessibility/motion/data separation and visual QA/definition-of-done.",
+    "scopeBoundary": "No second page audited and no whole-app inventory rebuilt. Shared internals were read only where directly relevant; uninspected owners are explicitly identified.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-001.json", ".agent-status\\audit-page-001.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx",
+    "web\\src\\features\\action-center\\pages\\ActionCenterPage.test.tsx",
+    "web\\src\\features\\action-center\\components\\index.ts",
+    "web\\src\\features\\action-center\\components\\ActionCenterFilters.tsx",
+    "web\\src\\features\\action-center\\components\\ActionCenterSummary.tsx",
+    "web\\src\\features\\action-center\\components\\ActionConfirmation.tsx",
+    "web\\src\\features\\action-center\\components\\ProviderStatusPanel.tsx",
+    "web\\src\\features\\action-center\\components\\RecommendationList.tsx",
+    "web\\src\\features\\action-center\\components\\RecommendationCard.tsx",
+    "web\\src\\features\\action-center\\components\\RecommendationDetails.tsx",
+    "web\\src\\api\\hooks\\useActionCenter.ts",
+    "web\\src\\types\\actionCenter.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

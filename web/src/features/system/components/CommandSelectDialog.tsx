@@ -97,8 +97,9 @@ export function CommandSelectDialog({
             type="button"
             variant="ghost"
             size="sm"
+            wrapLabel
             onClick={onClose}
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
           >
             {t('common.cancel', 'Cancel')}
           </ControlButton>

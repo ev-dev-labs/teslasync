@@ -61,7 +61,11 @@ export function DestinationTransitionsQueryStatus({
   if (state.error) {
     return (
       <div className="mt-4" data-testid="destination-transitions-initial-error">
-        <QueryError error={state.error} onRetry={state.onRetry} />
+        <QueryError
+          error={state.error}
+          onRetry={state.onRetry}
+          className="[&_button]:min-h-11 [&_button]:min-w-11 md:[&_button]:min-h-9 md:[&_button]:min-w-0"
+        />
       </div>
     );
   }
@@ -74,7 +78,7 @@ export function DestinationTransitionsQueryStatus({
         icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Text as="p" variant="caption">
+          <Text as="p" variant="caption" className="min-w-0 break-words">
             {t(
               'destinationTransitions.states.refreshError',
               'Drive history could not refresh. Showing the most recently loaded destination evidence.',
@@ -84,6 +88,10 @@ export function DestinationTransitionsQueryStatus({
             type="button"
             variant="ghost"
             size="sm"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+            loading={state.sourceTrust?.isRefreshing}
+            disabled={state.sourceTrust?.isRefreshing}
             onClick={state.onRetry}
           >
             {t('destinationTransitions.states.retry', 'Retry')}

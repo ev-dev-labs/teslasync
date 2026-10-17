@@ -27,6 +27,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, within, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
+import { formatDate } from '@/lib/dateFormat';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ locale: 'de-DE', settings: { tz_display_default: 'user', timezone_user: 'America/Los_Angeles' } }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -171,6 +179,32 @@ afterEach(() => {
 });
 
 describe('ShareDriveDialog — create mode', () => {
+  it('scopes mobile minima to the dialog and preserves full share metadata', async () => {
+    const title = 'A long synthetic share title that remains fully accessible on narrow screens';
+    routeRequest({ listShares: () => Promise.resolve([makeShare({ title })]) });
+    renderDialog();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('max-md:[&_button]:min-h-11', 'max-md:[&_button]:min-w-11', 'max-md:[&_input]:min-h-11', 'max-md:[&_select]:min-h-11');
+    expect(within(dialog).getByLabelText('Share title')).toHaveAccessibleName('Share title');
+    const heading = await screen.findByText(title);
+    expect(heading).toHaveClass('break-words');
+    expect(heading).not.toHaveClass('truncate');
+    expect(heading.parentElement?.parentElement).toHaveClass('flex-col', 'md:flex-row');
+  });
+
+  it.each(['2999-04-02T00:30:00Z', '2999-04-02T08:30:00Z', 'invalid', null])('formats expiration %s using saved preferences independently of expiry logic', async (expires_at) => {
+    routeRequest({ listShares: () => Promise.resolve([makeShare({ expires_at })]) });
+    renderDialog();
+    if (expires_at === null) {
+      expect(await screen.findByText('No expiry')).toBeInTheDocument();
+      return;
+    }
+    const time = await screen.findByText(`Expires ${formatDate(expires_at, { locale: 'de-DE', tz: 'America/Los_Angeles' })}`);
+    expect(time).toHaveAttribute('datetime', expires_at);
+    expect(time).toHaveAttribute('title', expires_at);
+    expect(screen.queryByText('Expired')).not.toBeInTheDocument();
+  });
+
   it('renders nothing when closed', async () => {
     const { onClose } = renderDialog({ open: false });
     // The hooks still run, so the list GET fires; flush it to stay in act().
@@ -183,7 +217,7 @@ describe('ShareDriveDialog — create mode', () => {
   it('renders the create form with toggles, expiry options and a generate button', async () => {
     renderDialog();
 
-    const dialog = await screen.findByRole('dialog', { name: 'Share Drive' });
+    const dialog = await screen.findByRole('dialog', { name: 'Share drive' });
     expect(within(dialog).getByText(/Generate a public link/i)).toBeInTheDocument();
 
     // Two switches, defaulting to speed-on / telemetry-off.
@@ -266,7 +300,7 @@ describe('ShareDriveDialog — create mode', () => {
     // Result view: the public URL + copy/open affordances.
     expect(await screen.findByDisplayValue(`${ORIGIN}/s/tok_new`)).toBeInTheDocument();
     expect(screen.getByText('Share link created!')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open link in a new tab' })).toBeInTheDocument();
 
     // "Create another link" flips back to the form.
@@ -351,7 +385,7 @@ describe('ShareDriveDialog — create mode', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'reopen' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Share Drive' });
+    const dialog = await screen.findByRole('dialog', { name: 'Share drive' });
     expect(within(dialog).getByRole('button', { name: /Generate Link/i })).toBeInTheDocument();
     expect(screen.queryByText('Share link created!')).not.toBeInTheDocument();
   });
@@ -389,6 +423,61 @@ describe('ShareDriveDialog — existing shares list', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Could not load your existing share links. Please try again.');
+  });
+
+  it('retries an initial list failure without showing an empty success state', async () => {
+    const listShares = vi.fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce([makeShare()]);
+    routeRequest({ listShares });
+    renderDialog();
+
+    const alert = await screen.findByRole('alert');
+    expect(screen.queryByText('No active share links yet.')).not.toBeInTheDocument();
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('Sunday drive')).toBeInTheDocument();
+    expect(listShares).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps cached links and their controls after a refresh failure and retries locally', async () => {
+    const retry = deferred<ShareToken[]>();
+    const listShares = vi.fn()
+      .mockResolvedValueOnce([makeShare()])
+      .mockRejectedValueOnce(new Error('refresh failed'))
+      .mockImplementationOnce(() => retry.promise);
+    routeRequest({ listShares });
+    const { client } = renderDialog();
+    await screen.findByText('Sunday drive');
+
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['shares', DRIVE_ID] });
+    });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Could not load your existing share links. Please try again.');
+    expect(screen.getByText('Sunday drive')).toBeInTheDocument();
+    expect(screen.getByText('3 views')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Revoke' })).toBeEnabled();
+    expect(screen.queryByText('No active share links yet.')).not.toBeInTheDocument();
+
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(listShares).toHaveBeenCalledTimes(3));
+    expect(screen.getByText('Sunday drive')).toBeInTheDocument();
+    expect(screen.queryByTestId('share-links-loading')).not.toBeInTheDocument();
+    expect(mockedRequest.mock.calls.every(([, options]) =>
+      !(options as RequestInit | undefined)?.method,
+    )).toBe(true);
+
+    await act(async () => {
+      retry.resolve([makeShare({ title: 'Refreshed drive', views: 4 })]);
+      await retry.promise;
+    });
+    expect(await screen.findByText('Refreshed drive')).toBeInTheDocument();
+    expect(screen.queryByText('Sunday drive')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('shows an empty state when there are no shares', async () => {

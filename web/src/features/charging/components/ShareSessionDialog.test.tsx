@@ -13,8 +13,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, waitFor, within, fireEvent } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -54,6 +54,7 @@ import { request } from '@/api/client';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ShareSessionDialog } from './ShareSessionDialog';
 import type { ShareToken, CreateShareResponse } from '@/types/sharing';
+import { sharingKeys } from '@/api/hooks/useSharing';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -139,6 +140,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.restoreAllMocks();
 });
 
@@ -217,11 +219,123 @@ describe('ShareSessionDialog — create mode', () => {
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(CREATE_PATH, expect.anything()));
     await waitFor(() => expect(generate).not.toHaveAttribute('aria-busy', 'true'));
     expect(generate).toBeEnabled();
+    expect(await screen.findByText('Failed to create share link')).toBeInTheDocument();
     expect(screen.queryByText('Share link created!')).not.toBeInTheDocument();
   });
 });
 
 describe('ShareSessionDialog — existing shares list', () => {
+  it('shows a skeleton only during active initial loading, without hiding consent', async () => {
+    let resolveList!: (shares: ShareToken[]) => void;
+    routeRequest({ listShares: () => new Promise<ShareToken[]>((resolve) => { resolveList = resolve; }) });
+    renderDialog();
+
+    expect(screen.getByTestId('share-links-loading')).toBeInTheDocument();
+    expect(screen.queryByText('No active share links yet.')).not.toBeInTheDocument();
+    expect(screen.getByText(/Anyone with the link/)).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Include charge curve and cost' })).toHaveAttribute('aria-checked', 'false');
+    await act(async () => resolveList([]));
+    expect(await screen.findByText('No active share links yet.')).toBeInTheDocument();
+    expect(screen.queryByTestId('share-links-loading')).not.toBeInTheDocument();
+  });
+
+  it('does not claim an empty list or a failure when the initial request is paused', async () => {
+    onlineManager.setOnline(false);
+    renderDialog();
+    expect(await screen.findByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByTestId('share-links-loading')).not.toBeInTheDocument();
+    expect(screen.queryByText('No active share links yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Could not load/)).not.toBeInTheDocument();
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+    await act(async () => onlineManager.setOnline(true));
+    expect(await screen.findByText('No active share links yet.')).toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+  });
+
+  it('retries an initial failure without creating or revoking a link', async () => {
+    const listShares = vi.fn().mockRejectedValueOnce(new Error('list failed')).mockResolvedValue([]);
+    routeRequest({ listShares });
+    renderDialog();
+    expect(await screen.findByText('Could not load your existing share links. Please try again.')).toBeInTheDocument();
+    expect(screen.queryByText('No active share links yet.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByText('No active share links yet.')).toBeInTheDocument();
+    expect(listShares).toHaveBeenCalledTimes(2);
+    expect(mockedRequest.mock.calls.every(([path]) => path === LIST_PATH)).toBe(true);
+  });
+
+  it('keeps links usable during active and paused background refreshes', async () => {
+    let resolveRefresh!: (shares: ShareToken[]) => void;
+    const listShares = vi.fn()
+      .mockResolvedValueOnce([makeShare()])
+      .mockImplementationOnce(() => new Promise<ShareToken[]>((resolve) => { resolveRefresh = resolve; }))
+      .mockResolvedValue([makeShare({ title: 'Resumed link' })]);
+    routeRequest({ listShares });
+    const { client } = renderDialog();
+    await screen.findByText('Baker stop');
+    let refreshing!: Promise<void>;
+    act(() => {
+      refreshing = client.refetchQueries({ queryKey: sharingKeys.sessionShares(SESSION_ID) });
+    });
+    await waitFor(() => expect(listShares).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('Baker stop')).toBeInTheDocument();
+    expect(screen.queryByTestId('share-links-loading')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+    await act(async () => {
+      resolveRefresh([makeShare()]);
+      await refreshing;
+    });
+    await act(async () => {
+      onlineManager.setOnline(false);
+      await client.refetchQueries({ queryKey: sharingKeys.sessionShares(SESSION_ID) });
+    });
+    expect(await screen.findByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByText('Baker stop')).toBeInTheDocument();
+    expect(screen.queryByText(/Could not load/)).not.toBeInTheDocument();
+    await act(async () => onlineManager.setOnline(true));
+    expect(await screen.findByText('Resumed link')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])('retains the successful list (empty=%s) through refresh failure and individual recovery', async (empty) => {
+    const initial = empty ? [] : [makeShare({ views: 0 })];
+    const listShares = vi.fn()
+      .mockResolvedValueOnce(initial)
+      .mockRejectedValueOnce(new Error('refresh failed'))
+      .mockResolvedValueOnce([makeShare({ title: 'Recovered link', views: 0 })]);
+    routeRequest({ listShares });
+    const { client } = renderDialog();
+    const retainedText = empty ? 'No active share links yet.' : 'Baker stop';
+    await screen.findByText(retainedText);
+    if (!empty) expect(screen.getByText('0 views')).toBeInTheDocument();
+    await act(async () => {
+      await client.refetchQueries({ queryKey: sharingKeys.sessionShares(SESSION_ID) });
+    });
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText(retainedText)).toBeInTheDocument();
+    expect(screen.queryByText(/Could not load/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Generate Link/ })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(await screen.findByText('Recovered link')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(listShares).toHaveBeenCalledTimes(3);
+    expect(mockedRequest.mock.calls.every(([path]) => path === LIST_PATH)).toBe(true);
+  });
+
+  it('preserves existing links and reports revoke errors', async () => {
+    routeRequest({
+      listShares: () => Promise.resolve([makeShare()]),
+      revokeShare: () => Promise.reject(new Error('revoke failed')),
+    });
+    renderDialog();
+    await screen.findByText('Baker stop');
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke' }));
+    expect(await screen.findByText('Failed to revoke share link')).toBeInTheDocument();
+    expect(screen.getByText('Baker stop')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Revoke' })).toBeEnabled();
+  });
+
   it('renders an active share with views, expiry and revoke controls', async () => {
     routeRequest({ listShares: () => Promise.resolve([makeShare({ title: 'Baker stop', views: 3 })]) });
     renderDialog();

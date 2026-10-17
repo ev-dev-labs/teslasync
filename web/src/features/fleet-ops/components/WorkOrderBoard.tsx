@@ -1,14 +1,19 @@
 import { Pencil, Plus, Trash2, Wrench } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Button, GlassPanel, PanelTitle, StatusPill } from '@/components/ui';
+import { Button, Text, Subhead, StatusPill } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { FleetWorkOrder, WorkOrderStatus } from '@/api/hooks/useFleetOps';
+import type { DataState } from '@/api/dataState';
 
 interface WorkOrderBoardProps {
   items: FleetWorkOrder[];
   loading: boolean;
+  source?: DataState<unknown>;
+  pendingContent?: ReactNode;
   error: unknown;
   onRetry: () => void;
   onAdd: () => void;
@@ -29,6 +34,8 @@ const severityColor: Record<FleetWorkOrder['severity'], string> = {
 export function WorkOrderBoard({
   items,
   loading,
+  source,
+  pendingContent,
   error,
   onRetry,
   onAdd,
@@ -38,6 +45,7 @@ export function WorkOrderBoard({
   actionsDisabledReason,
 }: WorkOrderBoardProps) {
   const { t } = useTranslation();
+  const { formatDate } = useDateFormat();
   const { formatDistance } = useUnits();
   const statusLabel = (status: WorkOrderStatus) => ({
     open: t('fleetOps.workOrders.open', 'Open'),
@@ -54,16 +62,16 @@ export function WorkOrderBoard({
   }[severity]);
 
   return (
-    <GlassPanel className="p-5">
-      <div className="flex items-center justify-between gap-3">
-        <PanelTitle>{t('fleetOps.workOrders.title', 'Maintenance work-order board')}</PanelTitle>
+    <LayoutCard title={t('fleetOps.workOrders.title', 'Maintenance work-order board')} actions={
         <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd} disabled={actionsDisabled} title={actionsDisabledReason}>
           {t('fleetOps.workOrders.add', 'Add work order')}
         </Button>
-      </div>
-      {loading ? <Skeleton lines={8} /> : error ? (
+      }>
+      {source?.hasData !== true && error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.workOrders.resource', 'Work orders')} />
-      ) : items.length === 0 ? (
+      ) : source && !source.hasData ? (
+        pendingContent
+      ) : !source && loading ? <Skeleton lines={8} /> : items.length === 0 ? (
         <EmptyState
           icon={<Wrench className="h-8 w-8" />}
           message={t('fleetOps.workOrders.empty', 'No maintenance work orders are open.')}
@@ -76,30 +84,30 @@ export function WorkOrderBoard({
           {columns.map((status) => {
             const statusItems = items.filter((item) => item.status === status);
             return (
-              <section key={status} aria-label={statusLabel(status)} className="rounded-xl bg-white/[0.02] p-3">
+              <section key={status} aria-label={statusLabel(status)} className="min-w-0 rounded-xl bg-[var(--surface-2)] p-3">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">{statusLabel(status)}</h3>
-                  <span className="text-xs text-[var(--text-muted)]">{statusItems.length}</span>
+                  <Subhead>{statusLabel(status)}</Subhead>
+                  <Text variant="caption">{statusItems.length}</Text>
                 </div>
                 <div className="space-y-2">
                   {statusItems.length === 0 ? (
-                    <p className="py-6 text-center text-xs text-[var(--text-muted)]">
+                    <Text as="p" variant="caption" className="py-6 text-center">
                       {t('fleetOps.workOrders.noneInColumn', 'No orders')}
-                    </p>
+                    </Text>
                   ) : statusItems.map((item) => (
-                    <article key={item.id} className="rounded-lg border border-white/[0.06] bg-[var(--surface-1)] p-3">
+                    <article key={item.id} className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-3">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium">{item.title}</p>
+                        <Text as="p" weight="medium" className="min-w-0 break-words">{item.title}</Text>
                         <StatusPill color={severityColor[item.severity]}>{severityLabel(item.severity)}</StatusPill>
                       </div>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">{item.vehicle_display_name}</p>
-                      <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                      <Text as="p" variant="caption" className="mt-1 break-words">{item.vehicle_display_name}</Text>
+                      <Text as="p" variant="caption" className="mt-2">
                         {item.due_at
                           ? t('fleetOps.workOrders.dueDate', 'Due {{date}}', { date: formatDate(item.due_at) })
                           : item.due_odometer_m != null
                             ? t('fleetOps.workOrders.dueDistance', 'Due at {{distance}}', { distance: formatDistance(item.due_odometer_m) })
                             : t('fleetOps.workOrders.noDue', 'No due threshold')}
-                      </p>
+                      </Text>
                       <div className="mt-2 flex justify-end gap-1">
                         <Button
                           type="button"
@@ -134,6 +142,6 @@ export function WorkOrderBoard({
           })}
         </div>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

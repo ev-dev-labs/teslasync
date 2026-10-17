@@ -42,7 +42,7 @@
  * end-to-end.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -73,9 +73,9 @@ import LiveSignalSparklinesWidget, {
   SIGNAL_COLORS,
 } from './LiveSignalSparklinesWidget';
 import { request } from '@/api/client';
-import { fmtNumber } from '@/lib/numberFormat';
 import type { WidgetSize } from './types';
 import type { Vehicle } from '@/types/vehicle';
+import type { SignalHistoryPoint } from '@/api/types';
 
 // The generic `request<T>` fights `mockResolvedValue`'s inference; the repo's
 // convention is to treat it as a plain untyped mock at the call site.
@@ -94,17 +94,27 @@ const DEFAULTS = [
 ];
 
 type LiveSnapshot = Record<string, { value: unknown; timestamp: string }>;
-type HistoryPoints = { timestamp: string; valueNum?: number }[];
+type HistoryPoints = SignalHistoryPoint[];
 
 let AVAILABLE: string[];
 let LIVE: LiveSnapshot;
 let HISTORY: Record<string, HistoryPoints>;
 
+type SignalSource = 'catalogue' | 'live' | 'history';
+const SOURCE_URLS: Record<SignalSource, string> = {
+  catalogue: '/signals/1/available',
+  live: '/signals/1/live',
+  history: '/signals/1/BatteryLevel/history?hours=1',
+};
+
 // Route the shared `request` seam by URL so the real telemetry hooks resolve
 // against the per-test AVAILABLE / LIVE / HISTORY fixtures.
-function wire() {
+function wire(failures: ReadonlySet<SignalSource> = new Set()) {
   mockedRequest.mockImplementation((url: string) => {
     if (typeof url !== 'string') return Promise.resolve({});
+    const failed = (Object.keys(SOURCE_URLS) as SignalSource[])
+      .find((source) => failures.has(source) && SOURCE_URLS[source] === url);
+    if (failed) return Promise.reject(new Error(`${failed} unavailable`));
     if (url.endsWith('/available')) return Promise.resolve({ signals: AVAILABLE });
     if (url.endsWith('/live')) return Promise.resolve({ signals: LIVE });
     const m = url.match(/^\/signals\/\d+\/([^/]+)\/history/);
@@ -121,8 +131,29 @@ function liveCallCount(): number {
   return mockedRequest.mock.calls.filter((c) => String(c[0]).endsWith('/live')).length;
 }
 
-function points(...vals: number[]): HistoryPoints {
-  return vals.map((v, i) => ({ timestamp: `2026-07-01T0${i}:00:00Z`, valueNum: v }));
+function sourceCallCount(source: SignalSource): number {
+  return mockedRequest.mock.calls.filter((call) => call[0] === SOURCE_URLS[source]).length;
+}
+
+function signalRow(label: string): HTMLElement {
+  const row = screen.getByText(label).parentElement?.parentElement;
+  if (!row) throw new Error(`Signal row "${label}" not found`);
+  return row;
+}
+
+function points(...vals: SignalHistoryPoint['value'][]): HistoryPoints {
+  return vals.map((value, i) => ({
+    ts: `2026-07-01T${String(i).padStart(2, '0')}:00:00Z`,
+    kind: typeof value === 'number' ? 'ValueKindDouble'
+      : typeof value === 'string' ? 'ValueKindString'
+      : typeof value === 'boolean' ? 'ValueKindBoolean'
+      : 'ValueKindUnknown',
+    value,
+    ingest_origin: null,
+    source_emitted_at: null,
+    received_at: null,
+    normalization_version: null,
+  }));
 }
 
 function fleet(...ids: number[]): { data: Vehicle[] } {
@@ -131,13 +162,14 @@ function fleet(...ids: number[]): { data: Vehicle[] } {
 
 function renderWidget(size: WidgetSize, vehicleId?: number, config?: Record<string, unknown>) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <LiveSignalSparklinesWidget vehicleId={vehicleId} size={size} config={config} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, queryClient: qc };
 }
 
 beforeEach(() => {
@@ -167,6 +199,11 @@ describe('formatSignalName', () => {
 });
 
 describe('extractNumericValue', () => {
+  it('rejects numeric-prefix garbage and blank text while preserving a true zero', () => {
+    expect(extractNumericValue('55 km/h')).toBeNull();
+    expect(extractNumericValue('  ')).toBeNull();
+    expect(extractNumericValue('0')).toBe(0);
+  });
   it('passes finite numbers through and parses numeric strings', () => {
     expect(extractNumericValue(42)).toBe(42);
     expect(extractNumericValue(0)).toBe(0);
@@ -192,9 +229,9 @@ describe('SIGNAL_COLORS palette', () => {
 
   it('matches the documented cyan/purple/amber/emerald/blue/rose order', () => {
     expect(SIGNAL_COLORS).toEqual([
-      '#00f0ff',
-      '#a855f7',
-      '#f59e0b',
+      '#91bbc0',
+      '#b5a8c9',
+      '#cfb481',
       '#10b981',
       '#3b82f6',
       '#f43f5e',
@@ -223,7 +260,7 @@ describe('LiveSignalSparklinesWidget — full view', () => {
     wire();
     renderWidget(FULL, 1);
 
-    expect(await screen.findByText('Live Signal Sparklines')).toBeInTheDocument();
+    expect(await screen.findByText('Live signal sparklines')).toBeInTheDocument();
 
     // Hook URLs are path-based with NO /api/v1 double-prefix.
     await waitFor(() => expect(calledWithUrl('/signals/1/available')).toBe(true));
@@ -240,9 +277,9 @@ describe('LiveSignalSparklinesWidget — full view', () => {
 
     // Live values go through fmtNumber; the numeric string is coerced; the two
     // signals absent from the /live snapshot dash out.
-    expect(screen.getByText(fmtNumber(82, 1))).toBeInTheDocument();
-    expect(screen.getByText(fmtNumber(55.4, 1))).toBeInTheDocument();
-    expect(screen.getByText(fmtNumber(-3.2, 1))).toBeInTheDocument();
+    expect(screen.getByText('82.00')).toBeInTheDocument();
+    expect(screen.getByText('55.40')).toBeInTheDocument();
+    expect(screen.getByText('-3.20')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(2);
 
     // Sparklines render only where there are >=2 history points; the rest fall
@@ -254,7 +291,8 @@ describe('LiveSignalSparklinesWidget — full view', () => {
     // The icon-only trend arrows announce their direction to assistive tech.
     expect(screen.getByRole('img', { name: 'Trending up' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Trending down' })).toBeInTheDocument();
-    expect(screen.getAllByRole('img', { name: 'No change' })).toHaveLength(4);
+    expect(screen.getAllByRole('img', { name: 'No change' })).toHaveLength(1);
+    expect(screen.getAllByRole('img', { name: 'no data' })).toHaveLength(3);
   });
 
   it('lays out two columns and widens sparklines to 80px when the tile is wide', async () => {
@@ -271,7 +309,7 @@ describe('LiveSignalSparklinesWidget — full view', () => {
     const { container } = renderWidget(FULL, 1);
 
     const spark = await screen.findByRole('img', { name: 'Battery Level trend' });
-    expect(container.querySelector('.grid-cols-2')).toBeTruthy();
+    expect(container.querySelector('.\\@xs\\:grid-cols-2')).toBeTruthy();
     expect(spark.getAttribute('width')).toBe('80');
   });
 });
@@ -330,8 +368,8 @@ describe('LiveSignalSparklinesWidget — empty / lifecycle states', () => {
     mockedRequest.mockReturnValue(new Promise(() => {})); // never resolves
     const { container } = renderWidget(FULL, 1);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Live Signal Sparklines')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    expect(screen.queryByText('Live signal sparklines')).toBeInTheDocument();
     expect(screen.queryByText('Battery Level')).toBeNull();
   });
 
@@ -380,6 +418,221 @@ describe('LiveSignalSparklinesWidget — vehicle resolution', () => {
   });
 });
 
+describe('LiveSignalSparklinesWidget — independent source trust', () => {
+  it('preserves raw history while plotting only finite numbers in source order, including zero', async () => {
+    AVAILABLE = ['BatteryLevel'];
+    LIVE = { BatteryLevel: { value: 0, timestamp: '2026-07-01T03:00:00Z' } };
+    const data = [null, {}, ...points(0, '100', true, Number.NaN, 2, null, -1, false, Number.POSITIVE_INFINITY, 4)];
+    wire();
+    const respond = mockedRequest.getMockImplementation();
+    mockedRequest.mockImplementation((url: string) =>
+      url === SOURCE_URLS.history ? Promise.resolve({ data }) : respond?.(url),
+    );
+    const { container, queryClient } = renderWidget(FULL, 1, { signals: ['BatteryLevel'] });
+
+    const sparkline = await screen.findByRole('img', { name: 'Battery Level trend' });
+    const row = signalRow('Battery Level');
+    const coordinates = sparkline.querySelector('polyline')?.getAttribute('points');
+    expect(within(row).getByText('0.00')).toBeInTheDocument();
+    expect(within(row).queryByText('—')).not.toBeInTheDocument();
+    expect(within(row).getByRole('img', { name: 'Trending up' })).toBeInTheDocument();
+    expect(coordinates?.split(' ')).toHaveLength(4);
+    expect(coordinates?.split(' ').map((point) => Number(point.split(',')[1]))).toEqual([16, 8, 20, 0]);
+    expect(coordinates).toMatch(/^0,16 .* 80,0$/);
+    expect(queryClient.getQueryData(['signal-history', 1, 'BatteryLevel', 1])).toEqual({ data });
+    expect(sourceCallCount('history')).toBe(1);
+    expect(container.textContent).not.toMatch(/NaN|Infinity|undefined/);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  function populate() {
+    AVAILABLE = ['BatteryLevel'];
+    LIVE = { BatteryLevel: { value: 82, timestamp: '2026-07-01T03:00:00Z' } };
+    HISTORY = { BatteryLevel: points(1, 2, 3, 4) };
+  }
+
+  function expectHistory() {
+    const row = signalRow('Battery Level');
+    const sparkline = within(row).getByRole('img', { name: 'Battery Level trend' });
+    expect(within(row).getByRole('img', { name: 'Trending up' })).toBeInTheDocument();
+    const coordinates = sparkline.querySelector('polyline')?.getAttribute('points');
+    expect(coordinates).toMatch(/^0,20 .* 80,0$/);
+    expect(coordinates?.split(' ')).toHaveLength(4);
+    return coordinates;
+  }
+
+  it('shows a fatal retry instead of empty rows when catalogue and live both fail initially', async () => {
+    populate();
+    const failures = new Set<SignalSource>(['catalogue', 'live']);
+    wire(failures);
+    const { container } = renderWidget(FULL, 1, { signals: ['BatteryLevel'] });
+    const alert = await screen.findByRole('alert');
+
+    expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
+    expect(screen.queryByText('Battery Level')).not.toBeInTheDocument();
+    expect(screen.queryByText('No signals available')).not.toBeInTheDocument();
+    expect(sourceCallCount('history')).toBe(0);
+    failures.clear();
+    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+    await screen.findByText('82.00');
+    await screen.findByRole('img', { name: 'Battery Level trend' });
+    expectHistory();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(sourceCallCount('catalogue')).toBe(2);
+    expect(sourceCallCount('live')).toBe(2);
+    expect(sourceCallCount('history')).toBe(1);
+  });
+
+  it.each(['catalogue', 'live', 'history'] as const)(
+    'keeps independent row evidence and retries the right producers after an initial %s failure',
+    async (source) => {
+      populate();
+      const failures = new Set<SignalSource>([source]);
+      wire(failures);
+      const { container } = renderWidget(FULL, 1, { signals: ['BatteryLevel'] });
+      await screen.findByText('Battery Level');
+      const row = signalRow('Battery Level');
+
+      if (source === 'history') {
+        await within(row).findByRole('alert');
+        expect(within(row).getByText('82.00')).toBeInTheDocument();
+        expect(within(row).queryByRole('img', { name: 'Battery Level trend' })).not.toBeInTheDocument();
+        expect(within(row).queryByText('no data')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      } else {
+        const warning = await screen.findByTestId('stale-refresh-warning');
+        expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+        expect(warning).toHaveAttribute('role', 'status');
+        expect(warning).toHaveAttribute('aria-live', 'polite');
+        expect(warning).toHaveAttribute('data-data-state', 'partial');
+        expect(within(row).getByText(source === 'live' ? '—' : '82.00')).toBeInTheDocument();
+        await within(row).findByRole('img', { name: 'Battery Level trend' });
+        expectHistory();
+        expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server");
+        expect(screen.getByText(source === 'catalogue' ? 'Signal catalog' : 'Live signals')).toBeInTheDocument();
+        expect(within(row).queryByRole('alert')).not.toBeInTheDocument();
+      }
+      expect(screen.queryByText('No signals available')).not.toBeInTheDocument();
+
+      const counts = {
+        catalogue: sourceCallCount('catalogue'),
+        live: sourceCallCount('live'),
+        history: sourceCallCount('history'),
+      };
+      failures.clear();
+      if (source === 'history') {
+        fireEvent.click(within(row).getByRole('button', { name: 'Retry' }));
+      } else {
+        fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      }
+      await waitFor(() => {
+        expect(sourceCallCount(source)).toBe(counts[source] + 1);
+        expect(within(signalRow('Battery Level')).getByText('82.00')).toBeInTheDocument();
+        expectHistory();
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      });
+      if (source === 'history') {
+        expect(sourceCallCount('catalogue')).toBe(counts.catalogue);
+        expect(sourceCallCount('live')).toBe(counts.live);
+      } else {
+        expect(sourceCallCount('catalogue')).toBe(counts.catalogue + 1);
+        expect(sourceCallCount('live')).toBe(counts.live + 1);
+        expect(sourceCallCount('history')).toBe(counts.history);
+      }
+    },
+  );
+
+  it.each(['catalogue', 'live', 'history'] as const)(
+    'retains measured readings, history coordinates and trend after a %s refresh fails',
+    async (source) => {
+      populate();
+      const failures = new Set<SignalSource>();
+      wire(failures);
+      const { queryClient } = renderWidget(FULL, 1, { signals: ['BatteryLevel'] });
+      await screen.findByText('82.00');
+      await screen.findByRole('img', { name: 'Battery Level trend' });
+      const retainedCoordinates = expectHistory();
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+
+      failures.add(source);
+      await act(async () => {
+        await queryClient.refetchQueries({ type: 'active' });
+      });
+
+      const warning = await screen.findByTestId('stale-refresh-warning');
+      expect(within(signalRow('Battery Level')).getByText('82.00')).toBeInTheDocument();
+      expect(expectHistory()).toBe(retainedCoordinates);
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(warning).toHaveAttribute('role', 'status');
+      expect(warning).toHaveAttribute('aria-live', 'polite');
+      expect(warning).toHaveAttribute('data-data-state', 'stale');
+      expect(warning).toHaveTextContent('Previously loaded data remains visible');
+
+      const counts = {
+        catalogue: sourceCallCount('catalogue'),
+        live: sourceCallCount('live'),
+        history: sourceCallCount('history'),
+      };
+      failures.clear();
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      await waitFor(() => {
+        expect(sourceCallCount(source)).toBe(counts[source] + 1);
+        expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      });
+      expect(within(signalRow('Battery Level')).getByText('82.00')).toBeInTheDocument();
+      expect(expectHistory()).toBe(retainedCoordinates);
+      if (source === 'history') {
+        expect(sourceCallCount('catalogue')).toBe(counts.catalogue);
+        expect(sourceCallCount('live')).toBe(counts.live);
+      } else {
+        expect(sourceCallCount('catalogue')).toBe(counts.catalogue + 1);
+        expect(sourceCallCount('live')).toBe(counts.live + 1);
+        expect(sourceCallCount('history')).toBe(counts.history);
+      }
+    },
+  );
+
+  it.each([
+    { name: 'a null history array', data: null, hasHistory: false },
+    { name: 'null history members', data: [null, ...points(1, 2, 3, 4)], hasHistory: true },
+  ])('keeps a genuine zero distinct from unknown with $name', async ({ data, hasHistory }) => {
+    AVAILABLE = ['BatteryLevel', 'VehicleSpeed'];
+    LIVE = { BatteryLevel: { value: 0, timestamp: '2026-07-01T03:00:00Z' } };
+    HISTORY = { VehicleSpeed: points(4, 3, 2, 1) };
+    wire();
+    const respond = mockedRequest.getMockImplementation() as ((url: string) => Promise<unknown>) | undefined;
+    mockedRequest.mockImplementation((url: string) =>
+      url === SOURCE_URLS.history ? Promise.resolve({ data }) : respond?.(url),
+    );
+    const { container, queryClient } = renderWidget(FULL, 1, { signals: ['BatteryLevel', 'VehicleSpeed'] });
+
+    await screen.findByText('0.00');
+    await screen.findByRole('img', { name: 'Vehicle Speed trend' });
+    await waitFor(() => expect(
+      queryClient.getQueryCache().getAll()
+        .filter((query) => query.state.status === 'success')
+        .map((query) => query.state.data),
+    ).toContainEqual({ data }));
+    const battery = signalRow('Battery Level');
+    const speed = signalRow('Vehicle Speed');
+    expect(within(battery).getByText('0.00')).toBeInTheDocument();
+    expect(within(battery).queryByText('—')).not.toBeInTheDocument();
+    expect(within(speed).getByText('—')).toBeInTheDocument();
+    expect(within(speed).queryByText('0.00')).not.toBeInTheDocument();
+    expect(within(speed).getByRole('img', { name: 'Trending down' })).toBeInTheDocument();
+    if (hasHistory) {
+      await within(battery).findByRole('img', { name: 'Battery Level trend' });
+      expectHistory();
+    } else {
+      await waitFor(() => expect(within(battery).getByText('no data')).toBeInTheDocument());
+      expect(within(battery).queryByRole('img', { name: 'Battery Level trend' })).not.toBeInTheDocument();
+    }
+    expect(container.textContent).not.toMatch(/NaN|Infinity|undefined/);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
 describe('LiveSignalSparklinesWidget — refresh', () => {
   it('refetches the live snapshot when the accessible "Refresh" control is activated', async () => {
     AVAILABLE = ['BatteryLevel'];
@@ -390,7 +643,7 @@ describe('LiveSignalSparklinesWidget — refresh', () => {
 
     // Wait for the first load to settle — a visible value implies /live is no
     // longer fetching, so the refresh control is armed.
-    expect(await screen.findByText(fmtNumber(60, 1))).toBeInTheDocument();
+    expect(await screen.findByText('60.00')).toBeInTheDocument();
     await waitFor(() => expect(liveCallCount()).toBe(1));
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));

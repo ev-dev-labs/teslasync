@@ -1,0 +1,16 @@
+[
+  {
+    "lines": 275,
+    "path": "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.spec.ts",
+    "copy": ".agents\\artifacts\\atomic-browser-diagnostics-source-20261007T062132Z\\source\\specialized-diagnostics.supported.spec.ts",
+    "copySha256": "1283666048B0ABBEE3B45C236CA5D60BB33FFA525C9FE4BF7CD3E2026C01CC7C",
+    "sha256": "1283666048B0ABBEE3B45C236CA5D60BB33FFA525C9FE4BF7CD3E2026C01CC7C"
+  },
+  {
+    "lines": 141,
+    "path": "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.fixtures.ts",
+    "copy": ".agents\\artifacts\\atomic-browser-diagnostics-source-20261007T062132Z\\source\\specialized-diagnostics.supported.fixtures.ts",
+    "copySha256": "A32B2CB61663036A56112356C66CBF867D98EBDB0527E3D5312D3D5A8F338A49",
+    "sha256": "A32B2CB61663036A56112356C66CBF867D98EBDB0527E3D5312D3D5A8F338A49"
+  }
+]

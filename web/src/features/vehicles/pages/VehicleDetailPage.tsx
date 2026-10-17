@@ -1,18 +1,24 @@
+import { useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Activity, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui'
+import { PageLayout, Section } from '@/components/layout'
+import { Caption, GlassPanel } from '@/components/ui'
 import { DataProvenanceBadge } from '@/components/data-display'
-import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton, QueryError, EmptyState } from '@/components/feedback'
+import { LiveStaleDataBanner, SectionErrorBoundary, EmptyState, QueryError, StaleRefreshWarning, useToast } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
-import { useToast } from '@/components/feedback/Toast'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { useTelemetryClock } from '@/hooks/useTelemetryFreshness'
+import { formatObservationAge } from '@/lib/observationAge'
+import { getVehicleStateEvidence, vehicleKeys, type RawStateResponse } from '@/api/hooks/useVehicles'
 import { request } from '@/api/client'
+import { VEHICLE_STATUSES } from '@/api/types'
 import type {
   Vehicle,
   VehicleStatus,
@@ -26,77 +32,39 @@ import type {
   VehicleConfigSnapshot,
 } from '@/api/types'
 
-import { deriveStatus, type StateResponse } from '../components/vehicle-detail/helpers'
+import { deriveStatus } from '../components/vehicle-detail/helpers'
 import {
   VehicleHeader,
-  BatteryRangePanel,
-  LiveStateIndicators,
-  QuickStatsGrid,
-  MotorSection,
-  ClimateSection,
-  SecuritySection,
-  TirePressureSection,
-  ChargingTelemetrySection,
-  BatteryRangeCharts,
-  RecentDrivesSection,
-  RecentChargesSection,
   VehicleConfigSection,
   QuickLinksSection,
 } from '../components/vehicle-detail'
+import {
+  VehiclePanelGrid, VehicleSourcePanel, VehicleDetailCharts, VehicleDetailOverview,
+  VehicleDetailSystems, VehicleDetailSkeleton, VehicleDetailHistory, VehicleDetailStats,
+} from '../components/modernization'
 import VehicleSettingsTab from '../components/VehicleSettingsTab'
 import { SilenceBanner } from '../components/SilenceBanner'
 import { NextChargeDecisionStrip } from '../components/NextChargeDecisionStrip'
 import { useVehicleSettings, findEffectiveSetting } from '@/api/hooks/useVehicleSettings'
-import { AIVehiclePaintPreview } from '@/components/ai/AIVehiclePaintPreview'
-
-/* ─── Loading skeleton ─────────────────────── */
-
-/**
- * Mirrors the VehicleDetailPage layout while the vehicle record loads:
- * page header → battery & range panel → live state indicators →
- * 4-card quick-stats grid → motor/climate/security/tire panels →
- * battery-range chart → recent drives + charges tables → quick links.
- */
-function VehicleDetailSkeleton() {
-  return (
-    <div className="space-y-6" data-testid="vehicle-detail-skeleton">
-      <PageHeaderSkeleton />
-      <Skeleton className="h-40 rounded-xl" />
-      <StatGridSkeleton cards={4} />
-      <StatGridSkeleton cards={4} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Skeleton className="h-44 rounded-xl" />
-        <Skeleton className="h-44 rounded-xl" />
-      </div>
-      <ChartBlockSkeleton height={320} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Skeleton className="h-56 rounded-xl" />
-        <Skeleton className="h-56 rounded-xl" />
-      </div>
-      <StatGridSkeleton cards={6} className="md:grid-cols-3 lg:grid-cols-6" />
-    </div>
-  )
-}
+import { AIVehiclePaintPreview } from '@/components/ai'
 
 export default function VehicleDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
-  // Guard the deep-link id: a non-numeric/zero/negative id previously flowed
-  // into every query as NaN (silently disabled) and rendered an empty page
-  // shell. Clamp to 0 (which every `enabled`/`> 0` gate already treats as
-  // absent) and render an explicit not-found branch below instead.
   const rawId = Number(id)
-  const hasValidId = Number.isFinite(rawId) && rawId > 0
+  const hasValidId = Number.isSafeInteger(rawId) && rawId > 0
   const vehicleId = hasValidId ? rawId : 0
-  usePageTitle(t('vehicles.detail.title', 'Vehicle Detail'))
+  usePageTitle(t('vehicles.detail.title', 'Vehicle detail'))
 
   /* ─── Queries ─── */
 
-  const { data: vehicle, isLoading: vehicleLoading, error: vehicleError } = useQuery({
+  const vehicleQuery = useQuery({
     queryKey: ['vehicles', String(vehicleId)],
-    queryFn: () => request<Vehicle>(`/vehicles/${vehicleId}`),
+    queryFn: ({ signal }) => request<Vehicle>(`/vehicles/${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
   })
+  const { data: vehicle, isLoading: vehicleLoading } = vehicleQuery
+  const vehicleDataState = useDataState(vehicleQuery)
 
   // Nickname override feeds the page title and breadcrumb; falls back to
   // vehicles.display_name when no override is present.
@@ -108,71 +76,94 @@ export default function VehicleDetailPage() {
       : vehicle?.display_name
 
   const stateQuery = useQuery({
-    queryKey: ['vehicle-state', vehicleId],
-    queryFn: () => request<StateResponse>(`/vehicles/${vehicleId}/state`),
+    queryKey: vehicleKeys.state(vehicleId),
+    queryFn: ({ signal }) => request<RawStateResponse | null>(`/vehicles/${vehicleId}/state`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
-  const { data: stateData, error: stateError, refetch: refetchState } = stateQuery
-  const stateDataState = useDataState(stateQuery, { provenance: 'live' })
+  const { data: stateData, refetch: refetchState } = stateQuery
+  useTelemetryClock()
+  const stateEvidence = getVehicleStateEvidence(stateData)
+  const stateDataState = useDataState(stateQuery, {
+    provenance: stateData?.live === true ? 'live' : 'unknown',
+    partial: stateEvidence.freshness === 'unknown' || stateEvidence.verifiedFields.length === 0,
+  })
+  const stateTrustStatus = (stateDataState.status === 'ok' || stateDataState.status === 'partial') && stateEvidence.freshness === 'stale'
+    ? 'stale'
+    : stateDataState.status
+  const observationAge = formatObservationAge(stateEvidence.observedAt, t)
 
-  const { data: motorData } = useQuery({
+  const motorQuery = useQuery({
     queryKey: ['motor-latest', vehicleId],
-    queryFn: () => request<MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 15_000,
   })
 
-  const { data: climateData } = useQuery({
+  const climateQuery = useQuery({
     queryKey: ['climate-latest', vehicleId],
-    queryFn: () => request<ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 15_000,
   })
 
-  const { data: securityData } = useQuery({
+  const securityQuery = useQuery({
     queryKey: ['security-latest', vehicleId],
-    queryFn: () => request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 15_000,
   })
 
-  const { data: tireData } = useQuery({
+  const tireQuery = useQuery({
     queryKey: ['tire-latest', vehicleId],
-    queryFn: () => request<TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
 
-  const { data: chargingTelemetry } = useQuery({
+  const chargingTelemetryQuery = useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],
-    queryFn: () => request<ChargingTelemetry | null>(`/charging-telemetry/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ChargingTelemetry | null>(`/charging-telemetry/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 5_000,
   })
 
-  const { data: drives } = useQuery({
+  const drivesQuery = useQuery({
     queryKey: ['drives', vehicleId],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${vehicleId}&limit=5`),
+    queryFn: ({ signal }) => request<Drive[]>(`/drives?vehicle_id=${vehicleId}&limit=5`, { signal }),
     enabled: vehicleId > 0,
   })
+  const { data: drives } = drivesQuery
 
-  const { data: sessions } = useQuery({
+  const sessionsQuery = useQuery({
     queryKey: ['charging', vehicleId],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${vehicleId}&limit=5`),
+    queryFn: ({ signal }) => request<ChargingSession[]>(`/charging?vehicle_id=${vehicleId}&limit=5`, { signal }),
     enabled: vehicleId > 0,
   })
 
-  const { data: vehicleConfig } = useQuery({
+  const vehicleConfigQuery = useQuery({
     queryKey: ['vehicle-config-latest', vehicleId],
-    queryFn: () => request<VehicleConfigSnapshot | null>(`/vehicle-config/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<VehicleConfigSnapshot | null>(`/vehicle-config/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
+  const { data: vehicleConfig } = vehicleConfigQuery
 
   const toast = useToast()
+  const operationalMode = useOperationalMode()
+  const online = useOnlineStatus()
+  const wakeInFlight = useRef(false)
+  const wakeBlockReason = !operationalMode.canWrite
+    ? operationalMode.writeBlockReason ?? t('operationalMode.writeBlocked', 'Return to live mode before making operational changes.')
+    : !online
+      ? t('operationalMode.cached.writeBlocked', 'Reconnect before making operational changes.')
+      : null
   const wakeMutation = useMutation({
-    mutationFn: () => request<{ status: string }>(`/vehicles/${vehicleId}/wake`, { method: 'POST' }),
+    networkMode: 'always',
+    mutationFn: () => {
+      if (wakeBlockReason) throw new Error(wakeBlockReason)
+      return request<{ status: string }>(`/vehicles/${vehicleId}/wake`, { method: 'POST' })
+    },
     onSuccess: () => {
       toast.success(t('vehicles.detail.wakeSuccess', 'Wake command sent'))
       setTimeout(() => { refetchState() }, 5000)
@@ -180,12 +171,28 @@ export default function VehicleDetailPage() {
     onError: (err: Error) => {
       toast.error(err.message || t('vehicles.detail.wakeFailed', 'Failed to wake vehicle'))
     },
+    onSettled: () => { wakeInFlight.current = false },
   })
+  const handleWake = () => {
+    if (wakeInFlight.current || wakeMutation.isPending) return
+    if (wakeBlockReason) {
+      toast.error(wakeBlockReason)
+      return
+    }
+    wakeInFlight.current = true
+    wakeMutation.mutate()
+  }
 
   /* ─── Derived state ─── */
 
   const state = stateData?.state
-  const status: VehicleStatus = vehicle ? deriveStatus(state) : 'offline'
+  // A partial state object must not mask a known vehicle-record status.
+  const stateHasStatus = state != null && (
+    state.is_charging === true ||
+    (typeof state.speed === 'number' && Number.isFinite(state.speed) && state.speed > 0) ||
+    VEHICLE_STATUSES.some(status => status === state.state?.toLowerCase())
+  )
+  const status: VehicleStatus = deriveStatus(stateHasStatus ? state : vehicle)
 
   // Model + trim badge shown under the (nickname) title for quick identification.
   const subtitle = vehicle
@@ -194,199 +201,143 @@ export default function VehicleDetailPage() {
 
   /* ─── Loading short-circuit ─────────── */
   if (vehicleLoading) {
-    return <VehicleDetailSkeleton />
+    return (
+      <PageLayout title={t('vehicles.detail.title', 'Vehicle detail')} busy>
+        <VehicleDetailSkeleton />
+      </PageLayout>
+    )
   }
 
   if (!hasValidId) {
     return (
-      <PageContainer title={t('vehicles.detail.title', 'Vehicle Detail')}>
+      <PageLayout title={t('vehicles.detail.title', 'Vehicle detail')}>
         <FadeIn>
           <GlassPanel className="p-4 sm:p-5">
             <EmptyState
               icon={<AlertCircle className="h-8 w-8" aria-hidden="true" />}
               title={t('vehicles.detail.invalidIdTitle', 'Vehicle not found')}
               message={t('vehicles.detail.invalidIdBody', 'That vehicle link looks wrong. Check the URL or pick a vehicle from the list.')}
-              actionTo={{ label: t('vehicles.detail.backToVehicles', 'Back to Vehicles'), to: '/vehicles' }}
+              actionTo={{ label: t('vehicles.detail.backToVehicles', 'Back to vehicles'), to: '/vehicles' }}
             />
           </GlassPanel>
         </FadeIn>
-      </PageContainer>
+      </PageLayout>
     )
   }
 
   /* ─── Render ─── */
 
   return (
-    <PageContainer
-      title={effectiveName ?? t('vehicles.detail.title', 'Vehicle Detail')}
+    <PageLayout
+      title={effectiveName ?? t('vehicles.detail.title', 'Vehicle detail')}
       subtitle={subtitle}
-      error={vehicleError as Error | null}
       breadcrumbLabels={{
         '/vehicles/:id': effectiveName ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id }),
       }}
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
+      metadataActions={
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <DataProvenanceBadge
             provenance={stateDataState.provenance}
-            status={stateDataState.status}
-            updatedAt={stateDataState.updatedAt}
+            status={stateTrustStatus}
           />
+          <Caption className="min-w-0 break-words" title={stateData?.observed_at ?? undefined}>
+            {observationAge
+              ? t('dashboard.fleetPosture.scope.observed', 'Last real observation {{age}}', { age: observationAge })
+              : t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')}
+          </Caption>
         </div>
+      }
+      contextActions={
+        <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
+          <FadeIn>
+            <div className="min-w-0 max-w-full" data-tour="vehicle-detail-tabs">
+              <fieldset
+                disabled={wakeBlockReason != null || wakeMutation.isPending}
+                aria-describedby={wakeBlockReason ? 'vehicle-wake-blocked' : undefined}
+                className="m-0 min-w-0 border-0 p-0"
+              >
+                <VehicleHeader
+                  vehicle={vehicle}
+                  status={status}
+                  onWake={handleWake}
+                  waking={wakeMutation.isPending}
+                />
+              </fieldset>
+              {wakeBlockReason && <Caption className="break-words" id="vehicle-wake-blocked">{wakeBlockReason}</Caption>}
+            </div>
+          </FadeIn>
+        </SectionErrorBoundary>
       }
     >
       <LiveStaleDataBanner />
+      {vehicleDataState.fatalError != null && (
+        <GlassPanel padding="md">
+          <QueryError error={vehicleDataState.fatalError}
+            onRetry={() => { vehicleQuery.refetch() }}
+            resourceName={t('vehicles.detail.title', 'Vehicle detail')} />
+        </GlassPanel>
+      )}
+      <StaleRefreshWarning state={vehicleDataState} label={t('vehicles.detail.title', 'Vehicle detail')} />
       <SilenceBanner vehicleId={vehicleId > 0 ? vehicleId : undefined} />
       <NextChargeDecisionStrip
         vehicleId={vehicleId > 0 ? vehicleId : undefined}
         currentSoc={typeof state?.battery_level === 'number' ? state.battery_level : undefined}
       />
 
-      {/* Hero header — full-width band */}
-      <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>
-        <FadeIn>
-          <div data-tour="vehicle-detail-tabs">
-            <VehicleHeader
-              vehicle={vehicle}
-              status={status}
-              onWake={() => wakeMutation.mutate()}
-              waking={wakeMutation.isPending}
-            />
-          </div>
-        </FadeIn>
-      </SectionErrorBoundary>
+      <VehicleDetailOverview state={state} stateQuery={stateQuery} />
+      <VehicleDetailStats state={state} status={status} stateQuery={stateQuery} />
+      <VehicleDetailSystems state={state} stateQuery={stateQuery} motorQuery={motorQuery} climateQuery={climateQuery}
+        securityQuery={securityQuery} tireQuery={tireQuery} chargingTelemetryQuery={chargingTelemetryQuery} />
 
-      {!state ? (
-        <FadeIn delay={0.05}>
-          <GlassPanel className="p-8">
-            {stateError ? (
-              <QueryError
-                error={stateError}
-                onRetry={() => { refetchState() }}
-                resourceName={t('vehicles.detail.liveStateResource', 'Live vehicle state')}
-              />
-            ) : (
-              <Skeleton lines={5} height={20} />
-            )}
-          </GlassPanel>
-        </FadeIn>
-      ) : (
-        <>
-          {/* Live overview — battery hero spans 2 cols, live-state side panel fills the third */}
-          <FadeIn delay={0.03}>
-            <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.overview', 'Live Overview')}</SectionTitle>
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-                <div className="xl:col-span-2">
-                  <SectionErrorBoundary name="vehicle-detail:battery-range" fallbackTitle={t('vehicles.detail.section.batteryRangeFailed', 'Battery & range section failed to load')}>
-                    <BatteryRangePanel state={state} />
-                  </SectionErrorBoundary>
-                </div>
-                <SectionErrorBoundary name="vehicle-detail:live-state" fallbackTitle={t('vehicles.detail.section.liveStateFailed', 'Live state indicators failed to load')}>
-                  <GlassPanel className="h-full p-6">
-                    <PanelTitle className="mb-4 flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                      {t('vehicles.detail.liveState', 'Live State')}
-                    </PanelTitle>
-                    <LiveStateIndicators state={state} />
-                  </GlassPanel>
-                </SectionErrorBoundary>
-              </div>
-            </section>
-          </FadeIn>
+      {/* Battery & range charts — existing source order, shared host sizing. */}
+      <FadeIn delay={0.12}>
+        <Section id="vehicle-battery-charts" title={t('vehicles.detail.batteryRange', 'Battery & range')}>
+          <SectionErrorBoundary name="vehicle-detail:battery-charts" fallbackTitle={t('vehicles.detail.section.batteryChartsFailed', 'Battery & range charts failed to load')}>
+            <VehicleDetailCharts state={state} drives={drives} stateQuery={stateQuery} drivesQuery={drivesQuery} />
+          </SectionErrorBoundary>
+        </Section>
+      </FadeIn>
 
-          {/* Quick stats — full-width KPI band */}
-          <FadeIn delay={0.08}>
-            <section className="space-y-3" aria-label={t('vehicles.detail.quickStats', 'Quick Stats')}>
-              <SectionTitle>{t('vehicles.detail.quickStats', 'Quick Stats')}</SectionTitle>
-              <SectionErrorBoundary name="vehicle-detail:quick-stats" fallbackTitle={t('vehicles.detail.section.quickStatsFailed', 'Quick stats failed to load')}>
-                <QuickStatsGrid state={state} status={status} />
-              </SectionErrorBoundary>
-            </section>
-          </FadeIn>
+      <VehicleDetailHistory drivesQuery={drivesQuery} sessionsQuery={sessionsQuery} />
 
-          {/* Vehicle systems — telemetry bento: paired panels on wide screens */}
-          <FadeIn delay={0.10}>
-            <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.systems', 'Vehicle Systems')}</SectionTitle>
-              <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
-                <SectionErrorBoundary name="vehicle-detail:motor" fallbackTitle={t('vehicles.detail.section.motorFailed', 'Motor section failed to load')}>
-                  <MotorSection motorData={motorData} />
-                </SectionErrorBoundary>
-                <SectionErrorBoundary name="vehicle-detail:climate" fallbackTitle={t('vehicles.detail.section.climateFailed', 'Climate section failed to load')}>
-                  <ClimateSection climateData={climateData} />
-                </SectionErrorBoundary>
-              </div>
-              <SectionErrorBoundary name="vehicle-detail:charging-telemetry" fallbackTitle={t('vehicles.detail.section.chargingTelemetryFailed', 'Charging telemetry failed to load')}>
-                <ChargingTelemetrySection chargingTelemetry={chargingTelemetry} />
-              </SectionErrorBoundary>
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <SectionErrorBoundary name="vehicle-detail:security" fallbackTitle={t('vehicles.detail.section.securityFailed', 'Security section failed to load')}>
-                  <SecuritySection securityData={securityData} state={state} />
-                </SectionErrorBoundary>
-                <SectionErrorBoundary name="vehicle-detail:tire-pressure" fallbackTitle={t('vehicles.detail.section.tireFailed', 'Tire pressure section failed to load')}>
-                  <TirePressureSection tireData={tireData} />
-                </SectionErrorBoundary>
-              </div>
-            </section>
-          </FadeIn>
-
-          {/* Battery & range charts — full-width, internal 2-col grid */}
-          <FadeIn delay={0.12}>
-            <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.batteryRange', 'Battery & Range')}</SectionTitle>
-              <SectionErrorBoundary name="vehicle-detail:battery-charts" fallbackTitle={t('vehicles.detail.section.batteryChartsFailed', 'Battery & range charts failed to load')}>
-                <BatteryRangeCharts state={state} drives={drives} />
-              </SectionErrorBoundary>
-            </section>
-          </FadeIn>
-
-          {/* Recent activity — drives + charges side by side on wide screens */}
-          <FadeIn delay={0.14}>
-            <section className="space-y-4">
-              <SectionTitle>{t('vehicles.detail.recentActivity', 'Recent Activity')}</SectionTitle>
-              <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
-                <SectionErrorBoundary name="vehicle-detail:recent-drives" fallbackTitle={t('vehicles.detail.section.recentDrivesFailed', 'Recent drives failed to load')}>
-                  <RecentDrivesSection drives={drives} />
-                </SectionErrorBoundary>
-                <SectionErrorBoundary name="vehicle-detail:recent-charges" fallbackTitle={t('vehicles.detail.section.recentChargesFailed', 'Recent charges failed to load')}>
-                  <RecentChargesSection sessions={sessions} />
-                </SectionErrorBoundary>
-              </div>
-            </section>
-          </FadeIn>
-
-          {/* Configuration + Helix paint preview — auto-fit so the AI card
-              (which self-hides when the feature is off) gracefully collapses
-              the row to a single full-width configuration panel. */}
-          <FadeIn delay={0.16}>
-            <section className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(22rem,1fr))]">
+      {/* Configuration and the independently gated Helix preview stay in
+          source order. A hidden AI feature creates no empty grid cell. */}
+      <FadeIn delay={0.16}>
+        <Section id="vehicle-configuration" title={t('vehicles.detail.vehicleConfig', 'Vehicle configuration')}>
+          <VehiclePanelGrid label={t('vehicles.detail.vehicleConfig', 'Vehicle configuration')} items={[
+            { id: 'vehicle-configuration', size: 'full', content:
               <SectionErrorBoundary name="vehicle-detail:vehicle-config" fallbackTitle={t('vehicles.detail.section.vehicleConfigFailed', 'Vehicle config section failed to load')}>
-                <VehicleConfigSection vehicleConfig={vehicleConfig} softwareVersion={state.software_version} />
+                <VehicleSourcePanel query={vehicleConfigQuery}
+                  label={t('vehicles.detail.vehicleConfig', 'Vehicle configuration')}
+                  emptyMessage={t('vehicles.detail.noVehicleConfig', 'No configuration data available')}
+                  errorMessage={t('vehicles.detail.section.vehicleConfigFailed', 'Vehicle config section failed to load')}>
+                  <VehicleConfigSection vehicleConfig={vehicleConfig} softwareVersion={state?.software_version} />
+                </VehicleSourcePanel>
               </SectionErrorBoundary>
-              <SectionErrorBoundary name="vehicle-detail:ai-paint-preview" fallbackTitle={t('vehicles.detail.section.aiPaintPreviewFailed', 'Helix paint preview failed to load')}>
-                <AIVehiclePaintPreview vehicleId={vehicleId} />
-              </SectionErrorBoundary>
-            </section>
-          </FadeIn>
+            },
+          ]} />
+          <SectionErrorBoundary name="vehicle-detail:ai-paint-preview" fallbackTitle={t('vehicles.detail.section.aiPaintPreviewFailed', 'Helix paint preview failed to load')}>
+            <AIVehiclePaintPreview vehicleId={vehicleId} />
+          </SectionErrorBoundary>
+        </Section>
+      </FadeIn>
 
-          {/* Quick links — full-width */}
-          <FadeIn delay={0.18}>
-            <SectionErrorBoundary name="vehicle-detail:quick-links" fallbackTitle={t('vehicles.detail.section.quickLinksFailed', 'Quick links failed to load')}>
-              <QuickLinksSection />
-            </SectionErrorBoundary>
-          </FadeIn>
+      {/* Quick links — full-width */}
+      <FadeIn delay={0.18}>
+        <SectionErrorBoundary name="vehicle-detail:quick-links" fallbackTitle={t('vehicles.detail.section.quickLinksFailed', 'Quick links failed to load')}>
+          <QuickLinksSection />
+        </SectionErrorBoundary>
+      </FadeIn>
 
-          {/* Per-vehicle settings — full-width */}
-          <FadeIn delay={0.20}>
-            <SectionErrorBoundary
-              name="vehicle-detail:settings"
-              fallbackTitle={t('vehicles.detail.section.settingsFailed', 'Per-vehicle settings failed to load')}
-            >
-              <VehicleSettingsTab vehicleId={vehicleId} />
-            </SectionErrorBoundary>
-          </FadeIn>
-        </>
-      )}
-    </PageContainer>
+      {/* Per-vehicle settings — full-width */}
+      <FadeIn delay={0.20}>
+        <SectionErrorBoundary
+          name="vehicle-detail:settings"
+          fallbackTitle={t('vehicles.detail.section.settingsFailed', 'Per-vehicle settings failed to load')}
+        >
+          <VehicleSettingsTab vehicleId={vehicleId} />
+        </SectionErrorBoundary>
+      </FadeIn>
+    </PageLayout>
   )
 }

@@ -10,11 +10,11 @@
  *     publish to)
  *   - A replay is in flight
  *
- * Heavy payload viewer is a `<pre>` rendering the base64 of the inner
- * payload (decoded as UTF-8 best-effort) — operators rarely need the
- * raw envelope; that's a CopyButton further down.
+ * Payloads retain distinct missing, empty UTF-8, binary and invalid-base64
+ * outcomes. Copy preserves decoded text or the original opaque encoding.
+ * Summary metadata never establishes that detail bytes loaded successfully.
  */
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send } from 'lucide-react';
 
@@ -29,37 +29,48 @@ import {
   type TabItem,
 } from '@/components/ui';
 import { KVList, TimeStamp } from '@/components/data-display';
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { fmtInt } from '@/lib/numberFormat';
+import { AlertBanner, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+
 import type { DLQEntryFull, DLQEntrySummary } from '@/types/admin-diagnostics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState, type DataState } from '@/api/dataState';
 
 interface EntryDrawerProps {
   open: boolean;
   summary: DLQEntrySummary | null;
   full: DLQEntryFull | undefined;
   loading: boolean;
+  state?: DataState<DLQEntryFull>;
   replayEnabled: boolean;
   replayInFlight: boolean;
   onClose: () => void;
   onReplay: () => void;
 }
 
-/**
- * Decodes base64 → UTF-8 string when possible; falls back to a short
- * "(non-UTF-8 binary, {{n}} bytes)" marker for opaque payloads so we
- * never crash the drawer on a binary protobuf body.
- */
-function decodeBase64Utf8(b64: string): string {
-  if (!b64) return '';
+type DecodedPayload =
+  | { kind: 'missing' }
+  | { kind: 'invalid'; encoded: string }
+  | { kind: 'text'; text: string; encoded: string; size: number }
+  | { kind: 'binary'; encoded: string; size: number };
+
+function decodeBase64Utf8(b64: string): DecodedPayload {
+  let bytes: Uint8Array;
   try {
     const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
+    bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    // TextDecoder with fatal=true throws on invalid UTF-8 sequences
-    // so binary protobuf payloads cleanly hit the catch block.
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
-    return '';
+    return { kind: 'invalid', encoded: b64 };
+  }
+  try {
+    return {
+      kind: 'text',
+      text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes),
+      encoded: b64,
+      size: bytes.length,
+    };
+  } catch {
+    return { kind: 'binary', encoded: b64, size: bytes.length };
   }
 }
 
@@ -68,26 +79,37 @@ export function EntryDrawer({
   summary,
   full,
   loading,
+  state,
   replayEnabled,
   replayInFlight,
   onClose,
   onReplay,
 }: EntryDrawerProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string>('inner');
+  const tabId = useId();
+  const idBase = `dlq-entry-${tabId}`;
+  const detail = state ?? deriveDataState({ data: full, isLoading: loading });
+  // A prior entry's bytes must never be shown or replayed under a new summary.
+  const payload = full && (!summary || full.id === summary.id) ? full : undefined;
 
-  const innerText = useMemo(
-    () => (full ? decodeBase64Utf8(full.inner_payload_b64) : ''),
-    [full],
+  const inner = useMemo(
+    () => typeof payload?.inner_payload_b64 === 'string'
+      ? decodeBase64Utf8(payload.inner_payload_b64)
+      : { kind: 'missing' as const },
+    [payload],
   );
-  const rawText = useMemo(
-    () => (full ? decodeBase64Utf8(full.raw_payload_b64) : ''),
-    [full],
+  const raw = useMemo(
+    () => typeof payload?.raw_payload_b64 === 'string'
+      ? decodeBase64Utf8(payload.raw_payload_b64)
+      : { kind: 'missing' as const },
+    [payload],
   );
 
   // Summary fields used when the full payload is still loading — pulled
   // from the summary row that was already in cache.
-  const head: DLQEntryFull | DLQEntrySummary | null = full ?? summary;
+  const head: DLQEntryFull | DLQEntrySummary | null = payload ?? summary;
 
   const tabs = useMemo<TabItem[]>(
     () => [
@@ -145,50 +167,41 @@ export function EntryDrawer({
             },
           ]
         : [],
-    [head, t],
+    [head, t, fmtInt],
   );
 
-  // Active payload panel: its accessible label (mirrors the selected tab)
-  // plus the body text. Falls back to a "(non-UTF-8 …)" marker with the
-  // byte size when the blob isn't valid UTF-8 so a binary protobuf body
-  // never blanks the viewer.
-  const panel = useMemo(() => {
-    if (activeTab === 'inner') {
-      return {
-        label: t('admin.dlq.drawer.tabs.inner', 'Inner payload'),
-        body:
-          innerText ||
-          t(
-            'admin.dlq.drawer.binaryPayload',
-            '(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)',
-            { n: head?.inner_payload_size ?? 0 },
-          ),
-      };
-    }
-    return {
-      label: t('admin.dlq.drawer.tabs.raw', 'Raw envelope'),
-      body:
-        rawText ||
-        t(
-          'admin.dlq.drawer.binaryEnvelope',
-          '(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)',
-          { n: head?.raw_payload_size ?? 0 },
-        ),
-    };
-  }, [activeTab, head, innerText, rawText, t]);
-
-  // Text handed to the CopyButton: prefer decoded UTF-8, fall back to the
-  // raw base64 so operators can still copy an opaque binary body.
-  const copyText = useMemo(
-    () =>
-      activeTab === 'inner'
-        ? innerText || full?.inner_payload_b64 || ''
-        : rawText || full?.raw_payload_b64 || '',
-    [activeTab, innerText, rawText, full],
-  );
+  const panels = tabs.map(tab => {
+    const decoded = tab.key === 'inner' ? inner : raw;
+    const body = decoded.kind === 'missing'
+      ? t('admin.dlq.drawer.payloadMissing', 'This payload was not included in the entry details.')
+      : decoded.kind === 'invalid'
+        ? t('admin.dlq.drawer.payloadInvalid', 'This payload is not valid base64. Copy preserves the original encoded value.')
+        : decoded.kind === 'text'
+          ? decoded.text === ''
+            ? t('admin.dlq.drawer.payloadEmpty', 'Empty UTF-8 payload (0 bytes).')
+            : decoded.text
+          : tab.key === 'inner'
+            ? t(
+                'admin.dlq.drawer.binaryPayload',
+                '(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)',
+                { n: fmtInt(decoded.size) },
+              )
+            : t(
+                'admin.dlq.drawer.binaryEnvelope',
+                '(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)',
+                { n: fmtInt(decoded.size) },
+              );
+    return { ...tab, body };
+  });
+  const activePayload = activeTab === 'inner' ? inner : raw;
+  const copyText = activePayload.kind === 'missing'
+    ? undefined
+    : activePayload.kind === 'text' ? activePayload.text : activePayload.encoded;
 
   const replayDisabled =
-    !replayEnabled || !head?.replayable || replayInFlight || loading;
+    !replayEnabled || !payload?.replayable || replayInFlight || loading
+    || detail.status !== 'ok' || detail.isRefreshing || detail.isRefreshBlocked
+    || inner.kind === 'missing' || inner.kind === 'invalid';
 
   return (
     <Drawer
@@ -201,8 +214,9 @@ export function EntryDrawer({
       }
       size="lg"
       tabs={
-        head && !loading ? (
+        payload ? (
           <Tabs
+            idBase={idBase}
             tabs={tabs}
             activeTab={activeTab}
             onChange={setActiveTab}
@@ -234,7 +248,28 @@ export function EntryDrawer({
             <KVList items={summaryItems} />
           </GlassPanel>
           <GlassPanel className="p-4">
-            {loading && !full ? (
+            <StaleRefreshWarning
+              state={detail}
+              label={t('admin.dlq.drawer.payloadView', 'Payload view')}
+              message={detail.isRefreshBlocked
+                ? t('admin.dlq.drawer.pausedRetained', 'Payload refresh is paused. Previously loaded details remain visible.')
+                : undefined}
+            />
+            {detail.hasData && detail.updatedAt != null && detail.status === 'stale' && (
+              <TimeStamp value={new Date(detail.updatedAt).toISOString()} format="absolute" />
+            )}
+            {detail.fatalError ? (
+              <QueryError error={detail.fatalError} onRetry={detail.retry ?? undefined} />
+            ) : !payload && detail.isRefreshBlocked ? (
+              <AlertBanner variant="info" title={t('dataSources.status.pending', 'Pending')}>
+                <Text as="p" variant="bodySm">
+                  {t('admin.dlq.drawer.pausedInitial', 'The payload request is paused. No entry details have loaded yet.')}
+                </Text>
+                {detail.retry && (
+                  <Button variant="secondary" onClick={detail.retry}>{t('common.retry', 'Retry')}</Button>
+                )}
+              </AlertBanner>
+            ) : !payload ? (
               <div
                 role="status"
                 aria-busy="true"
@@ -247,19 +282,28 @@ export function EntryDrawer({
               </div>
             ) : (
               <div>
-              <div className="mb-2 flex items-center justify-end gap-2">
-                <CopyButton text={copyText} />
+                {detail.isRefreshing && (
+                  <Text role="status">{t('freshness.updating', 'Updating…')}</Text>
+                )}
+                <div className="mb-2 flex items-center justify-end gap-2">
+                  {copyText !== undefined && <CopyButton text={copyText} />}
+                </div>
+                {panels.map(panel => (
+                  <Text
+                    key={panel.key}
+                    as="pre"
+                    variant="code"
+                    role="tabpanel"
+                    id={`${idBase}-panel-${panel.key}`}
+                    aria-labelledby={`${idBase}-tab-${panel.key}`}
+                    aria-label={panel.label}
+                    hidden={activeTab !== panel.key}
+                    className="max-h-80 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] p-3"
+                  >
+                    {panel.body}
+                  </Text>
+                ))}
               </div>
-              <Text
-                as="pre"
-                variant="code"
-                role="tabpanel"
-                aria-label={panel.label}
-                className="max-h-80 overflow-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] p-3"
-              >
-                {panel.body}
-              </Text>
-            </div>
             )}
           </GlassPanel>
         </div>

@@ -1,0 +1,1120 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-vehicle-systems-hvac-cycling",
+  "attempt": 1,
+  "mode": "READONLY_source_QA",
+  "started_at": "2026-10-14T01:27:49.8416548Z",
+  "return_deadline": "2026-10-14T01:44:50.678Z",
+  "hard_deadline": "2026-10-14T01:49:50.678Z",
+  "before_pins_at": "2026-10-14T01:29:54.6980517Z",
+  "before_pins": [
+    {
+      "path": "web/eslint.config.js",
+      "sha256": "423257334c90030971ad6e8e2f3985906ae7fd0f9be8d24cea6821a7a106ce32"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicleSystems.ts",
+      "sha256": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCoverageCadence.tsx",
+      "sha256": "88485c0c29e242042deee3f2d02a42477cb2e74dc14569af2d816fcea52c5d8f"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCycleDiagnostics.tsx",
+      "sha256": "0262e28d021659de813df59555cb22e0d52be4cb136cd3b651375fb5c022e496"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingDataAvailability.tsx",
+      "sha256": "ea4610edcc4b466d2491618538dd468eac8321de6e2c359f2da007744e65f7c2"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingDutyComposition.tsx",
+      "sha256": "c7a8c0642eb0c43a811dd3d8f96f3ecac2df14d0c9a6de6c052a3d71968e57a1"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingEvidenceKpiLedger.tsx",
+      "sha256": "ba16e5922ed2578dd0d122a7c5ceedc5adc5210a7ede3a501dd2355399dcb5e7"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingExactAccounting.tsx",
+      "sha256": "a5ea58b6bef911d7cb9e201fefc7c5c0b3f1b674cfb851135dde01025209b083"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingHourlyDuty.tsx",
+      "sha256": "c4f8c8454c2862e54e2fb33b8b8ea21e7ff8303305f651e235d6533e3ac06226"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingIntervalDisposition.tsx",
+      "sha256": "53fba50feff33e3d97928ede5d6c29ddf0f7b1647c01b6754b6d95499b565eff"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingMethodology.tsx",
+      "sha256": "c13f755dc32849583c301cd5fb563409ff257bed872fe441af5deff61bc6380e"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingQueryStatus.tsx",
+      "sha256": "a1baf3d3f31e09c8164ce469c5c17bbbb92dd080a355a5070deae05e113fff50"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+      "sha256": "01a1d95db97a4d359c238cbf296c96153bde113aeefba9db65395861b92a70ab"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunLengthDistribution.tsx",
+      "sha256": "7161a7212a0f1a10fa46cde14c28736068bb816b550b0eb7a452b48140eab95a"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingSectionBody.tsx",
+      "sha256": "71f7986919baa8bcd1f2e07ff0582564844ac3a5c00e9291b332e1182b84bce7"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingSourceAvailability.tsx",
+      "sha256": "9c26a830335db654b9036ef483f29cb08d355f2040acec0828c1edd66def3ea1"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingThresholdGateMatrix.tsx",
+      "sha256": "acf4ee7acd8a97575e9900084cfdf6978ad3d57269fa89447517d4830eb1c73e"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingTransitionMatrix.tsx",
+      "sha256": "86621f4bbe88329dc8b0a5886d37498caf586630daedcf74ef292bd359b34e82"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/index.ts",
+      "sha256": "216c7d0a1a0ed6adb23d9b7545430ddb7494f8b7e6ba5f98d727eacc3d6c970b"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/types.ts",
+      "sha256": "f247155ce392a3012d32ca23f26ad51efcd30b439a91aae505c00334f7b1f4cd"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.test.ts",
+      "sha256": "360fdcec1c462925a022fddc6077c6447f44784bcee6bcf499c9631aab9782f4"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "sha256": "e12c1eb30ac06a0a8689c2a2d9843ba3dfd6e7d2d9a82d6549ca67715ef9fdf8"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/HvacCyclingPage.test.tsx",
+      "sha256": "583c975de8ac522da012f4c0014898bc279948064b7676c25c9796e7878ce679"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/HvacCyclingPage.tsx",
+      "sha256": "c05016a7c1a34b4506649e2aaa7475f8a19760a1415c5d03bcbd77696fe06a05"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3"
+    },
+    {
+      "path": "web/src/lib/safeArray.ts",
+      "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+    },
+    {
+      "path": "web/src/types/vehicle-systems.ts",
+      "sha256": "85b58a61a9a5d8824b77a9ffcbb29c97ae2ae3aec3237c3b3395624a06c9a0f8"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58"
+    },
+    {
+      "path": "web/src/lib/climateState.ts",
+      "sha256": "09e5c29b473279a17b6d14742bac7d02469bde4f3580736aa7f758389578fe6f"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+      "sha256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "sha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721"
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f"
+    },
+    {
+      "path": "internal/api/climate/handler.go",
+      "sha256": "76038b350eec0a6c1d1de46c3ac07801ad494fb2b95e3c354568e0a972258d5c"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/SourceAvailabilityBrief.tsx",
+      "sha256": "4c68db6ea70c526cca551812e692210d7d1051a60b73e62954f896d2655a5247"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29"
+    },
+    {
+      "path": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c"
+    }
+  ],
+  "status": "DONE_source_QA_with_findings",
+  "actor": "f3df755a-6853-4e09-b713-d522e4d25623",
+  "page": "web/src/features/vehicle-systems/pages/HvacCyclingPage.tsx",
+  "routes": [
+    "/hvac-cycling"
+  ],
+  "purpose": "Explain HVAC state cycling using returned climate timeline rows, qualified step intervals, censored runs and complete-cycle support; not electrical power, energy, diagnosis or live control.",
+  "authority": {
+    "queue_file": "migration-queue.md",
+    "queue_line_at_first_read": 61,
+    "queue_type": "read-only-finished-page-QA",
+    "attempt": 1,
+    "reservation": "2026-10-14T01:24:50.678Z",
+    "accepted_dependency": "phase5-page-vehicle-systems-hvac-cycling",
+    "historical_source_acceptance_commit": "fbefa0a1610ddf80d5337474e00ad620eb4c389c",
+    "prior_audit": "docs/frontend-audits/audit-page-221.json",
+    "read": [
+      "docs/orchestrator-loop.md (entire)",
+      "docs/frontend-design-contract.md (core through MDC-080 and applicable scope/trust/SI/mobile/a11y decisions)",
+      "docs/frontend-mission.md (principles, states, responsive, architecture and sections 43-45)",
+      "docs/frontend-inventory.md (authority and HVAC entry)",
+      "docs/session-handoff.md (current recovery and historical limits)",
+      "migration-queue.md (exact attempt and relevant owner fields)",
+      "docs/frontend-worker-conventions.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "precedence": "Assigned READONLY/two-artifact restrictions govern. Modernization and SI cutover supersede obsolete neon/glass/source-unit examples. No global compiler, full gates, native runs or additional write claims."
+  },
+  "confirmed_findings": [
+    {
+      "id": "HVAC-F01",
+      "rule": "unresolved-support-as-zero",
+      "contract": "MDC-026/MDC-045",
+      "severity": "P1",
+      "classification": "confirmed source mechanism; not a newly executed native reproduction",
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingMethodology.tsx",
+      "line": 108,
+      "end_line": 119,
+      "mechanism": "The support notice interpolates summary row/run/complete counts unconditionally. Page lines 50-57 summarize an empty fallback before a response; page line 164 passes only summary to Methodology, not source resolution. Static explanatory articles correctly remain visible, but the dependent notice asserts zero source support without a resolved response.",
+      "repro": "Mount /hvac-cycling with no vehicle, undefined data while loading/paused, or fatal initial failure and no cache. The unchanged notice renders '0 returned rows, 0 run fragments, and 0 complete active runs...' although no authoritative response exists. The passing no-vehicle/loading/error tests assert shell presence, not this notice's trust semantics.",
+      "fix": "Pass existing source state and gate only the source-dependent support notice; retain all six methodology explanations and the section shell. Show localized unresolved/unavailable support rather than fabricated zero. Keep true zeros for successful empty responses and retained counts on failed refresh.",
+      "owner": "page-local methodology/page wiring; new exclusive fix claim required",
+      "dedup": "Existing audit-page-221 states.findings[0]; reconfirmed, not a new duplicate repair campaign. No exact active source repair owner found in queue file fields.",
+      "confidence": "high"
+    },
+    {
+      "id": "HVAC-F02",
+      "rule": "unresolved-support-as-zero",
+      "contract": "MDC-026",
+      "severity": "P1",
+      "classification": "confirmed source mechanism; not a newly executed native reproduction",
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+      "line": 64,
+      "end_line": 77,
+      "mechanism": "The displayed/total/omitted caption precedes HvacCyclingSectionBody. Empty fallback produces directory counts 0/0/0 even while its body correctly shows loading, unresolved, no-vehicle or fatal state.",
+      "repro": "Use any no-cache initial-loading, initial-paused, no-vehicle or fatal-error query at /hvac-cycling: caption claims 'Showing 0 of 0 runs; 0 omitted by the 50-run display cap.' Body trust gating does not govern the caption.",
+      "fix": "Gate resolved or retained directory counts with the existing source state. Keep the cap policy/shell and distinguish missing evidence from genuine empty response; do not remove run details or change the cap.",
+      "owner": "page-local run-directory caption",
+      "dedup": "Existing audit-page-221 states.findings[1]. Same trust requirement as F01 but a separate exact affected source site, not an additional shared dataState defect.",
+      "confidence": "high"
+    },
+    {
+      "id": "HVAC-F03",
+      "rule": "missing-workspace-bounds",
+      "contract": "MDC-032",
+      "severity": "P1",
+      "classification": "confirmed source integration gap; actual server boundary semantics NOTRUN",
+      "file": "web/src/features/vehicle-systems/pages/HvacCyclingPage.tsx",
+      "line": 40,
+      "related": [
+        {
+          "file": "web/src/api/hooks/useVehicleSystems.ts",
+          "line": 14
+        },
+        {
+          "file": "web/src/api/hooks/useVehicleSystems.ts",
+          "line": 37,
+          "end_line": 43
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23,
+          "end_line": 76
+        },
+        {
+          "file": "internal/api/climate/handler.go",
+          "line": 87,
+          "end_line": 100
+        }
+      ],
+      "mechanism": "The dated historical page consumes only vehicleId, not useRangeState. /hvac-cycling is absent from the opt-in range registry. useClimateHistory accepts only a vehicle, puts no bounds in its query key and sends neither start nor end. Handler defaults to a seven-calendar-day window and already parses bounds before Timeline(r.Context()).",
+      "repro": "Navigate with a shared/custom analysis window or /hvac-cycling?vehicle_id=7&from=2026-08-01&to=2026-08-02. Source still constructs only /climate?vehicle_id=7 under ['climate','history','7']; route range flag is false and both requested workspace bounds are absent. Example illustrates code path only; no HTTP was made.",
+      "fix": "Coordinate existing typed hook and workspace registry owners, consume startInstant/endInstantExclusive on the page, put selected vehicle and both bounds in query identity, send snake_case/server-recognized start/end while retaining AbortSignal, safeArray and callers. Preserve presets/custom/DST and full-server result scope. No second page picker or loaded-row-only filtering.",
+      "owner": "integration: useVehicleSystems.ts/workspaceScope.ts plus narrow page adoption",
+      "dedup": "Existing audit-page-221 architectureIssues[0] and requiredSharedChanges[0]. Closed Phase5 source acceptance is not a bounds repair; no existing exact active bounds fix claim found. Do not redispatch Phase5.",
+      "confidence": "high"
+    },
+    {
+      "id": "HVAC-F04",
+      "rule": "implicit-browser-timezone",
+      "contract": "MDC-032/MDC-044",
+      "severity": "P1",
+      "classification": "confirmed preference bypass in source; DST/native displays NOTRUN",
+      "file": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "line": 369,
+      "end_line": 374,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+          "line": 694
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCoverageCadence.tsx",
+          "line": 30,
+          "end_line": 31
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+          "line": 98
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+          "line": 128,
+          "end_line": 134
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 73,
+          "end_line": 93
+        }
+      ],
+      "mechanism": "Hourly interval splitting uses host Date.setMinutes/setHours/getHours; transitions use host getHours. Absolute date renderers pass locale only, so dateFormat uses browser timezone. Existing useDateFormat resolves the saved vehicle/user/UTC mode, but is not consumed by this page or its calculation. Label 'local hour' does not disclose which analytical zone.",
+      "repro": "With browser America/Los_Angeles and saved tz_display_default='utc', a 2026-07-01T10:30:00Z sample displays/buckets in browser hour 03, not selected UTC hour 10. Saving UTC cannot affect summary: useMemo depends on samples only. This is a source-derived reproduction, not a browser/settings mutation.",
+      "fix": "Reuse existing useDateFormat/useTimezone and resolve/disclose one analytical timezone; coordinate explicit timezone-aware hourly splitting and transition allocation while keeping elapsed SI seconds and DST conservation. Changing display labels alone is insufficient. Never guess a vehicle timezone.",
+      "owner": "page/domain timezone adoption using existing date/timezone APIs",
+      "dedup": "Existing audit-page-221 architectureIssues[1]. Active phase6-fix-relative-future-dates is a different shared relative-date defect, not ownership of this page's timezone adoption; do not broaden it.",
+      "confidence": "high"
+    },
+    {
+      "id": "HVAC-F05",
+      "rule": "decorative-stage-color",
+      "contract": "MDC-010/MDC-012; mission 7",
+      "severity": "P2",
+      "classification": "confirmed unconditional decorative color assignments; not a contrast or neon-runtime finding",
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingEvidenceKpiLedger.tsx",
+      "line": 48,
+      "related_lines": [
+        56,
+        66,
+        76,
+        84,
+        93
+      ],
+      "mechanism": "Six ordinary evidence-stage icons get fixed indigo/cyan/purple/amber-300 hues regardless of trust/status. These color assignments decorate metric grouping instead of expressing source-confirmed semantic state and do not use existing neutral/semantic foreground roles.",
+      "repro": "Render complete evidence, then loading or no-vehicle data: source-stage icon hues remain unchanged across trust states. Observe the six unconditional class declarations. No composed contrast or screenshot comparison was performed.",
+      "fix": "Use existing restrained muted/semantic token roles for ordinary stages; warning hue only when actual qualified warning meaning requires it. Preserve icon identities, all six metrics, user chart palettes and units. Do not create a page palette.",
+      "owner": "page-local ledger presentation",
+      "dedup": "Existing audit-page-221 visualIssues[0]; one design finding for six related icon assignments, not six violations or a new global palette campaign.",
+      "confidence": "high for source assignments; visual severity unmeasured"
+    }
+  ],
+  "conditional_candidates": [
+    {
+      "id": "HVAC-C01",
+      "file": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "line": 260,
+      "related_lines": [
+        289,
+        293
+      ],
+      "rule": "wire-enum-interpretation",
+      "mechanism": "HVAC power/A-C accept strict booleans; fan inputs accept finite numbers and use >0. An enum-only HVAC power/fan-status payload can remain unknown or have a nonsemantic positive code interpreted active. Climate handler maps raw signal values, not watts, and TS typing is not wire proof.",
+      "repro_needed": "Obtain authorized boolean/enum wire-contract fixtures from the actual signal owner, then test all recognized On/Off/Unknown and fan enum values, including negative/invalid values. No backend/API/device calls or broad signal-catalog audit were made.",
+      "disposition": "Conditional integration contract candidate, not a confirmed production bug. Preserve existing strict/active-wins semantics until an exact supported enum mapping is established. Never convert hvacPower into W/kW or infer energy."
+    },
+    {
+      "id": "HVAC-C02",
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingThresholdGateMatrix.tsx",
+      "line": 31,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingHourlyDuty.tsx",
+          "line": 128
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingDataAvailability.tsx",
+          "line": 99
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingEvidenceKpiLedger.tsx",
+          "line": 58
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingTransitionMatrix.tsx",
+          "line": 73
+        }
+      ],
+      "rule": "interpolated-count-preferences",
+      "mechanism": "Some t() count arguments remain raw numbers instead of fmtInt; most metrics use the reactive saved-number preference hook. Page tests mock t() and therefore cannot establish canonical plural/grouping/localized-digit behavior.",
+      "repro_needed": "Authorized real-catalog i18n rendering with large counts and saved non-English number preferences. Check plural count numerics separately from formatted replace values; do not rewrite plural-selection counts blindly.",
+      "disposition": "Conditional localization candidate, not confirmed untranslated English or a request to edit catalogs."
+    },
+    {
+      "id": "HVAC-C03",
+      "file": "web/src/api/hooks/useVehicleSystems.ts",
+      "line": 42,
+      "related": [
+        {
+          "file": "web/src/lib/safeArray.ts",
+          "line": 9,
+          "end_line": 13
+        }
+      ],
+      "rule": "malformed-success-versus-empty",
+      "mechanism": "safeArray returns [] for null or non-array successful payloads. The page then legitimately treats the selected [] as a resolved empty response, losing malformed-shape distinction upstream.",
+      "repro_needed": "Authorized existing hook/client contract test with malformed successful climate response. The inspected handler normally emits an array; no malformed production response was observed.",
+      "disposition": "Conditional shared adapter contract candidate; do not expand this leaf into a global safeArray repair."
+    }
+  ],
+  "native_candidates": [
+    {
+      "id": "HVAC-N01",
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+      "line": 78,
+      "rule": "keyboard-scroll-access",
+      "mechanism": "Capped ol has overflow-y-auto/max-h-[42rem] without explicit tabIndex or region label. Browser automatic scroll focusability and descendant reachability determine whether this is a real inaccessible region.",
+      "repro_needed": "Authorized keyboard/assistive-technology run with enough fragments to overflow; scroll to every displayed row using Tab/arrows/PageDown. Preserve newest-first order and full details.",
+      "dedup": "Existing audit-page-221 keyboard risk; no new native run and no claimed WCAG failure."
+    },
+    {
+      "id": "HVAC-N02",
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+      "line": 125,
+      "related": [
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingHourlyDuty.tsx",
+          "line": 116
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingThresholdGateMatrix.tsx",
+          "line": 58
+        }
+      ],
+      "rule": "narrow-container-long-content",
+      "mechanism": "Two-column directory details and threshold cells, three-column hourly support, and fixed chart heights need long-label/200%-text/narrow allocated-container review. Source declarations do not demonstrate clipping or page overflow.",
+      "repro_needed": "All mission widths 320/375/390/430/768/1024/1280/1440/1920/2560, allocated narrow cards, RTL/long labels and 200% text. Preserve all fields/actions and contained scroll.",
+      "dedup": "Existing audit-page-221 responsive risk; historical 21-versus-14 selector probe was not a verified bug and is not revived."
+    },
+    {
+      "id": "HVAC-N03",
+      "file": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingQueryStatus.tsx",
+      "line": 92,
+      "related": [
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36
+        }
+      ],
+      "rule": "mobile-retry-target",
+      "mechanism": "Refresh-error Retry requests sm; shared declared sm is h-9 (36px), below the stronger 44px mobile target. Actual composed hit geometry, global CSS and spacing exceptions have not been measured.",
+      "repro_needed": "At below-md widths, measure the actual retained-refresh-error Retry hit area, long translated label wrapping and unclipped focus. Keep desktop sizing and retry semantics; apply existing responsive utility only if required.",
+      "dedup": "Native target candidate only; shared Button ownership is not reopened by this audit."
+    }
+  ],
+  "dismissed_candidates": [
+    {
+      "rule": "missing-page-container",
+      "reason": "Page uses PageLayout, whose implementation wraps PageContainer; acceptable canonical adapter, not a violation.",
+      "evidence": "PageLayout.tsx:9-16"
+    },
+    {
+      "rule": "missing-freshness",
+      "reason": "Full climateQuery is passed to PageLayout at page:83. PageContainer:222 renders DataFreshnessAuto; DataFreshness.tsx:329-346 forwards dataUpdatedAt/isFetching/isStale/isError/refetch. Source supports shared age/status/manual refresh. Dropped fields in the local HVAC state alone do not prove missing freshness UI.",
+      "limit": "Native badge detail and loaded-versus-observed-time interpretation unverified."
+    },
+    {
+      "rule": "raw-html/fetch-useeffect/hardcoded-string",
+      "reason": "Initial broad scans falsely matched capitalized shared Button, refetch(), and a TypeScript arrow/comparison. Corrected case-sensitive raw/fetch scans returned 0 match lines. All local presentation bodies were read; the arrow/comparison is not JSX text."
+    },
+    {
+      "rule": "direct-library-import",
+      "reason": "Shared motion/FadeIn.tsx is the intended building block; its direct framer-motion import is an acceptable boundary implementation. Feature/page imports use category barrels."
+    },
+    {
+      "rule": "static-inline-style",
+      "reason": "CSS-variable Tailwind classes are not inline style objects. Recharts tick/axis API props and computed chartTokens lookups are accepted exceptions, not static-inline-style violations."
+    }
+  ],
+  "data_source": {
+    "hook": "useClimateHistory(vehicleIdStr)",
+    "endpoint": "GET /api/v1/climate?vehicle_id=<selected ID> (client adds prefix)",
+    "query_identity": "['climate','history',vehicleId]",
+    "enabled": "nonempty selected vehicle string",
+    "cancellation": "queryFn receives signal and forwards { signal } to request",
+    "selection": "safeArray; no unit conversion",
+    "scope": "Shared selected vehicle is consumed without duplicate page selector; date bounds absent (F03).",
+    "backend_source": "internal/api/climate/handler.go:80-116; StateReader.Timeline(r.Context()); default seven calendar days; change-feed rows forward-fold fields. Handler alone does not prove exclusive end semantics or signal enum meanings.",
+    "hvac_semantics": "hvacPower/isAcOn are strict boolean state inputs under current TS/domain contract, not numeric power. Any interpretable active signal wins; absent/invalid-only state is null. Finite fan values use >0; supported enum mapping remains conditional C01.",
+    "raw_si_and_signs": "Durations and thresholds stay in seconds, timestamps in epoch milliseconds/UTC source. No W/kW, energy, thermal efficiency or temperature inference. Display durations use existing useUnits; fractions become percent only at display. No physical negative power/temperature/distance values are presented by this page, so no sign-changing display is established. Negative finite fan input resolving off is retained tested behavior, not a newly guessed physical interpretation.",
+    "numeric_limits": {
+      "max_gap_s": 1800,
+      "short_cycle_threshold_s": 600,
+      "run_cap_default": 50,
+      "run_cap_max": 500
+    },
+    "freshness": "Shared header query-driven freshness/age/manual refetch; history remains labeled non-live and source-only. Individual signal measurement timestamps are not supplied by flat forward-folded rows, so row cadence is not per-signal measurement freshness."
+  },
+  "states": {
+    "initial_loading": "All 14 shells remain; ledger raw metrics missing, source-shaped section skeletons and one localized loading status. F01/F02 count captions bypass trust.",
+    "no_vehicle": "Hook called with empty string and disabled; summaries have no rows; persistent shells and shared header vehicle owner. F01/F02 must not represent absence as measured zero.",
+    "fatal_initial_error": "deriveDataState.fatalError only without cache; ledger QueryError/refetch and passive unavailable body messages preserve neighbors.",
+    "retained_refresh_error": "Cached rows survive; summary/section content remains, warning plus localized Retry; shared header exposes age/status/refetch. Fresh covering page test passes.",
+    "paused_initial": "fetchStatus paused maps isRefreshBlocked; VehicleSourcePause explains no empty response inferred; unresolved section bodies remain passive. Source reviewed, no covering paused test executed.",
+    "paused_retained": "Retained summary remains visible and existing SourceContent pause notice/retry is reused. Source reviewed, native/offline and explicit paused fixture NOTRUN.",
+    "authoritative_empty": "Successful [] yields real zero returned-row accounting and balanced identities; ratios/quantiles remain null, interval/run claims withheld. This is distinct from unknown state or unresolved source.",
+    "unknown_and_partial": "Strict invalid-only rows stay unknown. Unique timestamp-valid unknowns are timeline continuity barriers, not removed gaps. Long gaps censor runs; known sample before unknown endpoint may support a step interval per disclosed method, but cannot establish an observed transition.",
+    "measured_zero": "Known-off observed intervals yield real 0 on-duty; no observed denominator yields null duty, not 0. Only complete transition-bounded active runs enter short-rate denominator. Empty complete denominator stays null even if censored on-fragments exist.",
+    "coverage": "First returned duplicate at a timestamp retained; terminal sample separate; exact row/pair/run/duration identities; rows remain full returned source despite directory display cap. No maintenance diagnosis inferred."
+  },
+  "preservation": {
+    "page_lines": 168,
+    "local_hvac_tsx_presentation_lines": 1796,
+    "scope_note": "1796 counts only the 16 local HVAC TSX supports; it intentionally excludes operationalbrief shared/domain supports and is not substituted for historical wider presentation totals.",
+    "section_count": 14,
+    "layout_card_count": 13,
+    "embedded_chart_count": 2,
+    "sections": [
+      "Evidence KPI ledger",
+      "Source and signal availability",
+      "Chronological coverage and cadence",
+      "Interval disposition",
+      "On/off duty composition",
+      "Hourly HVAC duty and 24-hour support grid",
+      "Observed transition matrix",
+      "Run-length distribution and eight quantiles",
+      "Complete-cycle and short-cycle diagnostics",
+      "Threshold and gate matrix",
+      "Run evidence directory",
+      "Exact source and interval accounting",
+      "Data-availability matrix",
+      "Methodology and limitations (six explanations)"
+    ],
+    "actions": [
+      "Header-selected vehicle (no duplicated page picker)",
+      "Header query freshness manual refetch",
+      "Ledger fatal/refresh/paused recovery retry",
+      "Two shared chart toolbars, image export and accessible table alternatives",
+      "Distribution on/off legend persistence via hvac-cycling-run-length",
+      "Newest-first directory scrolling, all six run details/support badges and cap omission disclosure"
+    ],
+    "capabilities_not_invented": "No chart CSV exportData or fullscreen opt-in is supplied. No annotation/vehicle/climate mutation controls are introduced or executed. Data-table alternative includes completeOn counts even though plot series are only on/off.",
+    "line_count_baseline": "No source edits. Equality is verified by before/after SHA256, not by creating or replacing a preservation baseline. Historical source/native receipts remain historical."
+  },
+  "i18n_a11y_mobile": {
+    "i18n_declarations": "Local titles, captions, states, actions, chart names/columns/boundaries use t() with fallbacks. Most numbers use reactive useNumberFormatting and durations use useUnits. Tests mock translation, charts and duration formatting; they do not establish canonical catalog/parity/plural, RTL, saved 12/24h or real preference acceptance. Timezone bypass is F04; raw count interpolation is C02.",
+    "a11y_declarations": "KPI section localized accessible name; loading polite status; refresh warning alert; decorative icons aria-hidden; charts localized ariaLabel plus data/dataColumns; directory ol/li and textual support badges; shared PageContainer heading/route focus and error boundary; shared FadeIn reduced-motion hook.",
+    "mobile_declarations": "Root Grid one column below xl; directory 2/3/6 detail columns; hourly support 3/6/12; methodology 1/2/3; threshold/transition cells start two columns; canonical min-w-0 container and contained directory overflow. Fixed chart heights are 230/220; no mobileHeight override.",
+    "acceptance": "Source declarations only. Native/mobile/keyboard/focus/screen-reader/forced-colors/reduced-motion/low-bandwidth/composed contrast/theme/200%-text matrix NOTRUN. No real 12/24h preference defect asserted without an applicable setting contract."
+  },
+  "verification": {
+    "runtime": {
+      "command": "node --version",
+      "output": "v26.8.1",
+      "exit": 0,
+      "supported_by_package_engine": true
+    },
+    "tests": {
+      "command": "node node_modules/vitest/vitest.mjs run src/features/vehicle-systems/pages/HvacCyclingPage.test.tsx src/features/vehicle-systems/lib/hvacCycling.test.ts --pool=forks --maxWorkers=2 --no-file-parallelism --reporter=verbose",
+      "exit": 0,
+      "files_discovered": 2,
+      "files_executed": 2,
+      "files_passed": 2,
+      "tests_discovered": 32,
+      "tests_executed": 32,
+      "tests_passed": 32,
+      "tests_failed": 0,
+      "tests_skipped": 0,
+      "test_names": "All 32 verbose executed names and exact source declarations/lines are preserved in the raw log; page 9, domain 23.",
+      "limitations": "Mocked page source tests and pure domain cases, not mounted backend/native/prefs acceptance. Normal Vite/i18n guards ran unchanged; no bypass. Initial test startup exceeded first 120-second wait; original session was collected, not rerun."
+    },
+    "eslint": {
+      "command": "node node_modules/eslint/bin/eslint.js src/features/vehicle-systems/pages/HvacCyclingPage.tsx src/features/vehicle-systems/pages/HvacCyclingPage.test.tsx src/features/vehicle-systems/lib/hvacCycling.ts src/features/vehicle-systems/lib/hvacCycling.test.ts src/features/vehicle-systems/components/hvac-cycling --max-warnings 0",
+      "exit": 0,
+      "raw_output": "No diagnostics; SCOPED_ESLINT_EXIT=0 in transcript."
+    },
+    "classic_rule_scan": {
+      "method": "Bounded native Select-String searches plus source read; not repository-wide or parser-complete.",
+      "confirmed_counts": {
+        "static-inline-style": 0,
+        "raw-html": 0,
+        "direct-library-import": 0,
+        "old-api-import": 0,
+        "double-prefix": 0,
+        "camelcase-param": 0,
+        "hidden-section": 0,
+        "hardcoded-string": 0,
+        "missing-page-container": 0,
+        "fetch-useeffect": 0
+      },
+      "evidence": "Raw search patterns/match lines/counts and corrected case-sensitive searches are in log. Hardcoded-text lexical scan returned a TS arrow/comparison false positive; missing-page-container search found canonical PageLayout (3 lines). Hook source sends /climate and snake_case vehicle_id without double prefix. Shared building-block internals, dynamic/Recharts API props are acceptable exceptions. No claim of zero application-wide violations."
+    },
+    "notrun": [
+      "npx tsc --noEmit/global compiler (explicitly prohibited; no TypeScript-pass claim)",
+      "Build and full suites/full lint/global audit gates",
+      "Custom helper/preservation capture or baseline regeneration (would need unauthorized artifacts)",
+      "Browser/Playwright/screenshot/viewport/visual/native-host/device/API/authentication/backend integration checks",
+      "Vehicle, climate, device commands or mutations",
+      "Real i18n/catalog/full localization gates and saved clock/RTL rendered matrix",
+      "Installs, servers, subagents and all Git writes"
+    ],
+    "failures_preserved": [
+      {
+        "operation": "functions.view speculative components/hvac-cycling/format.ts",
+        "result": "Path does not exist; no numeric tool exit available; no helper created."
+      },
+      {
+        "operation": "Add-Content to log while Start-Transcript held the file (shell 1355)",
+        "result": "Nonterminating file-in-use error printed and preserved; actual shell exit 0, not a clean append. After Stop-Transcript, the same raw supplemental output was appended successfully in the lint invocation. Other scans in that command completed."
+      }
+    ],
+    "external_notices": "Normal startup reported known namespace entries/resolved baselines and two new dotless labels Healthy/Paused outside this leaf; no guard failure and no catalog/baseline changes by auditor."
+  },
+  "summary": {
+    "confirmed_findings": 5,
+    "conditional_candidates": 3,
+    "native_candidates": 3,
+    "confirmed_by_rule": {
+      "unresolved-support-as-zero": 2,
+      "missing-workspace-bounds": 1,
+      "implicit-browser-timezone": 1,
+      "decorative-stage-color": 1
+    },
+    "files_with_most_confirmed_findings": "One primary finding each at Methodology, RunDirectory, page scope, domain timezone and KPI ledger; no inflated duplicate counts for related call sites.",
+    "priority_fixes": [
+      "F01/F02: trust-gate only source-dependent counts, preserving shells/static explanations",
+      "F03: one narrow hook/registry/page workspace-bounds integration",
+      "F04: explicit saved analysis timezone and timestamp display adoption",
+      "F05: restrained existing icon foreground roles"
+    ],
+    "needs": "Narrow page/domain fix claims for existing audit findings; coordinated hook/workspace-range integration; authorized future native+i18n+wire-contract coverage. Do not broaden active relative-future-date owner, mutate catalogs, reopen accepted Phase5 or revive exhausted native helpers.",
+    "acceptance": "Read-only source QA report complete; page/application/native acceptance remains open. Passing scoped tests/lint do not clear the five source findings or native/conditional candidates."
+  },
+  "writes": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-hvac-cycling.json",
+    "web/logs/phase6-qa-vehicle-systems-hvac-cycling.log"
+  ],
+  "release": {
+    "report": "RELEASED after final parse/pin verification",
+    "log": "RELEASED after final transcript closure",
+    "commands": "All auditor covering commands completed; no ongoing auditor process/server/helper retained",
+    "source_tests_catalog_git": "No writes; read-only claims released; concurrent external ownership preserved",
+    "released_at": "2026-10-14T01:42:01.8428975Z"
+  },
+  "completed_at": "2026-10-14T01:40:51.7924847Z",
+  "after_pins_at": "2026-10-14T01:41:31.5524841Z",
+  "after_pins": [
+    {
+      "path": "web/eslint.config.js",
+      "sha256": "423257334c90030971ad6e8e2f3985906ae7fd0f9be8d24cea6821a7a106ce32",
+      "matches_before": true
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicleSystems.ts",
+      "sha256": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCoverageCadence.tsx",
+      "sha256": "88485c0c29e242042deee3f2d02a42477cb2e74dc14569af2d816fcea52c5d8f",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCycleDiagnostics.tsx",
+      "sha256": "0262e28d021659de813df59555cb22e0d52be4cb136cd3b651375fb5c022e496",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingDataAvailability.tsx",
+      "sha256": "ea4610edcc4b466d2491618538dd468eac8321de6e2c359f2da007744e65f7c2",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingDutyComposition.tsx",
+      "sha256": "c7a8c0642eb0c43a811dd3d8f96f3ecac2df14d0c9a6de6c052a3d71968e57a1",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingEvidenceKpiLedger.tsx",
+      "sha256": "ba16e5922ed2578dd0d122a7c5ceedc5adc5210a7ede3a501dd2355399dcb5e7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingExactAccounting.tsx",
+      "sha256": "a5ea58b6bef911d7cb9e201fefc7c5c0b3f1b674cfb851135dde01025209b083",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingHourlyDuty.tsx",
+      "sha256": "c4f8c8454c2862e54e2fb33b8b8ea21e7ff8303305f651e235d6533e3ac06226",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingIntervalDisposition.tsx",
+      "sha256": "53fba50feff33e3d97928ede5d6c29ddf0f7b1647c01b6754b6d95499b565eff",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingMethodology.tsx",
+      "sha256": "c13f755dc32849583c301cd5fb563409ff257bed872fe441af5deff61bc6380e",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingQueryStatus.tsx",
+      "sha256": "a1baf3d3f31e09c8164ce469c5c17bbbb92dd080a355a5070deae05e113fff50",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+      "sha256": "01a1d95db97a4d359c238cbf296c96153bde113aeefba9db65395861b92a70ab",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunLengthDistribution.tsx",
+      "sha256": "7161a7212a0f1a10fa46cde14c28736068bb816b550b0eb7a452b48140eab95a",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingSectionBody.tsx",
+      "sha256": "71f7986919baa8bcd1f2e07ff0582564844ac3a5c00e9291b332e1182b84bce7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingSourceAvailability.tsx",
+      "sha256": "9c26a830335db654b9036ef483f29cb08d355f2040acec0828c1edd66def3ea1",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingThresholdGateMatrix.tsx",
+      "sha256": "acf4ee7acd8a97575e9900084cfdf6978ad3d57269fa89447517d4830eb1c73e",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingTransitionMatrix.tsx",
+      "sha256": "86621f4bbe88329dc8b0a5886d37498caf586630daedcf74ef292bd359b34e82",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/index.ts",
+      "sha256": "216c7d0a1a0ed6adb23d9b7545430ddb7494f8b7e6ba5f98d727eacc3d6c970b",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/types.ts",
+      "sha256": "f247155ce392a3012d32ca23f26ad51efcd30b439a91aae505c00334f7b1f4cd",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.test.ts",
+      "sha256": "360fdcec1c462925a022fddc6077c6447f44784bcee6bcf499c9631aab9782f4",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "sha256": "e12c1eb30ac06a0a8689c2a2d9843ba3dfd6e7d2d9a82d6549ca67715ef9fdf8",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/HvacCyclingPage.test.tsx",
+      "sha256": "583c975de8ac522da012f4c0014898bc279948064b7676c25c9796e7878ce679",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/HvacCyclingPage.tsx",
+      "sha256": "c05016a7c1a34b4506649e2aaa7475f8a19760a1415c5d03bcbd77696fe06a05",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/safeArray.ts",
+      "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/types/vehicle-systems.ts",
+      "sha256": "85b58a61a9a5d8824b77a9ffcbb29c97ae2ae3aec3237c3b3395624a06c9a0f8",
+      "matches_before": true
+    },
+    {
+      "path": "web/vite.config.ts",
+      "sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/climateState.ts",
+      "sha256": "09e5c29b473279a17b6d14742bac7d02469bde4f3580736aa7f758389578fe6f",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+      "sha256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "sha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "matches_before": true
+    },
+    {
+      "path": "internal/api/climate/handler.go",
+      "sha256": "76038b350eec0a6c1d1de46c3ac07801ad494fb2b95e3c354568e0a972258d5c",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/SourceAvailabilityBrief.tsx",
+      "sha256": "4c68db6ea70c526cca551812e692210d7d1051a60b73e62954f896d2655a5247",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "matches_before": true
+    }
+  ],
+  "pin_verification": {
+    "algorithm": "SHA256",
+    "checked": 49,
+    "matched": 49,
+    "mismatched": 0,
+    "all_inspected_pins_match": true,
+    "scope": "Target, local supports/tests and necessary direct supports/configs; not repository-wide or transitive dependency preservation"
+  },
+  "filesRead": [
+    {
+      "path": "web/eslint.config.js",
+      "mode": "hash-only runner/direct-support pin; not audited body"
+    },
+    {
+      "path": "web/package.json",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicleSystems.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCoverageCadence.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingCycleDiagnostics.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingDataAvailability.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingDutyComposition.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingEvidenceKpiLedger.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingExactAccounting.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingHourlyDuty.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingIntervalDisposition.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingMethodology.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingQueryStatus.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunDirectory.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingRunLengthDistribution.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingSectionBody.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingSourceAvailability.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingThresholdGateMatrix.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/HvacCyclingTransitionMatrix.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/index.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/hvac-cycling/types.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.test.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/HvacCyclingPage.test.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/HvacCyclingPage.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "mode": "necessary partial declarations/ranges"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "mode": "hash-only runner/direct-support pin; not audited body"
+    },
+    {
+      "path": "web/src/lib/safeArray.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/types/vehicle-systems.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "mode": "necessary partial declarations/ranges"
+    },
+    {
+      "path": "web/src/lib/climateState.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "internal/api/climate/handler.go",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/SourceAvailabilityBrief.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "mode": "necessary partial declarations/ranges"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "mode": "source read"
+    },
+    {
+      "path": "web/src/components/data-display/DataFreshness.tsx",
+      "mode": "necessary partial declarations/ranges"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "mode": "source read"
+    }
+  ],
+  "pin_timing_note": "Before pins were captured after bootstrap discovery reads, before scoped test/lint execution; additional necessary supports were pinned before their focused reads. No immutable pre-discovery hash claim is made."
+}

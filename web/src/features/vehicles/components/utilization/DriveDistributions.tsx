@@ -17,11 +17,12 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveDistributionsProps {
   summary: UtilizationSummary;
@@ -32,6 +33,7 @@ export function DriveDistributions({
   summary,
   state,
 }: DriveDistributionsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance, formatDuration } =
     useUtilizationDisplay();
@@ -79,14 +81,10 @@ export function DriveDistributions({
   const distanceRows = useMemo(
     () =>
       summary.distanceBands.map((band) => {
-        const minimum = formatDistance(band.minInclusive, {
-          precision: 0,
-        });
+        const minimum = formatDistance(band.minInclusive);
         const maximum =
           band.maxExclusive != null
-            ? formatDistance(band.maxExclusive, {
-                precision: 0,
-              })
+            ? formatDistance(band.maxExclusive)
             : null;
         const label =
           band.minInclusive === 0 && maximum
@@ -189,7 +187,7 @@ export function DriveDistributions({
               'utilization.columns.sampleShare',
               'Sample share (%)',
             ),
-            format: (value) => `${fmtNumber(value, 1)}%`,
+            format: (value) => `${fmtNumber(value)}%`,
           },
         ]}
       >
@@ -327,7 +325,7 @@ export function DriveDistributions({
               'utilization.columns.sampleShare',
               'Sample share (%)',
             ),
-            format: (value) => `${fmtNumber(value, 1)}%`,
+            format: (value) => `${fmtNumber(value)}%`,
           },
         ]}
       >

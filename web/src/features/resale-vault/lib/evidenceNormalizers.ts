@@ -11,11 +11,13 @@
  *     them (watt-hours, seconds, meters — see field-level doc comments in
  *     `types.ts`), deferring km/mi/kWh-vs-Wh *display* formatting entirely
  *     to `useUnits()` in the UI layer.
- *   - Applies the selected date precision via `applyDatePrecision()` so no
- *     evidence timestamp bypasses the redaction selection.
- *   - Never reads/forwards any hard-excluded field (coordinates,
- *     addresses, raw trip paths, tokens, driver identity) — those fields
- *     are simply never read from the source objects here.
+ *   - Applies the selected date precision to documented evidence instants.
+ *     Opaque warranty business dates are excluded rather than inferred from
+ *     string contents. Report generation/signature instants are artifact
+ *     metadata, outside these normalizers, and intentionally remain exact.
+ *   - Projects structured facts instead of forwarding opaque payloads.
+ *     Free-text service notes are excluded unless explicitly consented to
+ *     and reviewed; human review is not automated content sanitization.
  */
 import type { Vehicle } from '@/types/vehicle';
 import type { BatteryPassport } from '@/api/hooks/useBatteryPassport';
@@ -23,7 +25,8 @@ import type { MaintenanceItem, ServiceRecord, SoftwareUpdate } from '@/types/veh
 import type { Drive, DriveScore, DrivingStats } from '@/types/driving';
 import type { ChargingSession } from '@/types/charging';
 import type { GuardEvent } from '@/api/hooks/useGuard';
-import { applyDatePrecision, resolveVinDisclosure, scrubSensitiveRecord } from './redaction';
+import { asFiniteNumber } from '@/lib/typeGuards';
+import { applyDatePrecision, resolveVinDisclosure } from './redaction';
 import type {
   BatteryEvidence,
   ChargingHistoryEvidence,
@@ -40,6 +43,27 @@ const METERS_PER_KM = 1000;
 const WH_PER_KWH = 1000;
 
 /**
+ * Explicit disclosure approval for reviewed, shareable service-note text.
+ * Keys bind review to the exact source record, so a refreshed/changed record
+ * cannot inherit an earlier approval. Reviewers must remove hard-excluded
+ * content; consent alone does not make arbitrary text safe.
+ */
+interface ServiceNoteDisclosure {
+  consent: boolean;
+  reviewedNotes: ReadonlyMap<ServiceRecord, { sourceNotes: string; reviewedText: string }>;
+}
+
+function disclosedServiceNote(record: ServiceRecord, disclosure?: ServiceNoteDisclosure): string {
+  if (disclosure?.consent !== true) return '';
+  const review = disclosure.reviewedNotes.get(record);
+  return review && review.sourceNotes === record.notes ? review.reviewedText : '';
+}
+
+// Both field names AND values are constrained: a benign key is not proof
+// that an arbitrary string or nested payload is safe to disclose.
+const WARRANTY_PLANS = new Set(['Basic', 'Battery', 'Drive Unit', 'Extended']);
+
+/**
  * True for DC fast charging (Supercharger/CCS) session types, matching the
  * same `charger_type` string-matching convention already established in
  * `features/battery/lib/batteryCare.ts::isDcSession` (re-implemented here,
@@ -51,9 +75,16 @@ function isDcFastChargeSession(chargerType: string | null): boolean {
   return t.includes('dc') || t.includes('super') || t.includes('fast') || t.includes('ccs');
 }
 
-function avg(values: number[]): number | null {
+/** Without coverage fields, a partial aggregate must remain unknown. */
+function completeTotal(values: unknown[]): number | null {
   if (values.length === 0) return null;
-  return values.reduce((sum, v) => sum + v, 0) / values.length;
+  let total = 0;
+  for (const value of values) {
+    const measured = asFiniteNumber(value);
+    if (measured == null) return null;
+    total += measured;
+  }
+  return asFiniteNumber(total);
 }
 
 function minMaxDates(dates: string[]): { earliest: string | null; latest: string | null } {
@@ -112,11 +143,12 @@ export function normalizeBattery(
   };
 }
 
-/** Maintenance schedule + service history. NOTE: both `/maintenance` and `/maintenance/records` are fleet-wide backend endpoints, not vehicle-scoped — surfaced as a report-level limitation by `reportBuilder.ts`, not silently treated as this-vehicle-only data here. */
+/** Maintenance schedule + service history. Notes require separate consent/review, not just section selection. Both source endpoints are fleet-wide; `reportBuilder.ts` surfaces that limitation. */
 export function normalizeMaintenance(
   items: MaintenanceItem[] | undefined,
   records: ServiceRecord[] | undefined,
   precision: DatePrecision,
+  noteDisclosure?: ServiceNoteDisclosure,
 ): MaintenanceEvidence | null {
   const hasItems = items != null && items.length > 0;
   const hasRecords = records != null && records.length > 0;
@@ -131,25 +163,38 @@ export function normalizeMaintenance(
       item_id: r.itemId,
       date: applyDatePrecision(r.date, precision) ?? r.date,
       odometer_m: r.odometerKm != null ? r.odometerKm * METERS_PER_KM : null,
-      notes: r.notes ?? '',
+      notes: disclosedServiceNote(r, noteDisclosure),
     })),
     categories,
   };
 }
 
-/** Software update history (vehicle-scoped — `/software-updates?vehicle_id=`). */
-export function normalizeSoftwareUpdates(updates: SoftwareUpdate[] | undefined): SoftwareUpdateEvidence | null {
+/** Software installation instants (vehicle-scoped). Omitted precision uses the privacy-preserving day default. */
+export function normalizeSoftwareUpdates(
+  updates: SoftwareUpdate[] | undefined,
+  precision: DatePrecision = 'day',
+): SoftwareUpdateEvidence | null {
   if (!updates || updates.length === 0) return null;
   const installed = updates.filter((u) => u.status === 'installed' && u.installedAt);
   const sortedByInstall = [...installed].sort((a, b) => (b.installedAt ?? '').localeCompare(a.installedAt ?? ''));
   return {
     update_count: updates.length,
-    installed_versions: installed.map((u) => ({ version: u.version, installed_at: u.installedAt })),
+    installed_versions: installed.map((u) => ({
+      version: u.version,
+      installed_at: applyDatePrecision(u.installedAt, precision),
+    })),
     latest_version: sortedByInstall[0]?.version ?? null,
   };
 }
 
-/** Opaque, untyped Tesla warranty payload for the selected vehicle → scrubbed `WarrantyEvidence`. */
+/**
+ * Opaque warranty input -> an explicit bounded-value disclosure contract.
+ * Unknown fields, nested values and free text are excluded, not declared
+ * content-safe by key-name scrubbing. Opaque coverage/business date fields
+ * have no documented temporal contract and remain excluded at any precision;
+ * only the envelope's fetch instant is coarsened. Extend only with verified
+ * safe contracts, not date-looking strings or date-like key names.
+ */
 export function normalizeWarranty(
   envelope: { data: Record<string, unknown> | null; fetched_at: string | null } | null | undefined,
   precision: DatePrecision,
@@ -157,7 +202,9 @@ export function normalizeWarranty(
   if (!envelope || !envelope.data) return null;
   return {
     fetched_at: applyDatePrecision(envelope.fetched_at, precision),
-    data: scrubSensitiveRecord(envelope.data) as Record<string, unknown>,
+    data: typeof envelope.data.plan === 'string' && WARRANTY_PLANS.has(envelope.data.plan)
+      ? { plan: envelope.data.plan }
+      : {},
   };
 }
 
@@ -187,17 +234,17 @@ export function normalizeDrivingHistory(
   };
 }
 
-/** Charging history — summed/averaged directly from `ChargingSession[]`'s already-SI (Wh/W) fields; no unit conversion needed at all. */
+/** Charging history — complete finite measurements only, in already-SI Wh/W. Cost remains an unconverted amount with unknown denomination; missing measurements never become zero. */
 export function normalizeChargingHistory(
   sessions: ChargingSession[] | undefined,
   precision: DatePrecision,
 ): ChargingHistoryEvidence | null {
   if (!sessions || sessions.length === 0) return null;
 
-  const totalEnergyWh = sessions.reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0);
-  const peakPowers = sessions.map((s) => s.peak_power_w).filter((v): v is number => v != null);
+  const totalEnergyWh = completeTotal(sessions.map((s) => s.total_energy_added_wh));
+  const totalPeakPower = completeTotal(sessions.map((s) => s.peak_power_w));
   const fastChargeCount = sessions.filter((s) => isDcFastChargeSession(s.charger_type)).length;
-  const totalCost = sessions.reduce((sum, s) => sum + (s.cost ?? s.cost_decimal ?? 0), 0);
+  const totalCost = completeTotal(sessions.map((s) => s.cost ?? s.cost_decimal));
   const timestamps = sessions.map((s) => s.started_at ?? s.start_ts).filter(Boolean);
   const { earliest, latest } = minMaxDates(timestamps);
 
@@ -205,7 +252,7 @@ export function normalizeChargingHistory(
     observed_session_count: sessions.length,
     total_energy_added_wh: totalEnergyWh,
     fast_charge_session_count: fastChargeCount,
-    avg_peak_power_w: avg(peakPowers),
+    avg_peak_power_w: totalPeakPower == null ? null : totalPeakPower / sessions.length,
     total_cost: totalCost,
     earliest_session_at: applyDatePrecision(earliest, precision),
     latest_session_at: applyDatePrecision(latest, precision),

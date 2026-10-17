@@ -157,7 +157,7 @@ const STATS_KEYS: Array<keyof DriveStats> = [
   'insideTemps', 'outsideTemps', 'driverTemps', 'passengerTemps',
   'climateStatus', 'avgFanSpeed', 'maxFanSpeed',
   'startRange', 'endRange', 'odometerStart', 'odometerEnd',
-  'hasTirePressure', 'efficiencyPctPer100',
+  'hasTirePressure', 'efficiencyPctPer100', 'elevationEvidence', 'energyEvidence',
 ];
 
 beforeEach(() => {
@@ -227,13 +227,13 @@ describe('ChartDataPoint contract (via useDriveDetailData.chartData)', () => {
     expect(imperialPt.tireFl).toBeCloseTo(convertPressureFromSI(100, 'psi'), 6);
   });
 
-  it('coalesces absent required fields to 0 and absent optionals to null', () => {
+  it('preserves all absent signal fields as null', () => {
     const p = render(makeDrive({ telemetry: [makeTele()] })).current.chartData[0];
 
-    expect(p.speed).toBe(0);
-    expect(p.battery).toBe(0);
-    expect(p.elevation).toBe(0);
-    expect(p.power).toBe(0);
+    expect(p.speed).toBeNull();
+    expect(p.battery).toBeNull();
+    expect(p.elevation).toBeNull();
+    expect(p.power).toBeNull();
     const nullable: Array<keyof ChartDataPoint> = [
       'outsideTemp', 'insideTemp', 'driverTemp', 'passengerTemp',
       'idealRange', 'ratedRange', 'estRange', 'odometer', 'soc', 'usableSoc',
@@ -270,10 +270,10 @@ describe('DriveStats contract (via useDriveDetailData.stats)', () => {
   function fourPointDrive(): DriveDetail {
     return makeDrive({
       telemetry: [
-        makeTele({ speed: 0, power: 5, elevation: 100, outsideTemp: 10, insideTemp: 22, idealRange: 500000, soc: 80, tirePressureFl: 250000, isClimateOn: true, fanStatus: 3 }),
-        makeTele({ speed: 10, power: -3, elevation: 150, insideTemp: 24, odometer: 1_000_000, soc: 78, isClimateOn: true }),
-        makeTele({ speed: 20, power: 8, elevation: 120, outsideTemp: 20, soc: 75, isClimateOn: false, fanStatus: 5 }),
-        makeTele({ speed: 5, power: -10, elevation: 130, idealRange: 480000, odometer: 1_005_000, soc: 70, isClimateOn: false }),
+        makeTele({ speed: 0, power: 5000, elevation: 100, outsideTemp: 10, insideTemp: 22, idealRange: 500000, soc: 80, tirePressureFl: 250000, isClimateOn: true, fanStatus: 3 }),
+        makeTele({ speed: 10, power: -3000, elevation: 150, insideTemp: 24, odometer: 1_000_000, soc: 78, isClimateOn: true }),
+        makeTele({ speed: 20, power: 8000, elevation: 120, outsideTemp: 20, soc: 75, isClimateOn: false, fanStatus: 5 }),
+        makeTele({ speed: 5, power: -10000, elevation: 130, idealRange: 480000, odometer: 1_005_000, soc: 70, isClimateOn: false }),
       ],
     });
   }
@@ -303,7 +303,7 @@ describe('DriveStats contract (via useDriveDetailData.stats)', () => {
     expect(s.energyWh).toBe(7200);
     expect(s.regenWh).toBe(900);
     expect(s.consumptionWhKm).toBeCloseTo(200, 6); // 7200 Wh / 36 km
-    expect(s.efficiencyPctPer100).toBeCloseTo(12 / 36 * 10, 6);
+    expect(s.efficiencyPctPer100).toBeCloseTo(12 / 36 * 100, 6);
   });
 
   it('accumulates elevation gain/loss and temperature / climate / fan aggregates', () => {
@@ -409,7 +409,8 @@ describe('RoutePoint + SpeedSegment contract (via trail / speedSegments)', () =>
     expect(segments).toHaveLength(route.length - 1);
     for (const seg of segments) {
       expect(seg.positions).toHaveLength(2);
-      expect(seg.color).toMatch(/^#[0-9a-f]{6}$/i);
+      // Route bands use theme-aware semantic colours (light-dark()/var()), not fixed hex.
+      expect(seg.color).toMatch(/^(#[0-9a-f]{6}|light-dark\(.+\)|var\(--.+\))$/i);
     }
     expect(segments[0].positions).toEqual([
       [47.6, -122.3],

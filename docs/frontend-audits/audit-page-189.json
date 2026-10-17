@@ -1,0 +1,637 @@
+{
+  "item": "audit-page-189",
+  "phase": "Phase0",
+  "mode": "READ-ONLY source audit; only assigned report and heartbeat written",
+  "page": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+  "routes": [
+    "/system-status/incidents/:id"
+  ],
+  "purpose": "Incident post-mortem and operator lifecycle cockpit: inspect source evidence, chronological updates, affected components and optional Helix summary.",
+  "primaryGoal": "Understand a specific incident, append an investigation update or resolve it without losing the canonical timeline.",
+  "identity": {
+    "component": "IncidentTimelinePage",
+    "routeEvidence": {
+      "file": "web\\src\\App.tsx",
+      "line": 692,
+      "detail": "Mounted through SafeRoute; lazy import at line 296."
+    },
+    "scope": "Assigned mounted detail page and its presentation/data dependencies, not all system pages.",
+    "runtime": "unverified"
+  },
+  "dataSources": [
+    {
+      "hook": "useIncident(numericId)",
+      "owner": "web\\src\\api\\hooks\\useIncidents.ts",
+      "line": 141,
+      "endpoint": "GET /api/v1/status/incidents/{id}",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 4535
+      },
+      "behavior": "Positive IDs enable detail key ['status-incidents','detail',id]; null disables the noop key. Query function forwards AbortSignal. Raw snake_case incident timestamps, status, source, affected components and updates remain authoritative. Page reverses a copy of updates, leaving cache ordering unchanged.",
+      "trustOwner": "web\\src\\hooks\\useDataState.ts",
+      "backendLimits": "Repository ordering, transactional close-out rules, authorization and response nullability were not traced beyond route/handler evidence."
+    },
+    {
+      "hook": "usePatchIncident()",
+      "owner": "web\\src\\api\\hooks\\useIncidents.ts",
+      "line": 165,
+      "endpoint": "PATCH /api/v1/status/incidents/{id}",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 4536
+      },
+      "behavior": "Resolve sends {resolved:true}, invalidates ['status-incidents'], shows success/error toast; confirmation stays open on failure."
+    },
+    {
+      "hook": "useAppendIncidentUpdate()",
+      "owner": "web\\src\\api\\hooks\\useIncidents.ts",
+      "line": 174,
+      "endpoint": "POST /api/v1/status/incidents/{id}/updates",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 4537
+      },
+      "behavior": "IncidentUpdateForm trims/validates message, permits optional lifecycle advancement, limits draft to 4000 characters, protects dirty navigation, retains draft on mutation failure and clears it on success."
+    },
+    {
+      "hook": "useAiStream() through AIIncidentTimelineSummarizer",
+      "owner": "web\\src\\hooks\\useAiStream.ts",
+      "endpoint": "POST /api/v1/ai/system/incidents/{incidentID}/summarize",
+      "line": 131,
+      "endpointEvidence": {
+        "file": "web\\src\\components\\ai\\AIIncidentTimelineSummarizer.tsx",
+        "line": 130
+      },
+      "integrationEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 5090,
+        "detail": "Handler supplied to AI route registration; exact nested AI route declaration not inspected."
+      },
+      "behavior": "Opt-in withAiFeature gate; AI-off absent by contract, never substitutes canonical incident content. Positive integer incident ID, empty body, scopeKey bound to ID; hook source shows abort/reset on scope change.",
+      "verification": "Client URL and registration wiring inspected; nested route and live SSE behavior unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "Existing PageContainer props forwarded, full-width min-w-0 content; shell remains navigation/workspace owner."
+    },
+    {
+      "name": "SystemSummaryBrief",
+      "kind": "domain adapter",
+      "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+      "contract": "OperationalBrief/useOperationalMetrics; title, description, scope, numeric StatMetric[] and text metrics, loading/available/retained/statusLabel/freshness."
+    },
+    {
+      "name": "GlassPanel/Button/Badge/ConfirmDialog/Typography",
+      "kind": "primitives",
+      "owner": "web\\src\\components\\ui",
+      "contract": "Category barrel at page; localized actions, role typography, explicit confirmation and semantic badges. Only Button implementation inspected individually; other primitive internals unverified."
+    },
+    {
+      "name": "KVList",
+      "kind": "data display",
+      "owner": "web\\src\\components\\data-display\\KVList.tsx",
+      "contract": "Translated ReactNode labels/values; semantic dl/dt/dd; existing layout inline/stacked/responsive and wrap option."
+    },
+    {
+      "name": "IncidentTimelineList",
+      "kind": "domain",
+      "owner": "web\\src\\features\\system\\components\\incident\\IncidentTimelineList.tsx",
+      "contract": "Newest-first updates, absolute localized dates, status, author, multiline message, empty recovery adjacent to form; uses canonical Timeline with summaryBounds."
+    },
+    {
+      "name": "IncidentUpdateForm",
+      "kind": "domain form",
+      "owner": "web\\src\\features\\system\\components\\incident\\IncidentUpdateForm.tsx",
+      "contract": "Shared Textarea/Select/Button, required validation, pending state, dirty/navigation guards and independent mutation."
+    },
+    {
+      "name": "IncidentSeverityChip",
+      "kind": "domain status",
+      "owner": "web\\src\\features\\system\\components\\incident\\IncidentSeverityChip.tsx",
+      "contract": "Localized severity with decorative icon; unknown severity label retained."
+    },
+    {
+      "name": "AIIncidentTimelineSummarizer",
+      "kind": "AI composite",
+      "owner": "web\\src\\components\\ai\\AIIncidentTimelineSummarizer.tsx",
+      "contract": "withAiFeature and AIFeatureCard own opt-in presentation; caller supplies incidentId."
+    },
+    {
+      "name": "useDataState/StaleRefreshWarning",
+      "kind": "trust",
+      "owner": "web\\src\\api\\dataState.ts",
+      "contract": "fatalError only without retained data; stale/offline warning beside retained content, independent retry."
+    },
+    {
+      "name": "FadeIn",
+      "kind": "motion",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "contract": "Existing useMotionPreference; reduced motion uses initial=false and zero delay; browser behavior unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+      "line": 164,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Status, source, duration and timestamps appear in summary, overview and detail list. These currently serve different reading contexts; duplication is not permission to drop fields.",
+      "fix": "Keep all contexts; derive consistent labels/display values once where useful, without introducing another stats component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Both main bento regions stack at narrow widths and become three-column grids at xl; overview/timeline span two columns. Hero header wraps. Timeline messages use break-words and preserve whitespace.",
+    "viewportVerification": "All contract widths 320/375/390/430/768/1024/1280/1440/1920/2560 unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+        "line": 230,
+        "rule": "MDC-043/MDC-031",
+        "detail": "Details call KVList with default inline layout and wrap=false. Long creator identities, translated labels and formatted dates have no responsive wrapping selected; the existing primitive only adds overflow-wrap/min-w-0 with wrapping or responsive layout.",
+        "fix": "Adopt existing KVList layout='responsive' (or stacked with wrap) preserving all eight rows, then verify 320px and long/RTL labels.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+        "line": 215,
+        "rule": "MDC-043",
+        "detail": "Affected component names are joined into plain body text; description at line 206 preserves whitespace but does not explicitly break long unbroken identifiers. Potential narrow-container overflow requires real-content verification.",
+        "fix": "Use existing wrapping utilities for long operator-authored values; preserve full text and selectable evidence.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourcePositives": [
+      "Localized labeled overview/timeline sections.",
+      "Decorative page icons aria-hidden.",
+      "Shared semantic Timeline ordered list, accessible label and explicit oldest/newest summary bounds.",
+      "Shared KVList definition list.",
+      "Form has accessible name, labeled required message and accessible status select.",
+      "Existing confirmation and reduced-motion primitives reused."
+    ],
+    "verification": "Keyboard order, focus restoration, screen reader, actual target spacing, contrast, forced colors and 200% text unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+        "line": 73,
+        "rule": "MDC-040",
+        "detail": "Back and Resolve (line 197) request Button size='sm'; inspected Button owner defines h-9 (36px), below contract default 44px mobile target. No source evidence establishes the WCAG spacing exception here.",
+        "fix": "Use existing lg sizing or page min-height utilities for mobile; retain compact desktop when appropriate and verify non-overlap/spacing.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+        "line": 110,
+        "rule": "MDC-026/MDC-040",
+        "detail": "Initial-loading branch renders custom skeletons but does not pass loading/busy to PageLayout; PageContainer derives aria-busy and load announcements only from those props. The loaded branch also does not forward busy for refresh.",
+        "fix": "Forward existing busy prop for custom skeleton/refresh ownership without enabling replacement skeletons or suppressing retained content.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Summary loading plus two 240px skeletons and Back; timeline/form/AI absent until source resolves.",
+    "empty": "Not-found page recovery, no-description placeholder, no affected components, timeline empty state, resolved update placeholder.",
+    "fatalError": "useDataState.fatalError feeds QueryError with retry and list navigation.",
+    "retainedRefreshError": "Incident remains readable; StaleRefreshWarning has retry; summary retained flag uses query.isError.",
+    "offline": "Retained paused query warning supported by shared DataState; initial paused query handling and brief labeling have gaps.",
+    "mutations": "Resolve and append have pending affordances, success/error toasts; failed append retains draft; resolved incidents intentionally read-only.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+        "line": 108,
+        "rule": "MDC-026",
+        "detail": "A valid initial query paused offline has no retained data, isPending=true but isLoading=false. It skips skeleton branch and reaches !incident not-found at line 120 despite no authoritative not-found response; initial isRefreshBlocked is available through DataState but ignored.",
+        "fix": "Distinguish invalid ID/authoritative absent response from pending-paused source; render shared unavailable/offline recovery without inventing an incident or asserting deletion/access denial.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+        "line": 87,
+        "rule": "MDC-026/MDC-046",
+        "detail": "Brief retained flag checks only incidentQuery.isError. A paused retained query is stale in DataState but brief says Source available, while adjacent warning says offline/retained.",
+        "fix": "Derive retained from incidentState.status/isRefreshBlocked; preserve recorded incident updated_at separately from last successful query observation.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\components\\incident\\incidentPresentation.ts",
+      "line": 15,
+      "rule": "MDC-010/MDC-012/MDC-025",
+      "detail": "Severity chip uses fixed amber/orange/rose 300-level text and 500-level surfaces instead of theme-aware semantic tokens. No neon/glow is introduced here, but fixed pale text on light surfaces warrants verification.",
+      "fix": "Reuse existing semantic severity/status token contract, retaining all severity icons/labels and user theme preferences; measure composed contrast.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+      "line": 243,
+      "rule": "MDC-010/MDC-016",
+      "detail": "Decorative timeline heading icon has fixed text-cyan-300 without a source semantic need.",
+      "fix": "Use existing muted/secondary icon token rather than an independent palette; leave status accents semantic.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 158,
+      "rule": "MDC-032",
+      "detail": "Vehicle-disabled exact set contains /system-status, not /system-status/incidents/:id; no /system-status disabled prefix. The actual detail URL therefore yields vehicle=true although useIncident is ID-only and consumes no vehicle selection. Range is correctly absent.",
+      "fix": "Integration owner should make incident detail workspace semantics explicit using existing route-scope policy (disable vehicle for this system detail), not add a local vehicle/range picker or unsupported backend filter.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+      "line": 54,
+      "rule": "MDC-046",
+      "detail": "Finite positive route-number validation accepts fractional IDs; status handler parses base-10 int64 (incidents.go:244). AI child already uses Number.isInteger. Positive decimals produce avoidable rejected detail requests and unsafe integers can lose identity precision.",
+      "fix": "Use positive safe integer route validation with existing disabled-query behavior; test decimal, nonnumeric, zero, negative and unsafe values.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\incident\\incidentPresentation.ts",
+      "line": 41,
+      "rule": "MDC-044/MDC-045",
+      "detail": "fmtDuration constructs English s/m/h/d suffixes and unlocalized digits. Absolute/relative dates already use central preference-aware useDateFormat; this duration bypasses that locale path.",
+      "fix": "Reuse existing locale-aware duration formatter at display boundary while preserving current rounding, elapsed interval and raw seconds. Do not introduce a conversion engine or change stored timestamps.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+      "line": 33,
+      "rule": "MDC-002",
+      "detail": "useToast imports a concrete feedback module from a feature despite category barrel already used for other feedback and by IncidentUpdateForm.",
+      "fix": "Use existing @/components/feedback category export; shared implementation files keep concrete imports.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "rationale": "Correct false not-found and inconsistent trust/workspace indication first; then narrow-width evidence readability, mobile targets and theme/locale consistency.",
+    "implementationStatus": "Not implemented; audit-only."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Incident detail workspace scope integration",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Existing getWorkspaceRouteScope(actual pathname): {range:false,vehicle:false} for incident detail; preserve all other route ownership and header/mobile selector behavior.",
+      "usedBy": [
+        "/system-status/incidents/:id"
+      ],
+      "dependsOn": [
+        "Existing WorkspaceRouteScope policy and application shell consumers",
+        "Focused actual-path scope regression"
+      ],
+      "owner": "integration",
+      "detail": "No new shared component/API required; resolve exact-path versus descendant system-route ownership centrally."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\system\\components\\incident\\incidentPresentation.ts",
+      "line": 15,
+      "rule": "MDC-025",
+      "detail": "Local severity palette parallels canonical semantic tokens; keep domain severity mapping but avoid establishing a second global status engine.",
+      "fix": "Reuse/compose current tokens, not a new SeverityBadge library.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+      "line": 82,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Current summary already adapts OperationalBrief/useOperationalMetrics; no evidence justifies replacing it with another KPI grid or adding a new timeline/layout/AI card.",
+      "fix": "Reuse current owners and retain all specialist metric metadata.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "04978E26919E7D5EF8715B970113DBA69AF6A970677828D18E8D8C8941E4D46D",
+    "currentLineCount": 279,
+    "sourceInventory": [
+      {
+        "path": "docs\\frontend-design-contract.md",
+        "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+        "lineCount": 394,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "docs\\frontend-worker-conventions.md",
+        "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+        "lineCount": 80,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "docs\\frontend-mission.md",
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "lineCount": 1593,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+        "lineCount": 141,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+        "sha256": "04978E26919E7D5EF8715B970113DBA69AF6A970677828D18E8D8C8941E4D46D",
+        "lineCount": 279,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\pages\\IncidentTimelinePage.test.tsx",
+        "sha256": "3F828C2CBC2B4749C125F72E758839B5C1772E0F2B33805F073476879686F891",
+        "lineCount": 537,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\incident\\index.ts",
+        "sha256": "06DACDFBA4EE025149743E47C62AF18C859BB10DBFD6E9DF7C9EA05B3216BF94",
+        "lineCount": 11,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\incident\\IncidentTimelineList.tsx",
+        "sha256": "CE47CA13C9F8CC804B71D3FCE45E6DAE754BAE815DAF131B77D5821EAF7C707E",
+        "lineCount": 62,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\incident\\IncidentUpdateForm.tsx",
+        "sha256": "B445B35A1F7FEDE6689CD920E1A35DEA1AF7734CE9108D3A48B0786E2129D94C",
+        "lineCount": 100,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\incident\\IncidentSeverityChip.tsx",
+        "sha256": "FB121017AE963113DDC1E1B32766CA553873959C9471FB7D2DE3F5DC3542BF6A",
+        "lineCount": 52,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\incident\\incidentPresentation.ts",
+        "sha256": "E62BBA219F0046F848E3E4B0CF4E905B7DB4A9EDE8480446390C30C6AD60C610",
+        "lineCount": 68,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+        "sha256": "F57825BEF8B213E4987373B6D1EA03A089906170E0098D4D6686DED3BFE99326",
+        "lineCount": 63,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useIncidents.ts",
+        "sha256": "685F9C110F5320063C1F322E29190631944AECE52A8CD24CB8611927FFC77A54",
+        "lineCount": 189,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "lineCount": 65,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\hooks\\useDateFormat.ts",
+        "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "lineCount": 148,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\hooks\\useAiStream.ts",
+        "sha256": "3CFA502372BB3C43FE5049D8A04E3EBEB9727D58B25D2D9704E9359E2B419C0E",
+        "lineCount": 598,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\api\\dataState.ts",
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "lineCount": 434,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sha256": "8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6",
+        "lineCount": 17,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\layout\\PageContainer.tsx",
+        "sha256": "0E2E1842FCAC1FE5BD7C4C37299A76F9515D45EAFE43AD122A8E09A0BB817D55",
+        "lineCount": 259,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\data-display\\Timeline.tsx",
+        "sha256": "477AEDCA8E0E76AC36493E260024265E40DCB99415390CA4AFD82230204FBF57",
+        "lineCount": 142,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\data-display\\KVList.tsx",
+        "sha256": "E25F2CADCAEA2B802167668CB8D635C36FF89F8365E77BFF00C79FED783E442B",
+        "lineCount": 124,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\ui\\Button.tsx",
+        "sha256": "741FFFCC9093169BE795CB28F1F0BB34B8F5F1FD9D5CFFA4197E73A7EAAD7247",
+        "lineCount": 91,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "sha256": "6103CED7AF551C52DD32499D8C62AB3AD479A8ADF230D3C8059FA8B5199E87D0",
+        "lineCount": 115,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\motion\\FadeIn.tsx",
+        "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "lineCount": 39,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\ai\\AIIncidentTimelineSummarizer.tsx",
+        "sha256": "C07F93FF1A319308C990F8879F3F290DF372C381F9BEFB4CBF0C1E005F25BAAC",
+        "lineCount": 167,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+        "sha256": "0DA96A5CE3DF7CB980AE9CCCF8D028062AB5C66A5C846D718BA39C2E37AD7111",
+        "lineCount": 353,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\components\\ai\\withAiFeature.tsx",
+        "sha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+        "lineCount": 60,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "lineCount": 168,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "web\\src\\App.tsx",
+        "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+        "lineCount": 918,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "internal\\api\\router.go",
+        "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+        "lineCount": 5366,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      },
+      {
+        "path": "internal\\api\\status\\incidents.go",
+        "sha256": "EB88D4C928614B7ACC9070010C95C583E8A4D4D7C7FFE34DE0D9A66400909975",
+        "lineCount": 261,
+        "coverage": "Actual inspected file; some reads limited to cited ranges/search excerpts, not full semantic review"
+      }
+    ],
+    "sectionNames": [
+      "Incident metrics",
+      "Incident overview",
+      "Details",
+      "Opt-in Helix timeline summary",
+      "Timeline",
+      "Post an update / resolved placeholder"
+    ],
+    "counts": {
+      "loadedContentSections": 6,
+      "topLevelBands": 4,
+      "namedBentoRegions": 2,
+      "rootGlassPanelOpenings": 5,
+      "loadedBranchGlassPanels": 4,
+      "fallbackGlassPanels": 1,
+      "rootChartContainerOpenings": 0,
+      "detailRows": 8,
+      "summaryNumericMetrics": 3,
+      "summaryTextMetrics": 3,
+      "confirmDialogs": 1
+    },
+    "actions": [
+      "Back to system status",
+      "Fatal-source retry",
+      "Not-found return link",
+      "Retained-source refresh",
+      "Open resolve confirmation",
+      "Cancel resolution",
+      "Confirm resolution",
+      "Enter/update message",
+      "Choose optional next status",
+      "Append update",
+      "Dirty navigation warning",
+      "Opt-in summarize incident"
+    ],
+    "dataBehavior": [
+      "Do not delete incidents or truncate timeline messages.",
+      "Preserve all source status/severity/author/timestamps/components and newest-first display.",
+      "Retain source-derived metrics with unknown distinct from zero and raw duration seconds.",
+      "Preserve typed request client, AbortSignal, detail/noop query keys, invalidation and inherited policies.",
+      "Preserve resolved read-only behavior, confirmation and retained-data trust/recovery.",
+      "Keep AI feature-off absent, deterministic baseline always available, incident scope binding and privacy boundaries.",
+      "No new vehicle/date filtering: this is incident-owned scope.",
+      "Keep existing theme/locale/timezone/motion preferences; no fixtures, fake data or legacy unit conversion."
+    ],
+    "baselineComparison": "Current source-only baseline recorded; no modernization delta or historical line-count parity claimed.",
+    "writeOwnership": [
+      "docs\\frontend-audits\\audit-page-189.json",
+      ".agent-status\\audit-page-189.txt"
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "NOT RUN; inspected existing page test cases are context, not current acceptance.",
+    "fullGates": "NOT RUN by assignment: TypeScript, lint, build and full suites.",
+    "auditScript": "Read .github\\skills\\audit-violations\\audit.sh but did not execute: step 7 unconditionally runs project TypeScript, prohibited during this Phase0 item. Bounded source scans substituted, not runtime validation.",
+    "boundedChecks": {
+      "scope": "Root plus IncidentTimelineList, IncidentUpdateForm, IncidentSeverityChip and incidentPresentation production files.",
+      "staticInlineStyles": 0,
+      "rawFormControls": 0,
+      "directRechartsLeafletMotionImports": 0,
+      "oldRelativeApiImports": 0,
+      "note": "Initial broad raw-element regex counted five JSDoc/comment mentions; anchored code search found no native controls. useIncidents URLs source-inspected: no /api/v1 double prefix or camelCase query parameters."
+    },
+    "backend": "Canonical read/patch/append route registrations confirmed. Handler integer parsing excerpt inspected; repository, authorization, AI nested route and actual network behavior not certified.",
+    "inventory": "Hashes identify read inputs, not atomic repository snapshot or mounted dependency coverage. Shared primitives not individually read are named as imports only. No source, shared, queue or Git edits/operations.",
+    "commands": [
+      {
+        "command": "$stamp = [DateTime]::UtcNow.ToString('o'); \"$stamp | inspecting incident dependencies, trust, workspace and shared contracts | .agent-status\\audit-page-189.txt\" | Set-Content -Encoding utf8 .agent-status\\audit-page-189.txt; $p='web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx'; $s=Get-Content $p; \"Root SHA256: $((Get-FileHash $p -Algorithm SHA256).Hash)\"; \"Root lines: $($s.Count)\"; \"GlassPanel openings: $(($s | Select-String '<GlassPanel\\b').Count)\"; \"ChartContainer openings: $(($s | Select-String '<ChartContainer\\b').Count)\"; $paths=@($p,'web\\src\\features\\system\\components\\incident\\IncidentTimelineList.tsx','web\\src\\features\\system\\components\\incident\\IncidentUpdateForm.tsx','web\\src\\features\\system\\components\\incident\\IncidentSeverityChip.tsx','web\\src\\features\\system\\components\\incident\\incidentPresentation.ts'); foreach($pattern in @('style=\\{\\{','<(button|input|textarea|select|table)\\b','from [''\\\"](recharts|react-leaflet|framer-motion)[''\\\"]','from [''\\\"]\\.\\./(\\.\\./)?api[''\\\"]')) { $n=0; foreach($f in $paths){ $n+=@(Select-String -Path $f -Pattern $pattern).Count }; \"$pattern : $n matches\" }",
+        "exitCode": 0,
+        "output": "Root SHA256: 04978E26919E7D5EF8715B970113DBA69AF6A970677828D18E8D8C8941E4D46D\nRoot lines: 279\nGlassPanel openings: 5\nChartContainer openings: 0\nstyle=\\{\\{ : 0 matches\n<(button|input|textarea|select|table)\\b : 5 matches\nfrom ['\"](recharts|react-leaflet|framer-motion)['\"] : 0 matches\nfrom ['\"]\\.\\./(\\.\\./)?api['\"] : 0 matches"
+      },
+      {
+        "command": "functions.rg {\"pattern\":\"^[^/]*<(button|input|textarea|select|table)\\\\b\",\"paths\":[\"web\\\\src\\\\features\\\\system\\\\pages\\\\IncidentTimelinePage.tsx\",\"web\\\\src\\\\features\\\\system\\\\components\\\\incident\\\\IncidentTimelineList.tsx\",\"web\\\\src\\\\features\\\\system\\\\components\\\\incident\\\\IncidentUpdateForm.tsx\",\"web\\\\src\\\\features\\\\system\\\\components\\\\incident\\\\IncidentSeverityChip.tsx\"],\"glob\":\"*.tsx\",\"output_mode\":\"content\",\"-n\":true}",
+        "exitCode": "tool returned no matches",
+        "output": "No matches found."
+      }
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\IncidentTimelinePage.tsx",
+    "web\\src\\features\\system\\pages\\IncidentTimelinePage.test.tsx",
+    "web\\src\\features\\system\\components\\incident\\index.ts",
+    "web\\src\\features\\system\\components\\incident\\IncidentTimelineList.tsx",
+    "web\\src\\features\\system\\components\\incident\\IncidentUpdateForm.tsx",
+    "web\\src\\features\\system\\components\\incident\\IncidentSeverityChip.tsx",
+    "web\\src\\features\\system\\components\\incident\\incidentPresentation.ts",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useIncidents.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\Timeline.tsx",
+    "web\\src\\components\\data-display\\KVList.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ai\\AIIncidentTimelineSummarizer.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\status\\incidents.go"
+  ]
+}

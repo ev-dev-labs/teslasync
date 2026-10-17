@@ -125,6 +125,9 @@ export interface Drive {
   duration_s: number
   /** Distance travelled in meters (SI canonical). */
   distance_m: number
+  /** Recorded drive endpoint odometers in meters (SI). */
+  start_odometer_m?: number | null
+  end_odometer_m?: number | null
   start_address: string | null
   end_address: string | null
   start_lat: number | null
@@ -620,6 +623,7 @@ export interface VehicleState {
   longitude: number
   heading?: number | null
   speed: number
+  /** Signed pack power in watts (SI). */
   power: number
   battery_level: number
   rated_range: number
@@ -635,6 +639,13 @@ export interface VehicleState {
   is_locked: boolean
   sentry_mode: boolean
   software_version: string
+}
+
+/** Client readings preserve absent fields without inventing measurements or flags. */
+export type VehicleStateReadings = {
+  [Field in keyof VehicleState]: Field extends 'vehicle_id'
+    ? VehicleState[Field]
+    : VehicleState[Field] | null
 }
 
 export interface AuthStatus {
@@ -900,6 +911,16 @@ export interface AlertTestTarget {
 }
 
 export interface AlertTestRequest {
+  name?: string
+  signal_name?: string
+  op?: AlertRuleOp
+  value_num?: number | null
+  value_text?: string | null
+  value_bool?: boolean | null
+  value_min?: number | null
+  value_max?: number | null
+  vehicle_name?: string
+  vehicle_timezone?: string
   message?: string
   target?: AlertTestTarget | null
   /**
@@ -934,6 +955,7 @@ export interface AlertMessagePreset {
   name: string
   description?: string
   template: string
+  example?: string
   kind?: '' | 'signal' | 'computed_metric'
   tags?: string[]
 }
@@ -944,6 +966,7 @@ export interface AlertMessagePreset {
  * the same inputs the production dispatch path uses.
  */
 export interface AlertMessagePreviewRequest {
+  vehicle_timezone?: string
   name?: string
   kind?: AlertRuleKind
   component_name?: string | null
@@ -978,6 +1001,13 @@ export interface StatsSummary {
 }
 
 export interface FleetAnalytics {
+  generated_at?: string
+  source?: 'derived_fleet_analytics'
+  /** HTTP success does not guarantee that every contributing query completed. */
+  partial_result?: {
+    is_partial: boolean
+    reasons: string[] | null
+  } | null
   period_days: number
   total_vehicles: number
   /** Distance in kilometers (km, derived SI). */
@@ -1003,7 +1033,8 @@ export interface FleetAnalytics {
     duration_stats: StatsSummary
     distance_stats: StatsSummary
     efficiency_stats: StatsSummary
-    daily_trend: { date: string; drives: number; distance: number; efficiency?: number }[]
+    /** Efficiency (Wh/km) is absent/null without matched driving distance and energy evidence; never derive it from charging totals. */
+    daily_trend: { date: string; drives: number; distance: number; efficiency?: number | null }[]
     temp_vs_efficiency: { temp: number; efficiency: number; distance: number }[]
     duration_distribution?: { range: string; count: number }[]
     temperature: { inside: StatsSummary; outside: StatsSummary }
@@ -1022,7 +1053,23 @@ export interface FleetAnalytics {
     efficiency_stats: StatsSummary
   }
 
-  battery_trend: { date: string; health_score: number; capacity_wh: number; degradation_pct: number; range_km: number; cycle_count: number }[]
+  /** Missing health/cycle evidence is null, never inferred from state of charge. */
+  battery_trend: {
+    date: string
+    vehicle_id?: number
+    health_score: number | null
+    capacity_wh: number | null
+    degradation_pct: number | null
+    range_km: number | null
+    cycle_count: number | null
+    soc_pct?: number | null
+    source?: 'state' | 'daily_soc'
+    /** State lookup time, not the signal emission time; freshness is unknown. */
+    as_of?: string
+    /** Daily aggregation bucket bounds, not continuous recording coverage. */
+    coverage_start?: string
+    coverage_end?: string
+  }[]
 }
 
 export interface CommandResult {
@@ -1240,7 +1287,13 @@ export type VehicleStatus = _VehicleState
 export const VEHICLE_STATUSES = VEHICLE_STATES as unknown as VehicleStatus[]
 
 /** Derives a display-friendly status from live vehicle state. */
-export function deriveVehicleStatus(state?: VehicleState | null): VehicleStatus {
+export type VehicleStatusInput = {
+  state?: string | null
+  is_charging?: boolean | null
+  speed?: number | null
+}
+
+export function deriveVehicleStatus(state?: VehicleStatusInput | null): VehicleStatus {
   if (!state) return 'offline'
   if (state.is_charging) return 'charging'
   if (state.speed && state.speed > 0) return 'driving'
@@ -1995,6 +2048,8 @@ export interface GasPriceStatus {
   last_poll_time: string
   current_price: number
   current_price_kwh_eq: number
+  /** Denomination recorded atomically with the quote; null before the first poll. */
+  current_price_unit: 'gallon' | 'liter' | null
 }
 
 export interface GasPriceHistory {
@@ -2194,20 +2249,22 @@ export interface ChargingTelemetry {
 // === Media ===
 
 export interface MediaSnapshot {
-  id: number
-  vehicle_id: number
-  now_playing_title?: string
-  now_playing_artist?: string
-  now_playing_album?: string
-  now_playing_station?: string
-  now_playing_duration?: number
-  now_playing_elapsed?: number
-  playback_status?: string
-  playback_source?: string
-  audio_volume?: number
-  audio_volume_max?: number
-  audio_volume_increment?: number
-  created_at: string
+  // Latest has no row metadata; history adds id, ts and created_at.
+  id?: number
+  vehicle_id?: number
+  ts?: string
+  created_at?: string
+  now_playing_title?: string | null
+  now_playing_artist?: string | null
+  now_playing_album?: string | null
+  now_playing_station?: string | null
+  now_playing_duration?: number | null
+  now_playing_elapsed?: number | null
+  playback_status?: string | null
+  playback_source?: string | null
+  audio_volume?: number | null
+  audio_volume_max?: number | null
+  audio_volume_increment?: number | null
 }
 
 // === Vehicle Config ===
@@ -2805,7 +2862,8 @@ export interface VehicleInvitation {
 
 export interface YearReviewDriveHighlight {
   drive_id: number
-  date: string
+  /** UTC calendar day (YYYY-MM-DD), not an instant to convert to a display timezone. */
+  date?: string | null
   /** Distance in kilometers (km, derived SI). */
   distance_km: number
   duration_min: number
@@ -2870,8 +2928,10 @@ export interface YearReview {
   monthly_stats: YearReviewMonthStat[]
 
   // Patterns
-  most_active_day_of_week: string
-  most_active_hour: number
+  /** UTC calendar weekday; preserve unrecognized source labels verbatim. */
+  most_active_day_of_week: string | null
+  /** UTC hour bucket, not a timestamp to convert to a display timezone. */
+  most_active_hour: number | null
   avg_drives_per_week: number
   /** Average distance per drive in kilometers (km, derived SI). */
   avg_distance_per_drive_km: number
@@ -2920,6 +2980,13 @@ export interface SearchHit {
 export interface SearchResponse {
   hits: SearchHit[]
   query: string
+  /** Producer-reported coverage; absent metadata means coverage is unknown. */
+  completeness?: {
+    failed_types: SearchHitType[]
+    /** These sources reached their cap; additional matches may exist. */
+    limit_reached_types: SearchHitType[]
+    total_limit_reached: boolean
+  }
 }
 
 export type {
@@ -3209,18 +3276,19 @@ export interface FeedbackEntry {
   category: FeedbackCategory
   title: string
   body: string
-  page_route: string
-  user_agent: string
-  app_version: string
-  user_email: string
-  recent_errors: unknown
-  console_tail: string
+  // The backend omits empty metadata and unset triage fields.
+  page_route?: string
+  user_agent?: string
+  app_version?: string
+  user_email?: string
+  recent_errors?: unknown
+  console_tail?: string
   status: FeedbackStatus
-  github_issue_url: string
-  submitter_subject: string
-  submitter_ip: string
-  triaged_at: string | null
-  triaged_by: string
+  github_issue_url?: string
+  submitter_subject?: string
+  submitter_ip?: string
+  triaged_at?: string | null
+  triaged_by?: string
 }
 
 export interface FeedbackSubmitInput {

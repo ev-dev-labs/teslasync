@@ -9,11 +9,13 @@ import {
   PanelTitle,
   Text,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { rangeStatusLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AccountingRow {
   key: string;
@@ -26,6 +28,7 @@ export function RangeSourceCoverage({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const stateAccounting = analysis.stateAccounting;
   const eventAccounting = analysis.events.accounting;
@@ -131,7 +134,19 @@ export function RangeSourceCoverage({
         ),
       },
     ],
-    [t],
+    [t, fmtInt],
+  );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<AccountingRow>>(
+    () => ({
+      roles: { source: 'title', category: 'meta', count: 'primary' },
+      displayValue: (row, key) => {
+        if (key === 'source') return row.source;
+        if (key === 'category') return row.category;
+        if (key === 'count') return fmtInt(row.count);
+        return undefined;
+      },
+    }),
+    [fmtInt],
   );
   const requestedWindow =
     analysis.range.requestedStart && analysis.range.requestedEnd
@@ -150,7 +165,7 @@ export function RangeSourceCoverage({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <CalendarRange
-            className="h-4 w-4 text-blue-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t(
@@ -164,13 +179,16 @@ export function RangeSourceCoverage({
             'Requested UTC dates, backend coverage, exclusions, duplicate policy, display caps, and the frozen analysis clock are disclosed together.',
           )}
         </Text>
-        <SleepEfficiencySectionBody state={state} skeletonHeight={300}>
+        <SleepEfficiencySectionBody
+          state={{ ...state, isResolved: state.isResolved && analysis.source.hasResponse }}
+          skeletonHeight={300}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               icon={<CalendarRange className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.requested', 'Requested UTC dates')}
               value={requestedWindow}
-              color="cyan"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.rangeStatus',
                 'Range status: {{status}}',
@@ -188,7 +206,7 @@ export function RangeSourceCoverage({
                   ? fmtInt(analysis.range.inclusiveDays)
                   : '—'
               }
-              color="blue"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.utcSafe',
                 'Computed from UTC calendar dates',
@@ -205,7 +223,7 @@ export function RangeSourceCoverage({
                   ? fmtInt(analysis.source.backendPeriodDays)
                   : '—'
               }
-              color="purple"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.backendEcho',
                 'Response coverage field',
@@ -219,7 +237,7 @@ export function RangeSourceCoverage({
                   ? fmtInt(analysis.source.vehicleId)
                   : '—'
               }
-              color="green"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.responseIdentity',
                 'Sanitized response identity',
@@ -229,7 +247,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.stateCap', 'State directory cap')}
               value={fmtInt(stateAccounting.directoryCap)}
-              color="amber"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.omitted',
                 '{{count}} valid rows omitted from display',
@@ -240,7 +258,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.eventCap', 'Event directory cap')}
               value={fmtInt(eventAccounting.directoryCap)}
-              color="amber"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.omitted',
                 '{{count}} valid rows omitted from display',
@@ -251,7 +269,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.clock', 'Frozen analysis clock')}
               value={analysis.source.frozenNowIso ?? '—'}
-              color="red"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.clockPurpose',
                 'Used for future and recency classification',
@@ -261,7 +279,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.summaryScope', 'Summary scope')}
               value={t('sleep.coverage.allValidRows', 'All valid rows')}
-              color="cyan"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.capDoesNotAffect',
                 'Directory caps do not affect summaries',
@@ -274,7 +292,8 @@ export function RangeSourceCoverage({
               columns={columns}
               data={rows}
               keyExtractor={(row) => row.key}
-              mobileColumns={['source', 'category']}
+              rowLabel={(row) => `${row.source}: ${row.category}`}
+              mobilePresentation={mobilePresentation}
               density="compact"
               emptyMessage={t(
                 'sleep.coverage.empty',

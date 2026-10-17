@@ -4,7 +4,7 @@ import { render, screen, act } from '@testing-library/react'
 import '@/i18n'
 
 // Drive the reduced-motion preference deterministically. Mirrors the
-// pattern used in RouteTransition.test.tsx and DataFreshness.test.tsx.
+// pattern used in RouteTransition.test.tsx and FreshnessDot.test.tsx.
 let reducedMotionMock = (): boolean => false
 vi.mock('framer-motion', () => ({
   useReducedMotion: () => reducedMotionMock(),

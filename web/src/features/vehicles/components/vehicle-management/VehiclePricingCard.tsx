@@ -22,6 +22,7 @@ export function VehiclePricingCard() {
         prerequisite="partner"
         kind="pricing"
         data={pricing.data?.data}
+        loading={pricing.isPending}
         error={pricing.error}
         refreshPending={pricing.isPending}
         operationSucceeded={pricing.isSuccess}

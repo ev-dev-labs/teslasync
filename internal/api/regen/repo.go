@@ -2,14 +2,13 @@ package regen
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
-	"github.com/rs/zerolog/log"
 )
 
 // driveRegenRow is a single scanned drives-table row feeding the
@@ -64,15 +63,19 @@ type regenRepository interface {
 // avg_power_w, start_soc_pct, end_soc_pct, started_at. The 7th column is
 // NULL::float8 (min/regen power has no source column) so min_power_w and
 // regen_score are null/0 in production; the placeholder keeps the scan
-// order stable. efficiency is SOC-consumed-per-mile, guarded against a
-// zero-distance divide.
+// order stable. Detail and monthly populations include ongoing drives and
+// exclude drives of two miles or less. Efficiency is signed SOC percentage
+// points consumed per mile, multiplied by 100; both SOC readings must be
+// measured and in [0, 100]. Missing/invalid inputs are unknown, not zero.
 const driveRegenSQL = `
 		SELECT id, started_at, distance_m, duration_s, avg_speed_mps,
 			avg_power_w, NULL::float8,
 			start_soc_pct::float8, end_soc_pct::float8,
-			CASE WHEN distance_m > 0
+			CASE WHEN distance_m > 0 AND distance_m < 'Infinity'::float8
+			          AND start_soc_pct BETWEEN 0 AND 100
+			          AND end_soc_pct BETWEEN 0 AND 100
 			     THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
-			     ELSE 0 END as efficiency
+			     END as efficiency
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_m > $3
 			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
@@ -80,31 +83,53 @@ const driveRegenSQL = `
 
 // monthlyRegenSQL rolls the same drive set into month buckets. avg_power_w
 // is averaged in SI watts; the handler keeps it in watts (see
-// monthlyRegenRow) rather than converting to kW.
+// monthlyRegenRow) rather than converting to kW. Buckets are UTC calendar
+// months, independent of the database session timezone; the instant filter
+// still selects the exact requested population before bucketing. DriveCount
+// counts all detail-eligible drives; each AVG denominator counts only its
+// own valid measurements (not DriveCount). These are not recovered-energy
+// totals: average power is signed drive power, not minimum braking power.
 const monthlyRegenSQL = `
-		SELECT DATE_TRUNC('month', started_at) as month,
+		SELECT DATE_TRUNC('month', started_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' as month,
 			COUNT(*) as drive_count,
-			AVG(ABS(COALESCE(avg_power_w, 0))) as avg_regen_power_w,
-			AVG(avg_speed_mps) as avg_speed_mps,
-			AVG(CASE WHEN distance_m > 0
+			AVG(avg_power_w) FILTER (WHERE avg_power_w > '-Infinity'::float8
+			                             AND avg_power_w < 'Infinity'::float8) as avg_regen_power_w,
+			AVG(avg_speed_mps) FILTER (WHERE avg_speed_mps >= 0
+			                               AND avg_speed_mps < 'Infinity'::float8) as avg_speed_mps,
+			AVG(CASE WHEN distance_m > 0 AND distance_m < 'Infinity'::float8
+			              AND start_soc_pct BETWEEN 0 AND 100
+			              AND end_soc_pct BETWEEN 0 AND 100
 			         THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $2) * 100
-			         ELSE 0 END) as avg_efficiency
+			         END) as avg_efficiency
 		FROM drives
 		WHERE vehicle_id = $1 AND distance_m > $3
 			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
 		GROUP BY month ORDER BY month`
 
 // lifetimeEnergySQL sums regen/drive energy (SI watt-hours) from the
-// SI-canonical cagg_fleet_stats. The optional [start,end] window is
-// applied against the daily `day` column so the lifetime totals stay in
-// sync with the per-drive and monthly views.
+// drives table. Daily rollups cannot honor partial-day instant bounds.
+// Select whole completed drives by their start instant, preserving the
+// rollup's population (including short drives) without rounding the bounds
+// or waiting for a materialized-view refresh. Numerator and denominator must
+// both cover every selected completed drive, unlike the >two-mile detail
+// population above. Finite signed/fractional energy is retained unchanged.
+// Missing or invalid energy in either operand makes the totals unknown.
+// The parser supplies inclusive
+// SQL bounds, including its exclusive-end adjustment for RFC3339 inputs.
 const lifetimeEnergySQL = `
 		SELECT
-			COALESCE(SUM(total_regen_wh), 0),
-			COALESCE(SUM(total_energy_wh), 0)
-		FROM cagg_fleet_stats
-		WHERE vehicle_id = $1
-			AND ($2::date IS NULL OR day BETWEEN $2::date AND $3::date)`
+			SUM(regen_energy_wh) FILTER (WHERE regen_energy_wh > '-Infinity'::float8
+			                                 AND regen_energy_wh < 'Infinity'::float8),
+			SUM(energy_used_wh) FILTER (WHERE energy_used_wh > '-Infinity'::float8
+			                                AND energy_used_wh < 'Infinity'::float8),
+			COUNT(*),
+			COUNT(*) FILTER (WHERE regen_energy_wh > '-Infinity'::float8
+			                       AND regen_energy_wh < 'Infinity'::float8
+			                       AND energy_used_wh > '-Infinity'::float8
+			                       AND energy_used_wh < 'Infinity'::float8)
+		FROM drives
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL
+			AND ($2::timestamptz IS NULL OR started_at BETWEEN $2 AND $3)`
 
 // vehicleModelSQL resolves the VIN + model used to estimate battery
 // capacity.
@@ -122,10 +147,8 @@ func newRegenRepo(db *database.DB) *regenRepo {
 }
 
 // DriveRegens returns the per-drive regen rows for a vehicle, optionally
-// scoped to [start, end] when hasRange is true. Individual row-scan
-// failures are logged and skipped so one malformed row cannot blank the
-// whole response; a query- or iteration-level failure is wrapped and
-// returned for the handler to surface as a 500.
+// scoped to [start, end] when hasRange is true. Scan and coverage failures
+// are returned, not silently dropped from the disclosed population.
 func (r *regenRepo) DriveRegens(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) ([]driveRegenRow, error) {
 	rows, err := r.db.Pool.Query(ctx, driveRegenSQL,
 		vehicleID, metersPerMile, twoMilesMeters,
@@ -138,11 +161,15 @@ func (r *regenRepo) DriveRegens(ctx context.Context, vehicleID int64, hasRange b
 	out := make([]driveRegenRow, 0)
 	for rows.Next() {
 		var d driveRegenRow
+		var efficiency *float64
 		if err := rows.Scan(&d.ID, &d.StartDate, &d.DistanceM, &d.DurationS, &d.SpeedAvgMps,
-			&d.PowerAvgW, &d.PowerMinW, &d.StartSocPct, &d.EndSocPct, &d.Efficiency); err != nil {
-			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("regen: scan drive row")
-			continue
+			&d.PowerAvgW, &d.PowerMinW, &d.StartSocPct, &d.EndSocPct, &efficiency); err != nil {
+			return nil, fmt.Errorf("scan drive regen row: %w", err)
 		}
+		if !finiteMeasurement(efficiency) {
+			return nil, fmt.Errorf("drive %d efficiency coverage is missing or invalid", d.ID)
+		}
+		d.Efficiency = *efficiency
 		out = append(out, d)
 	}
 	if err := rows.Err(); err != nil {
@@ -167,8 +194,12 @@ func (r *regenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange
 	for rows.Next() {
 		var m monthlyRegenRow
 		if err := rows.Scan(&m.Month, &m.DriveCount, &m.AvgPowerW, &m.AvgSpeedMps, &m.AvgEff); err != nil {
-			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("regen: scan monthly row")
-			continue
+			return nil, fmt.Errorf("scan monthly regen row: %w", err)
+		}
+		// The existing response has non-nullable monthly metrics. Do not let
+		// its formatter turn an unknown AVG into a measured zero.
+		if !finiteMeasurement(m.AvgPowerW) || !finiteMeasurement(m.AvgSpeedMps) || !finiteMeasurement(m.AvgEff) {
+			return nil, fmt.Errorf("monthly regen measurement coverage missing or invalid for %s", m.Month.Format("2006-01"))
 		}
 		out = append(out, m)
 	}
@@ -179,19 +210,33 @@ func (r *regenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange
 }
 
 // LifetimeEnergy sums lifetime regen/drive energy (watt-hours) from
-// cagg_fleet_stats, optionally scoped to [start, end]. A missing row
-// (pgx.ErrNoRows) is treated as zero totals, not an error, because the
-// aggregate is meaningful for a vehicle with no recorded days.
+// completed drives, optionally scoped to [start, end] by started_at. Unknown
+// coverage is returned as an error so the existing handler exposes null totals,
+// rather than fabricating measured zero or a ratio of mismatched populations.
 func (r *regenRepo) LifetimeEnergy(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) (float64, float64, error) {
-	var regenWh, driveWh float64
-	err := r.db.Pool.QueryRow(ctx, lifetimeEnergySQL,
+	return scanLifetimeEnergy(r.db.Pool.QueryRow(ctx, lifetimeEnergySQL,
 		vehicleID,
 		apiparams.NullableTime(hasRange, start), apiparams.NullableTime(hasRange, end),
-	).Scan(&regenWh, &driveWh)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	))
+}
+
+func scanLifetimeEnergy(row pgx.Row) (float64, float64, error) {
+	var regenWh, driveWh *float64
+	var completed, eligible int64
+	if err := row.Scan(&regenWh, &driveWh, &completed, &eligible); err != nil {
 		return 0, 0, fmt.Errorf("query lifetime regen energy: %w", err)
 	}
-	return regenWh, driveWh, nil
+	if completed == 0 || eligible != completed || regenWh == nil || driveWh == nil {
+		return 0, 0, fmt.Errorf("regen energy coverage unknown: %d of %d completed drives have both measurements", eligible, completed)
+	}
+	if !finiteMeasurement(regenWh) || !finiteMeasurement(driveWh) {
+		return 0, 0, fmt.Errorf("regen energy totals are not finite")
+	}
+	return *regenWh, *driveWh, nil
+}
+
+func finiteMeasurement(value *float64) bool {
+	return value != nil && !math.IsNaN(*value) && !math.IsInf(*value, 0)
 }
 
 // VehicleModel returns the VIN and model string for a vehicle. A NULL

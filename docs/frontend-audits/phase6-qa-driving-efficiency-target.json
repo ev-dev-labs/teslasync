@@ -1,0 +1,993 @@
+{
+  "item": "phase6-qa-driving-efficiency-target",
+  "attempt": 1,
+  "actor": "974d71cb-efdf-414a-a623-bd604732b18d",
+  "status": "SOURCE_QA_DONE_ACCEPTANCE_NOTRUN",
+  "page": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+  "routes": [
+    "/efficiency-target"
+  ],
+  "sourceUtc": "2026-10-14T01:19:55.554845Z",
+  "scope": {
+    "existingReportFirst": "Absent at first inspection 01:12:18.9106561Z and C01; no accepted report overwritten.",
+    "writableOnly": [
+      "docs\\frontend-audits\\phase6-qa-driving-efficiency-target.json",
+      "web\\logs\\phase6-qa-driving-efficiency-target.log"
+    ],
+    "sourceWritesByActor": 0,
+    "fullAuditFiles": 16,
+    "integrationReview": "Relevant mechanisms of necessary hooks/router/shared owners only, not whole shared files/repository.",
+    "phases": "0-5 stay closed. Phase6 unfinished; Phase7 NOTRUN. No remigration or closed-row restart.",
+    "guidanceRead": "Full orchestrator-loop1-296/design-contract1-2539; latest/current handoff1-220; current queue header1-110 and exact claim/accepted/dedup rows; mission43-45 at1416-1516; full SI, React, observability and unit instructions. Current design/SI contract supersedes old enum/neon examples."
+  },
+  "clocks": {
+    "reservationUtc": "2026-10-14T01:10:24.802Z",
+    "firstObservedActualUtc": "2026-10-14T01:12:18.9106561Z",
+    "returnUtc": "2026-10-14T01:30:24.802Z",
+    "hardUtc": "2026-10-14T01:35:24.802Z",
+    "earlierActualClockWins": true,
+    "targetMinutes": 10,
+    "returnMinutes": 20,
+    "hardMinutes": 25,
+    "boundedCommandLimitMinutes": 15
+  },
+  "counts": {
+    "findings": 6,
+    "candidates": 5,
+    "needs": 4,
+    "sections": 7,
+    "actionFamilies": 12,
+    "pageLines": 206,
+    "historicalPageLines": 173,
+    "mountedPresentationFilesExcludingPage": 10,
+    "mountedPresentationLinesExcludingPage": 1356,
+    "pagePlusPresentationLines": 1562,
+    "unmountedLegacyKpisLines": 122,
+    "sectionBoundaries": 7,
+    "glassPanels": 3,
+    "chartContainers": 3,
+    "dataTables": 1,
+    "nestedBriefCalls": 2,
+    "coreTenRuleConfirmedViolations": 0,
+    "testsDiscovered": 0,
+    "testsExecuted": 0,
+    "testsPassed": 0,
+    "testsFailed": 0,
+    "testsSkipped": 0
+  },
+  "purpose": "Independent persisted consumption goal compared with completed observed weeks, active snapshot, consistency, weekday patterns, rankings and coverage for the workspace-selected vehicle.",
+  "dataAndOwnership": {
+    "route": "App.tsx:146,848 lazy-loads/mounts the actual page under SafeRoute. Not mounted in this audit.",
+    "vehicle": "Page36-43 consumes useSelectedVehicle URL/store/fleet selection; registry workspaceScope.ts:153-168 enables vehicle, not a second picker. History key isolates vehicle+limit and enablement prevents absent-vehicle requests.",
+    "workspaceDate": "/efficiency-target is absent from RANGE_ENABLED_PATHS at workspaceScope.ts:23-77. Range=false/vehicle=true. Business goal/local Monday-Sunday grouping is independent, not a duplicate analysis-window control. Missing useRangeState/startInstant/endInstantExclusive is NOT a confirmed violation here. Any future range adoption needs explicit route/hook/business integration with complete server bounds, not cosmetic rewriting.",
+    "history": "useDriving.ts:47-48,143-156: /drives?vehicle_id=<encoded selected id>&limit=1000; key ['drives',vehicleId,'history',boundedLimit]; clamp1-1000, AbortSignal, enabled vehicle, MODERATE stale time, safeArray. No double-prefix/camelCase wire parameter in this hook; no API call executed.",
+    "target": "Page39-42,71-99,127-139: default160 under teslasync:efficiency-target:v1. Controlled text/validation; blank/nonfinite/nonpositive edits do not persist. Valid preferred Wh/mi or Wh/km divides by convertDistanceToSI-derived scale before canonical Wh/km persistence. No Save/API mutation exists: valid edits invoke local preference setter. No real target/storage action executed.",
+    "currentPersistence": "useStoredNumber.ts:13-57 current tuple[value,set,raw] is compatible with page first-two destructuring; finite fallback/cross-tab event/in-memory fallback remain. An unrelated actor changed this shared file during review; current57-line source was re-read C14 and pinned, not attributed to this audit.",
+    "units": "useEfficiencyTargetDisplay.ts:15-48 uses preferred distance/locale/precision and signed gaps; useUnits.formatDistance takes meters. Brief operands Wh/km divided by1000 are Wh/m; custom validated display formatter restores preferred consumption. No hook/cache/raw Drive or submitted API payload conversion introduced.",
+    "math": "efficiencyTarget.ts:88-103,180-211,214-253,274-331: eligible positive finite measuredWh, distance>=1000m, valid nonfuture start. Weighted energy/distance, not mean-of-means. Active week is null-grade/gap/rank and excluded from bands/hit rate/completed ranks/streaks. Hit denominator=completed eligible observed weeks, consistency=graded weeks; absent denominators yield null. Overall includes eligible active/completed rows. Rolling=current+previous3calendar weeks, distance weighted.",
+    "unknownAndSigns": "Empty/unqualified consumption/hit rate stay null, never measured zero. Resolved-empty zero counts/streak are genuine derived counts. Explicit positive-energy eligibility excludes null/zero/negativeWh; this disclosed policy is not an accidental sign clamp. Signed target gaps preserve plus/minus/neutral zero. Backend regeneration/physical bounds unverified, policy unchanged.",
+    "scopeProvenance": "Historical/observed1000-row subset, eligible/excluded/returned counts and cap disclosed; no lifetime/full-range guarantee. Methodology43-46 explicitly uses browser-local Monday-Sunday, not silently configured timezone. Streaks span completed observed eligible weeks, not invented zero/missed goals for absent weeks.",
+    "acceptedNoChange": "Prior uncontrolled target, silent validation, frozen nowMs and missing boundaries are not re-reported: current controlled draft/error, render-time nowMs, local Monday rollover at44-60 and seven boundaries remain. Static source evidence only, not passing tests.",
+    "noLoss": "All seven sections, three charts, seven scorecard fields/export, active/completed distinctions, observed denominators and persistence IDs remain declared. Source correction is unnecessary for already accepted page migration; remaining narrow findings are below."
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "owner": "EfficiencyTargetBrief.tsx:11-49",
+      "content": "Target/streak/longest/hit denominator/weighted overall/eligible counts, scope/provenance, retry, empty browse and review drawer."
+    },
+    {
+      "id": "pulse",
+      "owner": "GoalPulse.tsx:21-186",
+      "content": "Latest completed week/date/band/consumption/signed margin and active ungraded snapshot/date/consumption/distance/drives, two nested briefs, empties."
+    },
+    {
+      "id": "consistency",
+      "owner": "TargetConsistencyChart.tsx:32-172",
+      "content": "Three completed bands/counts/shares/graded denominator, data alternatives/export."
+    },
+    {
+      "id": "weekly",
+      "owner": "WeeklyTargetChart.tsx:25-198",
+      "content": "Latest26 observed weeks; consumption/target/rolling4calendarweek trend/phase/status; consumption and rolling legend IDs, data/export."
+    },
+    {
+      "id": "weekday",
+      "owner": "WeekdayEfficiencyChart.tsx:45-194",
+      "content": "All7 localized weekdays; nullable weighted consumption/target/distance/drives in data/export."
+    },
+    {
+      "id": "scorecard",
+      "owner": "RecentWeekScorecard.tsx:34-202",
+      "content": "Latest8 completed weeks newest-first; rank/week/consumption/signed gap/distance/drives/status and seven-field export. Mobile gap/distance/drives defect F03."
+    },
+    {
+      "id": "methodology",
+      "owner": "TargetMethodology.tsx:21-191",
+      "content": "Returned/eligible/completed/excluded counts, cap/window, calendar/eligibility/weighting/active exclusion/rolling/help; premature cap claim F01."
+    }
+  ],
+  "actions": [
+    {
+      "id": "target-edit",
+      "pin": "EfficiencyTargetPage.tsx:71-99,127-139"
+    },
+    {
+      "id": "workspace-vehicle",
+      "pin": "workspaceScope.ts:153-168;useSelectedVehicle.ts:48-76"
+    },
+    {
+      "id": "setup-no-vehicle",
+      "pin": "NoVehicleSelected.tsx:53-69",
+      "to": "/onboarding"
+    },
+    {
+      "id": "browse-empty-drives",
+      "pin": "EfficiencyTargetBrief.tsx:46-49",
+      "to": "/drives"
+    },
+    {
+      "id": "source-retry-refresh",
+      "pin": "EfficiencyTargetPage.tsx:109-114,124,144;StaleRefreshWarning.tsx:95-111;DataFreshness.tsx:323-340",
+      "grouping": "Fatal/retained/header are surfaces of same source action, not three different business actions."
+    },
+    {
+      "id": "brief-review-drawers",
+      "pin": "OperationalBrief.tsx:159-168,246-318;DrivingSummaryBrief.tsx:33-50;NestedDrivingBrief.tsx:52-63",
+      "grouping": "Summary plus two nested review slots."
+    },
+    {
+      "id": "consistency-export-data",
+      "pin": "TargetConsistencyChart.tsx:87-105;ChartContainer.tsx:477-509"
+    },
+    {
+      "id": "weekly-export-data",
+      "pin": "WeeklyTargetChart.tsx:93-114;ChartContainer.tsx:477-509"
+    },
+    {
+      "id": "weekday-export-data",
+      "pin": "WeekdayEfficiencyChart.tsx:100-120;ChartContainer.tsx:477-509"
+    },
+    {
+      "id": "weekly-series-visibility",
+      "pin": "WeeklyTargetChart.tsx:93,159,171,189",
+      "series": [
+        "consumption",
+        "rolling"
+      ]
+    },
+    {
+      "id": "scorecard-export-controls",
+      "pin": "RecentWeekScorecard.tsx:174-197",
+      "identity": "efficiency-target:recent-weeks"
+    },
+    {
+      "id": "methodology-help",
+      "pin": "TargetMethodology.tsx:92-100"
+    }
+  ],
+  "actionLimits": "All actions are source-declared capabilities, NOT EXECUTED. Chart fullscreen is opt-in and not supplied by these callers, so none inferred. Exports do not substitute for mobile field access. No save/mutation/browser/storage/API/device action.",
+  "states": {
+    "initial": "No payload=>initial; bodies labeled skeletons, charts loading, summary suppresses evidence; cap header still unproved F01.",
+    "initialPaused": "No payload+paused=>initial/isRefreshBlocked. Adapter drops qualifier, warning hides, metadata lacks fetchStatus; source-local deferred loading not distinguished F06.",
+    "fatal": "Only fatalError with no retained data goes to seven local source states/retry; shells persist. PageLayout receives query metadata, not whole-page loading/error replacement props. Main summary unavailable; business target is independent. Cap assertion F01.",
+    "retainedError": "Rows/summary remain; page warning/main brief retained/retry; nested pulse briefs wrongly Returned evidence F02.",
+    "retainedPaused": "stale/isRefreshBlocked with no invented failure or vehicle offline; retained rows remain. Nested propagation defect F02.",
+    "empty": "Resolved[] yields null measured consumption/rate, explicit per-section empties, browse action and genuine zero derived counts.",
+    "noEligible": "Observed invalid/short/nonpositive rows remain observed/excluded; no invented measurement; all sections visible.",
+    "retry": "Same history refetch forwarded by local errors/warning/header; none triggered."
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "P1",
+      "rule": "unsupported-coverage-assertion",
+      "contract": "MDC-026",
+      "file": "web\\src\\features\\driving\\components\\efficiency-target\\TargetMethodology.tsx",
+      "line": 110,
+      "ranges": [
+        [
+          102,
+          114
+        ]
+      ],
+      "occurrences": 1,
+      "mechanism": "Unconditional cap/below-cap Badge is outside SectionBody. Before response/initial failure, page61-68 defaults drives[] and emptySummary127-156 sets cap=false; header asserts Observed window below API cap without established coverage.",
+      "fix": "Qualify/withhold coverage using real source availability/trust; preserve header/badge/all content and resolved-empty vs actual cap.",
+      "needs": "N01",
+      "dedup": "Same historical audit-page-116 state issue; accepted page leaves child trust debt. C06 exact child queue matches0, not a new whole-page migration."
+    },
+    {
+      "id": "F02",
+      "priority": "P1",
+      "rule": "retained-trust-not-propagated",
+      "contract": "MDC-026",
+      "file": "web\\src\\features\\driving\\components\\efficiency-target\\GoalPulse.tsx",
+      "line": 104,
+      "ranges": [
+        [
+          104,
+          111
+        ],
+        [
+          155,
+          170
+        ]
+      ],
+      "occurrences": 2,
+      "mechanism": "Both NestedDrivingBrief calls omit supported retained prop; local types1-5 omit retained. Retained error/paused history is neither initial nor fatal; NestedDrivingBrief25-27,56-63 defaultsfalse and says Returned evidence despite page/main retained label150.",
+      "fix": "Thread actual same-source retained/paused refresh trust into existing two nested props, keep operands/content.",
+      "needs": "N01",
+      "dedup": "Historical exact issue; phase3-nested-driving-brief[x] already supplies API, do not restart or add another trust model."
+    },
+    {
+      "id": "F03",
+      "priority": "P1",
+      "rule": "mobile-field-loss",
+      "contract": "MDC-023/MDC-043",
+      "file": "web\\src\\features\\driving\\components\\efficiency-target\\RecentWeekScorecard.tsx",
+      "line": 179,
+      "ranges": [
+        [
+          174,
+          197
+        ]
+      ],
+      "occurrences": 1,
+      "fields": [
+        "gap",
+        "distance",
+        "drives"
+      ],
+      "mechanism": "Fixed allow-list omits3of7fields, with no mobilePresentation/expandable/renderExpanded. DataTable742-743 hides outsiders belowmd and applies1180/1535; expandable defaultsfalse479, mobile adapter opt-in506. Column menu cannot bypass fixed allow-list. Export is not UI access.",
+      "fix": "Exact caller adopts existing mobile/detail capability, preserving all7fields/eight-week subset/tableId/density/order/export; no shared table rewrite.",
+      "needs": "N02",
+      "dedup": "Historical risk now source-proven. Closed DataTable/mobile roots not reopened; exact child queue matches0."
+    },
+    {
+      "id": "F04",
+      "priority": "P2",
+      "rule": "weekday-rainbow-encoding",
+      "contract": "MDC-010/MDC-034/mission43",
+      "file": "web\\src\\features\\driving\\components\\efficiency-target\\WeekdayEfficiencyChart.tsx",
+      "line": 183,
+      "ranges": [
+        [
+          180,
+          186
+        ]
+      ],
+      "occurrences": 1,
+      "mechanism": "Single consumption series rotates weekday colors solely by ordinal CHART_COLORS[index%length], creating rainbow without another measure/status. Dynamic palette lookup is NOT static-inline-style violation; composed saturation/contrast not measured.",
+      "fix": "One restrained existing series role; keep saved palette identity/all7categories/values/null gaps/target/data/export, no new palette engine.",
+      "needs": "N03",
+      "dedup": "Historical exact visual issue; no exact open child correction, no closed palette/page restart."
+    },
+    {
+      "id": "F05",
+      "priority": "P2",
+      "rule": "missing-count-plural-forms",
+      "contract": "MDC-044",
+      "file": "web\\src\\i18n\\en.json",
+      "line": 2321,
+      "lines": [
+        2321,
+        2324,
+        2401
+      ],
+      "occurrences": 3,
+      "keys": [
+        "effTarget.weeks",
+        "effTarget.ofWeeks",
+        "effTarget.consistency.weekValue"
+      ],
+      "mechanism": "Count-dependent mounted lookups have plural English base only/no_one_other. Brief25/30 and consistency146 supply numeric count. Canonical plus target projection9/12/89 cannot supply singular wording. No mounted sentence executed; localized but incomplete copy, not unwrapped English.",
+      "fix": "Serialized canonical owner adds exact3singular/other leaf families, preserves bases/numeric count, normal generator outputs/guards; no global i18n config.",
+      "needs": "N04",
+      "dedup": "Advanced evidence-sample-count-plurals owns different leaves; active-catalog-projections owns charging/usage only. Neither grants target additions. Explicit serialized parent lease required."
+    },
+    {
+      "id": "F06",
+      "priority": "P1",
+      "rule": "initial-paused-unqualified-loading",
+      "contract": "MDC-026",
+      "file": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+      "line": 110,
+      "ranges": [
+        [
+          109,
+          115
+        ]
+      ],
+      "occurrences": 1,
+      "mechanism": "Adapter keeps initial/loading,fatal,retry but discards isRefreshBlocked. dataState205-220 initial-paused provides flag; StaleRefreshWarning58 hides without data; DataFreshness281-285,330-339 never forwards fetchStatus. Source-local page cannot identify deferred initial loading vs active fetching.",
+      "fix": "Use existing feedback plus actual paused qualifier with unknown facts/placeholders/retry, never assert vehicle/device offline; no blanket shared remigration.",
+      "needs": "N01",
+      "dedup": "Closed shared freshness preserves its prior paused semantics; target exact correction absent, unrelated trust rows not duplicate ownership."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "status": "UNPROVED",
+      "file": "WeekdayEfficiencyChart.tsx",
+      "lines": [
+        148,
+        152
+      ],
+      "related": "TargetMethodology115-117;GoalPulse78",
+      "risk": "Seven forced localized ticks, three count tiles and18rem minimum may crowd long labels/narrow panels/200% text.",
+      "proof": "Authorized mounted viewport/container/RTL/text checks; no measured clipping."
+    },
+    {
+      "id": "C02",
+      "status": "POLICY_IMPACT_UNPROVED",
+      "file": "WeeklyTargetChart.tsx",
+      "lines": [
+        46,
+        49,
+        62
+      ],
+      "related": "Weekday67/76;efficiencyTarget84-93",
+      "risk": "Pre-rounded1decimal data loses digits before reactive preference formatter.",
+      "proof": "Confirm existing specialist precision/raw response contract before changing numerical policy; canonical setter is not rounded."
+    },
+    {
+      "id": "C03",
+      "status": "REACHABILITY_UNPROVED",
+      "file": "useSelectedVehicle.ts",
+      "lines": [
+        50,
+        65,
+        73,
+        74,
+        76
+      ],
+      "related": "Page101-106;NoVehicle53-69",
+      "risk": "Unresolved fleet without stored/URL ID can yield null/setup surface, hook exposes no fleet trust.",
+      "proof": "Trace actual onboarding/auth/shell initial/fatal/paused gate reachability before expanding shared API or calling false empty. No identity/storage inspected."
+    },
+    {
+      "id": "C04",
+      "status": "BACKEND_UNKNOWN",
+      "file": "useDriving.ts",
+      "lines": [
+        143,
+        149,
+        154
+      ],
+      "related": "efficiencyTarget95-103,180-211,327-330",
+      "risk": "Ordering/completeness/end-of-drive status/source units/signs/physical numeric bounds not verified; huge finite sums could overflow.",
+      "proof": "Separately authorized existing backend contract evidence, not real API/device data; retain observed/capped scope and explicit eligibility."
+    },
+    {
+      "id": "C05",
+      "status": "ROLE_COMPOSED_IMPACT_UNPROVED",
+      "file": "TargetMethodology.tsx",
+      "lines": [
+        115,
+        152,
+        178
+      ],
+      "related": "GoalPulse69/139;Scorecard153",
+      "risk": "Arbitrary geometry/literal cyan/amber/purple roles merit neutral/named-role review; amber tint even below cap. Tailwind declarations are not static-inline-style or measured neon/contrast failure.",
+      "proof": "Existing token owner disposition and authorized theme/forced-color composition; no guessed geometry equivalents/saved-color rewrite."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "findings": [
+        "F01",
+        "F02",
+        "F06"
+      ],
+      "owner": "Existing local efficiency-target adapter/renderers and page integration, separately reserved narrow Phase6 correction",
+      "paths": [
+        "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+        "web\\src\\features\\driving\\components\\efficiency-target\\types.ts",
+        "web\\src\\features\\driving\\components\\efficiency-target\\GoalPulse.tsx",
+        "web\\src\\features\\driving\\components\\efficiency-target\\TargetMethodology.tsx"
+      ],
+      "need": "Real availability/retained/initial-paused trust; qualify cap, supported nested retained prop. Preserve seven boundaries/goal/persistence/SI/history/calendar/actions. Parent reserves covering tests explicitly; this report grants no writes. No new trust API/hook/backend/shared remigration."
+    },
+    {
+      "id": "N02",
+      "findings": [
+        "F03"
+      ],
+      "owner": "Existing RecentWeekScorecard caller",
+      "paths": [
+        "web\\src\\features\\driving\\components\\efficiency-target\\RecentWeekScorecard.tsx"
+      ],
+      "need": "Existing DataTable mobile/detail access for omitted3fields; retain7fields/8rows/IDs/order/export. Parent explicitly reserves adjacent RecentWeekScorecard.test.tsx (absent inspected directory), not a shared table rewrite."
+    },
+    {
+      "id": "N03",
+      "findings": [
+        "F04"
+      ],
+      "owner": "Existing WeekdayEfficiencyChart",
+      "paths": [
+        "web\\src\\features\\driving\\components\\efficiency-target\\WeekdayEfficiencyChart.tsx"
+      ],
+      "need": "One existing restrained consumption-series paint only, preserve all data/preferences/actions. Parent reserves adjacent WeekdayEfficiencyChart.test.tsx (absent inspected directory); no global palette engine."
+    },
+    {
+      "id": "N04",
+      "findings": [
+        "F05"
+      ],
+      "owner": "Serialized canonical English integration",
+      "paths": [
+        "web\\src\\i18n\\en.json"
+      ],
+      "keys": [
+        "effTarget.weeks_one/_other",
+        "effTarget.ofWeeks_one/_other",
+        "effTarget.consistency.weekValue_one/_other"
+      ],
+      "projection": "web\\src\\i18n\\en\\locale-detail-effTarget.json",
+      "need": "Add-only3families; retain bases/raw numeric plural count. Parent must explicitly serialize target leaf lease, normal generator determines exact additional projection/manifest closure. Do not piggyback Advanced sample or current charging projection claim."
+    }
+  ],
+  "scanEvidence": {
+    "rawLog": "web\\logs\\phase6-qa-driving-efficiency-target.log",
+    "files": 16,
+    "mode": "Native read/grep/hash/JSON commands only; exact raw commands/output/exits retained in log/tool receipts, no helper file/runner.",
+    "coreRuleCounts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-sectionMatches": 2,
+      "hardcoded-jsx-text": 0,
+      "literalEnglishProps": 0,
+      "literalPageContainer": 0,
+      "useEffectMatches": 1,
+      "fetchMatches": 0
+    },
+    "exceptions": [
+      "Two && matches add EmptyState/QueryError, not hide shells (Brief46/Summary51).",
+      "Calendar-only effect Page46-60 does not fetch.",
+      "PageLayout11-15 delegates PageContainer; NoVehicle53 also wraps it.",
+      "Shared concrete imports/raw HTML expected at shared owners, not violations.",
+      "Dynamic palette lookups/Recharts props are not static-inline-style.",
+      "t fallbacks/translated weekday tuples/HelpTooltip i18nKey/default valid; plural defect independently counted."
+    ],
+    "backendRules": "SQL/fmt/panic/context NOT_APPLICABLE: no internal Go audit scope.",
+    "tokenScan": {
+      "matchLines": 25,
+      "occurrences": 27
+    },
+    "scopeLimit": "Regex zeros are bounded matches, not complete i18n/runtime/a11y/shared/workspace passes.",
+    "commands": [
+      {
+        "rawCommand": "Test-Path exact report; Select-String migration-queue.md -Pattern phase6-qa-driving-efficiency-target,phase5-page-driving-efficiency-target",
+        "id": "C01",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String App.tsx,workspaceScope.ts,useDriving.ts,PageLayout.tsx -Pattern EfficiencyTarget,efficiency-target,useDriveHistory,startInstant,endInstantExclusive,vehicle_id,PageContainer,isRefreshBlocked -Context 2,3",
+        "id": "C02",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String migration-queue.md -Pattern efficiency.target,DrivingSummaryBrief,NestedDrivingBrief,useStoredNumber,initial.*paused,DataTable.*mobile | select structured row identity and first 360 note chars",
+        "id": "C03",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String migration-queue.md -Pattern efficiency.target,DrivingSummaryBrief,NestedDrivingBrief,useStoredNumber,initial.*paused,DataTable.*mobile -> line,status,item,dependencies only",
+        "id": "C04",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-Content migration-queue.md | filter item names for driving,efficiency,initial.*pause,query.*trust,source.*trust,data.*state; omit phase5-page and phase6-qa unrelated rows",
+        "id": "C05",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String migration-queue.md -Pattern TargetMethodology,GoalPulse,WeeklyTargetChart,WeekdayEfficiencyChart,RecentWeekScorecard,EfficiencyTargetSectionState; Select-String DataTable.tsx -Pattern colHiddenClass,mobileActive,expandable,renderExpanded,mobilePresentation",
+        "id": "C06",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String -AllMatches on EfficiencyTargetPage.tsx + efficiency-target/*.ts(x) + EfficiencyTargetBrief.tsx,DrivingSummaryBrief.tsx,NestedDrivingBrief.tsx,efficiencyTarget.ts with listed rule patterns",
+        "id": "C07",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String 16 scoped files -AllMatches for style=, fetch(, useEffect(, literal English attributes and all imports; Select-String necessary useDriving.ts:143-156 for /api/v1 and camel query params",
+        "id": "C08",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-Content exact named sources with 1-based numbered ranges",
+        "id": "C10",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-Content line counts and Select-String JSX declarations on exact page and ten mounted presenter files",
+        "id": "C11",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-Content en.json -Raw | ConvertFrom-Json -AsHashtable; inspect only effTarget weeks,ofWeeks,consistency.weekValue plural siblings; queue exact item-name search",
+        "id": "C09R",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String exact numeric/domain/display sources for positive measurements,nullable rates,denominators,signed gaps,canonical input,chart/scorecard limits and dataColumns/export declarations",
+        "id": "C13",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String migration-queue.md for exact reservation/accepted page/nested brief/data freshness/catalog rows; Get-FileHash SHA256 and Get-Content line counts of 16 bounded source files plus necessary mechanism owners",
+        "id": "C12",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-FileHash SHA256 and line counts for read guidance, historical audit and readonly authored tests",
+        "id": "C15",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String en.json target subtree for three plural leaf families; Get-Content useStoredNumber.ts numbered; Select-String scoped hook selection type and global precision",
+        "id": "C14",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String OperationalBrief.tsx and ChartContainer.tsx for details/review/export/fullscreen/data table/legend; locate i18n initialization files",
+        "id": "C16",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-FileHash SHA256 and line counts for shared action and native i18n configuration sources",
+        "id": "C18",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Select-String -CaseSensitive -AllMatches 16 scoped files -Pattern <(button|input|textarea|select|table)\\b; Select-String i18n/index.ts -Pattern plural,compatibilityJSON,postProcess,interpolation",
+        "id": "C17",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-ChildItem i18n/en -Filter *effTarget*; Select-String existing locale-driving.json and matching target projections -Pattern weeks,ofWeeks,weekValue,effTarget",
+        "id": "C19",
+        "exitCode": 0
+      },
+      {
+        "rawCommand": "Get-Content en.json -Raw | ConvertFrom-Json",
+        "id": "C09",
+        "result": "PowerShell casing limitation; subsequent original checks NOTRUN",
+        "exitCode": 1
+      },
+      {
+        "rawCommand": "Oversized PowerShell report-write payload",
+        "id": "C20",
+        "result": "OS206 launch failure; no writes",
+        "exitCode": 1
+      },
+      {
+        "exitCode": 0,
+        "id": "C21",
+        "rawCommand": "ConvertFrom-Json model; attach snapshot pins; Set-Content authorized JSON; actual reparse"
+      },
+      {
+        "exitCode": 0,
+        "id": "C22",
+        "rawCommand": "ConvertFrom-Json exact report; Get-FileHash SHA256 for every sourcePin; assert exact finding/candidate/need/section/action and line totals; finalize release; reparse final JSON"
+      }
+    ]
+  },
+  "summary": {
+    "byRule": {
+      "unsupported-coverage-assertion": 1,
+      "retained-trust-not-propagated": 1,
+      "mobile-field-loss": 1,
+      "weekday-rainbow-encoding": 1,
+      "missing-count-plural-forms": 1,
+      "initial-paused-unqualified-loading": 1
+    },
+    "priority": {
+      "P1": 4,
+      "P2": 2
+    },
+    "mostIssues": "6distinct primary files,1mechanism each; GoalPulse2sites/catalog3families not inflated into more findings.",
+    "priorityFixes": [
+      "N01 trust/deferred initial",
+      "N02 mobile field access",
+      "N03 weekday paint",
+      "N04 serialized target plurals"
+    ]
+  },
+  "limits": {
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "pagePASS": "NOTRUN",
+    "applicationPASS": "NOTRUN",
+    "tests": "NOTRUN; execution counts0 mean no runner, not an empty pass.",
+    "TypeScript": "NOTRUN; npx tsc --noEmit not invoked/no pass.",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "browser": "No grant/lock/browser/screenshots/device/API/identity/location/storage/goal/save/mutation. Parent5173 unchanged/unprobed; later authorized browser must be installed Edge msedge/no downloads.",
+    "other": "No Git/subagents/installs/servers/Docker/helpers/extensions/heartbeats/catalog generation/queue/handoff edits.",
+    "a11yMobile": "Source-only localized labels/errors/named regions/status skeletons/aria-hidden icons/shared tables/charts/mobile44 input declarations. No actual focus/keyboard/contrast/screenreader/forced-colors/RTL/reduced-motion/safe-area/200%text/viewport/performance acceptance.",
+    "concurrency": "Shared useStoredNumber changed and was re-read. Queue lines moved with parent changes; pin/line facts are snapshots, not locks or attribution.",
+    "failures": "C09 plain ConvertFrom-Json exit1 casing limitation subFSMs/subFsms, corrected -AsHashtable C09R exit0. C20 oversized command OS206 could not launch, numeric1, no report write claimed. Both raw failures retained, not product passes.",
+    "log": "Append-only authorized ignored raw log preserved; early small discovery console-only, large original tool receipts copied unchanged. No historical test pass reasserted."
+  },
+  "release": {
+    "commandReleased": true,
+    "runtime": "NOTRUN",
+    "noLaterWritesAfterTerminal": true,
+    "state": "RELEASED_AFTER_FINAL_COMMAND",
+    "logWriteReleased": true,
+    "reportWriteReleased": true,
+    "pagePASS": "NOTRUN",
+    "utc": "2026-10-14T01:30:10.8721659Z",
+    "native": "NOTRUN"
+  },
+  "sourcePins": [
+    {
+      "path": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+      "sha256": "1BBC8ED657BA5C31370D8F8F72B6E79D534009386F0D4AFC7D06F253B43DC1FB",
+      "lines": 206,
+      "lastWriteUtc": "2026-10-14T00:29:41.5689235Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\EfficiencyTargetKpis.tsx",
+      "sha256": "5AB622FCD754D355FE4AA0C2FC1713A03FA09E666362018E5658E5EA68E3D532",
+      "lines": 122,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\EfficiencyTargetSectionBody.tsx",
+      "sha256": "C74CDE87966ED73B741E49AF8BE2A633E7579B1EBC0FB604E6892ED42856B5B1",
+      "lines": 47,
+      "lastWriteUtc": "2026-10-13T06:09:18.2564729Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\GoalPulse.tsx",
+      "sha256": "E05370479D10890851E839CE7F19B83FBFD7FBDA62AD4C2A2228617F17F30238",
+      "lines": 186,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\index.ts",
+      "sha256": "7CC19F2888F3FD12B5BDC5D5C32934D30FEE11A9C74D406FD90D0CC1F6952CF0",
+      "lines": 9,
+      "lastWriteUtc": "2026-10-13T06:09:18.2574726Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\RecentWeekScorecard.tsx",
+      "sha256": "0D0630415AF8F64ED9767927AF1FF24461C226D929F9892D3014AAFFE00BE45E",
+      "lines": 202,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\TargetConsistencyChart.tsx",
+      "sha256": "320C4060225EBEF32216DCFF4F597ED055531E0B261E0A1CCC9DBDF43E3C6445",
+      "lines": 172,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\TargetMethodology.tsx",
+      "sha256": "2D603D591BCFD89EB8EC3F2450924904FA04B282FFB0CC587231D595D43B8675",
+      "lines": 191,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\types.ts",
+      "sha256": "288F65097CF9A4CF3781976E791AB718D2607F9A7463657DD4EE526F30CDE0F5",
+      "lines": 5,
+      "lastWriteUtc": "2026-10-13T06:09:18.2574726Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\useEfficiencyTargetDisplay.ts",
+      "sha256": "1D4A4758504862ABF8420D345CDA7DC189127D4C2DA9E7076534F4B9D1750665",
+      "lines": 76,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\WeekdayEfficiencyChart.tsx",
+      "sha256": "42ED6DE26A0C3F443F01FA3D621FDFCCEFCDE8BBCE2DB44D274E30B1B07FACF7",
+      "lines": 194,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\efficiency-target\\WeeklyTargetChart.tsx",
+      "sha256": "ABAF5ACDBF36867066B36E5CC4551FAEAC6177C82F54EA931111249D155F8BF5",
+      "lines": 198,
+      "lastWriteUtc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyTargetBrief.tsx",
+      "sha256": "01DE2E2E35A1CE3CA6E9D17E3033EFAB4FFDB9F8D435FA9E4CE9F7F199E55659",
+      "lines": 50,
+      "lastWriteUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "sha256": "29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93",
+      "lines": 53,
+      "lastWriteUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+      "sha256": "682A5D14BB65BA04739960E8C9E08AD15A8C39D32B9D6E5941A7946C226891BA",
+      "lines": 63,
+      "lastWriteUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web\\src\\features\\driving\\lib\\efficiencyTarget.ts",
+      "sha256": "8561DE14C1FD853E139611EE3224BCD3F573D33F99D176D5C90C6026BD19A3A0",
+      "lines": 333,
+      "lastWriteUtc": "2026-10-13T06:09:18.2823621Z"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "lines": 454,
+      "lastWriteUtc": "2026-10-14T00:29:40.8549213Z"
+    },
+    {
+      "path": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lines": 434,
+      "lastWriteUtc": "2026-10-13T06:09:17.7649888Z"
+    },
+    {
+      "path": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lines": 65,
+      "lastWriteUtc": "2026-10-13T06:09:18.5649346Z"
+    },
+    {
+      "path": "web\\src\\hooks\\useStoredNumber.ts",
+      "sha256": "ADFBB756CC1672C82789CD8BFB7D034A7BEC949EBE13C9A2B89A5BADE5B87966",
+      "lines": 57,
+      "lastWriteUtc": "2026-10-14T01:16:08.5922003Z"
+    },
+    {
+      "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lines": 174,
+      "lastWriteUtc": "2026-10-13T06:09:18.5715117Z"
+    },
+    {
+      "path": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lines": 194,
+      "lastWriteUtc": "2026-10-13T06:09:18.5715117Z"
+    },
+    {
+      "path": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "lines": 47,
+      "lastWriteUtc": "2026-10-14T00:29:41.8646135Z"
+    },
+    {
+      "path": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168,
+      "lastWriteUtc": "2026-10-14T00:29:41.9890728Z"
+    },
+    {
+      "path": "web\\src\\lib\\unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "lines": 500,
+      "lastWriteUtc": "2026-10-14T00:29:41.9890728Z"
+    },
+    {
+      "path": "web\\src\\lib\\dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "lines": 462,
+      "lastWriteUtc": "2026-10-14T00:29:41.9809331Z"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919,
+      "lastWriteUtc": "2026-10-14T00:29:40.8444677Z"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17,
+      "lastWriteUtc": "2026-10-14T00:29:40.9682184Z"
+    },
+    {
+      "path": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "lines": 259,
+      "lastWriteUtc": "2026-10-14T00:29:40.9542141Z"
+    },
+    {
+      "path": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "lines": 115,
+      "lastWriteUtc": "2026-10-14T00:29:40.9392577Z"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\DataFreshness.tsx",
+      "sha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+      "lines": 342,
+      "lastWriteUtc": "2026-10-14T00:29:40.8945434Z"
+    },
+    {
+      "path": "web\\src\\components\\ui\\DataTable.tsx",
+      "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "lines": 1707,
+      "lastWriteUtc": "2026-10-14T00:29:40.9960797Z"
+    },
+    {
+      "path": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "lines": 77,
+      "lastWriteUtc": "2026-10-13T06:09:18.3540415Z"
+    },
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "sha256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "lines": 38994,
+      "lastWriteUtc": "2026-10-14T00:29:41.8787917Z"
+    },
+    {
+      "lines": 321,
+      "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "sha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7"
+    },
+    {
+      "lines": 1006,
+      "path": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694"
+    },
+    {
+      "lines": 172,
+      "path": "web\\src\\lib\\numberFormat.ts",
+      "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3"
+    },
+    {
+      "lines": 333,
+      "path": "web\\src\\i18n\\index.ts",
+      "sha256": "8804718879D0CCB02C876B64B139DA56E67B7D117E34E5DE914904242DE3EC17"
+    },
+    {
+      "lines": 140,
+      "path": "web\\src\\i18n\\en\\locale-detail-effTarget.json",
+      "sha256": "3F5690520E32B615016AF78D9D191A63733029CF878628C3226A3A2E6E9E836D"
+    }
+  ],
+  "referencePins": [
+    {
+      "lines": 296,
+      "path": "docs\\orchestrator-loop.md",
+      "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767"
+    },
+    {
+      "lines": 2539,
+      "path": "docs\\frontend-design-contract.md",
+      "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E"
+    },
+    {
+      "lines": 2460,
+      "path": "docs\\session-handoff.md",
+      "sha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2"
+    },
+    {
+      "lines": 1593,
+      "path": "docs\\frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F"
+    },
+    {
+      "lines": 1460,
+      "path": "docs\\frontend-inventory.md",
+      "sha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA"
+    },
+    {
+      "lines": 94,
+      "path": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4"
+    },
+    {
+      "lines": 629,
+      "path": ".github\\instructions\\react-frontend.instructions.md",
+      "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E"
+    },
+    {
+      "lines": 45,
+      "path": ".github\\instructions\\observability.instructions.md",
+      "sha256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42"
+    },
+    {
+      "lines": 221,
+      "path": ".github\\instructions\\unit-conversion.instructions.md",
+      "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315"
+    },
+    {
+      "lines": 295,
+      "path": "docs\\frontend-audits\\audit-page-116.json",
+      "sha256": "F3AF47B552E3B923B573DFAD58970BECD4661A0AA74A46DC83728E6E8EA35EFB"
+    },
+    {
+      "lines": 273,
+      "path": "web\\src\\features\\driving\\lib\\efficiencyTarget.test.ts",
+      "sha256": "56E109541D48D5CC19A621B70178CE818C3FBA41D5483DD484073263E2BF7894"
+    },
+    {
+      "lines": 449,
+      "path": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.test.tsx",
+      "sha256": "1B8AF9955C8F365D9F416A3FF4BBD210F16F42363E8C416EB813CACD0DB9C998"
+    },
+    {
+      "lines": 321,
+      "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "sha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7"
+    },
+    {
+      "lines": 1006,
+      "path": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694"
+    },
+    {
+      "lines": 172,
+      "path": "web\\src\\lib\\numberFormat.ts",
+      "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3"
+    },
+    {
+      "lines": 333,
+      "path": "web\\src\\i18n\\index.ts",
+      "sha256": "8804718879D0CCB02C876B64B139DA56E67B7D117E34E5DE914904242DE3EC17"
+    }
+  ],
+  "queueEvidence": {
+    "capturedUtc": "2026-10-14T01:29:33.1100266Z",
+    "sha256": "10E8409C99E9D67AFAFB9E393709A030816F5F32CB215E608E1047F29311191E",
+    "rows": [
+      {
+        "row": "| [~] | 6 | phase6-fix-active-catalog-projections | parent-serialized-external-root | web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\usage-manifest.json | - | 1 | parent owner; actual failing check2026-10-14T01:17:14Z; no agent/browser claim | - | Normal split-i18n-catalog.mjs --check exit1 names exactly these two derived artifacts after active source closure changed. Keep canonical en.json/all other generated leaves and missing-key baselines pinned; regenerate with existing normal script, check and strict namespace audit without bypass/accept-missing/pruning. Catalog-only worker startup failures remain external/no attempt charge and never hold independent dispatch. This exact root is not a new tooling or translation campaign. |",
+        "line": 41
+      },
+      {
+        "row": "| [~] | 6 | phase6-qa-driving-efficiency-target | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-efficiency-target.json | phase5-page-driving-efficiency-target | 1 | conservative reservation=2026-10-14T01:10:24.802Z; return=2026-10-14T01:30:24.802Z; hard=2026-10-14T01:35:24.802Z; actor=974d71cb-efdf-414a-a623-bd604732b18d; LastConsumed=-1 | - | CurrentacceptedEfficiencyTargetPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Businessgoal-vs-workspace/preferenceunits/rawpayload/scopes/denominators/trust/unknownzero/actions/sections; no remigration. Actual ready exact scope reserved; NOT a running worker, no browserlock. Actual built-in launch accepted; exact exclusive files/no browserlock. |",
+        "line": 437
+      },
+      {
+        "row": "| [ ] | 6 | phase6-fix-evidence-sample-count-plurals | confirmed-BS004-localized-evidence-count | web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx; web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.sampleCounts.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\usage-manifest.json | phase6-qa-advanced-behavioral-sentinel; phase6-fix-behavioral-evidence-source-trust; phase6-fix-dlq-toast-catalog | 0 | - | - | BS004 exactrawcount template/no_one_other produces1samples and bypassesfmtInt. Preserve numericpluralcount/rawwire; existinguseNumberFormatting supplies separatelyformattedinterpolation, add-onlycanonical singular/other leaves/normalgeneration/preservation. Actualcomponent and soleEnglishwriteclaims serialized afterexistingroots, no competingformatter/globali18n config/otherlocale changes. Null count/date-only/sourceidentity/zero/grouping/nonEnglishreactivity remain distinct tests; no silentguardbypass/currentCatalogpass assumed. |",
+        "line": 452
+      },
+      {
+        "row": "| [x] | 3 | phase3-data-freshness | shared | web\\src\\components\\data-display\\DataFreshness.tsx; web\\src\\components\\data-display\\__tests__\\DataFreshness.test.tsx | phase3-use-date-format,primitive-button,phase3-resource-and-geometry-addendum,phase3-resource-geometry-tokens | 2 | 2026-10-08T19:43:29.237Z | b13559132d | phase3-use-date-format,primitive-button,phase3-resource-and-geometry-addendum,phase3-resource-geometry-tokens / 2 / 2026-10-08T19:43:29.237Z / Verified real-owner plan=phase3-data-freshness in session frontend-phase3-owner-plan.json; category=status-system; sources=web\\src\\components\\data-display\\DataFreshness.tsx; tests=web\\src\\components\\data-display\\__tests__\\DataFreshness.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; crash recovery 2026-10-08T13:10:44.944Z: actual no-live-context observation, delivery receipts/source preserved; acceptance reconciliation required before any new worker or attempt increment; Read-only post-root review of preserved delivery; no source writes or implementation attempt increment; current frozen scope and original dispatch provenance required; actor context idle verified 2026-10-08T17:50:31.621Z: Actual delivered idle full report read; owned source/test preserved and released; raw failures/shared prerequisites retained, no source acceptance inferred; failure=Read-only29/29 lint/all reached types0; min-w4.5rem231 exact named geometry role/adoption required; blocked=Final-failed prerequisite pending honest shared-root repair/read-only runtime validation, no new generic retry; Unblocked only after every recorded prerequisite actually accepted; prior failures/attempts and preserved delivery remain immutable; frozen preserved-delta retry baseline=phase3-data-freshness-retry-dispatch-baseline.json; distinct attempt2 heartbeat/receipt required; original manifest/proofs/tests remain authoritative; actor=73f0fba0-1a02-4856-8bf2-f1330d4c01be; actor context idle verified 2026-10-08T20:07:56.057Z: Actual current lifecycle idle and full result read; shipping delta/provenance frozen, source lease released; no idle timeout inferred.; Verified scoped delivery acceptance commit=b13559132d; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=29/29 actual normal, strict lint/source scan0 with9 retained token reviews/ALL407 reached0; original27 cases+2 preserved, five generated CSS pairs43 merges and full source/test inverse original SHA0, exact4.5rem named role only. Original missing dispatch artifact acknowledged, actual immutable plan/SHA originals retained; no observation/fetch/paused/status semantics change, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |",
+        "line": 1063
+      },
+      {
+        "row": "| [x] | 3 | phase3-nested-driving-brief | shared | web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx; web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.test.tsx | phase3-operational-brief | 1 | 2026-10-08T17:25:43.504Z | 7c81b4b20f | phase3-operational-brief / 1 / 2026-10-08T17:25:43.504Z / Verified real-owner plan=phase3-nested-driving-brief in session frontend-phase3-owner-plan.json; category=domain-shared; sources=web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx; tests=web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; reboot reconciliation 2026-10-08T17:18:31.366Z: actual zero live actors; frozen delivery retained, awaiting read-only intake, not stuck or new implementation attempt; READ-ONLY reboot review reserved, attempts unchanged; isolated new receipt, no original source/test edits; actor=69cd031b-aca2-4ccc-a928-4ecf48fb5350; actor context idle verified 2026-10-08T17:46:20.736Z: Actual delivered idle result read; source/test frozen, no additional writes; precise readiness blockers retained before separate acceptance; Verified scoped delivery acceptance commit=7c81b4b20f; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=25/25 actual guarded tests; original19 assertions/cases/raw SI/formatters retained, completed versus active-week grading oracle reviewed explicitly; strict lint/source scan0/ALL reached fixture0, original runtime/probe failures retained and frozen current bytes stable, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |",
+        "line": 1396
+      },
+      {
+        "row": "| [x] | 5 | phase5-page-driving-efficiency-target | original-page-migration | web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx; web\\src\\features\\driving\\pages\\EfficiencyTargetPage.test.tsx | - | 1 | 2026-10-13T01:51:11.597Z | 20759dc777bc5c8f25cb67a4635f4779c16b3cdd | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/efficiency-target; audit=docs\\frontend-audits\\audit-page-116.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fourteenth rolling refill from actual16-runtime census (AlertRules since concluded): genuinely unstarted originalpage/exclusivepair, not wholepage rework/prior no-output/provenance/new audit. Actor pending; no runtime/QA/source delivery inferred from reservation. Actual fresh actor=e9e0728b-cbd7-4400-a02d-6f4f7feaf520 successfully launched, exact existing original-fresh-page; source/native/behavioral evidence not yet delivered. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; ActualREADterminal0/idle exactpairandrawreceiptverified. SOURCEONLY externalusage-manifeststartupVitest1 zeroexecuted notpass/no bypass/rerun. Controlledtargetvalidation/synchronization/weekrollover/SEVENwidgetboundaries/reducedentrance; scopedESLint/style0/violationcounts0 SEVENsections206of173lines/originaltests preserved. Childtrust/paintparentneeds accurate, no shared/catalog/type/globaledits/native/fullacceptance.; commit=20759dc777bc5c8f25cb67a4635f4779c16b3cdd; pushed. |",
+        "line": 1901
+      }
+    ]
+  },
+  "createdUtc": "2026-10-14T01:29:33.1383614Z",
+  "finalPinCheck": {
+    "checked": 39,
+    "driftCount": 1,
+    "qualification": "Snapshot hashes verified, not workspace-wide no-change attribution or runtime pass",
+    "matched": 38,
+    "utc": "2026-10-14T01:30:10.8721659Z",
+    "drift": [
+      {
+        "actual": "41FDC5DF3DBCA6238C6D85805A6DADEF3DA1FFA6DDAD6B96BB95ED93EBE4D6D4",
+        "expected": "ADFBB756CC1672C82789CD8BFB7D034A7BEC949EBE13C9A2B89A5BADE5B87966",
+        "path": "web\\src\\hooks\\useStoredNumber.ts"
+      }
+    ],
+    "exitCode": 0
+  }
+}

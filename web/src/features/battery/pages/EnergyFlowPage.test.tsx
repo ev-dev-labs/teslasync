@@ -31,6 +31,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
+import { neonColorMap, typography } from '@/lib/tokens';
+import en from '@/i18n/en.json';
+import type { StatMetric } from '@/components/data-display';
+import type { StatPeriod } from '@/lib/metric-reference';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+
+const briefProps = vi.hoisted(() => vi.fn());
+const translationCalls = vi.hoisted(() => vi.fn());
+
+vi.mock('../components/operationalbrief-all/BatteryEvidenceBrief', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-all/BatteryEvidenceBrief')>();
+  return {
+    ...actual,
+    BatteryEvidenceBrief: (props: Parameters<typeof actual.BatteryEvidenceBrief>[0]) => {
+      briefProps(props);
+      return <actual.BatteryEvidenceBrief {...props} />;
+    },
+  };
+});
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -41,9 +61,21 @@ vi.mock('@/components/charts', async (importOriginal) => {
 // i18n stub: return the fallback string, interpolating {{var}} tokens so
 // assertions can target the rendered English copy. When called with a bare
 // key (e.g. t('Charging')) it echoes the key.
-vi.mock('react-i18next', () => ({
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const { default: catalog } = await import('@/i18n/en.json');
+  const i18n = createInstance();
+  await i18n.init({ lng: 'en', resources: { en: { translation: catalog } }, interpolation: { escapeValue: false } });
+  return {
   useTranslation: () => ({
     t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+      translationCalls(key, fallbackOrOpts, opts);
+      if (key === 'energyFlow.units.days' || key === 'energyFlow.summary.trailingWindow') {
+        return i18n.t(key, {
+          defaultValue: typeof fallbackOrOpts === 'string' ? fallbackOrOpts : key,
+          ...(opts as Record<string, unknown>),
+        });
+      }
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           const o = opts as Record<string, unknown>;
@@ -63,7 +95,8 @@ vi.mock('react-i18next', () => ({
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
-}));
+  };
+});
 
 // Mutable unit preference so one file exercises both the metric (km) and
 // imperial (mi) display-conversion branches. Hoisted so the settings mock
@@ -148,7 +181,7 @@ if (typeof window.matchMedia !== 'function') {
   })) as unknown as typeof window.matchMedia;
 }
 
-import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
+import { useEnergyStats, useEnergyFlow, type EnergyFlowSnapshot } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import type { DailyEnergy } from '@/types/energy';
 import EnergyFlowPage, {
@@ -157,13 +190,14 @@ import EnergyFlowPage, {
   computeChargePower,
   buildDailyChartData,
   buildEfficiencyChartData,
+  compareDailyRows,
 } from './EnergyFlowPage';
 
 const mockStats = vi.mocked(useEnergyStats);
 const mockFlow = vi.mocked(useEnergyFlow);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
@@ -210,10 +244,10 @@ function makeStatsData(over: Record<string, unknown> = {}) {
   };
 }
 
-function makeFlowData(over: Record<string, unknown> = {}) {
+function makeFlowData(over: Partial<EnergyFlowSnapshot> = {}): EnergyFlowSnapshot {
   return {
-    dc_charging_power: 11,
-    ac_charging_power: 0,
+    dc_charging_power_w: 11_000,
+    ac_charging_power_w: 0,
     energy_remaining: 62.5,
     pack_voltage: 400,
     pack_current: 27.5,
@@ -265,14 +299,65 @@ function kpiRegion() {
   return screen.getByRole('region', { name: 'Energy summary metrics' });
 }
 
+function metricValue(label: string, region: HTMLElement = kpiRegion()): string {
+  const tile = within(region).getByText(label).closest('[data-operational-metric]');
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
+}
+
+function historyTable() {
+  return screen.getByRole('table', { name: /Daily energy history/ });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   unitState.length = 'km';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   installHappyPath();
 });
 
 /* ───────────────────────── Pure helper unit tests ───────────────────────── */
+
+describe('compareDailyRows', () => {
+  it.each(['energy_wh', 'distance_m', 'efficiency_wh_per_m'] as const)(
+    'sorts raw %s values without conflating missing/invalid values with zero',
+    (key) => {
+      const values = [null, 0, -0.25, undefined, NaN, 0.125, Infinity, -Infinity, 0.124, 0];
+      const rows = values.map((value, id) => ({ [key]: value, id }));
+      const original = rows.slice();
+      for (const direction of ['asc', 'desc'] as const) {
+        const sorted = rows.slice().sort((a, b) => compareDailyRows(a, b, key, direction));
+        expect(sorted.map(row => row.id)).toEqual(direction === 'asc'
+          ? [2, 1, 9, 8, 5, 0, 3, 4, 6, 7]
+          : [5, 8, 1, 9, 2, 0, 3, 4, 6, 7]);
+        expect(compareDailyRows({ [key]: null }, { [key]: undefined }, key, direction)).toBe(0);
+      }
+      expect(rows).toEqual(original);
+      rows.forEach((row, index) => expect(row[key]).toBe(values[index]));
+    },
+  );
+
+  it('orders valid dates chronologically and keeps invalid/missing dates last and stable', () => {
+    const rows = [
+      { date: null, id: 0 },
+      { date: '1970-01-01T00:00:00Z', id: 1 },
+      { date: 'invalid', id: 2 },
+      { date: '1969-12-31T23:59:59Z', id: 3 },
+      { date: '', id: 4 },
+      { date: '1970-01-01T00:00:00.125Z', id: 5 },
+      { date: undefined, id: 6 },
+      { date: '1970-01-01T01:00:00+01:00', id: 7 },
+      { date: '   ', id: 8 },
+    ];
+    for (const direction of ['asc', 'desc'] as const) {
+      expect(rows.slice().sort((a, b) => compareDailyRows(a, b, 'date', direction))
+        .map(row => row.id)).toEqual(direction === 'asc'
+        ? [3, 1, 7, 5, 0, 2, 4, 6, 8]
+        : [5, 1, 7, 3, 0, 2, 4, 6, 8]);
+    }
+  });
+});
 
 describe('scaleEfficiency', () => {
   it('converts SI Wh/m to whole Wh per display distance unit', () => {
@@ -281,9 +366,14 @@ describe('scaleEfficiency', () => {
     expect(scaleEfficiency(0.16, 'mi')).toBe(257); // round(0.16 * 1609.344)
   });
 
-  it('treats null / undefined as 0 (never NaN)', () => {
-    expect(scaleEfficiency(null, 'km')).toBe(0);
-    expect(scaleEfficiency(undefined, 'mi')).toBe(0);
+  it('preserves null / undefined as unknown, distinct from measured zero', () => {
+    // MDC-025/026/045: absent telemetry is not a measured zero.
+    expect(scaleEfficiency(null, 'km')).toBeNull();
+    expect(scaleEfficiency(undefined, 'mi')).toBeNull();
+    expect(scaleEfficiency(0, 'km')).toBe(0);
+    expect(scaleEfficiency(0, 'mi')).toBe(0);
+    expect(scaleEfficiency(Number.NaN, 'km')).toBeNull();
+    expect(scaleEfficiency(Number.POSITIVE_INFINITY, 'mi')).toBeNull();
   });
 });
 
@@ -305,14 +395,18 @@ describe('efficiencyRating', () => {
 });
 
 describe('computeChargePower', () => {
-  it('sums DC + AC power, treating null legs as 0', () => {
-    expect(computeChargePower({ dc_charging_power: 10, ac_charging_power: 5 } as any)).toBe(15);
-    expect(computeChargePower({ dc_charging_power: null, ac_charging_power: 7 } as any)).toBe(7);
+  it('sums known DC + AC power without fabricating a missing channel', () => {
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 10_000, ac_charging_power_w: 5_000 }))).toBe(15_000);
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: null, ac_charging_power_w: 7_000 }))).toBeNull();
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 7_000, ac_charging_power_w: null }))).toBeNull();
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 0, ac_charging_power_w: 7_000 }))).toBe(7_000);
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 7_000, ac_charging_power_w: 0 }))).toBe(7_000);
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 0, ac_charging_power_w: 0 }))).toBe(0);
   });
 
-  it('returns 0 for missing flow data', () => {
-    expect(computeChargePower(null)).toBe(0);
-    expect(computeChargePower(undefined)).toBe(0);
+  it('keeps missing flow data unknown rather than reporting zero charge power', () => {
+    expect(computeChargePower(null)).toBeNull();
+    expect(computeChargePower(undefined)).toBeNull();
   });
 });
 
@@ -329,11 +423,23 @@ describe('buildDailyChartData', () => {
     expect(mi[0].energy).toBe(1); // 1000 Wh → 1 kWh
   });
 
-  it('null-safes missing energy / distance to 0', () => {
-    const rows = [makeDay({ energy_wh: null as any, distance_m: null as any })];
+  it('keeps missing energy / distance as chart gaps, distinct from measured zero', () => {
+    const missing = makeDay();
+    Reflect.set(missing, 'energy_wh', null);
+    Reflect.set(missing, 'distance_m', null);
+    const rows = [missing];
     const out = buildDailyChartData(rows, 'km');
-    expect(out[0].energy).toBe(0);
-    expect(out[0].distance).toBe(0);
+    expect(out[0].energy).toBeNull();
+    expect(out[0].distance).toBeNull();
+    expect(out).toHaveLength(1);
+    const measured = buildDailyChartData([makeDay({ energy_wh: 0, distance_m: 0 })], 'km');
+    expect(measured[0].energy).toBe(0);
+    expect(measured[0].distance).toBe(0);
+    const partialRow = makeDay({ distance_m: 50_000 });
+    Reflect.set(partialRow, 'energy_wh', null);
+    const partial = buildDailyChartData([partialRow], 'mi');
+    expect(partial[0].energy).toBeNull();
+    expect(partial[0].distance).toBeCloseTo(31.06856, 5);
   });
 });
 
@@ -355,21 +461,48 @@ describe('buildEfficiencyChartData', () => {
 describe('EnergyFlowPage — shell & KPI band', () => {
   it('renders the page title + subtitle and sets the document title', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Energy Flow' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Energy flow' })).toBeInTheDocument();
     expect(screen.getByText('Power distribution and energy analysis')).toBeInTheDocument();
-    expect(document.title).toContain('Energy Flow');
+    expect(document.title).toContain('Energy flow');
   });
 
   it('renders every KPI card with km-converted values', () => {
     renderPage();
     const kpi = kpiRegion();
-    expect(within(kpi).getByText('Total Energy')).toBeInTheDocument();
-    expect(within(kpi).getByText('42.00 kWh')).toBeInTheDocument();
-    expect(within(kpi).getByText('55.50 kWh')).toBeInTheDocument();
-    expect(within(kpi).getByText('123.00 km')).toBeInTheDocument();
-    expect(within(kpi).getByText('160')).toBeInTheDocument(); // efficiency (Wh/km)
-    expect(within(kpi).getByText('12.3')).toBeInTheDocument(); // CO2
-    expect(within(kpi).getByText('7')).toBeInTheDocument(); // period days
+    expect(within(kpi).getByText('Total energy')).toBeInTheDocument();
+    expect(metricValue('Total energy', kpi)).toBe('42.00 kWh');
+    expect(metricValue('Total charged', kpi)).toBe('55.50 kWh');
+    expect(metricValue('Distance', kpi)).toBe('123.00 km');
+    expect(Number.parseFloat(metricValue('Efficiency', kpi))).toBe(160); // Wh/km
+    expect(metricValue('Efficiency', kpi)).toBe('160.00 Wh/km');
+    expect(Number.parseFloat(metricValue('CO₂ saved', kpi)).toFixed(2)).toBe('12.30');
+    expect(metricValue('CO₂ saved', kpi)).toBe('12.30 kg');
+    expect(Number.parseFloat(metricValue('Period', kpi))).toBe(7);
+    expect(metricValue('Period', kpi)).toBe('7 days');
+  });
+
+  it('preserves both energy identities and explains their shared-source alias in context and review details', () => {
+    mockStats.mockReturnValue(qr({ data: makeStatsData({ total_energy_charged_wh: 42_000 }) }));
+    renderPage();
+    const kpi = kpiRegion();
+    const explanation = 'The energy summary currently returns total energy used and total energy charged as aliases of the same source total. These are not independent consumed and charged measurements; distinct totals require a producer with measured consumption and charging semantics.';
+
+    const used = within(kpi).getByText('Total energy').closest('[data-operational-metric]')!;
+    const charged = within(kpi).getByText('Total charged').closest('[data-operational-metric]')!;
+    expect(used.getAttribute('data-operational-metric')).not.toBe(charged.getAttribute('data-operational-metric'));
+    for (const tile of [used, charged]) {
+      expect(within(tile as HTMLElement).queryByText('Shared source total')).not.toBeInTheDocument();
+    }
+    expect(metricValue('Total energy', kpi)).toBe('42.00 kWh');
+    expect(metricValue('Total charged', kpi)).toBe('42.00 kWh');
+
+    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Energy summary metrics details' });
+    expect(within(details).getByText('Total energy')).toBeVisible();
+    expect(within(details).getByText('Total charged')).toBeVisible();
+    expect(within(details).getAllByText('42.00 kWh')).toHaveLength(2);
+    expect(within(details).getAllByText('Shared source total')).toHaveLength(2);
+    expect(within(details).getAllByText(explanation)).toHaveLength(2);
   });
 
   it('shows an em-dash placeholder in the KPI band when no vehicle is selected', () => {
@@ -385,7 +518,9 @@ describe('EnergyFlowPage — shell & KPI band', () => {
 
     // Silent-zero hardening: no misleading "0.00 kWh" while data is unknown.
     expect(within(kpiRegion()).queryByText('0.00 kWh')).not.toBeInTheDocument();
-    expect(within(kpiRegion()).getAllByText('—').length).toBeGreaterThanOrEqual(6);
+    for (const label of ['Total energy', 'Total charged', 'Distance', 'Efficiency', 'CO₂ saved', 'Period']) {
+      assertOperationalMetricUnavailable(kpiRegion(), label);
+    }
     // Every data section falls back to the no-vehicle prompt.
     expect(
       screen.getAllByText('Select a vehicle to view its energy flow.').length,
@@ -396,44 +531,191 @@ describe('EnergyFlowPage — shell & KPI band', () => {
     unitState.length = 'mi';
     renderPage();
     const kpi = kpiRegion();
-    expect(within(kpi).getByText('76.43 mi')).toBeInTheDocument(); // 123_000 m → mi
-    expect(within(kpi).getByText('257')).toBeInTheDocument(); // 0.16 Wh/m → 257 Wh/mi
-    expect(within(kpi).getAllByText('Wh/mi').length).toBeGreaterThanOrEqual(1);
+    expect(metricValue('Distance', kpi)).toBe('76.43 mi'); // 123_000 m → mi
+    expect(Number.parseFloat(metricValue('Efficiency', kpi))).toBe(257);
+    expect(metricValue('Efficiency', kpi)).toBe('257.00 Wh/mi');
+    expect(metricValue('Efficiency', kpi)).toMatch(/ Wh\/mi$/);
+  });
+});
+
+describe('EnergyFlowPage — period presentation', () => {
+  it.each([
+    [0, '0 days'],
+    [1, '1 day'],
+    [7, '7 days'],
+    [-1, '-1 day'],
+    [-2.5, '-2.50 days'],
+    [1.25, '1.25 days'],
+    [1234, '1,234 days'],
+    [1.004, '1.00 days'],
+  ])('formats %s raw days without changing metric identity or duration seconds', (days, expected) => {
+    const data = makeStatsData({ period_days: days });
+    mockStats.mockReturnValue(qr({ data }));
+    renderPage();
+    expect(metricValue('Period')).toBe(expected);
+    const props = briefProps.mock.calls
+      .map(([props]) => props as { metrics: StatMetric[]; period: StatPeriod })
+      .find(props => props.metrics.some(metric => metric.occurrenceId === 'period-days'))!;
+    const metric = props.metrics.find(metric => metric.occurrenceId === 'period-days')!;
+    expect(metric.metricId).toBe('duration');
+    expect(metric.rawValue).toBe(days * 86400);
+    expect(data.period_days).toBe(days);
+    expect(props.period.kind).toBe('unknown');
+    expect(props.period).toHaveProperty('reason',
+      'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.');
+    expect(translationCalls).toHaveBeenCalledWith('energyFlow.units.days', 'days', { count: days });
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'keeps missing/invalid period %s distinct from measured zero', (days) => {
+      mockStats.mockReturnValue(qr({ data: makeStatsData({ period_days: days }) }));
+      renderPage();
+      assertOperationalMetricUnavailable(kpiRegion(), 'Period');
+      expect(translationCalls.mock.calls.some(([key]) => key === 'energyFlow.units.days')).toBe(false);
+    },
+  );
+
+  it('uses locale-aware presentation and raw plural counts', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    mockStats.mockReturnValue(qr({ data: makeStatsData({ period_days: 1234.5 }) }));
+    renderPage();
+    expect(metricValue('Period')).toBe('1.234,500 days');
+    expect(translationCalls).toHaveBeenCalledWith('energyFlow.units.days', 'days', { count: 1234.5 });
+  });
+
+  it('uses canonical singular copy for a one-day trailing window and retains the warning', () => {
+    renderPage(['/battery/energy?from=2025-03-07&to=2025-03-07']);
+    assertOperationalBriefDisclosure(kpiRegion(), 'Trailing 1 day', { contains: true });
+    expect(translationCalls).toHaveBeenCalledWith(
+      'energyFlow.summary.trailingWindow', 'Trailing {{days}} days', { count: 1, days: '1' },
+    );
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const trailingDialog = screen.getByRole('dialog');
+    expect(within(trailingDialog).getAllByText(
+      'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.',
+    )).toHaveLength(3);
+    fireEvent.keyDown(trailingDialog, { key: 'Escape' });
+    expect(en.energyFlow.units.days_one).toBe('day');
+    expect(en.energyFlow.units.days_other).toBe('days');
+    expect(en.energyFlow.summary.trailingWindow_one).toBe('Trailing {{days}} day');
+    expect(en.energyFlow.summary.trailingWindow_other).toBe('Trailing {{days}} days');
   });
 });
 
 describe('EnergyFlowPage — live energy flow', () => {
+  it('converts stored watts once and leaves EnergyRemaining raw without inferring its unit', () => {
+    const flow = makeFlowData({ dc_charging_power_w: 48_500, ac_charging_power_w: 7_200 });
+    mockFlow.mockReturnValue(qr({ data: flow }));
+    renderPage();
+    expect(screen.getByText('55.70 kW')).toBeInTheDocument();
+    expect(screen.getByText('48.50 kW')).toBeInTheDocument();
+    expect(screen.getByText('7.20 kW')).toBeInTheDocument();
+    expect(screen.getByText('62.50')).toBeInTheDocument();
+    expect(screen.queryByText('62.50 kWh')).not.toBeInTheDocument();
+    expect(flow.dc_charging_power_w).toBe(48_500);
+    expect(flow.ac_charging_power_w).toBe(7_200);
+    expect(flow.energy_remaining).toBe(62.5);
+  });
+
   it('renders the flow diagram, SOC gauge and charge badge on the happy path', () => {
     renderPage();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Energy Flow Diagram' }),
+      screen.getByRole('heading', { level: 3, name: 'Energy flow diagram' }),
     ).toBeInTheDocument();
     // "Charging" renders twice: the static flow-connector label AND the live
     // charge-state badge (proves the badge branch fired, not just the label).
     expect(screen.getAllByText('Charging').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('82')).toBeInTheDocument(); // SOC gauge value
-    expect(screen.getByText('62.5 kWh')).toBeInTheDocument(); // battery energy_remaining
+    expect(screen.getByText('82.00')).toBeInTheDocument(); // SOC gauge value
+    expect(screen.getByText('62.50')).toBeInTheDocument(); // raw EnergyRemaining, unit not inferred
     expect(screen.getByText('Grid')).toBeInTheDocument();
   });
 
   it('renders the live-power breakdown rows', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 3, name: 'Live Power' })).toBeInTheDocument();
-    expect(screen.getByText('DC Power')).toBeInTheDocument();
-    expect(screen.getByText('AC Power')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Live power' })).toBeInTheDocument();
+    expect(screen.getByText('DC power')).toBeInTheDocument();
+    expect(screen.getByText('AC power')).toBeInTheDocument();
     expect(screen.getByText('HVAC')).toBeInTheDocument();
     expect(screen.getByText('Accessories')).toBeInTheDocument();
     // DC leg = 11 kW (also the aggregate connector); AC leg = 0 kW.
-    expect(screen.getAllByText('11.0 kW').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
+    expect(screen.getAllByText('11.00 kW').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('0.00 kW')).toBeInTheDocument();
+  });
+
+  it('uses restrained flow roles without dimming unsupported labels or power values', () => {
+    renderPage();
+
+    const chargingConnector = screen.getAllByText('11.00 kW')
+      .find((element) => element.parentElement?.classList.contains('rounded-full'))!;
+    expect(chargingConnector).toHaveClass(neonColorMap.cyan.text);
+    expect(chargingConnector.parentElement).toHaveClass(neonColorMap.cyan.bg, neonColorMap.cyan.border);
+    expect(chargingConnector.parentElement?.style.boxShadow).toBe('');
+
+    const drivingConnector = screen.getByText('Driving').parentElement!;
+    expect(within(drivingConnector).getByText('N/A')).toHaveClass(typography.color.secondary);
+    expect(drivingConnector.querySelector('[class*="opacity-"]')).toBeNull();
+
+    const motor = screen.getByText('Motor').closest('.text-center')!;
+    expect(within(motor).getByText('No live data')).toBeInTheDocument();
+    expect(motor).not.toHaveClass('opacity-50');
+
+    const power = screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!;
+    for (const label of ['HVAC', 'Accessories']) {
+      const row = within(power).getByText(label).parentElement!.parentElement!;
+      expect(within(row).getByText('N/A')).toHaveClass(typography.color.secondary);
+      expect(row).not.toHaveClass('opacity-50');
+    }
+    expect(within(power).getByText('11.00 kW')).toHaveClass(typography.color.primary);
+    expect(within(power).getByText('0.00 kW')).toHaveClass(typography.color.primary);
+  });
+
+  it('keeps missing charging channels unknown and unsupported channels readable', () => {
+    mockFlow.mockReturnValue(qr({ data: makeFlowData({
+      dc_charging_power_w: null, ac_charging_power_w: 0, soc: null,
+      energy_remaining: null, charge_state: null,
+    }) }));
+    renderPage();
+
+    const diagram = screen.getByRole('heading', { name: 'Energy flow diagram', exact: true }).closest('[data-card]')!;
+    expect(within(diagram).getAllByText('—')).toHaveLength(2);
+    expect(within(diagram).queryByText('0.00 kW')).not.toBeInTheDocument();
+    expect(within(diagram).getByText('N/A')).toHaveClass(typography.color.secondary);
+
+    const power = screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!;
+    expect(within(power).getByText('—')).toBeInTheDocument();
+    expect(within(power).getByText('0.00 kW')).toBeInTheDocument();
+    expect(within(power).getAllByText('N/A')).toHaveLength(2);
+    expect(metricValue('Total energy')).toBe('42.00 kWh');
+  });
+
+  it('retains historical readings and all section shells when live refresh fails', () => {
+    mockFlow.mockReturnValue(qr({
+      data: makeFlowData(), error: new Error('refresh failed'), isError: true,
+    }));
+    renderPage();
+
+    for (const name of [
+      'Energy summary metrics', 'Energy flow diagram', 'Live power',
+      'Daily energy usage', 'Efficiency metrics', 'Daily distance',
+      'Daily efficiency', 'Daily energy history',
+    ]) {
+      expect(screen.getAllByRole('heading', { name, exact: true }).length).toBeGreaterThan(0);
+    }
+    expect(metricValue('Total charged')).toBe('55.50 kWh');
+    expect(screen.getByText('62.50')).toBeInTheDocument();
+    expect(screen.getAllByText('11.00 kW')).toHaveLength(2);
+    expect(historyTable()).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' })[0]);
+    expect(mockFlow.mock.results[0].value.refetch).toHaveBeenCalledOnce();
   });
 
   it('shows a skeleton (not the gauge) while the flow query is loading', () => {
     mockFlow.mockReturnValue(qr({ isLoading: true, isFetching: true }));
-    const { container } = renderPage();
-    expect(screen.queryByText('62.5 kWh')).not.toBeInTheDocument();
+    renderPage();
+    expect(screen.queryByText('62.50')).not.toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
   });
 
   it('surfaces a retry-able error and re-fetches the flow on retry', async () => {
@@ -452,7 +734,7 @@ describe('EnergyFlowPage — historical sections', () => {
   it('renders the daily-usage chart section (no empty placeholder) on the happy path', () => {
     renderPage();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Daily Energy Usage' }),
+      screen.getAllByRole('heading', { level: 3, name: 'Daily energy usage' })[0],
     ).toBeInTheDocument();
     expect(screen.queryByText('No daily energy data available.')).not.toBeInTheDocument();
   });
@@ -467,12 +749,20 @@ describe('EnergyFlowPage — historical sections', () => {
 
   it('renders the efficiency-metrics panel with a unit-aware rating badge', () => {
     renderPage();
+    const efficiency = screen.getByRole('region', { name: 'Efficiency metrics', exact: true });
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Efficiency Metrics' }),
+      within(efficiency).getByRole('heading', { level: 3, name: 'Efficiency metrics' }),
     ).toBeInTheDocument();
+    const card = efficiency.closest('[data-card]') as HTMLElement;
+    expect(within(card).getAllByRole('heading', { level: 3, name: 'Efficiency metrics' })).toHaveLength(2);
+    expect(within(card.querySelector('header')!).getByRole('heading', { name: 'Efficiency metrics' }))
+      .toBeInTheDocument();
     // avg 160 Wh/km → "good" bucket.
-    expect(screen.getByText('Good')).toBeInTheDocument();
-    expect(screen.getByText('6.00 kWh')).toBeInTheDocument(); // 42_000 Wh / 7 days
+    fireEvent.click(within(efficiency).getByRole('button', { name: 'Review details' }));
+    const efficiencyDialog = screen.getByRole('dialog');
+    expect(within(efficiencyDialog).getByRole('group', { name: 'Wh/km' })).toHaveTextContent('Good');
+    fireEvent.keyDown(efficiencyDialog, { key: 'Escape' });
+    expect(metricValue('Avg energy/day', efficiency)).toBe('6.00 kWh');
   });
 
   it('re-fetches stats when a stats-section retry is clicked', async () => {
@@ -489,7 +779,7 @@ describe('EnergyFlowPage — historical sections', () => {
 
   it('renders the history table and re-sorts when the Energy header is clicked', async () => {
     renderPage();
-    const table = screen.getByRole('table');
+    const table = historyTable();
 
     const firstDataRowText = () => {
       const rows = within(table).getAllByRole('row');
@@ -504,6 +794,29 @@ describe('EnergyFlowPage — historical sections', () => {
 
     // Energy-desc → the higher-energy 20 kWh row rises to the top.
     await waitFor(() => expect(firstDataRowText()).toContain('20.00 kWh'));
+  });
+
+  it('keeps missing energy after measured zero and signed values in both table sort directions', () => {
+    const missing = makeDay({ date: '2025-03-09' });
+    Reflect.set(missing, 'energy_wh', null);
+    const rows = [
+      missing,
+      makeDay({ date: '2025-03-08', energy_wh: 0 }),
+      makeDay({ date: '2025-03-07', energy_wh: -250 }),
+      makeDay({ date: '2025-03-06', energy_wh: 125 }),
+    ];
+    mockStats.mockReturnValue(qr({ data: makeStatsData({ daily_breakdown: rows }) }));
+    renderPage();
+    const table = historyTable();
+    const energyCells = () => within(table).getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[1].textContent);
+    expect(energyCells()).toEqual(['—', '0.00 kWh', '-0.25 kWh', '0.13 kWh']);
+    fireEvent.click(within(table).getByRole('button', { name: 'Energy' }));
+    expect(energyCells()).toEqual(['0.13 kWh', '0.00 kWh', '-0.25 kWh', '—']);
+    fireEvent.click(within(table).getByRole('button', { name: 'Energy' }));
+    expect(energyCells()).toEqual(['-0.25 kWh', '0.00 kWh', '0.13 kWh', '—']);
+    expect(rows[0]).toBe(missing);
+    expect(missing.energy_wh).toBeNull();
   });
 });
 

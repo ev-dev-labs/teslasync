@@ -21,7 +21,7 @@
 //   - vehicleId normalization (leading-zero + whitespace) and rate-plan
 //     trimming into the request body,
 //   - server-valid defaults for every optional field,
-//   - depart_by RFC3339 normalization + now-fallback,
+//   - depart_by RFC3339 normalization + explicit standalone now-assumption,
 //   - the double-submit guard, and
 //   - the terminal-error render path.
 //
@@ -294,6 +294,55 @@ describe('AISmartChargeScheduleSuggestion — canStart validation (mirrors backe
 });
 
 describe('AISmartChargeScheduleSuggestion — wired SSE POST', () => {
+  it.each(['', '   ', 'not-a-date'])(
+    'blocks a supplied invalid departure %j with localized validation and no request',
+    async (departBy) => {
+      enableFeature();
+      const calls = installFetch(DONE);
+
+      render(
+        <AISmartChargeScheduleSuggestion vehicleId={42} ratePlanId="tou-a" departBy={departBy} />,
+      );
+
+      expect(screen.getByText('Enter a valid departure date and time.')).toBeInTheDocument();
+      expect(screen.queryByText(/This standalone draft assumes/)).not.toBeInTheDocument();
+      const button = screen.getByRole('button', { name: DRAFT });
+      expect(button).toBeDisabled();
+      await act(async () => { fireEvent.click(button); });
+      expect(calls).toHaveLength(0);
+    },
+  );
+
+  it('aborts an active draft and clears its proposal when a supplied departure becomes invalid', async () => {
+    enableFeature();
+    let signal: AbortSignal | null | undefined;
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      signal = init?.signal;
+      return new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(sseFrame('delta', { text: 'Old departure proposal' })));
+        },
+      }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+    });
+    const { rerender } = render(
+      <AISmartChargeScheduleSuggestion vehicleId={42} ratePlanId="tou-a" departBy="2026-07-05T14:30" />,
+    );
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: DRAFT })); });
+    await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Old departure proposal'));
+
+    rerender(<AISmartChargeScheduleSuggestion vehicleId={42} ratePlanId="tou-a" departBy="" />);
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    expect(screen.queryByText('Old departure proposal')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: DRAFT })).toBeDisabled();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+    rerender(<AISmartChargeScheduleSuggestion vehicleId={42} ratePlanId="tou-a" departBy="2026-07-06T14:30" />);
+    expect(screen.getByRole('button', { name: DRAFT })).toBeEnabled();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('clicking Draft POSTs exactly once to the draft route with the normalized draftRequest body', async () => {
     enableFeature();
 
@@ -371,6 +420,9 @@ describe('AISmartChargeScheduleSuggestion — wired SSE POST', () => {
 
     const before = Date.now();
     render(<AISmartChargeScheduleSuggestion vehicleId={5} ratePlanId="tou-b" />);
+    expect(screen.getByText(
+      'No departure was supplied. This standalone draft assumes departure at the current time.',
+    )).toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: DRAFT }));
@@ -388,8 +440,7 @@ describe('AISmartChargeScheduleSuggestion — wired SSE POST', () => {
     expect(parsed.charger_voltage).toBe(240);
     expect(parsed.prefer_off_peak).toBe(true);
 
-    // depart_by falls back to "now" as a valid RFC3339 timestamp the
-    // handler's time.Parse(RFC3339) accepts.
+    // Only an omitted departure uses the disclosed standalone assumption.
     const departMs = Date.parse(parsed.depart_by as string);
     expect(Number.isNaN(departMs)).toBe(false);
     expect(departMs).toBeGreaterThanOrEqual(before - 1000);

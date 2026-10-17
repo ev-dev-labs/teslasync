@@ -1,0 +1,110 @@
+{
+  "scope": "Four source-specific translation-key substitutions only; fallback English already existed in this dirty source preimage.",
+  "sourceMap": [
+    {
+      "section": "Operational brief",
+      "source": "sessionsQuery -> useDataState(provenance historical), filtered sessions, operationalTotals, chargingAttention, narrative, scopedMetrics",
+      "preserved": "All status predicates, status tone, loading flag, scoped metrics operands, attention, confidence, narrative evidence and limitations unchanged; only four approved translation keys differ."
+    },
+    {
+      "section": "Business account and sync",
+      "source": "is403 from refreshMutation.error.status, lastSync from first filtered session fetched_at",
+      "preserved": "Business account note, 403 state, last-sync timestamp unchanged."
+    },
+    {
+      "section": "KPI summary",
+      "source": "response.summary -> summaryMetrics -> ChargingSummaryBrief",
+      "preserved": "Server lifetime-summary scope, raw source values, retained-state flags and formatter callbacks unchanged."
+    },
+    {
+      "section": "Wait forecast",
+      "source": "WaitOraclePanel independent source",
+      "preserved": "Forecast panel and its independent behavior unchanged."
+    },
+    {
+      "section": "Cost and charger analysis",
+      "source": "buildMonthlyCost(sessions), chargerTypeBreakdown from groupSessions",
+      "preserved": "Monthly cost chart, exports, chart retry, loading/empty/error branches, energy totals and bars unchanged."
+    },
+    {
+      "section": "Locations",
+      "source": "mapPoints with non-null coordinates, topLocations grouped and ranked by spend",
+      "preserved": "Lazy map, suspense/loading/empty/error branches, six-site ranking, energy/cost/count bar operands unchanged."
+    },
+    {
+      "section": "Session history",
+      "source": "sortedSessions from sessions, columns, mobilePresentation, DataTable",
+      "preserved": "Table and mobile detailed states, privacy masking, columns, sorting, pagination, virtualization, selection, filters, export row and bulk CSV actions unchanged."
+    }
+  ],
+  "dataMap": [
+    {
+      "source": "useVehicles + useVehicleVinFilter",
+      "operands": "vehiclesLoading, queryVin, selectedVin, setSelectedVin, vehicles",
+      "bounds": "Tesla query enabled only after vehicle inventory loading; queryVin passed to useTeslaChargingSessions unchanged."
+    },
+    {
+      "source": "useRangeState",
+      "operands": "start, end; persistKey tesla-charging-sessions.range; defaultPresetId all",
+      "bounds": "Existing client-side charge_start_datetime filter uses local start midnight and end 23:59:59.999 unchanged; no new server-bound filtering claim."
+    },
+    {
+      "source": "useTeslaChargingSessions",
+      "operands": "response.sessions, response.summary, sessionsQuery, historical useDataState",
+      "bounds": "All source flags, hasData, fatalError, refreshError, refresh-blocked paths and retry behavior preserved."
+    },
+    {
+      "source": "SI/display",
+      "operands": "total_energy_added_wh, charge_duration_s, total_cost, idle_fee, congestion_fee, summary.total_wh, peak_power_kw",
+      "bounds": "formatEnergy and convertEnergyFromSI remain display-only; existing power operands and currency/duration precision untouched; no unit field renamed or conversion changed."
+    },
+    {
+      "source": "Operational aggregates",
+      "operands": "totalWh, totalCost, totalFees, missingCostCount, averageDurationSeconds",
+      "bounds": "All null safety, duration-validity checks, accumulations, confidence predicates and chart grouping unchanged."
+    }
+  ],
+  "actionMap": [
+    {
+      "action": "Select vehicle",
+      "handler": "setSelectedVin(e.target.value)",
+      "preserved": true
+    },
+    {
+      "action": "Refresh from Tesla",
+      "handler": "handleRefresh -> refreshMutation.mutate(queryVin ? {vin: queryVin} : undefined)",
+      "preserved": true
+    },
+    {
+      "action": "Retry source/section",
+      "handler": "sessionsQuery.refetch()",
+      "preserved": true
+    },
+    {
+      "action": "Review operational detail drawer",
+      "handler": "Existing OperationalBrief real shared component and supplied narrative",
+      "preserved": true
+    },
+    {
+      "action": "Sort",
+      "handler": "handleSort; date/energy/peakPower/cost comparators",
+      "preserved": true
+    },
+    {
+      "action": "Select, paginate, reorder columns, filter values",
+      "handler": "Existing DataTable props and state handlers",
+      "preserved": true
+    },
+    {
+      "action": "Chart and table exports",
+      "handler": "Existing monthlyData export, exportRow, exportSelectedCsv(rows)",
+      "preserved": true
+    }
+  ],
+  "limitations": [
+    "Returned Fleet Charging active-session population remains unproved; no API/business changes or claim that this is resolved.",
+    "Existing sessionsDetail canonical copy and all detailed session states are deliberately untouched.",
+    "ChargingListPage actual pending posture says Checking; the authored live-query probe verifies operations.status.loading = Resolving live state without falsely attributing that exact label to ChargingListPage.",
+    "Source maps and exact bytes are metadata, not TypeScript, audit, test or browser acceptance."
+  ]
+}

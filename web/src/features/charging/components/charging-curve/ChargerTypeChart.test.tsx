@@ -41,6 +41,29 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { ChargingSession } from '@/api/types';
 
+const chartSpies = vi.hoisted(() => ({
+  bar: vi.fn((_props: Record<string, unknown>) => null),
+  composed: vi.fn(),
+}));
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    ComposedChart: ({ children, ...props }: { children?: ReactNode; data: unknown }) => {
+      chartSpies.composed(props);
+      return <>{children}</>;
+    },
+    Bar: chartSpies.bar,
+    XAxis: () => null,
+    YAxis: () => null,
+    CartesianGrid: () => null,
+    Tooltip: () => null,
+    ChartLegend: () => null,
+  };
+});
+
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via shared
 // UI) reads it. Install a benign stub before any shared module evaluates.
 vi.hoisted(() => {
@@ -108,6 +131,7 @@ vi.mock('@/hooks/useChartExport', () => ({
 // <ChartContainer> wires annotation hooks unconditionally; we never pass
 // `annotations`, so stub them to no-ops instead of demanding a live query.
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
@@ -195,7 +219,38 @@ function dataRowCells(label: string): string[] {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
+});
+
+describe('ChargerTypeChart — motion-aware series', () => {
+  it.each([false, true])('preserves both populated series with reduced motion=%s', (reduce) => {
+    const matchMedia = window.matchMedia;
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      ...matchMedia(query),
+      matches: reduce && query.includes('prefers-reduced-motion'),
+    }));
+    renderChart([
+      session(1, 30, { charger_type: 'Tesla', peak_power_w: 120_000, total_energy_added_wh: 40_000 }),
+    ]);
+
+    expect(screen.getByRole('figure', { name: TITLE })).toHaveAttribute(
+      'data-chart-key', 'charger-type-chart',
+    );
+    expect(chartSpies.composed).toHaveBeenCalledWith(expect.objectContaining({
+      data: [{ label: 'Supercharger', count: 1, avgKw: 120, avgKwh: 40, avgDuration: 30 }],
+    }));
+    expect(chartSpies.bar.mock.calls.map(([props]) => ({
+      dataKey: props.dataKey,
+      yAxisId: props.yAxisId,
+      isAnimationActive: props.isAnimationActive,
+      animationDuration: props.animationDuration,
+    }))).toEqual([
+      { dataKey: 'avgKw', yAxisId: 'kw', isAnimationActive: !reduce, animationDuration: reduce ? 0 : 300 },
+      { dataKey: 'avgKwh', yAxisId: 'kwh', isAnimationActive: !reduce, animationDuration: reduce ? 0 : 300 },
+    ]);
+    expect(dataRowCells('Supercharger')).toEqual(['Supercharger', '1', '120.00', '40.00', '30']);
+  });
 });
 
 describe('ChargerTypeChart — chrome + a11y', () => {
@@ -233,10 +288,10 @@ describe('ChargerTypeChart — grouping + averaging', () => {
     ]);
 
     // avgKw=(250+150)/2=200, avgKwh=(40+60)/2=50, avgDuration=(20+40)/2=30.
-    expect(dataRowCells('Supercharger')).toEqual(['Supercharger', '2', '200.0', '50.0', '30']);
+    expect(dataRowCells('Supercharger')).toEqual(['Supercharger', '2', '200.00', '50.00', '30']);
     // Single-session buckets — 120 kW / 80 kWh / 30 min and 7 kW / 10 kWh / 60 min.
-    expect(dataRowCells('DC Fast')).toEqual(['DC Fast', '1', '120.0', '80.0', '30']);
-    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '7.0', '10.0', '60']);
+    expect(dataRowCells('DC Fast')).toEqual(['DC Fast', '1', '120.00', '80.00', '30']);
+    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '7.00', '10.00', '60']);
   });
 
   it('mirrors each bucket in the visible legend (label + session count)', () => {
@@ -297,8 +352,8 @@ describe('ChargerTypeChart — null safety', () => {
 
     const cells = dataRowCells('Home / AC');
     expect(cells[1]).toBe('2'); // both sessions counted
-    expect(cells[3]).toBe('5.0'); // avgKwh survives the missing reading
-    expect(cells[3]).not.toBe('0.0'); // pin the pre-fix collapse
+    expect(cells[3]).toBe('5.00'); // avgKwh survives the missing reading
+    expect(cells[3]).not.toBe('0.00'); // pin the pre-fix collapse
   });
 
   it('coerces a null peak power to a zeroed kW average without crashing', () => {
@@ -308,7 +363,7 @@ describe('ChargerTypeChart — null safety', () => {
       ]),
     ).not.toThrow();
     // peak_power_w null → avgKw 0 → "0.0"; energy 5 kWh survives.
-    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '0.0', '5.0', '15']);
+    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '0.00', '5.00', '15']);
   });
 });
 

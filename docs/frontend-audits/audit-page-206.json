@@ -1,0 +1,258 @@
+{
+  "item": "audit-page-206",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+  "routes": ["/signal-entropy"],
+  "purpose": "Analyze the information content of one selected vehicle's numeric telemetry signal with quantile-binned Shannon entropy.",
+  "primaryGoal": "Choose a signal, understand its entropy and dominant state, inspect rolling entropy and bin occupancy, and interpret the observed sample range.",
+  "dataSources": [
+    {
+      "hook": "useSignals",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoint": "/signals/{vehicleID}/available",
+      "backendRouteEvidence": "internal\\api\\router.go:4886,4911,4929",
+      "sourceOwnership": "Signal handler available-signal catalog; this hook retains names only, not value_kind or unit_kind metadata.",
+      "behavior": "Vehicle-keyed query, enabled only for positive vehicle ID, standard staleTime, safe array output, AbortSignal forwarded."
+    },
+    {
+      "hook": "useSignalAnalysisHistory",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 194,
+      "endpoint": "/signals/{vehicleID}/{encodedSignalName}/history?hours=48&limit=10000",
+      "backendRouteEvidence": "internal\\api\\router.go:4886,4914,4932",
+      "sourceOwnership": "Signal handler historical response. Backend storage, ordering, truncation, completeness and actual returned bounds were not exercised or independently inspected.",
+      "behavior": "Key includes vehicle, signal, bounded hours and limit; enabled for positive vehicle and nonempty signal; URI encoding, cancellation, moderate staleTime, standard polling and no background polling.",
+      "derivedOwner": "web\\src\\features\\telemetry\\lib\\signalEntropy.ts",
+      "sampleContract": "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts:14-47 accepts finite numeric ValueKind rows with valid ts, sorts ascending and retains the last valid row per timestamp; booleans, enums, strings and invalid rows are excluded."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": null,
+      "sourceOwnership": "Existing workspace vehicle selection; path/vehicle_id URL, persisted selection and fleet fallback.",
+      "behavior": "Page consumes the workspace owner and does not introduce another vehicle picker."
+    },
+    {
+      "hook": "useNumberFormatting",
+      "owner": "web\\src\\hooks\\useNumberFormatting.ts",
+      "line": 18,
+      "endpoint": null,
+      "sourceOwnership": "Existing formatter-preference bridge.",
+      "behavior": "Locale and precision changes update numeric metrics and bin labels without changing raw measurements."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "category": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": "Page:121-130; adapter:7-15 forwards PageContainer props and owns full-width min-w-0 container layout."},
+    {"name": "PageContainer", "category": "layout", "owner": "web\\src\\components\\layout\\PageContainer.tsx", "evidence": "Existing header, freshness, DataSourceNotice and page error boundary; page supplies independent named catalog/history sources."},
+    {"name": "TelemetrySummaryBrief", "category": "domain composite", "owner": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "evidence": "Page:167-174; composite:23-51 adapts raw StatMetric through useOperationalMetrics into existing OperationalBrief with retained/unknown/unavailable labels and source bounds."},
+    {"name": "GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip", "category": "ui primitives", "owner": "@/components/ui", "evidence": "Page:6,133-161,253-297; category import retained; shared implementations other than interfaces encountered above were not independently audited."},
+    {"name": "ChartContainer and chart category exports", "category": "charts", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "evidence": "Page:193-217,224-246; shared props:77-180 include named charts, source data tables, loading/error/empty, fullscreen/export presentation capabilities."},
+    {"name": "Skeleton, EmptyState, QueryError", "category": "feedback", "owner": "@/components/feedback", "evidence": "Page:145-153,176,181-190,258-265; independent recovery rather than a whole-page data gate."},
+    {"name": "FadeIn", "category": "motion", "owner": "@/components/motion", "evidence": "Five page sections use existing motion category; reduced-motion implementation and actual behavior not inspected/exercised."},
+    {"name": "NoVehicleSelected", "category": "onboarding domain", "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "evidence": "Page:117-119 preserves existing no-selected-vehicle fallback; implementation not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {"pattern": "Two interpretation surfaces share border, background, radius, padding and badge/text structure.", "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx", "line": 269, "assessment": "Small local repetition; use existing layout/card composition if useful, not a new global card library. Preserve both independent explanations."},
+    {"pattern": "Two charts share grid, axis and tooltip composition.", "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx", "line": 210, "assessment": "Already use canonical ChartContainer/category exports. Prefer existing chart tokens; no evidence here warrants another chart wrapper."}
+  ],
+  "responsive": {
+    "sourceEvidence": ["Page:133,182,253 use p-4 sm:p-5.", "Page:268 stacks interpretation cards and uses two columns at sm.", "PageLayout:11-13 retains full-width min-w-0 and container layout.", "Page:209,238 charts use width=100% ResponsiveContainer."],
+    "risks": ["Long signal names and numeric bin labels need real 320px and allocated-container testing.", "Two days of time-only labels can repeat and become ambiguous even when labels fit.", "Chart heights of 300/260 and shared fallback tables need mobile and fullscreen verification."],
+    "verifiedViewports": [],
+    "status": "unverified"
+  },
+  "accessibility": {
+    "sourceEvidence": ["Page:155-161 Select has localized label.", "Page:135,255 decorative title icons have aria-hidden.", "Page:137-143 help has localized ariaLabel.", "Page:196,226 chart ariaLabel and data/dataColumns provide existing table alternatives.", "Page:272-283 state badges contain explanatory text rather than color alone."],
+    "keyboard": "unverified",
+    "focus": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotion": "unverified",
+    "touchTargets": "unverified"
+  },
+  "states": {
+    "noVehicle": "Existing NoVehicleSelected return at page:117-119.",
+    "catalogLoading": "Skeleton at page:147-148.",
+    "catalogFatalError": "QueryError and catalog refetch at page:145-146.",
+    "catalogEmpty": "Localized no-recorded-signals EmptyState at page:149-153.",
+    "unchosenHistory": "History hook disabled; metrics null; rolling prompt and reading prompt remain mounted.",
+    "historyLoading": "Page:91-95 avoids hiding retained response; summary and charts/reading receive contextual loading.",
+    "historyFatalError": "Only historyState.fatalError replaces affected content, with history refetch recovery.",
+    "historyEmptyOrNonNumeric": "Metric raw values remain null when summary.samples=0; rolling and distribution empty states; interpretation message inaccurately asks to pick a signal even after selection.",
+    "insufficientRollingSamples": "Separate rolling empty explanation; distribution and metrics can remain available.",
+    "refreshFailure": "Retained response continues to derive charts and metrics; brief labels retained at page:170. PageContainer receives named sources for nonfatal notices.",
+    "staleOfflinePartial": "Existing useDataState and source-notice mechanisms are wired; actual status rendering, offline transitions and retained-refresh recovery were not exercised.",
+    "missingBounds": "Summary composite explicitly labels bounds unknown when absent; no fabricated timestamp bounds.",
+    "finding": {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+      "line": 265,
+      "rule": "MDC-026 / mission 23",
+      "detail": "Selected histories with zero valid numeric samples show 'Pick a signal' although a signal is already chosen. The distribution uses the generic shared empty copy. This fails to explain the numeric-only eligibility or empty returned history.",
+      "fix": "Keep both sections mounted and distinguish unchosen, resolved-empty and no-valid-numeric-samples using existing EmptyState/ChartContainer empty text; do not manufacture zero entropy.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+      "line": 135,
+      "rule": "MDC-010 / MDC-011",
+      "detail": "Two decorative section icons use fixed text-cyan-300 (also line 255), independent of theme/semantic tokens. No neon text, glowing panel or fixed-white body text was found in the scoped page scan.",
+      "fix": "Use existing muted/semantic icon tokens; retain the configured chart palette and saved theme choices instead of resetting colors.",
+      "owner": "page",
+      "confidence": "high",
+      "priority": "low"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+      "line": 29,
+      "rule": "MDC-032",
+      "detail": "History is hard-coded to 48 hours at line 42. /signal-entropy is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77), so this dated analysis has no shared header range ownership and does not consume from/to workspace bounds. Vehicle scope correctly uses the shared owner.",
+      "fix": "Integration owner should establish typed explicit-bound analysis support and register this exact route only when it consumes both bounds. Preserve existing 48h default and query/cache behavior until explicit scoped integration; never add a local date picker or silently reinterpret the period.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+      "line": 76,
+      "rule": "MDC-044 / mission 26",
+      "detail": "Rolling timestamps are reduced to browser-local hour/minute strings with undefined locale before reaching chart/table data. Over a 48h query, different dates can share the same label; configured locale/timezone is not passed and the plotted/fallback rows lose timestamp identity.",
+      "fix": "Keep raw timestamp identity in derived display rows, then use existing configured date/time formatting for axes, tooltip and table; include date or disambiguating context without changing algorithm windows or SI data.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+      "line": 85,
+      "rule": "MDC-033 / MDC-045",
+      "detail": "Bin endpoints and observed range (lines 289-290) use generic fmtNumber without unit metadata or display-only physical conversion. The catalog hook discards unit_kind. Entropy bits/fractions are dimensionless, but physical signal ranges cannot identify their unit or honor unit display preferences from this page's current inputs.",
+      "fix": "Reuse existing rich signal catalog and signal-unit presentation owner where supported. Keep binning on original canonical measurements and convert only physical endpoints at the display boundary; never infer units from a name or change wire/cache measurements.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+      "line": 288,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Observed-range copy says samples are 'in the last 48h window', while the summary correctly warns that analysis covers returned numeric samples and is not guaranteed full-window coverage (line 174). The hook is capped at 10000 and backend coverage/truncation semantics were not inspected.",
+      "fix": "Align interpretation with requested-window versus returned-sample wording and retain actual/unknown source bounds; do not claim complete coverage or invent backend completeness.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\AnalysisBriefs.test.tsx",
+      "line": 64,
+      "rule": "MDC-045 / MDC-070 evidence integrity",
+      "detail": "This entropy consumer test builds historical samples as timestamp/valueNum (lines 64-72), but SignalHistoryPoint requires ts/kind/value (api/types.ts:2670-2678) and the entropy extractor rejects rows without string ts (signalHistorySamples.ts:19-20). The mock chart and PageLayout omit real chart/source behavior. This is source evidence of fixture drift, not a test execution result.",
+      "fix": "Integration/test owner should migrate this consumer's fixtures to the real typed numeric signal envelope and retain assertions on nonempty actual entropy, source bounds and retained state; add rendered chart/time/empty-state coverage instead of borrowing old receipts.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": "Close typed fixture drift and physical range/time identity before visual modernization.",
+    "next": "Coordinate shared workspace range integration without changing the current 48h default or analyses.",
+    "last": "Subdue two decorative icon accents and refine existing empty copy; no replacement presentation library needed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace-bounded statistical history integration",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "propsVariantsStates": "Typed explicit start/end bounds, scope-keyed cancellation/cache identity, retained response/fatal versus refresh failure, numeric eligibility and actual/unknown source bounds; preserve 48h current default and 10000 limit.",
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx"],
+      "dependsOn": ["Backend signal-history bound support must be inspected before implementation.", "Integration ownership of web\\src\\lib\\workspaceScope.ts route registration."]
+    },
+    {
+      "name": "Rich signal metadata display integration",
+      "owner": "web\\src\\api\\hooks\\useSignals.ts (existing rich catalog owner identified by useTelemetry.ts documentation; not inspected)",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useSignals.ts",
+      "propsVariantsStates": "Existing value_kind/unit_kind metadata with typed supported/unknown unit handling and display-only range formatting; do not alter raw measurement inputs.",
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx"],
+      "dependsOn": ["Inspect existing rich catalog and established signal-formatting contracts before adopting; no new generic unit engine."]
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "assessment": "Page reuses existing layout, summary, chart and feedback owners; no competing theme/query/table/chart library found in inspected page. Generic raw time formatting and local card markup are consolidation opportunities, not justification to introduce new owners."
+  },
+  "preservation": {
+    "sourceHash": "062091690fd9cd6c6f07090fd2c0bc5ed32c92bdde29e6f96d3a7577d1410b43",
+    "hashAlgorithm": "SHA256",
+    "hashScope": "Exact bytes of root page web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+    "currentLineCount": 302,
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Choose a signal", "line": 131, "count": 1},
+      {"name": "Entropy metrics", "line": 165, "count": 1, "metricCount": 4},
+      {"name": "Rolling information density", "line": 178, "count": 1},
+      {"name": "Quantile bin distribution", "line": 221, "count": 1},
+      {"name": "Reading the result", "line": 251, "count": 1, "interpretationCount": 2}
+    ],
+    "componentOpeningCounts": {"GlassPanel": 3, "ChartContainer": 2, "TelemetrySummaryBrief": 1, "FadeIn": 5},
+    "actions": [
+      "Signal selection and contextual help.",
+      "Catalog and selected-history retry.",
+      "OperationalBrief review details through existing composite.",
+      "Existing ChartContainer table alternatives, fullscreen/image-export presentation capabilities as supplied by shared owner; actual mounted controls unverified.",
+      "Shared workspace vehicle selection and no-vehicle onboarding fallback."
+    ],
+    "dataBehavior": [
+      "48h requested history, bounded 10000-row analysis hook, standard polling, positive vehicle/nonempty signal enablement, cancellation and cache identity.",
+      "Numeric-only valid measurement extraction, ascending timestamp sorting and last-valid timestamp deduplication; no enum/string/boolean promotion.",
+      "Default 8 requested quantile bins; collapse duplicate boundaries, normalize against populated bins.",
+      "Entropy bits, effective states, dominant-state fraction and consecutive-bin change rate; preserve exact rounding/calculations.",
+      "Rolling windows of 20 samples advancing 5 samples using global bin edges; timestamp uses each window's last sample.",
+      "Unknown input yields null metric rawValue, not invented successful zero; retain nonempty history after refresh failure.",
+      "Preserve numeric formatter locale/precision, source bounds/unknown bounds, explanations and semantic dominant-bin threshold at 0.9.",
+      "Raw canonical measurements remain unchanged; only displayed physical ranges may acquire preference conversion through established owners."
+    ],
+    "mustNotRemove": ["All five sections", "All four metrics and specialist help", "Both charts and accessible data rows", "Both interpretation cards", "Retries and retained trust", "All existing workspace, formatter, theme and motion preferences"]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; only assigned report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Route strings confirmed in router; handler/storage/filter/truncation and runtime requests not inspected/exercised.",
+    "tests": "Inspected existing entropy-consumer test source only; no tests, TypeScript, lint, builds or Git run.",
+    "auditScript": "Read .github\\skills\\audit-violations\\audit.sh; not executed because it unconditionally runs project TypeScript and this assignment is source-only.",
+    "sourceScan": {"staticInlineStyleMatches": 0, "caseSensitiveRawControlMatches": 0, "directRechartsLeafletMotionImportMatches": 0, "fixedWhiteGrayNeonTextMatches": 0, "fixedCyanIconMatches": 2},
+    "scanCommands": ["Get-FileHash 'web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx' -Algorithm SHA256", "Get-Content page; Select-String -CaseSensitive for style and lowercase raw controls; scoped Select-String counts for library names and color text."],
+    "commandResults": ["Page hash/count scan exit 0; page has 302 lines, 3 GlassPanel openings and 2 ChartContainer openings.", "An initial PowerShell scan had a quoting parse error (exit 1); rerun succeeded. An initially case-insensitive raw-control count matched shared Select; corrected case-sensitive result is 0.", "Two mistaken dependency path probes returned nonexistent path errors; no alternative access to restricted content was attempted."],
+    "historicalAcceptance": "No prior runtime acceptance or old receipts used as current proof.",
+    "scope": "Single exact page and directly relevant data/presentation interfaces only; no neighboring-page audit or full-app conclusion."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md (sections 0-37)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalEntropyPage.tsx",
+    "web\\src\\features\\telemetry\\lib\\signalEntropy.ts",
+    "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\AnalysisBriefs.test.tsx (lines 1-190)",
+    "web\\src\\api\\hooks\\useTelemetry.ts (lines 1-245)",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts (lines 1-150)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx (lines 1-255)",
+    "web\\src\\components\\charts\\ChartContainer.tsx (lines 1-180)",
+    "web\\src\\api\\types.ts (lines 2657-2688)",
+    "web\\src\\types\\telemetry.ts (lines 1-31)",
+    "web\\src\\App.tsx (scoped route/import matches)",
+    "web\\src\\lib\\routeRegistry.ts (scoped route match)",
+    "internal\\api\\router.go (scoped route matches and lines 4890-4936)"
+  ]
+}

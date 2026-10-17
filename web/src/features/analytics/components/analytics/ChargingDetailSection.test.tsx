@@ -6,7 +6,7 @@
  *
  *   1. Charger Brands — a leaderboard whose bar widths are `count / maxCount`
  *      (the top brand is always 100%). Rank + locale-formatted session count.
- *   2. Cost by Charger Type — per-type share bars (`count / typeTotal`) plus a
+ *   2. Session Share by Charger Type — per-type share bars (`count / typeTotal`) plus a
  *      locale-formatted count and rounded percentage.
  *   3. Cost Analysis — four MetricCards (min / avg / median / max) run through
  *      `useFormatting().formatCurrency`.
@@ -25,7 +25,7 @@
  * `useNavigate`.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -169,13 +169,35 @@ function renderSection(query: FleetAnalyticsQuery) {
 }
 
 const PANEL_TITLES = [
-  'Charger Brands',
-  'Cost by Charger Type',
-  'Cost Analysis',
-  'Monthly Charging Trend',
+  'Charger brands',
+  'Charging sessions by charger type',
+  'Returned charging cost distribution',
+  'Monthly charging trend',
 ];
 
 describe('ChargingDetailSection — populated', () => {
+  it('labels count-based shares as sessions and does not invent charger-type prices', () => {
+    renderSection(makeQuery({ data: {
+      ...FULL,
+      charging_analytics: {
+        ...CA,
+        charger_types: [{ type: 'Home', count: 3 }, { type: 'Supercharger', count: 1 }],
+      },
+    } }));
+
+    const heading = screen.getByRole('heading', { name: 'Charging sessions by charger type' });
+    const panel = heading.closest('[data-card]');
+    expect(panel).not.toBeNull();
+    if (!panel) throw new Error('Missing charger-type session share panel');
+    expect(within(panel).getByText('3 (75%)')).toBeInTheDocument();
+    expect(within(panel).getByText('1 (25%)')).toBeInTheDocument();
+    expect(Array.from(panel.querySelectorAll<HTMLElement>('[style]'), el => el.style.width))
+      .toEqual(['75%', '25%']);
+    expect(within(panel).queryByText(/cost|\$/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Cost by charger type' })).not.toBeInTheDocument();
+    expect(screen.getByText('$12.40')).toBeInTheDocument();
+  });
+
   it('mounts all four panel headings as level-3 headings', () => {
     renderSection(makeQuery({ data: FULL }));
     for (const name of PANEL_TITLES) {
@@ -215,7 +237,8 @@ describe('ChargingDetailSection — populated', () => {
   it('formats the four cost MetricCards through formatCurrency (2dp, $)', () => {
     renderSection(makeQuery({ data: FULL }));
 
-    expect(screen.getByText('Min Cost')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Cost analysis' })).toBeInTheDocument();
+    expect(screen.getByText('Min cost')).toBeInTheDocument();
     expect(screen.getByText('$1.50')).toBeInTheDocument();
     expect(screen.getByText('$12.40')).toBeInTheDocument();
     expect(screen.getByText('$9.75')).toBeInTheDocument();
@@ -225,7 +248,7 @@ describe('ChargingDetailSection — populated', () => {
   it('mounts the monthly-trend chart body (not the empty placeholder) when trend rows exist', () => {
     renderSection(makeQuery({ data: FULL }));
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Monthly Charging Trend' }),
+      screen.getByRole('heading', { level: 3, name: 'Monthly charging trend' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('No monthly data')).toBeNull();
   });
@@ -236,10 +259,19 @@ describe('ChargingDetailSection — loading', () => {
     const { container } = renderSection(makeQuery({ isLoading: true, data: FULL }));
 
     // Loading takes precedence — skeletons render, panel titles stay mounted.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const skeletons = container.querySelectorAll<HTMLElement>(
+      '[aria-busy="true"] [role="status"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(Array.from(skeletons, skeleton => skeleton.style.height))
+      .toEqual(['260px', '260px', '140px']);
+    const chart = screen.getByTestId('chart-skeleton');
+    expect(chart).toHaveAttribute('aria-busy', 'true');
+    expect(chart.querySelectorAll('[aria-hidden="true"].flex-1.rounded-t')).toHaveLength(7);
     for (const name of PANEL_TITLES) {
       expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
     }
+    expect(screen.queryByRole('heading', { name: 'Cost analysis' })).not.toBeInTheDocument();
     // No populated content bleeds through the skeleton.
     expect(screen.queryByText('#1 Tesla Supercharger')).toBeNull();
     expect(screen.queryByText('$1.50')).toBeNull();
@@ -283,6 +315,7 @@ describe('ChargingDetailSection — empty states', () => {
     for (const name of PANEL_TITLES) {
       expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
     }
+    expect(screen.queryByRole('heading', { name: 'Cost analysis' })).not.toBeInTheDocument();
   });
 
   it('shows per-section empty copy when charging_analytics is present but sections are empty', () => {
@@ -296,6 +329,41 @@ describe('ChargingDetailSection — empty states', () => {
 });
 
 describe('ChargingDetailSection — null safety', () => {
+  it('keeps zero and signed recorded costs distinct from missing cost fields', () => {
+    const { container } = renderSection(makeQuery({ data: {
+      ...FULL,
+      charging_analytics: { ...CA, cost_stats: { ...STATS, count: 3, min: -2.5, avg: 0, median: 0, max: 5 } },
+    } }));
+    expect(container.querySelector('[data-operational-metric="charging-min-cost"] [data-operational-value]')).toHaveTextContent('$-2.50');
+    expect(container.querySelector('[data-operational-metric="charging-average-cost"] [data-operational-value]')).toHaveTextContent('$0.00');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it.each([0, -1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, undefined, null])(
+    'does not present zero-filled costs as measured with count %s',
+    (count) => {
+      renderSection(makeQuery({ data: {
+        ...FULL,
+        charging_analytics: { ...CA, cost_stats: { ...STATS, count } },
+      } as unknown as FleetAnalytics }));
+      expect(screen.getByText('No cost statistics')).toBeInTheDocument();
+      expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+      expect(screen.getByText('800 sessions')).toBeInTheDocument();
+    },
+  );
+
+  it('keeps missing and invalid cost readings unknown despite recorded samples', () => {
+    const { container } = renderSection(makeQuery({ data: {
+      ...FULL,
+      charging_analytics: { ...CA, cost_stats: { ...STATS, count: 2, min: undefined, avg: Number.NaN, median: Infinity, max: 0.25 } },
+    } as unknown as FleetAnalytics }));
+    expect(container.querySelector('[data-operational-metric="charging-min-cost"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="charging-average-cost"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(container.querySelector('[data-operational-metric="charging-median-cost"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(container.querySelector('[data-operational-metric="charging-max-cost"] [data-operational-value]')).toHaveTextContent('$0.25');
+  });
+
   it('renders placeholder labels and zeroed counts without crashing on missing fields', () => {
     renderSection(makeQuery({ data: MALFORMED }));
 

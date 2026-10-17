@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Route, BatteryCharging, Car } from 'lucide-react';
 
-import { GlassPanel, IconBox, Heading, Text } from '@/components/ui';
+import { GlassPanel, Icon, IconBox, Heading, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { type NeonColor } from '@/lib/tokens';
 
@@ -33,30 +33,30 @@ export function OnboardingFeaturePreview({ className }: { className?: string }) 
     () => [
       {
         key: 'tracking',
-        icon: <MapPin className="h-5 w-5" aria-hidden="true" />,
-        color: 'cyan',
-        title: t('onboarding.tracking', 'Real-time Tracking'),
+        icon: <Icon icon={MapPin} size="lg" aria-hidden={true} />,
+        color: 'neutral',
+        title: t('onboarding.tracking', 'Real-time tracking'),
         desc: t('onboarding.unlock.tracking', 'Follow location, speed, and state live on the map.'),
       },
       {
         key: 'drives',
-        icon: <Route className="h-5 w-5" aria-hidden="true" />,
-        color: 'green',
-        title: t('onboarding.drives', 'Drive History'),
+        icon: <Icon icon={Route} size="lg" aria-hidden={true} />,
+        color: 'neutral',
+        title: t('onboarding.drives', 'Drive history'),
         desc: t('onboarding.unlock.drives', 'Every trip logged with route, efficiency, and stats.'),
       },
       {
         key: 'charging',
-        icon: <BatteryCharging className="h-5 w-5" aria-hidden="true" />,
-        color: 'amber',
-        title: t('onboarding.charging', 'Charge Analytics'),
+        icon: <Icon icon={BatteryCharging} size="lg" aria-hidden={true} />,
+        color: 'neutral',
+        title: t('onboarding.charging', 'Charge analytics'),
         desc: t('onboarding.unlock.charging', 'Track sessions, costs, and battery health over time.'),
       },
       {
         key: 'control',
-        icon: <Car className="h-5 w-5" aria-hidden="true" />,
-        color: 'purple',
-        title: t('onboarding.control', 'Vehicle Control'),
+        icon: <Icon icon={Car} size="lg" aria-hidden={true} />,
+        color: 'neutral',
+        title: t('onboarding.control', 'Vehicle control'),
         desc: t('onboarding.unlock.control', 'Climate, charging, and locks — all from one place.'),
       },
     ],
@@ -77,7 +77,7 @@ export function OnboardingFeaturePreview({ className }: { className?: string }) 
           key={feature.key}
           role="listitem"
           hover
-          glow="cyan"
+          glow="none"
           className="flex flex-col gap-3 p-4 sm:p-5"
         >
           <IconBox color={feature.color} size="md">

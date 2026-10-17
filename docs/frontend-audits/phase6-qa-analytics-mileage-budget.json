@@ -1,0 +1,1104 @@
+{
+  "item": "phase6-qa-analytics-mileage-budget",
+  "status": "DONE",
+  "acceptance": "SOURCE-ONLY REPORT DELIVERY, not whole-page acceptance",
+  "sourceConclusion": "NEEDS: four confirmed source findings",
+  "page": "web/src/features/analytics/pages/MileageBudgetPage.tsx",
+  "routes": [
+    "/mileage-budget"
+  ],
+  "purpose": "Compare selected-vehicle observed drive distance against independent owner lease/warranty terms and linear projections.",
+  "primaryGoal": "Preserve actual term/scope, measurement/budget/forecast denominators, SI/preferences, states/actions/sections.",
+  "startedAtUtc": "2026-10-13T19:50:39.3968976Z",
+  "returnBoundaryUtc": "2026-10-13T20:05:00Z",
+  "hardBoundaryUtc": "2026-10-13T20:10:00Z",
+  "scope": {
+    "repository": "D:/repos/teslasync",
+    "branchEvidence": ".git/HEAD read: refs/heads/fix/dashboard-followups; no Git command",
+    "coreFiles": [
+      "web/src/features/analytics/pages/MileageBudgetPage.tsx",
+      "web/src/features/analytics/lib/mileageBudget.ts",
+      "web/src/features/analytics/hooks/useMileageBudget.ts",
+      "web/src/features/analytics/components/operationalbrief-a-m/MileageBudgetBrief.tsx"
+    ],
+    "writableFiles": [
+      "D:/repos/teslasync/docs/frontend-audits/phase6-qa-analytics-mileage-budget.json",
+      "D:/repos/teslasync/web/logs/phase6-qa-analytics-mileage-budget.log"
+    ],
+    "otherFiles": "All source/tests/backend/catalog/config/queue/handoff READONLY",
+    "initialArtifacts": "Both absent; exact authorized pair created only",
+    "ignoredLogEvidence": ".gitignore:80 logs/; Git ignore/index checks NOTRUN",
+    "queue": "migration-queue.md:275 existing exact QA item, unchanged",
+    "dependency": "migration-queue.md:1658 [x] phase5-page-analytics-mileage-budget SOURCE ONLY, recorded commit66fef4861dc45a459606b12f203d056b725b3db3; historical15discovered/13passed/2failed, not rerun",
+    "noDuplicateQAOrRemigration": true
+  },
+  "contractsRead": [
+    "migration-queue.md",
+    "agent-loop-playbook.md",
+    "shared-library-loop.md",
+    ".agents/state.md prefix",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-design-contract.md authority/architecture/numeric/state/SI/mobile/a11y/evidence",
+    "docs/frontend-mission.md principles/forms/responsive/mobile/loading/empty/error/stale/date/charts",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/instructions/observability.instructions.md"
+  ],
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr,1000), page:58",
+      "owner": "web/src/api/hooks/useDriving.ts:143-155",
+      "endpoint": "GET /api/v1/drives?vehicle_id={encodedSelectedId}&limit=1000",
+      "hookUrl": "/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}",
+      "route": "internal/api/router.go:3506-3507 ->driveHandler.ListByVehicle",
+      "canonicalKey": "drivingKeys.history:47-48 = ['drives',vehicleId,'history',limit]; used:146",
+      "policy": "enabled !!vehicleId, MODERATE staleTime, safeArray, queryFn signal ->request({signal}); no polling/page fetch",
+      "wire": "internal/models/drive/drive.go:33-36 start_ts time.Time/end_ts nullable/distance_m float64 meters. api/client.ts:301 and lib/resilience.ts:27-41 expose BOTH snake_case/camelCase; no guessed units/adapters.",
+      "bounds": "listing.go:28-44 requires positive vehicle_id, passes ctx/limit/offset/start/end; hook no dates/offset. repo.go:165-194 newest started_at DESC,id DESC; values parameterized. Latest <=1000rows, NOT guaranteed lifetime. Model filters returned rows by configured term."
+    },
+    {
+      "hook": "useMileageBudget",
+      "owner": "web/src/features/analytics/hooks/useMileageBudget.ts",
+      "endpoint": null,
+      "persistence": "teslasync:mileage-budget:v1, per-owner/browser profile NOT per-vehicle; defaults15000km/year, Jan1currentyear,36months,0.1majorcurrency/km; same-tab/cross-tab subscriptions, in-memory fallback. No actual saved config accessed.",
+      "units": "Retain existing annualAllowanceKm and overagePerKm stored shape; no remigration."
+    },
+    {
+      "hook": "useSelectedVehicle/useUnits/useFormatting",
+      "contract": "Existing URL/store/first vehicle selection; saved mi/km/locale/decimal_precision/currency_symbol display hooks; indirect vehicles/settings endpoint chains not recursively audited or exercised."
+    }
+  ],
+  "scopeAndAccounting": {
+    "workspace": "App.tsx:842 route. workspaceScope.ts excludes /mileage-budget from RANGE_ENABLED_PATHS, vehicle enabled. No duplicate selector.",
+    "businessDates": "Independent lease/warranty term start/length legitimate, not header analysis range. No year selector exists here.",
+    "termBounds": "Model:81-95 local midnight start inclusive, calculated end exclusive; startTs-based filtering, not proration. No <=now cutoff; no claim of actual future data.",
+    "denominators": "totalAllowanceM=annualAllowanceKm*1000*termMonths/12; allowedToDateM uses fractional elapsedDays/roundedtotalDays. Pace usedM/allowedToDateM if denominator>0. Linear projection usedM/elapsedDays*totalDays only >=7days; cap withholds pace/projections.",
+    "observed": "Returned in-term distanceM sum, not odometer delta or guaranteed missing-drive recovery.",
+    "budget": "User allowance/pro-rata target, not measurement.",
+    "forecast": "Explicitly estimated linear total and excess charge, F01 eligibility defect.",
+    "signedAccounting": "Nonnegative physical distance/excess; max(0,forecast-allowance), not signed balance. Zero fee valid; no private financial data.",
+    "SIAndPreferences": "Meter wire/cache/model totals source-backed. Existing monthly domain km; shared mile factor convertDistanceToSI(1,'mi')/1000; mi allowance->km and per-mi fee->per-km inverse consistent. Summary formatDistance/formatCurrency honor units/locale/precision; chart F04 loses precision. No legacy adapter or guessed ISO currency."
+  },
+  "sections": [
+    {
+      "name": "Summary metrics",
+      "line": 148,
+      "alwaysMountedWithVehicle": true,
+      "content": "Four metrics, term period/status/provenance"
+    },
+    {
+      "name": "Allowance terms/progress",
+      "line": 167,
+      "alwaysMountedWithVehicle": true,
+      "content": "Four shared Inputs, help, term elapsed/allowance usage"
+    },
+    {
+      "name": "Distance vs allowance",
+      "line": 260,
+      "alwaysMountedWithVehicle": true,
+      "content": "Area/targetline, legend/tooltip, unit metadata, loading/fatal retry/empty, export/three-column accessible alternative"
+    }
+  ],
+  "actions": [
+    {
+      "name": "Annual allowance",
+      "line": 177,
+      "contract": "Finite positive draft/error; displaymi->storedkm; valid local edits only"
+    },
+    {
+      "name": "Independent start date",
+      "line": 189,
+      "contract": "Nonempty local business date patch, not workspace range"
+    },
+    {
+      "name": "Term months",
+      "line": 196,
+      "contract": "Positive integer patches; no max; unlike rate/allowance invalid drafts not retained, native behavior unexercised"
+    },
+    {
+      "name": "Overage rate",
+      "line": 209,
+      "contract": "Finite nonnegative including0; invalid draft/error retained; inverse mi rate conversion"
+    },
+    {
+      "name": "Help",
+      "line": 168,
+      "contract": "Localized shared HelpTooltip/ariaLabel; native focus NOTRUN"
+    },
+    {
+      "name": "Fatal retry",
+      "line": 281,
+      "contract": "source.retry from query.refetch, chart QueryError; brief:74 conditional additional recovery, not hidden panel"
+    },
+    {
+      "name": "Retained/paused refresh",
+      "line": 129,
+      "contract": "StaleRefreshWarning source.retry, disabled while refreshing, rows retained"
+    },
+    {
+      "name": "Series toggles",
+      "line": 306,
+      "contract": "ChartLegend/useHiddenSeries('mileage-budget'), hideprops319/331; runtime NOTRUN"
+    },
+    {
+      "name": "Export",
+      "line": 286,
+      "contract": "ChartCard->EmbeddedChart->ChartContainer:483 excludes export menu loading/error/empty; export execution NOTRUN"
+    },
+    {
+      "name": "No-vehicle setup",
+      "line": 116,
+      "contract": "Shared NoVehicleSelected PageContainer with governed setup CTA; no production action"
+    }
+  ],
+  "states": {
+    "initial": "No payload ->initial; briefloading/chart skeleton; terms visible",
+    "fatal": "No retained payload +error ->fatalError; chart/source retry, terms visible; no all-page gate",
+    "retained": "Refresh failure ->stale/refreshError; payload retained, nonblocking warning/retry; chart receives fatalError only",
+    "paused": "Retained paused ->stale/isRefreshBlocked; no offline assumption. No-payloadpaused ->initial, native presentation NOTRUN",
+    "refreshing": "Retained rows stay, shared header freshness; timing NOTRUN",
+    "empty": "Successful[] is returned history, chartempty and allowanceusage null; summary returned observed0. Not proof of actual no travel/complete telemetry",
+    "zero": "Finite zero distance/rate valid; denominator guard before accrual",
+    "unknown": "No payload rawnull; projectedTotalM unknown before7days but overage0F01. Actual distance producer nonnullable, no invented nullable-wire finding",
+    "capped": "At>=1000rows warning/observedlabels, pace/total/overagenull; chart/terms remain",
+    "noVehicle": "Explicit shared prerequisite page, not data-gated selected-vehicle panels"
+  },
+  "evidenceLimits": {
+    "runtime": "NOTRUN",
+    "actualPageMount": "NOTRUN",
+    "realAPI": "NOTRUN",
+    "browser": "NOTRUN",
+    "native": "NOTRUN",
+    "geometry": "NOTRUN",
+    "contrast": "NOTRUN",
+    "performance": "NOTRUN",
+    "tests": "NOTRUN; existing test source inspected only",
+    "typescript": "NOTRUN; npx tsc --noEmit not executed, no pass claim",
+    "buildLintFullsuite": "NOTRUN",
+    "privateFinancialData": "NOT ACCESSED",
+    "executionRepros": "NOTRUN; source-traced proposed cases only, no fixtures/helpers created",
+    "node": "User-provided existing26.11.1 not needed/invoked/installed"
+  },
+  "preservation": {
+    "currentPageLines": 337,
+    "recordedOriginalLines": 311,
+    "recordedOriginalEvidence": "Queue:1658 historical311; Git revision comparison NOTRUN",
+    "historicalRatioPercent": 108.36,
+    "majorSections": 3,
+    "inputs": 4,
+    "progressIndicators": 2,
+    "metrics": 4,
+    "chartSeries": 2,
+    "alternativeColumns": 3,
+    "corePins": "C09/C20 four hashes identical; no source writes. Other pins report-time snapshots not full-file acceptance."
+  },
+  "requiredSharedChanges": [],
+  "duplicatedPatterns": [],
+  "competingImplementations": [],
+  "priority": "F01/F02 first; then explicit month-end policy F03 and displayprecision F04. Separately authorize narrow source work, not remigration.",
+  "rawLog": "D:/repos/teslasync/web/logs/phase6-qa-analytics-mileage-budget.log",
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "unknown-forecast-as-zero",
+      "severity": "high",
+      "file": "web/src/features/analytics/components/operationalbrief-a-m/MileageBudgetBrief.tsx",
+      "line": 50,
+      "related": [
+        "web/src/features/analytics/lib/mileageBudget.ts:131-132",
+        "MileageBudgetBrief.tsx:44,52-54",
+        "web/src/lib/operationalMetrics.tsx:16",
+        "web/src/lib/metric-reference/formatMetric.ts:24"
+      ],
+      "mechanism": "Before7elapsed days projectedTotalM=null but projectedOverageM=0. With uncapped returned source, overage rawValue=0 and context='no overage projected' even as projected total unknown. Shared formatter receives real0 and cannot restore eligibility.",
+      "sourceRepro": "PLANNED NOTEXECUTED: positive allowance/rate, term start3days before injected now, finite returned in-term drive, source.hasData=true and uncapped. Trace total=null/overageraw0/affirmative no-overage.",
+      "needs": "Gate overage raw/context on projectedTotalM eligibility independently of actual zero excess; retain missing state/reason until signal exists, without hiding panel.",
+      "owner": "Page-specific brief/model owner",
+      "confidence": "Confirmed source mechanism; runtime repro NOTRUN"
+    },
+    {
+      "id": "F02",
+      "rule": "mixed-calendar-month-basis",
+      "severity": "high",
+      "file": "web/src/features/analytics/lib/mileageBudget.ts",
+      "line": 104,
+      "related": [
+        "mileageBudget.ts:81,94-95,113-117",
+        "internal/models/drive/drive.go:33"
+      ],
+      "mechanism": "Term/emitted month boundaries use browser-local Date but drive month uses timestamp substring. Offset/RFC3339 month may differ from local month; usedM includes drive while current cumulative monthly chart omits/shifts it.",
+      "sourceRepro": "PLANNED NOTEXECUTED: browser America/Los_Angeles, start2026-02-01/3months, now2026-03-01T04:00Z (Feb28local20:00), drive2026-03-01T00:30Z (Feb28local16:30),1000m. Filter includes; timestamp bucket2026-03; local loop stopsFebruary ->usedM1000/finalmonthlyused0.",
+      "needs": "Use one explicit existing business-calendar timezone basis for filtering/month keys/period presentation; derive bucket from parsed instant consistently. No guessed producer timezone/adapter or header range replacement.",
+      "owner": "Page-specific mileageBudget model",
+      "confidence": "Confirmed source mechanism; timezone scenario not executed"
+    },
+    {
+      "id": "F03",
+      "rule": "calendar-month-end-overflow",
+      "severity": "medium",
+      "file": "web/src/features/analytics/lib/mileageBudget.ts",
+      "line": 59,
+      "related": [
+        "mileageBudget.ts:82-88",
+        "web/src/features/analytics/pages/MileageBudgetPage.tsx:189-207"
+      ],
+      "mechanism": "new Date(year,month+months,originalDay) rolls nonexistent month-end dates into following month. Jan31+1month ->March3in2026; filter/day denominator/pro-rata/forecast use rolled date while annual allowance multiplier still exactly1month.",
+      "sourceRepro": "PLANNED NOTEXECUTED: UTC termStart2026-01-31,termMonths1, valid remaining config. Trace JS Date month/day normalization; configured calendar-month term spans further month.",
+      "needs": "Resolve explicit lease/warranty month-end policy, then use bounded calendar arithmetic and pin Jan31/nonleap/leap/31day cases. Do not guess contractual end-day or impose new header selector.",
+      "owner": "Page model/business contract owner",
+      "confidence": "Date rollover/denominator source-confirmed; intended contractual policy needs owner decision"
+    },
+    {
+      "id": "F04",
+      "rule": "display-precision-loss",
+      "severity": "medium",
+      "file": "web/src/features/analytics/pages/MileageBudgetPage.tsx",
+      "line": 102,
+      "related": [
+        "MileageBudgetPage.tsx:103,105,287-296",
+        "web/src/features/analytics/lib/mileageBudget.ts:124-125",
+        "web/src/hooks/useUnits.ts:119-134",
+        "web/src/lib/unitConversion.ts:370-378"
+      ],
+      "mechanism": "Model rounds monthly values to0.1km then chart Math.round forces wholemi/km; tooltip/export/fallback table consume truncated chartdata. Saved decimal_precision cannot restore fractional measurements; summary formatDistance uses saved precision/locale.",
+      "sourceRepro": "PLANNED NOTEXECUTED: savedkm/precision3, finite in-term1609.344m and >=2monthly points. Summary1.609km; model1.6km; chart2km. Precision changes cannot recover discarded fraction.",
+      "needs": "Retain monthly numeric precision; convert chart points nondestructively and format axes/tooltip/table/export at existing preference-aware boundary. No wire/cache/config unit migration.",
+      "owner": "Page/model presentation owner",
+      "confidence": "Confirmed source transformation; actual tooltip/export NOTRUN"
+    }
+  ],
+  "unpromotedCandidates": [
+    {
+      "id": "CAND01",
+      "category": "native-mobile-geometry-accessibility",
+      "source": "MileageBudgetPage.tsx:166,177,190,197,210,283",
+      "detail": "Container stacking/thirds and min-h-11 declared.320px/200%/RTL/long translations/date/numeric controls/help/legend/export/focus need mounted checks; no overlap/overflow/hit-target defect claimed."
+    },
+    {
+      "id": "CAND02",
+      "category": "contrast-forced-colors",
+      "source": "MileageBudgetPage.tsx:110,302; ChartContainer.tsx:785,850-949",
+      "detail": "Token colors/shared SR and forced-colors table exist. Actual composed chart/grid/focus contrast and native rendering not measured; no contrast failure promoted."
+    },
+    {
+      "id": "CAND03",
+      "category": "clock-invalid-controls-large-terms",
+      "source": "MileageBudgetPage.tsx:53,196-207; mileageBudget.ts:112; useMileageBudget.ts:62-109",
+      "detail": "Clock refreshes on rerender, no timer; month control no maximum and draft differs from rate/allowance. Native validation/idle rollover/enormous-term performance/storage failure not exercised. No runtime/performance failure or new cap prescribed."
+    }
+  ],
+  "ruleChecks": {
+    "method": "Actual PowerShell Select-String grep on4core files; direct history window and ListByVehicle/GetByVehicle separately; no customtool.",
+    "frontend": [
+      {
+        "rule": "static-inline-style",
+        "rawMatchLines": 0,
+        "confirmedViolations": 0
+      },
+      {
+        "rule": "raw-html",
+        "rawMatchLines": 0,
+        "confirmedViolations": 0
+      },
+      {
+        "rule": "direct-library-import",
+        "rawMatchLines": 0,
+        "confirmedViolations": 0
+      },
+      {
+        "rule": "old-api-import",
+        "rawMatchLines": 0,
+        "confirmedViolations": 0
+      },
+      {
+        "rule": "double-prefix",
+        "rawMatchLines": 0,
+        "historyHookMatchLines": 0,
+        "confirmedViolations": 0
+      },
+      {
+        "rule": "camelcase-param",
+        "rawMatchLines": 0,
+        "historyHookCaseSensitiveMatchLines": 0,
+        "confirmedViolations": 0,
+        "correction": "C11 default case-insensitive hookregex falselymatchedvehicle_id; C12 -CaseSensitive0, original receipt preserved"
+      },
+      {
+        "rule": "hidden-section",
+        "rawMatchLines": 1,
+        "confirmedViolations": 0,
+        "exception": "Brief:74 additional conditional fatal recovery, not KPI shell suppression"
+      },
+      {
+        "rule": "hardcoded-string",
+        "candidateMatchLines": 0,
+        "literalTCalls": 57,
+        "uniqueLiteralKeys": 53,
+        "missingEnglishKeys": 0,
+        "confirmedViolations": 0,
+        "limit": "Literal JSX/prop/literal-key scope, not all-language/runtimei18n acceptance"
+      },
+      {
+        "rule": "missing-page-container",
+        "confirmedViolations": 0,
+        "evidence": "PageLayout:123->PageContainer(sharedPageLayout:11); NoVehicleSelected wrapsPageContainer"
+      },
+      {
+        "rule": "fetch-useeffect",
+        "rawMatchLines": 0,
+        "confirmedViolations": 0,
+        "exception": "Selected vehicle useEffect syncs store, not ad-hoc fetching"
+      }
+    ],
+    "backend": {
+      "scope": "Exact used list chain only, not allbackend",
+      "sqlInterpolation": 0,
+      "fmtPrintln": 0,
+      "barePanic": 0,
+      "missingContext": 0,
+      "rawRepositoryFmtSprintfMatches": 3,
+      "exceptions": "Three Sprintf build numbered placeholders only; inputs inargs, Pool.Query(ctx,query,args...). Broad contextregex13 includes URL.Query()/unrelatedhandlers, not13violations."
+    },
+    "summary": {
+      "confirmedFindings": 4,
+      "byRule": {
+        "unknown-forecast-as-zero": 1,
+        "mixed-calendar-month-basis": 1,
+        "calendar-month-end-overflow": 1,
+        "display-precision-loss": 1
+      },
+      "byPrimaryFile": {
+        "web/src/features/analytics/lib/mileageBudget.ts": 2,
+        "web/src/features/analytics/components/operationalbrief-a-m/MileageBudgetBrief.tsx": 1,
+        "web/src/features/analytics/pages/MileageBudgetPage.tsx": 1
+      },
+      "candidates": 3,
+      "warning": "Low narrow style/import counts are not zero total defects or page/runtime acceptance"
+    },
+    "exceptions": "Page charttick/fill/stroke CSS variables are Recharts APIprops, not static-inline-style; sharedcomponents buildingblocks rawHTML/directimports not page violations"
+  },
+  "responsive": {
+    "source": "PageLayout @container/min-w-0, basegrid-cols-1/@5xl thirds, chart min-w-0; Inputmin-h-11belowmd; ChartCardheight340/sharedsizing",
+    "geometry": "NOTRUN"
+  },
+  "accessibility": {
+    "source": "InputuseId/htmlFor/aria-invalid/describedby; localized helpname; chartariaLabel/dataColumns; sharedgroup role with togglelegend, figcaptiontableheaders; PageContainer routefocus; sharedretry/status",
+    "keyboardScreenReaderFocusContrastNativeForcedColors": "NOTRUN"
+  },
+  "components": [
+    "PageLayout/PageContainer",
+    "LayoutCard",
+    "ChartCard/EmbeddedChart/ChartContainer",
+    "OperationalBrief/MileageBudgetBrief/useOperationalMetrics",
+    "Input/HelpTooltip",
+    "MetricBar",
+    "AlertBanner/StaleRefreshWarning",
+    "SourceContent",
+    "FadeIn",
+    "sharedchartbarrel/ChartLegend/ChartTooltip",
+    "NoVehicleSelected"
+  ],
+  "architectureIssues": "No competing query/unit/theme engine or duplicate workspace controls in core. Findings local business/model/presentation.",
+  "visualIssues": "Candidates only; no actual visual/native failure promoted.",
+  "release": {
+    "ownedPathsOnly": true,
+    "report": "RELEASED after final validation exits",
+    "log": "RELEASED after final validation exits",
+    "sourceTestsBackendCatalogConfigQueueHandoff": "READONLY throughout",
+    "commands": "All bounded sync sessions terminal before return; no background work",
+    "postReturnWrites": "NONE permitted",
+    "parentCoordination": "NONE",
+    "wholePageAcceptance": false
+  },
+  "reviewedFiles": [
+    {
+      "file": "web/src/features/analytics/pages/MileageBudgetPage.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+      "sha256": "4287A167F504E0983FA7A7CB6E847CE784CFC02E5225C499AA1858139FCC6B00",
+      "lines": 337,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.3996128Z"
+    },
+    {
+      "file": "web/src/features/analytics/lib/mileageBudget.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\mileageBudget.ts",
+      "sha256": "EA5297B590FFAEBC54DCDA684B0D556910E6C50CC662980769B363FF68AEBAEE",
+      "lines": 152,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.4070170Z"
+    },
+    {
+      "file": "web/src/features/analytics/hooks/useMileageBudget.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\hooks\\useMileageBudget.ts",
+      "sha256": "9E908B0382061765CE685CEEF0AA60CACC32361813A5D6A2EAE35219F617A7E2",
+      "lines": 112,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.4087569Z"
+    },
+    {
+      "file": "web/src/features/analytics/components/operationalbrief-a-m/MileageBudgetBrief.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBudgetBrief.tsx",
+      "sha256": "78385C4A7A8BFF3FC777DB269657F8FFE707323FF9E49CC2943FE722D194D0A2",
+      "lines": 78,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.4098511Z"
+    },
+    {
+      "file": "web/src/features/analytics/pages/MileageBudgetPage.test.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MileageBudgetPage.test.tsx",
+      "sha256": "94A4AD97A061111E51BB4D7B664A4FC5FA1EF4FDE89E2736E03F74785AA339B3",
+      "lines": 283,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4115773Z"
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "lines": 454,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4139668Z"
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\types\\driving.ts",
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "lines": 411,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4161194Z"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\api\\client.ts",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "lines": 458,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4331693Z"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lines": 434,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4373848Z"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lines": 174,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4395889Z"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\hooks\\useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lines": 194,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4418290Z"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\hooks\\useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "lines": 106,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4432588Z"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\hooks\\useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "lines": 24,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4442117Z"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\lib\\unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "lines": 500,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4468014Z"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4487156Z"
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\lib\\operationalMetrics.tsx",
+      "sha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "lines": 53,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4497824Z"
+    },
+    {
+      "file": "web/src/lib/resilience.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\lib\\resilience.ts",
+      "sha256": "E100C50C5CE8080AADDE8BADBF083254F1ED4730978E52FA4B690876CD2F0BCA",
+      "lines": 1008,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4542928Z"
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\lib\\metric-reference\\formatMetric.ts",
+      "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "lines": 137,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4617664Z"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4690108Z"
+    },
+    {
+      "file": "web/src/components/layout/index.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\layout\\index.ts",
+      "sha256": "16105443F3F6C85FC73AE940F65F8B61F751A1FB30E77369B229D24EC7DFC642",
+      "lines": 27,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4700099Z"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "lines": 259,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4716851Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4725629Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "sha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "lines": 48,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4735711Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "sha256": "409641019732349E44D45ADF5E2C13DD93C5B38A0F037564AE43B93FC4099A1E",
+      "lines": 67,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4749594Z"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "sha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "lines": 42,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4759290Z"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "lines": 1006,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4799921Z"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "lines": 115,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4810931Z"
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\components\\ui\\Input.tsx",
+      "sha256": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "lines": 116,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4821998Z"
+    },
+    {
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "lines": 77,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.4831919Z"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\i18n\\en.json",
+      "sha256": "0CD7994F71D5610C56E7E1B1E5E0C97F54CF939E817999AF50B04ADF52B1629C",
+      "lines": 38982,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.9078972Z"
+    },
+    {
+      "file": "internal/api/router.go",
+      "absolutePath": "D:\\repos\\teslasync\\internal\\api\\router.go",
+      "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "lines": 5363,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.9769122Z"
+    },
+    {
+      "file": "internal/api/drives/listing.go",
+      "absolutePath": "D:\\repos\\teslasync\\internal\\api\\drives\\listing.go",
+      "sha256": "DA0D6486C0F98E9F911825CE2E7BCAEE8E9AC4A6993EA77EDA90F0A789CD53C1",
+      "lines": 606,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.9807496Z"
+    },
+    {
+      "file": "internal/api/drives/handler.go",
+      "absolutePath": "D:\\repos\\teslasync\\internal\\api\\drives\\handler.go",
+      "sha256": "035D0B01C24BDE0480D8E6E3942A83865777A195D78FD6FA2AEAB4A8E195AA70",
+      "lines": 108,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.9823575Z"
+    },
+    {
+      "file": "internal/models/drive/drive.go",
+      "absolutePath": "D:\\repos\\teslasync\\internal\\models\\drive\\drive.go",
+      "sha256": "53A16694FE796F73DD785AAB26DD94E467C456DA540B615D53DC77728C163789",
+      "lines": 128,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.9838054Z"
+    },
+    {
+      "file": "internal/database/drive/repo.go",
+      "absolutePath": "D:\\repos\\teslasync\\internal\\database\\drive\\repo.go",
+      "sha256": "259AB3223E7EC7E74A4F6EBB1F6B1147340BA97E682FB85586A67D7CC1AA5426",
+      "lines": 710,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.9882382Z"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-047.json",
+      "absolutePath": "D:\\repos\\teslasync\\docs\\frontend-audits\\audit-page-047.json",
+      "sha256": "7DA3136BC6822161798ADCEFCEA10B3FD54785C71EB3D9167B563933BE71003E",
+      "lines": 360,
+      "readScope": "Relevant direct-support ranges/declarations/scans only; NOT whole-file acceptance",
+      "pinTimeUtc": "2026-10-13T20:07:24.9913638Z"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/analytics/pages/MileageBudgetPage.tsx",
+    "web/src/features/analytics/lib/mileageBudget.ts",
+    "web/src/features/analytics/hooks/useMileageBudget.ts",
+    "web/src/features/analytics/components/operationalbrief-a-m/MileageBudgetBrief.tsx",
+    "web/src/features/analytics/pages/MileageBudgetPage.test.tsx",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/types/driving.ts",
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "web/src/lib/resilience.ts",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/App.tsx",
+    "web/src/components/layout/index.ts",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/ChartCard.tsx",
+    "web/src/components/layout/layout-reference/LayoutCard.tsx",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/ui/Input.tsx",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "web/src/i18n/en.json",
+    "internal/api/router.go",
+    "internal/api/drives/listing.go",
+    "internal/api/drives/handler.go",
+    "internal/models/drive/drive.go",
+    "internal/database/drive/repo.go",
+    "docs/frontend-audits/audit-page-047.json"
+  ],
+  "reviewedFileCount": 36,
+  "sourcePins": [
+    {
+      "file": "web/src/features/analytics/pages/MileageBudgetPage.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MileageBudgetPage.tsx",
+      "sha256": "4287A167F504E0983FA7A7CB6E847CE784CFC02E5225C499AA1858139FCC6B00",
+      "lines": 337,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.3996128Z"
+    },
+    {
+      "file": "web/src/features/analytics/lib/mileageBudget.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\mileageBudget.ts",
+      "sha256": "EA5297B590FFAEBC54DCDA684B0D556910E6C50CC662980769B363FF68AEBAEE",
+      "lines": 152,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.4070170Z"
+    },
+    {
+      "file": "web/src/features/analytics/hooks/useMileageBudget.ts",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\hooks\\useMileageBudget.ts",
+      "sha256": "9E908B0382061765CE685CEEF0AA60CACC32361813A5D6A2EAE35219F617A7E2",
+      "lines": 112,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.4087569Z"
+    },
+    {
+      "file": "web/src/features/analytics/components/operationalbrief-a-m/MileageBudgetBrief.tsx",
+      "absolutePath": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBudgetBrief.tsx",
+      "sha256": "78385C4A7A8BFF3FC777DB269657F8FFE707323FF9E49CC2943FE722D194D0A2",
+      "lines": 78,
+      "readScope": "Full core source/rule scan",
+      "pinTimeUtc": "2026-10-13T20:07:24.4098511Z"
+    }
+  ],
+  "namedCommands": [
+    {
+      "shellId": "5397",
+      "name": "Initial artifact inspection",
+      "exit": 1,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5398",
+      "name": "Existing artifact read/discovery",
+      "exit": 1,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5410",
+      "name": "Layout/page source read",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5413",
+      "name": "Broad document listing/HEAD",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5424",
+      "name": "Queue/loop/instruction scan",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5423",
+      "name": "Design/mission/conventions/ignore",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5434",
+      "name": "Exact queue/dependency/paths",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5439",
+      "name": "Loop/worker/mission/state prefix",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5440",
+      "name": "Numbered core/model/hook/type",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5449",
+      "name": "DONE dependency/hook/type/ignore",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5461",
+      "name": "C07 failed route wildcard",
+      "exit": 1,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5463",
+      "name": "Data-state/SI/display source",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5462",
+      "name": "C08 mission/design/baseline",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5478",
+      "name": "C09 log initialization/core pins",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5479",
+      "name": "C07R corrected route/hook/wire",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5490",
+      "name": "C10 guessed hook extension failure",
+      "exit": 1,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5491",
+      "name": "C11 frontend grep",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5501",
+      "name": "C10R actual support/hook/baseline",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5503",
+      "name": "C12 case-sensitive URL/SI/key",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5502",
+      "name": "C13 catalog collision failure",
+      "exit": 1,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5512",
+      "name": "C14 corrected catalog/producer",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5522",
+      "name": "C15 guessed formatter extension failure",
+      "exit": 1,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5523",
+      "name": "C16 i18n/section/backend grep",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5534",
+      "name": "C17 actual producer/action",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5543",
+      "name": "C18 repo/SI/normalizer/chart",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5547",
+      "name": "C19 exact finding citations",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5557",
+      "name": "C20 final core pins/rules/counts",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5556",
+      "name": "C21 chart actions/states/design",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5564",
+      "name": "C22 export gates/failure/formatter",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5583",
+      "name": "C23 report launch OS206",
+      "exit": 1,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5592",
+      "name": "C23A bounded JSON core",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    },
+    {
+      "shellId": "5598",
+      "name": "C23B findings/rules augmentation",
+      "exit": 0,
+      "mode": "sync/terminal",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "commandMethod": "Explicit Set-Location; built-in Get-Content/Get-ChildItem/Select-String/Get-FileHash; artifact writes via File APIs only. Exact invocation/raw output retained in tool transcript; named evidence/outputs and failure chronology in rawlog."
+    }
+  ],
+  "checkCommands": {
+    "frontend": "C11 Select-String -LiteralPath <exact four core files> -Pattern <per-rule regex>; raw stdout in log",
+    "historyParam": "C12 <useDriving.ts lines144-159> | Select-String -CaseSensitive -Pattern [ ?& ][a-z_]*[A-Z][A-Za-z_]*= (actual regex without spaces in C12 receipt)",
+    "i18n": "C16 Get-Content en.json -Raw | ConvertFrom-Json -AsHashtable; regex literal t keys, nested-key coverage",
+    "sections": "C20 Select-String -LiteralPath MileageBudgetPage.tsx -CaseSensitive -Pattern <MileageBudgetSummary|<LayoutCard|<ChartCard",
+    "pins": "C09/C20/C23C Get-FileHash -Algorithm SHA256 and Get-Content line counts",
+    "backend": "C16/C20 Select-String listing.go /exact GetByVehicle slice; inputs in args and ctx inspected",
+    "typescript": "npx tsc --noEmit NOTRUN, user excludes TSC/fullsuite",
+    "runtime": "Browser/page/API/geometry/contrast/performance/tests NOTRUN"
+  },
+  "failureChronology": [
+    {
+      "shellId": "5397",
+      "exit": 1,
+      "detail": "Get-Item JSON missing, stopped before log/page metadata"
+    },
+    {
+      "shellId": "5398",
+      "exit": 1,
+      "detail": "Get-Content same missing JSON; artifact did not exist"
+    },
+    {
+      "shellId": "5413",
+      "exit": 0,
+      "detail": "Overbroad listing produced1.3MB tool-truncated; complete raw preserved inlog, later bounded probes"
+    },
+    {
+      "shellId": "5461",
+      "exit": 1,
+      "detail": "web/src/routes guessed directory absent; buffered output not emitted; corrected C07R5479 and C10R5501 actual App/router"
+    },
+    {
+      "shellId": "5490",
+      "exit": 1,
+      "detail": "useOperationalMetrics.ts guessed extension absent; actual.tsx discovered/read; buffered output not emitted"
+    },
+    {
+      "shellId": "5502",
+      "exit": 1,
+      "detail": "Default ConvertFrom-Json key-case collision subFSMs/subFsms; corrected -AsHashtable, not invalid JSON finding"
+    },
+    {
+      "shellId": "5522",
+      "exit": 1,
+      "detail": "operationalMetrics.ts guessed extension absent; actual.tsx discovered/read; buffered output not emitted"
+    },
+    {
+      "shellId": "5583",
+      "exit": 1,
+      "detail": "Report command launch OS error206 filename/extension too long, did not execute; bounded artifact-only segmentation used"
+    },
+    {
+      "exit": null,
+      "detail": "Conservative20:05Z return missed during report-launch recovery (C23A20:05:31Z); hard20:10Z retained, no new source work/clock reset"
+    }
+  ],
+  "preparedAtUtc": "2026-10-13T20:07:25.0459959Z",
+  "commandCounts": {
+    "knownCompletedBeforeThisWrite": 32,
+    "exitZero": 25,
+    "exitOne": 7,
+    "literalTCalls": 57,
+    "uniqueLiteralKeys": 53,
+    "missingEnglishKeys": 0,
+    "majorSections": 3,
+    "confirmedFindings": 4,
+    "candidates": 3
+  },
+  "rawLogNotes": "Includes preserved complete tool-truncated outputs and bounded check raw stdout. Early direct view/unbuffered source reads additionally remain in tool transcript; lost buffered output explicitly NOT emitted, not fabricated. Only exact pair written, no helpers."
+}

@@ -1,0 +1,419 @@
+{
+  "item": "audit-page-156",
+  "page": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+  "routes": ["/ownership/driver-attribution"],
+  "purpose": "Explain anonymous behavioural drive clusters, inspect attribution confidence and outliers, and optionally create named profiles and confirm drive labels without asserting physical identity.",
+  "primaryGoal": "Understand how reliably a selected vehicle's drives separate into behaviour clusters and explicitly label a drive to a named driver profile.",
+  "dataSources": [
+    {
+      "hook": "useDriverAttribution(vehicleId, windowDays, 100, 0)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 325,
+      "endpoints": ["GET /api/v1/driver-attribution?vehicle_id=<id>&window_days=<days>&limit=100&offset=0"],
+      "owner": "useOwnership hook / ownershipintel handler and service",
+      "routeEvidence": ["internal\\api\\router.go:3918", "internal\\handler\\v1\\ownershipintel\\handler.go:135-136"],
+      "behavior": "Vehicle-positive enablement, query key includes vehicle/window/limit/offset, request receives AbortSignal. Report holds full cluster summary, first requested fingerprint page, totals, monetary currency, window, quality and evidence. Actual aggregate/pagination semantics were not exercised."
+    },
+    {
+      "hook": "useDriverProfiles(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 343,
+      "endpoints": ["GET /api/v1/driver-attribution/profiles?vehicle_id=<id>"],
+      "owner": "useOwnership hook / ownershipintel handler",
+      "routeEvidence": ["internal\\handler\\v1\\ownershipintel\\handler.go:138"],
+      "behavior": "Independent vehicle-scoped items/total register; null items become an empty render collection. Request receives AbortSignal."
+    },
+    {
+      "hook": "useGhostDrives(vehicleId, windowDays)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 351,
+      "endpoints": ["GET /api/v1/driver-attribution/ghost-drives?vehicle_id=<id>&window_days=<days>"],
+      "owner": "GhostDrivesPanel / useOwnership / ownershipintel handler",
+      "routeEvidence": ["internal\\handler\\v1\\ownershipintel\\handler.go:137"],
+      "behavior": "Separately fetched scanned count and outlier rows; positive-vehicle enablement, cancellation, operational queryPolicy and scope-sensitive query key. It is not included in PageLayout's two-query list and has its own OwnershipPanel source boundary."
+    },
+    {
+      "hook": "useCreateDriverProfile / useDeleteDriverProfile / useAssignDrive",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 371,
+      "endpoints": ["POST /api/v1/driver-attribution/profiles", "DELETE /api/v1/driver-attribution/profiles/{id}", "POST /api/v1/driver-attribution/assignments"],
+      "owner": "useOwnership mutations / ownershipintel write-limited routes",
+      "routeEvidence": ["internal\\handler\\v1\\ownershipintel\\handler.go:139-141"],
+      "behavior": "Successful writes invalidate ownershipKeys.all and display existing localized toast feedback. Create passes vehicle_id/name/accent/is_primary; assignment passes drive_id/driver_profile_id/confirmed:true. No write was executed."
+    },
+    {
+      "hook": "useSelectedVehicle / useUnits / useNumberFormatting / useHiddenSeries",
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 83,
+      "endpoints": [],
+      "owner": "Existing workspace, display-preference and chart-persistence owners",
+      "behavior": "Consumes shell-selected vehicle; keeps physical quantities SI in API data and converts at render boundary. Local windowDays starts at 90. Chart hidden-series key is driver-attribution-chart. Hook implementations themselves were not comprehensively audited."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "contract": "Existing PageContainer adapter; forwards query/contextActions/header props and keeps a full-width min-w-0 container. Mounted route is lazy imported at App.tsx:246 and assigned at App.tsx:778; actual route mount is unverified."
+    },
+    {
+      "name": "OwnershipPanel / SourceContent",
+      "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "line": 24,
+      "contract": "Domain source adapter composed with LayoutCard and canonical SourceContent. Props include source, sourceEnabled, editing, empty and preserveSummary. Uses fatal error versus retained-data distinction; independent panel titles/actions remain present."
+    },
+    {
+      "name": "OwnershipBrief / OperationalBrief",
+      "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+      "line": 24,
+      "contract": "Typed metrics flow through useOperationalMetrics; localized scope, recorded bounds, client-loaded time and explicitly unknown source freshness remain visible. Do not replace with a new KPI engine."
+    },
+    {
+      "name": "GhostDrivesPanel",
+      "owner": "web\\src\\features\\ownership\\components\\GhostDrivesPanel.tsx",
+      "line": 30,
+      "contract": "Own ghost query, score/deviation/reason table and label callback; does not prove identity."
+    },
+    {
+      "name": "EvidencePanel / VerdictBadge / MutationError",
+      "owner": "web\\src\\features\\ownership\\components",
+      "line": 1,
+      "contract": "Existing ownership-domain provenance, verdict vocabulary and write-error adapters; specific files and findings are listed below."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 450,
+      "contract": "Sole table interaction/export/persistence owner. Stable tableId, caller-owned sorting and opt-in mobilePresentation. mobileColumns is a CSS allow-list, not a complete-detail adapter. CSV/JSON defaults operate on loaded rows unless exportAll is provided."
+    },
+    {
+      "name": "ChartContainer / ChartLegend / ChartTooltip / chart barrel",
+      "owner": "web\\src\\components\\charts",
+      "line": 11,
+      "contract": "Imported through category barrel at page lines 11-26. Page supplies labeled accessible data columns, persisted legend identity and both original chart series. Shared implementations were not browser-tested."
+    },
+    {
+      "name": "Input / Select / Toggle / Button / Badge / Text / ConfirmDialog / AlertBanner / FadeIn",
+      "owner": "Existing ui, feedback and motion category barrels",
+      "line": 31,
+      "contract": "Reuse current control identity, labels, dialogs, typography and reduced-motion owners; no competing primitive or overlay proposed. Page imports are source-confirmed, not runtime acceptance."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 248,
+      "rule": "MDC-002 / mission 4 shared patterns",
+      "detail": "Aggression meter repeats the track, clamped dynamic width and colored fill used for ghost score at GhostDrivesPanel.tsx:59-65.",
+      "fix": "Before extracting anything, compare the existing shared metric-meter contract; reuse if it supports a bounded 0-100 source, unknown values, localized value/unit and subdued semantic tone. Keep domain thresholds outside a presentation primitive.",
+      "owner": "page",
+      "confidence": "high",
+      "disposition": "reuse investigation, not authorization to create a competing score component"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 293,
+      "rule": "MDC-002",
+      "detail": "Fingerprint and ghost rows repeat drive identifier/date and label action. Existing shared DataTable already owns table chrome; duplication is limited domain cell presentation.",
+      "fix": "Keep table ownership unchanged; consider a small ownership-domain drive-reference cell only if migration actually needs both consumers changed. Preserve identifiers, date formatting and callback payload.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Full-width PageLayout; profile and assignment grids stack below md; evidence columns stack below lg; all four tables use mobileColumns allow-lists; chart is responsive with fixed 280px height.",
+    "verifiedViewports": [],
+    "findings": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+        "line": 775,
+        "rule": "MDC-023 / MDC-031 / MDC-043 preservation and mobile reachability",
+        "detail": "Fingerprints allow only drive/attribution/confidence below md, hiding the assign Label action and distance/duration/margin/traits. Profiles at line 702 hide Remove; cluster rows at line 629 hide seven specialist fields. GhostDrivesPanel.tsx:170 similarly omits Label, trip and deviation. DataTable.tsx:238-240 and 724-725 implement hidden md:table-cell; no mobilePresentation or separate full-detail action is supplied by these callers.",
+        "fix": "Adopt DataTable's existing opt-in mobile presentation/detail contract with all fields and actions, retaining loaded rows, source ordering, selection/export scope and stable table IDs. An action-column allow-list addition alone would not restore every hidden detail. Do not delete secondary information.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+        "line": 450,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Header analysis-window select, long cluster axis labels, attribution label/badge row and toggle/save row use inline flex or chart layouts with no demonstrated 320px/long-label behavior.",
+        "fix": "Exercise long localized names, 200% text and narrow allocated widths before choosing wrapping or chart-label adjustments. Preserve all controls, chart data-table access and full labels.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "positiveSourceEvidence": [
+      "Controls use existing shared Input/Select/Toggle/Button; window select has localized aria-label at page:452.",
+      "Most meaningful action icons are aria-hidden and buttons contain localized text.",
+      "ChartContainer receives ariaLabel and all three data columns at page:561-577.",
+      "Destructive removal uses existing useConfirm and ConfirmDialog at page:107-118 and 836.",
+      "Evidence sections have aria-label and semantic h3 text wrappers."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+        "line": 586,
+        "rule": "MDC-034 / MDC-040 truthful chart units",
+        "detail": "The shared YAxis uses unit='%' for both share_pct and aggression_score. The aggression table represents the score as /100 at line 257, and its data-column label is a score, not a percentage. A single percentage axis conflates these source meanings.",
+        "fix": "Use a unit-neutral 0-100 axis with explicit localized per-series units in tooltip/accessible data, or supported distinct axes. Preserve both series, legend persistence and score meaning; do not convert aggression into a percentage claim.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard traversal", "dialog focus trapping/restoration", "screen-reader announcements", "effective contrast", "44px targets", "forced colors", "reduced motion", "RTL"]
+  },
+  "states": {
+    "loading": "OwnershipPanel maps initial missing-data loading to SourceContent; preserveSummary retains the OwnershipBrief's own loading state. Ghost query owns its separate boundary.",
+    "empty": "All named panels remain rendered; null arrays become empty collections. Table empties and source explanations are present. The disabled-vehicle ghost message is not trustworthy; see finding.",
+    "error": "Source fatal errors map to shared ErrorDisplay with retry; create/delete/assignment errors use MutationError. Draft/editor remains available before a first successful register read.",
+    "retained": "OwnershipPanel.tsx:46 maps useDataState stale status to retained. SourceContent.tsx:57-65 keeps children and supplies a polite retained notice/retry.",
+    "offline": "Uses existing trust infrastructure; no offline browser case exercised. Source-only inspection does not prove network policy or every pending/offline transition.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\ownership\\components\\GhostDrivesPanel.tsx",
+        "line": 142,
+        "rule": "MDC-025 / MDC-026 unknown is not success",
+        "detail": "When vehicleId is null, the ghost query is disabled, ghosts defaults to [], and OwnershipPanel sourceEnabled=false selects empty state. The message then says every scanned drive fits a known profile despite no selected vehicle/read. A successful response with scanned=0 also receives this all-clear assertion.",
+        "fix": "Distinguish selection required, not scanned/zero-sample, resolved empty with positive scanned count, loading and fatal failure. Retain explicit behavioral-not-identity language, retry, existing source boundaries and positive data.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+        "line": 798,
+        "rule": "MDC-025 / MDC-026 source verdict preservation",
+        "detail": "Interpretation chooses strong, moderate, otherwise weak explanatory text. For a returned unknown or other verdict string it claims behaviour is too similar to separate, while VerdictBadge displays the actual unknown string. Type permits any string at ownership.ts:468.",
+        "fix": "Handle weak explicitly and use a localized unknown/not-computed explanation for unrecognized verdicts; retain raw verdict evidence and all strong/moderate/weak explanations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 56,
+      "rule": "MDC-010 / MDC-011 / MDC-034 / mission 5 and 7 reduced visual noise",
+      "detail": "Independent six-color ACCENT_HEX palette fixes saturated cyan/emerald/amber/purple/rose/indigo chart fills and profile dots; accentText at lines 65-79 fixes matching body/icon hues. Aggression uses a separate literal amber RGBA at line 605.",
+      "fix": "Resolve existing persisted accent names through the current canonical chart/theme palette and restrained semantic tokens. Keep profile accent choice, identity distinguishability and legend/table text; do not reset stored accents or explicit user chart choices. Prefer neutral identity text and smaller color cues over coloring every label.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 730,
+      "rule": "MDC-010 / MDC-012 / MDC-015",
+      "detail": "Assignment form uses fixed white border/background opacity; EvidencePanel.tsx:129 repeats fixed white decorative evidence tiles. These do not follow theme-neutral surface/border tokens.",
+      "fix": "Use existing subdued surface and border tokens without an extra card engine or stronger decoration. Retain the form grouping and each evidence source, summary, sample count and date.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 256,
+      "rule": "MDC-013 / mission 9",
+      "detail": "Aggression score caption bypasses typography roles with text-xs; its muted color is token-based already. Ghost/attribution score colors and evidence section icons additionally use fixed color shades.",
+      "fix": "Use existing Caption/Text role for /100 metadata and muted semantic tones appropriate to actual meaning. Preserve tabular numbers and visible numeric/word explanations, not color-only classifications.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 87,
+      "rule": "MDC-032 workspace analysis range",
+      "detail": "Time-scoped report and ghost queries use local windowDays and page contextActions window select (lines 450-460), not useRangeState. Route is absent from RANGE_ENABLED_PATHS in workspaceScope.ts:23-77, so the shell range owner is disabled here. Hooks accept window_days only, not both URL/shared bounds.",
+      "fix": "Integration owner must first establish actual report/ghost endpoint support for explicit start/end bounds and full-range filtering, then register the exact route and consume the shared range owner. Preserve current 30/60/90/180/365-day capabilities and selected vehicle. Do not merely remove the existing functioning window control or pretend backend custom/DST range support exists.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 627,
+      "rule": "MDC-023 table interaction contract",
+      "detail": "Columns declare sortable:true at lines 199,206,261,329,336, but DataTable callers provide no onSort/sortKey/sortDir or sorted rows. Ghost table similarly declares sortable flags. DataTable.tsx:1557 only mounts interactive sort headers with onSort. This is inert declarative metadata, not verified sorting.",
+      "fix": "Wire existing caller-owned typed sorting with source field accessors where sorting is intended. Keep original default ordering, stable IDs, monetary/physical raw values, null ordering and export scope. Do not replace DataTable or claim sorting already works.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+      "line": 68,
+      "rule": "MDC-025 / MDC-044 localized domain status",
+      "detail": "VerdictBadge falls back to raw lowercased English strings; its tone map lacks strong/moderate/weak. Page:797 does not supply label. EvidencePanel.tsx:72 renders quality.status verbatim, and profile accent option labels are raw accent codes at page:676.",
+      "fix": "Supply localized visible labels while preserving raw source and stored accent identifiers. Ownership-domain owner should explicitly map separation verdict semantics using existing Badge variants, not create a global competing status registry. Catalog changes belong to their assigned owner.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 101,
+      "rule": "MDC-023 complete result access",
+      "detail": "Report requests limit=100 offset=0. Fingerprints table receives those loaded rows only; page:783 reports shown/total without pagination or a full-result fetch. Existing shared CSV/JSON controls therefore export loaded matching rows, not every report.total drive.",
+      "fix": "Keep the current loaded-scope exports accurately labeled. If the desired modernization promises all drives, integration must wire the existing endpoint limit/offset and DataTable pagination/exportAll contract, without changing whole-range cluster summaries or silently widening export scope.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "first": ["Restore mobile access to all existing details and Label/Remove actions using the current table adapter", "Correct disabled/zero-sample ghost success messaging and unknown verdict interpretation"],
+    "next": ["Resolve shared workspace range integration without dropping existing windows", "Replace hardcoded palette and white overlays with current restrained tokens", "Localize source statuses and clarify chart score units"],
+    "later": ["Activate intended caller-owned sorting", "Evaluate complete fingerprint paging with explicit export scope"],
+    "notAuthorized": "No implementation, shared changes, catalog changes or backend changes performed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Ownership-domain verdict and quality presentation",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+      "propsVariantsStates": "Keep value/label/dot and existing Badge variants; explicitly support localized strong/moderate/weak/unknown labels and matching semantics. EvidencePanel quality labels must retain sufficient/limited/insufficient raw values.",
+      "usedBy": ["DriverAttributionPage interpretation", "EvidencePanel mounted on DriverAttributionPage"],
+      "dependsOn": ["Existing localization/catalog owner", "Source verdict contract; no new status engine"],
+      "scope": "Shared/domain owner recommendation only; no other page consumers were audited."
+    },
+    {
+      "name": "Neutral evidence-source surfaces",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Reuse existing quality/evidence/limitations/unsupported/source/sourceEnabled props and neutral surface/border tokens; preserve loading/fatal/retained/empty handling and every evidence entry.",
+      "usedBy": ["DriverAttributionPage provenance trailer"],
+      "dependsOn": ["Canonical theme-neutral surface and border tokens", "OwnershipPanel source-state adapter"],
+      "scope": "Domain-wide renderer needs its own exclusive owner; this audit does not request a new composite."
+    },
+    {
+      "name": "Shared workspace range adoption",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "RANGE_ENABLED_PATHS exact /ownership/driver-attribution registration only after both report and ghost hooks can carry shared startInstant/endInstantExclusive. Preserve vehicle scope, rolling/custom/timezone semantics and current analysis windows.",
+      "usedBy": ["/ownership/driver-attribution report", "/ownership/driver-attribution ghost scan"],
+      "dependsOn": ["Verified backend support for bounded analysis", "useOwnership typed hook and query-key integration", "Existing useRangeState/workspace owner"],
+      "scope": "Integration prerequisite, not a page-only cosmetic edit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 56,
+      "detail": "Local identity/chart hex mapping overlaps the canonical chart/theme palette; retain persisted accent keys while consolidating rendering.",
+      "existingOwner": "Canonical chart/theme palette referenced by MDC-011 and MDC-034"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+      "line": 450,
+      "detail": "Local analysis-window select owns this dated route because workspace range is currently not registered; report as a real integration gap, not a duplicate visible header picker.",
+      "existingOwner": "web\\src\\lib\\workspaceScope.ts and existing useRangeState"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "EF5151B7F2D9A2667C8AE5D9A8B0D8C9675319C9A0EDBCDE8146A0F2DA9D7FAF",
+    "hashAlgorithm": "SHA256",
+    "sourceFile": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+    "currentLineCount": 839,
+    "sectionCount": 9,
+    "sections": [
+      {"name": "Behavioural, never biometric notice", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 466},
+      {"name": "Ghost-driver alerts", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 477},
+      {"name": "Separation quality and five-metric operational brief", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 491},
+      {"name": "Cluster mix and driving intensity chart", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 549},
+      {"name": "Cluster characteristics table", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 616},
+      {"name": "Named drivers register and create form", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 638},
+      {"name": "Drive fingerprints table and confirm-label form", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 713},
+      {"name": "Interpretation", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 794},
+      {"name": "Evidence, quality, and limitations", "file": "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "line": 819}
+    ],
+    "counts": {
+      "pageOwnershipPanel": 6,
+      "pageChartContainer": 1,
+      "pageDataTable": 3,
+      "pageGlassPanel": 0,
+      "renderedDomainPanelCallSitesIncludingGhostAndEvidence": 8,
+      "dataTableCallSitesIncludingGhost": 4,
+      "summaryMetrics": 5,
+      "chartSeries": 2,
+      "clusterColumns": 10,
+      "fingerprintColumns": 8,
+      "profileColumns": 3,
+      "ghostColumns": 6,
+      "evidenceSubsections": 3,
+      "explicitUnsupportedStatements": 2
+    },
+    "actions": [
+      "Select existing 30/60/90/180/365-day analysis window; default 90",
+      "Consume header-selected vehicle, without a second vehicle picker",
+      "Toggle persisted share/aggression chart legend; retain driver-attribution-chart identity",
+      "Keep shared ChartContainer accessible table and existing shared-frame tooling; actual open/export/fullscreen behavior unexercised",
+      "Open/cancel Add driver; edit name (required/maxLength 80), persisted accent and primary flag; save and reset draft on success",
+      "Confirm irreversible profile removal through current danger dialog; cancel and show row-specific pending feedback",
+      "Label fingerprint or ghost row, prefill drive ID and first existing profile, edit assignment, confirm with confirmed:true or cancel",
+      "Retain source retry and create/delete/assignment error feedback",
+      "Retain DataTable column persistence, profile value filters and existing loaded/selected-row CSV/JSON export controls",
+      "Preserve all profile, cluster, fingerprint and ghost fields and actions across mobile and desktop"
+    ],
+    "data": [
+      "No wire/cache SI conversion: distance_m, duration_s, avg_speed_mps, efficiency_wh_per_m and monetary minor units remain canonical",
+      "Display distance/speed via useUnits; specialist efficiency, duration, percent and currency formatters remain display-only",
+      "Keep cluster count, separation score/verdict, confirmed/inferred/ambiguous counts, context captions and report recorded window",
+      "Keep anonymous cluster naming and labelled versus inferred versus ambiguous distinctions; identity is never proven",
+      "Keep null-safe collections and missing optional values rendered as unavailable, not measured zero",
+      "Keep share/aggression chart's existing one-decimal display transform separate from raw report data; do not rewrite calculations during visual migration",
+      "Keep all ten cluster columns including cohesion and monetary share; eight fingerprint columns including top-three weighted traits and separation margin",
+      "Keep scanned/outlier scores, typical-distance ratio, confidence and reason; both ghost and fingerprint Label callbacks target the same assignment form",
+      "Keep first-100/offset-zero fingerprint load, explicit shown/total notice and loaded export scope until deliberate pagination integration",
+      "Keep stable table IDs ownership-driver-clusters, ownership-driver-profiles, ownership-driver-fingerprints and ownership-ghost-drives",
+      "Keep independent source enablement/cancellation/query keys, inherited retry/stale policies and broad ownership invalidation on successful writes",
+      "Keep evidence source/summary/sample/date, quality/coverage/window/reasons, limitations and both explicit not-computed explanations"
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified beyond source semantics",
+    "backend": "Route mount and handler route declarations inspected; calculations, authentication middleware effects, trailing-slash behavior, explicit date-bound support and live response shape not exercised.",
+    "validation": [
+      "PowerShell Get-FileHash -Algorithm SHA256 and Get-Content line count succeeded.",
+      "Scoped PowerShell regex scan succeeded: static var inline-style matches 0; raw button/input/textarea/select/table 0; direct recharts/react-leaflet/framer-motion imports 0; old relative API imports 0; OwnershipPanel 6; DataTable 3; ChartContainer 1.",
+      "These narrow pattern counts do not mean zero design, accessibility or architecture findings.",
+      "An initial PowerShell command collected hash/line count, then failed because rg was not installed on PATH (exit 1). Subsequent citations used the available functions.rg tool; the failed attempt is not treated as a passing check.",
+      "Audit skill script was read but not executed because it unconditionally runs project TypeScript, contrary to this read-only no-heavy-validation assignment.",
+      "No TypeScript, lint, full build, test, browser navigation, screenshot, viewport, keyboard, mutation, Git or production request executed."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-156.json", ".agent-status\\audit-page-156.txt"],
+    "sourceWrites": [],
+    "scope": "Only assigned mounted page, its domain dependencies and narrow route/shared-contract evidence inspected. No claims about other ownership pages, whole-app completion or current browser acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx",
+    "web\\src\\features\\ownership\\components\\GhostDrivesPanel.tsx",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.test.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.production.test.tsx",
+    "web\\src\\components\\ui\\__tests__\\DataTableA11y.test.tsx",
+    "web\\src\\components\\ui\\__tests__\\DataTable.test.tsx",
+    "web\\src\\components\\ui\\DataTable.test.tsx",
+    "web\\src\\components\\ui\\DataTable.mobile-adapter.test.tsx",
+    "web\\src\\components\\ui\\DataTable.production.test.tsx"
+  ]
+}

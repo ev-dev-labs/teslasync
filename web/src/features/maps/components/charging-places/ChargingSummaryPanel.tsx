@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { Coins } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Badge } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { MetricTile } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
@@ -28,23 +30,29 @@ export function ChargingSummaryPanel({ summary, isLoading, error, onRetry }: Cha
   const { locale } = useSettings();
   const { formatEnergy } = useUnits();
   const rows = summary ?? [];
+  const state = deriveDataState({ data: summary, isLoading, error });
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Coins className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-        {t('chargingPlaces.summary.title', 'Charging Summary')}
-      </PanelTitle>
+    <LayoutCard title={t('chargingPlaces.summary.title', 'Charging summary')} actions={<Coins className="h-4 w-4 text-emerald-300" aria-hidden="true" />}>
+      <SourceContent
+        state={state.refreshError ? 'retained' : 'ready'}
+        label={t('chargingPlaces.summary.title', 'Charging summary')}
+        errorMessage={t('chargingPlaces.summary.loadFailed', 'Charging summary could not be loaded.')}
+        emptyMessage={t('chargingPlaces.summary.empty', 'No priced charging activity at this place yet.')}
+        errorRecovery={{ onRetry }}
+      >
 
-      {error ? (
-        <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.summary.title', 'Charging Summary')} />
-      ) : isLoading ? (
+      {state.fatalError ? (
+        <QueryError error={state.fatalError} onRetry={onRetry} resourceName={t('chargingPlaces.summary.title', 'Charging summary')} />
+      ) : isLoading && !state.hasData ? (
         <Skeleton className="h-24 w-full" />
       ) : rows.length === 0 ? (
         <>
           {/* no-action: the summary fills automatically as sessions at this place are priced. */}
           <EmptyState
-            message={t('chargingPlaces.summary.empty', 'No priced charging activity at this place yet.')}
+            message={state.hasData
+              ? t('chargingPlaces.summary.empty', 'No priced charging activity at this place yet.')
+              : t('chargingPlaces.summary.unavailable', 'Charging summary is unavailable.')}
           />
         </>
       ) : (
@@ -59,7 +67,7 @@ export function ChargingSummaryPanel({ summary, isLoading, error, onRetry }: Cha
                   {row.currency}
                 </Badge>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 @sm:grid-cols-3">
                 <MetricTile
                   value={row.session_count}
                   label={t('chargingPlaces.summary.sessions', 'Sessions')}
@@ -81,6 +89,7 @@ export function ChargingSummaryPanel({ summary, isLoading, error, onRetry }: Cha
           ))}
         </div>
       )}
-    </GlassPanel>
+      </SourceContent>
+    </LayoutCard>
   );
 }

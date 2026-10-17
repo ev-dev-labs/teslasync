@@ -169,9 +169,9 @@ describe('AuditLogWidget — feed view (wide)', () => {
     expect(screen.getByText('vehicle · vin 5YJ')).toBeInTheDocument();
 
     // Severity → colour: delete=critical, update=warning, login=info.
-    expect(rowStyle('vehicle.delete')).toContain('rgb(239, 68, 68)');
-    expect(rowStyle('settings.update')).toContain('rgb(245, 158, 11)');
-    expect(rowStyle('user.login')).toContain('rgb(59, 130, 246)');
+    expect(rowStyle('vehicle.delete')).toContain('color: var(--semantic-danger);');
+    expect(rowStyle('settings.update')).toContain('color: var(--semantic-warning);');
+    expect(rowStyle('user.login')).toContain('color: var(--semantic-info);');
   });
 
   it('renders a distinct security title for each state branch with matching severity colour', () => {
@@ -197,9 +197,12 @@ describe('AuditLogWidget — feed view (wide)', () => {
     expect(screen.getByText('Valet mode on')).toBeInTheDocument();
 
     // inferSecuritySeverity: unlocked=critical, sentry active=warning, locked=info.
-    expect(rowStyle('Vehicle unlocked')).toContain('rgb(239, 68, 68)');
-    expect(rowStyle('Sentry: active')).toContain('rgb(245, 158, 11)');
-    expect(rowStyle('Vehicle locked')).toContain('rgb(59, 130, 246)');
+    expect(rowStyle('Vehicle unlocked')).toContain('color: var(--semantic-danger);');
+    expect(rowStyle('Sentry: active')).toContain('color: var(--semantic-warning);');
+    expect(rowStyle('Vehicle locked')).toContain('color: var(--semantic-info);');
+    expect(rowStyle('Door: open')).toContain('color: var(--semantic-info);');
+    expect(rowStyle('Guest mode on')).toContain('color: var(--semantic-info);');
+    expect(rowStyle('Valet mode on')).toContain('color: var(--semantic-info);');
   });
 
   it('falls back to the generic "Security event" title when no state field is set', () => {
@@ -270,24 +273,99 @@ describe('AuditLogWidget — compact view (1 col)', () => {
 });
 
 describe('AuditLogWidget — loading / error / refresh', () => {
-  it('renders a skeleton (no content, no refresh) while either source is loading', () => {
+  it('keeps resolved content and reports partial while one source is loading', () => {
     mockUseAuditLogs.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Audit Log')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+    expect(screen.queryByText('Audit log')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: /^Refresh/i }).length).toBeGreaterThan(0);
   });
 
   it('surfaces a genuine load error as an error panel instead of a misleading empty state', () => {
     mockUseAuditLogs.mockReturnValue(
       makeQuery({ data: undefined, isError: true, error: new Error('boom') }),
     );
+    mockUseSecurityEvents.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('boom') }));
     renderWidget();
 
     // Honest error panel from WidgetShell (QueryError), not "No audit events".
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('No audit events')).not.toBeInTheDocument();
+  });
+
+  describe('AuditLogWidget — trust and recovery regressions', () => {
+    it.each([1, 2, 3])('retains content on failed refresh in %i-column mode', (cols) => {
+      mockUseAuditLogs.mockReturnValue(makeQuery({
+        data: [auditEntry({ id: 'retained', action: 'token.revoke' })],
+        error: new Error('refresh failed'), isError: true,
+      }));
+      const { container } = renderWidget({ size: { cols, rows: 2 } });
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByText(cols === 1 ? 'Critical' : 'token.revoke')).toBeInTheDocument();
+    });
+
+    it('recovers failed vehicle discovery without asking a disabled security query to fetch an empty id', () => {
+      const discover = vi.fn();
+      const sec = vi.fn();
+      mockUseVehicles.mockReturnValue(makeQuery({ data: undefined, error: new Error('discovery'), refetch: discover }));
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: undefined, isLoading: true, refetch: sec }));
+      renderWidget();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+      expect(discover).toHaveBeenCalledOnce();
+      expect(sec).not.toHaveBeenCalled();
+    });
+
+    it.each([0, -1, NaN, Infinity, 1.5, Number.MAX_SAFE_INTEGER + 1])('disables security reads for invalid vehicle id %s', (vehicleId) => {
+      renderWidget({ vehicleId });
+      expect(mockUseSecurityEvents).toHaveBeenCalledWith('');
+    });
+
+    it('does not interpret omitted security booleans as unlocked or disabled', () => {
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: [{ id: 'missing', createdAt: recentIso() }] }));
+      renderWidget();
+      expect(screen.queryByText('Vehicle unlocked')).not.toBeInTheDocument();
+      expect(screen.queryByText('Guest mode off')).not.toBeInTheDocument();
+    });
+
+    it('safely handles nullable lists and disabled security initial state', () => {
+      mockUseVehicles.mockReturnValue(makeQuery({ data: null }));
+      mockUseAuditLogs.mockReturnValue(makeQuery({ data: null }));
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+      renderWidget();
+      expect(screen.getByText('No audit events')).toBeInTheDocument();
+    });
+
+    it('only shows initial skeleton when no source has resolved', () => {
+      mockUseAuditLogs.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+      const initial = renderWidget();
+      const shell = initial.container.querySelector('[data-data-state="initial"]');
+      const skeleton = shell?.querySelector('[aria-hidden="true"].bg-\\[var\\(--skeleton-bg\\)\\]');
+      expect(skeleton).not.toBeNull();
+      expect(skeleton).toHaveClass('h-full', 'min-h-24', 'w-full', 'rounded-xl');
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+      expect(shell).toHaveAttribute('aria-busy', 'true');
+      expect(initial.container.querySelector('.animate-pulse')).toBeNull();
+      expect(screen.queryByText('No audit events')).not.toBeInTheDocument();
+      initial.unmount();
+
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: [] }));
+      const partial = renderWidget();
+      expect(partial.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+      expect(partial.container.querySelector('.bg-\\[var\\(--skeleton-bg\\)\\]')).toBeNull();
+      expect(screen.getByText('No audit events')).toBeInTheDocument();
+      partial.unmount();
+
+      mockUseAuditLogs.mockReturnValue(makeQuery({ data: [], isLoading: true, isFetching: true }));
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+      const cached = renderWidget();
+      expect(cached.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+      expect(cached.container.querySelector('.bg-\\[var\\(--skeleton-bg\\)\\]')).toBeNull();
+      expect(screen.getByText('No audit events')).toBeInTheDocument();
+    });
   });
 
   it('refetches BOTH audit logs and security events when the refresh control is used', () => {

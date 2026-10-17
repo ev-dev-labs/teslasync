@@ -1,0 +1,434 @@
+{
+  "item": "audit-page-217",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx",
+  "routes": ["/cabin-thermal"],
+  "purpose": "Audit the evidence supporting a vehicle's passive cabin thermal model, from returned climate rows through normalization, segmentation, ordered gates and accepted Newton-cooling fits.",
+  "primaryGoal": "Understand whether an accepted direction-specific thermal time constant is supported, inspect exclusions and rejected candidates, and distinguish a worked scenario from a weather forecast.",
+  "dataSources": [
+    {
+      "hook": "useClimateHistory(vehicleIdStr)",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 37,
+      "endpoint": "GET /api/v1/climate?vehicle_id=<selected vehicle>",
+      "hookPath": "/climate?vehicle_id=${vehicleId}",
+      "routeEvidence": "internal\\api\\router.go:4116-4118",
+      "ownership": "ClimateHandler.List -> signal.StateReader.Timeline -> historical signal-log timeline; not a latest-state snapshot query.",
+      "ownerFile": "internal\\api\\climate\\handler.go",
+      "ownerLine": 78,
+      "behavior": "Enabled only with a selected vehicle; key ['climate','history',vehicleId]; forwards AbortSignal; safeArray selection; inherits query policy. Handler defaults to the last seven days, supports start/end, forward-folds climate fields and emits timestamp/created_at/id aliases.",
+      "mappingEvidence": [
+        "internal\\api\\climate\\handler.go:29-37",
+        "internal\\api\\climate\\handler.go:78-111",
+        "web\\src\\api\\client.ts:93",
+        "web\\src\\api\\client.ts:284-288",
+        "web\\src\\types\\vehicle-systems.ts:28-39"
+      ],
+      "units": "Frontend ClimateState documents temperatures as Celsius. Request adds camelCase aliases without removing snake_case keys; model reads insideTemp/outsideTemp/hvacPower/isAcOn. No wire or cache conversion is performed here.",
+      "limits": "No actual endpoint call, timeline reader implementation, database completeness, sample density or freshness was tested. Forward-filled rows must not be treated as independent experiments."
+    },
+    {
+      "hook": "useSelectedVehicle; useUnits; useTranslation; useNumberFormatting",
+      "file": "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx",
+      "line": 36,
+      "ownership": "Existing workspace vehicle selection, display-unit preferences and locale/precision infrastructure.",
+      "behavior": "Deselection clears page analysis samples; component props receive saved temperature/duration preferences and formatters. No second vehicle picker, mutation, settings write or local query store.",
+      "limits": "Selection persistence, query-provider configuration and actual saved preferences were not exercised."
+    },
+    {
+      "hook": "summarizeCabinThermal(samples)",
+      "file": "web\\src\\features\\vehicle-systems\\lib\\cabinThermal.ts",
+      "line": 842,
+      "ownership": "Existing pure domain derivation; not a backend forecast capability.",
+      "behavior": "Separates raw rows, normalized rows, candidates and accepted fits. Ordered exclusion/rejection accounting, HVAC-off continuity, newest-first capped directories, accepted-only median tau and direction-specific medians.",
+      "limits": "Selected source ranges and symbols inspected; regression and segmentation internals were not exhaustively reviewed or executed."
+    }
+  ],
+  "components": [
+    {
+      "kind": "layout",
+      "names": ["PageLayout", "CardGrid", "LayoutCard", "Grid"],
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": [
+        "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx:64-195",
+        "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:8-16",
+        "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx:25-45"
+      ],
+      "contract": "PageLayout delegates to PageContainer; CardGrid items have stable id/size/content, preserve source order and use allocated container width. CabinThermalGrid consumes placement without owning panels or actions."
+    },
+    {
+      "kind": "composite",
+      "names": ["VehicleOperationalBrief", "OperationalBrief", "CabinThermalEvidenceStats"],
+      "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+      "evidence": [
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\CabinThermalEvidenceStats.tsx:59-92",
+        "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx:8-77"
+      ],
+      "contract": "Typed StatMetric raw values, period, loading/available/retained/error and specialist display formatters. Unknown coverage remains unknown; no generic completeness claim."
+    },
+    {
+      "kind": "charts",
+      "names": ["EmbeddedChart", "ChartContainer", "ChartTooltip", "ChartLegend", "ResponsiveContainer"],
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "evidence": [
+        "web\\src\\components\\charts\\EmbeddedChart.tsx:18-45",
+        "web\\src\\components\\charts\\ChartContainer.tsx:760-851",
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalPredictionScenario.tsx:111-138"
+      ],
+      "contract": "Five embedded charts retain toolbar, exportable data/dataColumns, accessible label and fallback table. Prediction retains cabin/ambient series and chartKey cabin-thermal-prediction with hidden-series state. Fit-quality scatter uses a static Legend, not the prediction's toggle contract."
+    },
+    {
+      "kind": "primitives and state",
+      "names": ["Text", "Heading", "MetricLabel", "Badge", "Button", "AlertBanner", "EmptyState", "QueryError", "Skeleton", "SourceContent", "FadeIn"],
+      "owner": "Existing category-barrel owners; domain gates in CabinThermalSectionBody and CabinThermalQueryStatus",
+      "evidence": [
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSectionBody.tsx:23-154",
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalQueryStatus.tsx:21-151",
+        "web\\src\\components\\motion\\FadeIn.tsx:23-37"
+      ],
+      "contract": "Passive section gates keep section shells visible; a single evidence-ledger status owns retry. Shared FadeIn uses reduced-motion preference and suppresses delayed entrance when reduced."
+    },
+    {
+      "kind": "domain",
+      "names": ["SourceCoverage", "SegmentationDiagnostics", "CandidateDisposition", "RejectionReasons", "AcceptanceFunnel", "ThresholdMatrix", "CandidateDirectory", "CandidateRow", "FitQuality", "DirectionProfile", "AcceptedDirectory", "PredictionScenario", "AccountingMatrix", "Methodology"],
+      "owner": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal",
+      "evidence": ["web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx:74-173"],
+      "contract": "Preserve every specialist section and explanation. Domain components remain appropriate owners; do not replace them with a generic empty dashboard."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalCandidateRow.tsx",
+      "line": 24,
+      "rule": "MDC-002 / reuse before new abstraction",
+      "detail": "Detail and AcceptedDirectory.EventMetric repeat a label/value pair. Existing Typography already owns the visual primitives; only two local implementations are established.",
+      "fix": "Keep local until an existing shared label/value presentation is demonstrated compatible; optionally consolidate a domain-only renderer without changing values, ordering or caps.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAcceptedDirectory.tsx:25-34"]
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSegmentationDiagnostics.tsx",
+      "line": 37,
+      "rule": "Mission 7 visual intensity / MDC-033",
+      "detail": "Evidence, coverage, segmentation and exclusion sections reuse VehicleOperationalBrief, but embedded briefs repeat source status, coverage and not-live metadata. This is consistent architecture, with a potential secondary-information density cost rather than a proven rendering defect.",
+      "fix": "Review hierarchy in the mounted page; use the existing embedded contract, retaining source provenance and every metric rather than creating another summary component or removing explanations.",
+      "owner": "page",
+      "confidence": "medium",
+      "relatedEvidence": [
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSourceCoverage.tsx:43-64",
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAccountingMatrix.tsx:120-132",
+        "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx:44-72"
+      ]
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": "Root and slot have w-full/min-w-0; CardGrid stacks full/half cards under 1024 container pixels, uses half-width cards above that, and preserves DOM order. Candidate and accepted directories reflow field grids but retain bounded vertical scroll. Methodology reflows 1/2/3 columns.",
+    "evidence": [
+      "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx:180",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\CabinThermalGrid.tsx:10-33",
+      "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts:4-28",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalMethodology.tsx:91"
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalRejectionReasons.tsx",
+        "line": 66,
+        "rule": "MDC-043 / mission 15-17",
+        "detail": "The eight-reason chart reserves 150px for 10px category text plus 18px left margin in a fixed 230px chart. At phone widths this consumes much of the plot; long translated reasons can exceed the reserved label space. Funnel uses the same axis strategy.",
+        "fix": "Exercise narrow allocated widths and long translations; adapt label wrapping/height through existing chart contracts and keep complete labels in the accessible table/tooltip. Do not omit gates or counts.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": ["web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAcceptanceFunnel.tsx:55-68"]
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalThresholdMatrix.tsx",
+        "line": 137,
+        "rule": "MDC-043 / MDC-040",
+        "detail": "Thresholds start at two columns even on phones, and direction-card measurements stay three columns. Scientific slope, duration ranges and long labels have no local wrap strategy; possible crowding at 320px or 200% text.",
+        "fix": "Validate and allow one-column threshold cards and wrapping/stacking measurement groups when allocated width is insufficient, preserving all nine thresholds and both direction profiles.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": ["web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalDirectionProfile.tsx:59"]
+      }
+    ],
+    "runtime": "UNVERIFIED at all required widths: 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560; no screenshot or measured overflow evidence."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Localized section titles and chart ariaLabel; decorative status/methodology icons are aria-hidden.",
+      "Charts supply complete data/dataColumns to shared fallback table; table caption and scoped header semantics exist in ChartContainer.",
+      "Candidate and accepted directories use ordered lists and textual accepted/rejection labels, not color alone.",
+      "Retry uses shared Button/QueryError; loading status has polite live region; shared PageContainer provides a route-focus target.",
+      "FadeIn uses the existing reduced-motion hook."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalCandidateDirectory.tsx",
+        "line": 57,
+        "rule": "MDC-040 keyboard reachability",
+        "detail": "A bounded overflow-y-auto ordered list has no explicit accessible scroll-region name or tabIndex, and its rows have no interactive descendants. Keyboard-only access to overflow depends on browser scroll-focus behavior; accepted directory has the same pattern.",
+        "fix": "Test keyboard traversal and scrolling in supported browsers; if not reachable, name/focus the existing scroll region with shared focus styling. Do not introduce unnecessary row tab stops or discard capped metadata.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": ["web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAcceptedDirectory.tsx:59-79"]
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalPredictionScenario.tsx",
+        "line": 122,
+        "rule": "MDC-044 accessible numeric localization",
+        "detail": "Chart numeric dataColumns omit kind/format. Shared fallback table uses String(raw) when neither is present, unlike locale-aware visible metrics. Count columns in the bar charts have the same omission; scenario decimals can be read/exported without the locale's separator convention.",
+        "fix": "Supply existing column kind/format metadata for count and specialist temperature/duration display, keeping chart source values and export units unchanged.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\components\\charts\\ChartContainer.tsx:824-836",
+          "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalCandidateDisposition.tsx:62-65"
+        ]
+      }
+    ],
+    "runtime": "UNVERIFIED keyboard/focus order and restoration, screen reader output, effective contrast, forced colors, touch targets, reduced-motion rendering, RTL and 200% text."
+  },
+  "states": {
+    "loading": "Evidence metrics use unavailable raw values, QueryStatus announces loading, and passive section bodies render Skeleton without removing section titles. Methodology remains visible.",
+    "noVehicle": "Page analysis uses []; localized selection guidance in status and passive sections, not a fabricated zero measurement.",
+    "empty": "Resolved zero returned rows are legitimate zero counts with no tau claim. Normalized-empty, candidate-empty and all-rejected states have distinct explanations.",
+    "error": "Only fatalError gates the content. QueryError owns initial retry; passive sections retain their shells. PageLayout receives query for header freshness, not loading/error props that would replace all content.",
+    "retained": "Refresh failure keeps climateState.data, summary and section contents; evidence-ledger warning provides retry. Paused loading delegates to VehicleSourcePause; retained briefs disclose retained evidence.",
+    "unknown": "Unresolved availability is not inferred empty; unknown HVAC excludes samples from candidates; missing accepted tau remains null/dash.",
+    "partial": "Returned-but-invalid rows and rejected windows are explicitly accounted for. There is one historical query, not independent network sources; no generic partial network state is invented.",
+    "stale": "Header delegates freshness to PageContainer/DataFreshnessAuto. Local sourceState retains refresh-error/paused signals but does not propagate timestamp/age; embedded briefs say not-live rather than claiming current observations.",
+    "evidence": [
+      "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx:46-61",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\sourceState.ts:5-21",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalQueryStatus.tsx:26-151",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSectionBody.tsx:59-154",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\ledgerPresenter.ts:16-30"
+    ],
+    "findings": [],
+    "runtime": "All state descriptions are source-observed branches, not rendered acceptance. Retry effects, offline transitions, scope-change cancellation and retained cache behavior were not exercised."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalPredictionScenario.tsx",
+      "line": 136,
+      "rule": "MDC-010 / MDC-034 / mission 5-8 and 27",
+      "detail": "Ambient reference uses the saturated shared amber series token; adjacent count charts use blue/green/red series. These are data colors, not local glow decoration, but the reference line and multiple equal-weight saturated charts warrant a calmer intensity review. Shared palette is fixed hex across themes.",
+      "fix": "Use a subdued existing reference token for ambient where distinguishable, and ask the shared chart-token owner to review restrained default series semantics. Preserve saved explicit neon chart preferences, all data, series identity and contrast.",
+      "owner": "shared",
+      "confidence": "medium",
+      "relatedEvidence": [
+        "web\\src\\lib\\tokens.ts:383-401",
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAcceptanceFunnel.tsx:68",
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalRejectionReasons.tsx:68"
+      ]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx",
+      "line": 46,
+      "rule": "MDC-032 workspace/date ownership",
+      "detail": "This dated historical analysis is not in RANGE_ENABLED_PATHS and useClimateHistory accepts vehicle only, so the page always analyzes the endpoint's default seven-day window rather than the shared workspace range. Backend already accepts start/end. Existing captions explicitly describe seven days; changing scope must update these truthfully.",
+      "fix": "Integration owner should add typed optional start/end to the existing history hook/query key and register /cabin-thermal, then page consumes shared range instants. Preserve the existing default window for unscoped callers, cancellation, server-side filtering and all analysis rules; no second range picker.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\api\\hooks\\useVehicleSystems.ts:37-43",
+        "web\\src\\lib\\workspaceScope.ts:23-77",
+        "internal\\api\\climate\\handler.go:85-96",
+        "internal\\api\\apiparams\\params.go:89-91",
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSourceCoverage.tsx:39"
+      ]
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "rationale": "Already uses canonical layouts, state gates and chart frames; no evidenced feature loss or page-local neon decoration. Prioritize workspace-range integration and narrow/keyboard validation before cosmetic refinements.",
+    "order": ["Shared range integration", "Narrow chart/card and scroll-region QA", "Accessible numeric localization", "Restrained reference color and metadata hierarchy review"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing climate-history workspace range integration",
+      "owner": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "additionalOwner": "web\\src\\lib\\workspaceScope.ts",
+      "props": "Optional typed start/end ISO instants; include supplied bounds in existing domain query key; keep vehicleId enablement, AbortSignal and safeArray.",
+      "variants": "Existing unscoped seven-day default and explicitly workspace-scoped history; no alternative endpoint or query store.",
+      "states": "Initial/empty/fatal/retained/paused behavior unchanged; both bounds sent to the server.",
+      "usedBy": ["/cabin-thermal", "Existing useClimateHistory consumers must retain their current unscoped behavior"],
+      "dependsOn": ["Existing useRangeState startInstant/endInstantExclusive", "GET /climate start/end parsing", "Canonical route registry", "Page-specific scope captions"],
+      "status": "Integration requirement from MDC-032; not implemented or runtime validated."
+    },
+    {
+      "name": "Restrained chart reference/default palette review",
+      "owner": "web\\src\\lib\\tokens.ts",
+      "props": "Reuse chartTokens reference/series semantics; no new palette engine or per-page hex constants.",
+      "variants": "Calm default reference/series rendering across light/dark; preserve explicit saved chart palette choices.",
+      "states": "Ensure distinction and effective contrast in normal and forced-color chart/table views.",
+      "usedBy": ["/cabin-thermal prediction", "/cabin-thermal acceptance funnel", "/cabin-thermal rejection reasons"],
+      "dependsOn": ["Shared chart owner", "Current chart preferences", "Actual composed-theme contrast and visual review"],
+      "status": "Conditional review, not proof of failed contrast and not authorization to reset palettes."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalEvidenceKpiBand.tsx",
+      "line": 27,
+      "rule": "MDC-002 single existing architecture",
+      "detail": "Old six-MetricCard evidence band still exists and is barrel-exported alongside the active typed CabinThermalEvidenceStats/VehicleOperationalBrief presentation. The mounted page imports only the modernization ledger, so this is a competing local implementation, not a demonstrated double render.",
+      "fix": "Do not re-adopt the old color-per-metric band. Before any retirement, integration owner must verify other consumers/tests; no deletion authorized by this audit.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\index.ts:8",
+        "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx:28-33",
+        "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\CabinThermalEvidenceStats.tsx:59-92"
+      ]
+    }
+  ],
+  "preservation": {
+    "sourceHash": "88de17a1e08e41c5cb65d344d5122cf44334ce25b2900f9b2131e868d991b0f9",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 198,
+    "scopeLineCount": 2373,
+    "scopeLineCountDefinition": "Page plus all non-test .ts/.tsx files in cabin-thermal and cabin-thermal-modernization, including the inactive KPI band and barrels; not a mounted-only count.",
+    "sectionCount": 14,
+    "sectionNames": ["Thermal evidence ledger", "Source coverage", "Segmentation diagnostics", "Candidate disposition", "Final rejection reasons", "Acceptance funnel", "Threshold and gate matrix", "Candidate-window directory", "Accepted-fit quality", "Cooling versus warming profile", "Accepted-event directory", "Accepted-fit worked scenario", "Data and accounting matrix", "Methodology and limitations"],
+    "sectionEvidence": "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx:64-173",
+    "counts": {
+      "mountedGridItems": 14,
+      "activeLayoutCardSections": 13,
+      "activeEmbeddedCharts": 5,
+      "evidenceMetrics": 6,
+      "thresholdCards": 9,
+      "accountingIdentities": 3,
+      "methodologyExplanations": 6,
+      "rawRowExclusionReasons": 7,
+      "candidateRejectionReasons": 8,
+      "candidateDisplayCap": 50,
+      "acceptedDisplayCap": 20
+    },
+    "actions": [
+      "Workspace vehicle selection; existing page title/help and header freshness",
+      "Single source retry/refetch owner for fatal, refresh-error or paused states",
+      "Five shared chart toolbars and chart data export surfaces",
+      "Prediction cabin/ambient legend toggling and stable chartKey",
+      "Candidate and accepted-directory scrolling with newest-first ordering and omission disclosure"
+    ],
+    "dataBehavior": [
+      "Raw wire/cache remains SI; Celsius temperature values and original aliases survive. No local units conversion in hook or cache.",
+      "Domain derivation currently uses elapsed minutes, tauMin and slope/min internally; preserve this numerical algorithm and rounding. Multiply minutes by 60 before duration formatters/shared duration metrics, not a wire-shape migration.",
+      "Temperature deltas use converted delta minus converted zero so Fahrenheit offset is not applied to differences.",
+      "Timestamp/finite-temperature validation, deterministic first-row duplicate retention and explicit HVAC-on/off/unknown resolution must remain.",
+      "Default thresholds: continuity gap 45min; duration 25min; 4 samples; initial gap 3 Celsius; R2 0.8; crossing band 0.2 Celsius; slope epsilon 0.000001/min; tau range 1-1440min.",
+      "Returned rows = normalized + excluded; candidates = accepted + rejected; final-reason counts = rejected. Diagnostics never become accepted thermal evidence.",
+      "Missing tau is null/dash, not zero; real resolved count zero remains zero.",
+      "Prediction is an explicitly hypothetical cooling 45/22/25 Celsius or warming 5/22/19 Celsius worked scenario, conditional on accepted directional tau. These are documented assumptions, not fixture telemetry or invented weather.",
+      "Keep model equation, ordered gates, seven-day source explanation until genuinely scoped, forward-filled-data caveat and sun/wind/occupancy/sensor/HVAC limitations."
+    ],
+    "evidence": [
+      "web\\src\\features\\vehicle-systems\\lib\\cabinThermal.ts:107-118",
+      "web\\src\\features\\vehicle-systems\\lib\\cabinThermal.ts:351-425",
+      "web\\src\\features\\vehicle-systems\\lib\\cabinThermal.ts:842-915",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\ledgerPresenter.ts:20-30",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\labels.ts:109-121",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalPredictionScenario.tsx:51-78",
+      "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAcceptedDirectory.tsx:45-56"
+    ],
+    "verification": "Root SHA-256 read twice and unchanged before report writing; no source edits. No runtime no-feature-loss claim."
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source audit. Root read in full; cited domain presentation files read in full; shared/backend files read at cited ranges or filtered symbols. No Git, nested agents, production actions, source edits or application startup.",
+    "mount": "Source route registration only: web\\src\\App.tsx:89 and 862 lazy-loads the page behind SafeRoute. Actual authenticated mount was not exercised.",
+    "runtime": "NOT RUN: browser, endpoint requests, screenshots, interactions, visual/theme/viewport acceptance, keyboard, screen reader, contrast, performance or export verification.",
+    "validation": "NOT RUN: TypeScript, full lint/build or regression tests, per Phase 0 scoped prohibition. Skill audit.sh was inspected but not run because it unconditionally runs package TypeScript. Targeted read-only regex counts were used instead.",
+    "sourceCheckOutput": [
+      "Scoped source checks:",
+      "style= = 0",
+      "<(button|input|textarea|select|table)\\b = 0",
+      "from ['\"](recharts|react-leaflet|framer-motion)['\"] = 0",
+      "neon|glow|text-white|#[0-9a-fA-F]{3,8} = 0",
+      "Scoped non-test source lines = 2373",
+      "LayoutCard openings = 13",
+      "EmbeddedChart openings = 5",
+      "Domain section openings = 14"
+    ],
+    "sourceCheckScope": "Root page and non-test .ts/.tsx in the two cabin-thermal component directories. Regex results do not establish absence of inherited glow/saturation/pure-white styling: shared tokens and inactive MetricCard styling remain outside those literal counts.",
+    "commandEvidence": [
+      {
+        "command": "Get-FileHash 'web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx').Count",
+        "exitCode": 0,
+        "output": "SHA256 88DE17A1E08E41C5CB65D344D5122CF44334CE25B2900F9B2131E868D991B0F9; 198"
+      },
+      {
+        "command": "PowerShell: concatenate root and non-test files from cabin-thermal/cabin-thermal-modernization; count [regex]::Matches for the four patterns printed above; sum Get-Content line counts",
+        "exitCode": 0,
+        "output": "Raw scoped count lines retained in sourceCheckOutput; no TypeScript or runtime acceptance inferred."
+      },
+      {
+        "command": "$fs=Get-ChildItem 'web\\src\\features\\vehicle-systems\\components\\cabin-thermal' -Filter '*.tsx'; count Select-String '<LayoutCard', '<EmbeddedChart', '<section'",
+        "exitCode": 0,
+        "output": "LayoutCard openings = 13; EmbeddedChart openings = 5; Domain section openings = 14"
+      }
+    ],
+    "unknowns": [
+      "Backend signal.StateReader.Timeline implementation and deployed data completeness are not independently verified.",
+      "Active source may evolve under other owners; citations describe this audit snapshot only.",
+      "Domain tests/preservation test files were enumerated but not read or run; old acceptance is not borrowed.",
+      "Page does not have a locally evidenced glow/pure-white violation; shared chart palette intensity is a review finding, not measured contrast failure.",
+      "Full catalog coverage, external consumers of the inactive KPI band, preference persistence and translations were not audited."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\CabinThermalPage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\types.ts",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\labels.ts",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAcceptanceFunnel.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAcceptedDirectory.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalAccountingMatrix.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalCandidateDirectory.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalCandidateDisposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalCandidateRow.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalDirectionProfile.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalEvidenceKpiBand.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalFitQuality.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalMethodology.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalPredictionScenario.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalQueryStatus.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalRejectionReasons.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSectionBody.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSegmentationDiagnostics.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalSourceCoverage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal\\CabinThermalThresholdMatrix.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\CabinThermalEvidenceStats.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\CabinThermalGrid.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\sourceState.ts",
+    "web\\src\\features\\vehicle-systems\\components\\cabin-thermal-modernization\\ledgerPresenter.ts",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\VehicleSourcePause.tsx",
+    "web\\src\\features\\vehicle-systems\\lib\\cabinThermal.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\types\\vehicle-systems.ts",
+    "web\\src\\lib\\climateState.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\climate\\handler.go",
+    "internal\\api\\apiparams\\params.go"
+  ]
+}

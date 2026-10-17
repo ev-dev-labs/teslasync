@@ -18,22 +18,22 @@ vi.mock('react-i18next', () => ({
 const FEATURES = [
   {
     key: 'onboarding.tracking',
-    title: 'Real-time Tracking',
+    title: 'Real-time tracking',
     desc: 'Follow location, speed, and state live on the map.',
   },
   {
     key: 'onboarding.drives',
-    title: 'Drive History',
+    title: 'Drive history',
     desc: 'Every trip logged with route, efficiency, and stats.',
   },
   {
     key: 'onboarding.charging',
-    title: 'Charge Analytics',
+    title: 'Charge analytics',
     desc: 'Track sessions, costs, and battery health over time.',
   },
   {
     key: 'onboarding.control',
-    title: 'Vehicle Control',
+    title: 'Vehicle control',
     desc: 'Climate, charging, and locks — all from one place.',
   },
 ] as const;
@@ -41,6 +41,52 @@ const FEATURES = [
 describe('OnboardingFeaturePreview', () => {
   beforeEach(() => {
     tSpy.mockClear();
+  });
+
+  describe('OnboardingFeaturePreview neutral decoration', () => {
+    it('keeps all four decorative feature glyphs neutral and non-focusable', () => {
+      render(<OnboardingFeaturePreview />);
+
+      const cards = screen.getAllByRole('listitem');
+      const glyphs = ['lucide-map-pin', 'lucide-route', 'lucide-battery-charging', 'lucide-car'];
+      expect(cards).toHaveLength(4);
+
+      cards.forEach((card, index) => {
+        const icon = card.querySelector('svg');
+        expect(icon).toHaveClass(glyphs[index], 'h-5', 'w-5', 'shrink-0');
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+        expect(icon).toHaveAttribute('focusable', 'false');
+        expect(icon).toHaveAttribute('stroke-width', '2');
+        expect(icon).not.toHaveAttribute('role', 'img');
+
+        const iconBox = icon?.parentElement;
+        expect(iconBox).toHaveClass(
+          'h-10', 'w-10', 'shrink-0',
+          'text-[var(--text-secondary)]',
+          'bg-[var(--surface-2)]',
+          'ring-[var(--border-default)]',
+        );
+        expect(iconBox?.className).not.toContain('--semantic-');
+        expect(icon?.getAttribute('class')).not.toContain('--semantic-');
+      });
+    });
+
+    it('uses only neutral hover borders without adding interactive preview actions', () => {
+      render(<OnboardingFeaturePreview />);
+
+      for (const card of screen.getAllByRole('listitem')) {
+        expect(card).toHaveClass(
+          'hover:border-[var(--panel-border-hover)]',
+          'forced-colors:hover:border-[CanvasText]',
+        );
+        expect(card.className).not.toContain('--semantic-');
+        expect(card).toHaveClass('shadow-panel');
+        expect(card).not.toHaveAttribute('tabindex');
+      }
+
+      expect(screen.queryAllByRole('link')).toHaveLength(0);
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
+    });
   });
 
   it('renders every feature card with its title and description', () => {
@@ -61,10 +107,10 @@ describe('OnboardingFeaturePreview', () => {
     const headings = screen.getAllByRole('heading', { level: 3 });
     expect(headings).toHaveLength(4);
     expect(headings.map((h) => h.textContent)).toEqual([
-      'Real-time Tracking',
-      'Drive History',
-      'Charge Analytics',
-      'Vehicle Control',
+      'Real-time tracking',
+      'Drive history',
+      'Charge analytics',
+      'Vehicle control',
     ]);
   });
 

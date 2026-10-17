@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { CarFront } from 'lucide-react';
-import { GlassPanel, PanelTitle, Accordion, Slider, Toggle, Select, Badge } from '@/components/ui';
+import { Accordion, Slider, Toggle, Select, Badge, Text } from '@/components/ui';
+import { FormSection } from '@/components/forms';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import type { DataState } from '@/api/dataState';
 import { updateVehicleAssumption } from '../hooks/useOrchestrationScenario';
 import { DEFAULT_VEHICLE_ASSUMPTION, type VehicleAssumption } from '../lib/scenarioDefaults';
 import type { VehicleInput } from '../lib/types';
@@ -10,10 +12,11 @@ import type { VehicleInput } from '../lib/types';
 interface VehicleAssumptionsPanelProps {
   vehicleInputs: VehicleInput[];
   assumptions: Record<string, VehicleAssumption>;
+  sourceState?: DataState<unknown>;
 }
 
 /** Per-vehicle editable assumptions: target SoC, usable capacity, charge power, departure deadline, priority. */
-export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleAssumptionsPanelProps) {
+export function VehicleAssumptionsPanel({ vehicleInputs, assumptions, sourceState }: VehicleAssumptionsPanelProps) {
   const { t } = useTranslation();
   const { formatPower, formatEnergy } = useUnits();
 
@@ -24,9 +27,16 @@ export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleA
   ];
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3">{t('homeEnergy.vehicle.title', 'Vehicle Assumptions')}</PanelTitle>
-      {vehicleInputs.length === 0 ? (
+    <FormSection title={t('homeEnergy.vehicle.title', 'Vehicle assumptions')}>
+      {sourceState && !sourceState.hasData ? (
+        <Text role="status" variant="bodySm" color="secondary">
+          {sourceState.isRefreshBlocked
+            ? t('homeEnergy.brief.paused', 'Source refresh paused')
+            : sourceState.fatalError
+              ? t('homeEnergy.brief.unavailable', 'Essential source unavailable')
+              : t('homeEnergy.brief.loading', 'Loading source inputs')}
+        </Text>
+      ) : vehicleInputs.length === 0 ? (
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}
           message={t('homeEnergy.vehicle.empty', 'No vehicles found on this account to orchestrate.')}
@@ -48,9 +58,9 @@ export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleA
                 }
               >
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="text-sm text-[var(--text-muted)]">
-                    {t('homeEnergy.vehicle.currentSoc', 'Current SoC (measured): {{pct}}%', { pct: Math.round(v.currentSocPct) })}
-                  </div>
+                  <Text variant="bodySm" color="muted">
+                    {t('homeEnergy.vehicle.modelSoc', 'Current SoC used by model: {{pct}}%', { pct: Math.round(v.currentSocPct) })}
+                  </Text>
                   <Select
                     label={t('homeEnergy.vehicle.priority', 'Charging priority')}
                     value={assumption.priority}
@@ -110,6 +120,6 @@ export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleA
           })}
         </div>
       )}
-    </GlassPanel>
+    </FormSection>
   );
 }

@@ -40,7 +40,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/feedback';
@@ -279,19 +279,86 @@ beforeEach(() => {
   settingsRef.unit_of_temp = 'C';
 });
 
+it('does not fabricate efficiency for daily distance-only aggregates', () => {
+  renderTab(makeQuery({ data: populated({
+    daily_trend: [
+      { date: '2026-01-01', drives: 2, distance: 10 },
+      { date: '2026-01-02', drives: 1, distance: 5, efficiency: 150 },
+    ],
+  }) }));
+  expect(dailyRows()).toHaveLength(2);
+  expect(effTrendRows()).toEqual([
+    { date: '2026-01-02', drives: 1, distance: 5, efficiency: 150 },
+  ]);
+});
+
+it('keeps daily efficiency visibly unavailable despite populated charging totals', () => {
+  const data = populated({
+    daily_trend: [
+      { date: '2026-01-01', drives: 2, distance: 10 },
+      { date: '2026-01-02', drives: 1, distance: 5, efficiency: null },
+    ],
+  });
+  data.total_energy_kwh = 500;
+  data.avg_efficiency_wh_km = 150;
+  renderTab(makeQuery({ data }));
+  const panel = screen.getByRole('figure', { name: 'Efficiency trend' });
+  expect(within(panel).getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
+  expect(within(panel).queryByRole('img')).toBeNull();
+  expect(screen.queryByTestId('chart-area')).toBeNull();
+  expect(dailyRows()).toHaveLength(2);
+  expect(data.drive_analytics.daily_trend[1].efficiency).toBeNull();
+});
+
 // ── Loading ───────────────────────────────────────────────────────────────────
 
 describe('DrivingTab — loading', () => {
   it('renders skeletons and withholds the performance cards and every chart', () => {
-    const { container } = renderTab(makeQuery({ isLoading: true }));
+    renderTab(makeQuery({ isLoading: true }));
 
     // Panel titles always render (they frame the section)…
-    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument();
-    // …but the performance band is a skeleton — no card labels leak through…
-    expect(screen.queryByText('Top Speed')).toBeNull();
-    // …pulsing skeletons are on screen…
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Speed distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency trend' })).toBeInTheDocument();
+    // The retained performance shell keeps its labels, but withholds all values.
+    const performance = screen.getByRole('group', { name: 'Driving performance metrics' });
+    const performanceRegion = within(performance).getByRole('region', { name: 'Driving performance metrics' });
+    expect(performanceRegion).toHaveAttribute('aria-busy', 'true');
+    expect(within(performance).getByText('Top speed')).toBeInTheDocument();
+    const performanceCells = within(performance).getAllByRole('listitem');
+    expect(performanceCells).toHaveLength(6);
+    performanceCells.forEach((cell) => {
+      const placeholders = cell.querySelectorAll('.h-5.w-20.max-w-full.rounded');
+      expect(placeholders).toHaveLength(1);
+      expect(placeholders[0]).toHaveAttribute('aria-hidden', 'true');
+      expect(cell.querySelector('[data-operational-value]')).toBeNull();
+      expect(cell.querySelector('[class*="animate-"]')).toBeNull();
+    });
+    // Each chart owns a busy, static silhouette, not a plotted series.
+    [
+      'Speed distribution', 'Trip distance distribution', 'Hourly driving pattern',
+      'Temperature vs efficiency', 'Daily driving trend', 'Drive duration distribution',
+      'Efficiency trend',
+    ].forEach((title) => {
+      const panel = screen.getByRole('figure', { name: title });
+      expect(panel).toHaveAttribute('aria-busy', 'true');
+      expect(panel).toHaveAttribute('data-chart-state', 'loading');
+      const placeholder = within(panel).getByRole('status', { name: 'Loading chart…' });
+      expect(placeholder).toHaveAttribute('aria-busy', 'true');
+      expect(placeholder).toHaveClass('h-full');
+      const bars = placeholder.querySelectorAll<HTMLElement>('.flex-1.rounded-t');
+      expect(bars).toHaveLength(7);
+      expect(Array.from(bars, (bar) => bar.style.height)).toEqual(['50%', '45%', '63%', '64%', '37%', '8%', '33%']);
+      bars.forEach((bar) => expect(bar).toHaveAttribute('aria-hidden', 'true'));
+      expect(within(panel).queryAllByRole('img')).toHaveLength(0);
+      expect(panel.querySelector('[data-testid^="chart-"]:not([data-testid="chart-skeleton"])')).toBeNull();
+    });
+    const temperature = screen.getByRole('heading', { name: 'Observed temperature measurements' }).closest('[aria-busy]');
+    expect(temperature).toHaveAttribute('aria-busy', 'true');
+    const temperaturePlaceholders = temperature?.querySelectorAll<HTMLElement>('.w-full.rounded[aria-hidden="true"]') ?? [];
+    expect(temperaturePlaceholders).toHaveLength(1);
+    expect(temperaturePlaceholders[0]).toHaveStyle({ height: '120px' });
+    expect(temperaturePlaceholders[0]).toHaveClass('h-4', 'w-full');
+    expect(screen.queryByText('Inside min')).toBeNull();
     // …and no chart has been drawn yet.
     expect(screen.queryByTestId('chart-bar')).toBeNull();
     expect(screen.queryAllByTestId('chart-composed')).toHaveLength(0);
@@ -311,7 +378,7 @@ describe('DrivingTab — empty', () => {
     expect(screen.getAllByRole('status')).toHaveLength(8);
     expect(screen.getByText('No speed data')).toBeInTheDocument();
     expect(screen.getByText('No daily trend data')).toBeInTheDocument();
-    expect(screen.getByText('No efficiency trend data')).toBeInTheDocument();
+    expect(screen.getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
     expect(screen.getByText('No temperature stats')).toBeInTheDocument();
 
     // No chart on the empty branch.
@@ -356,13 +423,13 @@ describe('DrivingTab — populated', () => {
     renderTab(makeQuery({ data: populated() }));
 
     // Every panel title frames its section.
-    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Trip Distance Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Hourly Driving Pattern')).toBeInTheDocument();
-    expect(screen.getByText('Temperature vs Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Daily Driving Trend')).toBeInTheDocument();
-    expect(screen.getByText('Drive Duration Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Speed distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Trip distance distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hourly driving pattern' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Temperature vs efficiency' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Daily driving trend' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drive duration distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency trend' })).toBeInTheDocument();
 
     // Three bar charts, two composed, one scatter, one area = seven charts.
     expect(screen.getAllByTestId('chart-bar')).toHaveLength(3);
@@ -371,10 +438,10 @@ describe('DrivingTab — populated', () => {
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
 
     // Both sibling bands compose in (performance cards + temperature stats).
-    expect(screen.getByText('Top Speed')).toBeInTheDocument();
-    expect(screen.getByText('Longest Drive')).toBeInTheDocument();
-    expect(screen.getByText('Inside Min')).toBeInTheDocument();
-    expect(screen.getByText('Outside Max')).toBeInTheDocument();
+    expect(screen.getByText('Top speed')).toBeInTheDocument();
+    expect(screen.getByText('Longest drive')).toBeInTheDocument();
+    expect(screen.getByText('Inside min')).toBeInTheDocument();
+    expect(screen.getByText('Outside max')).toBeInTheDocument();
   });
 
   it('binds every chart series to its expected dataKey', () => {
@@ -469,14 +536,42 @@ describe('DrivingTab — Fahrenheit preference', () => {
     expect(scatterRows()[0].temp).toBe(68);
     // Distance/efficiency untouched by the temperature flip (still metric).
     expect(scatterRows()[0].distance).toBe(12);
-    // The temperature-stats band re-projects too: inside min 18 °C → 64.4 °F.
-    expect(screen.getByText('64.4')).toBeInTheDocument();
+    expect(scatterRows()[0].efficiency).toBe(150);
+    // Operational metrics now render the formatted value and unit together.
+    // Keep exact two-decimal Fahrenheit projections, scoped to each source cell.
+    const temperature = screen.getByRole('region', { name: 'Temperature stats' });
+    const cells = within(temperature).getAllByRole('listitem');
+    expect(cells).toHaveLength(6);
+    [
+      ['Inside min', '64.40°F'],
+      ['Inside avg', '69.80°F'],
+      ['Inside max', '75.20°F'],
+      ['Outside min', '41.00°F'],
+      ['Outside avg', '53.60°F'],
+      ['Outside max', '68.00°F'],
+    ].forEach(([label, value], index) => {
+      expect(within(cells[index]).getByText(label)).toBeInTheDocument();
+      expect(within(cells[index]).getByText(value)).toHaveAttribute('data-operational-value', 'true');
+      expect(cells[index]).toHaveAttribute('data-value-state', 'value');
+    });
   });
 });
 
 // ── Efficiency-trend filter branch ─────────────────────────────────────────────
 
 describe('DrivingTab — efficiency trend filter', () => {
+  it.each([null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    'does not plot daily efficiency without usable distance (%s)', distance => {
+      renderTab(makeQuery({ data: populated({
+        daily_trend: [{ date: '2026-01-01', drives: 1, distance, efficiency: 150 }],
+      }) }));
+      const panel = screen.getByRole('figure', { name: 'Efficiency trend' });
+      expect(within(panel).getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
+      expect(screen.queryByTestId('chart-area')).toBeNull();
+      expect(dailyRows()).toHaveLength(1);
+    },
+  );
+
   it('keeps only positive-efficiency rows while daily trend keeps them all', () => {
     renderTab(
       makeQuery({
@@ -509,7 +604,7 @@ describe('DrivingTab — efficiency trend filter', () => {
     // The daily trend still renders (it has a row)…
     expect(screen.getAllByTestId('chart-composed').length).toBeGreaterThanOrEqual(1);
     // …while the efficiency-trend panel collapses to its empty state.
-    expect(screen.getByText('No efficiency trend data')).toBeInTheDocument();
+    expect(screen.getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
     expect(screen.queryByTestId('chart-area')).toBeNull();
   });
 });
@@ -531,14 +626,14 @@ describe('DrivingTab — null safety', () => {
     // Charts still render — the rows exist, the values are just null.
     expect(screen.getAllByTestId('chart-composed')).toHaveLength(2);
     expect(screen.getByTestId('chart-scatter')).toBeInTheDocument();
-    expect(screen.getByTestId('chart-area')).toBeInTheDocument();
+    expect(screen.queryByTestId('chart-area')).toBeNull();
 
     // Every null projection collapses to 0, never NaN.
     expect(hourlyRows()[0].distance).toBe(0);
     expect(dailyRows()[0].distance).toBe(0);
     expect(scatterRows()[0]).toEqual({ temp: 0, efficiency: 0, distance: 0 });
-    // The surviving efficiency (200 Wh/km) is preserved through the projection.
-    expect(effTrendRows()[0].efficiency).toBe(200);
+    // An efficiency number without usable driving distance is not plotted.
+    expect(screen.getByText('Evidence unavailable: No efficiency trend data')).toBeInTheDocument();
     expect(Number.isNaN(dailyRows()[0].distance as number)).toBe(false);
   });
 });

@@ -201,7 +201,7 @@ describe('FleetTelemetryHealth', () => {
 
     // Both card headings render.
     expect(screen.getByText('Error VINs')).toBeInTheDocument()
-    expect(screen.getByText('Error Log')).toBeInTheDocument()
+    expect(screen.getByText('Error log')).toBeInTheDocument()
 
     // The affected-vehicles badge counts the VIN list.
     expect(screen.getByText(/affected/)).toHaveTextContent('2 affected')
@@ -247,12 +247,18 @@ describe('FleetTelemetryHealth', () => {
 
     // Card chrome is present immediately…
     expect(screen.getByText('Error VINs')).toBeInTheDocument()
-    expect(screen.getByText('Error Log')).toBeInTheDocument()
+    expect(screen.getByText('Error log')).toBeInTheDocument()
 
     // …with two skeletons and none of the settled-state content.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2)
+    const skeletons = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')
+    expect(skeletons.length).toBeGreaterThanOrEqual(2)
+    expect(skeletons[0]).toHaveClass('h-24', 'w-full')
+    expect(skeletons[1]).toHaveClass('h-40', 'w-full')
+    expect(screen.queryByRole('button', { name: VIN_A })).toBeNull()
+    expect(screen.queryByText('MISSING_KEY')).toBeNull()
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.queryByText('No vehicles with telemetry errors')).toBeNull()
+    expect(screen.queryByText('No fleet telemetry errors recorded')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
   })
 

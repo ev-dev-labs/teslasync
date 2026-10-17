@@ -1,12 +1,14 @@
-import { CalendarClock, Milestone } from 'lucide-react';
+import { CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface UpcomingRoadmapProps {
   summary: OdometerMilestoneResult;
@@ -19,6 +21,7 @@ export function UpcomingRoadmap({
   state,
   className,
 }: UpcomingRoadmapProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateMs, formatDistanceKm } =
     useOdometerMilestoneDisplay();
@@ -32,11 +35,7 @@ export function UpcomingRoadmap({
       )}
       data-testid="milestone-roadmap"
     >
-      <GlassPanel className="h-full p-4 sm:p-5">
-        <PanelTitle className="mb-4 flex items-center gap-2">
-          <Milestone className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('milestones.roadmap.title', 'Upcoming milestone roadmap')}
-        </PanelTitle>
+      <LayoutCard title={t('milestones.roadmap.title', 'Upcoming milestone roadmap')}>
         <MilestoneSectionBody state={state}>
           <ul className="space-y-2">
             {summary.upcoming.map((milestone) => {
@@ -113,7 +112,7 @@ export function UpcomingRoadmap({
             </Text>
           </div>
         </MilestoneSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

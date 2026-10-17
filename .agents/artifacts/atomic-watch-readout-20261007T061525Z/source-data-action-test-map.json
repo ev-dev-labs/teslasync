@@ -1,0 +1,167 @@
+{
+  "status": "SOURCE_AUTHORED_NOT_TECHNICALLY_ACCEPTED",
+  "writeRelease": "Both WatchSummaryWidget.tsx and WatchSummaryWidget.test.tsx explicitly released; no further writes planned.",
+  "sourceMap": [
+    {
+      "original": "Standard WidgetStatGrid Range/Cabin two measurements",
+      "current": "DashboardSourceBrief testId=dashboard-watch-measurements-brief; readonly StatMetric[]; real useOperationalMetrics and OperationalBrief",
+      "state": "summaryTrust only; not combined or complicationTrust"
+    },
+    {
+      "original": "Compact watch face",
+      "current": "Unchanged LinearGauge, getBatteryColor thresholds, battery unknown branch, StatusBadge, existing compact displayRange conversion, complication charging and no-watch message"
+    },
+    {
+      "original": "Standard battery hero/state badge",
+      "current": "Unchanged WidgetBigNumber battery percent and online/asleep/offline stateLabel/variant"
+    },
+    {
+      "original": "Lock/charging status grid",
+      "current": "Unchanged WidgetStatusGrid; lock reads summary.is_locked; charging reads complication.charging, not summary.is_charging"
+    },
+    {
+      "original": "Last-seen timestamp and missing-summary message",
+      "current": "Unchanged TimeStamp value=summary.last_updated; noWatchData branch retained"
+    },
+    {
+      "original": "Combined query shell/recovery/freshness",
+      "current": "Unchanged combineDataStates, initial/fatal overrides, both-source retry, WidgetShell updatedAt/isFetching/isStale/isError and handleRefresh"
+    }
+  ],
+  "dataMap": [
+    {
+      "occurrenceId": "watch-summary-range",
+      "metricId": "distance",
+      "source": "useWatchSummary(vehicleId).data.range_km",
+      "sourceUnit": "proven kilometers; existing bridge retained",
+      "rawOperand": "rangeKm == null ? null : convertDistanceToSI(rangeKm, 'km')",
+      "canonicalUnit": "m",
+      "display": "convertDistanceFromSI(raw, distanceUnit), fmtNumber, distanceUnit",
+      "trust": "summaryTrust",
+      "missing": "null, never coerced to zero",
+      "zero": "retained numerical zero"
+    },
+    {
+      "occurrenceId": "watch-summary-cabin",
+      "metricId": "temperature",
+      "source": "useWatchSummary(vehicleId).data.inside_temp_c",
+      "rawOperand": "insideTempC",
+      "canonicalUnit": "Celsius unchanged",
+      "display": "convertTempFromSI(raw, tempUnit), fmtNumber, tempUnit",
+      "trust": "summaryTrust",
+      "missing": "null, never coerced to zero",
+      "zeroAndNegative": "retained numerical 0 and negative Celsius"
+    },
+    {
+      "source": "useWatchComplication(vehicleId)",
+      "measurements": "No numeric inputs taken from complication.range or complication.battery; no formatted-string parsing",
+      "preservedUses": [
+        "combined shell freshness/recovery",
+        "compact charging indicator",
+        "standard charging status"
+      ]
+    }
+  ],
+  "actionMap": [
+    {
+      "action": "Shell refresh and retry",
+      "beforeAfter": "Both refetchSummary and complicationQuery.refetch remain; existing in-flight control blocking unchanged"
+    },
+    {
+      "action": "Review details",
+      "change": "Real shared OperationalBrief review drawer now available for the two summary metrics; real renderer is retained in focused tests"
+    },
+    {
+      "action": "Vehicle selection input",
+      "beforeAfter": "vehicleId still passed identically to both existing hooks; no added controls/requests"
+    }
+  ],
+  "testMap": {
+    "originalDeclarations": [
+      "maps healthy SoC (> 50%) to emerald",
+      "maps low SoC (> 20% and <= 50%) to amber, including the 50 boundary",
+      "maps critical SoC (<= 20%) to red, including the 20 boundary and zero",
+      "renders the title, battery big number + state badge, and the full detail grid (mi/°C)",
+      "converts range to the km preference and temperature to the °F preference",
+      "renders the Unlocked chip when the vehicle is unlocked",
+      "renders \"$state\" with the $cls badge variant",
+      "renders the compact heading, gauge, status badge and converted range",
+      "paints the gauge progress stroke with the healthy-band color at high SoC",
+      "paints the gauge progress stroke with the critical-band color at low SoC",
+      "shows the pulsing charging indicator when the complication reports charging",
+      "omits the charging indicator when not charging",
+      "renders the titled shell with the \"No watch data\" placeholder when summary is absent (standard)",
+      "keeps the compact heading when summary is absent",
+      "renders a skeleton while the summary query is loading, with no title or content",
+      "retains the summary while only the complication is loading",
+      "keeps cached content and flags the freshness dot red instead of a full-panel error",
+      "shows the initial-failure retry when the summary errors with no retained data",
+      "never draws a zero battery gauge for an unavailable compact battery",
+      "degrades a partial summary to em-dash placeholders without throwing",
+      "refetches the summary when the accessible refresh control is clicked",
+      "does not refetch while a fetch is already in flight",
+      "threads an explicit vehicleId to both the summary and complication hooks",
+      "passes undefined through to both hooks when no vehicleId prop is given"
+    ],
+    "retainedOriginalDeclarations": [
+      "maps healthy SoC (> 50%) to emerald",
+      "maps low SoC (> 20% and <= 50%) to amber, including the 50 boundary",
+      "maps critical SoC (<= 20%) to red, including the 20 boundary and zero",
+      "renders the title, battery big number + state badge, and the full detail grid (mi/°C)",
+      "converts range to the km preference and temperature to the °F preference",
+      "renders the Unlocked chip when the vehicle is unlocked",
+      "renders \"$state\" with the $cls badge variant",
+      "renders the compact heading, gauge, status badge and converted range",
+      "paints the gauge progress stroke with the healthy-band color at high SoC",
+      "paints the gauge progress stroke with the critical-band color at low SoC",
+      "shows the pulsing charging indicator when the complication reports charging",
+      "omits the charging indicator when not charging",
+      "renders the titled shell with the \"No watch data\" placeholder when summary is absent (standard)",
+      "keeps the compact heading when summary is absent",
+      "renders a skeleton while the summary query is loading, with no title or content",
+      "retains the summary while only the complication is loading",
+      "keeps cached content and flags the freshness dot red instead of a full-panel error",
+      "shows the initial-failure retry when the summary errors with no retained data",
+      "never draws a zero battery gauge for an unavailable compact battery",
+      "degrades a partial summary to em-dash placeholders without throwing",
+      "refetches the summary when the accessible refresh control is clicked",
+      "does not refetch while a fetch is already in flight",
+      "threads an explicit vehicleId to both the summary and complication hooks",
+      "passes undefined through to both hooks when no vehicleId prop is given"
+    ],
+    "missingOriginalDeclarations": [],
+    "newFocusedDeclarations": [
+      "retains numeric metres and Celsius, real zero and negative temperature, and missing measurements without parsing complication strings",
+      "uses summary trust independently of complication failure while retaining battery, status, timestamp and both refresh actions"
+    ],
+    "newFocusedDeclarationCount": 2,
+    "originalAssertionAdaptations": [
+      "standard 186.41 + mi -> 186.41 mi",
+      "standard 21.00 + Celsius -> 21.00 Celsius combined text",
+      "standard 300.00 + km -> 300.00 km",
+      "standard 68.00 + Fahrenheit -> 68.00 Fahrenheit combined text"
+    ],
+    "newCaseCoverage": [
+      "Actual DashboardSourceBrief/useOperationalMetrics/OperationalBrief rendered with numeric raw operand capture; [0,-10], [300000,0], [null,null]; km/Celsius then mi/Fahrenheit; complication formatted strings deliberately disagree",
+      "Summary healthy + failed complication yields Source available brief and stale outer shell; reverse retained summary failure + healthy complication yields Retained readings brief; battery, stateBadge, lock, charging, lastSeen and dual refresh retained"
+    ],
+    "executed": false,
+    "executionCount": 0
+  },
+  "i18n": {
+    "catalogEdits": false,
+    "requestedKeysFile": "i18n-requests.json",
+    "newKeys": [
+      "widget.watchMeasurementsTitle",
+      "widget.watchMeasurementsDescription",
+      "widget.watchMeasurementsScope",
+      "widget.watchDefaultVehicle"
+    ],
+    "sharedKey": "widget.summaryEyebrow"
+  },
+  "limitations": [
+    "No TypeScript, Vitest, lint, build, official audit, validators, browser, preview or install executed per atomic SOURCE instruction.",
+    "No commits, staging, push, PR, deployment, hooks, API types, backend, catalogs or shared/core source writes.",
+    "Phase-48 methodology requested path absent; no guessed DTO/unit shape change; only explicitly authorized existing kilometer-to-meter bridge retained."
+  ]
+}

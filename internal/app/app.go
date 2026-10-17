@@ -86,12 +86,13 @@ type App struct {
 	InboundAPILogger   api.APICallLogger
 	OutboundAPILogSink httputil.APICallSink
 
-	// Telemetry pipeline (set only when cfg.FleetTelemetry.Enabled)
+	// Live read layers exist independently of Fleet Telemetry ownership.
 	TelemetryHandler    *apitelem.Handler
 	SignalStore         *sigsvc.Store
 	SignalHistoryWriter *signaldb.SignalHistoryWriter
 	StateReader         *sigsvc.LogStateReader
 	LiveSignalStore     sigsvc.LiveSignalStore
+	redisSignalCache    *sigsvc.RedisSignalCache
 
 	// Fleet telemetry pipeline subscriber resources
 	pipelineSubscriber *mqtt.PipelineSubscriber

@@ -40,16 +40,16 @@
       "or": " or the ",
       "docs": "documentation"
     },
-    "syncTitle": "Sync Your Vehicles",
+    "syncTitle": "Sync your vehicles",
     "title": "Welcome to TeslaSync",
     "syncDesc": "Your Tesla account is connected. Sync your vehicles to start tracking.",
     "desc": "The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.",
-    "sync": "Sync Vehicles",
-    "connect": "Connect Tesla Account",
+    "sync": "Sync vehicles",
+    "connect": "Connect Tesla account",
     "tracking": "Real-time Tracking",
-    "drives": "Drive History",
-    "charging": "Charge Analytics",
-    "control": "Vehicle Control",
+    "drives": "Drive history",
+    "charging": "Charge analytics",
+    "control": "Vehicle control",
     "status": {
       "sectionLabel": "Setup status",
       "tesla": {
@@ -69,7 +69,9 @@
         "flowing": "Flowing",
         "waiting": "Waiting",
         "hintDone": "Live signals arriving",
-        "hint": "No signals received yet"
+        "hint": "No signals received yet",
+        "stale": "Interrupted",
+        "hintStale": "Stored history remains available"
       },
       "loading": "Loading status…"
     },
@@ -103,6 +105,60 @@
       "drives": "Every trip logged with route, efficiency, and stats.",
       "charging": "Track sessions, costs, and battery health over time.",
       "control": "Climate, charging, and locks — all from one place."
+    },
+    "subtitleComplete": "Your setup stays complete even when a live service is temporarily unavailable.",
+    "brief": {
+      "missing": "Setup status has not been received; no completed-step or vehicle count is known.",
+      "eyebrow": "First-run setup",
+      "description": "Account authorization, synced vehicles, and telemetry readiness from the existing setup check.",
+      "unavailable": "Setup status unavailable",
+      "retained": "Retained setup status",
+      "notReceived": "Setup status not yet received",
+      "scope": "This installation · 3 setup anchors",
+      "lastTelemetry": "Last telemetry: {{time}}",
+      "noTelemetryTime": "Last telemetry time not supplied",
+      "provenance": "Existing onboarding status response; completed setup remains complete during a live-service outage. Telemetry health is not a status-fetch timestamp."
+    },
+    "stepper": {
+      "status": {
+        "current": "In progress",
+        "done": "Completed",
+        "pending": "Not started"
+      },
+      "empty": "No setup steps to show right now.",
+      "label": "Onboarding steps"
+    },
+    "next": "Next",
+    "stepAccount": "Connect Tesla account",
+    "runtimeHealth": {
+      "systemStatus": "View system status",
+      "telemetryLastSeen": "Fleet Telemetry is stale. The last signal arrived {{time}}.",
+      "telemetryStale": "Fleet Telemetry is stale and live values may be out of date.",
+      "title": "Setup is complete, but a live service needs attention",
+      "access": "You can keep using TeslaSync and viewing stored history while live services recover.",
+      "teslaAuth": "Your Tesla account authorization is unavailable and may need to be renewed.",
+      "reconnect": "Reconnect Tesla account",
+      "alerts": "Configure health alerts"
+    },
+    "close": "Close and skip introduction",
+    "getStarted": "Get Started",
+    "trackingHelp": "See current vehicle state and data freshness.",
+    "drivesHelp": "Review routes, efficiency, and driving patterns.",
+    "chargingHelp": "Understand charging cost and battery health.",
+    "controlHelp": "Manage alerts, automations, and vehicle actions.",
+    "stepAccountHelp": "Authorize TeslaSync through the account settings.",
+    "stepVehicles": "Sync vehicle inventory",
+    "stepVehiclesHelp": "Import the vehicles available to your account.",
+    "stepWorkspace": "Activate your workspace",
+    "stepWorkspaceHelp": "Live dashboards populate as telemetry arrives.",
+    "accountConnected": "Account connected",
+    "setupRequired": "Workspace setup",
+    "explore": "Explore capabilities",
+    "privateTitle": "Private by design",
+    "privateHelp": "Your fleet data stays in the infrastructure you control.",
+    "tasks": {
+      "optOut": "Stop showing setup tips",
+      "dismiss": "Dismiss this tip"
     }
   }
 }

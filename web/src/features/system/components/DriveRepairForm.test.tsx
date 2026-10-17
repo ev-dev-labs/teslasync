@@ -141,12 +141,12 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     expect(region).toHaveAttribute('id', 'drive-202-editor');
 
     // Every field is labelled and seeded from SI columns (nullish → '').
-    expect((screen.getByLabelText('End Date/Time (ISO)') as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText('End date/time (ISO)') as HTMLInputElement).value).toBe('');
     expect((screen.getByLabelText('Distance (m)') as HTMLInputElement).value).toBe('15000');
     expect((screen.getByLabelText('Duration (s)') as HTMLInputElement).value).toBe('');
-    expect((screen.getByLabelText('End Battery (%)') as HTMLInputElement).value).toBe('80');
-    expect((screen.getByLabelText('Max Speed (m/s)') as HTMLInputElement).value).toBe('30');
-    expect((screen.getByLabelText('Avg Speed (m/s)') as HTMLInputElement).value).toBe('20');
+    expect((screen.getByLabelText('End battery (%)') as HTMLInputElement).value).toBe('80');
+    expect((screen.getByLabelText('Max speed (m/s)') as HTMLInputElement).value).toBe('30');
+    expect((screen.getByLabelText('Avg speed (m/s)') as HTMLInputElement).value).toBe('20');
 
     // The four actions are reachable by their accessible names, and each
     // carries a decorative, aria-hidden icon (icon-only-in-spirit controls
@@ -154,7 +154,7 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     const save = within(region).getByRole('button', { name: 'Save' });
     expect(save).toBeInTheDocument();
     expect(save.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
-    expect(within(region).getByRole('button', { name: 'Close Drive' })).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Close drive' })).toBeInTheDocument();
     expect(within(region).getByRole('button', { name: 'Move to quarantine' })).toBeInTheDocument();
     expect(within(region).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
@@ -202,8 +202,8 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     const { onClose } = renderForm();
 
     fireEvent.change(screen.getByLabelText('Distance (m)'), { target: { value: '20000' } });
-    fireEvent.change(screen.getByLabelText('Avg Speed (m/s)'), { target: { value: '' } });
-    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+    fireEvent.change(screen.getByLabelText('Avg speed (m/s)'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('End date/time (ISO)'), {
       target: { value: '  2026-03-30T04:00:00Z  ' },
     });
 
@@ -245,10 +245,10 @@ describe('DriveRepairForm — Project Apex elevation', () => {
   it('Close POSTs to the SI-canonical close route and closes the form on success', async () => {
     const { onClose } = renderForm();
 
-    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+    fireEvent.change(screen.getByLabelText('End date/time (ISO)'), {
       target: { value: '2026-03-30T04:00:00Z' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Close Drive' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close drive' }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 

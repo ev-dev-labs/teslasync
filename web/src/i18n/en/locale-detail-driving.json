@@ -1,0 +1,25 @@
+{
+  "driving": {
+    "brief": {
+      "loading": "Loading source",
+      "retained": "Retained source",
+      "unavailable": "Source unavailable",
+      "available": "Source available",
+      "eyebrow": "Driving evidence",
+      "observationUnknown": "Source observation time not provided",
+      "completeScope": "Complete analysis window",
+      "subsetScope": "Returned subset",
+      "unknownScope": "Coverage unknown",
+      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
+      "returned": "Returned evidence",
+      "awaiting": "Awaiting evidence",
+      "window": "{{start}}–{{end}}; returned drive subset, not a server-wide aggregate",
+      "selectVehicle": "Select a vehicle",
+      "noVehicle": "Choose a vehicle",
+      "unresolvedCoverage": "Drive-history coverage is unresolved",
+      "partial": "Partial evidence",
+      "responseReceivedAt": "Response received {{timestamp}}",
+      "pending": "Drive evidence is not available yet."
+    }
+  }
+}

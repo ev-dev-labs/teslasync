@@ -1,0 +1,514 @@
+{
+  "item": "audit-page-180",
+  "phase": 0,
+  "auditMode": "read-only source inspection",
+  "page": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx",
+  "routes": [
+    {
+      "path": "/activity",
+      "mountedSource": "web\\src\\App.tsx:166,664",
+      "workspaceScope": "range and vehicle",
+      "scopeEvidence": "web\\src\\lib\\workspaceScope.ts:23-24,156-167",
+      "runtimeReachability": "unverified"
+    }
+  ],
+  "purpose": "Unified vehicle operations-intelligence history from drives, charging, alert delivery logs, software updates and user annotations; not the personal audit-action or FSM transition timelines.",
+  "primaryGoal": "Understand what happened to the selected vehicle in the workspace date range, filter domains, browse newest-to-oldest events and follow real source details or export the loaded page.",
+  "dataSources": [
+    {
+      "name": "Activity list",
+      "hook": "useActivity",
+      "hookOwner": "web\\src\\api\\hooks\\useActivity.ts",
+      "endpoint": "GET /api/v1/activity",
+      "endpointEvidence": "web\\src\\api\\hooks\\useActivity.ts:71-84; internal\\api\\router.go:4172; web\\src\\api\\client.ts:73-93,368-385",
+      "sourceOwner": "internal\\api\\activity\\handler.go; internal\\database\\activity\\repo.go; internal\\models\\activity\\activity.go",
+      "sourceTables": [
+        "drives",
+        "charging_sessions",
+        "notification_logs with alert_rules and alert_rule_vehicles",
+        "software_updates",
+        "chart_annotations"
+      ],
+      "sourceEvidence": "internal\\database\\activity\\repo.go:59-197",
+      "parameters": ["vehicle_id", "start", "end", "repeatable kind", "limit", "offset"],
+      "queryContract": "Scope-specific key includes sorted kinds, bounds, vehicle, limit and offset; forwards cancellation signal, uses STALE_TIMES.STANDARD, validates response envelope in select.",
+      "queryEvidence": "web\\src\\api\\hooks\\useActivity.ts:22-60,71-84",
+      "response": "items, total, limit, offset, generated_at; snake_case event DTO fields preserved.",
+      "sourceBehavior": "UNION ALL; newest occurred_at first with source_table ASC/source_id DESC tie-breakers. Server filters before pagination; count(*) OVER() supplies total for nonempty pages. Fleet-wide annotation and applicable fleet alert rows remain eligible for vehicle-scoped reads.",
+      "behaviorEvidence": "internal\\database\\activity\\repo.go:113-153,176-197,242-250,256-287",
+      "units": "duration_s is seconds; energy_added_wh is watt-hours; SOC is percentage. Feed converts duration and energy only through useUnits at render time; exports retain raw source fields.",
+      "unitEvidence": "internal\\models\\activity\\activity.go:73-80; web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx:73-74,138-153; web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:136-150",
+      "limitations": "Read source establishes composition, not working database tables, deployment, API execution or completeness. Software events use installed/scheduled/created timestamp precedence, not a separately verified lifecycle event stream. No real dated service-history source is claimed."
+    },
+    {
+      "name": "Workspace vehicle prerequisite",
+      "hook": "useSelectedVehicle -> useVehicles",
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "web\\src\\hooks\\useSelectedVehicle.ts; web\\src\\api\\hooks\\useVehicles.ts; existing vehicleHandler.List",
+      "evidence": "web\\src\\hooks\\useSelectedVehicle.ts:51-79,154-168; web\\src\\api\\hooks\\useVehicles.ts:73-76; internal\\api\\router.go:3319-3320",
+      "behavior": "URL, persisted selection and first-known-vehicle fallback. Activity query enabled only when vehicles.length > 0. Empty or unresolved list returns NoVehicleSelected; this hook does not expose prerequisite query loading/error.",
+      "limits": "Only the page-specific vehicle selection trace was read; no vehicle repository/runtime audit."
+    },
+    {
+      "name": "Workspace date, timezone and operational context",
+      "hook": "useRangeState, useTimezone('vehicle'), useOperationalMode",
+      "endpoint": "No additional page-owned endpoint inspected for these contexts",
+      "sourceOwner": "web\\src\\hooks\\useRangeState.ts; web\\src\\hooks\\useOperationalMode.tsx; existing timezone context",
+      "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:75-94; web\\src\\hooks\\useRangeState.ts:1-20,85-92,112-124,325-331,665-683; web\\src\\hooks\\useOperationalMode.tsx:42-87",
+      "behavior": "Header-owned route, from/to URL and shared preference; no local duplicate date or vehicle controls. resolveActivityWindow caps end at asOf; if start is not before the cap, shifts start backward by max(original duration, 24 hours). Not a claim that source rows are reconstructed as they existed at asOf.",
+      "limits": "Timezone provider and lower context queries not traced; browser-versus-vehicle calendar semantics require integration resolution."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout -> PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "role": "Canonical page frame, header, overflow actions and query freshness; w-full/min-w-0 container.",
+      "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:124-153; web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15; web\\src\\components\\layout\\PageContainer.tsx:90-114,125-139,164-225"
+    },
+    {
+      "name": "ActivityOverview -> SystemSummaryBrief -> OperationalBrief",
+      "owner": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx",
+      "role": "Two contextual summaries: four range/page measurements and five loaded-page kind counts; existing useOperationalMetrics formatter bridge.",
+      "evidence": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx:24-60; web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx:23-62",
+      "limits": "OperationalBrief and formatter internals not read; no rendered summary/drawer acceptance asserted."
+    },
+    {
+      "name": "KindFilterBar",
+      "owner": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx",
+      "role": "Localized wrapping multi-select button group with aria-pressed; All clears selection; five domain toggles.",
+      "evidence": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx:20-65"
+    },
+    {
+      "name": "ActivityFeed -> TimelineItem, GlassPanel, Badge",
+      "owner": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+      "role": "Day-grouped source-ordered rows, source-backed detail links, localized status/severity/provenance, SI-formatted summaries.",
+      "evidence": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx:104-208; web\\src\\components\\data-display\\TimelineItem.tsx:35-94"
+    },
+    {
+      "name": "Skeleton, QueryError, EmptyState, StaleRefreshWarning, NoVehicleSelected",
+      "owner": "Existing feedback and onboarding components",
+      "role": "Source trust, recovery, initial and prerequisite states; retain cached data on failed refresh.",
+      "evidence": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx:76-101; web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:105-116,154; web\\src\\components\\feedback\\StaleRefreshWarning.tsx:53-111; web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:44-76"
+    },
+    {
+      "name": "ListExportMenu, Button, Text, FadeIn",
+      "owner": "Existing forms, ui and motion categories",
+      "role": "Loaded-page CSV/JSON, pagination, explanatory captions and reduced-motion-aware entrance.",
+      "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:132-150,183-230; web\\src\\components\\motion\\FadeIn.tsx:24-37; web\\src\\components\\ui\\Button.tsx:38-52,63-82"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx",
+      "line": 34,
+      "rule": "MDC-002/MDC-033; mission sections 4 and 7",
+      "detail": "Two existing SystemSummaryBrief instances plus an outer GlassPanel repeat description, scope and page-coverage context. This is source-confirmed repetition, not proof of excessive mounted height.",
+      "fix": "Reuse current OperationalBrief/SystemSummaryBrief composition; review hierarchy without deleting four summary counts, five kind counts, trust labels or coverage explanations.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "sourceSupported": [
+      "PageLayout uses w-full/min-w-0 and vertical gap; filter and pagination groups flex-wrap.",
+      "Day panels use p-4/sm:p-6; TimelineItem has min-w-0, wrapped badges and breakable subtitles/metadata."
+    ],
+    "evidence": [
+      "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:11",
+      "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx:33-36",
+      "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:183",
+      "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx:109",
+      "web\\src\\components\\data-display\\TimelineItem.tsx:67-79"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+        "line": 168,
+        "rule": "MDC-031/MDC-043; preserve full titles",
+        "detail": "Caller does not enable TimelineItem.wrap; shared default truncates the source-authored title to one line. Narrow feeds and long annotation/alert titles risk hiding important information.",
+        "fix": "Use existing wrap prop for full readable titles; retain event order, summaries, provenance and links.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx",
+        "line": 54,
+        "rule": "MDC-040/MDC-043; long labels and touch targets",
+        "detail": "Kind chips and pagination use Button size sm (h-9 / 36px); filter buttons do not opt into existing wrapLabel. At 200% text or long translations fixed heights need testing. This is below the stronger 44px mobile default, not a measured WCAG failure.",
+        "fix": "Use existing wrapping and minimum-target caller capabilities; validate spacing exceptions and ten widths rather than shrink or remove filters.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "viewportAcceptance": "Unverified at 320/375/390/430/768/1024/1280/1440/1920/2560, container widths, text zoom and RTL."
+  },
+  "accessibility": {
+    "sourceSupported": [
+      "Localized filter group and aria-pressed; decorative icons hidden in filters, feed and pagination.",
+      "Shared Button supplies focus treatment; linked rows use native router links.",
+      "Pagination uses aria-live=polite; stale warning uses role=status and aria-live=polite.",
+      "FadeIn uses existing motion preference and initial=false in reduced mode."
+    ],
+    "evidence": [
+      "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx:34-59",
+      "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:183-215",
+      "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:87-111",
+      "web\\src\\components\\motion\\FadeIn.tsx:24-37"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\forms\\ListExportMenu.tsx",
+        "line": 172,
+        "rule": "MDC-024/MDC-040; menu keyboard and focus semantics",
+        "detail": "role=menu/menuitem is supplied, but inspected implementation has only outside mousedown/Escape dismissal. No focus transfer, roving/arrow-key navigation or explicit focus restoration is implemented here. Runtime Tab behavior remains unverified.",
+        "fix": "Extend existing export owner with canonical menu/popover focus behavior or appropriate non-menu semantics, preserving localized names, exports, outside dismissal, busy/disabled states and scopes.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\forms\\ListExportMenu.tsx",
+        "line": 155,
+        "rule": "MDC-040; mobile target default",
+        "detail": "Export trigger overrides shared button height to 32px. Need measured target spacing/reachability in the real header, not a blanket WCAG claim.",
+        "fix": "Shared export owner should support reachable 44px mobile trigger and bounded open-menu placement without changing export behavior.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+        "line": 187,
+        "rule": "MDC-040; non-hover provenance",
+        "detail": "Source record ID is supplied only through the provenance span title attribute. CSV/JSON retains IDs, but the in-feed record detail relies on hover and lacks a keyboard/touch disclosure.",
+        "fix": "Retain source ID and source caption via visible detail or an existing accessible disclosure/tooltip; do not add nested interactive content to the whole-row link.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "acceptance": "Keyboard, focus order/restoration, screen reader, actual contrast, forced colors, reduced motion and touch are unverified."
+  },
+  "states": {
+    "initialLoading": "ActivityFeed shows six-line Skeleton; overview receives loading and unavailable measurements, not factual zeros. Initial vehicle-list resolution may instead show prerequisite UI.",
+    "successfulEmpty": "Feed shows localized No activity in this window; filters remain usable. Successful empty envelope allows legitimate zero counts.",
+    "fatalError": "Only state.fatalError drives feed QueryError with refetch retry; summaries remain present with unavailable measurements.",
+    "refreshFailure": "DataState preserves cached items; StaleRefreshWarning renders beside content; overview receives retained=true on query error; pagination/export are not suppressed by raw query.isError.",
+    "offlineRetained": "DataState handles paused refresh as stale with retained payload; warning mentions offline; PageContainer can display operational-mode badge.",
+    "unknownFreshness": "SystemSummaryBrief honestly defaults to source observation time not supplied; generated_at/dataUpdatedAt are not conflated with event observation.",
+    "disabled": "Export disabled during initial loading, fatal error or no loaded rows; missing direction buttons mean no corresponding page, not disabled placeholders.",
+    "evidence": [
+      "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:103-116,135,154-178,183-217",
+      "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx:76-101",
+      "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx:38-58",
+      "web\\src\\api\\dataState.ts:188-249",
+      "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx:28-35",
+      "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:53-83"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx",
+        "line": 111,
+        "rule": "MDC-026; unknown is not confirmed empty",
+        "detail": "vehicles.length===0 conflates a real empty fleet with unresolved/failed vehicle query because useSelectedVehicle returns vehicles??[] without loading/error metadata. Activity is disabled and setup guidance is returned in all cases.",
+        "fix": "Coordinate prerequisite trust metadata with useSelectedVehicle owner; show loading/error recovery distinctly while preserving the real no-vehicle onboarding action.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx",
+        "line": 163,
+        "rule": "MDC-026; distinguish retained offline from current source",
+        "detail": "Overview retained flag is tied to query.isError, not state.isRefreshBlocked/status. A paused refresh with cached data can show Source available in summary while the nearby warning says offline. No false measurement is inferred, but trust labels can conflict.",
+        "fix": "Adapt existing DataState trust into the summary's retained/status/freshness props consistently; keep retained measurements and distinguish fetch time from source observation time.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+        "line": 95,
+        "rule": "Mission section 23; actionable empty explanation",
+        "detail": "Empty message states what is empty but provides no visible guidance that shared date range or kind filters can change the result; this guidance exists only in a source comment.",
+        "fix": "Use existing EmptyState description/help capability with localized range/kind guidance; no fake source rows, automatic filter changes or competing date picker.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "All branches are source-inspected only, not exercised."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\constants.ts",
+      "line": 16,
+      "rule": "MDC-010/MDC-025; mission sections 5-8 and 43",
+      "detail": "Five fixed bright cyan/green/amber/indigo/purple hex accents bypass theme tokens and repeat across every timeline icon. This is saturation/rainbow noise risk, not literal neon CSS or measured fluorescence; semantic severity/status badges already communicate state.",
+      "fix": "Subdue domain decoration through existing neutral/semantic token treatment; preserve domain icons, text labels, severity and status. Current TimelineItem supports omitting color for neutral swatch; do not mutate saved theme choices or invent a palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+      "line": 110,
+      "rule": "MDC-013; typography ownership",
+      "detail": "Day headings use raw h3 text-sm/font-semibold and provenance uses raw span text-2xs instead of role typography components. Colors use text variables, so this is typography drift, not pure-white text.",
+      "fix": "Use existing heading/caption wrappers with semantic as override, preserving headings, labels and record details.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\data-display\\TimelineItem.tsx",
+      "line": 47,
+      "rule": "MDC-010/MDC-012/MDC-040; theme-aware interactive chrome",
+      "detail": "Shared link uses fixed white-alpha hover and cyan-400/60 focus rather than canonical control/focus tokens. This is white-overlay/focus hue drift, not proof of pure-white body text or insufficient contrast.",
+      "fix": "Shared owner replaces hover/focus chrome with existing semantic tokens while preserving whole-row navigation, rich-slot title-only navigation and neutral fallback.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\forms\\ListExportMenu.tsx",
+      "line": 177,
+      "rule": "MDC-010/MDC-015; mission section 8",
+      "detail": "Export dropdown retains fixed white-alpha borders/hover and shadow-xl. Review restrained elevation and light-theme interaction visibility; no actual glowing border/text found in inspected page.",
+      "fix": "Use canonical border/control-hover/elevation tokens in existing menu owner, retaining opened content and actions.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx",
+      "line": 79,
+      "rule": "MDC-032/MDC-045; consistent calendar timezone",
+      "detail": "Vehicle timezone is used to group/display events, but useRangeState receives no timezone. Hook defaults to browser timezone, so vehicle-local day grouping and calendar request bounds can differ.",
+      "fix": "Resolve workspace date-time authority with existing hook/header owners; align bounds and labels without introducing a picker or silently changing saved range policy. Add focused differing-timezone/DST evidence in implementation phase.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "internal\\database\\activity\\repo.go",
+      "line": 81,
+      "rule": "MDC-032; server bound contract",
+      "detail": "Page passes endInstantExclusive but all UNION branches filter timestamp<=end; adjacent windows can include a row exactly at the exclusive boundary. Handler documents inclusive bounds.",
+      "fix": "Integration owner must resolve actual inclusive-versus-exclusive API semantics with backend/date owners and add boundary tests. No backend changes are authorized by this audit; preserve existing behavior until explicitly reconciled.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "internal\\database\\activity\\repo.go",
+      "line": 267,
+      "rule": "MDC-026/MDC-032; authoritative range counts",
+      "detail": "total is initialized to zero and obtained only from returned rows' count(*) OVER(). Empty out-of-range offset after source changes returns total=0 even if earlier matching events exist; page total/Older calculation can be misleading.",
+      "fix": "Integration owner should verify empty-offset behavior and provide correct full-range count or scoped page recovery without frontend invented totals. Preserve 50-row pagination and chronological order.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Preservation-sensitive chronological history with timezone/boundary/count integration risks and prerequisite state conflation; otherwise already uses shared orchestration and real sources.",
+    "order": [
+      "Resolve integration scope and prerequisite trust contracts.",
+      "Preserve and verify retained/offline states and all filters/actions.",
+      "Adopt existing wrapping/typography and reduce fixed saturated decoration.",
+      "Shared menu/focus token correction then mounted responsive/accessibility/visual QA."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Selected-vehicle prerequisite trust metadata",
+      "existingOwnerFile": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "concreteContract": "Expose or compose typed prerequisite loading, fatal error, retained data and retry from existing useVehicles without changing vehicleId/vehicle/vehicles/setVehicleId precedence or persistence. Unknown fleet must not equal confirmed zero vehicles.",
+      "variantsStates": ["initial", "fatal failure", "retained fleet", "confirmed empty fleet", "selected vehicle"],
+      "usedBy": ["/activity (source-confirmed consumer)"],
+      "dependsOn": ["Existing useVehicles query and selectedVehicle store; onboarding/shell owner coordination"],
+      "evidence": "web\\src\\hooks\\useSelectedVehicle.ts:51-53,163-168; web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:95-116",
+      "scopeLimit": "No other page consumers audited; reuse/expose existing query metadata rather than a second selection system."
+    },
+    {
+      "name": "TimelineItem semantic hover/focus chrome",
+      "existingOwnerFile": "web\\src\\components\\data-display\\TimelineItem.tsx",
+      "concreteContract": "Keep icon/title/subtitle/time/color/isLast/href/badges/metadata/actions/wrap API. Replace fixed-white hover/fixed-cyan focus with current control/focus tokens; retain neutral no-color swatch and both link compositions.",
+      "variantsStates": ["linked full row", "linked title with rich slots", "unlinked row", "wrapped title", "neutral swatch", "keyboard focus"],
+      "usedBy": ["/activity -> ActivityFeed"],
+      "dependsOn": ["Existing CSS token contract; shared TimelineItem owner"],
+      "evidence": "web\\src\\components\\data-display\\TimelineItem.tsx:6-32,35-94",
+      "scopeLimit": "No new component or color prop expansion required for this page; use existing neutral color omission."
+    },
+    {
+      "name": "ListExportMenu keyboard/mobile/token closeout",
+      "existingOwnerFile": "web\\src\\components\\forms\\ListExportMenu.tsx",
+      "concreteContract": "Retain onExportCsv/onExportJson scope callbacks, visibleCount/selectedCount, disabled/className/testId and async error/busy behavior. Supply coherent menu focus/keyboard/restoration through canonical primitives; touch-safe trigger, bounded placement and semantic borders/hover/elevation.",
+      "variantsStates": ["closed", "open", "disabled", "exporting", "export failure", "visible scope", "selected scope", "keyboard dismissal"],
+      "usedBy": ["/activity header overflow export"],
+      "dependsOn": ["Canonical overlay/menu owner, Button and control/focus tokens, existing toast feedback"],
+      "evidence": "web\\src\\components\\forms\\ListExportMenu.tsx:8-27,65-81,106-136,150-236",
+      "scopeLimit": "Other consumers not enumerated; cross-consumer shared acceptance belongs to owner, not this audit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Vehicle activity versus personal audit and FSM state timeline",
+      "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:58-70; web\\src\\types\\activity.ts:5-16",
+      "decision": "Do not consolidate distinct sources or delete routes. /me/activity and /timeline were not independently audited."
+    },
+    {
+      "name": "KindFilterBar versus single-select PillFilterBar",
+      "evidence": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx:14-18",
+      "decision": "Multi-select independent domains and All reset are intentional; do not replace with single-select tabs based on cosmetic similarity. PillFilterBar implementation was not inspected."
+    },
+    {
+      "name": "Operational summaries and TimelineItem",
+      "evidence": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx:34-58; web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx:168-208",
+      "decision": "Already uses canonical composites; do not add a competing timeline, stats formatter, surface or summary library."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "D0374C4A977B45A7D940FD1B92E8513E13AF9FF0C8B29836BBE2362A6C360807",
+    "hashAlgorithm": "SHA-256 of page bytes via Get-FileHash",
+    "currentLineCount": 232,
+    "featurePresentationLineCounts": {
+      "ActivityTimelinePage.tsx": 232,
+      "ActivityFeed.tsx": 212,
+      "ActivityOverview.tsx": 63,
+      "KindFilterBar.tsx": 66,
+      "pagePlusThreePresentationComponents": 573,
+      "constants.ts": 58,
+      "helpers.ts": 37,
+      "index.ts": 10,
+      "pagePlusListedFeatureFiles": 678
+    },
+    "counts": {
+      "pageGlassPanelOpeningSites": 0,
+      "dependencyGlassPanelOpeningSites": 5,
+      "chartContainerOpeningSites": 0,
+      "overviewSummaryBriefInstances": 2,
+      "overviewRangePageMetrics": 4,
+      "overviewKindMetrics": 5,
+      "filterButtons": 6,
+      "normalContentBlocks": 7
+    },
+    "countSemantics": "Five dependency GlassPanel sites are one overview panel plus feed loading/error/empty/day branches, not five simultaneous rendered panels. Day panel count is dynamic. Counts are source baseline, not runtime parity proof.",
+    "sections": [
+      {"name": "Header, subtitle help, query freshness and export", "count": 1, "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:124-153"},
+      {"name": "Retained-source warning", "count": 1, "conditional": true, "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:154"},
+      {"name": "Range/page overview and page event-type mix", "count": 2, "evidence": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx:34-60"},
+      {"name": "All and five kind filters", "count": 1, "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:168-170"},
+      {"name": "Timezone day-grouped event feed", "count": "one feed; dynamic local-day panels", "evidence": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx:104-208"},
+      {"name": "Page position and Newer/Older navigation", "count": 1, "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:183-218"},
+      {"name": "Loaded-page export explanation", "count": 1, "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:220-222"},
+      {"name": "Verified-service-source limitation", "count": 1, "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:224-230"},
+      {"name": "No-vehicle prerequisite alternative", "count": 1, "conditional": true, "evidence": "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx:111-117"}
+    ],
+    "normalContentBlockDefinition": "Overview, kind filters, feed, pagination, export explanation and service limitation plus conditional retained warning; header and prerequisite alternative counted separately.",
+    "actions": [
+      "All clears kind selection; five independent kind toggles permit multi-select.",
+      "Shared header range/vehicle controls change scope; preserve URL/preference ownership, no second selectors.",
+      "Any vehicle/window/kind change resets offset to zero.",
+      "Newer decrements offset by 50 bounded at zero; Older increments by 50 only when matching total permits.",
+      "Fatal-source Retry and retained warning Refresh call refetch.",
+      "Detail links preserve source-provided paths; drives and charging point to IDs, alerts/software to existing list surfaces; annotations without path remain plain rows.",
+      "CSV exports only loaded items with 12 named columns; JSON exports complete raw loaded item objects.",
+      "Header subtitle help and freshness remain supplied through existing PageLayout.",
+      "Confirmed no-vehicle setup action remains governed onboarding guidance."
+    ],
+    "exportColumns": ["occurred_at", "kind", "vehicle_id", "title", "summary", "severity", "status", "source_table", "source_id", "duration_s", "energy_added_wh", "path"],
+    "dataBehavior": [
+      "Maintain server event chronology and tie-breakers; group by local calendar day preserving incoming across/within-day order; invalid dates use unknown bucket and dash.",
+      "Do not sort by displayed time, merge different domain identities or append fabricated service events.",
+      "Keep stable composite source IDs and raw source table/ID in exports; visible semantic provenance and record detail survive.",
+      "Keep source-authored titles and summaries; fallback localized domain titles, software version and domain lifecycle labels remain.",
+      "Keep typed SI durations, energy, SOC endpoints, severity/status and source path; absent measurements omitted, not zero.",
+      "Range total is server supplied; loaded count, active days, critical alerts and five type counts cover only this page.",
+      "Maintain response-envelope validation, cancellation, existing cache key/stale/retry policy and enablement.",
+      "Preserve asOf end cap/shift behavior without claiming historical database reconstruction or filtering source lifecycle status beyond existing queries.",
+      "Retain successful data on failed or paused refresh, distinguish fatal versus refresh failure and keep recovery reachable."
+    ],
+    "testSourceEvidence": [
+      "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx:60-158 covers existing feed states, grouping, SI summaries, badges and linked/plain rows.",
+      "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx:6-45 covers All, independent toggles and six buttons.",
+      "web\\src\\features\\system\\components\\activity-timeline\\helpers.test.ts:20-73 covers chronology, timezone and invalid-date bucket."
+    ],
+    "testExecution": "NOTRUN; test source is intent evidence only."
+  },
+  "evidenceLimits": {
+    "evidenceKind": "Current bounded source reads and source-pattern measurements only",
+    "runtime": "NOTRUN; no browser, API request, database query, authenticated mount or production mutation",
+    "visual": "Unverified actual neon/glow/intensity, composed contrast, themes and open states. Bright fixed hexes and white-alpha chrome are source findings, not screenshot proof. No literal glow/neon/pure-white body utility matched in the page-only scan.",
+    "keyboard": "Unverified real keyboard/screen-reader behavior; source menu focus gap documented, no mounted accessibility claim",
+    "responsive": "All ten widths, RTL, long translations, 200% text, reduced motion and forced colors require later mounted QA",
+    "backend": "Only activity source composition/model/handler and endpoint router matches read. Inclusive bounds and empty-offset count risks are source-derived, not reproduced database failures. No real service-history capability inferred from documentation.",
+    "scope": "Only /activity page and direct page-specific dependencies inspected. Shared files read only for consumed contracts, not whole-app certification. Unread lower formatter, timezone, overlay and provider graphs remain unknown.",
+    "commands": [
+      {
+        "command": "Get-FileHash 'web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx' -Algorithm SHA256",
+        "exitCode": 0,
+        "output": "SHA256 D0374C4A977B45A7D940FD1B92E8513E13AF9FF0C8B29836BBE2362A6C360807"
+      },
+      {
+        "command": "Get-Content of page and six named activity-timeline feature files; Count lines and regex <GlassPanel\\b / <ChartContainer\\b",
+        "exitCode": 0,
+        "output": "page 232/0/0; feed 212/4/0; overview 63/1/0; filters 66/0/0; constants 58/0/0; helpers 37/0/0; index 10/0/0 (lines/GlassPanel/ChartContainer)"
+      },
+      {
+        "command": "Page-only regex counts: style=; raw button/input/textarea/select/table; text-white|bg-neon|text-neon|shadow-[|drop-shadow; direct recharts/react-leaflet/framer-motion imports; relative old api imports",
+        "exitCode": 0,
+        "output": "0; 0; 0; 0; 0",
+        "limits": "Not a zero-violations assertion for dependencies or application; separate source findings remain."
+      },
+      {
+        "command": "npx tsc --noEmit; full-repository lint/build; Vitest; audit.sh",
+        "exitCode": null,
+        "output": "NOTRUN. Phase 0 source-only assignment and centralized validation contract. audit.sh was read but its unconditional project TypeScript step was not executed; bounded source checks used instead."
+      }
+    ],
+    "noGit": true,
+    "noAgents": true,
+    "noSourceChanges": true,
+    "ownedFiles": [
+      "docs\\frontend-audits\\audit-page-180.json",
+      ".agent-status\\audit-page-180.txt"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\ActivityTimelinePage.tsx",
+    "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+    "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx",
+    "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx",
+    "web\\src\\features\\system\\components\\activity-timeline\\constants.ts",
+    "web\\src\\features\\system\\components\\activity-timeline\\helpers.ts",
+    "web\\src\\features\\system\\components\\activity-timeline\\index.ts",
+    "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+    "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx",
+    "web\\src\\features\\system\\components\\activity-timeline\\helpers.test.ts",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\api\\hooks\\useActivity.ts",
+    "web\\src\\types\\activity.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\data-display\\TimelineItem.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\forms\\ListExportMenu.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routePrefetch.ts",
+    "web\\src\\lib\\routeMeta.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\activity\\handler.go",
+    "internal\\database\\activity\\repo.go",
+    "internal\\models\\activity\\activity.go"
+  ]
+}

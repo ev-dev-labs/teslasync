@@ -27,6 +27,16 @@ export interface SignalStat {
   count: number;
 }
 
+export interface LiveSignalEntry extends SignalEntry {
+  /** Display/event time, never a verified per-field observation time. */
+  timestampProvenance: 'frame' | 'received';
+  /** Unmodified frame time; absent when the producer supplied none. */
+  frameTimestamp: string | null;
+  receivedAt: string;
+  /** vehicle_update carries no verified per-field observation timestamps. */
+  observationTimestamp: null;
+}
+
 export interface UseLiveSignalStreamOptions {
   /** Master switch — disables both subscription and buffer accumulation when false. */
   enabled: boolean;
@@ -49,7 +59,7 @@ export interface UseLiveSignalStreamResult {
   chartPointCount: number;
 
   // ── Tail slice ────────────────────────────────────────────────
-  tailEntries: SignalEntry[];
+  tailEntries: LiveSignalEntry[];
   /** Signals/sec averaged over the last second. */
   tailRate: number;
 
@@ -98,7 +108,7 @@ export function useLiveSignalStream({
   const [chartPointCount, setChartPointCount] = useState(0);
 
   // ── Tail buffers ─────────────────────────────────────────────
-  const [tailEntries, setTailEntries] = useState<SignalEntry[]>([]);
+  const [tailEntries, setTailEntries] = useState<LiveSignalEntry[]>([]);
   const [tailPaused, setTailPaused] = useState(false);
   const [tailRate, setTailRate] = useState(0);
   const tailIdRef = useRef(0);
@@ -179,12 +189,21 @@ export function useLiveSignalStream({
     }
 
     const now = Date.now();
-    const ts = data.timestamp ?? new Date().toISOString();
+    const receivedAt = new Date(now).toISOString();
+    const frameTimestamp = typeof data.timestamp === 'string' ? data.timestamp : null;
+    const ts = frameTimestamp ?? receivedAt;
+    const timing = {
+      timestamp: ts,
+      timestampProvenance: frameTimestamp === null ? 'received' as const : 'frame' as const,
+      frameTimestamp,
+      receivedAt,
+      observationTimestamp: null,
+    };
 
     // ── (a) Chart slice — selected signals only, throttled flush ──
     const sigs = chartSignalsRef.current;
     if (sigs.length > 0 && data.signals) {
-      const point: Record<string, unknown> = { timestamp: ts };
+      const point: Record<string, unknown> = { ...timing };
       let hasValue = false;
       for (const sig of sigs) {
         const val = data.signals[sig];
@@ -243,14 +262,14 @@ export function useLiveSignalStream({
     if (tailMaxRef.current === 0) return;
     if (tailPausedRef.current) return;
 
-    const newEntries: SignalEntry[] = [];
+    const newEntries: LiveSignalEntry[] = [];
     const cold = data?.cold;
     if (Array.isArray(cold)) {
       for (const item of cold) {
         if (item && typeof item === 'object' && 'name' in item && 'value' in item) {
           const { name, value } = item as { name: string; value: unknown };
           tailIdRef.current += 1;
-          newEntries.push({ id: tailIdRef.current, timestamp: ts, name, value: String(value), type: detectType(value) });
+          newEntries.push({ id: tailIdRef.current, ...timing, name, value: String(value), type: detectType(value) });
         }
       }
     }
@@ -260,7 +279,7 @@ export function useLiveSignalStream({
         if (columns && typeof columns === 'object') {
           for (const [colName, colValue] of Object.entries(columns as Record<string, unknown>)) {
             tailIdRef.current += 1;
-            newEntries.push({ id: tailIdRef.current, timestamp: ts, name: colName, value: String(colValue), type: detectType(colValue) });
+            newEntries.push({ id: tailIdRef.current, ...timing, name: colName, value: String(colValue), type: detectType(colValue) });
           }
         }
       }
@@ -272,7 +291,7 @@ export function useLiveSignalStream({
           if (name === 'timestamp' || name === 'vehicle_id' || name === 'ts') continue;
           if (typeof value === 'object' && value !== null) continue;
           tailIdRef.current += 1;
-          newEntries.push({ id: tailIdRef.current, timestamp: ts, name, value: String(value), type: detectType(value) });
+          newEntries.push({ id: tailIdRef.current, ...timing, name, value: String(value), type: detectType(value) });
         }
       }
     }

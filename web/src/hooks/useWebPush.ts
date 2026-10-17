@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useSubscribePush, useUnsubscribePush, usePushPublicKey } from '@/api/hooks/usePush'
 
 const isSupported = typeof window !== 'undefined' && 'Notification' in window
@@ -6,6 +6,45 @@ const isPushAPISupported =
   typeof window !== 'undefined' &&
   'PushManager' in window &&
   'serviceWorker' in navigator
+
+const permissionListeners = new Set<() => void>()
+let permissionTimer: number | undefined
+let cachedPermission: NotificationPermission = isSupported ? Notification.permission : 'denied'
+
+function getPermissionSnapshot(): NotificationPermission {
+  return cachedPermission
+}
+
+function updatePermission(permission: NotificationPermission) {
+  if (permission === cachedPermission) return
+  cachedPermission = permission
+  for (const listener of permissionListeners) listener()
+}
+
+function refreshPermission() {
+  updatePermission(isSupported ? Notification.permission : 'denied')
+}
+
+function subscribePermission(listener: () => void) {
+  if (permissionListeners.size === 0) {
+    refreshPermission()
+    window.addEventListener('focus', refreshPermission)
+    document.addEventListener('visibilitychange', refreshPermission)
+    // Browser settings can change while the tab stays focused; reading permission
+    // never prompts the user. Share one poll across all mounted consumers.
+    if (isSupported) permissionTimer = window.setInterval(refreshPermission, 1000)
+  }
+  permissionListeners.add(listener)
+  return () => {
+    permissionListeners.delete(listener)
+    if (permissionListeners.size === 0) {
+      window.removeEventListener('focus', refreshPermission)
+      document.removeEventListener('visibilitychange', refreshPermission)
+      window.clearInterval(permissionTimer)
+      permissionTimer = undefined
+    }
+  }
+}
 
 /**
  * Convert a base64url string (the encoding used by VAPID public keys
@@ -36,15 +75,27 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
  * (`subscribe` / `unsubscribe`) so existing callers keep working.
  */
 export function useWebPush() {
-  const [permission, setPermission] = useState<NotificationPermission>(
-    isSupported ? Notification.permission : 'denied',
+  const permission = useSyncExternalStore(
+    subscribePermission, getPermissionSnapshot, getPermissionSnapshot,
   )
   const [isSubscribed, setIsSubscribed] = useState<boolean>(false)
   const [currentEndpoint, setCurrentEndpoint] = useState<string | null>(null)
+  const [browserSubscriptionStatus, setBrowserSubscriptionStatus] = useState<
+    'checking' | 'error' | 'absent' | 'subscribed' | 'unsupported'
+  >(isSupported && isPushAPISupported ? 'checking' : 'unsupported')
+  const [browserSubscriptionError, setBrowserSubscriptionError] = useState<Error | null>(null)
+  const [lookupAttempt, setLookupAttempt] = useState(0)
+  const retryBrowserSubscription = useCallback(() => {
+    if (!isSupported || !isPushAPISupported) return
+    setBrowserSubscriptionStatus('checking')
+    setBrowserSubscriptionError(null)
+    setLookupAttempt((attempt) => attempt + 1)
+  }, [])
 
   const { data: publicKey } = usePushPublicKey()
   const subscribeMut = useSubscribePush()
-  const unsubscribeMut = useUnsubscribePush()
+  const unsubscribeMut = useUnsubscribePush({ notifySuccess: false })
+  const pendingServerRemovals = useRef(new Set<string>())
 
   /**
    * Reflect the existing browser-side subscription (if any) into local
@@ -54,31 +105,33 @@ export function useWebPush() {
    * The server's per-device list is a superset (other devices too).
    */
   useEffect(() => {
-    if (!isPushAPISupported) return
+    if (!isSupported || !isPushAPISupported) return
     let cancelled = false
-    void navigator.serviceWorker
-      .getRegistration()
+    void Promise.resolve()
+      .then(() => navigator.serviceWorker.getRegistration())
       .then(async (reg) => {
-        if (!reg || cancelled) return
-        const sub = await reg.pushManager.getSubscription()
+        if (cancelled) return
+        const sub = reg ? await reg.pushManager.getSubscription() : null
         if (cancelled) return
         setIsSubscribed(!!sub)
         setCurrentEndpoint(sub?.endpoint ?? null)
+        setBrowserSubscriptionStatus(sub ? 'subscribed' : 'absent')
+        setBrowserSubscriptionError(null)
       })
-      .catch(() => {
-        // A failed registration/subscription lookup just means "unknown /
-        // not subscribed on this device" — never surface it as an
-        // unhandled promise rejection.
+      .catch((error: unknown) => {
+        if (cancelled) return
+        setBrowserSubscriptionStatus('error')
+        setBrowserSubscriptionError(error instanceof Error ? error : new Error(String(error)))
       })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [lookupAttempt])
 
   const requestPermission = useCallback(async (): Promise<NotificationPermission> => {
     if (!isSupported) return 'denied'
     const result = await Notification.requestPermission()
-    setPermission(result)
+    updatePermission(result)
     return result
   }, [])
 
@@ -127,7 +180,7 @@ export function useWebPush() {
    * caller does not need to wire its own success/error toasts.
    */
   const subscribe = useCallback(async (): Promise<boolean> => {
-    if (!isPushAPISupported || !publicKey) return false
+    if (!isSupported || !isPushAPISupported || !publicKey) return false
 
     let perm = permission
     if (perm !== 'granted') {
@@ -157,6 +210,10 @@ export function useWebPush() {
     }
 
     if (!sub) return false
+    setIsSubscribed(true)
+    setCurrentEndpoint(sub.endpoint)
+    setBrowserSubscriptionStatus('subscribed')
+    setBrowserSubscriptionError(null)
 
     const json = sub.toJSON() as {
       endpoint?: string
@@ -190,40 +247,53 @@ export function useWebPush() {
     if (!isPushAPISupported) return false
 
     let sub: PushSubscription | null = null
+    let reg: ServiceWorkerRegistration | undefined
     try {
-      const reg = await navigator.serviceWorker.getRegistration()
-      if (!reg) return false
-      sub = await reg.pushManager.getSubscription()
-    } catch {
+      reg = await navigator.serviceWorker.getRegistration()
+      sub = reg ? await reg.pushManager.getSubscription() : null
+    } catch (error) {
       // Could not read the browser's registration/subscription state.
       // Report failure rather than throwing (mirrors subscribe()'s
       // "never throws" contract).
+      setBrowserSubscriptionStatus('error')
+      setBrowserSubscriptionError(error instanceof Error ? error : new Error(String(error)))
       return false
     }
 
-    if (!sub) {
-      setIsSubscribed(false)
-      setCurrentEndpoint(null)
-      return true
+    const endpoints = new Set(pendingServerRemovals.current)
+    if (currentEndpoint) endpoints.add(currentEndpoint)
+    if (sub) endpoints.add(sub.endpoint)
+    let serverRemoved = true
+    for (const endpoint of endpoints) {
+      try {
+        await unsubscribeMut.mutateAsync(endpoint)
+        pendingServerRemovals.current.delete(endpoint)
+      } catch {
+        // Browser removal can succeed while this server endpoint remains.
+        // Retain its identity for retries after getSubscription() returns null.
+        serverRemoved = false
+        pendingServerRemovals.current.add(endpoint)
+      }
+    }
+    let browserRemoved = true
+    try {
+      if (sub) browserRemoved = await sub.unsubscribe()
+    } catch {
+      browserRemoved = false
     }
     try {
-      await unsubscribeMut.mutateAsync(sub.endpoint)
-    } catch {
-      // Even on server failure, proceed with browser-side unsubscribe
-      // so the user gets the immediate effect they asked for. The
-      // mutation already toasted.
+      const remaining = reg ? await reg.pushManager.getSubscription() : null
+      setIsSubscribed(!!remaining)
+      setCurrentEndpoint(remaining?.endpoint ?? null)
+      setBrowserSubscriptionStatus(remaining ? 'subscribed' : 'absent')
+      setBrowserSubscriptionError(null)
+      return serverRemoved && browserRemoved && !remaining
+    } catch (error) {
+      setBrowserSubscriptionStatus('error')
+      setBrowserSubscriptionError(error instanceof Error ? error : new Error(String(error)))
+      return false
     }
-    try {
-      await sub.unsubscribe()
-    } catch {
-      // Browser-side unsubscribe failed (rare). Still clear local state
-      // so the UI reflects the user's intent; the next mount re-syncs
-      // against pushManager truth.
-    }
-    setIsSubscribed(false)
-    setCurrentEndpoint(null)
-    return true
-  }, [unsubscribeMut])
+  }, [currentEndpoint, unsubscribeMut])
 
   return {
     permission,
@@ -231,10 +301,13 @@ export function useWebPush() {
     sendNotification,
     isSupported,
     isPushSupported: isPushAPISupported && !!publicKey,
+    isPushAPISupported,
+    browserSubscriptionStatus,
+    browserSubscriptionError,
+    retryBrowserSubscription,
     isSubscribed,
     currentEndpoint,
     subscribe,
     unsubscribe,
   }
 }
-

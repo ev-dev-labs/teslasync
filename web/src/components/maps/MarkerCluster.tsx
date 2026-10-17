@@ -63,22 +63,16 @@ export interface MarkerClusterProps {
  */
 function defaultIconCreate(count: number, overrideColor?: string): L.DivIcon {
   let bg: string;
-  let glow: string;
   if (overrideColor) {
     bg = overrideColor;
-    glow = overrideColor;
   } else if (count >= 100) {
     bg = 'rgba(244, 63, 94, 0.85)'; // rose
-    glow = '#f43f5e';
   } else if (count >= 25) {
     bg = 'rgba(251, 191, 36, 0.85)'; // amber
-    glow = '#fbbf24';
   } else if (count >= 10) {
     bg = 'rgba(168, 85, 247, 0.85)'; // purple
-    glow = '#a855f7';
   } else {
     bg = 'rgba(34, 211, 238, 0.85)'; // cyan
-    glow = '#22d3ee';
   }
   const html = `
     <div style="
@@ -87,7 +81,6 @@ function defaultIconCreate(count: number, overrideColor?: string): L.DivIcon {
       background:${bg};
       border:2px solid rgba(255,255,255,0.85);
       color:#0b1020;font-weight:700;font-size:12px;
-      box-shadow:0 0 12px ${glow};
       backdrop-filter:blur(4px);
     ">${count}</div>
   `;
@@ -107,8 +100,7 @@ function makeDotIcon(color: string): L.DivIcon {
     popupAnchor: [0, -8],
     html: `
       <div style="width:16px;height:16px;border-radius:50%;
-        background:${color};border:2px solid rgba(255,255,255,0.9);
-        box-shadow:0 0 6px ${color};"></div>
+        background:${color};border:2px solid rgba(255,255,255,0.9);"></div>
     `,
   });
 }

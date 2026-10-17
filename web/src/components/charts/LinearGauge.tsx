@@ -1,13 +1,17 @@
 import { forwardRef, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
 import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
-import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { resolveGaugeColor, type GaugeTone } from '@/lib/tokens';
 
 export interface LinearGaugeProps {
-  value: number;
+  value: number | null | undefined;
+  /** Preserve the printed reading and caller scale; invalid ranges never become zero-valued meters. */
+  preserveReadingAndScale?: boolean;
   max: number;
   /**
    * Start of the scale. Defaults to 0 (a plain 0→max magnitude bar).
@@ -59,6 +63,8 @@ export interface LinearGaugeProps {
    */
   size?: number;
   decimals?: number;
+  /** Unit-bearing values default to measurements; use count for counted units. */
+  kind?: 'measurement' | 'count';
   /**
    * Qualitative reading, already translated ("Healthy", "Degraded",
    * "Below target").
@@ -87,9 +93,6 @@ export interface LinearGaugeProps {
   className?: string;
 }
 
-/** Coerce a possibly non-finite / nullish runtime value to a finite number. */
-const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
-
 /**
  * A reading drawn against a scale you can actually see.
  *
@@ -112,31 +115,37 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
  */
 export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
   function LinearGauge(
-    { value, max, min = 0, label, ariaLabel, unit, tone, color, size = 120, decimals, hideScale, marker, markerLabel, status, className },
+    { value, max, min = 0, preserveReadingAndScale = false, label, ariaLabel, unit, tone, color, size = 120, decimals, kind, hideScale, marker, markerLabel, status, className },
     ref,
   ) {
     const generatedId = useId();
     const summaryId = `${generatedId}-summary`;
+    const { t } = useTranslation();
     const { describeGauge } = useA11ySummary();
     // Semantic tone wins over the raw colour escape hatch (see
     // `resolveGaugeColor`), and an unspecified gauge falls back to the theme
     // primary rather than a hardcoded blue.
     const fillColor = resolveGaugeColor(tone, color);
-    // Null-safety: callers routinely forward optional API values (e.g.
-    // `state.battery_level`) that can be undefined / null / NaN at runtime
-    // despite the `number` type. Sanitising here keeps the fill geometry finite
-    // — an unguarded NaN value, a NaN `max`, or a zero `max` (0 / 0) would
-    // otherwise produce `width: NaN%` and blank the track.
-    const safeMax = Number.isFinite(max) && max > 0 ? max : 0;
+    const hasReading = isFiniteNumber(value);
+    const validScale = Number.isFinite(min) && Number.isFinite(max) && max > min;
+    const safeMax = Number.isFinite(max) && (preserveReadingAndScale || max > 0) ? max : 0;
     // A `min` at or above the top of the scale would invert the range, so it
     // falls back to 0 (the default 0→max behaviour) rather than producing a
     // negative span and a bar that grows the wrong way.
-    const safeMin = Number.isFinite(min) && min < safeMax ? min : 0;
+    const safeMin = Number.isFinite(min) && (preserveReadingAndScale || min < safeMax) ? min : 0;
     const span = safeMax - safeMin;
-    const clamped = Math.max(safeMin, Math.min(toFinite(value), safeMax));
+    const clamped = Math.max(safeMin, Math.min(hasReading ? value : 0, safeMax));
     const ratio = span > 0 ? (clamped - safeMin) / span : 0;
-    const d = decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision());
-    const display = fmtNumber(clamped, d);
+    const displayValue = preserveReadingAndScale && hasReading ? value : clamped;
+    const hasMeter = hasReading && (!preserveReadingAndScale ||
+      (validScale && value >= safeMin && value <= safeMax));
+    const { fmtNumber, fmtInt } = useNumberFormatting();
+    const hasUnit = !!unit?.trim() && unit.trim() !== '—';
+    const isCount = kind === 'count' || (kind == null && !hasUnit && Number.isInteger(displayValue));
+    const formatScale = kind === 'measurement' || (kind == null && hasUnit) ? fmtNumber : fmtInt;
+    const display = hasReading
+      ? decimals == null && isCount ? fmtInt(displayValue) : fmtNumber(displayValue, decimals)
+      : '—';
 
     // A percentage scale needs no caption: the reader already knows a full
     // track is "all of it". Percent-ness is a property of the UNIT, not of the
@@ -150,7 +159,8 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
     const isPlaceholderUnit = unitText === '' || /^[—–-]+$/.test(unitText);
     const isFullSpan = safeMin === 0 && safeMax === 100;
     const isPercentScale = isFullSpan && (unitText === '%' || isPlaceholderUnit);
-    const showScale = !hideScale && !isPercentScale && span > 0;
+    const showScale = !hideScale && !isPercentScale && span > 0 &&
+      (!preserveReadingAndScale || validScale);
     const unitSuffix = isPlaceholderUnit ? '' : unit ?? '';
 
     const valueSize = size >= 160 ? '3xl' : size >= 110 ? '2xl' : 'lg';
@@ -160,7 +170,8 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
     // actually land on the track — an out-of-range limit is dropped rather than
     // pinned to an edge, where it would read as a limit the vehicle can reach.
     const markerRatio =
-      marker != null && Number.isFinite(marker) && span > 0 && marker >= safeMin && marker <= safeMax
+      marker != null && Number.isFinite(marker) && span > 0 &&
+      (!preserveReadingAndScale || validScale) && marker >= safeMin && marker <= safeMax
         ? (marker - safeMin) / span
         : null;
 
@@ -168,21 +179,23 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
     // the spoken summary can never disagree with the printed numbers.
     const summary = describeGauge({
       label: ariaLabel || label,
-      value: unitSuffix ? `${display}${unitSuffix}` : display,
-      min: showScale ? `${fmtNumber(safeMin, 0)}${unitSuffix}` : null,
-      max: showScale ? `${fmtNumber(safeMax, 0)}${unitSuffix}` : null,
-      status,
+      value: hasReading
+        ? unitSuffix ? `${display}${unitSuffix}` : display
+        : t('common.unknown', 'Unknown'),
+      min: showScale ? `${formatScale(safeMin)}${unitSuffix}` : null,
+      max: showScale ? `${formatScale(safeMax)}${unitSuffix}` : null,
+      status: hasReading ? status : undefined,
     });
 
     return (
       <div
         ref={ref}
-        role="meter"
+        role={hasMeter ? 'meter' : 'group'}
         aria-label={ariaLabel || label || undefined}
-        aria-valuenow={clamped}
-        aria-valuemin={safeMin}
-        aria-valuemax={safeMax}
-        aria-valuetext={unit ? `${display}${unit}` : display}
+        aria-valuenow={hasMeter ? clamped : undefined}
+        aria-valuemin={hasMeter ? safeMin : undefined}
+        aria-valuemax={hasMeter ? safeMax : undefined}
+        aria-valuetext={hasMeter ? unit ? `${display}${unit}` : display : undefined}
         aria-describedby={summary ? summaryId : undefined}
         className={cn('flex w-full min-w-0 flex-col gap-1.5', className)}
       >
@@ -206,10 +219,12 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
         </div>
 
         <div className={cn('relative w-full overflow-hidden rounded-full bg-[var(--surface-2)]', trackHeight)}>
-          <div
-            className="h-full rounded-full transition-[width] duration-slow ease-out"
-            style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
-          />
+          {hasReading && (!preserveReadingAndScale || validScale) && (
+            <div
+              className="h-full rounded-full transition-[width] duration-slow ease-out"
+              style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
+            />
+          )}
           {markerRatio !== null && (
             <span
               data-testid="gauge-marker"
@@ -220,13 +235,13 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
           )}
         </div>
 
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           <Text as="span" size="xs" weight="medium" color="muted" className="min-w-0 truncate">
             {label}
           </Text>
           {showScale && (
             <Text as="span" size="2xs" color="muted" className="shrink-0 tabular-nums">
-              {`${fmtNumber(safeMin, 0)} – ${fmtNumber(safeMax, 0)}${unitSuffix}`}
+              {`${formatScale(safeMin)} – ${formatScale(safeMax)}${unitSuffix}`}
             </Text>
           )}
         </div>

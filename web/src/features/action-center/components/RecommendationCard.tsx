@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, GlassPanel } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
+import { Badge, Button, GlassPanel, HelperText, PanelTitle, Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { Icons, type LucideIcon } from '@/lib/icons';
 import type {
   ActionCenterPriority,
@@ -59,10 +59,18 @@ export function RecommendationCard({
   actionsDisabledReason,
 }: RecommendationCardProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const confidencePct = Math.round(recommendation.confidence.score * 100);
+  const disabledReasonId = `${recommendation.id}-actions-disabled-reason`;
+  const disabledReason = actionsDisabled
+    ? actionsDisabledReason?.trim() ? actionsDisabledReason : t(
+        'operationalMode.actionCenterDisabled.title',
+        'Inbox actions are read-only',
+      )
+    : undefined;
   return (
-    <GlassPanel padding="lg" hover glow={recommendation.priority === 'critical' ? 'purple' : 'cyan'}>
+    <GlassPanel padding="lg">
       <article aria-labelledby={`${recommendation.id}-title`}>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
@@ -85,46 +93,58 @@ export function RecommendationCard({
                   : t('actionCenter.card.noImpact', 'No projected impact')}
               </Badge>
             </div>
-            <h3 id={`${recommendation.id}-title`} className="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+            <PanelTitle id={`${recommendation.id}-title`} className="mt-3 break-words">
               {recommendation.title}
-            </h3>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">{recommendation.summary}</p>
-            <p className="mt-2 text-sm text-[var(--text-muted)]">{recommendation.rationale}</p>
-            <p className="mt-3 text-xs text-[var(--text-muted)]">
+            </PanelTitle>
+            <Text as="p" variant="bodySm" className="mt-1 break-words">{recommendation.summary}</Text>
+            <Text as="p" size="sm" color="muted" className="mt-2 break-words">{recommendation.rationale}</Text>
+            <Text as="p" variant="caption" className="mt-3 break-words">
               {recommendation.vehicle?.display_name ??
                 t('actionCenter.card.allVehicles', 'All vehicles')} ·{' '}
               {t('actionCenter.card.expires', 'Expires {{date}}', {
                 date: formatDateTime(recommendation.expires_at),
               })}
-            </p>
+            </Text>
           </div>
-          <div className="grid min-w-48 grid-cols-2 gap-2">
-            <div className="rounded-lg bg-white/[0.03] p-3 text-center">
-              <p className="text-xs text-[var(--text-muted)]">{t('actionCenter.card.rank', 'Rank')}</p>
-              <p className="mt-1 text-xl font-semibold text-cyan-200">{recommendation.rank.score}</p>
+          <div className="grid min-w-0 grid-cols-2 gap-2 lg:w-48 lg:shrink-0">
+            <div className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3 text-center">
+              <Text as="p" variant="caption">{t('actionCenter.card.rank', 'Rank')}</Text>
+              <Text as="p" size="xl" weight="semibold" color="primary" className="mt-1 break-words tabular-nums">
+                {recommendation.rank.score}
+              </Text>
             </div>
-            <div className="rounded-lg bg-white/[0.03] p-3 text-center">
-              <p className="text-xs text-[var(--text-muted)]">
+            <div className="min-w-0 rounded-lg bg-[var(--surface-2)] p-3 text-center">
+              <Text as="p" variant="caption">
                 {t('actionCenter.card.confidence', 'Confidence')}
-              </p>
-              <p className="mt-1 text-xl font-semibold text-cyan-200">{confidencePct}%</p>
-              <p className="text-xs text-[var(--text-muted)]">
+              </Text>
+              <Text as="p" size="xl" weight="semibold" color="secondary" className="mt-1 break-words tabular-nums">
+                {confidencePct}%
+              </Text>
+              <Text as="p" variant="caption" className="break-words">
                 {t(`actionCenter.confidence.${recommendation.confidence.label}`, recommendation.confidence.label)}
-              </p>
+              </Text>
             </div>
           </div>
         </div>
 
+        {actionsDisabled && (
+          <HelperText id={disabledReasonId} className="mt-4 break-words">
+            {disabledReason}
+          </HelperText>
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           {stateActions.filter(({ action }) => actionAllowed(recommendation, action)).map(({ action, Icon }) => (
             <Button
               key={action}
               type="button"
               size="sm"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               variant={action === 'dismiss' ? 'ghost' : 'secondary'}
               icon={<Icon className="h-4 w-4" aria-hidden="true" />}
               disabled={actionsDisabled}
-              title={actionsDisabled ? actionsDisabledReason : undefined}
+              title={disabledReason}
+              aria-describedby={actionsDisabled ? disabledReasonId : undefined}
               onClick={() => onAction(recommendation, action)}
             >
               {t(`actionCenter.action.${action}`, action)}
@@ -134,6 +154,8 @@ export function RecommendationCard({
             <Button
               type="button"
               size="sm"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               variant="ghost"
               icon={<Icons.forward className="h-4 w-4" aria-hidden="true" />}
               onClick={() => onAction(recommendation, 'navigate')}

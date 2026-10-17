@@ -1,15 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { TransportAgreementResponse } from '@/api/types';
 import { useTransportAgreement } from '@/api/hooks/useSignals';
+import './operationalbrief-all/metricPreferencesTestSetup';
 import { TransportAgreementPanel, transportAgreementWindowHours } from './TransportAgreementPanel';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, options?: Record<string, unknown>) =>
-      fallback.replace(/{{(\w+)}}/g, (_match, name: string) => String(options?.[name] ?? '')),
+    t: (_key: string, fallback: string, options?: Record<string, unknown>) => {
+      // Mirror the global mock's plural selection so counted sentences use
+      // the same singular/plural defaults production i18next resolves.
+      let template = fallback;
+      if (options && typeof options.count === 'number') {
+        const plural = options.count === 1 ? options.defaultValue_one : options.defaultValue_other;
+        if (typeof plural === 'string') template = plural;
+      }
+      return template.replace(/{{(\w+)}}/g, (_match, name: string) => String(options?.[name] ?? ''));
+    },
   }),
 }));
 
@@ -18,6 +28,30 @@ vi.mock('@/api/hooks/useSignals', () => ({
 }));
 
 const mockUseTransportAgreement = vi.mocked(useTransportAgreement);
+
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId('transport-agreement-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('transport-agreement-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
 
 function response(
   overrides: Partial<TransportAgreementResponse> = {},
@@ -76,11 +110,12 @@ describe('TransportAgreementPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('region', { name: 'HTTP / MQTT Agreement' })).toBeInTheDocument();
-    expect(screen.getAllByText('99.5%').length).toBeGreaterThan(0);
+    expect(screen.getByRole('region', { name: 'HTTP / MQTT agreement' })).toBeInTheDocument();
+    expect(screen.getAllByText('99.50%').length).toBeGreaterThan(0);
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
-    expect(screen.getByText('Producer time only; receipt fallbacks excluded')).toBeInTheDocument();
+    expect(screen.queryByText('Producer time only; receipt fallbacks excluded')).toBeNull();
+    expectDrawerGroupText('Agreement', 'Producer time only; receipt fallbacks excluded');
   });
 
   it('does not turn missing overlap into zero percent', () => {
@@ -110,8 +145,10 @@ describe('TransportAgreementPanel', () => {
     );
 
     expect(screen.getByText('Not enough overlapping evidence')).toBeInTheDocument();
-    expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
-    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('transport-agreement-summary');
+    assertOperationalMetricUnavailable(brief, 'Agreement');
+    expectHiddenFieldCount('1 empty field is hidden.');
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
   });
 
   it('waits for the explicit signal query', () => {
@@ -122,6 +159,42 @@ describe('TransportAgreementPanel', () => {
         'Run a signal query to audit HTTP and MQTT evidence for the same time window.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('preserves measured producer evidence after refresh failure and retries the same submitted bounds', () => {
+    const refetch = vi.fn();
+    mockUseTransportAgreement.mockReturnValue({
+      data: response(),
+      error: new Error('refresh failed'),
+      isLoading: false,
+      refetch,
+    } as unknown as ReturnType<typeof useTransportAgreement>);
+    render(<TransportAgreementPanel vehicleId={7} from="2026-08-27T00:00:00Z" to="2026-08-28T00:00:00Z" enabled />);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
+    expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
+    expect(screen.getAllByText('99.50%').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Producer time only; receipt fallbacks excluded')).toBeNull();
+    expectDrawerGroupText('Agreement', 'Producer time only; receipt fallbacks excluded');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockUseTransportAgreement.mock.calls.at(-1)).toEqual([
+      7, { from: '2026-08-27T00:00:00Z', to: '2026-08-28T00:00:00Z' }, true,
+    ]);
+  });
+
+  it('keeps complete long signal evidence names readable without changing pair or disagreement counts', () => {
+    const field = 'NormalizedProducerTelemetrySignal'.repeat(5);
+    const data = response();
+    data.fields = [{ ...data.fields[0], field }];
+    mockUseTransportAgreement.mockReturnValue({
+      data, error: null, isLoading: false, refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useTransportAgreement>);
+    render(<TransportAgreementPanel vehicleId={7} from="2026-08-27T00:00:00Z" to="2026-08-28T00:00:00Z" enabled />);
+    expect(screen.getByText(field)).toHaveClass('[overflow-wrap:anywhere]');
+    expect(screen.getByText(field)).not.toHaveClass('truncate');
+    expect(screen.getByText('200 pairs / 201 HTTP / 201 MQTT')).toBeInTheDocument();
+    expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
   });
 });
 
@@ -154,7 +227,7 @@ describe('TransportAgreementPanel seven-day limit', () => {
 
     // Measured evidence from a previous render must not leak into the limit state.
     expect(screen.queryByText('VehicleSpeed')).toBeNull();
-    expect(screen.queryAllByText('99.5%')).toHaveLength(0);
+    expect(screen.queryAllByText('99.50%')).toHaveLength(0);
   });
 
   it('still queries at exactly the 168-hour boundary', () => {
@@ -217,7 +290,7 @@ describe('TransportAgreementPanel seven-day limit', () => {
     );
 
     expect(screen.queryByText('Agreement is limited to seven days')).toBeNull();
-    expect(screen.getByRole('region', { name: 'HTTP / MQTT Agreement' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'HTTP / MQTT agreement' })).toBeInTheDocument();
   });
 });
 

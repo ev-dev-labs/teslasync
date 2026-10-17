@@ -85,14 +85,14 @@ describe('HighlightCard — colour accent + glow', () => {
     const { container } = renderCard();
 
     const iconSpan = screen.getByTestId('metric-icon').parentElement as HTMLElement;
-    expect(iconSpan).toHaveClass('text-cyan-300');
+    expect(iconSpan).toHaveClass('text-[var(--semantic-info)]');
     // hover + glow="cyan" → the cyan hover-border utility is present.
     expect(root(container).className).toContain(GLOW_CLASSES.cyan);
   });
 
   it.each([
-    ['green', 'text-emerald-300', GLOW_CLASSES.green],
-    ['purple', 'text-purple-300', GLOW_CLASSES.purple],
+    ['green', 'text-[var(--semantic-success)]', GLOW_CLASSES.green],
+    ['purple', 'text-[var(--semantic-purple)]', GLOW_CLASSES.purple],
   ] as const)('maps color=%s to its accent + glow', (color, accentClass, glowClass) => {
     const { container } = renderCard({ color });
 
@@ -105,7 +105,7 @@ describe('HighlightCard — colour accent + glow', () => {
     const { container } = renderCard({ color: 'amber' });
 
     const iconSpan = screen.getByTestId('metric-icon').parentElement as HTMLElement;
-    expect(iconSpan).toHaveClass('text-amber-300');
+    expect(iconSpan).toHaveClass('text-[var(--semantic-warning)]');
     // amber maps to glow="none" — no coloured hover-border glow leaks in.
     const cls = root(container).className;
     expect(cls).not.toContain(GLOW_CLASSES.cyan);
@@ -117,7 +117,7 @@ describe('HighlightCard — colour accent + glow', () => {
     const { container } = renderCard({ color: 'red' });
 
     const iconSpan = screen.getByTestId('metric-icon').parentElement as HTMLElement;
-    expect(iconSpan).toHaveClass('text-rose-300');
+    expect(iconSpan).toHaveClass('text-[var(--semantic-danger)]');
     expect(root(container).className).not.toContain(GLOW_CLASSES.cyan);
   });
 
@@ -127,7 +127,7 @@ describe('HighlightCard — colour accent + glow', () => {
     renderCard({ color: 'chartreuse' as unknown as CardProps['color'] });
 
     const iconSpan = screen.getByTestId('metric-icon').parentElement as HTMLElement;
-    expect(iconSpan).toHaveClass('text-cyan-300');
+    expect(iconSpan).toHaveClass('text-[var(--semantic-info)]');
   });
 });
 

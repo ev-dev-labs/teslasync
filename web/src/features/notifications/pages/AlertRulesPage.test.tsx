@@ -15,7 +15,7 @@
  * controllable doubles, and useConfirm / useEditLease / useNavigate are stubbed
  * for determinism.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -38,6 +38,7 @@ vi.mock('../components/AlertRuleEditor', () => ({
 
 import type { AlertRule } from '@/api/types';
 import AlertRulesPage, { subjectOf, isSnoozed } from './AlertRulesPage';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 // framer-motion's useMotionPreference (reached via <FadeIn>) reads matchMedia,
 // which jsdom does not implement. Install a minimal stub before any module that
@@ -61,9 +62,18 @@ vi.hoisted(() => {
 
 // Shared, hoisted doubles so the mock factories and the specs reach the same
 // instances.
+interface ChannelsQuery {
+  data?: Array<{ id: number; name: string }>;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: ReturnType<typeof vi.fn>;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+}
+
 const H = vi.hoisted(() => ({
   rules: { current: null as unknown },
-  channels: { current: { data: [{ id: 2, name: 'Team' }], isLoading: false, isError: false, error: null, refetch: vi.fn() } },
+  channels: { current: { data: [{ id: 2, name: 'Team' }], isLoading: false, isError: false, error: null, refetch: vi.fn() } as ChannelsQuery },
   bulkEnable: vi.fn(),
   bulkDisable: vi.fn(),
   del: vi.fn(),
@@ -161,6 +171,8 @@ interface RulesQuery {
   isError: boolean;
   error: unknown;
   refetch: typeof H.refetch;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+  dataUpdatedAt?: number;
 }
 
 function makeQuery(overrides: Partial<RulesQuery> = {}): RulesQuery {
@@ -215,8 +227,20 @@ beforeEach(() => {
   H.refetch.mockReset().mockResolvedValue(undefined);
   H.navigate.mockReset();
   H.confirm.mockReset().mockResolvedValue(true);
+  H.channels.current = {
+    data: [{ id: 2, name: 'Team' }],
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  };
   setRules({ data: [] });
   window.localStorage.clear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 // ── 1. Pure helpers ──────────────────────────────────────────────────────────
@@ -270,6 +294,23 @@ describe('AlertRulesPage — data state', () => {
     expect(within(kpis).getByText('2')).toBeInTheDocument(); // enabled
   });
 
+  it('reviews all six counts with unfiltered scope and overlapping snooze semantics without losing rules controls', () => {
+    renderPage();
+    const brief = screen.getByTestId('alert-rules-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-metric="rules-total"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('before search and channel filtering');
+    expect(drawer).toHaveTextContent('Snoozed rules can overlap enabled or disabled rules');
+    for (const label of ['Total rules', 'Enabled', 'Disabled', 'Critical', 'Snoozed', 'Computed']) {
+      expect(drawer).toHaveTextContent(label);
+    }
+    fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create rule' })).toBeInTheDocument();
+  });
+
   it('renders all three insight panels and the rules table', () => {
     renderPage();
     expect(screen.getByText('Severity distribution')).toBeInTheDocument();
@@ -278,9 +319,9 @@ describe('AlertRulesPage — data state', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('Zebra')).toBeInTheDocument();
     expect(screen.getByText('Mango')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Download CSV' }),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    expect(screen.getByRole('menuitem', { name: 'Download as CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Download as JSON' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Reorder or hide columns' }),
     ).toBeInTheDocument();
@@ -332,6 +373,15 @@ describe('AlertRulesPage — data state', () => {
       (_content, el) => el?.textContent === 'Critical · 1' && (el?.children.length ?? 1) === 0,
     );
     expect(leaf).toBeInTheDocument();
+  });
+
+  it('renders the translated severity label at the shared badge boundary', () => {
+    renderPage();
+    const table = screen.getByRole('table');
+    const row = within(table).getByRole('link', { name: 'Zebra' }).closest('tr');
+    if (!row) throw new Error('Critical rule row is missing');
+    expect(within(row).getByText('Critical')).toBeInTheDocument();
+    expect(within(row).queryByText('critical')).toBeNull();
   });
 
   it('orders rows by name ascending by default', () => {
@@ -441,18 +491,22 @@ describe('AlertRulesPage — header actions & a11y', () => {
 
   it('refetches when the icon-only refresh control is activated', () => {
     renderPage();
-    // The page header renders its own icon-only "Refresh" alongside the
-    // PageContainer freshness chip's refresh. Scope to the actions cluster (the
-    // refresh + studio buttons share a parent) so we target the page control.
     const studio = screen.getByRole('button', { name: 'Create rule' });
-    const actions = studio.parentElement as HTMLElement;
+    const actions = studio.closest('[data-role="page-actions"]')
+      ?.querySelector<HTMLElement>('[data-action-group="secondary"]');
+    if (!actions) throw new Error('Alert-rule header secondary actions are missing');
     fireEvent.click(within(actions).getByRole('button', { name: 'Refresh' }));
     expect(H.refetch).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to the studio from the header CTA', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
+    const createRule = screen.getByRole('button', { name: 'Create rule' });
+    expect(createRule.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Alert rules' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    fireEvent.click(createRule);
     expect(H.navigate).toHaveBeenCalledWith('/notifications/studio');
   });
 
@@ -467,5 +521,128 @@ describe('AlertRulesPage — header actions & a11y', () => {
     expect(
       screen.getByRole('button', { name: 'Rename alert rule Alpha' }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('AlertRulesPage — restrained presentation and retained sources', () => {
+  beforeEach(() => setRules({ data: DATA }));
+
+  it('uses solid semantic status fills and a neutral top-subject series without changing counts', () => {
+    const { container } = renderPage();
+    for (const [label, count, color] of [
+      ['Enabled', '2', 'var(--semantic-success)'],
+      ['Disabled', '1', 'var(--text-secondary)'],
+      ['Snoozed', '1', 'var(--semantic-warning)'],
+    ]) {
+      const bar = screen.getByRole('progressbar', { name: label });
+      expect(bar).toHaveAttribute('aria-valuenow', count);
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: color });
+      expect(bar.querySelector('[data-metric-track]')).toHaveClass('h-1');
+    }
+    for (const subject of ['VehicleSpeed', 'BatteryLevel', 'efficiency']) {
+      const bar = screen.getByRole('progressbar', { name: subject });
+      expect(bar).toHaveAttribute('aria-valuenow', '1');
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--text-secondary)' });
+    }
+    expect(container.querySelectorAll('[data-metric-fill]')).toHaveLength(6);
+    expect(screen.getByRole('link', { name: 'Alpha' })).toHaveClass('underline', 'text-[var(--text-primary)]');
+    expect(screen.getByRole('button', { name: 'Rename alert rule Alpha' })).toHaveClass('min-h-11', 'min-w-11');
+  });
+
+  it('keeps retained channel options usable after a refresh failure and retries only that source', () => {
+    H.channels.current = {
+      ...H.channels.current,
+      isError: true,
+      error: new Error('Channel refresh failed'),
+    };
+    const { container } = renderPage();
+    const filter = screen.getByRole('combobox', { name: 'Filter by notification channel' });
+    expect(filter).toBeEnabled();
+    expect(within(filter).getByRole('option', { name: 'Team' })).toHaveValue('2');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    const warning = container.querySelector('[data-testid="stale-refresh-warning"]');
+    if (!warning) throw new Error('Retained channel warning is missing');
+    expect(warning).toHaveTextContent('Filter by notification channel may be out of date');
+    fireEvent.click(within(warning as HTMLElement).getByRole('button', { name: 'Refresh' }));
+    expect(H.channels.current.refetch).toHaveBeenCalledTimes(1);
+    expect(H.refetch).not.toHaveBeenCalled();
+    fireEvent.change(filter, { target: { value: 'none' } });
+    expect(screen.getByText('No alert rules match')).toBeInTheDocument();
+    expect(screen.getByTestId('alert-rules-brief')).toHaveTextContent('Total rules');
+  });
+
+  it('disables a never-loaded channel filter without hiding independently loaded rules', () => {
+    H.channels.current = {
+      ...H.channels.current,
+      data: undefined,
+      isError: true,
+      error: new Error('Channels unavailable'),
+    };
+    renderPage();
+    expect(screen.getByRole('combobox', { name: 'Filter by notification channel' })).toBeDisabled();
+    expect(screen.getByRole('link', { name: 'Alpha' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(H.channels.current.refetch).toHaveBeenCalledTimes(1);
+    expect(H.refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps all rule sections and editing available through a retained refresh error', () => {
+    setRules({ data: DATA, isError: true, error: new Error('Rules refresh failed'), dataUpdatedAt: Date.now() });
+    renderPage();
+    for (const title of ['Severity distribution', 'Status breakdown', 'Top monitored signals', 'All rules']) {
+      expect(screen.getByText(title)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('alert-rules-brief'), 'Data may be stale');
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'Alpha' }));
+    expect(screen.getByTestId('full-rule-editor')).toHaveTextContent('Alpha');
+  });
+
+  it('preserves retained channel routing during paused refresh without claiming the vehicle is offline', () => {
+    H.channels.current = { ...H.channels.current, fetchStatus: 'paused' };
+    const { container } = renderPage();
+    expect(screen.getByRole('combobox', { name: 'Filter by notification channel' })).toBeEnabled();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(container.querySelector('[data-refresh-blocked="true"]')).toBeInTheDocument();
+    expect(screen.queryByText(/paused offline/i)).toBeNull();
+  });
+
+  it('keeps every mobile rule field and rename edit selection and export actions reachable', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 375, 100));
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    });
+    setRules({ data: [makeRule({
+      id: 42, name: 'Redis recovery', kind: 'system_component',
+      component_name: 'redis', transition: 'recovered', severity: 'critical',
+      vehicle_ids: [4], snoozed_until: FUTURE,
+    })] });
+    const { container } = renderPage();
+    const mobile = container.querySelector<HTMLElement>('[data-mobile-table]');
+    if (!mobile) throw new Error('Mobile rule presentation is missing');
+    const view = within(mobile);
+    expect(view.getByRole('link', { name: 'Redis recovery' })).toHaveAttribute('href', '/notifications/rules?rule=42');
+    expect(view.getByRole('button', { name: 'Rename alert rule Redis recovery' })).toBeInTheDocument();
+    fireEvent.click(view.getByRole('button', { name: 'Quick view' }));
+    const dialog = screen.getByRole('dialog');
+    for (const value of ['Type', 'System service', 'Subject', 'redis · recovered', 'Severity', 'Critical', 'Scope', '1 vehicles', 'Status', 'Enabled', 'Snoozed']) {
+      expect(within(dialog).getByText(value)).toBeInTheDocument();
+    }
+    expect(within(dialog).getByRole('link', { name: 'Redis recovery' })).toHaveAttribute('href', '/notifications/rules?rule=42');
+    fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close' }).at(-1)!);
+    fireEvent.click(view.getByRole('button', { name: 'Select' }));
+    fireEvent.click(view.getByRole('checkbox', { name: 'Select Redis recovery' }));
+    expect(screen.getByRole('button', { name: 'Enable' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Disable' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    expect(screen.getByRole('menuitem', { name: 'Download as JSON' })).toBeInTheDocument();
+    expect(H.bulkEnable).not.toHaveBeenCalled();
+    expect(H.bulkDisable).not.toHaveBeenCalled();
+    expect(H.del).not.toHaveBeenCalled();
+    expect(H.save).not.toHaveBeenCalled();
   });
 });

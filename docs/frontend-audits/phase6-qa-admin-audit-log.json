@@ -1,0 +1,479 @@
+{
+  "item": "phase6-qa-admin-audit-log",
+  "phase": 6,
+  "status": "REPORT_COMPLETE_WITH_CONFIRMED_SOURCE_ISSUES",
+  "fullQA": "NOT ACCEPTED",
+  "evidenceMode": "READ_ONLY_SOURCE_REVIEW",
+  "reportPreparedAt": "2026-10-13T16:29:25.0173910Z",
+  "authorization": {
+    "queueRow": "migration-queue.md:192",
+    "rollingContract": "migration-queue.md:140-154",
+    "sourceAcceptanceReceipt": "migration-queue.md:1520",
+    "soleVersionedWrite": "docs\\frontend-audits\\phase6-qa-admin-audit-log.json",
+    "ignoredLog": "web\\logs\\phase6-qa-admin-audit-log.log",
+    "applicationFiles": "READONLY; no application, test, catalog, configuration, queue or inventory edits",
+    "browser": "NOTRUN; explicitly prohibited",
+    "API": "NOTRUN; no requests, mutations or real audit identities",
+    "native": "NOTRUN",
+    "prohibitedWorkNotPerformed": [
+      "Git operations",
+      "Subagents",
+      "Installs",
+      "Helper or extension execution/creation",
+      "Servers",
+      "Full suites",
+      "Docker"
+    ]
+  },
+  "timebox": {
+    "creationUpperBound": "2026-10-13T16:20:09.251Z",
+    "firstActualClock": "2026-10-13T16:20:24.5203860Z",
+    "softReturnDeadline": "2026-10-13T16:40:09.251Z",
+    "hardDeadline": "2026-10-13T16:45:09.251Z",
+    "commandLimitSeconds": 480,
+    "clockPolicy": "Original creation clock retained; no reset. Final completion/release clock is recorded in the ignored log after bounded artifact validation.",
+    "finishPolicy": "Return immediately after validation, well before the soft deadline; no post-return writes."
+  },
+  "instructionsRead": [
+    "migration-queue.md:140-181",
+    "docs\\orchestrator-loop.md:1-276",
+    "docs\\frontend-design-contract.md:1-666",
+    "docs\\frontend-mission.md:1-238",
+    "docs\\frontend-mission.md:529-812",
+    "docs\\frontend-mission.md:921-1082",
+    "docs\\frontend-mission.md:1380-1535",
+    "docs\\session-handoff.md:1-115",
+    ".github\\instructions\\react-frontend.instructions.md:1-530",
+    ".github\\instructions\\frontend-si-cutover.instructions.md:1-94",
+    ".github\\instructions\\observability.instructions.md:1-45",
+    ".github\\instructions\\unit-conversion.instructions.md:1-204"
+  ],
+  "instructionResolution": "Current SI cutover and design-contract rules take precedence over older source-unit conversion/neon examples. No physical-unit field is changed or converted here. This documentation-only read-only worker does not rerun parent-owned application gates.",
+  "page": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx",
+  "routes": [
+    {
+      "path": "/admin/audit-log",
+      "lazyImport": "web\\src\\App.tsx:285",
+      "mount": "web\\src\\App.tsx:720",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "purpose": "Read-only filtered audit-ledger browser, expanded event evidence, loaded-table exports and explicit bounded row-hash verification.",
+  "primaryGoal": "Find an event, inspect complete evidence/outcome and understand the actual scope and freshness of verification without treating missing evidence as success.",
+  "featureSourceScope": [
+    "web\\src\\features\\admin\\pages\\AuditLogPage.tsx",
+    "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts",
+    "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\helpers.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx"
+  ],
+  "dataSources": [
+    {
+      "hook": "useAuditLog(queryParams)",
+      "method": "GET",
+      "path": "/admin/audit-log",
+      "requestEvidence": "web\\src\\api\\hooks\\useOperatorConfidence.ts:247-260",
+      "registrationEvidence": [
+        "internal\\api\\router.go:4607",
+        "internal\\api\\router.go:4628",
+        "internal\\handler\\v1\\admin_audit_handler.go:32"
+      ],
+      "parameters": ["since", "until", "categories", "actors", "actions", "entity_type", "entity_id", "limit", "offset"],
+      "serialization": "web\\src\\api\\hooks\\useOperatorConfidence.ts:374-387",
+      "serverBounds": "internal\\database\\audit\\log_query_repo.go:91-96; ts >= since and ts < until",
+      "policy": "Parameter-bearing key; forwarded AbortSignal; MODERATE stale time, STANDARD interval, background interval disabled, retry 1.",
+      "contractStatus": "FAIL",
+      "detail": "GET path, success envelope and filter names match; zero-based paging and error-envelope interpretation fail AL001/AL004. Response has rows/limit, not total."
+    },
+    {
+      "hook": "useAuditCategories()",
+      "method": "GET",
+      "path": "/admin/audit-log/categories",
+      "requestEvidence": "web\\src\\api\\hooks\\useOperatorConfidence.ts:270-280",
+      "registrationEvidence": ["internal\\api\\router.go:4628", "internal\\handler\\v1\\admin_audit_handler.go:33"],
+      "policy": "Independent key/AbortSignal; EXTENDED stale time, RARE interval, background interval disabled, retry 1.",
+      "scope": "Distinct non-null categories, alphabetically ordered, capped at 100: internal\\database\\audit\\log_query_repo.go:152-160.",
+      "pathAndSuccessShapeStatus": "PASS",
+      "errorEnvelopeStatus": "FAIL; AL004",
+      "runtime": "NOTRUN"
+    },
+    {
+      "hook": "useAuditActions()",
+      "method": "GET",
+      "path": "/admin/audit-log/actions",
+      "requestEvidence": "web\\src\\api\\hooks\\useOperatorConfidence.ts:283-294",
+      "registrationEvidence": ["internal\\api\\router.go:4628", "internal\\handler\\v1\\admin_audit_handler.go:34"],
+      "policy": "Independent key/AbortSignal; EXTENDED stale time, RARE interval, background interval disabled, retry 1.",
+      "scope": "At most 100 action names ordered by most recent occurrence: internal\\database\\audit\\log_query_repo.go:167-175.",
+      "pathAndSuccessShapeStatus": "PASS",
+      "errorEnvelopeStatus": "FAIL; AL004",
+      "runtime": "NOTRUN"
+    },
+    {
+      "hook": "useAuditChainVerify(null, 1000, false)",
+      "method": "GET",
+      "path": "/admin/audit-log/verify?limit=1000",
+      "requestEvidence": "web\\src\\api\\hooks\\useOperatorConfidence.ts:305-327",
+      "callerEvidence": "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:42",
+      "registrationEvidence": ["internal\\api\\router.go:4628", "internal\\handler\\v1\\admin_audit_handler.go:35"],
+      "policy": "Disabled until explicit refetch; independent key/AbortSignal; FAST stale time; no interval; retry 1.",
+      "serverScope": "Default since=now minus 30 days; maximum requested 1000 non-null-hash rows, oldest-first within that window; not entry filters or all ledger rows.",
+      "pathAndSuccessShapeStatus": "PASS",
+      "displayTrustStatus": "FAIL; AL002",
+      "pausedStatus": "FAIL; AL007",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "preservation": {
+    "baseline": "docs\\frontend-audits\\audit-page-005.json; preserved, not rewritten",
+    "baselinePageLines": 69,
+    "currentPageLines": 78,
+    "baselineNineFileLines": 686,
+    "currentNineFileLines": 695,
+    "baselinePresentationLines": 563,
+    "currentPresentationLines": 572,
+    "lineCountStatus": "PASS",
+    "lineCountMeaning": "Actual counts from nine exact files; current page plus extracted presentation exceeds 70% of retained original. Line count alone is not functional acceptance.",
+    "sectionStatus": "PASS",
+    "baselineSections": 4,
+    "currentSections": 4,
+    "actualMarkerCounts": {"LayoutCard": 3, "OperationalBrief": 1, "GlassPanel": 0, "ChartContainer": 0},
+    "sections": [
+      {
+        "name": "Audit overview",
+        "mount": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:67",
+        "content": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx:36-65",
+        "evidence": "Always-mounted six numeric metrics; page versus independent capped catalogs explicitly described; Review details delegated to OperationalBrief."
+      },
+      {
+        "name": "Filters",
+        "mount": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:71",
+        "content": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx:14-94",
+        "evidence": "Always-mounted seven controls, Reset/Search, four limit choices; every edit resets offset; temporal workspace contract fails AL008."
+      },
+      {
+        "name": "Hash chain integrity",
+        "mount": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:72",
+        "content": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:14-71",
+        "evidence": "Always-mounted explicit Verify, idle hint, initial skeleton, retry, retained intact/broken, checked count and first bad ID; scope/zero-check and initial pause fail AL002/AL007."
+      },
+      {
+        "name": "Entries",
+        "mount": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:75",
+        "content": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:18-94",
+        "evidence": "Always-mounted paging/table shell, loading/error/filtered-empty/populated branches, nine columns, built-in/custom expansion, copy, CSV/JSON pipeline; specific completeness defects below."
+      }
+    ],
+    "stableIdentities": ["admin:audit-log tableId", "row.id", "four operatorConfidence query keys", "/admin/audit-log route"],
+    "currentPageSHA256": "30537c7fab2d61cce89e6597fa9eb4becd2d4e20d8b0d9b234eca8c1f90ff3af",
+    "historicalHashComparison": "Six of eight dependency hashes match audit-page-005; StatStrip and ExpandedDetail differ from that historical report, with unchanged line counts. All current content was read; historical hashes were not treated as current acceptance. Exact hashes are in the ignored log."
+  },
+  "checks": [
+    {"id": "scope", "status": "PASS", "evidence": ["migration-queue.md:192", "migration-queue.md:144-154"], "detail": "Only the authorized JSON and ignored log written; application reads only."},
+    {"id": "route-mount", "status": "PASS", "evidence": ["web\\src\\App.tsx:285", "web\\src\\App.tsx:720"], "detail": "Source lazy import and SafeRoute mount match; actual navigation NOTRUN."},
+    {"id": "four-get-route-paths", "status": "PASS", "evidence": ["internal\\api\\router.go:4628", "internal\\handler\\v1\\admin_audit_handler.go:31-35"], "detail": "Nested Register route definitions inspected, not merely router budget strings."},
+    {"id": "success-envelope", "status": "PASS", "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:49-60", "internal\\platform\\httputil\\response.go:36-39"], "detail": "Per-hook data unwrap matches success envelope; this does not repair error envelopes."},
+    {"id": "error-envelope", "status": "FAIL", "issues": ["AL004"], "evidence": ["internal\\platform\\httputil\\response.go:50-55", "web\\src\\api\\client.ts:240", "web\\src\\lib\\resilience.ts:797-798"]},
+    {"id": "cancellation-query-policies", "status": "PASS", "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:247-327", "web\\src\\api\\client.ts:411-417"], "detail": "Signals, independent keys, enablement and intervals preserved in source; runtime cancellation NOTRUN."},
+    {"id": "no-write-actions", "status": "PASS", "evidence": ["internal\\handler\\v1\\admin_audit_handler.go:31-35", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:18"], "detail": "Audit query/verify actions are GETs; clipboard/export are local actions, not server mutations. None executed."},
+    {"id": "always-mounted-sections", "status": "PASS", "evidence": ["web\\src\\features\\admin\\pages\\AuditLogPage.tsx:67-75"], "detail": "Four independent sections remain mounted; unsupported notice is additive, not an all-page data gate."},
+    {"id": "loading-active-first-fetch", "status": "PASS", "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:48-49", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:28-29"], "detail": "Source-shaped entry/verification skeletons. Initial paused state is separately FAIL."},
+    {"id": "fatal-error-retry", "status": "PASS", "evidence": ["web\\src\\features\\admin\\pages\\AuditLogPage.tsx:31-38", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:46-47", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:30-35"], "detail": "Typed fatal errors retry locally without removing neighbors. Actual missing-subsystem transport is broken AL004."},
+    {"id": "authoritative-empty-rows", "status": "PASS", "evidence": ["internal\\database\\audit\\log_query_repo.go:142-145", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:50-59"], "detail": "Server normalizes empty list to []; message explains filters and recovery. This branch is also wrongly reached before paused first fetch, AL007."},
+    {"id": "retained-refresh-error", "status": "PASS", "evidence": ["web\\src\\api\\dataState.ts:179-230", "web\\src\\components\\feedback\\DataSourceNotice.tsx:77-122", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx:23-28"], "detail": "Retained rows/metrics/verification survive refresh error; shared stale/partial notices and per-source retry remain. No fresh runtime exercise."},
+    {"id": "retained-paused", "status": "PASS", "evidence": ["web\\src\\api\\dataState.ts:179-230", "web\\src\\components\\feedback\\DataSourceNotice.tsx:78-80", "web\\src\\components\\feedback\\DataSourceNotice.tsx:259-276"], "detail": "Retained sources are kept and annotated Paused offline with independent retry, not converted to server failure."},
+    {"id": "initial-paused", "status": "FAIL", "issues": ["AL007"], "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:48-50", "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:52"]},
+    {"id": "null-and-measured-zero", "status": "PASS", "evidence": ["web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:51-61", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx:31-48", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:83-97"], "detail": "Expected payload arrays are nullish-safe, unknown metrics are not silently zero, true/false/null outcomes stay distinct, entity ID zero is retained. Arbitrary malformed row objects and unsafe int64 IDs were not accepted or exercised."},
+    {"id": "SI-display-boundary", "status": "PASS", "evidence": ["web\\src\\types\\admin-operator-confidence.ts:227-285", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx:36-50"], "detail": "Audit model has counts/identifiers/timestamps/evidence, not physical measurements; numeric counts use existing OperationalBrief/useOperationalMetrics. No legacy converter or fabricated unit."},
+    {"id": "server-filter-contract", "status": "PASS", "evidence": ["web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:26-37", "web\\src\\api\\hooks\\useOperatorConfidence.ts:374-387", "internal\\database\\audit\\log_query_repo.go:91-109"], "detail": "Encoded snake_case filters reach full SQL results; since inclusive/until exclusive; actors/categories/actions are exact server filters, not current-page-only filtering."},
+    {"id": "filter-reset-limit", "status": "PASS", "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx:20-76", "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:85-93", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\helpers.ts:1-6"], "detail": "Changes reset offset; Reset clears non-limit filters/offset and retains row limit; choices 50/100/250/500. Edits already fetch; Search explicitly refetches, not a submit-only filter contract."},
+    {"id": "workspace-range-persistence", "status": "FAIL", "issues": ["AL008"], "evidence": ["web\\src\\lib\\workspaceScope.ts:23-77", "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:16-37"], "detail": "No vehicle selector is needed for instance-wide admin ledger; header vehicle is intentionally disabled."},
+    {"id": "paging-and-caption", "status": "FAIL", "issues": ["AL001"], "evidence": ["internal\\handler\\v1\\admin_audit_handler.go:42", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:30-39"]},
+    {"id": "bounded-verification-honesty", "status": "FAIL", "issues": ["AL002"], "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:38-68", "internal\\audit\\recorder.go:280-287"]},
+    {"id": "export-evidence-completeness", "status": "FAIL", "issues": ["AL003"], "evidence": ["web\\src\\components\\ui\\DataTable.tsx:872-904", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:75-91"]},
+    {"id": "payload-wire-display", "status": "FAIL", "issues": ["AL005"], "evidence": ["internal\\database\\audit\\log_query_repo.go:43-44", "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:6-10"]},
+    {"id": "mobile-field-reachability", "status": "FAIL", "issues": ["AL006"], "evidence": ["web\\src\\components\\ui\\DataTable.tsx:716-725", "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:17-39"]},
+    {"id": "canonical-i18n-key-coverage", "status": "PASS", "evidence": ["web\\src\\i18n\\en.json:10435-10504"], "detail": "Actual lookup of 73 distinct static t() keys in nine feature files: missing 0. Raw actor/action/category/hash evidence is intentionally untranslated. Split/cold locale/RTL runtime NOTRUN."},
+    {"id": "saved-date-locale-preferences", "status": "FAIL", "issues": ["AL009"], "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:4-20", "web\\src\\lib\\dateFormat.ts:37-59", "web\\src\\lib\\dateFormat.ts:124-139"]},
+    {"id": "semantic-labels-statuses", "status": "PASS", "evidence": ["web\\src\\components\\ui\\Input.tsx:52-72", "web\\src\\components\\ui\\Select.tsx:57-77", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:32-41", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:83-97"], "detail": "Stable implicit IDs/visible labels, labelled panel headings and textual outcome badges; not a screen-reader/focus/contrast acceptance claim."},
+    {"id": "single-disclosure-owner", "status": "FAIL", "issues": ["AL010"], "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:100-109", "web\\src\\components\\ui\\DataTable.tsx:1128-1144"]},
+    {"id": "reduced-motion-source", "status": "PASS", "evidence": ["web\\src\\components\\motion\\FadeIn.tsx:24-36"], "detail": "Existing preference disables entrance initial state/delay through the shared boundary; OS/native execution NOTRUN."},
+    {"id": "frontend-observability-boundary", "status": "PASS", "evidence": ["web\\src\\features\\admin\\pages\\AuditLogPage.tsx:19-27"], "detail": "No page-local RUM initialization or sensitive console logging in the inspected feature files; end-to-end traces/SLO behavior NOTRUN."},
+    {"id": "source-pattern-audit", "status": "PASS", "detail": "Actual case-sensitive scans and independent built-in rg over nine exact feature files found no matched static variable inline style/raw control/direct vendor/old API/neon-body/untyped-fetch patterns. Hook URL scans found no double prefix/camelCase query keys. This is not a whole-repository audit.sh pass."},
+    {"id": "native-visual-responsive-a11y", "status": "NOTRUN", "detail": "No browser/API grant. All mission widths, dark/light/custom, RTL, 200% text, open overlays, forced colors, native keyboard/screen reader/focus/hit targets/contrast/scroll/export/clipboard remain unaccepted."},
+    {"id": "TypeScript-build-lint-tests", "status": "NOTRUN", "detail": "npx tsc --noEmit/build/lint/Vitest not run in read-only report scope. Parent-owned Phase5 gate receipt is historical, not this review's current pass. No unchanged passing tests rerun."},
+    {"id": "audit-skill-and-hook-helper-scripts", "status": "NOTRUN", "detail": "Skills/instructions inspected; audit.sh includes project-wide tsc and the task prohibits helpers/full gates. verify.sh was not executed. Exact source route trace and built-in scans are separate evidence."}
+  ],
+  "confirmedIssues": [
+    {
+      "id": "AL001",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "high",
+      "file": "internal\\handler\\v1\\admin_audit_handler.go",
+      "line": 42,
+      "rule": "MDC-045; zero-based pagination integrity",
+      "mechanism": "Frontend advances offset by limit and serializes it unchanged. Handler subtracts one from positive offset; service forwards directly to SQL OFFSET. offset=100 reads SQL offset=99, overlapping the first page while the caption claims item 101. Additionally an empty later page renders Showing 0–offset because only from is reset.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:30-39", "web\\src\\api\\hooks\\useOperatorConfidence.ts:384", "internal\\app\\auditviewersvc\\service.go:66-73", "internal\\database\\audit\\log_query_repo.go:115-125"],
+      "repro": "With a stable synthetic ordered list and limit=100, request pages at offsets 0/100/200: second page begins with the previous page's last row. Request an empty positive offset: caption displays 0–that offset.",
+      "reproExecution": "NOTRUN; source-derived, no backend request or database access",
+      "fixNeed": "Integration owner aligns zero-based offsets and focused boundary coverage; page owner corrects the empty ordinal caption. Do not conceal the API bug through a display-only offset.",
+      "history": "Previously recorded in audit-page-005; current exact handler/page/repo were independently read and remain defective."
+    },
+    {
+      "id": "AL002",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx",
+      "line": 38,
+      "rule": "MDC-026/MDC-045; bounded verification is not whole-ledger integrity",
+      "mechanism": "The hint promises every row_hash and the badge reports Chain intact, including rows_checked=0. Actual request is limit=1000 with default last-30-days since, excludes null hashes and checks individual hash recomputation oldest-first. Returned since/limit are not displayed. The loop does not establish predecessor continuity between adjacent stored rows.",
+      "evidence": ["web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:42", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:49-68", "internal\\handler\\v1\\admin_audit_handler.go:117-139", "internal\\audit\\recorder.go:280-322"],
+      "repro": "Use a synthetic empty verification result: intact=true/rows_checked=0 yields success. With more than 1000 hashed events in the default window or older events, the same whole-chain wording appears despite unchecked rows.",
+      "reproExecution": "NOTRUN; source-derived",
+      "fixNeed": "Show response scope/limit/checked count and retained result age; describe bounded row-hash verification; render zero checked as no verification evidence. Preserve broken/first_bad_id/explicit GET and avoid inventing continuity guarantees.",
+      "history": "Retained Phase0 finding; unchanged integrity component hash verified."
+    },
+    {
+      "id": "AL003",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+      "line": 75,
+      "rule": "MDC-023; export evidence preservation",
+      "mechanism": "exportRow emits entity_type/entity_id/trace_id and audit metadata, but DataTable projects only visible column keys. Columns use entity/trace/expand, absent from exportRow, so those become null. ID/IP/user_agent/hash metadata is discarded by projection; before/after are not supplied at all. CSV and JSON follow the same projection.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:44-65", "web\\src\\components\\ui\\DataTable.tsx:872-904"],
+      "repro": "Export a synthetic row with nonempty entity and trace using default visible columns: entity/trace/expand export as blank/null and supplied metadata never reaches downloaded records.",
+      "reproExecution": "NOTRUN; no download/clipboard/browser action",
+      "fixNeed": "Page owner uses existing onExport with raw scoped records or aligns exportValue/keys with an explicit complete export contract. Keep tableId and truthful loaded-page scope; do not invent exportAll.",
+      "history": "Retained Phase0 finding; current DataTable projection read, not assumed from the old report."
+    },
+    {
+      "id": "AL004",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "high",
+      "file": "web\\src\\api\\client.ts",
+      "line": 240,
+      "rule": "MDC-025/MDC-026/MDC-045; capability error contract",
+      "mechanism": "Admin handlers emit {error:{code,message}} via httputil.RespondError. Both direct parseError and resilientFetch read a top-level code; fallback passes the nested error object as the ApiError message. Missing-subsystem code is lost, so the page's improved exact 503+SUBSYSTEM_NOT_CONFIGURED check cannot recognize the actual backend response.",
+      "evidence": ["internal\\handler\\v1\\admin_audit_handler.go:145-148", "internal\\platform\\httputil\\response.go:50-55", "web\\src\\api\\client.ts:232-241", "web\\src\\api\\client.ts:469-477", "web\\src\\lib\\resilience.ts:796-798", "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:31-38"],
+      "repro": "Source-contract fixture: a 503 body containing nested error.code=SUBSYSTEM_NOT_CONFIGURED and error.message. The direct/fallback parsers do not extract that code; final ApiError.code is undefined and the unsupported notice is not selected.",
+      "reproExecution": "NOTRUN; no actual request, mocked transport execution or real deployment identity",
+      "fixNeed": "Assigned shared request/resilience owner supports nested and existing flat errors without weakening code checks. Add focused synthetic transport/page coverage in a separate authorized fix item.",
+      "historicalCorrection": "The old any-503 page classification is fixed by the page override at lines 31-38, although stale classification remains in the controller. Do NOT report the page as still misclassifying every generic 503. Existing page tests mock request with prebuilt ApiError and therefore do not establish real envelope compatibility: web\\src\\features\\admin\\pages\\AuditLogPage.test.tsx:12-27."
+    },
+    {
+      "id": "AL005",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "high",
+      "file": "internal\\database\\audit\\log_query_repo.go",
+      "line": 43,
+      "rule": "MDC-045; before/after wire evidence",
+      "mechanism": "Before/After are []byte, not json.RawMessage. Standard encoding/json used by Respond serializes nonempty byte slices as base64 strings. Client camelCaseKeys preserves scalar strings; fetchEnvelope only unwraps. ExpandedDetail JSON.parse therefore fails on encoded JSON and falls back to displaying base64 instead of original JSON evidence.",
+      "evidence": ["internal\\database\\audit\\log_query_repo.go:43-44", "internal\\platform\\httputil\\response.go:36-39", "web\\src\\api\\client.ts:288", "web\\src\\lib\\resilience.ts:26-40", "web\\src\\api\\hooks\\useOperatorConfidence.ts:49-60", "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:6-10", "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:37-38"],
+      "repro": "Synthetic persisted before/after bytes containing a small JSON object are encoded by the shown success-response path into base64, then displayed unchanged by the fallback formatter.",
+      "reproExecution": "NOTRUN; standard serializer/source mechanism only, no HTTP or DB execution",
+      "fixNeed": "Integration owner chooses/documentedly tests one exact payload representation, preserving raw evidence and explicit invalid/missing states. Existing tests supply plaintext JSON strings and do not exercise backend serialization.",
+      "historicalCorrection": "Old report treated encoding as a candidate because response/client internals were uninspected; those exact internals were read here. Actual deployed payload remains NOTRUN."
+    },
+    {
+      "id": "AL006",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+      "line": 65,
+      "rule": "MDC-023/MDC-043; preserve mobile record fields",
+      "mechanism": "Explicit mobileColumns includes action/success/ts only. DataTable applies hidden md:table-cell to all other keys even after column-menu visibility changes. Expanded detail exposes IP/user-agent/trace/hash/before/after, but does not recover actor/category/entity/detail. No mobilePresentation adapter is supplied.",
+      "evidence": ["web\\src\\components\\ui\\DataTable.tsx:716-725", "web\\src\\components\\ui\\DataTable.tsx:1154-1177", "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:17-39"],
+      "repro": "At any viewport below md, inspect a synthetic populated row and open its built-in expander: actor/category/entity/detail have no rendered mobile detail path. Selecting those columns in the menu does not remove the mobile allow-list CSS.",
+      "reproExecution": "NOTRUN; CSS and rendered-field source trace, not measured mobile pixels",
+      "fixNeed": "Page/expanded-detail owner adopts existing mobilePresentation or complete expanded metadata. Preserve every desktop field/action, row identity, export and independent paging.",
+      "history": "Retained Phase0 finding, now including source proof that column-menu selection cannot override mobileColumns."
+    },
+    {
+      "id": "AL007",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+      "line": 48,
+      "rule": "MDC-026; paused initial load is not authoritative empty",
+      "mechanism": "For no-data/pending/fetchStatus=paused, isLoading/isFetching are false and no fatal error exists. Entries bypass skeleton and show No rows match before any result. After a paused first Verify refetch, integrity has no data/error/isFetching; the page excludes that source at line 52 and the panel returns the idle hint, hiding the requested paused verification.",
+      "evidence": ["web\\src\\api\\dataState.ts:179-215", "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:52", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:28-36", "web\\src\\components\\feedback\\DataSourceNotice.tsx:78-80"],
+      "repro": "Provide the valid no-data pending/paused query state on first offline mount; list says no match. Request Verify while that initial verification is paused; verify source is omitted and its body still describes an unrequested idle action.",
+      "reproExecution": "NOTRUN; branch evaluation from source, no browser offline simulation",
+      "fixNeed": "Assigned page/controller/components owner distinguishes initial pending/paused from successful empty and tracks whether explicit verification has been requested. Reuse isRefreshBlocked/source notices, retain true idle behavior and do not invent server failure."
+    },
+    {
+      "id": "AL008",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_CONTRACT_GAP",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts",
+      "line": 16,
+      "rule": "MDC-032/MDC-046; one workspace date owner and scope restoration",
+      "mechanism": "Dated audit list retains page-local Since/Until state and controls; actual /admin/audit-log is absent from RANGE_ENABLED_PATHS and controller does not consume useRangeState or URL bounds. These dates scope the displayed ledger, not an independent business-date form. Leaving/remounting loses all local filter state.",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-77", "web\\src\\lib\\workspaceScope.ts:96-97", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx:16-33", "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:16-37", "web\\src\\features\\admin\\pages\\AuditLogPage.tsx:5-7"],
+      "repro": "Set ledger dates, navigate away/back: local state reinitializes empty and no header/URL-backed range restores it.",
+      "reproExecution": "NOTRUN; source contract and initialization trace",
+      "fixNeed": "Integration owner coordinates workspaceScope/controller/filter adoption with both server bounds and explicit default compatibility. Preserve unbounded initial ledger access and minute-level custom scopes; do not silently impose a seven-day default or add a vehicle selector.",
+      "history": "Retained integration debt; current page comment truthfully acknowledges nonpersisted filters, so no stale claim of URL reproduction is made."
+    },
+    {
+      "id": "AL009",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx",
+      "line": 19,
+      "rule": "MDC-044; locale/timezone display preferences",
+      "mechanism": "Columns call unbound lib formatDateTime/formatRelative with no locale/tz options. Absolute date uses browser locale/timezone rather than saved settings; recent relative strings are hardcoded English in the utility. Filter Date.parse likewise uses host-local datetime with no explicit saved-zone interpretation.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:4-20", "web\\src\\lib\\dateFormat.ts:37-59", "web\\src\\lib\\dateFormat.ts:124-139", "web\\src\\hooks\\useDateFormat.ts:72-91", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\helpers.ts:14-17"],
+      "repro": "With saved UTC/non-browser locale and a different browser zone/locale, absolute audit timestamps still use browser defaults; a recent timestamp produces English relative text even when the UI language is not English.",
+      "reproExecution": "NOTRUN; no preferences changed, no locale/timezone runtime capture",
+      "fixNeed": "Page/shared-date owners use existing preference-aware formatting and localized relative phrases. Coordinate filter zone semantics with AL008; preserve original UTC wire instants.",
+      "caveat": "12/24-hour behavior and DST transitions were not exercised and are not independently certified."
+    },
+    {
+      "id": "AL010",
+      "status": "FAIL",
+      "classification": "CONFIRMED_SOURCE_CONTRACT_GAP",
+      "severity": "low",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx",
+      "line": 105,
+      "rule": "MDC-023/MDC-040; single disclosure owner with state semantics",
+      "mechanism": "The custom Details/Hide column duplicates DataTable's built-in leading expander for the same controlled expandedKeys. Custom Button has neither aria-expanded nor a target relationship; the built-in expander does expose aria-expanded. Default desktop presents two expansion controls.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:69-72", "web\\src\\components\\ui\\DataTable.tsx:1128-1144"],
+      "repro": "On a synthetic desktop row, tab through the leading Expand row and later Details button: both toggle the same content; the latter's accessibility attributes do not identify disclosure state.",
+      "reproExecution": "NOTRUN; source/ARIA attributes only, no keyboard or screen-reader run",
+      "fixNeed": "Page owner consolidates on the existing shared expansion control, preserving discoverable localized Details behavior and all mobile reachability; do not create another disclosure primitive."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C001",
+      "status": "NOTRUN",
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "line": 36,
+      "detail": "Previous/Next/custom Details/copy use sm (h-9), Verify uses min-h-9 wrapping, and Input default is min-h-10; unlike filter Reset/Search and shared Select/built-in table expander these do not specify mobile 44px. Source sizing risk, not a measured WCAG failure or documented spacing exception.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:21-39", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:15-20", "web\\src\\components\\ui\\Input.tsx:29-33", "web\\src\\components\\ui\\Select.tsx:34-38", "web\\src\\components\\ui\\DataTable.tsx:1143"],
+      "neededEvidence": "Authorized native rectangles/five-point hits/focus/spacing at mission widths and scaled text; assess actual global styles before declaring geometry acceptance."
+    },
+    {
+      "id": "C002",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx",
+      "line": 25,
+      "detail": "Trace/hash icon-only copy calls omit contextual ariaLabel; shared fallback is generic Copy. Labels are present, but contextual screen-reader usability across repeated rows remains unverified.",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:25-32", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:72", "web\\src\\components\\ui\\CopyButton.tsx:129-132"],
+      "neededEvidence": "Accessible-name/context inspection and clipboard success/failure announcements using synthetic values; use existing localized ariaLabel when assigned."
+    },
+    {
+      "id": "C003",
+      "status": "NOTRUN",
+      "file": "web\\src\\i18n\\en.json",
+      "line": 10498,
+      "detail": "rowsChecked contains only '{{count}} rows checked' in the inspected English block. Singular/plural and number interpolation for rows_checked/page ordinals need a focused real-i18n check; key presence alone is not grammatical/localized-number acceptance.",
+      "neededEvidence": "Synthetic 0/1/large counts in installed cold locale namespaces without editing catalogs or claiming an all-locale pass."
+    },
+    {
+      "id": "C004",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\helpers.ts",
+      "line": 14,
+      "detail": "Invalid local date parses silently remove bounds and reversed dates are not explicitly validated. Safe against RangeError, but user-facing validation/DST interpretation needs a separately assigned source or runtime check.",
+      "neededEvidence": "Synthetic malformed/reversed bounds and DST/non-browser-zone semantics; preserve until exclusivity and unbounded default."
+    }
+  ],
+  "historicalIssuesNotBlindlyRepeated": [
+    "Page now requires exact 503+SUBSYSTEM_NOT_CONFIGURED and overrides stale controller classification. The remaining confirmed defect is actual error-envelope code loss, AL004.",
+    "DataTable's current built-in expander uses shared Button, tokenized text, aria-expanded and h-11 mobile sizing. Old hardcoded white/cyan expander finding is not present in the inspected block at DataTable.tsx:1128-1144.",
+    "Page comment now acknowledges local filters are not URL-persisted; no false comment finding repeated.",
+    "Historical reports/source-only acceptance are preserved; their runtime gaps and zero-case test failure are not upgraded to passing QA."
+  ],
+  "verificationReceipts": {
+    "rawOutput": "web\\logs\\phase6-qa-admin-audit-log.log",
+    "commands": [
+      {
+        "command": "rg --line-number --no-heading -- <each recorded regex> <nine exact feature files>",
+        "shellId": "4563",
+        "exitCode": 1,
+        "status": "FAIL",
+        "output": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+        "interpretation": "Shell-tool availability failure; produced no violation counts. Not an application failure or pass."
+      },
+      {
+        "command": "Select-String -Path $files -CaseSensitive -Pattern <each exact regex recorded in ignored log>; Get-Content for counts; Select-String for panel markers",
+        "scope": "featureSourceScope, nine exact files; hook URL regexes additionally inspect only useOperatorConfidence.ts",
+        "shellId": "4576",
+        "exitCode": 0,
+        "status": "PASS",
+        "matchedLineCounts": {
+          "staticInlineVar": 0,
+          "rawControls": 0,
+          "directVendorLibraries": 0,
+          "oldAPIImports": 0,
+          "neonWhiteGrayBody": 0,
+          "anyDangerousHTMLDirectEventSourceFetch": 0,
+          "doublePrefixSameLineRequest": 0,
+          "camelCaseLiteralQueryParameters": 0,
+          "uppercaseURLSearchParamsKeys": 0
+        },
+        "caveat": "Regex/source-pattern coverage only; multiline request construction additionally traced directly. Shared primitives' expected raw HTML/vendor boundaries are excluded."
+      },
+      {
+        "command": "Built-in functions.rg with combined style/raw-controls/direct-libraries/old-api/camelCase regex over featureSourceScope",
+        "status": "PASS",
+        "exitCode": null,
+        "output": "No matches found.",
+        "caveat": "Tool exposes no numeric shell exit; not invented."
+      },
+      {
+        "command": "Get-Content src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; extract static t() keys from featureSourceScope and traverse canonical keys; Get-FileHash -Algorithm SHA256 on retained dependency inventory",
+        "shellId": "4595",
+        "exitCode": 0,
+        "status": "PASS",
+        "output": "UNIQUE_KEYS=73 MISSING=0; original69/686/4sections, current78/695/4sections; six/eight dependency pins match historical report.",
+        "caveat": "Canonical-key presence and current byte snapshots, not cold split catalog, grammar, full locale or runtime acceptance."
+      }
+    ],
+    "TypeScript": {"command": "npx tsc --noEmit", "status": "NOTRUN", "exitCode": null},
+    "tests": {
+      "status": "NOTRUN",
+      "discovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "reason": "Documentation-only source QA; no source/test changes or unchanged passing-test reruns. Read existing page tests only; no fresh passing receipt claimed."
+    },
+    "lintBuildFullSuites": "NOTRUN",
+    "auditAndVerifyScripts": "NOTRUN",
+    "nativeBrowserAPI": "NOTRUN",
+    "documentValidation": "Initial bounded validation at 2026-10-13T16:33:35.4969504Z parsed JSON, counted 34 checks/10 confirmed/4 candidates and found five out-of-range citations; EXIT=1 retained in ignored log. Those report-only ranges were corrected, including exact offset serialization at useOperatorConfidence.ts:384. Final bounded parse/citation validation and numeric result are appended to the ignored log before ownership release."
+  },
+  "needs": [
+    "Queue narrow AL001/AL002/AL003 fixes first: zero-based paging/caption, truthful bounded/zero-row verification, complete loaded-scope export.",
+    "Assign AL004 shared error-envelope parsing and AL005 payload wire representation to explicit integration owners; page tests with prebuilt ApiError/plain JSON do not prove either.",
+    "Assign AL006 complete mobile evidence, AL007 initial-paused handling, AL008 shared date ownership/default compatibility, AL009 preference/localization and AL010 disclosure consolidation without overlapping source claims.",
+    "Keep candidates and all native/visual/a11y acceptance NOTRUN until explicit safe synthetic browser ownership; do not open real audit logs.",
+    "Parent owns cadence TypeScript/build/test gates and queue updates; no report-wide blanket page/application acceptance."
+  ],
+  "ownershipRelease": {
+    "all": "ALL ownership released on return, including report, ignored log, application read scope and command/resource claims.",
+    "releaseBoundary": "After the final bounded document validation/log write and before the DONE response; exact release clock recorded in ignored log.",
+    "backgroundWork": "NONE",
+    "browserLocks": "NONE acquired",
+    "sourceWrites": "NONE authorized or performed",
+    "postReturnWrites": "NONE; no continuing commands, scheduled prompts, servers, helpers or agents."
+  }
+}

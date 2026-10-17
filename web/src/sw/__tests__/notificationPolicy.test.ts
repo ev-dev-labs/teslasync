@@ -139,6 +139,53 @@ describe('sanitizeDeviceNotificationPrefs', () => {
     expect(b.vehicleIds).toEqual([])
     expect(b.categories.alert).toBe(true)
   })
+
+  it.each(Array.from({ length: 128 }, (_, weekdays) => weekdays))(
+    'retains weekday mask %i through quiet-hours toggles and JSON round trips',
+    (weekdays) => {
+      let prefs = base({
+        quietHours: {
+          enabled: false,
+          startLocal: '21:30',
+          endLocal: '06:30',
+          weekdays,
+          bypassSeverities: [],
+        },
+      })
+
+      for (const enabled of [true, false, true]) {
+        prefs = sanitizeDeviceNotificationPrefs(JSON.parse(JSON.stringify({
+          ...prefs,
+          quietHours: { ...prefs.quietHours, enabled },
+        })))
+        expect(prefs.quietHours).toEqual({
+          enabled, startLocal: '21:30', endLocal: '06:30', weekdays, bypassSeverities: [],
+        })
+        for (let weekday = 0; weekday < 7; weekday++) {
+          const selected = enabled && (weekdays & (1 << weekday)) !== 0
+          const previousSelected = enabled && (weekdays & (1 << ((weekday + 6) % 7))) !== 0
+          for (const [minutesOfDay, silent] of [[23 * 60, selected], [60, previousSelected]] as const) {
+            expect(evaluateNotification({ severity: 'warn' }, prefs, MIDDAY, {
+              weekday, minutesOfDay,
+            })).toMatchObject({
+              show: true,
+              silent,
+              reason: silent ? 'quiet-hours-silenced' : 'delivered',
+            })
+          }
+        }
+      }
+    },
+  )
+
+  it.each([undefined, null, -1, 128, 1.5, NaN, Infinity, '2'])(
+    'defaults invalid weekday mask %s to all days',
+    (weekdays) => {
+      expect(sanitizeDeviceNotificationPrefs({
+        quietHours: { enabled: true, weekdays },
+      }).quietHours.weekdays).toBe(WEEKDAY_ALL)
+    },
+  )
 })
 
 describe('isWithinQuietHours', () => {
@@ -246,6 +293,47 @@ describe('evaluateNotification', () => {
     ).toMatchObject({ show: true, vehicleId: null })
   })
 
+  it.each([
+    ['device-disabled', { enabled: false }, 'critical'],
+    ['category-muted', { categories: { system: false } }, 'critical'],
+    ['below-min-severity', { minSeverity: 'critical' }, 'warn'],
+  ] as const)('still applies %s to a system notification without a vehicle', (reason, patch, severity) => {
+    const prefs = sanitizeDeviceNotificationPrefs({
+      ...DEFAULT_DEVICE_NOTIFICATION_PREFS,
+      vehicleScope: 'selected',
+      vehicleIds: [],
+      ...patch,
+    })
+    expect(evaluateNotification({ tag: 'system-outage', severity }, prefs, MIDDAY)).toMatchObject({
+      show: false,
+      silent: false,
+      requireInteraction: false,
+      category: 'system',
+      vehicleId: null,
+      reason,
+    })
+  })
+
+  it('exempts vehicle-less system notifications only from vehicle scope, not quiet-hours silence', () => {
+    const prefs = base({ vehicleScope: 'selected', vehicleIds: [] })
+    prefs.quietHours.enabled = true
+    expect(evaluateNotification({ category: 'system', severity: 'warn' }, prefs, MIDDAY, {
+      weekday: 3,
+      minutesOfDay: 23 * 60,
+    })).toMatchObject({
+      show: true,
+      silent: true,
+      vehicleId: null,
+      reason: 'quiet-hours-silenced',
+    })
+    expect(evaluateNotification({ category: 'system', severity: 'warn' }, prefs, MIDDAY)).toMatchObject({
+      show: true,
+      silent: false,
+      vehicleId: null,
+      reason: 'delivered',
+    })
+  })
+
   it('silences rather than suppresses inside quiet hours', () => {
     const prefs = base({
       quietHours: {
@@ -305,6 +393,51 @@ describe('evaluateNotification', () => {
     expect(
       evaluateNotification({ severity: 'info' }, prefs, MIDDAY).reason,
     ).toBe('below-min-severity')
+  })
+
+  it.each([
+    [[], 'critical', true],
+    [['warn'], 'critical', true],
+    [['warn'], 'warn', false],
+    [['info', 'critical'], 'info', false],
+    [['info', 'critical'], 'warn', true],
+  ] as const)('only bypasses selected severities %j for %s', (bypasses, severity, silent) => {
+    const prefs = base()
+    prefs.quietHours.enabled = true
+    prefs.quietHours.bypassSeverities = [...bypasses]
+    expect(evaluateNotification({ severity }, prefs, MIDDAY, {
+      weekday: 3,
+      minutesOfDay: 23 * 60,
+    })).toMatchObject({
+      show: true,
+      silent,
+      requireInteraction: !silent && severity === 'critical',
+      reason: silent ? 'quiet-hours-silenced' : 'quiet-hours-bypassed',
+    })
+    expect(sanitizeDeviceNotificationPrefs(prefs).quietHours.bypassSeverities).toEqual(bypasses)
+  })
+
+  it.each([
+    ['device-disabled', { enabled: false }],
+    ['category-muted', { categories: { alert: false } }],
+    ['below-min-severity', { minSeverity: 'critical' }],
+    ['vehicle-out-of-scope', { vehicleScope: 'selected', vehicleIds: [2] }],
+  ] as const)('does not let a selected bypass override %s', (reason, patch) => {
+    const prefs = sanitizeDeviceNotificationPrefs({
+      ...DEFAULT_DEVICE_NOTIFICATION_PREFS,
+      ...patch,
+      quietHours: {
+        ...DEFAULT_DEVICE_NOTIFICATION_PREFS.quietHours,
+        enabled: true,
+        bypassSeverities: ['warn'],
+      },
+    })
+    expect(evaluateNotification(
+      { severity: 'warn', category: 'alert', vehicle_id: 1 },
+      prefs,
+      MIDDAY,
+      { weekday: 3, minutesOfDay: 23 * 60 },
+    )).toMatchObject({ show: false, silent: false, requireInteraction: false, reason })
   })
 
   it('reports the resolved context on every decision', () => {

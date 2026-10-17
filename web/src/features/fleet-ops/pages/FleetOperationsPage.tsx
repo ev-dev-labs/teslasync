@@ -12,12 +12,14 @@ import {
   type FleetReservation,
 } from '@/api/hooks/useFleetOps';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { Button } from '@/components/ui';
-import { Grid, PageContainer } from '@/components/layout';
-import { OperationalWriteNotice } from '@/components/feedback';
+import { Button, Icon, Text } from '@/components/ui';
+import { Grid, LayoutCard, PageLayout } from '@/components/layout';
+import { EmptyState, OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useDataState } from '@/hooks/useDataState';
+import type { DataState } from '@/api/dataState';
 import {
   AssignmentRoster,
   CancelReservationDialog,
@@ -51,7 +53,7 @@ export default function FleetOperationsPage() {
   const [cancelTarget, setCancelTarget] = useState<FleetReservation | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FleetDeleteTarget | null>(null);
   const operationalMode = useOperationalMode();
-  const window = useMemo(forecastWindow, []);
+  const forecastRange = useMemo(forecastWindow, []);
   const vehiclesQuery = useVehicles();
   const driversQuery = useFleetDrivers({ limit: 100 });
   const assignmentsQuery = useFleetAssignments({ limit: 100 });
@@ -59,7 +61,29 @@ export default function FleetOperationsPage() {
   const costCentersQuery = useFleetCostCenters({ limit: 100 });
   const policiesQuery = useFleetChargingPolicies({ limit: 100 });
   const workOrdersQuery = useFleetWorkOrders({ limit: 100 });
-  const forecastQuery = useFleetUtilizationForecast(undefined, window.from, window.to);
+  const forecastQuery = useFleetUtilizationForecast(undefined, forecastRange.from, forecastRange.to);
+  const vehiclesState = useDataState(vehiclesQuery);
+  const driversState = useDataState(driversQuery);
+  const assignmentsState = useDataState(assignmentsQuery);
+  const reservationsState = useDataState(reservationsQuery);
+  const costCentersState = useDataState(costCentersQuery);
+  const policiesState = useDataState(policiesQuery);
+  const workOrdersState = useDataState(workOrdersQuery);
+  const forecastState = useDataState(forecastQuery, { provenance: 'inferred' });
+  const pendingContent = (state: DataState<unknown>, loading: boolean, lines: number) => (
+    <div role="status" aria-busy={loading && !state.isRefreshBlocked}>
+      <Text as="p" variant="bodySm" color="muted">
+        {state.isRefreshBlocked
+          ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+          : loading ? t('common.loading', 'Loading...')
+            : t('fleetOps.brief.source.initial', 'Awaiting source')}
+      </Text>
+      {loading && !state.isRefreshBlocked ? <Skeleton lines={lines} /> : null}
+      {state.isRefreshBlocked && state.retry ? (
+        <Button type="button" variant="ghost" onClick={state.retry}>{t('common.retry', 'Retry')}</Button>
+      ) : null}
+    </div>
+  );
 
   const drivers = driversQuery.data?.items ?? [];
   const assignments = assignmentsQuery.data?.items ?? [];
@@ -97,13 +121,15 @@ export default function FleetOperationsPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('fleetOps.title', 'Fleet operations')}
       subtitle={t('fleetOps.subtitle', 'Coordinate drivers, bookings, charging, costs, maintenance, and capacity.')}
-      actions={(
+      primaryAction={(
         <Button
           type="button"
-          icon={<CalendarPlus className="h-4 w-4" />}
+          icon={<Icon icon={CalendarPlus} />}
+          wrapLabel
+          className="max-w-full min-h-11 md:min-h-10"
           onClick={() => setEditor({ kind: 'reservation', item: null })}
           disabled={
             !operationalMode.canWrite
@@ -116,6 +142,7 @@ export default function FleetOperationsPage() {
         </Button>
       )}
       query={[
+        vehiclesQuery,
         driversQuery,
         assignmentsQuery,
         reservationsQuery,
@@ -126,8 +153,48 @@ export default function FleetOperationsPage() {
       ]}
     >
       <OperationalWriteNotice
-        title={t('fleetOps.readOnly.title', 'Fleet Operations is read-only')}
+        title={t('fleetOps.readOnly.title', 'Fleet operations is read-only')}
       />
+      {(!vehiclesState.hasData || vehicles.length === 0) && (
+        <LayoutCard title={t('nav.vehicles', 'Fleet')}>
+          {vehiclesState.fatalError ? (
+            <QueryError
+              compact
+              error={vehiclesState.fatalError}
+              resourceName={t('nav.vehicles', 'Fleet')}
+              message={t('vehicles.loadError', 'Failed to load vehicles.')}
+              onRetry={() => void vehiclesQuery.refetch()}
+            />
+          ) : !vehiclesState.hasData ? (
+            <div role="status" aria-label={vehiclesState.isRefreshBlocked
+              ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+              : vehiclesQuery.isLoading
+                ? t('common.loading', 'Loading...')
+                : t('fleetOps.brief.source.initial', 'Awaiting source')}>
+              <Text as="p" variant="bodySm" color="muted">
+                {vehiclesState.isRefreshBlocked
+                  ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+                  : t('fleetOps.brief.source.initial', 'Awaiting source')}
+              </Text>
+              <Skeleton lines={2} />
+            </div>
+          ) : (
+            <EmptyState
+              title={t('vehicles.emptyTitle', 'No vehicles yet')}
+              message={t('vehicles.emptyMessage', 'Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.')}
+              actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+            />
+          )}
+        </LayoutCard>
+      )}
+      <StaleRefreshWarning state={vehiclesState} label={t('nav.vehicles', 'Fleet')} />
+      <StaleRefreshWarning state={driversState} label={t('fleetOps.drivers.title', 'Fleet drivers')} />
+      <StaleRefreshWarning state={assignmentsState} label={t('fleetOps.assignments.title', 'Assignment roster')} />
+      <StaleRefreshWarning state={reservationsState} label={t('fleetOps.reservations.title', 'Reservation calendar')} />
+      <StaleRefreshWarning state={costCentersState} label={t('fleetOps.costCenters.title', 'Cost-center allocation')} />
+      <StaleRefreshWarning state={policiesState} label={t('fleetOps.policies.title', 'Charging policy matrix')} />
+      <StaleRefreshWarning state={workOrdersState} label={t('fleetOps.workOrders.title', 'Maintenance work-order board')} />
+      <StaleRefreshWarning state={forecastState} label={t('fleetOps.forecast.title', 'Utilization forecast')} />
 
       <FadeIn>
         <FleetKpis
@@ -136,14 +203,35 @@ export default function FleetOperationsPage() {
           workOrders={workOrders}
           forecast={forecastPoints}
           loading={kpiLoading}
+          availability={{
+            reservations: reservationsState.hasData,
+            assignments: assignmentsState.hasData,
+            workOrders: workOrdersState.hasData,
+            forecast: forecastState.hasData,
+          }}
+          sources={{
+            reservations: reservationsState,
+            assignments: assignmentsState,
+            workOrders: workOrdersState,
+            forecast: forecastState,
+          }}
+          coverage={{
+            reservations: reservationsQuery.data,
+            assignments: assignmentsQuery.data,
+            workOrders: workOrdersQuery.data,
+          }}
+          forecastSource={forecastQuery.data}
         />
       </FadeIn>
 
       <FadeIn delay={0.03}>
         <ReservationPanel
           items={reservations}
+          enableValueFilters={reservationsQuery.data?.offset === 0 && reservationsQuery.data.total === reservations.length}
           loading={reservationsQuery.isLoading}
-          error={reservationsQuery.error}
+          source={reservationsState}
+          pendingContent={pendingContent(reservationsState, reservationsQuery.isLoading, 7)}
+          error={reservationsState.fatalError}
           onRetry={() => void reservationsQuery.refetch()}
           onAdd={() => setEditor({ kind: 'reservation', item: null })}
           onEdit={(item) => setEditor({ kind: 'reservation', item })}
@@ -158,8 +246,11 @@ export default function FleetOperationsPage() {
         <FadeIn delay={0.05}>
           <DriverRoster
             items={drivers}
+            enableValueFilters={driversQuery.data?.offset === 0 && driversQuery.data.total === drivers.length}
             loading={driversQuery.isLoading}
-            error={driversQuery.error}
+            source={driversState}
+            pendingContent={pendingContent(driversState, driversQuery.isLoading, 5)}
+            error={driversState.fatalError}
             onRetry={() => void driversQuery.refetch()}
             onAdd={() => setEditor({ kind: 'driver', item: null })}
             onEdit={(item) => setEditor({ kind: 'driver', item })}
@@ -171,8 +262,11 @@ export default function FleetOperationsPage() {
         <FadeIn delay={0.06}>
           <AssignmentRoster
             items={assignments}
+            enableValueFilters={assignmentsQuery.data?.offset === 0 && assignmentsQuery.data.total === assignments.length}
             loading={assignmentsQuery.isLoading}
-            error={assignmentsQuery.error}
+            source={assignmentsState}
+            pendingContent={pendingContent(assignmentsState, assignmentsQuery.isLoading, 5)}
+            error={assignmentsState.fatalError}
             onRetry={() => void assignmentsQuery.refetch()}
             onAdd={() => setEditor({ kind: 'assignment', item: null })}
             onEdit={(item) => setEditor({ kind: 'assignment', item })}
@@ -186,13 +280,12 @@ export default function FleetOperationsPage() {
             costCenters={costCenters}
             reservations={reservations}
             workOrders={workOrders}
-            loading={costCentersQuery.isLoading || reservationsQuery.isLoading || workOrdersQuery.isLoading}
-            error={costCentersQuery.error ?? reservationsQuery.error ?? workOrdersQuery.error}
-            onRetry={() => {
-              void costCentersQuery.refetch();
-              void reservationsQuery.refetch();
-              void workOrdersQuery.refetch();
-            }}
+            loading={costCentersQuery.isLoading}
+            source={costCentersState}
+            pendingContent={pendingContent(costCentersState, costCentersQuery.isLoading, 5)}
+            dependencies={{ reservations: reservationsState, workOrders: workOrdersState }}
+            error={costCentersState.fatalError}
+            onRetry={() => void costCentersQuery.refetch()}
             onAdd={() => setEditor({ kind: 'cost_center', item: null })}
             onEdit={(item) => setEditor({ kind: 'cost_center', item })}
             onDelete={(item) => setDeleteTarget({ kind: 'cost_center', item })}
@@ -205,8 +298,11 @@ export default function FleetOperationsPage() {
       <FadeIn delay={0.09}>
         <ChargingPolicyMatrix
           items={policies}
+          enableValueFilters={policiesQuery.data?.offset === 0 && policiesQuery.data.total === policies.length}
           loading={policiesQuery.isLoading}
-          error={policiesQuery.error}
+          source={policiesState}
+          pendingContent={pendingContent(policiesState, policiesQuery.isLoading, 6)}
+          error={policiesState.fatalError}
           onRetry={() => void policiesQuery.refetch()}
           onAdd={() => setEditor({ kind: 'charging_policy', item: null })}
           onEdit={(item) => setEditor({ kind: 'charging_policy', item })}
@@ -220,7 +316,9 @@ export default function FleetOperationsPage() {
         <WorkOrderBoard
           items={workOrders}
           loading={workOrdersQuery.isLoading}
-          error={workOrdersQuery.error}
+          source={workOrdersState}
+          pendingContent={pendingContent(workOrdersState, workOrdersQuery.isLoading, 8)}
+          error={workOrdersState.fatalError}
           onRetry={() => void workOrdersQuery.refetch()}
           onAdd={() => setEditor({ kind: 'work_order', item: null })}
           onEdit={(item) => setEditor({ kind: 'work_order', item })}
@@ -234,7 +332,9 @@ export default function FleetOperationsPage() {
         <UtilizationForecastChart
           forecast={forecastQuery.data}
           loading={forecastQuery.isLoading}
-          error={forecastQuery.error}
+          source={forecastState}
+          pendingContent={pendingContent(forecastState, forecastQuery.isLoading, 5)}
+          error={forecastState.fatalError}
           onRetry={() => void forecastQuery.refetch()}
         />
       </FadeIn>
@@ -272,6 +372,6 @@ export default function FleetOperationsPage() {
           onRefresh={refreshAndCloseEditor}
         />
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

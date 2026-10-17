@@ -1,12 +1,123 @@
 package daylog
 
 import (
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	daylogdb "github.com/ev-dev-labs/teslasync/internal/database/daylog"
 	protomodel "github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
+
+func TestBuildTimeline_HalfOpenInstants(t *testing.T) {
+	t.Parallel()
+	in := dlBaseInput()
+	start, end := in.WindowStart, in.WindowEnd
+	last := end.Add(-time.Nanosecond)
+	for i, ts := range []time.Time{start, last, end} {
+		id := int64(i + 1)
+		in.Drives = append(in.Drives, daylogdb.DayDrive{ID: id, StartedAt: ts, EndedAt: &ts})
+		in.Charges = append(in.Charges, daylogdb.DayCharge{ID: id, StartedAt: ts, EndedAt: &ts})
+		in.FSM = append(in.FSM, daylogdb.DayFSMTransition{ID: id, Ts: ts, ToState: "parked"})
+		in.Security = append(in.Security, daylogdb.DaySecurityEvent{ID: id, Ts: ts, EventType: "locked", ToState: dlStr("true")})
+		in.Software = append(in.Software, daylogdb.DaySoftwareUpdate{ID: id, CreatedAt: ts, InstalledAt: &ts})
+	}
+	in.Signals = []daylogdb.DaySignalRow{
+		{Ts: start.Add(-time.Second), Field: "RemoteStartActive", BoolValue: dlBool(false)},
+		{Ts: start, Field: "RemoteStartActive", BoolValue: dlBool(true)},
+		{Ts: last, Field: "RemoteStartActive", BoolValue: dlBool(false)},
+		{Ts: end, Field: "RemoteStartActive", BoolValue: dlBool(true)},
+	}
+	in.Gears = []daylogdb.DayGearTick{
+		{Ts: start.Add(-time.Second), Gear: "P"},
+		{Ts: start, Gear: "D"},
+		{Ts: last, Gear: "P"},
+		{Ts: end, Gear: "D"},
+	}
+	out := BuildTimeline(in)
+	if out.Total != 20 || len(out.Events) != 20 {
+		t.Fatalf("total/events = %d/%d, want 20/20", out.Total, len(out.Events))
+	}
+	counts := map[string]int{}
+	for _, e := range out.Events {
+		if !e.Ts.Equal(start) && !e.Ts.Equal(last) {
+			t.Errorf("event outside half-open window: %+v", e)
+		}
+		counts[e.Source]++
+	}
+	for source, want := range map[string]int{
+		SourceDrives: 4, SourceCharges: 4, SourceFSM: 2, SourceSecurity: 2,
+		SourceSoftware: 4, SourceSignalLog: 2, SourceGear: 2,
+	} {
+		if counts[source] != want {
+			t.Errorf("%s count = %d, want %d", source, counts[source], want)
+		}
+	}
+	in.WindowStart, in.WindowEnd = end, end.Add(24*time.Hour)
+	next := BuildTimeline(in)
+	if next.Total != 10 {
+		t.Fatalf("next window total = %d, want 10 exact-end events", next.Total)
+	}
+	for _, e := range next.Events {
+		if !e.Ts.Equal(end) {
+			t.Errorf("next window event timestamp = %v, want %v", e.Ts, end)
+		}
+	}
+}
+
+func TestBuildTimeline_DSTWholeSessionSummary(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		date  string
+		hours int64
+	}{
+		{"2026-03-08", 23},
+		{"2026-11-01", 25},
+	} {
+		t.Run(tt.date, func(t *testing.T) {
+			t.Parallel()
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/day-log?vehicle_id=1&date="+tt.date+"&timezone=America/Los_Angeles", nil)
+			p, ok := parseDayLogParams(rec, req)
+			if !ok {
+				t.Fatalf("parse day: %s", rec.Body.String())
+			}
+			if p.end.Sub(p.start) != time.Duration(tt.hours)*time.Hour {
+				t.Fatalf("day span = %v, want %dh", p.end.Sub(p.start), tt.hours)
+			}
+			sessionStart := p.start.Add(-time.Hour)
+			sessionEnd := p.end.Add(time.Hour)
+			duration := int64(sessionEnd.Sub(sessionStart).Seconds())
+			in := TimelineInput{
+				VehicleID: 1, WindowStart: p.start, WindowEnd: p.end,
+				Drives: []daylogdb.DayDrive{{
+					ID: 1, StartedAt: sessionStart, EndedAt: &sessionEnd,
+					DurationS: &duration, DistanceM: dlFloat(30000), EnergyUsedWh: dlFloat(6000),
+				}},
+				Charges: []daylogdb.DayCharge{{
+					ID: 2, StartedAt: sessionStart, EndedAt: &sessionEnd, TotalEnergyAddedWh: dlFloat(10000),
+				}},
+				FSM: []daylogdb.DayFSMTransition{
+					{ID: 1, Ts: p.start, ToState: "parked"},
+					{ID: 2, Ts: p.end.Add(-time.Nanosecond), ToState: "online"},
+					{ID: 3, Ts: p.end, ToState: "asleep"},
+				},
+			}
+			out := BuildTimeline(in)
+			if out.Total != 2 {
+				t.Errorf("total = %d, want 2 in-window instants", out.Total)
+			}
+			s := out.Summary
+			if s.DriveCount != 1 || s.ChargeCount != 1 ||
+				s.DriveDurationS == nil || *s.DriveDurationS != duration ||
+				s.DriveDistanceM == nil || *s.DriveDistanceM != 30000 ||
+				s.EnergyUsedWh == nil || *s.EnergyUsedWh != 6000 ||
+				s.EnergyAddedWh == nil || *s.EnergyAddedWh != 10000 {
+				t.Errorf("whole-session summary changed or prorated: %+v", s)
+			}
+		})
+	}
+}
 
 func dlTime(h, m int) time.Time {
 	return time.Date(2026, 9, 14, h, m, 0, 0, time.UTC)

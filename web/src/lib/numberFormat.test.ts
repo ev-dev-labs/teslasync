@@ -8,11 +8,14 @@ import {
   safeNumber,
   isFiniteNumber,
   fmtNumber,
+  fmtScientificNumber,
   fmtWithUnit,
   fmtPercent,
   fmtInt,
   fmtCompact,
   formatBytes,
+  getFormatterPreferences,
+  _resetFormatterPreferences,
 } from './numberFormat'
 
 // The module keeps precision + locale as mutable module-level state that
@@ -80,6 +83,19 @@ describe('numberFormat — global locale', () => {
     setGlobalLocale('de-DE')
     // de-DE groups with '.' and uses ',' as the decimal separator.
     expect(fmtNumber(1234.5).replace(/\s/g, ' ')).toBe('1.234,50')
+  })
+})
+
+describe('numberFormat — test reset hook', () => {
+  it('restores en-US + precision 2 so a French-locale case cannot leak into later tests', () => {
+    setGlobalLocale('fr-FR')
+    setGlobalPrecision(4)
+    expect(fmtNumber(1234.5).replace(/[\s\u202f]/g, ' ')).toBe('1 234,5000')
+    _resetFormatterPreferences()
+    expect(getGlobalLocale()).toBe('en-US')
+    expect(getGlobalPrecision()).toBe(2)
+    expect(getFormatterPreferences()).toEqual({ precision: 2, locale: 'en-US' })
+    expect(fmtNumber(1234.5)).toBe('1,234.50')
   })
 })
 
@@ -179,6 +195,78 @@ describe('numberFormat — fmtNumber', () => {
   })
 })
 
+describe('numberFormat — fmtScientificNumber', () => {
+  it.each([1e-12, -1e-12, 1e-100, -1e-100])(
+    'keeps nonzero deadband thresholds %s distinct from measured zero',
+    value => {
+      expect(fmtScientificNumber(value, 4)).not.toBe(fmtScientificNumber(0, 4));
+      expect(fmtScientificNumber(value, 4)).not.toBe('—');
+      setGlobalPrecision(6);
+      expect(fmtScientificNumber(value, 4)).toContain('000000E');
+    },
+  );
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, '0', '', false, {}, []])(
+    'keeps missing or invalid input %j distinct from measured zero',
+    value => {
+      expect(fmtScientificNumber(value, 3)).toBe('—')
+    },
+  )
+
+  it('retains fixed formatting for measured zero and valid signed values', () => {
+    expect(fmtScientificNumber(0, 3)).toBe('0.000')
+    expect(fmtScientificNumber(-0, 3)).toBe('-0.000')
+    expect(fmtScientificNumber(1234.5678, 3)).toBe('1,234.568')
+    expect(fmtScientificNumber(-1234.5678, 3)).toBe('-1,234.568')
+    expect(fmtScientificNumber(0.1256, 3)).toBe('0.126')
+    expect(fmtScientificNumber(-0.1256, 3)).toBe('-0.126')
+  })
+
+  it('uses scientific notation for signed fractions that would round to zero', () => {
+    expect(fmtScientificNumber(0.000012345, 3)).toBe('1.235E-5')
+    expect(fmtScientificNumber(-0.000012345, 3)).toBe('-1.235E-5')
+    expect(fmtScientificNumber(Number.MIN_VALUE, 3)).toBe('5.000E-324')
+    expect(fmtScientificNumber(-Number.MIN_VALUE, 3)).toBe('-5.000E-324')
+  })
+
+  it('switches only below the locale formatter rounding boundary', () => {
+    expect(fmtScientificNumber(0.0005, 3)).toBe('0.001')
+    expect(fmtScientificNumber(-0.0005, 3)).toBe('-0.001')
+    expect(fmtScientificNumber(0.0004999, 3)).toBe('4.999E-4')
+    expect(fmtScientificNumber(-0.0004999, 3)).toBe('-4.999E-4')
+  })
+
+  it('honours global precision in fixed and scientific notation', () => {
+    setGlobalPrecision(5)
+    expect(fmtScientificNumber(0.000012345, 3)).toBe('0.00001')
+    expect(fmtScientificNumber(0.0000001234567, 3)).toBe('1.23457E-7')
+    setGlobalPrecision(0)
+    expect(fmtScientificNumber(0.125, 0)).toBe('1E-1')
+    expect(fmtScientificNumber(0, 0)).toBe('0')
+  })
+
+  it('uses the selected locale and honours a per-call locale override', () => {
+    setGlobalLocale('de-DE')
+    expect(fmtScientificNumber(1234.5, 3)).toBe('1.234,500')
+    expect(fmtScientificNumber(-0.000012345, 3)).toBe('-1,235E-5')
+    expect(fmtScientificNumber(0.000012345, 3, 'en-US')).toBe('1.235E-5')
+  })
+
+  it('falls back to en-US for invalid global and per-call locales', () => {
+    setGlobalLocale('xx_BAD_TAG!!')
+    expect(fmtScientificNumber(0.000012345, 3)).toBe('1.235E-5')
+    expect(fmtScientificNumber(-0.000012345, 3, 'xx_BAD_TAG!!')).toBe('-1.235E-5')
+  })
+
+  it('clamps diagnostic precision and handles non-finite requests', () => {
+    expect(fmtScientificNumber(0.000012345, NaN)).toBe('1.23E-5')
+    expect(fmtScientificNumber(0.000012345, Infinity)).toBe('1.23E-5')
+    expect(fmtScientificNumber(0.000012345, -Infinity)).toBe('1.23E-5')
+    expect(fmtScientificNumber(0.000012345, -5)).toBe('1.23E-5')
+    expect(fmtScientificNumber(1e-30, 150)).toBe('1.00000000000000000000E-30')
+  })
+})
+
 describe('numberFormat — fmtWithUnit', () => {
   it('appends the unit after a formatted number', () => {
     expect(fmtWithUnit(42.567, 'kWh')).toBe('42.57 kWh')
@@ -249,11 +337,20 @@ describe('numberFormat — formatBytes', () => {
   it('formats bytes into binary units', () => {
     expect(formatBytes(0)).toBe('0 B')
     expect(formatBytes(512)).toBe('512 B')
-    expect(formatBytes(1024)).toBe('1.0 KB')
-    expect(formatBytes(1536)).toBe('1.5 KB')
-    expect(formatBytes(1048576)).toBe('1.0 MB')
-    expect(formatBytes(1073741824)).toBe('1.0 GB')
-    expect(formatBytes(5 * 1073741824)).toBe('5.0 GB')
+    expect(formatBytes(1024)).toBe('1.00 KB')
+    expect(formatBytes(1536)).toBe('1.50 KB')
+    expect(formatBytes(1048576)).toBe('1.00 MB')
+    expect(formatBytes(1073741824)).toBe('1.00 GB')
+    expect(formatBytes(5 * 1073741824)).toBe('5.00 GB')
+  })
+
+  it('uses selected precision and locale for scaled units without changing byte counts', () => {
+    setGlobalPrecision(3)
+    setGlobalLocale('de-DE')
+    expect(formatBytes(512)).toBe('512 B')
+    expect(formatBytes(1536)).toBe('1,500 KB')
+    expect(formatBytes(1572864)).toBe('1,500 MB')
+    expect(formatBytes(1610612736)).toBe('1,500 GB')
   })
 
   it('returns the empty placeholder for null / undefined / non-finite input', () => {

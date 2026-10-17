@@ -1,0 +1,155 @@
+{
+  "releasedUtc": "2026-10-07T06:12:20.034267+00:00",
+  "release": "READ-ONLY RELEASE; no repository leases or outstanding owned source work",
+  "latestDirective": "32-agent rolling dispatch; atomic assignments capped at 15-20 minutes; existing launch clock is not reset. Finish page source before lint/validation.",
+  "existingLaunchUtcApprox": "2026-10-07T06:05:44Z",
+  "supersedingConservativeCapUtc": "2026-10-07T06:25:00Z",
+  "earlierCapInOutcomeSuperseded": true,
+  "concreteDisjointSourceTasksForFreshAssignments": [
+    {
+      "task": "Apply source-specific GeofencesPage copy keys after parent approval",
+      "atomicCapMinutes": 20,
+      "exactSourceFilename": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "focusedTestFilenameToAuthorOnly": "web\\src\\features\\maps\\pages\\GeofencesPage.catalogCopy.test.tsx",
+      "newCatalogLeavesRequestedFromParent": [
+        {
+          "key": "geofences.aiSuggest.selectHint",
+          "english": "Choose a visited location to propose a zone; review the draft before saving."
+        }
+      ],
+      "sourceChanges": [
+        {
+          "oldKey": "geofences.aiSuggest.pickHint",
+          "newKey": "geofences.aiSuggest.selectHint",
+          "fallback": "Choose a visited location to propose a zone; review the draft before saving."
+        }
+      ],
+      "testsToAuthorNotExecute": [
+        "Render canonical English with visited-location Select; assert no paste-ID instruction and unchanged selection/draft action."
+      ],
+      "ownership": "Independent page/test scope. Parent alone integrates canonical/generated catalogs. Confirm new focused test filename is unowned/nonexistent before assigning; retain original tests.",
+      "doNotChange": "No hooks, business operands, source periods, loading predicates, API filters, exports, or existing canonical leaf values."
+    },
+    {
+      "task": "Apply source-specific SafetyPage copy keys after parent approval",
+      "atomicCapMinutes": 20,
+      "exactSourceFilename": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "focusedTestFilenameToAuthorOnly": "web\\src\\features\\settings\\pages\\SafetyPage.catalogCopy.test.tsx",
+      "newCatalogLeavesRequestedFromParent": [
+        {
+          "key": "safetySettings.listing.cardsSubtitle",
+          "english": "Each tile shows the current value on this install and links to the canonical Settings page where you can change it."
+        },
+        {
+          "key": "safetySettings.cardsPageSubtitle",
+          "english": "Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to change a value."
+        }
+      ],
+      "sourceChanges": [
+        {
+          "oldKey": "safetySettings.listing.subtitle",
+          "newKey": "safetySettings.listing.cardsSubtitle",
+          "fallback": "Each tile shows the current value on this install and links to the canonical Settings page where you can change it."
+        },
+        {
+          "oldKey": "safetySettings.pageSubtitle",
+          "newKey": "safetySettings.cardsPageSubtitle",
+          "fallback": "Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to change a value."
+        }
+      ],
+      "testsToAuthorNotExecute": [
+        "Render settings card grid with canonical English; links remain available on each tile and old row-copy leaf unchanged.",
+        "Assert page subtitle gives card-link instructions while original pageSubtitle value is retained."
+      ],
+      "ownership": "Independent page/test scope. Parent alone integrates canonical/generated catalogs. Confirm new focused test filename is unowned/nonexistent before assigning; retain original tests.",
+      "doNotChange": "No hooks, business operands, source periods, loading predicates, API filters, exports, or existing canonical leaf values."
+    },
+    {
+      "task": "Apply source-specific SettingsPage copy keys after parent approval",
+      "atomicCapMinutes": 20,
+      "exactSourceFilename": "web\\src\\features\\settings\\pages\\SettingsPage.tsx",
+      "focusedTestFilenameToAuthorOnly": "web\\src\\features\\settings\\pages\\SettingsPage.catalogCopy.test.tsx",
+      "newCatalogLeavesRequestedFromParent": [
+        {
+          "key": "tour.openLauncher",
+          "english": "Open tour launcher"
+        }
+      ],
+      "sourceChanges": [
+        {
+          "oldKey": "tour.restart",
+          "newKey": "tour.openLauncher",
+          "fallback": "Open tour launcher"
+        }
+      ],
+      "testsToAuthorNotExecute": [
+        "Button accessible name says Open tour launcher; interaction dispatches launcher event, not immediate tour reset; retain Restart tour for actual restart callers."
+      ],
+      "ownership": "Independent page/test scope. Parent alone integrates canonical/generated catalogs. Confirm new focused test filename is unowned/nonexistent before assigning; retain original tests.",
+      "doNotChange": "No hooks, business operands, source periods, loading predicates, API filters, exports, or existing canonical leaf values."
+    },
+    {
+      "task": "Apply source-specific TeslaChargingSessionsPage copy keys after parent approval",
+      "atomicCapMinutes": 20,
+      "exactSourceFilename": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.tsx",
+      "focusedTestFilenameToAuthorOnly": "web\\src\\features\\charging\\pages\\TeslaChargingSessionsPage.catalogCopy.test.tsx",
+      "newCatalogLeavesRequestedFromParent": [
+        {
+          "key": "operations.charging.sessionsLoading",
+          "english": "Updating"
+        },
+        {
+          "key": "operations.charging.returnedSessionsTitle",
+          "english": "Cost, energy, and session evidence in one operating view"
+        },
+        {
+          "key": "operations.charging.returnedSessionsDescription",
+          "english": "The selected vehicle and date range drive charging totals, location analysis, and the supporting session history."
+        },
+        {
+          "key": "operations.charging.returnedSessionsProvenance",
+          "english": "Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display."
+        }
+      ],
+      "sourceChanges": [
+        {
+          "oldKey": "operations.status.loading",
+          "newKey": "operations.charging.sessionsLoading",
+          "fallback": "Updating"
+        },
+        {
+          "oldKey": "operations.charging.title",
+          "newKey": "operations.charging.returnedSessionsTitle",
+          "fallback": "Cost, energy, and session evidence in one operating view"
+        },
+        {
+          "oldKey": "operations.charging.description",
+          "newKey": "operations.charging.returnedSessionsDescription",
+          "fallback": "The selected vehicle and date range drive charging totals, location analysis, and the supporting session history."
+        },
+        {
+          "oldKey": "operations.charging.provenance",
+          "newKey": "operations.charging.returnedSessionsProvenance",
+          "fallback": "Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display."
+        }
+      ],
+      "testsToAuthorNotExecute": [
+        "Loading charging-history query displays Updating. Vehicle live-state query retains Resolving live state. Generic Loading remains generic and is never globally rewritten.",
+        "With real canonical English, assert Tesla sessions uses returned-session copy; local ChargingList retains existing canonical copy; no live-state or departure claim in history provenance.",
+        "With real canonical English, assert Tesla sessions uses returned-session copy; local ChargingList retains existing canonical copy; no live-state or departure claim in history provenance.",
+        "With real canonical English, assert Tesla sessions uses returned-session copy; local ChargingList retains existing canonical copy; no live-state or departure claim in history provenance."
+      ],
+      "ownership": "Independent page/test scope. Parent alone integrates canonical/generated catalogs. Confirm new focused test filename is unowned/nonexistent before assigning; retain original tests.",
+      "doNotChange": "No hooks, business operands, source periods, loading predicates, API filters, exports, or existing canonical leaf values."
+    }
+  ],
+  "explicitLimitations": [
+    "Settings title namespace resolution and whether returned Fleet Charging sessions contain active sessions remain unproved; do not label resolved.",
+    "Four parking Aria aliases are intentionally reserved, but absent from the specified immutable en-after receipt. Existing non-Aria literal dotted siblings and scalar are present. Obtain exact parent alias receipt before claiming alias integration.",
+    "Current receipt canonical operations.status.loading is Resolving live state, not Loading. New charging sessionsLoading=Updating prevents inherited generic/live-state wording without rewriting either generic Loading or existing Resolving live state.",
+    "Tests listed are proposals to AUTHOR after approval, never executed by this reconciliation.",
+    "Read-only source metadata and hash evidence are not technical or browser acceptance."
+  ],
+  "existingArtifactManifestSha256": "8d0a88716b7976efd17091974b4f42525884c7d182028dcbb90c6a188d5754e5",
+  "noRepositoryWritesOrValidation": true
+}

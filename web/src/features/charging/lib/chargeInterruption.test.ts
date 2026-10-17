@@ -7,6 +7,7 @@ import {
   betaPosterior,
   betaQuantile,
   regularizedIncompleteBeta,
+  type ChargeInterruptionSession,
 } from './chargeInterruption';
 
 const ANCHOR = Date.UTC(2026, 0, 1);
@@ -107,7 +108,6 @@ describe('beta posterior math', () => {
 describe('evaluateSessionSignal', () => {
   const opts = {
     taperSocPct: 80,
-    minBaselineSessions: 4,
     minDurationForRateCheckS: 300,
     rateShortfallRatio: 0.5,
     powerCollapseRatio: 0.35,
@@ -156,6 +156,44 @@ describe('evaluateSessionSignal', () => {
     const s = session({ day: 0, hours: 0.02, energyWh: 50, peakPowerW: 11_000, startSoc: 30, endSoc: 30 });
     const signal = evaluateSessionSignal(s, 'site', null, false, opts);
     expect(signal.causes).toContain('aborted_early');
+    expect(signal.energyWh).toBe(50);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'preserves unknown energy (%s) without flagging an early abort',
+    (energyWh) => {
+      const s: ChargeInterruptionSession = {
+        ...session({ day: 0, hours: 0.02, peakPowerW: 11_000, startSoc: 30, endSoc: 30 }),
+        total_energy_added_wh: energyWh,
+      };
+      const signal = evaluateSessionSignal(s, 'site', null, false, opts);
+      expect(signal.energyWh).toBeNull();
+      expect(signal.causes).toEqual([]);
+      expect(signal.suspect).toBe(false);
+    },
+  );
+
+  it('accepts omitted energy and still scores independent missing-field evidence', () => {
+    const { total_energy_added_wh: _energy, ...s } = session({
+      day: 0, hours: 0.02, peakPowerW: 11_000, noEnd: true, endSoc: null,
+    });
+    const summary = analyzeChargeInterruptions([
+      { ...s, start_place: 'Home' },
+      session({ day: 1, place: 'Home' }),
+    ]);
+    const signal = summary.sites[0]!.sessions[0]!;
+    expect(signal.energyWh).toBeNull();
+    expect(signal.causes).toEqual(['no_end_timestamp', 'no_end_soc']);
+    expect(summary.suspectedSessions).toBe(1);
+  });
+
+  it.each([0, 299, 300, 1000])('requires known energy below the abort threshold (%s Wh)', (energyWh) => {
+    const signal = evaluateSessionSignal(
+      session({ day: 0, hours: 0.02, energyWh, peakPowerW: 11_000 }),
+      'site', null, false, opts,
+    );
+    expect(signal.energyWh).toBe(energyWh);
+    expect(signal.causes.includes('aborted_early')).toBe(energyWh < opts.minMeaningfulEnergyWh);
   });
 
   it('does not flag a clean, complete session', () => {
@@ -167,6 +205,35 @@ describe('evaluateSessionSignal', () => {
 });
 
 describe('analyzeChargeInterruptions', () => {
+  it('skips rate scoring below the one-session baseline floor but retains independent evidence', () => {
+    const s = session({
+      day: 0, place: 'Home', startSoc: 30, endSoc: 30,
+      powerW: 1000, peakPowerW: 7000,
+    });
+    const summary = analyzeChargeInterruptions([s]);
+    expect(summary.sites[0]!.sessions[0]!.causes).toEqual(['power_collapse']);
+    expect(summary.suspectedSessions).toBe(1);
+  });
+
+  it('uses a single qualifying session as its own baseline at the scoring floor', () => {
+    const s = session({ day: 0, place: 'Home', startSoc: 30, endSoc: 35, hours: 3 });
+    const summary = analyzeChargeInterruptions([s]);
+    expect(summary.sites[0]!.evidenceCount).toBe(1);
+    expect(summary.sites[0]!.sessions[0]!.causes).toEqual([]);
+    expect(summary.suspectedSessions).toBe(0);
+  });
+
+  it('scores against the shared median with fewer than four qualifying sessions', () => {
+    const clean = session({ day: 0, place: 'Home' });
+    const slow = session({ day: 1, place: 'Home', startSoc: 30, endSoc: 35, hours: 3 });
+    const summary = analyzeChargeInterruptions([clean, slow]);
+    const site = summary.sites[0]!;
+    expect(site.evidenceCount).toBe(2);
+    expect(site.sessions.map((s) => s.causes)).toEqual([[], ['stalled_soc_gain']]);
+    expect(summary.suspectedSessions).toBe(1);
+    expect(site.posteriorMean).toBe(0.5);
+  });
+
   it('is empty and safe with no sessions', () => {
     const summary = analyzeChargeInterruptions([]);
     expect(summary.sites).toEqual([]);

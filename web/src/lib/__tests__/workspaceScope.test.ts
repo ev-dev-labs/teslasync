@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import nodePath from 'node:path';
+import { sourceHookCalls } from '../../test/sourceHookGraph';
 import {
   RANGE_ENABLED_PATHS,
   VEHICLE_DISABLED_PATHS,
@@ -25,6 +27,195 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns tire differential drift range and vehicle on the actual normalized route', () => {
+    for (const path of ['/tire-differential-drift', '/tire-differential-drift/',
+      '/tire-differential-drift?from=2024-03-10&to=2024-03-10',
+      '/tire-differential-drift#methodology', 'tire-differential-drift']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/vehicle-systems/tire-differential-drift').range).toBe(false);
+    expect(getWorkspaceQuickRangePresets('/tire-differential-drift')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns preconditioning effectiveness range and vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/preconditioning-effectiveness', '/preconditioning-effectiveness/',
+      '/preconditioning-effectiveness?from=2024-03-10&to=2024-03-11',
+      '/preconditioning-effectiveness#methodology', 'preconditioning-effectiveness',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/preconditioning-effectiveness')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns HVAC cycling range and vehicle on its normalized route', () => {
+    for (const path of [
+      '/hvac-cycling', '/hvac-cycling/',
+      '/hvac-cycling?from=2026-03-08&to=2026-03-08',
+      '/hvac-cycling#methodology', 'hvac-cycling',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/hvac-cycling')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns battery degradation analysis on the actual route, not the API path', () => {
+    for (const path of ['/battery-degradation', '/battery-degradation/',
+      '/battery-degradation?from=2024-03-10&to=2024-03-11', '/battery-degradation#history']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/analytics/battery-degradation').range).toBe(false);
+  });
+  it('owns comfort consistency range and vehicle on its normalized route', () => {
+    for (const path of [
+      '/comfort-consistency', '/comfort-consistency/',
+      '/comfort-consistency?from=2026-03-08&to=2026-03-08',
+      '/comfort-consistency#methodology', 'comfort-consistency',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/comfort-consistency')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns the shared range and vehicle on both climate-control aliases', () => {
+    for (const alias of ['/climate-control', '/climate']) {
+      for (const path of [alias, `${alias}/`, `${alias}?from=2026-10-10&to=2026-10-13`, `${alias}#history`, alias.slice(1)]) {
+        expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+      }
+      expect(getWorkspaceQuickRangePresets(alias)).toEqual(['24h', '7d', '30d', '90d']);
+    }
+  });
+  it('owns cabin thermal range and vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/cabin-thermal', '/cabin-thermal/',
+      '/cabin-thermal?from=2026-08-01&to=2026-08-08',
+      '/cabin-thermal#methodology', 'cabin-thermal',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/cabin-thermal')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns the correlation range and selected vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/signal-correlation', '/signal-correlation/',
+      '/signal-correlation?from=2026-10-10&to=2026-10-13',
+      '/signal-correlation#overlay', 'signal-correlation',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/signal-correlation')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns the deadband range and vehicle on its normalized route', () => {
+    for (const path of ['/signal-deadband', '/signal-deadband/', '/signal-deadband?from=2026-10-10', '/signal-deadband#chart', 'signal-deadband']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/signal-deadband')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns the change-point range and vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/signal-change-points',
+      '/signal-change-points/',
+      '/signal-change-points?from=2026-10-10&to=2026-10-13',
+      '/signal-change-points#timeline',
+      'signal-change-points',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/signal-change-points')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+
+  it('keeps Tesla API usage fleet-wide without overriding its independent UTC history range', () => {
+    for (const path of [
+      '/tesla-api-usage',
+      '/tesla-api-usage/',
+      '/tesla-api-usage?vehicle_id=42&from=2026-01-01',
+      '/tesla-api-usage#history',
+      'tesla-api-usage',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/drives')).toEqual({ range: true, vehicle: true });
+  });
+
+  it('keeps the SQL composing workspace free of misleading vehicle and range controls', () => {
+    for (const path of [
+      '/power/sql',
+      '/power/sql/',
+      '/power/sql?vehicle_id=42',
+      '/power/sql#editor',
+      'power/sql',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/drives')).toEqual({ range: true, vehicle: true });
+    expect(getWorkspaceRouteScope('/vehicles/42')).toEqual({ range: false, vehicle: true });
+  });
+
+  it('owns the Explorer range and vehicle on its actual route', () => {
+    for (const path of ['/explorer', '/explorer/', '/explorer?from=2026-01-01', '/explorer#methodology']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/driving/explorer').range).toBe(false);
+    expect(getWorkspaceQuickRangePresets('/explorer')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('offers the six and twenty-four hour shared ranges on physics ledger', () => {
+    expect(getWorkspaceRouteScope('/tesla-physics/ledger')).toEqual({ range: true, vehicle: true });
+    expect(getWorkspaceQuickRangePresets('/tesla-physics/ledger')).toEqual(['6h', '24h']);
+    expect(isWorkspaceRangePresetAvailable('/tesla-physics/ledger', '6h')).toBe(true);
+    expect(isWorkspaceRangePresetAvailable('/drives', '6h')).toBe(false);
+  });
+  it('owns the root-cause analysis range without changing the service evidence workspace', () => {
+    for (const path of ['/diagnostics/root-cause', '/diagnostics/root-cause/', '/diagnostics/root-cause?from=2026-01-01']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/diagnostics/service-evidence')).toEqual({ range: false, vehicle: true });
+  });
+  it('keeps fleet analytics range-owned without implying single-vehicle scope', () => {
+    for (const path of [
+      '/analytics',
+      '/analytics/',
+      '/analytics?vehicle_id=42&from=2026-01-01',
+      '/analytics#overview',
+      'analytics',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/analytics/carbon')).toEqual({ range: true, vehicle: true });
+    expect(getWorkspaceRouteScope('/analytics/range')).toEqual({ range: false, vehicle: true });
+  });
+
+  it('owns the charge advisor analysis window in the header', () => {
+    for (const path of ['/charge-advisor', '/charge-advisor/', '/charge-advisor?from=2026-01-01']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });
+    }
+  });
+  it('does not scope account-wide energy installations to a vehicle or date range', () => {
+    for (const path of ['/energy-products', '/energy-products/', '/energy-products?site_id=42']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    for (const path of ['/projected-range', '/analytics/range']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: true });
+    }
+  });
+
+  it('keeps whole-home energy orchestration fleet-wide without misleading workspace filters', () => {
+    for (const path of [
+      '/energy-orchestrator',
+      '/energy-orchestrator/',
+      '/energy-orchestrator?vehicle_id=42',
+      '/energy-orchestrator#plan',
+      'energy-orchestrator',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    for (const path of ['/energy', '/energy-flow']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+  });
+
+  it('does not imply live workspace scope for synthetic developer references', () => {
+    for (const path of ['/dev/grid-states', '/dev/layout', '/dev/stats']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: false, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/dev-tools')).toEqual({ range: false, vehicle: false });
+  });
+
   it('offers year-to-date and year navigation only for Drive Calendar', () => {
     expect(getWorkspaceQuickRangePresets('/drive-calendar/')).toEqual(['7d', '30d', '90d', 'ytd']);
     expect(getWorkspaceQuickRangePresets('/drives')).toEqual(['24h', '7d', '30d', '90d']);
@@ -81,6 +272,19 @@ describe('getWorkspaceRouteScope', () => {
     });
     expect(getWorkspaceRouteScope('/power-flow')).toEqual({
       range: true,
+      vehicle: false,
+    });
+  });
+
+  it('owns the period comparison vehicle without overriding independent periods', () => {
+    for (const path of ['/period-compare', '/period-compare/', '/period-compare?period_a=7&period_b=0']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({
+        range: false,
+        vehicle: true,
+      });
+    }
+    expect(getWorkspaceRouteScope('/vehicle-comparison')).toEqual({
+      range: false,
       vehicle: false,
     });
   });
@@ -208,7 +412,10 @@ describe('workspace scope metadata', () => {
     const unscoped = routedPages.flatMap(({ path, name }) => {
       const page = pageSources[lazyPages.get(name) ?? ''];
       if (!page) return [];
-      const hasRange = page.includes('useRangeState(') ||
+      const pageFile = nodePath.resolve(process.cwd(), 'src/lib/__tests__', lazyPages.get(name) ?? '');
+      const hasRange = (getWorkspaceRouteScope(path).range && sourceHookCalls(pageFile).some((call) =>
+        call.name === 'useRangeState' &&
+        call.module === nodePath.resolve(process.cwd(), 'src/hooks/useRangeState.ts'))) ||
         (name === 'ArchivedPage' && page.includes('<InboxBody'));
       const hasPagePicker = page.includes('<RangePicker');
       if (getWorkspaceRouteScope(path).range && !hasRange) return [path];

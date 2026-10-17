@@ -197,10 +197,10 @@ describe('WidgetRankedList', () => {
       />,
     );
 
-    expect(screen.getByText('Good')).toHaveClass('bg-green-100');
-    expect(screen.getByText('Warn')).toHaveClass('bg-yellow-100');
+    expect(screen.getByText('Good')).toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(screen.getByText('Warn')).toHaveClass('bg-[var(--semantic-warning-bg)]');
     // 'error' → the Badge's `danger` variant (red).
-    expect(screen.getByText('Bad')).toHaveClass('bg-red-100');
+    expect(screen.getByText('Bad')).toHaveClass('bg-[var(--semantic-danger-bg)]');
     expect(screen.getByText('Meh')).toHaveClass(BADGE_VARIANTS.neutral);
   });
 
@@ -305,5 +305,195 @@ describe('WidgetRankedList', () => {
 
     expect(screen.getByRole('list')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('accepts frozen readonly items without mutating their order or readings', () => {
+    const items: readonly RankedItem[] = Object.freeze([
+      Object.freeze(makeItem({ id: 'unknown', label: 'Unknown', value: null, formattedValue: 'Unavailable' })),
+      Object.freeze(makeItem({ id: 'low', label: 'Low', value: 10 })),
+      Object.freeze(makeItem({ id: 'high', label: 'High', value: 30 })),
+    ]);
+    const { rerender } = render(<WidgetRankedList items={items} />);
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('High');
+    expect(rows[1]).toHaveTextContent('Low');
+    expect(rows[2]).toHaveTextContent('Unknown');
+    expect(items.map((item) => item.id)).toEqual(['unknown', 'low', 'high']);
+    expect(items[0].value).toBeNull();
+
+    rerender(<WidgetRankedList items={items} order="source" />);
+    expect(screen.getAllByRole('listitem')[0]).toHaveTextContent('Unknown');
+    expect(items.map((item) => item.id)).toEqual(['unknown', 'low', 'high']);
+    expect(items[0].value).toBeNull();
+  });
+
+  it('preserves caller source rank and unknown placement without sorting by magnitude', () => {
+    render(
+      <WidgetRankedList
+        order="source"
+        items={[
+          makeItem({ id: 'unknown', label: 'Caller first', value: null, formattedValue: 'Pending' }),
+          makeItem({ id: 'low', label: 'Caller second', value: -10, formattedValue: 'Low effort' }),
+          makeItem({ id: 'high', label: 'Caller third', value: 100, formattedValue: 'High effort' }),
+        ]}
+      />,
+    );
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent('1Caller firstPending');
+    expect(rows[1]).toHaveTextContent('2Caller secondLow effort');
+    expect(rows[2]).toHaveTextContent('3Caller thirdHigh effort');
+  });
+
+  it('keeps null and missing readings as unknown rows while measured zero has a bar', () => {
+    const missing: RankedItem = {
+      id: 'missing',
+      label: 'Missing',
+      formattedValue: 'Not reported',
+    };
+    const { container } = render(
+      <WidgetRankedList
+        order="source"
+        items={[
+          makeItem({ id: 'null', label: 'Null', value: null, formattedValue: 'Unknown' }),
+          missing,
+          makeItem({ id: 'zero', label: 'Measured zero', value: 0, formattedValue: '0 visits' }),
+          makeItem({ id: 'positive', label: 'Positive', value: 20, formattedValue: '20 visits' }),
+        ]}
+      />,
+    );
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toHaveTextContent('NullUnknown');
+    expect(rows[1]).toHaveTextContent('MissingNot reported');
+    expect(rows[2]).toHaveTextContent('Measured zero0 visits');
+    expect(rows[0].querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(rows[1].querySelector('[aria-hidden="true"]')).toBeNull();
+    expect(bars(container)).toHaveLength(2);
+    expect(bars(container)[0].style.width).toBe('0%');
+    expect(bars(container)[1].style.width).toBe('100%');
+  });
+
+  it('defaults to finite descending order with unknowns after zero and negative readings', () => {
+    const { container } = render(
+      <WidgetRankedList
+        items={[
+          makeItem({ id: 'unknown', label: 'Unknown', value: null, formattedValue: 'No reading' }),
+          makeItem({ id: 'negative', label: 'Negative', value: -5, formattedValue: '-5' }),
+          makeItem({ id: 'zero', label: 'Zero', value: 0, formattedValue: '0' }),
+          makeItem({ id: 'positive', label: 'Positive', value: 10, formattedValue: '10' }),
+        ]}
+      />,
+    );
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toHaveTextContent('Positive');
+    expect(rows[1]).toHaveTextContent('Zero');
+    expect(rows[2]).toHaveTextContent('Negative-5');
+    expect(rows[3]).toHaveTextContent('UnknownNo reading');
+    expect(bars(container).map((bar) => bar.style.width)).toEqual(['100%', '0%', '0%']);
+  });
+
+  it('retains malformed-number zero safety and formatted text without treating null as zero', () => {
+    const { container } = render(
+      <WidgetRankedList
+        order="source"
+        items={[
+          makeItem({ id: 'nan', label: 'Malformed', value: Number.NaN, formattedValue: 'Invalid reading' }),
+          makeItem({ id: 'infinite', label: 'Infinite', value: Infinity, formattedValue: 'Out of range' }),
+          makeItem({ id: 'negative-infinite', label: 'Negative infinite', value: -Infinity, formattedValue: 'Invalid range' }),
+          makeItem({ id: 'unknown', label: 'Unknown', value: null, formattedValue: 'Not measured' }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
+    expect(bars(container).map((bar) => bar.style.width)).toEqual(['0%', '0%', '0%']);
+    expect(screen.getByText('Invalid reading')).toBeInTheDocument();
+    expect(screen.getByText('Out of range')).toBeInTheDocument();
+    expect(screen.getByText('Invalid range')).toBeInTheDocument();
+    expect(screen.getByText('Not measured')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')[3].querySelector('[aria-hidden="true"]')).toBeNull();
+  });
+
+  it('keeps all-unknown rows and caller labels without inventing magnitude bars', () => {
+    const { container } = render(
+      <WidgetRankedList
+        items={[
+          makeItem({ id: 'first', label: 'First', value: null, formattedValue: 'Unknown' }),
+          makeItem({ id: 'second', label: 'Second', value: undefined, formattedValue: 'Pending' }),
+        ]}
+      />,
+    );
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('FirstUnknown');
+    expect(rows[1]).toHaveTextContent('SecondPending');
+    expect(bars(container)).toHaveLength(0);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('wraps long rich labels and formatted evidence without hiding badges or values', () => {
+    const label = 'A long caller-owned route label with all destination evidence retained';
+    const formattedValue = 'Unavailable until the complete source reading arrives';
+    const { container } = render(
+      <WidgetRankedList
+        wrapContent
+        items={[makeItem({
+          id: 'rich',
+          label,
+          labelContent: <span><strong>{label}</strong><span> · Caller metadata</span></span>,
+          value: null,
+          formattedValue,
+          badge: { text: 'Pending', variant: 'neutral' },
+        })]}
+      />,
+    );
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByText('· Caller metadata')).toBeInTheDocument();
+    const labelSlot = screen.getByText(label).parentElement?.parentElement;
+    expect(labelSlot).toHaveClass('whitespace-normal', 'break-words');
+    expect(labelSlot).not.toHaveClass('truncate');
+    expect(screen.getByText(formattedValue)).toHaveClass('whitespace-normal', 'break-words', 'max-w-full');
+    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(bars(container)).toHaveLength(0);
+  });
+
+  it('retains default truncated labels and non-wrapping formatted values', () => {
+    render(<WidgetRankedList items={[makeItem({ label: 'Default label', formattedValue: 'Formatted value' })]} />);
+
+    expect(screen.getByText('Default label')).toHaveClass('truncate');
+    expect(screen.getByText('Formatted value')).toHaveClass('shrink-0');
+  });
+
+  it('applies caller limits to source order including unknown rows and compact overrides', () => {
+    const items = [
+      makeItem({ id: 'unknown', label: 'First unknown', value: null, formattedValue: 'Pending' }),
+      ...makeSeries(7),
+    ];
+    const { rerender, container } = render(
+      <WidgetRankedList items={items} order="source" maxItems={2} />,
+    );
+
+    let rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('First unknownPending');
+    expect(rows[1]).toHaveTextContent('A');
+    expect(screen.queryByText('B')).not.toBeInTheDocument();
+
+    rerender(<WidgetRankedList items={items} order="source" compact maxItems={7} />);
+    rows = screen.getAllByRole('listitem');
+    expect(rows).toHaveLength(7);
+    expect(rows[0]).toHaveTextContent('First unknownPending');
+    expect(rows[6]).toHaveTextContent('F');
+    expect(screen.queryByText('G')).not.toBeInTheDocument();
+    expect(bars(container)).toHaveLength(0);
   });
 });

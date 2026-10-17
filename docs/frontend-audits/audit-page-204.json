@@ -1,0 +1,276 @@
+{
+  "item": "audit-page-204",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+  "routes": ["/signal-deadband"],
+  "purpose": "Read-only numeric telemetry deadband analysis using robust delta noise and cumulative retained-value simulation.",
+  "primaryGoal": "Choose a vehicle-scoped signal, understand redundant emissions, and inspect a recommended threshold's reduction, material retention and reconstruction fidelity without changing telemetry configuration.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "ownership": "Existing workspace vehicle selection: URL, persisted picker and resolved fleet fallback.",
+      "endpoint": null,
+      "evidence": "Page lines 33-37 consume the shared selection; no competing page vehicle selector."
+    },
+    {
+      "hook": "useSignals",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/available",
+      "ownership": "internal\\api\\signalinspect\\handler.go; proto-derived catalog, not proof that samples have been ingested.",
+      "routeEvidence": "internal\\api\\router.go:4886,4911,4929",
+      "behavior": "Vehicle-positive enablement; AbortSignal forwarded; standard stale time; rich descriptors reduced to names; malformed names discarded."
+    },
+    {
+      "hook": "useSignalHistory",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 176,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/{signalName}/history?hours=24",
+      "ownership": "internal\\api\\signalinspect\\handler.go:242-360 reads typed signal_log.",
+      "routeEvidence": "internal\\api\\router.go:4886,4914,4932",
+      "behavior": "Vehicle and signal enablement, periodic refetch, AbortSignal forwarded; query key includes vehicle, signal and hours. No explicit row limit or workspace from/to.",
+      "coverage": "Handler defaults to 1000 rows and caps at 10000 (handler.go:102-110); ascending timestamp query with inclusive BETWEEN and LIMIT (handler.go:309-320). Response from/to are requested bounds, not observed sample extrema (handler.go:263-296). Missing database returns successful empty rows (handler.go:272-282)."
+    },
+    {
+      "hook": "analyzeSignalDeadband",
+      "file": "web\\src\\features\\telemetry\\lib\\signalDeadband.ts",
+      "line": 179,
+      "endpoint": null,
+      "ownership": "Pure feature derivation over returned raw SI measurements, not server mutation.",
+      "behavior": "At least three valid points; MAD-centered deltas, threshold candidates, cumulative retained-value simulation, quality scoring and lower-threshold tie break. signalHistorySamples.ts:14-57 filters numeric kinds and finite values, sorts and last-valid timestamp-deduplicates."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "PageContainer props, full-width min-w-0 container, query freshness and independent dataSources; existing shell owns workspace controls."},
+    {"name": "TelemetrySummaryBrief", "owner": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "line": 22, "contract": "OperationalBrief with readonly StatMetric[], scope, description, provenance, sourceBounds, sourceStatus and loading/unavailable/retained/unknown flags; adapter uses useOperationalMetrics."},
+    {"name": "ChartContainer", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "line": 79, "contract": "Canonical chart frame: ariaLabel, loading/error/empty, data/dataColumns, heights, recovery copy/actions; default image export and screen-reader fallback matrix. Page supplies six columns and one plotted series."},
+    {"name": "Select", "owner": "web\\src\\components\\ui\\Select.tsx", "line": 12, "contract": "Native select with label/options/value/onChange/placeholder, explicit id, hint/error, aria-describedby and sm/md/lg/auto sizing."},
+    {"name": "GlassPanel, PanelTitle, Text", "owner": "Existing @/components/ui category barrel", "line": 16, "contract": "Page uses existing surfaces and role typography, not a replacement visual library; implementations not independently audited."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 23, "contract": "Existing reduced-motion-aware entrance with sanitized delay; actual OS/low-bandwidth behavior unexercised."},
+    {"name": "DataSourceNotice", "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx", "line": 124, "contract": "Independent sources, enabled flag, retained-data refresh failures, paused/offline and per-source retry. Inherited through PageContainer."},
+    {"name": "NoVehicleSelected", "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "line": 47, "contract": "Existing governed prerequisite explanation and onboarding CTA."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+      "line": 183,
+      "rule": "MDC-026 / mission 24",
+      "detail": "A fatal history error produces retry surfaces in summary, chart replacement (187-190) and retention audit (244-245), plus inherited source notice. Chart replacement loses its title, subtitle and figure contract.",
+      "fix": "Keep each section mounted and titled; pass fatal history error/onRetry through ChartContainer's existing API and retain source-aware notices without redundant identical retry blocks.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+      "line": 238,
+      "rule": "MDC-031 / mission 12",
+      "detail": "Retention audit outer PanelTitle is repeated as the nested TelemetrySummaryBrief title at line 254 in the populated state.",
+      "fix": "Use one section title while preserving the complete nested metrics, source bounds and specialist description.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "evidence": [
+      "Page:137,237 uses p-4 sm:p-5; selection:155 constrains only form content to max-w-xl.",
+      "PageLayout.tsx:11-13 keeps w-full, min-w-0 and container scope.",
+      "ChartContainer owns mobile/desktop height presets; page:203 overrides desktop height to 320."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+        "line": 156,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Select uses default md, whose shared minimum height is 40px (Select.tsx:34), below the contract's preferred 44px mobile target. Actual composed size/spacing not measured.",
+        "fix": "Use existing lg or a reviewed density-aware variant with a verified 44px mobile target; preserve full native options and visible labels.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verifiedWidths": [],
+    "unverifiedWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "status": "Source-only; no viewport, clipping, zoom, long-label or RTL acceptance."
+  },
+  "accessibility": {
+    "strengths": ["Localized select label, native interaction and visible focus inherited from Select.", "Decorative heading icons explicitly aria-hidden.", "Chart ariaLabel and all six candidate dimensions supplied to shared fallback table.", "Shared FadeIn respects reduced-motion source contract."],
+    "findings": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+        "line": 164,
+        "rule": "MDC-021 / MDC-040",
+        "detail": "Canonical-SI explanation is a sibling Text, not the Select hint or aria-describedby target. Select's implicit ID is derived from the translated label (Select.tsx:60), so identity changes with locale.",
+        "fix": "Provide stable explicit control id and use existing hint prop or a stable described-by ID for the full explanation.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard and screen reader interaction", "Actual focus restoration", "Contrast on composed themes", "Forced colors", "Touch reachability", "OS reduced motion"]
+  },
+  "states": {
+    "initial": "Catalog skeleton; selected history skeleton/chart loading and summary suppression.",
+    "empty": "Catalog explanatory empty state; insufficient numeric analysis null; audit distinguishes no selection from fewer than three points.",
+    "fatal": "Source-specific QueryError retries; unaffected catalog survives history failure.",
+    "retained": "History data stays in analysis/chart; summary retained marker covers refresh, stale and refresh failure. PageContainer dataSources inherits nonfatal source retry and offline notice.",
+    "unknown": "Null metrics preserved; no measurements fabricated. Summary unknown covers no signal/insufficient analysis.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+        "line": 143,
+        "rule": "MDC-026 / mission 23",
+        "detail": "Catalog empty copy says signals populate from ingested telemetry (148-152), but the endpoint is proto-derived. This implies an unsupported remedy and does not distinguish catalog availability from historical sample coverage.",
+        "fix": "Describe unavailable catalog options accurately; preserve ingestion guidance only for history absence where evidence supports it.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+        "line": 201,
+        "rule": "MDC-026 / mission 23",
+        "detail": "Chart empty uses generic shared copy for both no selection and insufficient numeric samples, while the audit offers specific explanations. useDataState does not receive unavailable for successful empty history.",
+        "fix": "Pass localized emptyTitle/emptyMessage/emptyDescription appropriate to no selection, zero rows and insufficient valid numeric rows. Distinguish these cases from paused/failed queries and measured zeros.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "All transitions unexercised."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+      "line": 139,
+      "rule": "MDC-010 / MDC-016",
+      "detail": "Two decorative panel icons use fixed text-cyan-300 (also 239) instead of neutral/theme semantic tokens. No page glow, neon, fixed-white text or gradient found in source.",
+      "fix": "Use existing muted/secondary semantic icon color; preserve chartTokens data-series identity and saved chart palette choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+      "line": 219,
+      "rule": "MDC-013 / MDC-034 / MDC-044",
+      "detail": "Chart ticks hardcode 10/11px sizes; threshold/count axes use default numeric presentation. Fallback columns omit kind/format, so ChartContainer.tsx:828-835 falls through to String(raw) rather than locale-aware number formatting.",
+      "fix": "Reuse shared chart typography and current number-format helpers; assign existing column kind or specialist format functions without changing SI thresholds, retained counts or percentages.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+      "line": 27,
+      "rule": "MDC-032",
+      "detail": "History analysis is fixed to 24h and does not consume useRangeState. /signal-deadband is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:22-76); header vehicle scope remains enabled. No duplicate date control exists.",
+      "fix": "Integration owner should register route and supply shared startInstant/endInstantExclusive through a typed, bounds-aware history API. Preserve 24h as appropriate default, rolling/custom/timezone semantics and current analysis coverage disclosure. Verify exclusive-end semantics: current backend uses inclusive BETWEEN.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+      "line": 58,
+      "rule": "MDC-045 / mission 2",
+      "detail": "Every catalog name is offered under Numeric signal although useSignals discards value_kind/unit_kind. Non-numeric signals therefore remain selectable and yield no numeric analysis. Existing typed catalog/histories normalize kind names, whereas this analyzer expects long-form ValueKind names.",
+      "fix": "Reuse descriptor metadata to mark valid numeric choices or explain unsupported kinds, retaining access to source context. If adopting typed history, explicitly preserve analyzer kind compatibility; do not silently feed compact int/float discriminators to the current long-form parser.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+      "line": 180,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Summary labels from/to as source bounds, but backend returns requested bounds and ascending history may truncate at default 1000. Existing description correctly disclaims full-window coverage; it must not be upgraded into an observed-coverage claim.",
+      "fix": "Keep requested versus returned numeric extrema distinct; expose known row-limit/coverage uncertainty using existing brief scope/provenance/description. Any new authoritative coverage metadata needs an integration-owned backend contract.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {"level": "medium", "order": ["Trustworthy catalog and sample-coverage labels", "Workspace range integration", "Preserved titled chart error and tailored empty states", "Stable labeled control and mobile target", "Restrained tokens and locale-aware chart numbers"]},
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace range registration and bounds-compatible analysis",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Register /signal-deadband; existing useRangeState startInstant/endInstantExclusive; typed SignalHistoryRange from/to/limit; preserve query cancellation, polling and raw-kind compatibility. Confirm backend exclusive-end policy before wiring.",
+      "usedBy": ["/signal-deadband"],
+      "dependsOn": ["web\\src\\api\\hooks\\useSignals.ts:54-60,329-370", "internal\\api\\signalinspect\\handler.go:263-320", "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts:24-42"],
+      "owner": "integration",
+      "disposition": "Integration requirement, not authorization for this audit to edit shared files."
+    },
+    {
+      "name": "Accurate requested-window versus returned-sample bounds",
+      "existingOwnerFile": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+      "propsVariantsStates": "Existing sourceBounds {signal,from?,to?} renders source bounds; preserve unknown when absent and retained markers. Clarify supplied bounds are requested, and derive observed extrema only from valid returned samples. Reuse description/scope rather than inventing a universal coverage component.",
+      "usedBy": ["SignalDeadbandPage.tsx summary", "SignalDeadbandPage.tsx retention audit"],
+      "dependsOn": ["internal\\api\\signalinspect\\handler.go:290-296", "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts:14-57"],
+      "owner": "integration",
+      "disposition": "Other production consumers not audited; centralized owner must reconcile wording/capability rather than adding a speculative shared component."
+    }
+  ],
+  "competingImplementations": [
+    {"existing": "useTelemetry.useSignals/useSignalHistory", "alternative": "useSignals.useAvailableSignals/useSignalHistory", "evidence": "useTelemetry.ts:98-127,176-187 versus useSignals.ts:215-242,329-370", "decision": "Existing parallel domain APIs, not a new implementation request. Typed catalog retains metadata and typed history supports bounds, but normalized history kinds are not drop-in compatible with the analyzer. Preserve cache, polling and discriminator contracts during any integration."},
+    {"existing": "PageLayout/ChartContainer/OperationalBrief/Select", "alternative": null, "decision": "Reuse these owners; no new card, chart, stats, field, palette or overlay library needed."}
+  ],
+  "preservation": {
+    "sourceHash": "5A8033C7C5BE7313D0E81789EDFE8FFC4F1C2D68C39F5B7648B45CEE6DC41789",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact root page file bytes, not aggregate dependency hash.",
+    "currentLineCount": 266,
+    "sections": [
+      {"name": "Signal under test", "line": 137},
+      {"name": "Deadband metrics", "line": 175},
+      {"name": "Cumulative retained updates", "line": 192},
+      {"name": "Retention audit", "line": 237}
+    ],
+    "sectionCount": 4,
+    "sourceElementCounts": {"GlassPanel": 3, "ChartContainer": 1, "TelemetrySummaryBrief": 2, "PanelTitle": 2, "FadeIn": 4},
+    "actions": ["Shared header vehicle selection", "Signal selection including empty placeholder", "Catalog and history retry", "Inherited source-specific recovery", "Chart default PNG/SVG/copy-image export", "No-vehicle onboarding CTA"],
+    "metrics": ["MAD noise band", "Redundant emissions and exactly unchanged percentage", "Recommended deadband and noise suppressed", "Projected reduction and reconstruction fidelity", "Numeric samples", "Noise suppression", "Material retention", "Fidelity"],
+    "chartData": ["threshold", "retained", "reduction", "noiseSuppression", "materialRetention", "fidelity"],
+    "dataBehavior": ["Raw SI history/cache remains untouched", "Missing analysis remains null, never fabricated zero", "Finite numeric long-form kinds only; no enum or bool promotion", "Timestamp sorting and last-valid duplicate wins", "At least three numeric points", "MAD delta estimate and cumulative last-retained simulation", "Recommendation score, target suppression and tie break unchanged", "Independent source errors, retained refresh data and cancellation", "Returned-sample-only coverage disclaimer", "No actual telemetry deadband mutation exists on this page"],
+    "settings": ["Shared selected vehicle and URL precedence", "Saved number precision and locale", "Existing unit-preference bridge and specialist scientific formatting", "Existing chart palette and reduced-motion preferences"],
+    "sourceOnlyPatternCounts": {"staticInlineStyle": 0, "rawFormOrTableElementsCaseSensitive": 0, "directChartMapMotionLibraryImports": 0, "oldRelativeApiImports": 0, "neonFixedWhiteOrFixedGrayText": 0},
+    "patternEvidence": "PowerShell Select-String on exact page; initial case-insensitive raw-control count was 1 due to shared <Select>, corrected with -CaseSensitive to 0. Counts are narrow source patterns, not a complete violations certificate."
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "validation": "No Git, source/shared/queue edits, build, lint, TypeScript or runtime requests performed. Skill script inspected but not executed because it invokes project TypeScript outside this audit's allowed validation. No historical acceptance borrowed.",
+    "inspection": "Selected dependencies and relevant source ranges only; no whole-app or complete transitive graph claim. Backend source confirms current query semantics but no server request/database fixture was exercised.",
+    "attempts": ["internal\\api\\signal path lookup failed; actual owner resolved from router import to signalinspect.", "useOperationalMetrics.ts lookup failed; actual .tsx implementation subsequently inspected."],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-204.json", ".agent-status\\audit-page-204.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\features\\telemetry\\lib\\signalDeadband.ts",
+    "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useSignals.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\telemetry.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\signalinspect\\handler.go"
+  ]
+}

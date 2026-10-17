@@ -1,14 +1,15 @@
 /**
  * Signal Change Points — where did this numeric signal abruptly jump to a
- * new level, as opposed to slowly drifting there?
+ * new level, or accumulate enough deviation to cross an alarm threshold?
  *
  * Deliberately narrow scope: this module detects **abrupt regime shifts** —
  * a signal stepping from one stable level to another over a handful of
- * samples. It is intentionally blind to slow monotonic drift (that is
- * `signalTrend.ts`'s job — a gentle ramp produces no Page-Hinkley alarm
- * here because the running mean tracks it) and to the drive-week
- * aggregate regime clustering elsewhere in the app (this operates on one
- * signal's raw sample sequence, not weekly rollups).
+ * samples. This is not a drift classifier: sustained monotonic drift can
+ * also accumulate enough deviation to trigger alarms, including repeated
+ * alarms after resets. Use `signalTrend.ts` to assess drift; an alarm alone
+ * does not establish an abrupt step or a stable regime. This also differs
+ * from drive-week aggregate regime clustering: it operates on one signal's
+ * raw sample sequence, not weekly rollups.
  *
  * The detector is a **two-sided, robust Page-Hinkley test**: for each new
  * sample it compares the value against the running mean of the *current*
@@ -39,15 +40,9 @@
  * Pure, React-free and clock-free.
  */
 
-/**
- * Minimal structural shape this model needs — mirrors the `SignalPoint`
- * shape `useSignalHistory` resolves to, declared locally so this module
- * stays independently testable.
- */
-export interface ChangePointSample {
-  timestamp?: string | null;
-  valueNum?: number | null;
-}
+import { toSignalHistoryMeasurements, type SignalHistorySample } from './signalHistorySamples';
+
+export type ChangePointSample = SignalHistorySample;
 
 export interface Segment {
   startMs: number;
@@ -110,22 +105,7 @@ interface NumericPoint {
 
 /** Numeric samples only, ascending, de-duplicated by timestamp. */
 export function toNumericPoints(samples: readonly ChangePointSample[]): NumericPoint[] {
-  const points: NumericPoint[] = [];
-  for (const s of samples) {
-    if (s.timestamp == null) continue;
-    const ms = new Date(s.timestamp).getTime();
-    if (!Number.isFinite(ms)) continue;
-    if (typeof s.valueNum !== 'number' || !Number.isFinite(s.valueNum)) continue;
-    points.push({ ms, value: s.valueNum });
-  }
-  points.sort((a, b) => a.ms - b.ms);
-  const deduped: NumericPoint[] = [];
-  for (const p of points) {
-    const last = deduped[deduped.length - 1];
-    if (last != null && last.ms === p.ms) deduped[deduped.length - 1] = p;
-    else deduped.push(p);
-  }
-  return deduped;
+  return toSignalHistoryMeasurements(samples);
 }
 
 function median(values: readonly number[]): number {
@@ -182,6 +162,7 @@ function confidenceFromMagnitude(
 /**
  * Robust two-sided Page-Hinkley change-point detection over a chronological
  * numeric series. `values` and `timestampsMs` must be the same length.
+ * Outputs retain model precision; rounding belongs at the presentation boundary.
  */
 export function detectChangePoints(
   values: readonly number[],
@@ -269,10 +250,10 @@ export function detectChangePoints(
       changePoints.push({
         ms: timestampsMs[i]!,
         index: i,
-        beforeMean: Math.round(before.mean * 1000) / 1000,
-        afterMean: Math.round(afterMean * 1000) / 1000,
-        magnitude: Math.round(magnitude * 1000) / 1000,
-        confidence: Math.round(confidenceFromMagnitude(magnitude, pooledSpread, opts.confidenceEffectSizeScale) * 1000) / 1000,
+        beforeMean: before.mean,
+        afterMean,
+        magnitude,
+        confidence: confidenceFromMagnitude(magnitude, pooledSpread, opts.confidenceEffectSizeScale),
         direction: afterMean >= before.mean ? 'up' : 'down',
       });
     }
@@ -280,7 +261,7 @@ export function detectChangePoints(
 
   finalizeSegment(n);
 
-  return { segments, changePoints, globalSpread: Math.round(globalSpread * 1000) / 1000 };
+  return { segments, changePoints, globalSpread };
 }
 
 export function summarizeSignalChangePoints(

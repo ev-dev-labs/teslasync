@@ -64,19 +64,19 @@ function valueFor(label: string): HTMLElement {
 }
 
 const ALL_LABELS = [
-  'High Beams',
-  'Turn Signal',
+  'High beams',
+  'Turn signal',
   'Hazards',
-  'Driver Seat',
-  'Paired Keys',
-  'Valet Mode',
-  'Service Mode',
-  'Speed Limit',
-  'Center Display',
-  'HomeLink Devices',
-  'Software Update',
-  'Remote Start Active',
-  'GPS Accuracy',
+  'Driver seat',
+  'Paired keys',
+  'Valet mode',
+  'Service mode',
+  'Speed limit',
+  'Center display',
+  'HomeLink devices',
+  'Software update',
+  'Remote start active',
+  'GPS accuracy',
   'Grade',
   'Max speed to destination',
 ];
@@ -89,7 +89,7 @@ describe('VehicleStatePanel', () => {
   it('always renders the accessible heading and every row label, even with no live data', () => {
     render(<VehicleStatePanel live={{}} sseConnected={false} />);
 
-    expect(screen.getByRole('heading', { name: /Vehicle State/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vehicle state/ })).toBeInTheDocument();
     for (const label of ALL_LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
@@ -98,16 +98,16 @@ describe('VehicleStatePanel', () => {
   it('shows sensible off/empty placeholders (never a blank panel) when live is empty', () => {
     render(<VehicleStatePanel live={{}} sseConnected={false} />);
 
-    expect(valueFor('High Beams')).toHaveTextContent('Off');
+    expect(valueFor('High beams')).toHaveTextContent('Off');
     expect(valueFor('Hazards')).toHaveTextContent('Off');
-    expect(valueFor('Driver Seat')).toHaveTextContent('Empty');
-    expect(valueFor('Valet Mode')).toHaveTextContent('Off');
-    expect(valueFor('Service Mode')).toHaveTextContent('Off');
-    expect(valueFor('Speed Limit')).toHaveTextContent('Off');
+    expect(valueFor('Driver seat')).toHaveTextContent('Empty');
+    expect(valueFor('Valet mode')).toHaveTextContent('Off');
+    expect(valueFor('Service mode')).toHaveTextContent('Off');
+    expect(valueFor('Speed limit')).toHaveTextContent('Off');
     // Missing counts / text collapse to an em-dash, not "undefined".
-    expect(valueFor('Paired Keys')).toHaveTextContent('—');
-    expect(valueFor('Center Display')).toHaveTextContent('—');
-    expect(valueFor('HomeLink Devices')).toHaveTextContent('—');
+    expect(valueFor('Paired keys')).toHaveTextContent('—');
+    expect(valueFor('Center display')).toHaveTextContent('—');
+    expect(valueFor('HomeLink devices')).toHaveTextContent('—');
     // The speed-limit formatter must NOT run while the limit is disengaged.
     expect(formatSpeed).not.toHaveBeenCalled();
   });
@@ -127,11 +127,11 @@ describe('VehicleStatePanel', () => {
       />,
     );
 
-    const highBeams = valueFor('High Beams');
+    const highBeams = valueFor('High beams');
     expect(highBeams).toHaveTextContent('On');
     expect(highBeams.className).toContain('text-cyan-300');
 
-    const turn = valueFor('Turn Signal');
+    const turn = valueFor('Turn signal');
     expect(turn).toHaveTextContent('Left');
     expect(turn.className).toContain('text-amber-300');
 
@@ -139,15 +139,15 @@ describe('VehicleStatePanel', () => {
     expect(hazards).toHaveTextContent('Active');
     expect(hazards.className).toContain('text-rose-300');
 
-    const seat = valueFor('Driver Seat');
+    const seat = valueFor('Driver seat');
     expect(seat).toHaveTextContent('Occupied');
     expect(seat.className).toContain('text-green-400');
 
-    const valet = valueFor('Valet Mode');
+    const valet = valueFor('Valet mode');
     expect(valet).toHaveTextContent('Enabled');
     expect(valet.className).toContain('text-purple-400');
 
-    const service = valueFor('Service Mode');
+    const service = valueFor('Service mode');
     expect(service).toHaveTextContent('Active');
     expect(service.className).toContain('text-amber-400');
   });
@@ -155,7 +155,7 @@ describe('VehicleStatePanel', () => {
   it('mutes inactive status rows instead of colouring them', () => {
     render(<VehicleStatePanel live={{ lightsHighBeams: false }} sseConnected={false} />);
 
-    const highBeams = valueFor('High Beams');
+    const highBeams = valueFor('High beams');
     expect(highBeams).toHaveTextContent('Off');
     expect(highBeams.className).toContain('text-[var(--text-muted)]');
     expect(highBeams.className).not.toContain('text-cyan-300');
@@ -164,7 +164,7 @@ describe('VehicleStatePanel', () => {
   it('treats an explicit "Off" turn-signal string as inactive', () => {
     render(<VehicleStatePanel live={{ lightsTurnSignal: 'Off' }} sseConnected={false} />);
 
-    const turn = valueFor('Turn Signal');
+    const turn = valueFor('Turn signal');
     expect(turn).toHaveTextContent('Off');
     expect(turn.className).toContain('text-[var(--text-muted)]');
     expect(turn.className).not.toContain('text-amber-300');
@@ -179,9 +179,9 @@ describe('VehicleStatePanel', () => {
     );
 
     // 0 is genuine data — it must read "0", not collapse to the "missing" dash.
-    expect(valueFor('Paired Keys')).toHaveTextContent('0');
-    expect(valueFor('Paired Keys').textContent).toBe('0');
-    expect(valueFor('HomeLink Devices')).toHaveTextContent('3');
+    expect(valueFor('Paired keys')).toHaveTextContent('0');
+    expect(valueFor('Paired keys').textContent).toBe('0');
+    expect(valueFor('HomeLink devices')).toHaveTextContent('3');
   });
 
   it('dashes non-numeric counts and blank / non-string center-display values', () => {
@@ -193,14 +193,14 @@ describe('VehicleStatePanel', () => {
       />,
     );
 
-    expect(valueFor('Paired Keys').textContent).toBe('—');
-    expect(valueFor('Center Display').textContent).toBe('—');
-    expect(valueFor('HomeLink Devices').textContent).toBe('—');
+    expect(valueFor('Paired keys').textContent).toBe('—');
+    expect(valueFor('Center display').textContent).toBe('—');
+    expect(valueFor('HomeLink devices').textContent).toBe('—');
   });
 
   it('renders a non-empty center-display string as-is', () => {
     render(<VehicleStatePanel live={{ centerDisplay: 'Driving' }} sseConnected={false} />);
-    expect(valueFor('Center Display')).toHaveTextContent('Driving');
+    expect(valueFor('Center display')).toHaveTextContent('Driving');
   });
 
   it('formats the engaged speed limit through useUnits and passes the raw SI value', () => {
@@ -212,7 +212,7 @@ describe('VehicleStatePanel', () => {
     );
 
     expect(formatSpeed).toHaveBeenCalledWith(25);
-    const speedLimit = valueFor('Speed Limit');
+    const speedLimit = valueFor('Speed limit');
     expect(speedLimit).toHaveTextContent('25 mph');
     expect(speedLimit.className).toContain('text-cyan-300');
   });
@@ -222,7 +222,7 @@ describe('VehicleStatePanel', () => {
     // The mode is engaged, so the formatter still runs — but with `undefined`,
     // which the null-safe formatter turns into a dash rather than crashing.
     expect(formatSpeed).toHaveBeenCalledWith(undefined);
-    expect(valueFor('Speed Limit')).toHaveTextContent('—');
+    expect(valueFor('Speed limit')).toHaveTextContent('—');
   });
 
   it('exposes the "Live" indicator as a polite status region only when connected', () => {
@@ -241,7 +241,7 @@ describe('VehicleStatePanel', () => {
   it('marks decorative row glyphs as aria-hidden for screen readers', () => {
     render(<VehicleStatePanel live={{}} sseConnected={false} />);
 
-    const icon = screen.getByText('High Beams').querySelector('svg');
+    const icon = screen.getByText('High beams').querySelector('svg');
     expect(icon).not.toBeNull();
     expect(icon).toHaveAttribute('aria-hidden', 'true');
   });

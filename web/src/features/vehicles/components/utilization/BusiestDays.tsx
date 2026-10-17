@@ -7,14 +7,16 @@ import {
   GlassPanel,
   MetricLabel,
   PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
 import { UtilizationSectionBody } from './UtilizationSectionBody';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BusiestDaysProps {
   summary: UtilizationSummary;
@@ -25,6 +27,7 @@ export function BusiestDays({
   summary,
   state,
 }: BusiestDaysProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     formatDay,
@@ -91,11 +94,42 @@ export function BusiestDays({
             )}
           />
         ) : (
-          <ol className="space-y-3">
+          <>
+          <div className="hidden sm:block">
+            <Table aria-label={t('utilization.sections.busiest', 'Ranked busiest observed days')}>
+              <thead>
+                <tr>
+                  <th scope="col" className="text-right">#</th>
+                  <th scope="col">{t('common.date', 'Date')}</th>
+                  <th scope="col" className="text-right">{t('utilization.busiest.drivingTime', 'Driving time')}</th>
+                  <th scope="col" className="text-right">{t('utilization.busiest.distance', 'Distance')}</th>
+                  <th scope="col" className="text-right">{t('utilization.busiest.drives', 'Drives')}</th>
+                  <th scope="col" className="text-right">{t('utilization.busiest.energy', 'Energy')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.busiestDays.map((day, index) => (
+                  <tr key={day.day}>
+                    <td className="text-right tabular-nums">
+                      <Badge variant="neutral">{t('utilization.busiest.rank', '#{{rank}}', { rank: index + 1 })}</Badge>
+                    </td>
+                    <th scope="row" className="font-normal">{formatDay(day.day)}</th>
+                    <td className="text-right tabular-nums">{formatDuration(day.drivingS)}</td>
+                    <td className="text-right tabular-nums">{formatDistance(day.distanceM)}</td>
+                    <td className="text-right tabular-nums">{fmtInt(day.driveCount)}</td>
+                    <td className="text-right tabular-nums">
+                      {day.energyWh > 0 ? formatEnergy(day.energyWh) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+          <ol className="space-y-3 sm:hidden">
             {summary.busiestDays.map((day, index) => (
               <li
                 key={day.day}
-                className="grid gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:grid-cols-[auto_minmax(10rem,1fr)_repeat(4,minmax(5rem,auto))] sm:items-center"
+                className="grid gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
                 <Badge variant="neutral">
                   {t(
@@ -130,9 +164,7 @@ export function BusiestDays({
                     )}
                   </MetricLabel>
                   <Text variant="bodySm" mono>
-                    {formatDistance(day.distanceM, {
-                      precision: 1,
-                    })}
+                    {formatDistance(day.distanceM)}
                   </Text>
                 </div>
                 <div>
@@ -149,15 +181,14 @@ export function BusiestDays({
                   </MetricLabel>
                   <Text variant="bodySm" mono>
                     {day.energyWh > 0
-                      ? formatEnergy(day.energyWh, {
-                          precision: 1,
-                        })
+                      ? formatEnergy(day.energyWh)
                       : '—'}
                   </Text>
                 </div>
               </li>
             ))}
           </ol>
+          </>
         )}
       </UtilizationSectionBody>
     </GlassPanel>

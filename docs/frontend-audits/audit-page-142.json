@@ -1,0 +1,358 @@
+{
+  "item": "audit-page-142",
+  "page": "web\\src\\features\\notifications\\pages\\AlertPacksPage.tsx",
+  "routes": ["/notifications/packs"],
+  "purpose": "Browse curated alert packs, optionally draft a custom pack with Helix, preview and configure ordinary alert rules, and manage installed packs.",
+  "primaryGoal": "Install a reviewed set of independently editable rules with explicit vehicle and delivery scope without overwriting existing rules.",
+  "dataSources": [
+    {
+      "hook": "useAlertPacks",
+      "file": "web\\src\\api\\hooks\\useAlertPacks.ts",
+      "line": 73,
+      "endpoints": ["GET /api/v1/alerts/packs"],
+      "owner": "alertHandler.ListPacks; router.go:3771",
+      "behavior": "Reference query policy, abort signal, safeArray for catalog and each pack's rules. Localized catalog name/description drive client-side search."
+    },
+    {
+      "hook": "usePackInstallations(page)",
+      "file": "web\\src\\api\\hooks\\useAlertPacks.ts",
+      "line": 82,
+      "endpoints": ["GET /api/v1/alerts/pack-installations?limit=20&offset={page*20}"],
+      "owner": "alertHandler.ListPackInstallations; router.go:3772",
+      "behavior": "Operational policy, page-scoped key, abort signal, normalized members. Installed names resolve through catalog when available and otherwise use installation name."
+    },
+    {
+      "hook": "useInstallAlertPack / useRemoveAlertPack",
+      "file": "web\\src\\api\\hooks\\useAlertPacks.ts",
+      "line": 91,
+      "endpoints": ["POST /api/v1/alerts/packs/{packID}/install", "POST /api/v1/alerts/pack-installations/{installationID}/remove"],
+      "owner": "alertHandler.InstallPack / RemovePack; router.go:3773-3774",
+      "behavior": "Install transmits current configured selections; removal transmits explicitly selected delete_rule_ids. Success invalidates/broadcasts both alertRules and packInstallations. Source inspection only; no mutation executed."
+    },
+    {
+      "hook": "useVehicles / useNotificationChannels",
+      "file": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+      "line": 32,
+      "endpoints": ["GET /api/v1/vehicles", "GET /api/v1/notifications"],
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts:73-76; web\\src\\api\\hooks\\useNotifications.ts:738-742; notifications route confirmed router.go:4026-4027",
+      "behavior": "Independent vehicle/channel data states and retry. Vehicle selection is installation business scope, not a competing workspace selector. Exact vehicles backend registration was not inspected."
+    },
+    {
+      "hook": "useAiStream / withAiFeature",
+      "file": "web\\src\\components\\ai\\AIAlertPackBuilder.tsx",
+      "line": 36,
+      "endpoints": ["POST /api/v1/ai/alerts/packs/draft"],
+      "owner": "internal\\api\\ai_routes.go:939; router.go:5060",
+      "behavior": "Feature-gated custom catalog builder, goal 5-2000 characters, cancellation on unmount, validates successful propose_alert_pack tool payload against catalog IDs. Review opens ordinary install configuration; generation does not install. Message editor also delegates suggestion to existing AIAlertMessageTemplateButton; its transport was not traced."
+    }
+  ],
+  "components": [
+    {
+      "owner": "web\\src\\features\\notifications\\pages\\AlertPacksPage.tsx",
+      "line": 14,
+      "role": "PageLayout and usePageTitle own localized title/subtitle; thin page routes edit actions to /notifications/rules?rule={id}."
+    },
+    {
+      "owner": "web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.tsx",
+      "line": 30,
+      "role": "Feature container: SearchInput, GlassPanel catalog cards, installed section, paging, modal selection, optional AI builder."
+    },
+    {
+      "owner": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+      "line": 156,
+      "role": "Shared Modal, Accordion, DataTable, VehicleMultiSelect, Input/Select/Checkbox and feedback primitives compose full configuration; desktop table and mobile PackRulePreview reuse the same editor components and state."
+    },
+    {
+      "owner": "web\\src\\features\\notifications\\components\\packs\\InstalledPackCard.tsx",
+      "line": 19,
+      "role": "Installed metadata/member states, per-rule edit navigation, removal Modal and opt-in Toggle deletion."
+    },
+    {
+      "owner": "web\\src\\components\\ai\\AIAlertPackBuilder.tsx",
+      "line": 46,
+      "role": "AIFeatureCard, Textarea and proposal review presentation; shared AI infrastructure remains authoritative."
+    },
+    {
+      "owner": "web\\src\\hooks\\useDataState.ts",
+      "line": 31,
+      "role": "Shared retained-data trust adapter; StaleRefreshWarning and ErrorDisplay distinguish refresh degradation from initial fatal errors."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+      "line": 91,
+      "rule": "MDC-002 / reuse",
+      "detail": "Desktop columns and mobile PackRulePreview describe the same fields but correctly reuse trigger/delivery/message/channel/reset renderers. This is intentional responsive composition, not justification for a second table or form system.",
+      "fix": "Retain one selection/master state and the existing editors; verify parity after any presentation migration.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.tsx",
+      "line": 50,
+      "rule": "DRY",
+      "detail": "Custom-catalog lookup and installed pack-name lookup each repeat find calls. Small local repetition only; no evidence warrants another shared pack registry.",
+      "fix": "Optionally derive customPack and catalog lookup locally without changing order, fallback names or query behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "AlertPacksPanel.tsx:31-35 uses p-4/sm:p-5 and 1/2/3-column catalog; :53 and :58 use wrapping section actions and 1/2-column installed grid.",
+      "InstallPackDialog.tsx:37 uses 1024px boundary. Below it defaults become Accordion and rules become PackRulePreview; >=1024px uses full field matrix.",
+      "InstallPackDialog.tsx:121-124 defaults grid stacks, then sm two, lg three, 2xl six tracks. Footer and filters wrap.",
+      "InstallPackDialog.tsx:225-234 contains the deliberately 1960px-wide table in a keyboard-focusable horizontal region rather than clipping fields.",
+      "PackRulePreview.tsx:40-52 preserves every operator/threshold/cooldown/behavior/channel/message/title/reset control in stacked mobile cards."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+        "line": 157,
+        "rule": "MDC-024 / MDC-043",
+        "detail": "Large configuration uses Modal size=full plus sm:max-w-[96vw]; this is not the existing distinct fullscreen contract. Dense defaults and a 1960px editor require open-state, 320px, 1024px and zoom QA; source cannot establish footer reachability or scroll/focus containment.",
+        "fix": "Evaluate the existing fullscreen variant rather than inventing a dialog; retain all fields, horizontal region and persistent actions. Change only if current open-state evidence demonstrates a need.",
+        "owner": "integration",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\packs\\PackRuleChannels.tsx",
+        "line": 38,
+        "rule": "MDC-040 mobile targets",
+        "detail": "Channel-removal chips use size=sm/h-auto with no caller minimum 44px; InstalledPackCard.tsx:33 also uses sm edit actions. Effective shared target size and spacing are unverified.",
+        "fix": "Test mobile long names and effective target spacing; reuse Button target/density contract rather than page-only CSS expansion everywhere.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "Unverified at every required viewport, allocated container width, RTL and 200% text zoom."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "InstallPackDialog.tsx:170-173 announces selected count via aria-live=polite; desktop editor has role=region, accessible name/description, tabIndex and visible token-based focus outline (:228-230).",
+      "PackRulePreview.tsx:29 names each mobile section; shared field labels/aria-labels and rule selection names are present.",
+      "InstalledPackCard.tsx:34 names edit actions by member name; removal requires confirmation, protects pending dismissal and excludes existing/shared/deleted members from deletion selection.",
+      "SearchInput.tsx:255-270 supplies an accessible search name through shared Input; reset action has Tooltip and aria-label, decorative icon aria-hidden."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\packs\\PackRuleTriggerEditor.tsx",
+        "line": 24,
+        "rule": "MDC-040 field context",
+        "detail": "Compact operator/threshold and delivery/message/channel controls use repeated generic aria-labels without the rule name. Table headers supply visual context, but repeated accessible names can make field navigation ambiguous; actual screen-reader contextual announcement is unverified.",
+        "fix": "Preserve visible labels and explicit IDs; add rule-specific accessible context through shared field description/name props where necessary. Do not rename persistence keys.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+        "line": 160,
+        "rule": "MDC-021 validation",
+        "detail": "Overall invalid configuration gets one generic caption; numeric threshold and cooldown render native bounds but no field-level explanatory error props. Message editor does provide an error. Association/announcement of the general caption with disabled install is not explicit.",
+        "fix": "Reuse Input validation/error and described-by contracts for invalid threshold/cooldown and associate actionable install summary; retain exact current bounds and payload.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "Keyboard traversal, focus trap/restoration, Escape/discard behavior, screen reader, contrast, forced colors and reduced motion not exercised."
+  },
+  "states": {
+    "sourceEvidence": [
+      "AlertPacksPanel.tsx:33-49 and :57-67 independently handle catalog/installations initial Spinner, fatal ErrorDisplay/refetch, retained cards and StaleRefreshWarning.",
+      "AlertPacksPanel.tsx:44-45 offers clear-search recovery; :62-63 explains empty installation pages. Prev/next are guarded by fetch state and 20-row page size.",
+      "InstallPackDialog.tsx:127-130 vehicles loading/fatal/retry/stale; :207-210 channels loading/fatal/retry/empty/stale remain distinct.",
+      "InstallPackDialog.tsx:56-60 tracks dirty configuration and navigation guard; pending install blocks close and edits, errors remain in footer, result lists created/reused members and paused state.",
+      "InstalledPackCard.tsx:27-32 displays deleted, enabled, disabled, reused and shared status text; :49-55 retains removal error and pending actions.",
+      "AIAlertPackBuilder.tsx:25-34 clears previous proposal on invalid/failed tool result; :52-74 guards goal, busy/error review and proposal identity."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.tsx",
+        "line": 44,
+        "rule": "MDC-026 empty meaning",
+        "detail": "A successful empty catalog with an empty search is described as 'No matching packs' with 'Try another search' and clear-search action. This conflates an empty server catalog with a user filter mismatch.",
+        "fix": "Distinguish catalog empty from filtered empty using existing EmptyState; preserve catalog retry and installed neighbors.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.tsx",
+        "line": 48,
+        "rule": "MDC-026 source trust hierarchy",
+        "detail": "Catalog and installation stale warnings are below retained content and have no source labels; StaleRefreshWarning.tsx:12 documents placement above retained content. With two independent lists, generic notices can be encountered after decisions and be hard to attribute.",
+        "fix": "Place source-named existing warnings before their respective retained lists; keep every card and independent retry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+        "line": 179,
+        "rule": "MDC-026 unavailable configuration",
+        "detail": "Install is blocked for vehicle loading/fatal error, but not channel fatal error. Channel failure shows recovery while null channel defaults remain selectable. This may be intentional 'all enabled channels' server semantics, not evidence of incorrect backend behavior.",
+        "fix": "Clarify degraded channel configuration and verify existing intended contract before changing enablement; do not reinterpret null as no channels.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "No mounted loading/error/empty/stale/offline, retry, install or removal scenarios verified."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / MDC-012 visual intensity",
+      "detail": "Shared Helix CTA hardcodes cyan-400 borders/ring, cyan-500 backgrounds and dark:text-cyan-100; the AIBadge renderer in this same file at :214 repeats cyan palette and ad-hoc typography. This is a residual fixed saturated accent treatment, not a proven neon/glow defect.",
+      "fix": "Shared AI owner should evaluate subdued semantic control/brand tokens while retaining Helix identity, accessible contextual name and streaming state. Do not reset explicit user theme choices.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.tsx",
+      "line": 31,
+      "rule": "MDC-015 / mission visual intensity",
+      "detail": "Outer GlassPanel wraps catalog GlassPanels, installed GlassPanels and shared AI GlassPanel/proposal panel. Source shows multiple surface layers; actual excessive depth/noise is unverified. No explicit neon, glow, pure-white or saturated-gradient class was found in the inspected pack presentation files.",
+      "fix": "Evaluate neutral section/card hierarchy on mounted page and consolidate redundant surface chrome only; retain catalog/AI/installed sections and actions.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+      "line": 30,
+      "rule": "MDC-002 separation",
+      "detail": "252-line dialog combines dirty state, business validation, selection filtering/paging, mutation payload and responsive presentation. Editors and delivery helpers are already decomposed; the root page is appropriately thin. This is a maintainability hotspot, not a missing-feature defect.",
+      "fix": "If modernization needs simplification, extract a feature-local typed configuration controller without duplicating shared query/forms or changing default/payload calculations.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIAlertPackBuilder.tsx",
+      "line": 3,
+      "rule": "MDC-002 category imports",
+      "detail": "Shared AI implementation uses concrete internal AIFeatureCard/withAiFeature imports, while features consume category barrels. This follows the circular-import prevention contract and must not be 'fixed' to self-barrel imports.",
+      "fix": "Keep this ownership/import distinction and existing lazy route boundary.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Core source behavior is comprehensive and uses existing shared infrastructure. Prioritize clearer empty/trust/validation states and focused open-dialog mobile/a11y QA; avoid cosmetic rewriting or business behavior changes."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Shared Helix calm semantic styling review",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "propsVariantsStates": "Retain title/description/buttonLabel, inputSlot, below/inline placement, disabled, aria-busy, contextual accessible name, streaming and output states; review AIBadge and outline CTA fixed cyan classes against semantic tokens.",
+      "usedBy": ["AIAlertPackBuilder on /notifications/packs", "existing AIFeatureCard consumers, not enumerated in this bounded audit"],
+      "dependsOn": ["MDC-010/012/013/016/042", "existing Button and typography/token owners", "theme/contrast/reduced-motion integration QA"],
+      "status": "source-backed review requirement; no shared change implemented"
+    },
+    {
+      "name": "Reuse existing overlay and field acceptance contracts",
+      "existingOwnerFile": "web\\src\\components\\ui\\Modal.tsx",
+      "propsVariantsStates": "Existing full versus fullscreen, footer, close/pending, Escape, focus restoration and internal scroll; Input/Select/Textarea description/error APIs remain authoritative.",
+      "usedBy": ["InstallPackDialog", "InstalledPackCard removal dialog"],
+      "dependsOn": ["MDC-021/024/040/043", "focused viewport/keyboard QA", "existing field primitives"],
+      "status": "dependency, not a proven shared implementation gap; do not create replacement overlay or validation system"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\packs\\PackRulePreview.tsx",
+      "line": 40,
+      "detail": "Mobile rule cards and desktop DataTable share editors, master defaults and selections. No competing form/table library was observed.",
+      "disposition": "Preserve intentional responsive renderers."
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+      "line": 128,
+      "detail": "VehicleMultiSelect installs business-specific all-current-and-future/specific vehicle scope; it does not replace header workspace selection.",
+      "disposition": "Keep independent installation scope; do not migrate it to global workspace vehicle."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "DB4FDA93F577ED5BD8DF26C9A4B41A7EF277A909215D47D5862C50F3B60ACE0D",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 21,
+    "rootFile": "web\\src\\features\\notifications\\pages\\AlertPacksPage.tsx",
+    "sectionNames": ["Localized page header", "Searchable curated catalog", "Optional Helix custom pack builder", "Installed packs and pagination", "Pack preview/configuration dialog", "Installation result", "Removal confirmation"],
+    "sectionCount": 7,
+    "sectionCountingMethod": "Semantic page/feature sections, including conditional dialogs/results. Root has one AlertPacksPanel mount; not seven root JSX panels.",
+    "componentCounts": {"rootPageLayout": 1, "rootAlertPacksPanel": 1, "rootGlassPanel": 0, "rootChartContainer": 0, "AlertPacksPanelGlassPanelDeclarations": 2, "InstalledPackCardGlassPanelDeclarations": 1},
+    "actions": [
+      "Search/clear catalog, preview pack, refresh installed list and previous/next 20-item pages.",
+      "Goal-based Helix suggestion and proposal review only; retain feature gate, validation and stream cancellation.",
+      "Choose all current/future or specific vehicles, paused-by-default versus immediately enabled, custom name, select all matching/individual rules, search, selected/customized filters and 10-rule paging.",
+      "Edit operator, SI threshold/read-only nonnumeric value, cooldown minutes (seconds payload), once/repeat, message and AI message suggestion, channel inheritance/all/none/specific, include title, per-rule reset delivery and apply defaults to all rules.",
+      "Guard dirty navigation/close, discard or keep editing; install with validation/loading/error; inspect created/reused result and Done.",
+      "Navigate independent members to /notifications/rules?rule={id}; remove pack while keeping all rules by default; optionally delete only owned, unshared, nondeleted members with confirmation."
+    ],
+    "dataBehavior": [
+      "Preserve query keys, policies, cancellation, safe arrays, invalidation/broadcast and independent retained-data/fatal recovery.",
+      "Preserve pack ID/version, template IDs, scope_key, member ownership/shared/deleted/enabled metadata and source installation timestamp.",
+      "Channel undefined follows pack defaults, null means all enabled channels, [] means no external channels; reset delivery removes only delivery overrides, retaining message/operator/threshold.",
+      "Default enabled=false, master once/include_title=true and DEFAULT_ALERT_COOLDOWN_S. Cooldown accepts integer minute multiples 60..604800 seconds; thresholds remain current percent 0..100/other -100..100; message nonblank <=1024, custom name <=100.",
+      "Threshold Celsius remains canonical input with useUnits display equivalent; do not convert wire/cache or install payload to user display units.",
+      "Preserve duplicate reuse explanations, existing-enabled-state promise, quiet hours/preferences, no-vehicle-command explanation and telemetry-availability caveat. Backend execution semantics were not independently verified.",
+      "Desktop and mobile must expose all eleven rule table fields and full defaults/result/removal details; no lossy simplification."
+    ]
+  },
+  "evidenceLimits": [
+    "Read-only source audit. Runtime, mounted visuals, keyboard, contrast, viewport, screen reader, forced colors and motion are unverified.",
+    "No source edits, Git operations, full-repository lint/build/TypeScript, tests, browser actions, actual pack installation/removal or other mutations performed.",
+    "Audit skill was loaded and its script inspected; script was intentionally not executed because it invokes project-wide TypeScript, outside Phase 0 scope. Findings use direct bounded source inspection instead.",
+    "Endpoints verified from source registration only; server responses, persistence, duplicate detection and transaction behavior were not exercised.",
+    "Only relevant mission/contract sections and page dependencies were inspected, not whole application foundations. Shared Button/Modal/DataTable/VehicleMultiSelect, AI message transport and backend handler internals were not exhaustively audited.",
+    "Existing test file names/search matches were seen but tests were not fully read or run; no historical receipt is claimed as current proof."
+  ],
+  "verification": {
+    "exitCode": 0,
+    "commands": [
+      "Get-Content docs\\frontend-audits\\audit-page-142.json -Raw | ConvertFrom-Json; verify all 20 contract keys",
+      "Get-FileHash web\\src\\features\\notifications\\pages\\AlertPacksPage.tsx -Algorithm SHA256; compare preservation.sourceHash",
+      "Select-String -Pattern 'neon|glow|text-white|bg-white|gradient' on root page plus non-test packs/*.tsx",
+      "Select-String -Pattern '<(button|input|textarea|select|table)\\b' on the same focused files",
+      "Select-String -SimpleMatch 'style={{' on the same focused files",
+      "(Get-Content web\\src\\features\\notifications\\pages\\AlertPacksPage.tsx).Count; (Get-Content web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx).Count"
+    ],
+    "rawOutput": [
+      "JSON contract: 20 required keys present; root hash matches DB4FDA93F577ED5BD8DF26C9A4B41A7EF277A909215D47D5862C50F3B60ACE0D",
+      "Focused pack source counts: noise=0, raw-controls=0, inline-style=0",
+      "Root line count=21; InstallPackDialog line count=252"
+    ],
+    "limits": "Pattern counts cover only root page and non-test pack TSX files, not inherited shared AI/theme styling or actual rendered contrast."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\AlertPacksPage.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\InstalledPackCard.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\PackDeliveryControls.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\PackRuleChannels.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\PackRuleDeliveryEditor.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\PackRuleMessageEditor.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\PackRulePreview.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\PackRuleResetButton.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\PackRuleTriggerEditor.tsx",
+    "web\\src\\features\\notifications\\components\\packs\\packDelivery.ts",
+    "web\\src\\components\\ai\\AIAlertPackBuilder.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\forms\\SearchInput.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\hooks\\useAlertPacks.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go"
+  ]
+}

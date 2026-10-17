@@ -1,0 +1,808 @@
+{
+  "item": "phase6-qa-ownership-charging-reconciliation",
+  "attempt": 1,
+  "mode": "source-only-readonly",
+  "status": "DONE",
+  "source_test_hashes_before": {
+    "web/src/features/ownership/pages/ChargingReconciliationPage.tsx": "af23234519dbb5fc705d9ce75248110a1d5cb1ba2ccec4701881eccc40d7cb8a",
+    "web/src/features/ownership/pages/ChargingReconciliationPage.test.tsx": "ac8e9b526e56a70b37e30081da4bf7479c3bf095e6ab4791c0e4dfff01e36643",
+    "web/src/api/hooks/useOwnership.ts": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+    "web/src/types/ownership.ts": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+    "web/src/features/ownership/formatters.ts": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+    "web/src/features/ownership/components/index.ts": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+    "web/src/features/ownership/components/EvidencePanel.tsx": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+    "web/src/features/ownership/components/MoneyInput.tsx": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+    "web/src/features/ownership/components/MutationError.tsx": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+    "web/src/features/ownership/components/OwnershipPanel.tsx": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+    "web/src/features/ownership/components/OwnershipPanel.test.tsx": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+    "web/src/features/ownership/components/VerdictBadge.tsx": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+    "web/src/features/ownership/components/VerdictBadge.test.tsx": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+    "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+    "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+    "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+    "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+    "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+    "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+    "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+    "web/src/lib/dateFormat.ts": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+    "web/src/lib/dateFormat.contract.test.ts": "4a210dfec7e175a73f221db0d6630cf91948fb3a2bd016c934ccc09ae9a4ef0b",
+    "web/src/lib/csvExport.ts": "4dbb7ec4728f6e34365db08cb64c3c3855f4e17ea19dc2c6eb98bc4705f56396",
+    "web/src/components/ui/DataTable.tsx": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+    "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+    "web/src/hooks/useConfirm.ts": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+    "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+    "web/src/api/client.ts": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+    "web/src/components/data-display/OperationalBrief.tsx": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+    "web/src/hooks/useOperationalMetrics.tsx": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+    "web/src/lib/metric-reference/formatMetric.ts": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+    "web/src/lib/unitConversion.ts": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+    "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+    "web/src/lib/operationalMode.ts": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+    "web/src/lib/operationalMode.test.ts": "28f77090e441aa4c37ba6152d873f4cbc280cedbc9befcd297c3f045df872be5",
+    "web/src/components/layout/PageContainer.tsx": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+    "web/src/components/layout/layout-reference/SourceContent.tsx": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+    "web/src/components/layout/layout-reference/SourceContent.production.test.tsx": "954f27c6c86e314b7fc4e8b5f396f135bd7586eb92b69230611736585d6be934",
+    "web/src/lib/currencyFormat.ts": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+    "web/src/lib/operationalMetrics.tsx": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+    "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+    "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+    "web/src/components/ui/Input.tsx": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+    "web/src/components/ui/Textarea.tsx": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+    "web/src/components/ui/ConfirmDialog.tsx": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+    "web/src/components/motion/FadeIn.tsx": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+    "web/src/hooks/useMotionPreference.ts": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+    "web/src/api/offlineCache.ts": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+    "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+  },
+  "source_test_hashes_before_at": "2026-10-14T02:11:18.028049+00:00",
+  "schemaVersion": 1,
+  "qaAcceptance": "SOURCE_FINDINGS_RECORDED_NOT_APPLICATION_ACCEPTANCE",
+  "startUtc": "2026-10-14T02:09:46.7265646Z",
+  "releaseByUtc": "2026-10-14T02:24:58.538Z",
+  "hardByUtc": "2026-10-14T02:29:58.538Z",
+  "findings": [
+    {
+      "id": "CR01",
+      "rule": "vehicle-invoice-identity-drift",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 73,
+      "lines": [
+        73,
+        71,
+        91,
+        92,
+        145,
+        149,
+        226
+      ],
+      "mechanism": "activeInvoice persists as an unscoped number. Register changes with vehicleId, report key/enablement depend only on invoiceID. No membership/report.invoice.vehicle_id guard. Import uses current vehicleId rather than pinned draft target and success selects created.id without checking current workspace.",
+      "sourceRepro": "Audit invoice A on vehicle7, change shared picker to8 without unmounting: register scopes8 but report/actions still A. Draft begun for7 submits for8; old create success can select old-target invoice in new workspace. Source trace only.",
+      "fix": "Pin invoice/draft vehicle context, validate membership and guard settlement authority. Retain mismatched drafts explicitly, do not erase usable evidence.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR02",
+      "rule": "dispute-target-and-settlement-authority",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 112,
+      "lines": [
+        112,
+        130,
+        156,
+        158,
+        161,
+        164,
+        166,
+        226,
+        1019,
+        1021,
+        1022,
+        1048
+      ],
+      "mechanism": "Dispute amount/reasons/note persist independently of invoice. Audit can change activeInvoice while editor stays open. useCreateDispute(activeInvoice) routes old draft to new invoice; currency/digest follow new report. Success blindly closes whichever editor is current.",
+      "sourceRepro": "Open A USD dispute345/reasonsA, Audit B JPY: old345 now shown in B denomination and submit targets B with old reasons/note confirmed=true. Delayed old success closes a newly opened editor. No mutation executed.",
+      "fix": "Capture invoice/currency/report version/digest/editor-attempt target; refuse silent retargeting and stale close/reset. Only current-context confirmed success closes.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR03",
+      "rule": "delete-clears-selection-before-success",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 109,
+      "lines": [
+        109,
+        110,
+        129,
+        745
+      ],
+      "mechanism": "Confirmed removal clears activeInvoice before dispatch; failed DELETE leaves invoice but discards retained selection/report with no rollback.",
+      "sourceRepro": "Select A, confirm Remove, assume rejected DELETE: selection already null; MutationError cannot restore report. Existing danger confirmation itself is correct.",
+      "fix": "Clear same selected invoice only on guarded confirmed success, keep selection/report on rejection and never clear newly selected B.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR04",
+      "rule": "missing-live-only-mutation-guard",
+      "severity": "high",
+      "file": "web/src/api/hooks/useOwnership.ts",
+      "line": 272,
+      "lines": [
+        272,
+        273,
+        289,
+        307,
+        308
+      ],
+      "mechanism": "Three reconciliation writes omit requiresLiveMode. client.ts:348-358 defaults false; operationalMode.ts:66-75 bypasses historical/offline guard. offlineCache.ts:49-74 unsafe patterns exclude this path. PageContainer displays read-only badge but does not disable child actions. queryClient.ts:67-74 mutations networkMode=always/retry0: attempted writes, NOT queued/replayed writes.",
+      "sourceRepro": "With valid as_of URL, create/delete/dispute reaches request with flagfalse and operational guard returns before network refusal. Source-only trace; no environment or API execution.",
+      "fix": "Opt only these three paths into existing live-mode request guard and expose truthful read-only feedback; preserve endpoint/confirmation/no-replay defaults.",
+      "ownerGroup": "mutation-policy",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR05",
+      "rule": "invoice-register-server-coverage",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 91,
+      "lines": [
+        91,
+        114,
+        710,
+        728,
+        731
+      ],
+      "mechanism": "Always limit50/offset0; consumes items but never server total/limit/offset, with no server next-page action. Later invoices cannot be selected. Export correctly says all loaded and is not a full-result violation.",
+      "sourceRepro": "Synthetic total81/items50 still requests50,0 forever; remaining31 have no register navigation. Test391 supplies total81 but asserts export only.",
+      "fix": "Use existing server pagination and loaded-versus-total disclosure, retaining loaded-row search/actions/export scope.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR06",
+      "rule": "required-money-cleared-to-zero",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 592,
+      "lines": [
+        592,
+        590,
+        1050,
+        1052
+      ],
+      "mechanism": "MoneyInput.tsx:46-48 returns null for empty input; required statement total/claim callers replace null with0, re-filling controlled field and defeating required-empty validation. Initial editable zero defaults are not telemetry violations.",
+      "sourceRepro": "Clear required Statement total/Amount claimed: onChange(null) becomes0 and next render no longer blank/required-invalid. No native submit executed.",
+      "fix": "Retain nullable cleared drafts, validate before numeric DTO construction, keep intentionally entered0 valid.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR07",
+      "rule": "billed-fee-component-fabrication",
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 692,
+      "lines": [
+        692,
+        52,
+        53,
+        54,
+        679,
+        691,
+        145
+      ],
+      "mechanism": "Line total is copied into billed_energy_minor; idle/tax initialized0 with no controls to enter actual components. InvoiceLine distinguishes energy/idle/tax/total at types/ownership.ts:275-279. This changes write payload, not display.",
+      "sourceRepro": "Synthetic source line energy800/idle100/tax100/total1000 entered through total editor sends energy1000/idle0/tax0. Engine attribution consequences uninspected; payload misclassification confirmed.",
+      "fix": "Capture actual separate billed components or mark decomposition unsupported, never fabricate all-energy decomposition; preserve ISO minor amounts.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR08",
+      "rule": "cleared-billing-bound-clock-fabrication",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 569,
+      "lines": [
+        569,
+        581,
+        564,
+        565,
+        576,
+        577
+      ],
+      "mechanism": "Both business date controls call formatters.ts:144-147 fromDateInput, which substitutes now for empty/invalid. Controlled date then shows today instead of remaining required-invalid. These are independent business dates, not duplicate workspace selectors.",
+      "sourceRepro": "Clear either date: current clock instant is substituted; both DTO strings remain populated. No native event executed. Server inclusive/exclusive semantics unproved.",
+      "fix": "Preserve empty/invalid draft dates and validate both bounds/order; do not use clock as missing billing evidence.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR09",
+      "rule": "variance-as-financial-liability",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 756,
+      "lines": [
+        756,
+        767,
+        780,
+        787,
+        1123
+      ],
+      "mechanism": "Result/brief claim positive variance is provider money owed and negative is user under-payment. Available fields are billed/expected/recoverable reconciliation with quality/evidence, not adjudicated debt/payment. Unsupported trailer excludes tax/idle legality and provider submission.",
+      "sourceRepro": "Limited-quality report with unknown expected line pricing still receives owes/under-paid wording based on sign. Source declaration only; no actual financial outcome inferred.",
+      "fix": "Label signed billed-versus-expected discrepancy/candidate recoverability; distinguish observed prices from estimates and legal/coverage limits. Serialized canonical copy owner required.",
+      "ownerGroup": "copy-i18n",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR10",
+      "rule": "detached-export-denomination-and-provenance",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 875,
+      "lines": [
+        875,
+        885,
+        886,
+        887,
+        933,
+        937
+      ],
+      "mechanism": "Line/attribution CSV/JSON contain minor amounts but omit currency and parent invoice/vehicle/period/version/digest. Fixed filename cannot supply denomination. Supplied matched session_id/session_started_at/energy_delta_wh/ambiguous also absent from line detail/export. Invoice export correctly includes currency.",
+      "sourceRepro": "USD and JPY reports each export variance_minor345 with same filename/no denomination or parent identity. Probable line cannot be traced to supplied matched session ID. No download invoked.",
+      "fix": "Preserve original14/six row fields and null/sign/array fidelity while adding compatible explicit source context and available matching provenance. Never invent absent observations.",
+      "ownerGroup": "page-lifecycle",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed"
+    },
+    {
+      "id": "CR11",
+      "rule": "date-preferences-bypassed",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 190,
+      "lines": [
+        190,
+        258,
+        445,
+        721,
+        970,
+        1097
+      ],
+      "mechanism": "Pure formatDateTime has no effective opts; dateFormat.ts:44-63 uses browser locale/timezone. OwnershipBrief.tsx:62,68,71 and ownership/EvidencePanel.tsx:99,143,145 likewise bypass saved preferences. Existing useDateFormat.ts:74-100 supplies settings-aware reactive locale/timezone.",
+      "sourceRepro": "Browser locale/zone differ from saved preference: money/counts use saved preference, dates/bounds keep browser default. Source-only mechanism, no timezone browser probe; additional12/24h integration unknown.",
+      "fix": "Adopt existing useDateFormat at page and two existing domain adapters, serialized shared-owner then page adoption; raw ISO exports unchanged.",
+      "ownerGroup": "date-preference-root",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed",
+      "additionalLocations": [
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "lines": [
+            62,
+            68,
+            71
+          ]
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "lines": [
+            99,
+            143,
+            145
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CR12",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 363,
+      "lines": [
+        363,
+        1058
+      ],
+      "mechanism": "Two controlled reason-code labels replace underscores into untranslated English; EvidencePanel.tsx:72 prints closed QualityStatus sufficient/limited/insufficient. Controlled labels, not provider notes/locations/narrative. VerdictBadge already localizes41 known values with safe unknown fallback.",
+      "sourceRepro": "Non-English UI still renders price_not_observed as price not observed and quality limited as limited. Tests mock translation/assert English; not real catalog acceptance.",
+      "fix": "Localize known reason/quality values through approved existing mappings, preserve raw export codes/user prose/unknown fallbacks and severity. Only genuinely missing reason copy needs explicit canonical lease.",
+      "ownerGroup": "copy-i18n",
+      "confidence": "CONFIRMED SOURCE MECHANISM; synthetic reasoning only, never executed",
+      "additionalLocations": [
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "lines": [
+            72
+          ]
+        }
+      ]
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "CRC01",
+      "rule": "nullable-populations-and-coverage-certainty",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "lines": [
+        114,
+        134,
+        135,
+        137,
+        846,
+        849,
+        904,
+        907,
+        954,
+        957
+      ],
+      "mechanism": "Nullable lists become empty with No material variance/Every measured session appears wording. Backend null=empty versus unavailable contract and unknown-priced aggregate semantics not established.",
+      "sourceRepro": "Synthetic returned limited50% report with nullable collections follows empty branches; source trace only, not actual server behavior.",
+      "needs": "Confirm authoritative null/empty and per-price/matched coverage semantics before promotion. Never infer measured zero or complete population from missing pricing."
+    },
+    {
+      "id": "CRC02",
+      "rule": "matching-population-both-bounds-and-energy-basis",
+      "file": "web/src/types/ownership.ts",
+      "lines": [
+        310,
+        314,
+        315,
+        317,
+        324,
+        363,
+        379,
+        380
+      ],
+      "mechanism": "Report fetched by invoiceID. Both invoice period bounds sent/displayed, but server inclusion/exclusion, location/provider candidate identity, ambiguous matching, grid-versus-battery energy basis, tolerance, observed-price versus model provenance and digest/version settlement stability unproved.",
+      "sourceRepro": "Compare declared fields/DTO with labels; no engine/backend or actual invoices/locations/sessions inspected.",
+      "needs": "Separately authorized synthetic contract proof of both exact bounds, physical basis, candidate/priced coverage, digest/version and authorization. Do not invent missing backend capabilities."
+    },
+    {
+      "id": "CRC03",
+      "rule": "pending-native-submit-and-edit-races",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "lines": [
+        141,
+        147,
+        148,
+        150,
+        156,
+        166,
+        703,
+        1076
+      ],
+      "mechanism": "Loading button blocks normal activation, but no handler in-flight latch; fields/toggles editable during pending. Old success resets current import lines/ref or closes current editor. Target mismatch already CR01/02; native double Enter incidence not counted again.",
+      "sourceRepro": "Proposed synthetic delayed settlement plus edits/reopen/rapid activation; NOT EXECUTED.",
+      "needs": "Separate controlled-promise mounted proof with existing tools, no production mutations; preserve rejected drafts and target authority."
+    },
+    {
+      "id": "CRC04",
+      "rule": "backend-validation-and-error-source-prose",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "lines": [
+        549,
+        552,
+        553,
+        556,
+        667
+      ],
+      "mechanism": "Currency validates only length3/uppercase; native energy step unspecified can reject fractionalWh. MutationError.tsx:17-18 prints raw upstream error.message; bucket labels/narratives may be backend prose. Server precision/currency/error sanitization/localization contracts unknown.",
+      "sourceRepro": "Proposed synthetic invalid three-character currency/fractionalWh/upstream error; no native event/API executed.",
+      "needs": "Verify currency/precision/native validation and safe error boundary before promotion; do not translate user/provider notes/locations speculatively."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "CRN01",
+      "rule": "mounted-mobile-a11y-theme-native-acceptance",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "lines": [
+        224,
+        233,
+        512,
+        703,
+        716,
+        855,
+        914,
+        964,
+        1012,
+        1015,
+        1043,
+        1076
+      ],
+      "declarations": "4 complete mobilePresentation adapters/quick-view fields and invoice inline Audit/Remove; min-h11/w11 belowmd page buttons, useId editor ARIA targets/shared labels/ref/required/hints/danger confirmation exist. Input default min-h10 is not measured44px acceptance; repeat report-source notices/retries remain to assess.",
+      "needs": "Actual320/375/390/430/768/1024/1280/1440/1920/2560 widths/narrow containers, md transitions, longRTL/200%text, both forms/nested drawers, safeareas/chrome,44px targets/unclippedfocus, keyboard/Escape/restoration, native input validity,4.5:1 text/3:1 UI contrast, themes/forcedcolors/reducedmotion/lowbandwidth, initial/fatal/retained/paused recovery.375 jsdom mocked rectangle is not native proof. ALL NOTRUN."
+    }
+  ],
+  "scope": {
+    "mode": "SOURCE_ONLY_READONLY",
+    "page": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+    "route": "/ownership/charging-reconciliation",
+    "routeEvidence": "Existing inventory frontend-inventory.md:204 and audit-page-153; no fresh route/browser acceptance",
+    "allowedWrites": [
+      "docs/frontend-audits/phase6-qa-ownership-charging-reconciliation.json",
+      "web/logs/phase6-qa-ownership-charging-reconciliation.log"
+    ],
+    "sourceWrites": [],
+    "acceptedSourceCommitFromQueue": "5b439c606dcc1d430c8bf9646b7921e0583ec8bc",
+    "acceptedCommitVerification": "Queue receipt only. One initial read-only git status command, no Git writes or tree/history comparison. Inherited deltas preserved.",
+    "readDocuments": [
+      "docs/orchestrator-loop.md FULL",
+      "docs/frontend-design-contract.md FULL2540lines/chunked",
+      "docs/frontend-mission.md principles/architecture/states/QA43-45",
+      "docs/frontend-inventory.md exact page204/domain502-503",
+      "docs/session-handoff.md current recovery/conventions first70lines",
+      "migration-queue.md exact QA/source/owners",
+      "audit-page-153 existing source report",
+      "docs/CONTRIBUTING.md relevant engineering conventions",
+      ".github/copilot-instructions.md relevant frontend rules",
+      ".github/instructions/react-frontend.instructions.md FULL",
+      ".github/instructions/unit-conversion.instructions.md FULL; historical legacy guidance superseded by current SI cutover",
+      ".github/instructions/frontend-si-cutover.instructions.md FULL"
+    ],
+    "instructionAvailability": "Referenced phase5-page-worker-instructions.txt not found by exact recursive filter under repository files; session-only location unavailable. No bypass.",
+    "duplicateObjectiveCheck": "No other phase6 JSON mentions exact page; exact QA item once. Phase5 row2111 already records activeInvoice/dispute risk for separate lifecycle fix; CR01/02 reconfirm it, do not remigrate completed page. No active pending/held exact-file corrective owner in02:17:29Z queue read.",
+    "exactQueueRows": [
+      {
+        "line": 137,
+        "raw": "| [~] | 6 | phase6-qa-ownership-charging-reconciliation | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-ownership-charging-reconciliation.json; web\\logs\\phase6-qa-ownership-charging-reconciliation.log | phase5-page-ownership-charging-reconciliation | 1 | reserved02:04:58.538Z; actor pending | - | ChargingReconciliationPage/direct supports; source-only, no actual invoices/locations/charging/financial/API/mutation access. |"
+      }
+    ]
+  },
+  "sectionActionInventory": [
+    {
+      "name": "Provider statements/import",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 496,
+      "tableLine": 710
+    },
+    {
+      "name": "Reconciliation result/two briefs",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 750,
+      "tableLine": null
+    },
+    {
+      "name": "Line-by-line audit",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 842,
+      "tableLine": 852
+    },
+    {
+      "name": "Variance attribution",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 896,
+      "tableLine": 911
+    },
+    {
+      "name": "Uninvoiced sessions",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 946,
+      "tableLine": 960
+    },
+    {
+      "name": "Dispute desk",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 994,
+      "tableLine": null
+    },
+    {
+      "name": "Evidence quality limitations",
+      "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+      "line": 1113,
+      "tableLine": null
+    }
+  ],
+  "allActionsReviewed": {
+    "providerRegister": [
+      "Import/cancel editor",
+      "provider/reference/currency/both business dates/total",
+      "add/edit billed lines",
+      "Import and reconcile",
+      "Audit",
+      "danger-confirmed Remove",
+      "all-loadedCSV/JSON",
+      "table search/columns/density/mobile quickview"
+    ],
+    "report": [
+      "two briefs Review details",
+      "line raw value filters/search/columns/mobile detail/sourceCSV/JSON",
+      "variance search/columns/mobile detail/sourceCSV/JSON",
+      "uninvoiced session/location/energy filters/search/columns/mobile detail/sourceCSV/JSON"
+    ],
+    "dispute": [
+      "open/cancel editor",
+      "claimed amount/reasons/note",
+      "Record dispute locally",
+      "full digest/history/recovered amount/status"
+    ],
+    "trust": [
+      "source-specific Retry",
+      "quality/sources/limitations/unsupported trailer"
+    ]
+  },
+  "preservation": {
+    "pageLines": 1133,
+    "panels": 7,
+    "tables": 4,
+    "briefs": 2,
+    "metrics": 8,
+    "forms": 2,
+    "metricsIds": [
+      "billed",
+      "expected",
+      "variance",
+      "recoverable",
+      "matched",
+      "unmatched",
+      "billedEnergy",
+      "energyVariance"
+    ],
+    "bothDateBounds": "Independent business period_start and period_end sent asISO and displayed. Route not range-enabled; no useRangeState needed for independent invoice dates. Clock fabrication CR08; server bound semantics CRC02.",
+    "SIAndSigns": "Wire/cache/rawWh/seconds/ISO minor amounts unchanged. useUnits converts only at render; formatCurrencyMinor preserves currency exponent/realnegative/zero and missingdash; signedtime/energy/money preserved. >5% usesabs, sharewidth clamped0..100 only for bar, raw share remains displayed.",
+    "exportPopulations": "Register all-loaded ignores search/visiblecolumns with explicit caption. Report tables pass DataTable matching-loaded/selected raw rows, not screen strings. Original8/14/6/5 schema fields retained; CSV null empty/JSON null/negative numbers/arrays preserved, formula-like strings neutralized. Context omission CR10.",
+    "loading": "OwnershipPanel49-57 routes enabled/no-payload to loading; preserveSummary keeps unknown summaries, OperationalBrief loading suppresses readings.",
+    "fatal": "Only derived fatalError replaces source body; shells/neighbors/affectedretry remain.",
+    "retained": "RefreshError/stale/paused retain payload/source retry, no full-page error prop. All source declarations, not mounted proof.",
+    "initialPaused": "OwnershipPanel44-47,54,75-77 shows initialpause with no empty inference, opted-in unknown summary retained. Pause cause not independently proved beyond fetchStatus.",
+    "preferences": "Number/units/rawcurrency valid; dateprefs CR11. Saved density/tableIds retained. No setting writes.",
+    "i18nMobileA11y": "Localized labels/sharedText/nativecontrols/uniqueuseIdARIA/min44mobile button declarations/complete4table adapters/confirm declared.3 controlled-code sites CR12; contrast/keyboard/native unproved.",
+    "exceptions": [
+      "PageLayout delegates PageContainer at layout-reference/PageLayout11-15",
+      "all7panel shells unconditional",
+      "importOpen/disputeOpen/dialogProps are disclosures not data-section hiding",
+      "page408 computed width allowed",
+      "formatters135 input token is JSDoc, not rendered rawHTML",
+      "three camelCase grep hits areTSparameters, actual queryvehicle_id snake_case",
+      "shared primitive HTML/vendor motion boundary expected",
+      "t fallbacks/machineCSVfields/provider notes/locations/refs not hardcodedUICopy"
+    ],
+    "historicalFixesNotReopened": "Existing audit mobile-hidden fields/ARIA association/semantic-role and paused/missing-sample issues now have source declarations; no stale issue promotion or historical test pass reuse."
+  },
+  "ownerNeeds": [
+    {
+      "id": "page-lifecycle",
+      "findings": [
+        "CR01",
+        "CR02",
+        "CR03",
+        "CR05",
+        "CR06",
+        "CR07",
+        "CR08",
+        "CR10"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+        "web/src/features/ownership/pages/ChargingReconciliationPage.test.tsx"
+      ],
+      "need": "One serialized page/test narrow corrective owner; split only with exclusive claims, preserve original assertions/completedmobile/source sections. No completed-page remigration."
+    },
+    {
+      "id": "mutation-policy",
+      "findings": [
+        "CR04"
+      ],
+      "files": [
+        "web/src/api/hooks/useOwnership.ts",
+        "explicitly reserved directly matching hook test; existing location unestablished"
+      ],
+      "need": "Only3reconcile write functions, existingrequest/live root read-only, no global campaign."
+    },
+    {
+      "id": "date-preference-root",
+      "findings": [
+        "CR11"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+        "web/src/features/ownership/components/EvidencePanel.tsx",
+        "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "explicitly reserved matching tests"
+      ],
+      "need": "One ownership date root plus serialized page adoption; not accepted advanced-intelligence EvidencePanel date owner."
+    },
+    {
+      "id": "copy-i18n",
+      "findings": [
+        "CR09",
+        "CR12"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+        "web/src/features/ownership/components/EvidencePanel.tsx",
+        "canonical/generated copy only under explicit exact missing-key lease"
+      ],
+      "need": "Deduplicate financial qualification/knownlabels; preserve rawcodes/severity/userprose/unknownfallback. No catalog writes now."
+    }
+  ],
+  "checks": {
+    "executed": "Read-only native/inlinePython searches/reads/SHA256/JSON-line-count checks only; no helper file created. Raw outputs/exits/failures in log/tool transcript.",
+    "pageGrepRawCounts": {
+      "styleCandidates": 1,
+      "rawHtml": 0,
+      "directVendorImport": 0,
+      "oldApiImport": 0,
+      "doublePrefixText": 0,
+      "camelcaseUrlCandidate": 0,
+      "hiddenDataSectionCandidate": 0,
+      "fetchEffectCandidate": 0,
+      "PageLayout": 1,
+      "panelDeclarations": 7,
+      "DataTables": 4
+    },
+    "scopeGrepRawCounts": {
+      "staticVarInline": 0,
+      "rawHtmlCandidate": 1,
+      "directVendorImport": 0,
+      "oldApiImport": 0,
+      "fetchEffect": 0,
+      "controlledLabelCandidates": 3,
+      "hookRequestDoublePrefix": 0,
+      "hookCamelcaseIdentifierCandidates": 3,
+      "hookLiveGuardDeclarations": 0
+    },
+    "backendRules": "NOT_APPLICABLE; no internalGo in directwebscope, no backend scans/claims.",
+    "failures": [
+      {
+        "command": "rg --files docs governing globs",
+        "exit": 1,
+        "rawError": "The term rg is not recognized; remaining discovery did not execute. Native reads substituted."
+      },
+      {
+        "command": "inlinePython governing excerpts defaultcp1252 stdout",
+        "exit": 1,
+        "rawError": "UnicodeEncodeError at mission522; partial/traceback preserved. Later read usesutf8 stdout."
+      },
+      {
+        "command": "tool2509 inlineJSON construction",
+        "exit": 1,
+        "rawError": "The filename or extension is too long. (os error206); process did notstart/noeffects. Artifact command split, not passingtest rerun."
+      }
+    ],
+    "tests": {
+      "status": "NOTRUN",
+      "pageAuthoredDeclarations": 28,
+      "expandedPageCasesBySource": 34,
+      "basis": "24ordinary +3each2 CSV/JSON +1each4 currency =34, not runner discovery/pass",
+      "supportDeclarations": {
+        "OwnershipPanel": 18,
+        "OwnershipBrief": 5,
+        "VerdictBadge": 8
+      },
+      "discovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "historical": "Queue source receipt34PASS/lint0 historicalonly, not executed here. Page hook/vehicle/i18n/download mocks, newQueryClient not production defaults,375DOMRect not nativeacceptance. No crosscontext/clearedmoney/date/livemode page cases declared."
+    }
+  },
+  "notRun": [
+    "fresh tests/lint/globalTSC/build/fullgates",
+    "audit/preservation helpers or passingreruns",
+    "browser/API/HTTP/real invoices/locations/charging/financial datasets",
+    "nativeevents/mutations",
+    "servers/installs/subagents/Gitwrites/cataloggeneration",
+    "native/mobile/keyboard/focus/contrast/themes/OSmatrix",
+    "backend matching/authorization/pricecoverage/bothbound contract"
+  ],
+  "summary": {
+    "confirmedFindings": 12,
+    "conditionalCandidates": 4,
+    "nativeCandidateGroups": 1,
+    "severityCounts": {
+      "high": 4,
+      "medium": 8
+    },
+    "byRule": {
+      "vehicle-invoice-identity-drift": 1,
+      "dispute-target-and-settlement-authority": 1,
+      "delete-clears-selection-before-success": 1,
+      "missing-live-only-mutation-guard": 1,
+      "invoice-register-server-coverage": 1,
+      "required-money-cleared-to-zero": 1,
+      "billed-fee-component-fabrication": 1,
+      "cleared-billing-bound-clock-fabrication": 1,
+      "variance-as-financial-liability": 1,
+      "detached-export-denomination-and-provenance": 1,
+      "date-preferences-bypassed": 1,
+      "hardcoded-string": 1
+    },
+    "controlledLabelOccurrences": 3,
+    "deduplicatedOwnerGroups": 4,
+    "primaryFileFindingCounts": {
+      "web/src/features/ownership/pages/ChargingReconciliationPage.tsx": 11,
+      "web/src/api/hooks/useOwnership.ts": 1
+    },
+    "priorityFixes": [
+      "CR01/02 targetcontext/settlement",
+      "CR04 liveonlywrites",
+      "CR07 actualfeecomponents",
+      "CR03 failure-retainedselection",
+      "CR06/08 requiredmissingdrafts/bounds",
+      "CR05/10 sourcecoverage/exportcontext",
+      "CR09/11/12 copy/dateprefs/knownlabels"
+    ]
+  },
+  "source_test_hashes_after": {
+    "web/src/features/ownership/pages/ChargingReconciliationPage.tsx": "af23234519dbb5fc705d9ce75248110a1d5cb1ba2ccec4701881eccc40d7cb8a",
+    "web/src/features/ownership/pages/ChargingReconciliationPage.test.tsx": "ac8e9b526e56a70b37e30081da4bf7479c3bf095e6ab4791c0e4dfff01e36643",
+    "web/src/api/hooks/useOwnership.ts": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+    "web/src/types/ownership.ts": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+    "web/src/features/ownership/formatters.ts": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+    "web/src/features/ownership/components/index.ts": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+    "web/src/features/ownership/components/EvidencePanel.tsx": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+    "web/src/features/ownership/components/MoneyInput.tsx": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+    "web/src/features/ownership/components/MutationError.tsx": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+    "web/src/features/ownership/components/OwnershipPanel.tsx": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+    "web/src/features/ownership/components/OwnershipPanel.test.tsx": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+    "web/src/features/ownership/components/VerdictBadge.tsx": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+    "web/src/features/ownership/components/VerdictBadge.test.tsx": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+    "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+    "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+    "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+    "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+    "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+    "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+    "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+    "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+    "web/src/lib/dateFormat.ts": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+    "web/src/lib/dateFormat.contract.test.ts": "4a210dfec7e175a73f221db0d6630cf91948fb3a2bd016c934ccc09ae9a4ef0b",
+    "web/src/lib/csvExport.ts": "4dbb7ec4728f6e34365db08cb64c3c3855f4e17ea19dc2c6eb98bc4705f56396",
+    "web/src/components/ui/DataTable.tsx": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+    "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+    "web/src/hooks/useConfirm.ts": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+    "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+    "web/src/api/client.ts": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+    "web/src/components/data-display/OperationalBrief.tsx": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+    "web/src/hooks/useOperationalMetrics.tsx": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+    "web/src/lib/metric-reference/formatMetric.ts": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+    "web/src/lib/unitConversion.ts": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+    "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+    "web/src/lib/operationalMode.ts": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+    "web/src/lib/operationalMode.test.ts": "28f77090e441aa4c37ba6152d873f4cbc280cedbc9befcd297c3f045df872be5",
+    "web/src/components/layout/PageContainer.tsx": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+    "web/src/components/layout/layout-reference/SourceContent.tsx": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+    "web/src/components/layout/layout-reference/SourceContent.production.test.tsx": "954f27c6c86e314b7fc4e8b5f396f135bd7586eb92b69230611736585d6be934",
+    "web/src/lib/currencyFormat.ts": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+    "web/src/lib/operationalMetrics.tsx": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+    "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+    "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+    "web/src/components/ui/Input.tsx": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+    "web/src/components/ui/Textarea.tsx": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+    "web/src/components/ui/ConfirmDialog.tsx": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+    "web/src/components/motion/FadeIn.tsx": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+    "web/src/hooks/useMotionPreference.ts": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+    "web/src/api/offlineCache.ts": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+    "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+  },
+  "source_test_hashes_after_at": "2026-10-14T02:24:15.818535+00:00",
+  "source_test_hash_drift": [],
+  "hashLimits": "Firstpins02:11:18Z; directboundary additions02:14:12/02:16:13Z afterreadonly discovery. Equalpins prove unchanged recordedbytes, not original/history/globalworktree or runtime.",
+  "verification": {
+    "JSONParse": true,
+    "exactLineRanges": true,
+    "countsOwnerCoverage": true,
+    "exactQueueItemCount": 1,
+    "sourceTestPinsMatched": true,
+    "pinnedFiles": 51
+  },
+  "reportWrittenUtc": "2026-10-14T02:24:15.818535+00:00",
+  "release": {
+    "artifact": "RELEASED; only namedJSON/log written",
+    "source": "NO SOURCE WRITES/NO SOURCE CLAIM",
+    "commands": "RELEASED; all own commands bounded/synchronous, no asynchelpers/server/tests started",
+    "limits": "DONE readonly sourceaudit only; NOT application/native/page acceptance"
+  }
+}

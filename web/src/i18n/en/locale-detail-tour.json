@@ -3,11 +3,11 @@
     "close": "Close tour",
     "skip": "Skip tour",
     "prev": "Back",
-    "finish": "Get Started!",
+    "finish": "Get started!",
     "next": "Next",
-    "title": "Onboarding Tour",
+    "title": "Onboarding tour",
     "description": "Re-run the guided walkthrough of TeslaSync features",
-    "restart": "Restart Tour",
+    "restart": "Restart tour",
     "openLauncher": "Show tours",
     "takeATour": "Take a tour",
     "dialogLabel": "Onboarding tour",
@@ -32,7 +32,7 @@
         "description": "The 60-second tour: sidebar, dashboard layout, edit mode, and keyboard shortcuts."
       },
       "alerts": {
-        "title": "Alerts & Alert Studio",
+        "title": "Alerts & alert studio",
         "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs."
       },
       "charging": {
@@ -41,7 +41,7 @@
       },
       "drives": {
         "title": "Drives & replay",
-        "description": "Drive history, Saved Views, and the trip replay scrubber with markers."
+        "description": "Drive history, saved views, and the trip replay scrubber with markers."
       },
       "vehicles": {
         "title": "Vehicles & access",
@@ -81,7 +81,7 @@
           "hint": "Applied only when TeslaSync first opens at the root URL; Dashboard remains available from navigation.",
           "options": {
             "dashboard": "Dashboard",
-            "actionCenter": "Action Center",
+            "actionCenter": "Action center",
             "vehicles": "Vehicles",
             "battery": "Battery",
             "charging": "Charging",
@@ -115,10 +115,10 @@
       },
       "settings": {
         "title": "Settings & preferences",
-        "description": "Theme, units, notification channels, and Saved Views — all in one place."
+        "description": "Theme, units, notification channels, and saved views — all in one place."
       },
       "debugger": {
-        "title": "FSM Debugger",
+        "title": "FSM debugger",
         "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks."
       }
     }

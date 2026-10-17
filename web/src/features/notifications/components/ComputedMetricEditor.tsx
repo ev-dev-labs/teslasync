@@ -12,10 +12,14 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Select as UiSelect, Input as UiInput, GlassPanel, Text } from '@/components/ui'
+import { Select as UiSelect, GlassPanel, Text } from '@/components/ui'
+import { UnitInput } from '@/components/forms'
 import type { ComputedMetricOp, ComputedMetricSummary } from '@/api/types'
 import { usePreviewComputedMetric } from '@/api/hooks/useNotifications'
-import { fmtNumber } from '@/lib/numberFormat'
+
+import { useSettings } from '@/hooks/useSettings'
+import { computedMetricInputUnit } from '@/lib/computedMetricUnits'
+import { formatForUnit, unitSymbol } from '@/lib/unitInput'
 
 export interface ComputedMetricEditorValue {
   metric_id: string
@@ -42,6 +46,7 @@ const CATEGORY_ORDER: Record<ComputedMetricSummary['category'], number> = {
 }
 
 export function ComputedMetricEditor({ value, onChange, metrics = [], loading }: Props) {
+  const { settings } = useSettings()
   const { t } = useTranslation()
   const previewMut = usePreviewComputedMetric()
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -56,8 +61,8 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
       || a.label.localeCompare(b.label))
     .map(m => ({
       value: m.id,
-      label: `${t(`notifications.alertStudio.metricCategories.${m.category}`, categoryLabel(m.category))} · ${t(`notifications.alertStudio.metricNames.${m.id}`, m.label)} (${unitSuffix(m.unit) || m.unit})`,
-    })), [metrics, t])
+      label: `${t(`notifications.alertStudio.metricCategories.${m.category}`, categoryLabel(m.category))} · ${t(`notifications.alertStudio.metricNames.${m.id}`, m.label)} (${unitSymbol(computedMetricInputUnit(m.unit).kind, settings) || unitSuffix(m.unit) || m.unit})`,
+    })), [metrics, t, settings])
 
   const windowOptions = useMemo(() => {
     const list = selected?.windows ?? []
@@ -89,19 +94,22 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
     setPreviewError(null)
   }
 
+  const threshold = value.metric_threshold.trim() ? Number(value.metric_threshold) : null
+  const metricUnit = computedMetricInputUnit(selected?.unit)
+  const thresholdUnit = value.metric_op.startsWith('%_change_')
+    ? computedMetricInputUnit('%')
+    : metricUnit
   const ready =
     !!value.metric_id &&
     !!value.metric_window &&
     !!value.metric_op &&
-    Number.isFinite(parseFloat(value.metric_threshold))
+    threshold !== null && Number.isFinite(threshold)
 
   // Refresh the preview when the selected metric/window/op/threshold changes.
   // Debounce minimally — the user has to actively choose values, so an
   // extra fetch on each change is acceptable and the registry is cheap.
   useEffect(() => {
-    if (!ready) return
-    const threshold = parseFloat(value.metric_threshold)
-    if (!Number.isFinite(threshold)) return
+    if (!ready || threshold === null) return
     setPreviewError(null)
     previewMut.mutate(
       {
@@ -125,10 +133,13 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
     value.metric_op,
     value.metric_threshold,
     value.vehicle_id,
+    threshold,
   ])
 
   const previewData = previewMut.data
-  const previewSuffix = selected ? unitSuffix(selected.unit) : ''
+  const previewSuffix = selected
+    ? unitSymbol(metricUnit.kind, settings) || unitSuffix(selected.unit)
+    : ''
 
   return (
     <div className="space-y-4">
@@ -184,14 +195,20 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
         <Text as="label" variant="metricLabel" className="mb-1 block">
           {t('notifications.alertStudio.computedMetric.threshold', 'Threshold')}
         </Text>
-        <UiInput
-          type="number"
+        <UnitInput
+          key={`${value.metric_id}-${thresholdUnit.kind}`}
+          unit={thresholdUnit.kind}
           className="w-full"
           aria-label={t('notifications.alertStudio.computedMetric.threshold', 'Threshold')}
-          value={value.metric_threshold}
-          onChange={e => onChange({ ...value, metric_threshold: e.target.value })}
+          value={threshold !== null && Number.isFinite(threshold)
+            ? threshold * thresholdUnit.canonicalFactor
+            : null}
+          commitOnChange
+          onChange={next => onChange({
+            ...value,
+            metric_threshold: next === null ? '' : String(next / thresholdUnit.canonicalFactor),
+          })}
           placeholder={t('notifications.alertStudio.computedMetric.thresholdPlaceholder', 'e.g. 200')}
-          step="any"
         />
       </div>
 
@@ -200,40 +217,45 @@ export function ComputedMetricEditor({ value, onChange, metrics = [], loading }:
           {t('notifications.alertStudio.computedMetric.preview', 'Live preview')}
         </Text>
         {!ready && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="muted">
             {t(
               'notifications.alertStudio.computedMetric.previewIdle',
               'Pick a metric, window, operator, and threshold to preview.',
             )}
-          </p>
+          </Text>
         )}
         {ready && previewMut.isPending && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="muted">
             {t('notifications.alertStudio.computedMetric.previewLoading', 'Computing…')}
-          </p>
+          </Text>
         )}
         {ready && previewError && (
-          <p role="alert" className="text-xs text-rose-300">{previewError}</p>
+          <Text role="alert" variant="bodySm" className="break-words text-rose-300">{previewError}</Text>
         )}
         {ready && !previewMut.isPending && !previewError && !previewData && (
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text variant="bodySm" color="muted">
             {t('notifications.alertStudio.computedMetric.previewEmpty', 'No preview available yet.')}
-          </p>
+          </Text>
         )}
-        {ready && !previewMut.isPending && !previewError && previewData && (
-          <p className="text-xs text-[var(--text-primary)]">
+        {ready && !previewMut.isPending && previewError && previewData && (
+          <Text variant="bodySm" color="secondary" role="status">
+            {t('notifications.alertStudio.editor.previewRetained', 'The previous preview remains visible; it may not reflect the current draft.')}
+          </Text>
+        )}
+        {ready && !previewMut.isPending && previewData && (
+          <Text variant="bodySm" className="break-words">
             {t(
               'notifications.alertStudio.computedMetric.previewValue',
               'Right now this metric is {{value}}{{suffix}} — would {{verdict}} fire.',
               {
-                value: fmtNumber(previewData.value, 2),
+                value: formatForUnit(previewData.value * metricUnit.canonicalFactor, metricUnit.kind, settings),
                 suffix: previewSuffix ? ` ${previewSuffix}` : '',
                 verdict: previewData.would_trigger
                   ? t('notifications.alertStudio.computedMetric.would', '')
                   : t('notifications.alertStudio.computedMetric.wouldNot', 'NOT'),
               },
             )}
-          </p>
+          </Text>
         )}
       </GlassPanel>
     </div>

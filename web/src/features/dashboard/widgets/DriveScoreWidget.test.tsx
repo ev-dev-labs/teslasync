@@ -26,7 +26,7 @@
  *     `useUnits` reads — that is why efficiency renders in "Wh/km" and the
  *     km→display passthrough is exercised by the render tests, while the miles
  *     branch is covered directly through the pure `toEfficiencyDisplay`.
- *   - `matchMedia` is stubbed before any import runs because <DataFreshness>'s
+ *   - `matchMedia` is stubbed before any import runs because <FreshnessDot>'s
  *     `useMotionPreference` (rendered transitively by <WidgetShell>) touches it
  *     on first paint and jsdom does not provide it.
  *
@@ -34,12 +34,15 @@
  * codebase — interactions use `fireEvent`, consistent with the other slice
  * tests.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
+import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
+import { inputPreferences } from '@/test/inputPreferences';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference reads it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
@@ -121,9 +124,51 @@ function renderWidget(node: ReactElement) {
 }
 
 beforeEach(() => {
+  const preferences = inputPreferences();
+  setGlobalPrecision(preferences.decimal_precision ?? 2);
+  setGlobalLocale(preferences.locale ?? 'en-US');
   fleetAnalyticsMock.mockReset();
   // Sensible default: a real 7-day window whose 320 Wh/km ⇒ a score of 78.
   fleetAnalyticsMock.mockReturnValue(makeQuery({ avg_efficiency_wh_km: 320 }));
+});
+afterEach(() => {
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
+});
+
+it('keeps measured zero fleet consumption separate from the unavailable derived score', () => {
+  fleetAnalyticsMock.mockReturnValue(makeQuery({ avg_efficiency_wh_km: 0 }));
+  renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
+  const brief = screen.getByTestId('dashboard-drive-consumption-brief');
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
+  expect(brief).toHaveTextContent('0.00 Wh/km');
+  // Scope copy moved off the face into the drawer header.
+  assertOperationalBriefDisclosure(brief, 'Fleet-wide', { contains: true });
+  assertOperationalBriefDisclosure(brief, 'requested seven-day analytics window', { contains: true });
+  expect(screen.getByText('No drive score yet')).toBeInTheDocument();
+});
+
+it.each([1, 2, 3])('keeps an accessible heading and score at %s columns', cols => {
+  renderWidget(<DriveScoreWidget size={{ cols, rows: 2 }} />);
+  expect(screen.getByRole('heading', { name: 'Drive score', level: 3 })).toBeVisible();
+  expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '78');
+});
+
+it.each([SIZE_COMPACT, SIZE_STANDARD])('keeps score and efficiency reactive without rewriting canonical consumption at %j', (size) => {
+  const analytics = Object.freeze({ avg_efficiency_wh_km: 320.125 });
+  fleetAnalyticsMock.mockReturnValue(makeQuery(analytics));
+  renderWidget(<DriveScoreWidget size={size} />);
+  expect(screen.getByText('78.00')).toBeInTheDocument();
+  if (size.rows > 1) expect(screen.getByText('320.13 Wh/km')).toBeInTheDocument();
+  act(() => {
+    const preferences = inputPreferences({ decimal_precision: 3, locale: 'de-DE' });
+    setGlobalPrecision(preferences.decimal_precision ?? 2);
+    setGlobalLocale(preferences.locale ?? 'en-US');
+  });
+  expect(screen.getByText('78,000')).toBeInTheDocument();
+  if (size.rows > 1) expect(screen.getByText('320,125 Wh/km')).toBeInTheDocument();
+  expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '78');
+  expect(analytics.avg_efficiency_wh_km).toBe(320.125);
 });
 
 // ── driveScoreFromEfficiency (pure) ──────────────────────────────────────────
@@ -177,12 +222,11 @@ describe('DriveScoreWidget', () => {
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
     // 320 Wh/km ⇒ round(250/320*100) = 78.
-    expect(screen.getByText('78')).toBeInTheDocument();
+    expect(screen.getByText('78.00')).toBeInTheDocument();
     expect(screen.getByText('Score')).toBeInTheDocument();
     // Efficiency stat: label, km-passthrough value, and the Wh/km unit.
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('320')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('320.00 Wh/km')).toBeInTheDocument();
     // Not the empty state.
     expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
@@ -196,11 +240,11 @@ describe('DriveScoreWidget', () => {
     renderWidget(<DriveScoreWidget size={SIZE_COMPACT} />);
 
     // The gauge essentials still render...
-    expect(screen.getByText('78')).toBeInTheDocument();
+    expect(screen.getByText('78.00')).toBeInTheDocument();
     expect(screen.getByText('Score')).toBeInTheDocument();
     // ...but the compact hero omits the stat row entirely.
     expect(screen.queryByText('Efficiency')).not.toBeInTheDocument();
-    expect(screen.queryByText('320')).not.toBeInTheDocument();
+    expect(screen.queryByText('320.00')).not.toBeInTheDocument();
   });
 
   it('renders the empty state (role=status) when analytics is absent', () => {
@@ -223,7 +267,7 @@ describe('DriveScoreWidget', () => {
 
     expect(screen.getByText('No drive score yet')).toBeInTheDocument();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
   });
 
   it('treats a non-finite efficiency payload as no score', () => {
@@ -242,7 +286,7 @@ describe('DriveScoreWidget', () => {
 
     const { container } = renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
     expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
@@ -255,16 +299,17 @@ describe('DriveScoreWidget', () => {
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
     // Last-known score is retained despite the error flag.
-    expect(screen.getByText('78')).toBeInTheDocument();
+    expect(screen.getByText('78.00')).toBeInTheDocument();
     expect(screen.getByText('Score')).toBeInTheDocument();
   });
 
-  it('falls back to the empty state on error when no data is present', () => {
+  it('surfaces a fatal query error with retry when no data is present', () => {
     fleetAnalyticsMock.mockReturnValue(makeQuery(undefined, { isError: true }));
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('No drive score yet')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

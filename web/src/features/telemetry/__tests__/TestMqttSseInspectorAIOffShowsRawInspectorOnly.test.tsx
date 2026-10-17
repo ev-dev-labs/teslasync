@@ -69,7 +69,7 @@ vi.mock('@/api/hooks/useTelemetry', async () => {
 
 import { useSettings } from '@/hooks/useSettings';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
-import { AIMqttSseInspectorExplanations } from '@/components/ai/AIMqttSseInspectorExplanations';
+import { AIMqttSseInspectorExplanations } from '@/components/ai';
 import MQTTInspectorPage from '@/features/telemetry/pages/MQTTInspectorPage';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
@@ -251,7 +251,7 @@ describe('TestMqttSseInspectorAIOffShowsRawInspectorOnly (mqtt-sse-inspector-exp
     // (jsdom has zero-height containers so individual rows
     // don't paint), but the section header reports the row
     // count from the snapshot, proving that the baseline table is reachable.
-    expect(screen.getByText(/1 vehicles/i)).toBeInTheDocument();
+    expect(screen.getByText('1 vehicle')).toBeInTheDocument();
 
     // 3) The AI explainer surface MUST be absent from the DOM
     // (ADR-015 §I5). This baseline-intact assertion verifies that even

@@ -88,9 +88,20 @@ describe('ActivityFeedPanel', () => {
     const status = screen.getByRole('status', { name: 'Loading activity feed' });
     expect(status).toHaveAttribute('aria-busy', 'true');
     // Six skeleton rows stand in for the pending feed.
-    expect(status.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(status.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
     // The feed itself (and its empty copy) must not render underneath.
     expect(screen.queryByText('No recent activity in this window.')).toBeNull();
+  });
+
+  it('uses the neutral secondary role for the decorative history glyph with populated data', () => {
+    renderPanel({ entries: [makeEntry({ action: 'auth.login' })] });
+
+    const heading = screen.getByRole('heading', { level: 3, name: 'Activity feed' });
+    const icon = heading.querySelector('svg');
+    expect(icon).toHaveClass('lucide-history', 'h-4', 'w-4', 'text-[var(--text-secondary)]');
+    expect(icon).not.toHaveClass('text-cyan-300');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('Signed in')).toBeInTheDocument();
   });
 
   it('renders each entry, with a click-through link for routable entities', () => {

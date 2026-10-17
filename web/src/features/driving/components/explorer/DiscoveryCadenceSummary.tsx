@@ -1,7 +1,9 @@
 import { CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, MetricLabel, MetricValue, Text } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 
 import type { ExplorerSummary } from '../../lib/explorer';
 
@@ -13,25 +15,19 @@ export function DiscoveryCadenceSummary({
   summary,
 }: DiscoveryCadenceSummaryProps) {
   const { t } = useTranslation();
-  const days = (value: number | null) =>
-    value == null
-      ? '—'
-      : t('explorer.coverage.days', '{{count}} days', {
-          count: value,
-        });
-  const metrics: Array<[string, string]> = [
-    [
-      t('explorer.coverage.medianGap', 'Median gap'),
-      days(summary.cadence.medianGapDays),
-    ],
-    [
-      t('explorer.coverage.longestGap', 'Longest gap'),
-      days(summary.cadence.longestGapDays),
-    ],
-    [
-      t('explorer.coverage.latestGap', 'Latest gap'),
-      days(summary.cadence.latestGapDays),
-    ],
+  const metrics: StatMetric[] = [
+    { metricId: 'duration', occurrenceId: 'median-gap',
+      label: t('explorer.coverage.medianGap', 'Median gap'),
+      rawValue: summary.cadence.medianGapDays == null ? null : summary.cadence.medianGapDays * 86400,
+      display: { formatter: raw => ({ value: t('explorer.coverage.days', '{{count}} days', { count: raw / 86400 }), unit: '' }) } },
+    { metricId: 'duration', occurrenceId: 'longest-gap',
+      label: t('explorer.coverage.longestGap', 'Longest gap'),
+      rawValue: summary.cadence.longestGapDays == null ? null : summary.cadence.longestGapDays * 86400,
+      display: { formatter: raw => ({ value: t('explorer.coverage.days', '{{count}} days', { count: raw / 86400 }), unit: '' }) } },
+    { metricId: 'duration', occurrenceId: 'latest-gap',
+      label: t('explorer.coverage.latestGap', 'Latest gap'),
+      rawValue: summary.cadence.latestGapDays == null ? null : summary.cadence.latestGapDays * 86400,
+      display: { formatter: raw => ({ value: t('explorer.coverage.days', '{{count}} days', { count: raw / 86400 }), unit: '' }) } },
   ];
 
   return (
@@ -53,17 +49,11 @@ export function DiscoveryCadenceSummary({
         </Badge>
       </div>
       {summary.evidence.cadenceSufficient ? (
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {metrics.map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-lg bg-[var(--surface-2)] p-2"
-            >
-              <MetricValue>{value}</MetricValue>
-              <MetricLabel>{label}</MetricLabel>
-            </div>
-          ))}
-        </div>
+        <NestedDrivingBrief metrics={metrics}
+          title={t('explorer.brief.cadenceTitle', 'Observed discovery intervals')}
+          description={t('explorer.brief.cadenceScope', 'Intervals between first destination discoveries in returned history, not all vehicle travel.')}
+          period={{ kind: 'unknown', label: t('explorer.coverage.discoveryCount', '{{count}} discoveries', { count: summary.cadence.discoveries }),
+            reason: t('explorer.coverage.cadenceInsufficient', 'Three destination discoveries are required before interval cadence is reported.') }} />
       ) : (
         <div className="mt-4 flex items-start gap-2">
           <CalendarClock

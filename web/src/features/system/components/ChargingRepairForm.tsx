@@ -107,7 +107,7 @@ export function ChargingRepairForm({
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         <Input
-          label={t('dataRepair.field.endedAt', 'End Date/Time (ISO)')}
+          label={t('dataRepair.field.endedAt', 'End date/time (ISO)')}
           value={form.ended_at}
           placeholder="2026-03-30T04:00:00Z"
           onChange={set('ended_at')}
@@ -117,7 +117,7 @@ export function ChargingRepairForm({
           disabled={disabled}
         />
         <Input
-          label={t('dataRepair.field.energyWh', 'Energy Added (Wh)')}
+          label={t('dataRepair.field.energyWh', 'Energy added (Wh)')}
           type="number"
           value={form.total_energy_added_wh}
           onChange={set('total_energy_added_wh')}
@@ -125,14 +125,14 @@ export function ChargingRepairForm({
           disabled={disabled}
         />
         <Input
-          label={t('dataRepair.field.endSoc', 'End Battery (%)')}
+          label={t('dataRepair.field.endSoc', 'End battery (%)')}
           type="number"
           value={form.end_soc_pct}
           onChange={set('end_soc_pct')}
           disabled={disabled}
         />
         <Input
-          label={t('dataRepair.field.peakPowerW', 'Peak Power (W)')}
+          label={t('dataRepair.field.peakPowerW', 'Peak power (w)')}
           type="number"
           value={form.peak_power_w}
           onChange={set('peak_power_w')}
@@ -140,7 +140,7 @@ export function ChargingRepairForm({
           disabled={disabled}
         />
         <Input
-          label={t('dataRepair.field.avgPowerW', 'Avg Power (W)')}
+          label={t('dataRepair.field.avgPowerW', 'Avg power (w)')}
           type="number"
           value={form.avg_power_w}
           onChange={set('avg_power_w')}

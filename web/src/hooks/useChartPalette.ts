@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
+import { useTheme, type ColorTheme, type ModeTheme } from '@/components/ui/ThemeProvider'
 import { useSettings } from '@/api/hooks/useSettings'
-import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
+import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON, buildChartPalette } from '@/lib/colors'
 
 /** Persisted Settings value for the user's preferred chart palette. */
 export type ChartPaletteId = 'cb_safe' | 'neon'
@@ -17,8 +19,12 @@ export const CHART_PALETTES: Record<ChartPaletteId, readonly string[]> = {
  */
 export function resolveChartPalette(
   pref: string | null | undefined,
+  context?: { theme: ColorTheme; mode: ModeTheme },
 ): readonly string[] {
-  return pref === 'neon' ? CHART_PALETTES.neon : CHART_PALETTES.cb_safe
+  const palette = pref === 'neon' ? CHART_PALETTES.neon : CHART_PALETTES.cb_safe
+  return context?.mode.colorScheme === 'light'
+    ? buildChartPalette(context.theme, context.mode, palette).series
+    : palette
 }
 
 /**
@@ -28,7 +34,7 @@ export function resolveChartPalette(
  * canonical TanStack Query hook (`@/api/hooks/useSettings`), so cross-tab
  * settings broadcasts mutate every consumer instantly.
  *
- * Defaults to the color-blind-safe Okabe-Ito palette
+ * Defaults to the restrained Okabe-Ito hue order
  * (`CHART_COLORS_CB_SAFE`) when the preference is missing, unloaded, or
  * unrecognised — matching the static `CHART_COLORS` default in
  * `@/lib/colors`. Pass through to `useThemeChartPalette()` (in
@@ -38,5 +44,6 @@ export function resolveChartPalette(
  */
 export function useChartPalette(): readonly string[] {
   const { data } = useSettings()
-  return resolveChartPalette(data?.chart_palette)
+  const { theme, mode } = useTheme()
+  return useMemo(() => resolveChartPalette(data?.chart_palette, { theme, mode }), [data?.chart_palette, theme, mode])
 }

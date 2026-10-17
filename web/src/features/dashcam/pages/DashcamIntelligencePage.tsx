@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Video } from 'lucide-react';
-import { PageContainer, Grid } from '@/components/layout';
+import { PageLayout, Grid, LayoutCard, SourceContent } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, InlineCallout } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -22,17 +23,18 @@ import {
  * Local Dashcam / Sentry Intelligence — a fully local-first vertical slice:
  * searchable clip catalog, privacy redaction, honest local event detection,
  * and telemetry-synchronized incident reconstruction. Nothing here uploads
- * clip bytes or identifying metadata; the only network calls this page
- * makes are the existing vehicle-telemetry read endpoints used for
- * reconstruction.
+ * clip bytes or identifying metadata. Workspace vehicle-catalog and
+ * telemetry-history reads remain separate from local clip storage,
+ * analysis, and exports.
  */
 export default function DashcamIntelligencePage() {
   const { t } = useTranslation();
-  usePageTitle(t('dashcam.page.title', 'Dashcam & Sentry Intelligence'));
+  usePageTitle(t('dashcam.page.title', 'Dashcam & Sentry intelligence'));
 
   const { vehicleId } = useSelectedVehicle();
   const { persistent, fallbackReason } = useDashcamDb();
   const clipsQuery = useClipCatalog();
+  const catalogState = deriveDataState(clipsQuery);
   const [filters, setFilters] = useState(defaultClipFilterState());
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
 
@@ -44,42 +46,50 @@ export default function DashcamIntelligencePage() {
   );
 
   return (
-    <PageContainer
-      title={t('dashcam.page.title', 'Dashcam & Sentry Intelligence')}
+    <PageLayout
+      title={t('dashcam.page.title', 'Dashcam & Sentry intelligence')}
       subtitle={t(
         'dashcam.page.subtitle',
         'Local-only clip catalog, privacy redaction, and telemetry-synchronized incident reconstruction. Nothing leaves this browser.',
       )}
-      loading={clipsQuery.isLoading}
+      query={clipsQuery}
     >
       <FadeIn>
         <div className="space-y-4">
           {!persistent && (
-            <GlassPanel padding="sm" className="border-amber-400/30 bg-amber-500/5">
-              <p className="text-xs text-amber-200/90">
-                {t(
-                  'dashcam.page.noPersistence',
-                  'Local storage is not persistent in this browser ({{reason}}) — imported clips will be lost when this tab closes.',
-                  { reason: fallbackReason ?? t('dashcam.page.unknownReason', 'unknown reason') },
-                )}
-              </p>
-            </GlassPanel>
+            <InlineCallout variant="warning">
+              {t(
+                'dashcam.page.noPersistence',
+                'Local storage is not persistent in this browser ({{reason}}) — imported clips will be lost when this tab closes.',
+                { reason: fallbackReason ?? t('dashcam.page.unknownReason', 'unknown reason') },
+              )}
+            </InlineCallout>
           )}
 
           <ImportPanel vehicleId={vehicleId} />
 
           <Grid cols={{ default: 1, lg: 3 }} gap={4}>
             <div className="space-y-4 lg:col-span-1">
-              <GlassPanel padding="md">
+              <LayoutCard title={t('dashcam.filters.ariaLabel', 'Clip filters')}>
                 <ClipFilterBar clips={clips} filters={filters} onChange={setFilters} />
-              </GlassPanel>
-              <ClipCatalogList
-                clips={filteredClips}
-                totalCount={clips.length}
-                selectedClipId={selectedClipId}
-                onSelect={setSelectedClipId}
-                onClearFilters={() => setFilters(defaultClipFilterState())}
-              />
+              </LayoutCard>
+              <SourceContent
+                state={catalogState.fatalError ? 'error' : catalogState.refreshError ? 'retained'
+                  : clipsQuery.isLoading && !catalogState.hasData ? 'loading' : 'ready'}
+                label={t('dashcam.page.title', 'Dashcam & Sentry intelligence')}
+                error={catalogState.fatalError}
+                errorMessage={t('dashcam.catalog.loadFailed', 'The local clip catalog could not be loaded.')}
+                emptyMessage={t('dashcam.detail.emptyTitle', 'No clip selected')}
+                errorRecovery={{ onRetry: () => { void clipsQuery.refetch(); } }}
+              >
+                <ClipCatalogList
+                  clips={filteredClips}
+                  totalCount={clips.length}
+                  selectedClipId={selectedClipId}
+                  onSelect={setSelectedClipId}
+                  onClearFilters={() => setFilters(defaultClipFilterState())}
+                />
+              </SourceContent>
             </div>
 
             <div className="lg:col-span-2">
@@ -99,6 +109,6 @@ export default function DashcamIntelligencePage() {
           </Grid>
         </div>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

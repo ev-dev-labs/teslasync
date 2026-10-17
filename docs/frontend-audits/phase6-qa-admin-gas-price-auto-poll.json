@@ -1,0 +1,576 @@
+{
+  "item": "phase6-qa-admin-gas-price-auto-poll",
+  "phase": 6,
+  "completion": "DONE",
+  "sourceVerdict": "FAIL",
+  "nativeVerdict": "NOTRUN",
+  "verifiedCheckCounts": {"PASS": 17, "FAIL": 9, "NOTRUN": 5},
+  "confirmedIssueCount": 11,
+  "candidateCount": 3,
+  "acceptance": "Report completion only; neither source defects nor native/page/application acceptance are cleared.",
+  "startedAt": "2026-10-13T09:20:09.408-07:00",
+  "returnTarget": "2026-10-13T09:40:09.408-07:00",
+  "hardDeadline": "2026-10-13T09:45:09.408-07:00",
+  "page": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+  "routes": ["/gas-price"],
+  "purpose": "Inspect EIA gasoline polling status and prices, control its schedule, and review price history.",
+  "mode": "Read-only source QA of the accepted page, direct sections and supporting request contracts. Reproduction steps below are source-derived proposals, not executed browser/API scenarios.",
+  "authority": [
+    "migration-queue.md:141-185 rolling finished-page QA contract",
+    "migration-queue.md:202 existing assigned QA row",
+    "migration-queue.md:1530 source-only Phase5 acceptance",
+    "docs\\orchestrator-loop.md:93-124 bounded worker contract",
+    "docs\\frontend-design-contract.md:451-497 trust, currency, SI and live-only mutation contract",
+    "docs\\frontend-design-contract.md:509-539 mobile preservation and accessibility",
+    "docs\\frontend-design-contract.md:557-605 source/native evidence separation",
+    "docs\\frontend-mission.md:529-779 responsive, forms, state and offline requirements",
+    "docs\\frontend-mission.md:921-1080 accessibility, data separation and extremes",
+    "docs\\frontend-mission.md:1416-1518 QA and definitions of done",
+    "docs\\session-handoff.md:60-83 historical serialized technical gate; not rerun",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md"
+  ],
+  "checks": [
+    {
+      "id": "route-registration",
+      "status": "PASS",
+      "evidence": ["web\\src\\App.tsx:264", "web\\src\\App.tsx:727"],
+      "detail": "Source declares the lazy page and /gas-price SafeRoute. Runtime mount/authentication was not exercised."
+    },
+    {
+      "id": "gas-hook-paths-verbs-and-bodies",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:152-222", "internal\\api\\router.go:3796-3805", "internal\\api\\gasprice\\handler.go:109-146"],
+      "detail": "All five gas operations agree: GET status/history, POST poll/toggle, PUT config. Prefix-free paths, enabled boolean and snake_case poll_interval agree with handlers. Registration is conditional on GasPriceWorker; actual availability NOTRUN."
+    },
+    {
+      "id": "presentation-settings-route",
+      "status": "PASS",
+      "evidence": ["web\\src\\hooks\\useSettings.ts:80-93", "web\\src\\api\\settings.ts:24", "web\\src\\api\\hooks\\useSettings.ts:30", "internal\\api\\router.go:3702"],
+      "detail": "Both presentation settings readers resolve GET /settings. Palette/formatting are additional independent sources, not the gas-price worker."
+    },
+    {
+      "id": "response-shapes",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\types.ts:2021-2037", "internal\\worker\\gas_price_worker.go:274-280", "internal\\api\\gasprice\\handler.go:69-77"],
+      "detail": "Existing TS status/history fields match Go JSON tags, including nullable effective_to. This does not resolve the missing currency/price-denomination metadata or legacy efficiency_mpg contract."
+    },
+    {
+      "id": "poll-interval-value-validation",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:34-42", "internal\\api\\gasprice\\handler.go:140-143"],
+      "detail": "The four offered values daily/7d/15d/30d exactly match the server allow-list. Invalid supplied values receive source-defined HTTP 400; no request was made."
+    },
+    {
+      "id": "independent-source-shells",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:55-82", "web\\src\\components\\layout\\PageContainer.tsx:254-258"],
+      "detail": "Four sections remain mounted without a single page-level loading/error/empty gate. Named status/history sources are passed independently."
+    },
+    {
+      "id": "initial-loading",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:42", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:19-20", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:55", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:22"],
+      "detail": "Summary loading, configuration/history skeletons and canonical chart loading are wired. Skeleton geometry and announcements remain unmeasured."
+    },
+    {
+      "id": "fatal-read-error",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\dataState.ts:201-220", "web\\src\\features\\admin\\components\\continuation-admin-2\\AdminSourceContent.tsx:22-24", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:44", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:22"],
+      "detail": "Only fatalError replaces each source body; QueryError/ChartCard retain retry and other sections."
+    },
+    {
+      "id": "empty-and-never-polled",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:23", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:55-58", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:17-34"],
+      "detail": "Empty history has localized chart/table recovery text. The zero-time sentinel produces Never/Awaiting first poll; absent prices are not fabricated as measured zero. Valid-zero financial semantics remain a candidate below."
+    },
+    {
+      "id": "retained-refresh-error",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\dataState.ts:224-244", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:72-73", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:43", "web\\src\\features\\admin\\components\\continuation-admin-2\\AdminSourceContent.tsx:27-34"],
+      "detail": "Retained status/history stay visible. The page now has an explicit trend warning/retry; the older audit's missing-trend-warning concern is addressed in source, not natively accepted."
+    },
+    {
+      "id": "paused-read-state",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\dataState.ts:185-249", "web\\src\\components\\feedback\\DataSourceNotice.tsx:79-87", "web\\src\\components\\feedback\\DataSourceNotice.tsx:104-128", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:87-96"],
+      "detail": "Paused retained reads become stale without an invented server error. Initial paused reads retain isRefreshBlocked and are identified in the named-source notice. Local loading placeholders can coexist with that notice."
+    },
+    {
+      "id": "mutation-feedback-and-pending",
+      "status": "FAIL",
+      "findingIds": ["GAS-01", "GAS-10"],
+      "evidence": ["web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:47-48", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:25-35", "web\\src\\api\\hooks\\useSettings.ts:177-222"],
+      "detail": "Pending disabling and HTTP-rejection toasts exist, but request acknowledgement is presented as completed provider success and live-only guards are not opted into."
+    },
+    {
+      "id": "poll-status-versus-provider-failure",
+      "status": "FAIL",
+      "findingIds": ["GAS-01"],
+      "evidence": ["internal\\worker\\gas_price_worker.go:125-151", "internal\\worker\\gas_price_worker.go:274-280", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:20-22"],
+      "detail": "enabled describes scheduling, not last-attempt health. Provider/record failures are logged/traced and return without a failure field in the status payload; frontend mutation onError cannot receive detached provider failures. Do not infer that Running means a successful current poll."
+    },
+    {
+      "id": "automatic-history-refresh",
+      "status": "FAIL",
+      "findingIds": ["GAS-02"],
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:152-181", "web\\src\\api\\queryClient.ts:48-58"]
+    },
+    {
+      "id": "price-currency-and-volume-integrity",
+      "status": "FAIL",
+      "findingIds": ["GAS-03", "GAS-04", "GAS-05"],
+      "evidence": ["internal\\adapter\\gasprices\\eia.go:181-185", "web\\src\\hooks\\useFormatting.ts:45-57", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:16-29", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:16-26"]
+    },
+    {
+      "id": "history-result-scope",
+      "status": "FAIL",
+      "findingIds": ["GAS-06"],
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:165", "internal\\api\\apiparams\\params.go:25-27", "internal\\api\\gasprice\\handler.go:170-186"]
+    },
+    {
+      "id": "workspace-vehicle-and-range-scope",
+      "status": "FAIL",
+      "findingIds": ["GAS-08"],
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-77", "web\\src\\lib\\workspaceScope.ts:95-166", "web\\src\\components\\layout\\WorkspaceHeader.tsx:35-67"],
+      "detail": "No workspace date range is enabled, matching the currently unbounded/global API. Vehicle scope is erroneously exposed for this US-average global surface; do not add a local picker or invent backend vehicle filtering."
+    },
+    {
+      "id": "actual-scheduling-interval-agreement",
+      "status": "FAIL",
+      "findingIds": ["GAS-09"],
+      "evidence": ["internal\\api\\gasprice\\handler.go:146", "internal\\worker\\gas_price_worker.go:74-75", "internal\\worker\\gas_price_worker.go:108-115", "internal\\worker\\gas_price_worker.go:253-257"]
+    },
+    {
+      "id": "i18n-literal-catalog-coverage",
+      "status": "PASS",
+      "evidence": ["web\\src\\i18n\\en.json:22263-22313", "web\\src\\i18n\\en.json:8105-8120", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:31-63"],
+      "detail": "Fresh bounded catalog parse found 54 distinct literal t() keys across page/sections/AdminSummary and zero missing keys. Gas toast keys were separately read in canonical English. Translation quality, other locales and generated split runtime loading NOTRUN."
+    },
+    {
+      "id": "a11y-source-names-and-alternatives",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:36", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:24-42", "web\\src\\components\\ui\\Toggle.tsx:92-109", "web\\src\\components\\ui\\Select.tsx:68-109", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:21-27", "web\\src\\components\\charts\\ChartContainer.tsx:172-187"],
+      "detail": "Source supplies named switch/select, decorative status icons, named chart and data-table alternative. This is not keyboard, screen-reader, focus or contrast acceptance."
+    },
+    {
+      "id": "mobile-source-information-preservation",
+      "status": "FAIL",
+      "findingIds": ["GAS-07"],
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:56-58", "web\\src\\components\\ui\\DataTable.tsx:715-725"]
+    },
+    {
+      "id": "mobile-source-reflow-and-primary-target",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:41-45", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:70-76", "web\\src\\components\\ui\\Toggle.tsx:109-114", "web\\src\\components\\ui\\Select.tsx:35-38"],
+      "detail": "Source stacks below xl, constrains chart width and gives Poll now/wrapper controls mobile min-h-11 treatment. Actual composed rectangles, overflow and hit testing NOTRUN."
+    },
+    {
+      "id": "chart-typography-source",
+      "status": "FAIL",
+      "findingIds": ["GAS-11"],
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:32-33"],
+      "detail": "Two direct fixed 10px tick font overrides remain; actual readability is NOTRUN."
+    },
+    {
+      "id": "shared-architecture-and-lexical-rules",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:13-27", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:5-6", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:28-44", "web\\src\\components\\charts\\EmbeddedChart.tsx:30-40"],
+      "detail": "Typed hooks own reads; category barrels and existing canonical frames are used. Fresh direct-import scan: static CSS-variable inline styles 0, raw controls 0, direct vendors 0, old API imports 0, double-prefix request literals 0, camelCase URL params 0, neon-body matches 0, deprecated conversion callers 0. These are bounded lexical counts, not a whole-repository clean audit."
+    },
+    {
+      "id": "motion-and-observability-source",
+      "status": "PASS",
+      "evidence": ["web\\src\\components\\motion\\FadeIn.tsx:25-34", "internal\\worker\\gas_price_worker.go:120-134", "internal\\worker\\gas_price_worker.go:143-177"],
+      "detail": "Existing FadeIn delegates reduction to useMotionPreference. Worker creates gas_price.refresh_tick span, ends it and records provider/write errors. Page does not initialize RUM or log identifiers. Runtime motion, trace propagation, SLOs and failure telemetry NOTRUN; handler-wide instrumentation was not certified."
+    },
+    {
+      "id": "mutation-no-reconnect-queue-default",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\queryClient.ts:67-74"],
+      "detail": "Shared TanStack mutation defaults retry 0/networkMode always avoid paused reconnect replay. This does not certify every request-layer retry/idempotency behavior or remedy the missing live-mode guard."
+    },
+    {
+      "id": "native-functional-poll-and-configuration",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:145-152", "migration-queue.md:177-185", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:47-48"],
+      "detail": "Explicitly prohibited browser/API/paid polls/saved preferences/real identities; zero such calls."
+    },
+    {
+      "id": "native-mobile-and-desktop",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-mission.md:529-580", "docs\\frontend-design-contract.md:593-601"],
+      "widths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "detail": "No viewport, allocated-container, scrolling, hit testing or screenshot execution. Historical failed dark captures are not current acceptance."
+    },
+    {
+      "id": "native-keyboard-screen-reader-focus-and-contrast",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-design-contract.md:525-539", "docs\\frontend-mission.md:921-962"],
+      "detail": "No native keyboard, screen reader, focus, composed 4.5:1/3:1 contrast, forced-colors or reduced-motion/low-bandwidth verification."
+    },
+    {
+      "id": "native-themes-locale-and-extremes",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-design-contract.md:593-601", "docs\\frontend-mission.md:1055-1080"],
+      "detail": "Dark/light/custom, RTL, long text, 200% text, null/zero/negative-valid/huge datasets and open states were not exercised."
+    },
+    {
+      "id": "typescript-lint-build-and-tests",
+      "status": "NOTRUN",
+      "evidence": ["docs\\orchestrator-loop.md:228-235", "migration-queue.md:145-152", "logs\\phase5-page-admin-gas-price-auto-poll-lint-style.log:1-17", "logs\\phase5-page-admin-gas-price-auto-poll.log:5-37"],
+      "detail": "No npx tsc --noEmit, build, full suites, test runner or unchanged passing lint/style rerun. Historical page lint/style exit 0; historical Vitest exit 1 with zero discovery from catalog startup. Handoff's later shared compiler/build pass is historical only. Current executed tests 0; no current pass count."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "GAS-01",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "high",
+      "title": "Manual poll acknowledgement is reported as completed price update",
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 181,
+      "evidence": ["internal\\api\\gasprice\\handler.go:95-102", "internal\\worker\\gas_price_worker.go:125-151", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:47"],
+      "mechanism": "POST immediately returns poll_triggered while detached worker execution is outstanding. The hook unconditionally says Gas prices updated and clears mutation pending on that acknowledgement. Later provider/DB failure is only logged/traced; the mutation cannot reject for it and status has no attempt/failure fields.",
+      "repro": "Future isolated provider test: delay GetCurrentPrice or make it fail, acknowledge POST, and observe completed-success toast/enabled Poll now before any committed price change. No poll/API/provider test was executed here.",
+      "fix": "Distinguish triggered from completed using the existing triggered copy; define an explicit completion/failure source before claiming updated or complete. Do not derive success from an HTTP acknowledgement.",
+      "owner": "gas hook and polling-status integration",
+      "needs": ["web\\src\\api\\hooks\\useSettings.ts", "internal\\api\\gasprice\\handler.go", "internal\\worker\\gas_price_worker.go", "separately owned catalog/test changes only if required"]
+    },
+    {
+      "id": "GAS-02",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "medium",
+      "title": "New automatic or delayed manual prices do not refresh mounted history",
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 162,
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:158-169", "web\\src\\api\\hooks\\useSettings.ts:178-181", "web\\src\\api\\queryClient.ts:48-58", "internal\\worker\\gas_price_worker.go:155-159"],
+      "mechanism": "Only status polls every 30 seconds. History has staleTime but no interval or linkage to a changed last_poll_time; window-focus refresh defaults false. Manual history invalidation occurs at acknowledgement and can finish before the background write. No later completion invalidates it.",
+      "repro": "Future isolated fixture: return old history on acknowledgement invalidation, commit a new worker row later, then advance status polls while retaining the mount. Summary can advance while trend/history remain old. No fixture or real polling was executed.",
+      "fix": "Refresh history on evidenced poll completion/advanced last-success status, or adopt a bounded consistent refresh policy at the existing hook owner; preserve independent retained/error states.",
+      "owner": "gas query integration",
+      "needs": ["web\\src\\api\\hooks\\useSettings.ts", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx", "scoped future regression tests"]
+    },
+    {
+      "id": "GAS-03",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "high",
+      "title": "History trend joins incompatible volume denominations",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 17,
+      "evidence": ["internal\\worker\\gas_price_worker.go:197-213", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:24-35", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:40-43"],
+      "mechanism": "Worker records each poll in its then-current gallon/liter unit. Chart discards row.unit and plots raw price_per_unit as one comparable series, with no denominator in axis/table alternative. A preference change can therefore produce an artificial price drop despite a constant provider quote.",
+      "repro": "Future synthetic rows: 3.785411784 per gallon and 1 per liter for the same underlying quote. Current mapping plots unequal values and accessible table omits their units. Source mapping only was inspected.",
+      "fix": "Preserve and label each source denomination or perform an explicit display-boundary normalization with complete source units; keep raw payload, dates, series and accessible alternative.",
+      "owner": "GasTrendChart domain presentation",
+      "needs": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx", "scoped mixed-unit regression"]
+    },
+    {
+      "id": "GAS-04",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "high",
+      "title": "USD provider quotes are relabeled with arbitrary saved currency symbol",
+      "file": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx",
+      "line": 25,
+      "evidence": ["internal\\adapter\\gasprices\\eia.go:181-185", "web\\src\\hooks\\useFormatting.ts:45-57", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:40-41", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:26-33"],
+      "mechanism": "Provider explicitly returns USD. Gas status/history omit currency, while formatCurrency simply prepends saved currency_symbol without exchange conversion. Summary, history and chart therefore label unchanged USD amounts as a different currency.",
+      "repro": "Future isolated formatting case with USD 3.45 and saved symbol EUR/€: current formatter produces €3.45 without an exchange rate. No preferences were saved or changed here.",
+      "fix": "Keep source ISO currency explicit and format the gas quote as USD, or introduce an authorized explicit conversion contract. Never infer ISO currency from a saved symbol or silently relabel the amount.",
+      "owner": "gas currency integration and its three display adapters",
+      "needs": ["gas status/history currency contract", "GasPriceBrief.tsx", "GasTrendChart.tsx", "GasHistoryTable.tsx", "source-currency regression"]
+    },
+    {
+      "id": "GAS-05",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "high",
+      "title": "Summary denominator follows current settings rather than retained price unit",
+      "file": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx",
+      "line": 16,
+      "evidence": ["internal\\worker\\gas_price_worker.go:155-159", "internal\\worker\\gas_price_worker.go:197-213", "internal\\worker\\gas_price_worker.go:274-280", "web\\src\\hooks\\useSettings.ts:26-47", "web\\src\\hooks\\useSettings.ts:91-105"],
+      "mechanism": "Worker current_price remains the numeric value in the unit used at its last successful poll. Status does not carry that unit. Brief independently reads current gas_unit (or defaults when unavailable), so settings changes/hydration failures can relabel a retained gallon quote as per liter, or vice versa.",
+      "repro": "Future isolated source fixture: retained status current_price=3.785411784 from a gallon poll, settings later liter, no subsequent successful poll. Brief labels that same number per L although equivalent price is 1 per L. No setting/poll was performed.",
+      "fix": "Attach the price's actual source denomination to the status snapshot and use it atomically; expose unavailable/retained settings rather than assuming a denominator from defaults.",
+      "owner": "status price-denomination integration",
+      "needs": ["internal\\worker\\gas_price_worker.go status contract", "web\\src\\api\\types.ts", "GasPriceBrief.tsx", "independent settings-state regression"]
+    },
+    {
+      "id": "GAS-06",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "medium",
+      "title": "History is silently limited to the newest 50 records",
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 165,
+      "evidence": ["internal\\api\\apiparams\\params.go:25-27", "internal\\api\\gasprice\\handler.go:170-186", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:56-58", "web\\src\\components\\ui\\DataTable.tsx:622", "web\\src\\components\\ui\\DataTable.tsx:856-860"],
+      "mechanism": "Hook supplies no limit/offset. Handler defaults to LIMIT 50 OFFSET 0. Table pagination only slices the returned array, and chart uses that same array. Older records have no server-page navigation or explicit loaded-window/truncation disclosure.",
+      "repro": "Future synthetic database fixture with 51 records: endpoint default includes 50; local Next only traverses those 50 and the oldest record never becomes reachable. No database fixture/API request was executed.",
+      "fix": "Add actual server pagination with truthful result metadata and a separately declared chart scope, or explicitly communicate a newest-50 loaded window without implying complete history.",
+      "owner": "gas history API/query/table scope integration",
+      "needs": ["web\\src\\api\\hooks\\useSettings.ts", "internal\\api\\gasprice\\handler.go", "GasHistoryTable.tsx", "GasTrendChart.tsx", "51-plus-row scope regression"]
+    },
+    {
+      "id": "GAS-07",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "medium",
+      "title": "Mobile table removes efficiency without a reachable detail alternative",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx",
+      "line": 56,
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:44-47", "web\\src\\components\\ui\\DataTable.tsx:715-725", "web\\src\\components\\ui\\DataTable.tsx:478-481", "web\\src\\components\\ui\\DataTable.tsx:1386-1398"],
+      "mechanism": "Caller allow-list omits efficiency_mpg. Shared table applies hidden md:table-cell; caller supplies neither mobilePresentation nor expandable/renderExpanded. Unit remains in the visible price cell, but efficiency has no mobile route.",
+      "repro": "Future native/synthetic row at 375px with efficiency 25: current cell is hidden and there is no caller-provided row detail. Source CSS/props only; no viewport was opened.",
+      "fix": "Use the existing mobilePresentation full-detail owner or existing row expansion to retain every field, preserving stable tableId, sort/filter and pagination semantics.",
+      "owner": "GasHistoryTable adapter",
+      "needs": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx", "bounded mobile full-detail test and later native proof"]
+    },
+    {
+      "id": "GAS-08",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "medium",
+      "title": "Workspace vehicle picker implies vehicle-scoped global US prices",
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 166,
+      "evidence": ["web\\src\\App.tsx:727", "web\\src\\components\\layout\\Layout.tsx:832-835", "web\\src\\components\\layout\\Layout.tsx:1311", "web\\src\\components\\layout\\WorkspaceHeader.tsx:35-67", "web\\src\\api\\hooks\\useSettings.ts:154-165", "internal\\worker\\gas_price_worker.go:131"],
+      "mechanism": "/gas-price is in neither vehicle-disabled paths nor prefixes, so route scope returns vehicle=true. Header renders VehiclePicker although gas hooks/cache keys accept no selected vehicle and provider queries US average prices.",
+      "repro": "Source evaluation of getWorkspaceRouteScope('/gas-price') yields range=false, vehicle=true. Future desktop fixture selecting different synthetic vehicles leaves identical global gas queries. No picker/preference/browser action occurred.",
+      "fix": "Register this global route in the existing vehicle-disabled owner; do not invent vehicle-specific price filtering or duplicate controls.",
+      "owner": "workspace route-scope integration",
+      "needs": ["web\\src\\lib\\workspaceScope.ts", "existing route-scope tests"]
+    },
+    {
+      "id": "GAS-09",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "high",
+      "title": "Accepted schedule change does not reset the running ticker",
+      "file": "internal\\worker\\gas_price_worker.go",
+      "line": 254,
+      "evidence": ["internal\\worker\\gas_price_worker.go:74-75", "internal\\worker\\gas_price_worker.go:108-115", "internal\\worker\\gas_price_worker.go:253-269", "internal\\api\\gasprice\\handler.go:146-164", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:34"],
+      "mechanism": "Start constructs the ticker once. SetPollInterval only changes the field returned by Status; running tick handling never resets it. Only the stop/resume branch resets it. UI can show Daily and successful configuration while cadence remains the original weekly interval.",
+      "repro": "Future isolated worker clock test: start at 7d, call SetPollInterval('daily') while running without stop/resume, advance 24h. Existing ticker still uses 7d. No real ticker/provider or config submission was run.",
+      "fix": "Have the existing worker loop apply validated interval updates safely to its ticker and verify status/config reflect actual scheduling, without adding competing timers in the frontend.",
+      "owner": "gas worker integration; read-only finding outside this report's write authority",
+      "needs": ["internal\\worker\\gas_price_worker.go", "its existing worker tests"]
+    },
+    {
+      "id": "GAS-10",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "medium",
+      "title": "Gas mutations do not opt into the live-only request guard",
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 177,
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:177-216", "web\\src\\api\\client.ts:373-392", "web\\src\\lib\\operationalMode.ts:66-79", "web\\src\\api\\offlineCache.ts:49-75", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:41-48", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx:24-35"],
+      "mechanism": "All three mutation calls omit requiresLiveMode. The client defaults it false; operational-mode guard returns immediately for false. Gas paths are absent from offline unsafe-write patterns. Controls disable only for pending/no status, not historical/offline mode; with retained status, an as_of page can attempt live polling/config writes.",
+      "repro": "Future isolated request-boundary test in as_of mode: invoke gas hook mutation with its present options and verify the live-only guard does not reject before transport. No transport, paid poll or preferences were invoked here.",
+      "fix": "Use the existing requiresLiveMode boundary and operational-mode disabled/reason APIs for gas commands; retain no-reconnect-queue defaults and truthful failure feedback.",
+      "owner": "gas hooks and page/configuration command adapter",
+      "needs": ["web\\src\\api\\hooks\\useSettings.ts", "GasPriceAutoPollPage.tsx", "GasConfiguration.tsx", "live-only boundary regressions"]
+    },
+    {
+      "id": "GAS-11",
+      "status": "FAIL",
+      "confidence": "high-source",
+      "severity": "low",
+      "title": "Both trend axes bypass shared scalable typography",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 32,
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx:33", "docs\\frontend-design-contract.md:155-171"],
+      "mechanism": "Both ticks use literal fontSize 10 rather than an existing typography/chart role informed by saved font scaling. This is a confirmed source-pattern issue, not a measured WCAG failure.",
+      "repro": "Source inspection finds two fixed font-size declarations. Future 200% text/saved-font-scale chart verification must compare computed tick size and readability; not executed.",
+      "fix": "Use existing chart typography/preference roles while preserving currency labels, axes and compact geometry.",
+      "owner": "GasTrendChart presentation",
+      "needs": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx", "scoped typography regression and later native review"]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "GAS-C01",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 15,
+      "detail": "Literal amber fallback #f59e0b and palette/gradient contrast require composed theme review. useChartPalette resolves a built-in palette even without settings, so actual fallback reachability/saturation failure is not established.",
+      "evidence": ["web\\src\\hooks\\useChartPalette.ts:20-28", "web\\src\\hooks\\useChartPalette.ts:46-50"],
+      "needs": "Existing palette/theme owner review plus authorized native dark/light/custom contrast; no source waiver."
+    },
+    {
+      "id": "GAS-C02",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx",
+      "line": 24,
+      "detail": ">0 gates suppress zero/negative prices while history renders zero. Zero is intentionally the never-polled sentinel in current status. Whether a successful valid zero quote must be distinguishable is not established by this audit; do not blindly change the existing sentinel semantics.",
+      "evidence": ["web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx:17-28", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx:41"],
+      "needs": "Bounded provider/domain valid-zero contract and future synthetic cases before changing behavior."
+    },
+    {
+      "id": "GAS-C03",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+      "line": 34,
+      "detail": "Tooltip receives no monetary valueFormatter or volume unit; shared default formats numeric values without currency. Source formatting difference is visible, but its required presentation and native hover/keyboard behavior were not exercised.",
+      "evidence": ["web\\src\\components\\charts\\ChartTooltip.tsx:89-113", "web\\src\\components\\charts\\ChartTooltip.tsx:158-160"],
+      "needs": "Resolve consistently with GAS-03/GAS-04 rather than adding a competing formatter."
+    }
+  ],
+  "preservation": {
+    "status": "PASS",
+    "basis": "Current read-only snapshots and preserved original audit/Phase5 receipt, not Git history or recreated baselines.",
+    "originalAudit": "docs\\frontend-audits\\audit-page-015.json:251-307",
+    "originalPageLines": 82,
+    "currentPageLines": 84,
+    "originalPageAndFourSectionsLines": 281,
+    "currentPageAndFourSectionsLines": 283,
+    "minimumSeventyPercentMet": true,
+    "sectionCountOriginal": 4,
+    "sectionCountCurrent": 4,
+    "directGlassPanelCount": 0,
+    "directChartContainerCount": 0,
+    "compositeCounts": {"AdminSummary": 1, "LayoutCard": 2, "ChartCard": 1},
+    "canonicalChartChain": "GasTrendChart -> ChartCard -> EmbeddedChart -> ChartContainer, confirmed in inspected source.",
+    "sections": [
+      {"name": "Gas price summary", "component": "GasPriceBrief", "evidence": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:66", "metrics": 4, "lines": 46},
+      {"name": "Price trend", "component": "GasTrendChart", "evidence": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:73", "series": 1, "accessibleColumns": 2, "lines": 40},
+      {"name": "Configuration", "component": "GasConfiguration", "evidence": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:75", "fields": 2, "lines": 51},
+      {"name": "Price history", "component": "GasHistoryTable", "evidence": "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx:80", "columns": 5, "lines": 62}
+    ],
+    "actionsRetained": ["Poll now", "Enable/disable auto-poll", "Daily/weekly/biweekly/monthly interval", "Contextual help", "Individual source retry", "Price/date/unit/efficiency sorting", "Loaded-row value filters", "Loaded-row pagination", "Summary review details", "Canonical accessible chart data"],
+    "dataRetained": ["Raw source status/history", "last_poll_time zero-time sentinel", "Nullable effective_to Current meaning", "Row identity", "Price and per-kWh comparison", "Saved currency/precision/locale/palette identities", "Independent source loading/fatal/retained/paused states"],
+    "siLimits": "No legacy/new unit fields, converters or API shapes were edited. Existing efficiency_mpg and gas-unit price contract are reported as inspected source, not silently assumed SI or newly approved legacy usage.",
+    "sha256": {
+      "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx": "857B5965B647D818412FBE7620FB6489A1EEAC2557FB7A48CF50890C81E3E438",
+      "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx": "D36DF5A91E9B0C0AEB08ADE46FF584D868B45787D944A424355013A0A9BC676E",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx": "37B08B2F0FD244CBDFA696D770838C8C08B391FE88DD4DBAD0207A0D4DA1DC35",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx": "802A9B7EF48D6413941EE2F3EF4E78073E7825CDF51CA48558CFB2B55B7AF0DB",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx": "58F0A8524FD99EE67160B75F0CA408A4B29FE722F15BCB2F7EF6542645E69110"
+    }
+  },
+  "validation": {
+    "rawLog": "logs\\phase6-qa-admin-gas-price-auto-poll.log",
+    "logIgnoreEvidence": ".gitignore:80 logs/ rule (read directly; no Git invocation)",
+    "commands": [
+      {"id": "COMMAND0", "command": "Get-Date -Format o; Get-ChildItem for gas QA/receipt files and docs names", "exitCode": 0, "result": "Located prior receipts and contracts; raw clock retained."},
+      {"id": "COMMAND1", "command": "Case-sensitive Select-String across five directly relevant section/adapters; Get-FileHash; Get-Content line/section counts", "exitCode": 0, "result": "Eight inspected prohibited-pattern categories zero; two fixed axis-font matches; four composite section wrappers; hashes/line counts logged.", "limits": "New direct-import scope only; unchanged prior passing page style scan was not rerun."},
+      {"id": "COMMAND2-attempt1", "command": "Built-in hook/router/localization/workspace inspection", "exitCode": 1, "result": "PowerShell parser error in workspace-regex quoting; no command body executed. Audit command error, not an application defect."},
+      {"id": "COMMAND2", "command": "Corrected Get-Content/ConvertFrom-Json -AsHashtable/literal-key lookup and source route slices", "exitCode": 0, "result": "54 literal keys, zero missing; five matching gas operations; /gas-price absent from workspace route exemptions."},
+      {"id": "COMMAND3", "command": "Case-sensitive Select-String for exact polling/scheduling/pagination/mobile/unit source mechanisms", "exitCode": 0, "result": "Exact file:line evidence in log; clock 2026-10-13T09:28:21.7417004-07:00."},
+      {"id": "COMMAND4", "command": "ConvertFrom-Json -AsHashtable; check individual statuses/issue schema/cited file existence; compare five SHA-256 snapshots; inspect logs ignore rule", "exitCode": 0, "result": "JSON_VALID=True CHECKS=31 CONFIRMED=11 CANDIDATES=3; PASS=17 FAIL=9 NOTRUN=5; five section/page source hashes unchanged=True; VALIDATION_ERRORS=0; clock 2026-10-13T09:34:35.0212816-07:00."}
+    ],
+    "scriptAudit": {"status": "NOTRUN", "command": "bash .github\\skills\\audit-violations\\audit.sh <page>", "reason": "Script invokes full-project TypeScript and helper contract tooling; assignment forbids helpers/full suites/unchanged passing reruns. Built-in direct scans are separate evidence, not script success."},
+    "typecheck": {"status": "NOTRUN", "command": "npx tsc --noEmit", "reason": "No source edits; full/cadence compiler belongs to parent. Historical handoff gate was not rerun or claimed current."},
+    "lint": {"status": "NOTRUN", "reason": "Unchanged passing page ESLint receipt read, not rerun."},
+    "tests": {"status": "NOTRUN", "discovered": 0, "executed": 0, "passed": null, "failed": null, "skipped": null, "reason": "No runner authorized/needed for this read-only report; never treat zero execution as passing. Existing mocked tests were read for contract context only."},
+    "build": {"status": "NOTRUN", "reason": "No source edits; full build prohibited."},
+    "historicalEvidence": [
+      "logs\\phase5-page-admin-gas-price-auto-poll-lint-style.log: ESLINT_EXIT=0, STYLE_SCAN_EXIT=0; not freshly rerun.",
+      "logs\\phase5-page-admin-gas-price-auto-poll.log: VITEST_EXIT=1, catalog startup prevented discovery; no fresh passing test claim.",
+      "Historical four dark viewport captures were FAILED on resources; native remains NOTRUN for this item.",
+      "docs\\session-handoff.md records a later shared supported-runtime compiler/build exit 0; not current item verification."
+    ]
+  },
+  "evidenceLimits": [
+    "Source evidence proves inspected code mechanisms, not native reproduction or live deployment behavior.",
+    "No browser ownership, screenshot lock, HTTP/API call, provider call, paid poll, preference mutation, real identity or native host access was acquired.",
+    "The optional worker route mount, actual service availability, auth permissions and production configuration are unknown.",
+    "Settings trust is independent of the two gas sources; source denomination/currency defects cannot be fixed by guessing preferences.",
+    "The referenced .github\\prompts\\db-refactor\\phase-48-si-canonical\\0000-methodology.prompt.md is absent. No unit-field changes were attempted.",
+    "Frontend/unit-conversion instruction examples include historical legacy shapes; current design/SI cutover forbids adding those patterns. This QA preserves existing source and reports gaps rather than changing contracts.",
+    "Other workers may change shared source concurrently. Hashes identify the inspected page/sections, not exclusive ownership over all read dependencies.",
+    "No new baseline, source/tests/catalog/config/helper file or historical receipt was edited."
+  ],
+  "needs": [
+    "Parent triage eleven confirmed narrow source findings, deduplicating the historical mobile/typography/denomination needs rather than remodernizing the page.",
+    "Prioritize acknowledgement/failure truthfulness, source USD/volume metadata, ticker schedule correctness and history refresh/completeness.",
+    "Assign exact existing hook/domain/shared/integration owners and scoped regression cases before any fixes; this QA has no source-write authority.",
+    "Keep all native matrix/functional/accessibility acceptance NOTRUN until separately authorized synthetic read-only browser ownership is released/granted."
+  ],
+  "ownership": {
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-gas-price-auto-poll.json",
+      "logs\\phase6-qa-admin-gas-price-auto-poll.log"
+    ],
+    "logLocationDecision": "Explicit assignment names repository-root logs; used that exact ignored file despite queue's generic web\\logs wording.",
+    "applicationFilesReadOnly": true,
+    "sourceWriteClaims": [],
+    "browserClaims": [],
+    "screenshotLocks": [],
+    "backgroundProcessesStarted": [],
+    "gitCommandsRun": false,
+    "subagentsLaunched": false,
+    "release": "All report/log, source, command and resource ownership released on final return; no post-return writes or outstanding work."
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-inventory.md",
+    "docs\\frontend-audits\\audit-page-015.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".gitignore",
+    "logs\\phase5-page-admin-gas-price-auto-poll.log",
+    "logs\\phase5-page-admin-gas-price-auto-poll-lint-style.log",
+    "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx",
+    "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.test.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\AdminSourceContent.tsx",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\_toastHelpers.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\queryClient.ts",
+    "web\\src\\api\\offlineCache.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useChartPalette.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\operationalMode.ts",
+    "web\\src\\i18n\\en.json",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageActions.tsx",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartTooltip.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\gasprice\\handler.go",
+    "internal\\api\\apiparams\\params.go",
+    "internal\\worker\\gas_price_worker.go",
+    "internal\\adapter\\gasprices\\eia.go"
+  ]
+}

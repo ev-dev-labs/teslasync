@@ -1,5 +1,5 @@
 /**
- * HealthRow — single-line health summary row.
+ * HealthRow — compact health summary row.
  *
  * Renders an icon, label, summary text (e.g. "12 / 12 healthy"), and
  * a "View →" link. Status drives the dot colour. Use stacks of these
@@ -9,7 +9,8 @@
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
-import { Text } from '@/components/ui'
+import { Button, BUTTON_BASE, BUTTON_VARIANTS } from '../ui/Button'
+import { Text } from '../ui/Typography'
 import { cn } from '@/lib/cn'
 import type { HeroStatus } from './StatusHero'
 
@@ -22,11 +23,11 @@ const DOT_FOR_STATUS: Record<HeroStatus, string> = {
 }
 
 const TEXT_FOR_STATUS: Record<HeroStatus, string> = {
-  healthy:     'text-green-400',
-  degraded:    'text-amber-400',
-  unhealthy:   'text-red-400',
-  unknown:     'text-zinc-400',
-  maintenance: 'text-blue-400',
+  healthy:     'text-emerald-300',
+  degraded:    'text-amber-300',
+  unhealthy:   'text-rose-300',
+  unknown:     'text-[var(--text-muted)]',
+  maintenance: 'text-indigo-300',
 }
 
 export interface HealthRowProps {
@@ -58,10 +59,10 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
           {icon}
         </span>
       )}
-      <Text as="span" size="sm" weight="medium" color="primary" className="min-w-0 flex-1 truncate text-left">
+      <Text as="span" variant="bodySm" weight="medium" color="primary" className="min-w-0 flex-1 text-start [overflow-wrap:anywhere]">
         {label}
       </Text>
-      <Text as="span" size="xs" className={cn('shrink-0', summaryClass)}>
+      <Text as="span" variant="caption" className={cn('min-w-0 max-w-[50%] [overflow-wrap:anywhere]', summaryClass)}>
         {summary}
       </Text>
       {(to || onClick) && (
@@ -71,10 +72,10 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
   )
 
   const baseClasses = cn(
-    'flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left',
+    'flex h-auto w-full items-center gap-3 rounded-lg px-3 py-3 text-start',
     'min-h-[44px]',
-    (to || onClick) && 'transition-colors hover:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
   )
+  const linkClasses = cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, baseClasses)
 
   if (to) {
     if (external) {
@@ -83,7 +84,7 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
           href={to}
           target="_blank"
           rel="noopener noreferrer"
-          className={baseClasses}
+          className={linkClasses}
           aria-label={`${label} — ${summary}`}
         >
           {inner}
@@ -91,7 +92,7 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
       )
     }
     return (
-      <Link to={to} className={baseClasses} aria-label={`${label} — ${summary}`}>
+      <Link to={to} className={linkClasses} aria-label={`${label} — ${summary}`}>
         {inner}
       </Link>
     )
@@ -99,9 +100,9 @@ export function HealthRow({ status, icon, label, summary, to, external = false, 
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={baseClasses}>
+      <Button type="button" variant="ghost" size="auto" onClick={onClick} className={baseClasses}>
         {inner}
-      </button>
+      </Button>
     )
   }
 

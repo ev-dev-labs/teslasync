@@ -6,12 +6,14 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
+import { HelperText } from '@/components/ui/Typography'
 import { useAiStream } from '@/hooks/useAiStream'
 
 interface InnerSectionProps {
   vehicleId?: string | number
   targetSoc?: number
   currentSoc?: number
+  /** Standalone callers may omit departure to assume the current time. */
   departBy?: string
   ratePlanId?: string
   maxAmps?: number
@@ -65,17 +67,13 @@ function InnerSection({
   const { t } = useTranslation()
   const validVehicleId = useMemo(() => normalizeVehicleId(vehicleId), [vehicleId])
   const trimmedRatePlanId = (ratePlanId ?? '').trim()
+  const departIso = useMemo(() => {
+    if (departBy === undefined) return new Date().toISOString()
+    if (!departBy.trim()) return null
+    const departure = new Date(departBy)
+    return Number.isNaN(departure.getTime()) ? null : departure.toISOString()
+  }, [departBy])
   const body = useMemo(() => {
-    // depart_by must be RFC3339; the SmartChargePage feeds a
-    // datetime-local string which we normalize the same way the
-    // deterministic Optimize call does. An empty or unparseable value
-    // falls back to "now" so the handler's required-RFC3339 check never
-    // trips on a blank field.
-    const departIso = (() => {
-      if (!departBy) return new Date().toISOString()
-      const d = new Date(departBy)
-      return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
-    })()
     return {
       vehicle_id: validVehicleId ?? 0,
       target_soc: targetSoc ?? 80,
@@ -90,7 +88,7 @@ function InnerSection({
   }, [
     validVehicleId,
     targetSoc,
-    departBy,
+    departIso,
     trimmedRatePlanId,
     maxAmps,
     batteryCapacityKwh,
@@ -106,13 +104,9 @@ function InnerSection({
     // changing either aborts an in-flight draft and clears the
     // previous scope's schedule proposal before the new scope
     // streams in.
-    scopeKey: validVehicleId ? `${validVehicleId}:${body.depart_by}` : null,
+    scopeKey: validVehicleId && departIso ? `${validVehicleId}:${departIso}` : null,
   })
-  // canStart mirrors the two hard preconditions the backend enforces
-  // before it will accept a draft: a positive-integer vehicle_id and a
-  // non-empty rate_plan_id. Everything else has a safe server-valid
-  // default in `body`.
-  const haveInputs = validVehicleId !== null && trimmedRatePlanId.length > 0
+  const haveInputs = validVehicleId !== null && trimmedRatePlanId.length > 0 && departIso !== null
   return (
     <AIFeatureCard
       title={t('chargePlanner.aiAgent.title', 'Draft a schedule with Helix')}
@@ -122,13 +116,24 @@ function InnerSection({
       )}
       buttonLabel={t('chargePlanner.aiAgent.generateButton', 'Draft a schedule')}
       badgeLabel={t('chargePlanner.aiAgent.badge', 'Helix')}
-      emptyHint={t(
-        'chargePlanner.aiAgent.emptyHint',
-        'Select a vehicle and a rate plan to draft a schedule.',
-      )}
+      emptyHint={departIso === null
+        ? t('chargePlanner.invalidDepartBy', 'Enter a valid departure date and time.')
+        : t(
+          'chargePlanner.aiAgent.emptyHint',
+          'Select a vehicle and a rate plan to draft a schedule.',
+        )}
       canStart={haveInputs}
       stream={stream}
-    />
+    >
+      {departBy === undefined && (
+        <HelperText>
+          {t(
+            'chargePlanner.aiAgent.departureAssumption',
+            'No departure was supplied. This standalone draft assumes departure at the current time.',
+          )}
+        </HelperText>
+      )}
+    </AIFeatureCard>
   )
 }
 InnerSection.displayName = 'AISmartChargeScheduleSuggestionInner'

@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
+import { registerShellPortal } from '../layout/shellFocusTrap';
 
 export type PopoverAlign = 'start' | 'end' | 'center';
 export type PopoverSide = 'bottom' | 'top';
@@ -32,6 +33,8 @@ export interface PopoverProps {
   className?: string;
   /** ARIA label for the popover region (when no internal heading exists). */
   ariaLabel?: string;
+  /** Preserve menu semantics when the surface contains menu actions. */
+  role?: 'dialog' | 'menu';
   /** Keep tall mobile calendar footers clear of the shell's fixed bottom bars. */
   avoidMobileChrome?: boolean;
   /** Higher stacking layer for triggers inside elevated chrome (for example, a mobile sidebar). */
@@ -56,6 +59,7 @@ export function Popover({
   sideOffset = 6,
   className,
   ariaLabel,
+  role = 'dialog',
   avoidMobileChrome = false,
   zIndex = 60,
   children,
@@ -64,6 +68,11 @@ export function Popover({
   const [pos, setPos] = useState<{ top: number; left: number; resolvedSide: PopoverSide } | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!open) return;
+    return registerShellPortal(contentRef.current, anchorRef.current, onClose);
+  }, [open, anchorRef, onClose]);
 
   useLayoutEffect(() => {
     if (!open || typeof window === 'undefined') return;
@@ -181,9 +190,9 @@ export function Popover({
   const content = (
     <div
       ref={contentRef}
-      role="dialog"
+      role={role}
       aria-label={ariaLabel}
-      aria-modal="false"
+      aria-modal={role === 'dialog' ? 'false' : undefined}
       style={{
         position: 'fixed',
         top: pos?.top ?? -9999,

@@ -6,6 +6,7 @@ package audit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -26,9 +27,10 @@ type AuditLogQuery struct {
 	Offset     int
 }
 
-// AuditLogRow is the wire shape returned to the admin UI. before/after
-// are kept as raw JSON so the UI can render them as a tree without a
-// Go-side schema.
+// AuditLogRow is the wire shape returned to the admin UI. Before/After
+// retain the scanned bytes internally and serialize as raw JSON text strings.
+// Empty evidence is omitted; nonempty evidence, including invalid JSON and
+// explicit JSON null, is preserved for the UI's parse-or-display-raw behavior.
 type AuditLogRow struct {
 	ID          int64     `json:"id"`
 	Ts          time.Time `json:"ts"`
@@ -46,6 +48,22 @@ type AuditLogRow struct {
 	PrevRowHash *string   `json:"prev_row_hash,omitempty"`
 	RowHash     *string   `json:"row_hash,omitempty"`
 	Success     *bool     `json:"success,omitempty"`
+}
+
+// MarshalJSON prevents encoding/json from base64-encoding the evidence bytes.
+// JSON text remains a string, not an embedded value, so invalid evidence cannot
+// break the response or be silently replaced with missing evidence.
+func (row AuditLogRow) MarshalJSON() ([]byte, error) {
+	type fields AuditLogRow
+	return json.Marshal(struct {
+		fields
+		Before string `json:"before,omitempty"`
+		After  string `json:"after,omitempty"`
+	}{
+		fields: fields(row),
+		Before: string(row.Before),
+		After:  string(row.After),
+	})
 }
 
 // AuditLogQueryRepo is the read-side repo.

@@ -33,6 +33,7 @@ export function PaidVehicleSpecsCard({ vehicleId }: PaidVehicleSpecsCardProps) {
         prerequisite="partner"
         kind="specs"
         data={specs.data?.data}
+        source={specs}
         fetchedAt={specs.data?.fetched_at}
         loading={specs.isLoading}
         error={refreshSpecs.error ?? specs.error}

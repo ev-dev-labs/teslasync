@@ -91,8 +91,9 @@ export const ownershipKeys = {
   warranties: (vehicleId: number | null) =>
     [...ownershipKeys.all, 'warranties', vehicleId] as const,
   governance: () => [...ownershipKeys.all, 'governance'] as const,
+  governanceRunsAll: () => [...ownershipKeys.all, 'governance-runs'] as const,
   governanceRuns: (limit: number, offset: number) =>
-    [...ownershipKeys.all, 'governance-runs', limit, offset] as const,
+    [...ownershipKeys.governanceRunsAll(), limit, offset] as const,
   trust: (vehicleId: number | null, windowDays: number) =>
     [...ownershipKeys.all, 'model-trust', vehicleId, windowDays] as const,
   compliance: (vehicleId: number | null, windowDays: number) =>
@@ -158,8 +159,11 @@ export function useUpsertInsurancePolicy() {
     mutationFn: (body: UpsertInsurancePolicyRequest) =>
       request<InsurancePolicy>(`${INSURANCE}/policy`, {
         method: 'PUT',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.insurance.toast.saved', 'Insurance policy saved');
@@ -174,7 +178,9 @@ export function useDeleteInsurancePolicy() {
   const toast = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
-      request<void>(`${INSURANCE}/policy/${id}`, { method: 'DELETE' }),
+      request<void>(`${INSURANCE}/policy/${id}`, { method: 'DELETE', requiresLiveMode: true }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.insurance.toast.deleted', 'Insurance policy removed');
@@ -271,8 +277,11 @@ export function useCreateInvoice() {
     mutationFn: (body: CreateInvoiceRequest) =>
       request<ChargingInvoice>(`${RECONCILE}/invoices`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.reconcile.toast.created', 'Invoice imported');
@@ -286,7 +295,10 @@ export function useDeleteInvoice() {
   const client = useQueryClient();
   const toast = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) => request<void>(`${RECONCILE}/invoices/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: number) =>
+      request<void>(`${RECONCILE}/invoices/${id}`, { method: 'DELETE', requiresLiveMode: true }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.reconcile.toast.deleted', 'Invoice removed');
@@ -306,9 +318,12 @@ export function useCreateDispute(invoiceId: number | null) {
       }
       return request<InvoiceDispute>(`${RECONCILE}/invoices/${invoiceId}/disputes`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       });
     },
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.reconcile.toast.disputed', 'Dispute opened');
@@ -442,8 +457,11 @@ export function useCreateWarranty() {
     mutationFn: (body: CreateWarrantyRequest) =>
       request<Warranty>(`${WARRANTY}/warranties`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.warranty.toast.created', 'Coverage registered');
@@ -457,7 +475,13 @@ export function useDeleteWarranty() {
   const client = useQueryClient();
   const toast = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) => request<void>(`${WARRANTY}/warranties/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: number) =>
+      request<void>(`${WARRANTY}/warranties/${id}`, {
+        method: 'DELETE',
+        requiresLiveMode: true,
+      }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.warranty.toast.deleted', 'Coverage removed');
@@ -472,7 +496,13 @@ export function useCreateWarrantyClaim() {
   const toast = useMutationToast();
   return useMutation({
     mutationFn: (body: CreateClaimRequest) =>
-      request<WarrantyClaim>(`${WARRANTY}/claims`, { method: 'POST', body: JSON.stringify(body) }),
+      request<WarrantyClaim>(`${WARRANTY}/claims`, {
+        method: 'POST',
+        requiresLiveMode: true,
+        body: JSON.stringify(body),
+      }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.warranty.toast.claimed', 'Claim recorded');
@@ -510,8 +540,11 @@ export function useUpsertRetentionPolicy() {
     mutationFn: (body: UpsertRetentionPolicyRequest) =>
       request<RetentionPolicy>(`${GOVERNANCE}/policies`, {
         method: 'PUT',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.governance.toast.saved', 'Retention policy saved');
@@ -525,7 +558,10 @@ export function useDeleteRetentionPolicy() {
   const client = useQueryClient();
   const toast = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) => request<void>(`${GOVERNANCE}/policies/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: number) =>
+      request<void>(`${GOVERNANCE}/policies/${id}`, { method: 'DELETE', requiresLiveMode: true }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.governance.toast.deleted', 'Retention policy removed');
@@ -542,10 +578,13 @@ export function useSimulateGovernance() {
     mutationFn: (body: GovernanceSimulationRequest) =>
       request<GovernanceSimulationResponse>(`${GOVERNANCE}/simulate`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ownershipKeys.governanceRuns(25, 0) });
+      void client.invalidateQueries({ queryKey: ownershipKeys.governanceRunsAll() });
       toast.success('ownership.governance.toast.simulated', 'Dry run complete');
     },
     onError: (error) =>
@@ -770,8 +809,11 @@ export function useCreateSubscription() {
     mutationFn: (body: CreateSubscriptionRequest) =>
       request<Subscription>(`${SUBSCRIPTION}/subscriptions`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.subscription.toast.created', 'Subscription registered');
@@ -786,7 +828,9 @@ export function useDeleteSubscription() {
   const toast = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
-      request<void>(`${SUBSCRIPTION}/subscriptions/${id}`, { method: 'DELETE' }),
+      request<void>(`${SUBSCRIPTION}/subscriptions/${id}`, { method: 'DELETE', requiresLiveMode: true }),
+    networkMode: 'always',
+    retry: false,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ownershipKeys.all });
       toast.success('ownership.subscription.toast.deleted', 'Subscription removed');

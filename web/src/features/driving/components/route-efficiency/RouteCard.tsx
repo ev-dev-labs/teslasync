@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, ArrowRight } from 'lucide-react';
 import { GlassPanel, Badge, IconBox, Text, Caption } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { RouteSummary } from '@/types/driving';
 import { efficiencyVariant, type UnitDisplay } from './helpers';
 import { ROUTE_EFF_COLORS } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeStatProps {
   label: string;
@@ -16,6 +17,7 @@ interface RangeStatProps {
 
 /** One labelled figure in the best/avg/worst readout under the range bar. */
 function RangeStat({ label, value, unit, colorClass }: RangeStatProps) {
+  const { fmtInt } = useNumberFormatting();
   return (
     <div className="min-w-0">
       <Caption className="block truncate">{label}</Caption>
@@ -38,6 +40,7 @@ export interface RouteCardProps {
  * All colour is paired with text so status never relies on hue alone.
  */
 export function RouteCard({ route, unit }: RouteCardProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // `||` (not `??`) so an empty-string location degrades to the em-dash

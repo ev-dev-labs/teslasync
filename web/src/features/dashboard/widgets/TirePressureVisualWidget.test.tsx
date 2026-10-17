@@ -25,14 +25,14 @@
  * against the global `useSettings` stub (metric → bar) from src/test-setup.ts,
  * so the Pa→bar conversion is exercised end-to-end. `react-i18next` is
  * echo-mocked (returns the English fallback); `matchMedia` is polyfilled because
- * `<DataFreshness>` reads it via `useMotionPreference`.
+ * `<FreshnessDot>` reads it via `useMotionPreference`.
  *
  * Facets covered:
  *   - vehicle resolution: explicit prop wins → first vehicle → 0, always with
  *     the 10s poll interval.
  *   - shell states: loading skeleton, error `QueryError`, and empty state —
  *     never a blank panel.
- *   - standard vs compact layout (title suppressed at cols ≤ 1).
+ *   - standard vs compact layout (identifying title retained at every width).
  *   - Pa→display conversion (the hardening): 290 000 Pa → "2.9", not "2,900.0".
  *   - status colour bands from the Pa value: green / amber / red / grey across
  *     the shared helper's thresholds, plus the aggregate All-Normal vs
@@ -77,7 +77,7 @@ vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   return { ...actual, useVehicles: vi.fn(), useLatestTirePressure: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -108,7 +108,7 @@ const AMBER = '#f59e0b'; // warning
 const RED = '#ef4444'; // danger
 const GREY = '#6b7280'; // neutral / unknown
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,
@@ -171,6 +171,35 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe.each([1, 2, 3])('TirePressureVisualWidget — identifying heading at cols=%i', (cols) => {
+  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+    'keeps exactly one visible shell heading when %s',
+    (state) => {
+      const populated = state === 'populated' || state === 'retained failure';
+      const failed = state === 'initial failure' || state === 'retained failure';
+      mockLatest.mockReturnValue(qr({
+        data: populated ? makeSnap() : undefined,
+        isLoading: state === 'loading',
+        isError: failed,
+        error: failed ? new Error('offline') : null,
+      }));
+      const { container } = renderWidget({ cols, rows: 2 });
+      const headings = screen.getAllByRole('heading', { name: 'Tire pressure', level: 3 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toBeVisible();
+      if (populated) {
+        expect(screen.getAllByText('2.50')).toHaveLength(4);
+        expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
+        expect(screen.getByText('All normal')).toBeInTheDocument();
+      }
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+      if (state === 'empty') expect(screen.getByText('No tire pressure data')).toBeInTheDocument();
+      if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+      if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    },
+  );
+});
+
 describe('TirePressureVisualWidget — vehicle resolution', () => {
   it('prefers the explicit vehicleId prop over the vehicle list (with the 10s poll)', () => {
     mockVehicles.mockReturnValue(vehicles([7, 9]));
@@ -202,9 +231,9 @@ describe('TirePressureVisualWidget — shell states', () => {
     mockLatest.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No tire pressure data')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('renders an explicit empty state (no car diagram) when no snapshot has arrived', () => {
@@ -233,28 +262,28 @@ describe('TirePressureVisualWidget — layout', () => {
   it('renders the title, four corner labels, values, diagram, unit and All-Normal badge', () => {
     const { container } = renderWidget(STANDARD);
 
-    expect(screen.getByText('Tire Pressure')).toBeInTheDocument();
+    expect(screen.getByText('Tire pressure')).toBeInTheDocument();
     expect(screen.getByText('FL')).toBeInTheDocument();
     expect(screen.getByText('FR')).toBeInTheDocument();
     expect(screen.getByText('RL')).toBeInTheDocument();
     expect(screen.getByText('RR')).toBeInTheDocument();
 
     // All four corners at 250 000 Pa → "2.5" (bar) and a green tire rect each.
-    expect(screen.getAllByText('2.5')).toHaveLength(4);
+    expect(screen.getAllByText('2.50')).toHaveLength(4);
     expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
 
     // Footer shows the user's pressure unit and the aggregate status.
     expect(container.textContent).toContain('bar');
-    expect(screen.getByText('All Normal')).toBeInTheDocument();
-    expect(screen.queryByText('Check Pressure')).toBeNull();
+    expect(screen.getByText('All normal')).toBeInTheDocument();
+    expect(screen.queryByText('Check pressure')).toBeNull();
   });
 
-  it('suppresses the title in the compact (cols ≤ 1) tile but still renders the values', () => {
+  it('retains the identifying title and all values in the compact (cols ≤ 1) tile', () => {
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('Tire Pressure')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Tire pressure', level: 3 })).toBeVisible();
     expect(screen.getByText('FL')).toBeInTheDocument();
-    expect(screen.getAllByText('2.5')).toHaveLength(4);
+    expect(screen.getAllByText('2.50')).toHaveLength(4);
   });
 });
 
@@ -272,9 +301,9 @@ describe('TirePressureVisualWidget — Pa→display conversion (hardening)', () 
     );
     renderWidget(STANDARD);
 
-    expect(screen.getAllByText('2.9')).toHaveLength(4);
+    expect(screen.getAllByText('2.90')).toHaveLength(4);
     // Pre-fix, raw Pascals went straight through the kPa formatter (~1000×).
-    expect(screen.queryByText('2,900.0')).toBeNull();
+    expect(screen.queryByText('2,900.00')).toBeNull();
   });
 });
 
@@ -297,14 +326,14 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(1);
     expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(1);
 
-    expect(screen.getByText('2.5')).toBeInTheDocument();
-    expect(screen.getByText('2.4')).toBeInTheDocument();
-    expect(screen.getByText('2.0')).toBeInTheDocument();
+    expect(screen.getByText('2.50')).toBeInTheDocument();
+    expect(screen.getByText('2.40')).toBeInTheDocument();
+    expect(screen.getByText('2.00')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
 
     // Any non-success corner flips the aggregate badge.
-    expect(screen.getByText('Check Pressure')).toBeInTheDocument();
-    expect(screen.queryByText('All Normal')).toBeNull();
+    expect(screen.getAllByText('Check pressure')).toHaveLength(3);
+    expect(screen.queryByText('All normal')).toBeNull();
   });
 
   it('flags an over-inflated (critical-high) tire as red', () => {
@@ -321,8 +350,8 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(4);
-    expect(screen.getAllByText('3.5')).toHaveLength(4);
-    expect(screen.getByText('Check Pressure')).toBeInTheDocument();
+    expect(screen.getAllByText('3.50')).toHaveLength(4);
+    expect(screen.getAllByText('Check pressure')).toHaveLength(5);
   });
 
   it('colours the value text with the same severity variant as its tire', () => {
@@ -339,11 +368,19 @@ describe('TirePressureVisualWidget — Pa-derived status colours', () => {
     renderWidget(STANDARD);
 
     // The unique "2.0" front-left value renders in the danger text colour.
-    expect(screen.getByText('2.0').className).toContain('text-rose-300');
+    expect(screen.getByText('2.00').className).toContain('text-rose-300');
   });
 });
 
 describe('TirePressureVisualWidget — null safety', () => {
+  it('keeps tire readings and the diagram during a failed cached refresh', () => {
+    mockLatest.mockReturnValue(qr({ data: makeSnap(), isError: true, error: new Error('refresh failed') }));
+    const { container } = renderWidget(STANDARD);
+    expect(screen.getAllByText('2.50')).toHaveLength(4);
+    expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('renders "—" + a neutral grey tile (never red) when every corner is null', () => {
     mockLatest.mockReturnValue(
       qr({
@@ -362,38 +399,44 @@ describe('TirePressureVisualWidget — null safety', () => {
     expect(container.querySelectorAll(`rect[fill="${GREY}"]`)).toHaveLength(4);
     // Pre-fix this rendered four critical-red tiles; now it's calm neutral grey.
     expect(container.querySelectorAll(`rect[fill="${RED}"]`)).toHaveLength(0);
-    expect(screen.getByText('Check Pressure')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown')).toHaveLength(5);
+    expect(screen.queryByText('Check pressure')).toBeNull();
   });
 });
 
 describe('TirePressureVisualWidget — reading-time footer', () => {
+  // The footer caption shows the unit; the reading age lives in its tooltip.
+  function footerCaption(): HTMLElement {
+    return screen.getByText('bar');
+  }
+
   it('shows "No reading" when no per-corner last-seen timestamp is present', () => {
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('bar · No reading');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', 'No reading');
   });
 
   it('renders "Just now" for a sub-minute reading', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(20_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('Just now');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', 'Just now');
   });
 
   it('renders a minutes-ago label', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(5 * 60_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('5m ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '5m ago');
   });
 
   it('renders an hours-ago label', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(3 * 3_600_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('3h ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '3h ago');
   });
 
   it('renders a days-ago label', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(2 * 86_400_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('2d ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '2d ago');
   });
 
   it('surfaces the most-recent timestamp across the four corners', () => {
@@ -405,15 +448,15 @@ describe('TirePressureVisualWidget — reading-time footer', () => {
         }),
       }),
     );
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('Just now');
-    expect(container.textContent).not.toContain('3d ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', 'Just now');
+    expect(footerCaption().getAttribute('title')).not.toContain('3d ago');
   });
 
   it('degrades an unparseable timestamp to a "—" placeholder', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: 'not-a-date' }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('bar · —');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '—');
   });
 });
 

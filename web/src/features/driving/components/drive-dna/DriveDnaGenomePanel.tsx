@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { KVList, type KVItem } from '@/components/data-display';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type {
   DriveDnaModel,
@@ -20,6 +20,7 @@ import type {
 import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import { downloadDriveDnaSvg } from './driveDnaSvg';
 import type { DriveDnaSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const TRAIT_ICONS = {
   spirited: Gauge,
@@ -44,6 +45,7 @@ export function DriveDnaGenomePanel({
   driveLabel,
   units,
 }: DriveDnaGenomePanelProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const canDownload =
     state.telemetry.isResolved && model.genome.petals.length > 0;
@@ -79,18 +81,18 @@ export function DriveDnaGenomePanel({
     },
     {
       label: t('driveDna.genome.medianSpeed', 'Sampled median speed'),
-      value: units.formatSpeed(model.stats.medianSpeedMps, { precision: 1 }),
+      value: units.formatSpeed(model.stats.medianSpeedMps),
     },
     {
       label: t('driveDna.genome.peakRegen', 'Peak regen magnitude'),
-      value: units.formatPower(model.stats.peakRegenW, { precision: 1 }),
+      value: units.formatPower(model.stats.peakRegenW),
     },
     {
       label: t('driveDna.genome.climb', 'Positive measured climb'),
       value:
         model.stats.positiveElevationClimbM != null
           ? t('driveDna.genome.metres', '{{value}} m', {
-              value: fmtNumber(model.stats.positiveElevationClimbM, 0),
+              value: fmtNumber(model.stats.positiveElevationClimbM),
             })
           : '—',
     },
@@ -154,14 +156,16 @@ export function DriveDnaGenomePanel({
           <KVList items={stats} columns={1} className="mt-4" />
         </DriveDnaSectionBody>
 
+        {/* flow-cta: the genome download is this panel’s primary action */}
         <Button
           type="button"
           variant="secondary"
-          className="mt-4 w-full"
+          wrapLabel
+          icon={<Download className="h-4 w-4" aria-hidden="true" />}
+          className="mt-4 min-h-11 w-full md:min-h-10"
           disabled={!canDownload}
           onClick={() => downloadDriveDnaSvg(model.genome, driveLabel)}
         >
-          <Download className="h-4 w-4" aria-hidden="true" />
           {t('driveDna.genome.download', 'Download safe SVG')}
         </Button>
       </GlassPanel>

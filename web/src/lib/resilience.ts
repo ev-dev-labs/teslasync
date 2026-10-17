@@ -13,6 +13,7 @@ import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
 // HELP-12. `demoMode` imports nothing from this module, so there is no cycle;
 // it is a leaf that reads `import.meta.env` and validates it.
 import { demoCredentialsMode, getDemoApiBase } from './demoMode'
+import { getErrorMessage } from './errorMessage'
 
 type RequestStatus = 'online' | 'offline'
 
@@ -300,6 +301,39 @@ function maybeDispatchSessionExpired(path: string): void {
 }
 
 // --- Resilient Fetch ---
+
+/**
+ * Decode the same flat or httputil error envelope for both HTTP transports.
+ * Only malformed JSON falls back; cancellation and other read failures escape.
+ */
+export async function parseError(
+  res: Response,
+): Promise<{ message: string; code?: string; upstream?: string }> {
+  const fallback = res.statusText || `HTTP ${res.status}`
+  const contentType = res.headers.get('content-type') ?? ''
+  if (contentType.includes('json')) {
+    let body: unknown
+    try {
+      body = await res.json()
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err
+    }
+    const record = body !== null && typeof body === 'object' && !Array.isArray(body)
+      ? body as Record<string, unknown>
+      : {}
+    const nested = record.error !== null && typeof record.error === 'object' && !Array.isArray(record.error)
+      ? record.error as Record<string, unknown>
+      : {}
+    const message = getErrorMessage(record.error, fallback)
+    const rawCode = typeof record.code === 'string' && record.code.trim() !== ''
+      ? record.code
+      : nested.code
+    const code = typeof rawCode === 'string' && rawCode.trim() !== '' ? rawCode : undefined
+    const upstream = typeof record.upstream === 'string' ? record.upstream : undefined
+    return { message, code, upstream }
+  }
+  return { message: getErrorMessage(await res.text(), fallback) }
+}
 
 interface ResilientOptions extends RequestInit {
   retries?: number        // max retries (default 1)
@@ -793,9 +827,8 @@ async function _doFetch<T>(
       }
 
       if (!res.ok && !acceptedStatuses.includes(res.status)) {
-        const err = await res.json().catch(() => ({ error: res.statusText }))
-        const errCode = typeof err.code === 'string' ? err.code : undefined
-        const apiErr = new ApiError(err.error || `HTTP ${res.status}`, res.status, errCode)
+        const { message, code: errCode, upstream: errorUpstream } = await parseError(res)
+        const apiErr = new ApiError(message, res.status, errCode)
 
         // Tesla third-party token expiry.
         // The backend signals this via { code: 'TESLA_TOKEN_EXPIRED' } in
@@ -847,7 +880,7 @@ async function _doFetch<T>(
         // placeholder is rendered instead of a generic server-error.
         if (res.status === 503 && errCode === 'UPSTREAM_BREAKER_OPEN') {
           const retryAfterSec = parseRetryAfterHeader(res.headers.get('Retry-After'))
-          const upstream = typeof err.upstream === 'string' ? err.upstream : 'tesla'
+          const upstream = errorUpstream ?? 'tesla'
           dispatchUpstreamDownEvent(upstream, retryAfterSec)
           throw new UpstreamUnavailableError(
             apiErr.message || 'Upstream temporarily unavailable',
@@ -869,6 +902,7 @@ async function _doFetch<T>(
       // unchanged: no retry, no 408 conversion, no CORS probe — the user
       // has navigated away or the query was cancelled by TanStack Query.
       if (userSignal?.aborted) {
+        if ((err as { name?: unknown } | null)?.name === 'AbortError') throw err
         const aborted = err instanceof Error
           ? err
           : new DOMException('aborted', 'AbortError')
@@ -887,7 +921,7 @@ async function _doFetch<T>(
         let probeUnreachable = false
         try {
           const probe = await fetch(`${getApiBase()}/api/v1/system/version`, {
-            method: 'HEAD',
+            method: 'GET',
             redirect: 'manual',
           })
           if (probe.status === 401 || probe.status === 403 || probe.type === 'opaqueredirect'
@@ -915,6 +949,9 @@ async function _doFetch<T>(
             ? (err as { name: string }).name
             : ''
       const isAbort = errName === 'AbortError'
+
+      // A body-reader cancellation is not an internal request timeout.
+      if (isAbort && controller.signal.reason !== TIMEOUT_ABORT_REASON) throw err
 
       lastError = err instanceof Error ? err : new Error(String(err))
 

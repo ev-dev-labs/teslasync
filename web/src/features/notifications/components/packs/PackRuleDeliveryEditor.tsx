@@ -10,15 +10,18 @@ interface Props {
   disabled: boolean
   field: 'cooldown' | 'behavior' | 'title'
   compact?: boolean
+  selected?: boolean
   onChange: (selection: PackSelection) => void
 }
 
-export default function PackRuleDeliveryEditor({ selection, master, disabled, onChange, field, compact = false }: Props) {
+export default function PackRuleDeliveryEditor({ selection, master, disabled, onChange, field, compact = false, selected = true }: Props) {
   const { t } = useTranslation()
   const cooldown = selection.cooldown_s ?? master.cooldown_s
+  const invalid = selected && (!Number.isInteger(cooldown) || cooldown % 60 !== 0 || cooldown < 60 || cooldown > 604800)
   if (field === 'cooldown') return <Input id={`pack-${selection.template_id}-cooldown`}
       label={compact ? undefined : t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)')} className="h-11"
       aria-label={t('alertPacks.cooldown', 'Minimum minutes between notifications')}
+      error={invalid ? `${t('common.invalidNumber', 'Enter a valid number')} (1-10080)` : undefined}
       type="number" min={1} max={10080} step={1} value={Number.isNaN(cooldown) ? '' : cooldown / 60} disabled={disabled}
       onChange={event => onChange({ ...selection, cooldown_s: event.target.value === '' ? NaN : Number(event.target.value) * 60 })} />
   if (field === 'title') return <div className="flex min-h-11 items-center">

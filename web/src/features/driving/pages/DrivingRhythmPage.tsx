@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
+import { Grid, PageLayout } from '@/components/layout';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -12,7 +13,6 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import {
   DepartureConsistency,
-  DrivingRhythmKpis,
   DrivingRhythmMethodology,
   HourlyDistribution,
   MonthlyRhythmTrend,
@@ -22,6 +22,8 @@ import {
   type DrivingRhythmSectionState,
 } from '../components/driving-rhythm';
 import { buildDrivingRhythm } from '../lib/drivingRhythm';
+import { DrivingRhythmBrief } from '../components/operationalbrief-a-m/DrivingRhythmBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
 
 const SPLIT_COLUMNS = { default: 1, xl: 5 } as const;
 
@@ -31,15 +33,18 @@ export default function DrivingRhythmPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { start, end, timezone } = useRangeState({
+  const { start, end, timezone, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'driving-rhythm.range',
     defaultPresetId: 'all',
     inheritSharedPreference: false,
   });
   const [analysisNowMs] = useState(() => Date.now());
 
-  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, start, end);
+  // Request the exact local window (inclusive start, exclusive end instant);
+  // local dates still define the calendar denominator below.
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
+  const sourceState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () =>
       buildDrivingRhythm(drives, {
@@ -60,72 +65,97 @@ export default function DrivingRhythmPage() {
   }
 
   const sectionState: DrivingRhythmSectionState = {
-    isLoading: drivesQuery.isLoading,
-    error: drivesQuery.isError ? drivesQuery.error : null,
+    isLoading: sourceState.status === 'initial',
+    retained: sourceState.hasData && (
+      sourceState.status === 'stale' ||
+      sourceState.refreshError != null ||
+      sourceState.isRefreshBlocked
+    ),
+    error: sourceState.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('rhythm.title', 'Driving Rhythm')}
       subtitle={t(
         'rhythm.subtitle',
         'When your car actually gets driven',
       )}
       query={drivesQuery}
+      busy={sourceState.status === 'initial' && !sourceState.isRefreshBlocked && drivesQuery.isFetching}
     >
-      <FadeIn>
-        <DrivingRhythmKpis summary={summary} {...sectionState} />
-      </FadeIn>
+      {sourceState.status === 'initial' && sourceState.isRefreshBlocked && (
+        <div data-testid="driving-rhythm-initial-paused">
+          <DynamicsPausedNotice
+            state={sourceState}
+            label={t('rhythm.title', 'Driving Rhythm')}
+          />
+        </div>
+      )}
+      <StaleRefreshWarning state={sourceState} label={t('rhythm.title', 'Driving Rhythm')} />
+      <SectionErrorBoundary name="DrivingRhythmBrief">
+        <DrivingRhythmBrief summary={summary} {...sectionState}
+          scope={t('rhythm.brief.window', '{{start}}–{{end}} · {{timezone}}', { start, end, timezone })}
+          retained={sectionState.retained} />
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.05}>
+      <SectionErrorBoundary name="WeeklyPunchcard">
         <WeeklyPunchcard summary={summary} state={sectionState} />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.1}>
-        <Grid cols={SPLIT_COLUMNS} gap={4}>
-          <HourlyDistribution
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-3"
-          />
-          <WeekdayWeekendComparison
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-2"
-          />
-        </Grid>
-      </FadeIn>
+      <Grid cols={SPLIT_COLUMNS} gap={4}>
+        <div className="min-w-0 xl:col-span-3">
+          <SectionErrorBoundary name="HourlyDistribution">
+            <HourlyDistribution
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+        <div className="min-w-0 xl:col-span-2">
+          <SectionErrorBoundary name="WeekdayWeekendComparison">
+            <WeekdayWeekendComparison
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+      </Grid>
 
-      <FadeIn delay={0.15}>
+      <SectionErrorBoundary name="MonthlyRhythmTrend">
         <MonthlyRhythmTrend summary={summary} state={sectionState} />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.2}>
-        <Grid cols={SPLIT_COLUMNS} gap={4}>
-          <DepartureConsistency
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-3"
-          />
-          <StrongestSlots
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-2"
-          />
-        </Grid>
-      </FadeIn>
+      <Grid cols={SPLIT_COLUMNS} gap={4}>
+        <div className="min-w-0 xl:col-span-3">
+          <SectionErrorBoundary name="DepartureConsistency">
+            <DepartureConsistency
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+        <div className="min-w-0 xl:col-span-2">
+          <SectionErrorBoundary name="StrongestSlots">
+            <StrongestSlots
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+      </Grid>
 
-      <FadeIn delay={0.25}>
+      <SectionErrorBoundary name="DrivingRhythmMethodology">
         <DrivingRhythmMethodology
           summary={summary}
           start={start}
           end={end}
           state={sectionState}
         />
-      </FadeIn>
-    </PageContainer>
+      </SectionErrorBoundary>
+    </PageLayout>
   );
 }

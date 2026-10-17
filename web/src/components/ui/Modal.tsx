@@ -1,9 +1,10 @@
-import { forwardRef, useId, useImperativeHandle, useRef, type HTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useCallback, useId, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { useDialogFocus } from '@/hooks/useDialogFocus';
+import { useDialogFocus, type UseDialogFocusOptions } from '@/hooks/useDialogFocus';
+import { PanelTitle } from './Typography';
 
 export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
   open: boolean;
@@ -11,9 +12,9 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
   title?: string;
   /**
    * Width preset for `≥ sm` viewports. Below `sm` (640px) the modal is always
-   * full-screen regardless of this prop — see MOBILE_GUIDELINES.md.
+   * viewport-contained and full-width regardless of this prop.
    */
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'full' | 'fullscreen';
   children: ReactNode;
   /** Persistent actions outside the scrolling dialog body. */
   footer?: ReactNode;
@@ -22,15 +23,16 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
    * ARIA when the dialog has no visible heading.
    */
   ariaLabel?: string;
+  getReturnFocusTarget?: UseDialogFocusOptions['getReturnFocusTarget'];
 }
 
 /**
  * Surface modal with a backdrop. Mobile + accessibility behaviour:
- * - Below `sm` (< 640px), the modal is full-screen edge-to-edge regardless of
+ * - Below `sm` (< 640px), the modal is full-width edge-to-edge regardless of
  *   `size`. This is enforced via Tailwind responsive classes so SSR / no-JS
  *   environments behave identically.
  * - Close button is at least 44 × 44 px to satisfy WCAG 2.5.5 (touch target).
- * - Surfaces use `--surface-1` and `--glass-border` tokens, not hard-coded
+ * - Surfaces use `--surface-1` and `--border-default` tokens, not hard-coded
  *   `bg-white dark:bg-gray-800`, so light + dark themes both render correctly.
  *
  * Accessibility:
@@ -52,18 +54,22 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * Drawer, and Lightbox cannot drift apart.
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
-  ({ open, onClose, title, size = 'md', className, children, footer, ariaLabel, ...props }, ref) => {
+  ({ open, onClose, title, size = 'md', className, children, footer, ariaLabel, getReturnFocusTarget, ...props }, ref) => {
     const { t } = useTranslation();
+    const fullscreen = size === 'fullscreen';
     const dialogRef = useRef<HTMLDivElement | null>(null);
     const titleId = useId();
-    // Compose the forwarded ref with our internal ref so callers and the
-    // focus-trap effect can both reach the dialog node.
-    useImperativeHandle(ref, () => dialogRef.current as HTMLDivElement, []);
+    // A callback tracks portal mount/unmount even when the modal starts closed.
+    const setDialogRef = useCallback((node: HTMLDivElement | null) => {
+      dialogRef.current = node;
+      if (typeof ref === 'function') ref(node);
+      else if (ref) ref.current = node;
+    }, [ref]);
 
     // Shared focus contract (A11Y-04): initial focus, Tab trap, Escape,
     // and trigger restore with a resilient fallback when the trigger was
     // removed while the dialog was open.
-    useDialogFocus({ open, containerRef: dialogRef, onClose });
+    useDialogFocus({ open, containerRef: dialogRef, onClose, getReturnFocusTarget });
 
     if (!open) return null;
 
@@ -71,7 +77,8 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       sm:   'sm:max-w-sm',
       md:   'sm:max-w-lg',
       lg:   'sm:max-w-2xl',
-      full: 'sm:max-w-[min(96vw,1100px)]',
+      full: 'sm:max-w-modal-full',
+      fullscreen: 'max-w-none',
     };
 
     // Portal to <body> so the modal escapes any ancestor that creates a
@@ -81,61 +88,63 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     // status-bar segment is anchored to the bar's bbox, not the viewport, and
     // overflows the screen.
     //
-    // z-[60] is chosen to sit ABOVE the footer StatusBar (z-[55]) and the
+    // z-overlay is chosen to sit ABOVE the footer StatusBar (z-[55]) and the
     // mobile top bar so neither chrome ever clips the modal's edges.
     if (typeof document === 'undefined') return null;
 
     const overlay = (
       // This is the shared <Modal> source of truth. All other interactive
       // dialogs MUST use this component instead of hand-rolling overlays.
-      // eslint-disable-next-line no-restricted-syntax
-      <div className="fixed inset-0 z-[60] overflow-y-auto">
+      <div className="fixed inset-0 z-overlay overflow-y-auto">
         <div
           // Forced-colors mode suppresses
           // box-shadow + background-image, so a glass backdrop with a
           // semi-transparent rgba turns invisible. Force an opaque
           // Canvas-colour scrim so the dialog reads as modal in
           // Windows High Contrast.
-          className="fixed inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm forced-colors:bg-[Canvas]"
+          className="fixed inset-0 bg-[var(--surface-overlay)] forced-colors:bg-[Canvas]"
           onClick={onClose}
           aria-hidden="true"
         />
-        <div className="relative flex min-h-full items-end justify-center pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4">
+        <div className={cn(
+          'relative flex min-h-full justify-center',
+          fullscreen ? 'items-stretch' : 'items-end pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4',
+        )}>
           <div
-            ref={dialogRef}
+            ref={setDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={title ? titleId : undefined}
             aria-label={!title ? (ariaLabel ?? undefined) : undefined}
             tabIndex={-1}
             className={cn(
-              'relative z-10 flex w-full flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-xl outline-none',
-              'border border-[var(--glass-border)]',
+              'relative z-10 flex w-full min-w-0 flex-col bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 outline-none',
+              'border border-[var(--border-default)]',
               // Pin the dialog edge to a system
               // colour so the modal frame remains perceivable when the
               // glass-border alpha collapses to transparent.
               'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
               // Below sm: bottom sheet that fills width, capped to viewport height.
               // From sm and up: rounded card, auto height up to 90vh, centered.
-              'max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-lg',
-              footer && 'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]',
+              fullscreen ? 'h-dvh max-h-dvh rounded-none'
+                : 'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))] rounded-none sm:h-auto sm:max-h-modal sm:rounded-panel',
               sizes[size],
               className,
             )}
             {...props}
           >
             {title && (
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--glass-border)] px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
-                <h2 id={titleId} className="min-w-0 truncate text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-default)] px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
+                <PanelTitle as="h2" id={titleId} className="min-w-0 break-words">{title}</PanelTitle>
                 <button
                   type="button"
                   onClick={onClose}
                   aria-label={t('modal.close', 'Close')}
                   className={cn(
-                    'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg',
+                    'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-sm',
                     'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
-                    'active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]',
+                    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+                    'transition-colors duration-fast motion-reduce:transition-none [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]',
                   )}
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
@@ -144,12 +153,14 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             )}
             <div
               data-modal-scroll-body="true"
-              className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom"
+              className={fullscreen
+                ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6 safe-bottom'
+                : 'min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom'}
             >
               {children}
             </div>
             {footer && (
-              <div data-modal-footer="true" className="shrink-0 border-t border-[var(--glass-border)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 safe-bottom">
+              <div data-modal-footer="true" className="shrink-0 border-t border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-3 sm:px-6 safe-bottom">
                 {footer}
               </div>
             )}

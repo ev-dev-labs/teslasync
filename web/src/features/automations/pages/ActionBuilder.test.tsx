@@ -15,13 +15,21 @@
  * the English copy. No network is touched — the component is prop-driven.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { useState } from 'react';
 
 import { ActionBuilder, ACTION_TYPES } from './ActionBuilder';
 import type { AutomationActionStepInput } from '../components/stepInputTypes';
 import type { NotificationChannel } from '@/types/notifications';
+import { useSettings } from '@/hooks/useSettings';
+import { inputPreferences } from '@/test/inputPreferences';
+vi.mock('@/hooks/useSettings', () => ({ useSettings: vi.fn() }));
+beforeEach(() => {
+  vi.mocked(useSettings).mockReturnValue({
+    settings: inputPreferences(),
+  } as ReturnType<typeof useSettings>);
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -110,18 +118,19 @@ function lastAction(onChange: ReturnType<typeof vi.fn>, index = 0): any {
 
 // ── ACTION_TYPES export ─────────────────────────────────────────────────────
 describe('ACTION_TYPES', () => {
-  it('exposes the four supported action kinds with i18n keys and fallbacks', () => {
-    expect(ACTION_TYPES).toHaveLength(4);
+  it('exposes the five supported action kinds with i18n keys and fallbacks', () => {
+    expect(ACTION_TYPES).toHaveLength(5);
     expect(ACTION_TYPES.map((a) => a.value)).toEqual([
       'action_command',
       'action_notify',
       'action_set_setting',
       'action_call_automation',
+      'action_wait',
     ]);
     expect(ACTION_TYPES[0]).toEqual({
       value: 'action_command',
       labelKey: 'automations.actions.command',
-      fallback: 'Vehicle Command',
+      fallback: 'Vehicle command',
     });
     expect(
       ACTION_TYPES.every((a) => typeof a.labelKey === 'string' && a.fallback.length > 0),
@@ -205,7 +214,7 @@ describe('ActionBuilder — action type switching', () => {
       [command('lock')],
       [discordChannel(5, 'Disabled', false), discordChannel(9, 'Enabled', true)],
     );
-    fireEvent.change(screen.getByLabelText('Action Type'), {
+    fireEvent.change(screen.getByLabelText('Action type'), {
       target: { value: 'action_notify' },
     });
     expect(lastAction(onChange)).toEqual({
@@ -219,7 +228,7 @@ describe('ActionBuilder — action type switching', () => {
 
   it('gives every action-type select an accessible name (aria-label on rows > 0)', () => {
     renderBuilder([command('lock'), notify(0)]);
-    expect(screen.getAllByRole('combobox', { name: 'Action Type' })).toHaveLength(2);
+    expect(screen.getAllByRole('combobox', { name: 'Action type' })).toHaveLength(2);
   });
 });
 
@@ -284,7 +293,7 @@ describe('ActionFields — command', () => {
   it('edits a charge limit with a labeled number field and keeps the JSON editor optional', () => {
     const { onChange } = renderBuilder([command('set_charge_limit', { percent: 80 })]);
     expect(screen.queryByLabelText(/Params \(JSON/i)).not.toBeInTheDocument();
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Charge limit (%)' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Charge limit' }), {
       target: { value: '90' },
     });
     expect(lastAction(onChange).command_params).toEqual({ percent: 90 });
@@ -334,9 +343,9 @@ describe('ActionFields — set_setting', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_set_setting', setting_key: '', value_text: '' },
     ]);
-    expect(screen.getByLabelText('Setting Key')).toBeInTheDocument();
-    expect(screen.getByLabelText('Value Type')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Setting Key'), {
+    expect(screen.getByLabelText('Setting key')).toBeInTheDocument();
+    expect(screen.getByLabelText('Value type')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Setting key'), {
       target: { value: 'charge_limit' },
     });
     expect(lastAction(onChange).setting_key).toBe('charge_limit');
@@ -346,11 +355,11 @@ describe('ActionFields — set_setting', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_set_setting', setting_key: 'charge_limit', value_text: '' },
     ]);
-    fireEvent.change(screen.getByLabelText('Value Type'), { target: { value: 'number' } });
+    fireEvent.change(screen.getByLabelText('Value type'), { target: { value: 'number' } });
     expect(lastAction(onChange)).toEqual({
       kind: 'action_set_setting',
       setting_key: 'charge_limit',
-      value_num: 0,
+      value_num: null,
     });
     fireEvent.change(screen.getByLabelText('Value'), { target: { value: '80' } });
     expect(lastAction(onChange).value_num).toBe(80);
@@ -360,7 +369,7 @@ describe('ActionFields — set_setting', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_set_setting', setting_key: 'sentry', value_text: '' },
     ]);
-    fireEvent.change(screen.getByLabelText('Value Type'), { target: { value: 'boolean' } });
+    fireEvent.change(screen.getByLabelText('Value type'), { target: { value: 'boolean' } });
     expect(lastAction(onChange).value_bool).toBe(false);
     const valueSelect = screen.getByLabelText('Value');
     expect(valueSelect.tagName).toBe('SELECT');
@@ -370,13 +379,64 @@ describe('ActionFields — set_setting', () => {
 
   it('derives the "number" value type from an existing numeric value', () => {
     renderBuilder([{ kind: 'action_set_setting', setting_key: 'x', value_num: 42 }]);
-    expect((screen.getByLabelText('Value Type') as HTMLSelectElement).value).toBe('number');
-    expect((screen.getByLabelText('Value') as HTMLInputElement).value).toBe('42');
+    expect((screen.getByLabelText('Value type') as HTMLSelectElement).value).toBe('number');
+    expect((screen.getByLabelText('Value') as HTMLInputElement).value).toBe('42.00');
+  });
+
+  it('parses locale decimals without truncation and retains the numeric editor when cleared', () => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ locale: 'de-DE', decimal_precision: 3 }),
+    } as ReturnType<typeof useSettings>);
+    const { onChange } = renderBuilder([
+      { kind: 'action_set_setting', setting_key: 'threshold', value_num: 1.25 },
+    ]);
+    const input = screen.getByLabelText('Value');
+    expect(input).toHaveValue('1,250');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '12,375' } });
+    expect(lastAction(onChange).value_num).toBe(12.375);
+    fireEvent.change(input, { target: { value: '' } });
+    expect(lastAction(onChange).value_num).toBeNull();
+    expect(screen.getByLabelText('Value type')).toHaveValue('number');
+    expect(input).toHaveValue('');
+    fireEvent.change(input, { target: { value: '12invalid' } });
+    fireEvent.blur(input);
+    expect(lastAction(onChange).value_num).toBeNull();
+    expect(screen.getByLabelText('Value type')).toHaveValue('number');
+    expect(screen.getByText('Enter a valid number')).toBeInTheDocument();
+  });
+
+  it('uses the locale parser when converting text to a numeric setting', () => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ locale: 'de-DE' }),
+    } as ReturnType<typeof useSettings>);
+    const { onChange } = renderBuilder([
+      { kind: 'action_set_setting', setting_key: 'threshold', value_text: '1,25' },
+    ]);
+    fireEvent.change(screen.getByLabelText('Value type'), { target: { value: 'number' } });
+    expect(lastAction(onChange).value_num).toBe(1.25);
+    expect(screen.getByLabelText('Value')).toHaveValue('1,25');
+  });
+
+  it('updates displayed locale and precision without rewriting the canonical setting', () => {
+    const actions: AutomationActionStepInput[] = [
+      { kind: 'action_set_setting', setting_key: 'threshold', value_num: 12.3456 },
+    ];
+    const onChange = vi.fn();
+    const view = render(<ActionBuilder actions={actions} channels={[]} onChange={onChange} />);
+    expect(screen.getByLabelText('Value')).toHaveValue('12.35');
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ locale: 'de-DE', decimal_precision: 3 }),
+    } as ReturnType<typeof useSettings>);
+    view.rerender(<ActionBuilder actions={actions} channels={[]} onChange={onChange} />);
+    expect(screen.getByLabelText('Value')).toHaveValue('12,346');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(actions[0]).toMatchObject({ value_num: 12.3456 });
   });
 
   it('derives the "boolean" value type + label from an existing boolean value', () => {
     renderBuilder([{ kind: 'action_set_setting', setting_key: 'x', value_bool: true }]);
-    expect((screen.getByLabelText('Value Type') as HTMLSelectElement).value).toBe('boolean');
+    expect((screen.getByLabelText('Value type') as HTMLSelectElement).value).toBe('boolean');
     expect((screen.getByLabelText('Value') as HTMLSelectElement).value).toBe('true');
   });
 });
@@ -387,7 +447,7 @@ describe('ActionFields — call_automation', () => {
     const { onChange } = renderBuilder([
       { kind: 'action_call_automation', target_automation_id: 0 },
     ]);
-    const input = screen.getByLabelText('Target Automation ID') as HTMLInputElement;
+    const input = screen.getByLabelText('Target automation ID') as HTMLInputElement;
     expect(input.value).toBe('');
     fireEvent.change(input, { target: { value: '5' } });
     expect(lastAction(onChange).target_automation_id).toBe(5);
@@ -395,6 +455,6 @@ describe('ActionFields — call_automation', () => {
 
   it('renders an existing target automation id', () => {
     renderBuilder([{ kind: 'action_call_automation', target_automation_id: 7 }]);
-    expect((screen.getByLabelText('Target Automation ID') as HTMLInputElement).value).toBe('7');
+    expect((screen.getByLabelText('Target automation ID') as HTMLInputElement).value).toBe('7');
   });
 });

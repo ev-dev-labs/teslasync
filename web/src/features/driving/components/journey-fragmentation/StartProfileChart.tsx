@@ -3,8 +3,9 @@ import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
 
 import { JourneyFragmentationSectionProps } from './_types';
+import { PendingEvidence } from './PendingEvidence';
 
-export function StartProfileChart({ result, loading = false }: JourneyFragmentationSectionProps) {
+export function StartProfileChart({ result, state, loading = false }: JourneyFragmentationSectionProps) {
   const { t } = useTranslation();
   const data = result.startTwoHourProfile.map((point) => ({ period: point.label, journeys: point.journeyCount }));
   return (
@@ -13,15 +14,15 @@ export function StartProfileChart({ result, loading = false }: JourneyFragmentat
       subtitle={t('journeyFragmentation.startProfile.subtitle', 'Journey starts grouped in the vehicle timezone {{timeZone}}.', { timeZone: result.timeZone })}
       ariaLabel={t('journeyFragmentation.startProfile.aria', 'Bar chart of observed journey starts by local two-hour period')}
       loading={loading}
-      empty={!loading && data.length === 0}
-      data={data}
+      empty={(!state || state.hasData) && !loading && result.journeyCount === 0}
+      data={state && !state.hasData ? undefined : data}
       dataColumns={[
         { key: 'period', label: t('journeyFragmentation.startProfile.period', 'Local period') },
         { key: 'journeys', label: t('journeyFragmentation.startProfile.journeys', 'Journeys') },
       ]}
       height={280}
     >
-      {data.length === 0 ? (
+      {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : result.journeyCount === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('journeyFragmentation.profile.empty', 'No local journey-start profile is available yet.')} />
       ) : (
         <ResponsiveContainer width="100%" height="100%">

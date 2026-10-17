@@ -10,7 +10,7 @@ import {
   Text,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 
 import {
@@ -20,6 +20,7 @@ import {
 } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargingEnergyMixProps {
   care: CareScore;
@@ -44,6 +45,7 @@ export function ChargingEnergyMix({
   state,
   className,
 }: ChargingEnergyMixProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
   const coverage = care.energyMix.classificationCoverage;
@@ -77,7 +79,7 @@ export function ChargingEnergyMix({
         >
           {coverage != null
             ? t('batteryCare.energy.coverageBadge', '{{pct}} classified', {
-                pct: fmtPercent(coverage * 100, 0),
+                pct: fmtPercent(coverage * 100),
               })
             : t('batteryCare.energy.noCoverage', 'No classification')}
         </Badge>
@@ -86,7 +88,7 @@ export function ChargingEnergyMix({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-[var(--surface-2)] p-4">
           <MetricValue>
-            {formatEnergy(care.energyMix.totalEnergyWh, { precision: 1 })}
+            {formatEnergy(care.energyMix.totalEnergyWh)}
           </MetricValue>
           <MetricLabel>
             {t('batteryCare.energy.total', 'Measured energy returned')}
@@ -94,9 +96,7 @@ export function ChargingEnergyMix({
         </div>
         <div className="rounded-xl bg-[var(--surface-2)] p-4">
           <MetricValue>
-            {formatEnergy(care.energyMix.classifiedEnergyWh, {
-              precision: 1,
-            })}
+            {formatEnergy(care.energyMix.classifiedEnergyWh)}
           </MetricValue>
           <MetricLabel>
             {t('batteryCare.energy.classified', 'Classified AC/DC energy')}
@@ -116,7 +116,7 @@ export function ChargingEnergyMix({
               'batteryCare.energy.bucketValue',
               '{{energy}} · {{count}} sessions',
               {
-                energy: formatEnergy(bucket.energyWh, { precision: 1 }),
+                energy: formatEnergy(bucket.energyWh),
                 count: bucket.sessions,
               },
             )}

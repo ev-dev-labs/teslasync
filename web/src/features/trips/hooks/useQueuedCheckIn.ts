@@ -30,10 +30,17 @@ export function useQueuedCheckIn(sessionId: number) {
   }, [sessionId]);
 
   const queueOne = useCallback(() => {
-    enqueueCheckIn({ session_id: sessionId, recorded_at: new Date().toISOString() });
-    refresh();
-    warning('toast.journey.checkin.queued', 'Offline — check-in queued');
-  }, [sessionId, refresh, warning]);
+    const result = enqueueCheckIn({ session_id: sessionId, recorded_at: new Date().toISOString() });
+    setQueued(result.queue.filter((entry) => entry.session_id === sessionId).length);
+    if (result.persisted) {
+      warning('toast.journey.checkin.queued', 'Offline — check-in queued');
+    } else {
+      warning(
+        'toast.journey.checkin.queuedMemoryOnly',
+        'Check-in queued only in this tab — reloading or closing it will lose unsent check-ins',
+      );
+    }
+  }, [sessionId, warning]);
 
   const flush = useCallback(async () => {
     if (flushingRef.current || getConnectionStatus() !== 'online') return;

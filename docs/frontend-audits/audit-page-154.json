@@ -1,0 +1,393 @@
+{
+  "item": "audit-page-154",
+  "page": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+  "routes": ["/ownership/consumables-lifecycle"],
+  "purpose": "Track recorded consumables, service events, projected duty-adjusted remaining life and replacement economics for the selected vehicle, with explicit evidence and safety limitations.",
+  "primaryGoal": "Understand which recorded part needs attention, inspect the assumptions behind its projection, and record a part or service event without mistaking modelled wear for a physical measurement.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 86,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace vehicle selection hook; page consumes vehicleId and has no duplicate selector.",
+      "boundary": "Selection-hook implementation not inspected. Draft/event state remains page-local; source reads are vehicle-scoped."
+    },
+    {
+      "hook": "useConsumablesReport(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 680,
+      "endpoint": "GET /api/v1/consumables-lifecycle?vehicle_id={vehicleId}",
+      "sourceOwner": "ownershipKeys.consumables; useVehicleQuery at lines 129-140 enables positive IDs and forwards AbortSignal.",
+      "routeEvidence": "internal\\api\\router.go:3918 mounts ownershipIntelHandler; internal\\handler\\v1\\ownershipintel\\handler.go:175-176 registers report GET inside consumables route.",
+      "boundary": "Returned report owns lifecycle/status/projections, stress, money, quality and evidence. Typed shape web\\src\\types\\ownership.ts:983-1021. No engine, SQL, physical inspection, aggregation correctness or slash-normalization runtime proof."
+    },
+    {
+      "hook": "useConsumableItems(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 688,
+      "endpoint": "GET /api/v1/consumables-lifecycle/items?vehicle_id={vehicleId}",
+      "sourceOwner": "ownershipKeys.consumableItems; shared vehicle query enablement and cancellation.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:177; composed through internal\\api\\router.go:3918.",
+      "boundary": "Page uses itemsQuery.data?.items ?? []; no explicit server pagination arguments or page-specific export callbacks. Do not invent full-server export coverage."
+    },
+    {
+      "hook": "useCreateConsumable",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 696,
+      "endpoint": "POST /api/v1/consumables-lifecycle/items",
+      "sourceOwner": "Typed CreateConsumableItemRequest, request client, ownership-wide invalidation and mutation toast.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:178.",
+      "boundary": "Page submitItem at lines 145-166 sends metres, seconds, ISO install instant and currency minor units. Not executed."
+    },
+    {
+      "hook": "useDeleteConsumable",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 714,
+      "endpoint": "DELETE /api/v1/consumables-lifecycle/items/{id}",
+      "sourceOwner": "Existing mutation invalidation/toast; useConfirm owns page destructive confirmation.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:179.",
+      "boundary": "UI warns that the part and service history are permanently removed. Database cascade and authorization unverified; no delete executed."
+    },
+    {
+      "hook": "useCreateConsumableEvent",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 728,
+      "endpoint": "POST /api/v1/consumables-lifecycle/events",
+      "sourceOwner": "Typed CreateConsumableEventRequest, ownership-wide invalidation and mutation toast.",
+      "routeEvidence": "internal\\handler\\v1\\ownershipintel\\handler.go:180.",
+      "boundary": "Page lines 168-188 send item_id, one of inspect/rotate/service/replace/note, current ISO instant, nullable odometer_m, integer cost_minor and note. Not executed; no automatic maintenance performed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / OwnershipPanel / LayoutCard / SourceContent",
+      "owner": "Existing @/components/layout and ownership-domain adapter",
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:524-545", "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx:24-82", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:1-17", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:9-76"],
+      "contract": "Full-width container-aware page, persistent section shells, independent fatal recovery and retained source content; editor state can survive initial register failure."
+    },
+    {
+      "name": "OwnershipBrief / OperationalBrief / specialistDisplay",
+      "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:545-591", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:854-881", "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx:25-82", "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts:3-10"],
+      "contract": "Nine source-backed overview/economics metrics, raw numeric input to shared formatting, source status/as_of/client load time and unknown analysis bounds; no invented freshness or generic green status."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:627-633", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:838-847", "web\\src\\components\\ui\\DataTable.tsx:184-193", "web\\src\\components\\ui\\DataTable.tsx:714-725"],
+      "contract": "Sole table pipeline; stable stress/items IDs and item raw-value filters. Existing mobilePresentation and embedded variant available; callers currently only specify mobileColumns."
+    },
+    {
+      "name": "EvidencePanel / VerdictBadge / StatGrid / KVList",
+      "owner": "Existing ownership components and @/components/data-display",
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:341-520", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:886-901", "web\\src\\features\\ownership\\components\\EvidencePanel.tsx:33-194", "web\\src\\features\\ownership\\components\\StatGrid.tsx:1-61"],
+      "contract": "Keep named lifecycle statuses, per-part replacement/wear costs, complete expandable service history, evidence quality and unsupported physical-wear/recall limits. VerdictBadge/KVList internals not inspected."
+    },
+    {
+      "name": "SiNumberInput / MoneyInput / MutationError",
+      "owner": "web\\src\\features\\ownership\\components",
+      "citations": ["web\\src\\features\\ownership\\components\\SiNumberInput.tsx:1-66", "web\\src\\features\\ownership\\components\\MoneyInput.tsx:1-62", "web\\src\\features\\ownership\\components\\MutationError.tsx:9-23"],
+      "contract": "SI-entry fields expose preferred-unit hints; money is integer minor units with currency-specific display hint; failed writes retain visible feedback. Reuse these domain owners."
+    },
+    {
+      "name": "Button / Input / Select / Textarea / Accordion / Badge / ConfirmDialog / Text / AlertBanner / FadeIn",
+      "owner": "Existing category barrels @/components/ui, @/components/feedback and @/components/motion",
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:12-17", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:119-131", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:659-835", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:903"],
+      "contract": "Localized labelled controls, pending write states, destructive confirmation and service-history expansion. Focus trap, touch geometry and reduced-motion runtime behavior unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 345,
+      "rule": "MDC-002/MDC-015",
+      "detail": "Hand-styled lifecycle and event-editor surfaces repeat fixed-white border/background patterns at lines 345 and 778; the direct EvidencePanel dependency repeats one at line 129.",
+      "fix": "Use existing neutral surface/border tokens or existing card composition; do not create another consumable card visual system.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 841,
+      "rule": "MDC-023/MDC-043; mission 15-17",
+      "detail": "Part register mobileColumns retains label/installed/retired only. Actions are the sole Log event and Remove entry points at lines 316-337. DataTable.tsx:725 adds hidden md:table-cell to excluded columns; no mobilePresentation or alternate action path is supplied. Source indicates these actions and rated-life/cost columns disappear below md.",
+      "fix": "Adopt existing complete mobile table presentation retaining part identity, rated life, currency/cost, retirement and accessible Log event/Remove actions; test both narrow allocated containers and viewport widths without losing table pipeline behavior.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 629,
+      "rule": "MDC-023/MDC-043",
+      "detail": "Duty-cycle table hides the reference baseline on mobile while retaining observed value and multiplier. That removes the explicit comparison needed to interpret the explanatory projection.",
+      "fix": "Retain baseline, SI unit and narrative through the existing mobile detail/summary strategy, not a shortened data model.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 349,
+      "rule": "MDC-031/MDC-043",
+      "detail": "Lifecycle outer header wraps, but its nested label/verdict/harsh-duty flex row at line 351 does not wrap or declare min-w-0. Long user part names and translated badges can pressure narrow widths. Forms do stack below md; numeric detail grid reflows at md/xl.",
+      "fix": "Allow nested title/status reflow and safe word wrapping while preserving all labels. Verify 320/375/390/430 widths, long names, currency strings and expanded histories rather than asserting overflow from source alone.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "accessibility": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 382,
+      "rule": "MDC-040/MDC-025; mission 30",
+      "detail": "Remaining-life visual bar is nested divs without meter/progress semantics or aria-hidden. Text percentage and VerdictBadge provide non-color state, but no programmatic association identifies the bar as a projected, not physically measured, remaining-life value.",
+      "fix": "Keep textual projection/status and either mark the redundant bar decorative or use an existing accessible measurement presentation with a localized projection label and unknown-value handling. Do not imply maintenance completion progress.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 776,
+      "rule": "MDC-021/MDC-040",
+      "detail": "Inline event editor opens from a table action but has no visible selected-part heading, editor-region label or explicit focus transfer. Fields are labelled and Cancel exists, but target context is only eventFor state; tab/focus recovery is not demonstrated.",
+      "fix": "Expose the selected part name and associate an editor heading/region, using existing focus conventions; verify keyboard reachability and focus restoration without inventing another overlay system.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 251,
+      "rule": "MDC-044",
+      "detail": "Category names are generated by replacing underscores in source enum keys at lines 251, 361 and 665 rather than localized labels. Binding-limit text also interpolates the raw key at line 452. Event kinds already have a localized mapping at lines 70-76.",
+      "fix": "Use existing canonical catalog/domain label ownership for category and binding-limit display; preserve exact enum values on wire and in filters. Report any needed catalog entries to their owner.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "states": {
+    "loading": {
+      "citations": ["web\\src\\features\\ownership\\components\\OwnershipPanel.tsx:39-68", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:40-52", "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx:75"],
+      "detail": "Initial reads receive section loading shells; preserveSummary keeps raw-missing summary metrics and the OperationalBrief loading contract. No project-wide spinner replaces all page content by page-local condition."
+    },
+    "empty": {
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:601-605", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:622-625", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:643-644"],
+      "detail": "Projection explains recording a part; stress explains insufficient drives; register retains Record part action in panel chrome. Empty and missing report keep summary values unknown rather than measured zero."
+    },
+    "fatalError": {
+      "citations": ["web\\src\\features\\ownership\\components\\OwnershipPanel.tsx:43-64", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:642"],
+      "detail": "Fatal read error is section-local with retry. Register editor policy can keep unsaved editing usable without successful initial read. Actual mounted PageContainer behavior was not inspected."
+    },
+    "retainedRefreshErrorAndOffline": {
+      "citations": ["web\\src\\api\\dataState.ts:166-179", "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx:46-47", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:56-73"],
+      "detail": "Shared data state retains payload for refresh errors/paused reads; domain adapter maps stale to retained, with warning and retry. This adapter does not distinguish explicit offline copy from retained refresh failure. No disconnected-browser exercise."
+    },
+    "unknownAndPartial": {
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:280-284", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:413-445", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:875", "web\\src\\features\\ownership\\components\\EvidencePanel.tsx:83-108"],
+      "detail": "Nullable rated/adjusted/remaining distance, remaining duration, forecast date and rate use dashes/null raw metrics. Arrays default empty. Quality exposes reasons/coverage/evidence. health_pct and duty values are non-null typed inputs; do not reinterpret backend unknown projections as zero or assume physical wear.",
+      "limitations": "EvidencePanel sample_count fallback is 0 when a quality object exists; no nullable backend contract was reviewed to call this incorrect. Page does not add explicit partial-query status beyond independent section sources."
+    },
+    "writes": {
+      "citations": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:119-131", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:145-188", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:768-771", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:823-835", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx:848"],
+      "detail": "Save/event/delete pending states, inline write errors, global mutation toasts and destructive confirmation exist. Part form closes without resetting draft; successful event resets eventDraft. Cancellation closes editors without clearing drafts. No write executed."
+    }
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 369,
+      "rule": "MDC-013/MDC-012",
+      "detail": "Health percentage uses raw p with text-lg/font-semibold; detail values at 396, 412, 428 and 440 use ad-hoc text-sm paragraphs instead of role typography. Existing Text is already used throughout the same card.",
+      "fix": "Use existing Text/MetricValue roles while retaining tabular numbers and semantic projection emphasis. Measure actual composed contrast for toned emerald/amber/rose text in every supported theme.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 627,
+      "rule": "MDC-015/MDC-023; mission 7-8",
+      "detail": "Both DataTables sit inside OwnershipPanel but omit variant, whose inspected default is standalone (DataTable.tsx:452). Lifecycle cards also nest two separate StatGrid Cards per part. Repeated frames and duplicated long safety copy in the overview may dilute projection hierarchy; rendered intensity is unverified.",
+      "fix": "Prefer existing embedded table variant where panel owns the frame and tune composition/spacing with current tokens. Keep every cost, caveat and explanation; do not flatten away evidence or history to reduce card count.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 129,
+      "rule": "MDC-010/MDC-012/MDC-015",
+      "detail": "Shared evidence tiles use fixed-white border/background, independently of current theme tokens. Page has two analogous sites recorded under duplicatedPatterns. No neon/glow/shadow source matches were found on this page; bright appearance is not established.",
+      "fix": "EvidencePanel owner should replace its fixed-white surface with existing neutral tokens while retaining quality, evidence timestamps and limitation text; no palette or theme-provider change.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 135,
+      "rule": "MDC-045/MDC-033; preservation risk",
+      "detail": "Event MoneyInput uses report?.currency ?? draft.currency at line 812, while displayed per-item/event-history money uses the selected item's currency (lines 305, 462 and 505). Mixed-currency entries can therefore show an event cost-entry hint in a different currency from its part. Backend currency interpretation is unverified; event request carries no currency.",
+      "fix": "Resolve selected-item currency as the event editor's source contract and verify backend semantics before implementation. Preserve raw minor-unit values and report-level economics currency; do not introduce currency conversion or silently relabel prior amounts.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 89,
+      "rule": "MDC-032/MDC-046; maintenance target preservation",
+      "detail": "eventFor is only an item ID. Opening an event from a table row does not store the owning vehicle or part identity; no page-local effect/reset/guard compares it with a subsequently changed workspace vehicle before submitEvent at line 170. Reads do scope correctly. Cross-vehicle editor context is a source risk, not a proven wrong write.",
+      "fix": "Bind editor target to selected item/vehicle and safely close or mark invalid on scope changes before allowing a real write; preserve drafts intentionally and test no accidental maintenance submission to a previously selected vehicle.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "line": 341,
+      "rule": "MDC-002; mission 33",
+      "detail": "906-line orchestrator includes inline lifecycle/history rendering (341-520), column definitions, both forms, draft state and submit adapters. Typed hooks and existing formatters are already separated; only one component is exported, and no direct legacy API/library pattern was found.",
+      "fix": "If modernization needs decomposition, extract bounded ownership feature renderers/forms with typed props and callbacks, preserving the whole feature-directory count and every capability. Keep mutations in the existing hook layer and avoid a parallel global component library.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": "Recover mobile Log event/Remove and all omitted comparison/details through the existing DataTable contract.",
+    "next": ["Resolve event editor part/vehicle/currency context before any maintenance write acceptance.", "Retain source trust, all history and safety caveats while tokenizing repeated surfaces and typography.", "Localize source enum labels and verify accessible editor context, focus, long labels and theme contrast."],
+    "acceptance": "Runtime unverified. Source report is not mounted, visual, keyboard, financial or physical-maintenance acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse existing complete mobile DataTable presentation",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "action": "reuse; no new shared table component established",
+      "propsVariantsStates": ["mobilePresentation", "variant='embedded' where parent owns the surface", "mobile summary/detail with all original fields and accessible row actions", "same tableId, keyExtractor, raw-value filters, loaded ordering and any existing pipeline exports"],
+      "usedBy": ["ConsumablesLifecyclePage part register", "ConsumablesLifecyclePage duty-cycle factor table"],
+      "dependsOn": ["Existing DataTable owner's accepted presentation contract", "Page-owned row/action adapter", "Narrow allocated-container and keyboard acceptance"],
+      "boundary": "These are two consumers within this assigned page, not evidence for a new multi-page shared component. Report missing adapter capability to the current owner rather than guessing new API props."
+    },
+    {
+      "name": "Tokenize existing evidence tiles",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "action": "extend existing implementation styling only through its exclusive owner",
+      "propsVariantsStates": ["Keep quality/evidence/limitations/unsupported/source/sourceEnabled props", "Preserve unavailable metadata, empty evidence, retained and fatal recovery", "Neutral surface and border tokens, existing semantic statuses"],
+      "usedBy": ["ConsumablesLifecyclePage EvidencePanel at line 886"],
+      "dependsOn": ["Existing design-contract neutral tokens", "EvidencePanel owner", "Theme/contrast/runtime acceptance"],
+      "boundary": "No independent second-page consumer audit performed; no new shared component justified or authored."
+    },
+    {
+      "name": "Canonical localized category and binding-limit labels",
+      "existingOwnerFile": "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+      "action": "page mapping with canonical catalog owner coordination if missing keys are confirmed",
+      "propsVariantsStates": ["Localized display label for ten existing category values", "Localized known binding-limit labels with honest unknown fallback", "Raw wire enums remain unchanged"],
+      "usedBy": ["Part register category text", "Lifecycle category/binding text", "Record-part category Select"],
+      "dependsOn": ["Canonical i18n catalog owner; exact namespace files not inspected", "Existing ConsumableCategory/backend binding-limit contract"],
+      "boundary": "Do not create a second catalog, recase user labels or guess undocumented backend enum variants."
+    }
+  ],
+  "competingImplementations": {
+    "found": false,
+    "scope": "Assigned page and direct inspected dependencies only; not a whole-app negative claim.",
+    "reuse": ["Existing workspace selection and ownership query hooks", "PageLayout/OwnershipPanel/SourceContent", "DataTable mobile presentation and shared pipeline", "OwnershipBrief/shared operational metrics", "SiNumberInput/MoneyInput/formatCurrencyMinor", "Shared ConfirmDialog and canonical UI/motion/feedback primitives"],
+    "risk": "StatGrid's preformatted ReactNode values and OperationalBrief's raw metric values coexist. Retain the current specialist per-part economics; do not assume a new universal metric renderer can preserve them without proof.",
+    "doNotIntroduce": ["Consumables-specific theme or global surface wrapper", "Second table/filter/export pipeline", "Legacy unit converter", "Backend wear/currency conversion engine", "Second workspace selector or date picker", "New overlay/focus system"]
+  },
+  "preservation": {
+    "sourceHash": "6b82154cebebfcb67147914add1cadce257b9a0884ee56c3ae4e8419861e4088",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact root-relative page file bytes",
+    "currentLineCount": 906,
+    "counts": {"pageLayouts": 1, "ownershipPanelsDirect": 5, "evidencePanels": 1, "majorSectionsIncludingEvidence": 6, "contextNotices": 1, "ownershipBriefs": 2, "briefMetrics": 9, "dataTables": 2, "forms": 2, "statGridRenderSites": 1, "perPartStatValues": 2, "accordionRenderSites": 1, "confirmDialogRenderSites": 1, "chartContainers": 0, "glassPanelsDirect": 0},
+    "sections": [
+      {"name": "Duty-cycle projection safety notice", "line": 531, "count": 1},
+      {"name": "Fleet wear posture and six summary metrics", "line": 543, "count": 1},
+      {"name": "Part-by-part projection with economics and complete service history", "line": 597, "count": 1},
+      {"name": "Duty-cycle measured/reference factors and wear multipliers", "line": 613, "count": 1},
+      {"name": "Part register, record-part editor and service-event editor", "line": 638, "count": 1},
+      {"name": "Wear economics and three summary metrics", "line": 852, "count": 1},
+      {"name": "Evidence, quality and unsupported capabilities", "line": 886, "count": 1}
+    ],
+    "actions": [
+      {"name": "Toggle Record part/Cancel without clearing current draft", "line": 651},
+      {"name": "Edit category, label, position, install date, SI odometer/rated distance, rated days, minor cost, currency and notes", "line": 659},
+      {"name": "Save part for current selected vehicle; close on success and keep draft behavior", "line": 145},
+      {"name": "Open service-event editor for row item", "line": 325},
+      {"name": "Edit inspect/rotate/service/replace/note, nullable SI odometer, minor cost and note; cancel or submit", "line": 776},
+      {"name": "Log event with current ISO instant; clear event target/draft on success", "line": 168},
+      {"name": "Confirm permanent part/history removal with pending-row feedback", "line": 119},
+      {"name": "Expand complete service history beyond six preview badges", "line": 488},
+      {"name": "Use existing stress sorting and part raw-value filters/table controls", "line": 627},
+      {"name": "Retry independent fatal/retained read sources and retain mutation error feedback", "line": 60, "file": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx"}
+    ],
+    "dataBehavior": [
+      "Raw metres/seconds survive API, drafts and requests. SI numeric entry remains metres with preferred-display hints; rated days are explicitly converted to seconds on submit, nullable absence preserved.",
+      "ISO install dates use existing UTC-midnight fromDateInput/toDateInput round trip; event occurrence is submission time. These are independent maintenance business dates, not a missing workspace range selector.",
+      "Minor-unit integer money and each part's currency survive. Rate displays remain explicitly per 1 000 metres, with current rounding at display only; do not replace with per-mile rates or invent currency conversion.",
+      "Six posture metrics retain due soon, overdue, next replacement, next twelve-month cost, spent to date and average stress; three economics metrics retain blended rate, odometer and tracked part count.",
+      "Each projection retains label/category/position, status and harsh-duty signal, textual remaining-life percentage and clamped visual bar, distance used/rated percentage, adjusted life/stress, remaining metres/seconds, projected date, binding limit and narrative.",
+      "Per-part replacement cost and wear rate remain; preview badges are capped at six but Accordion exposes every event with kind/date/nullable odometer/cost/note.",
+      "Duty-cycle factors deduplicate by code using the first encountered factor; observed/reference SI values, source units, multipliers and narratives remain. Do not change compounding/clamping or create model calculations.",
+      "Register retains label/category/position, installed instant/odometer, rated metres/seconds, cost/currency, retired/in-service state, Log event and Remove, including mobile reachability.",
+      "Arrays remain null-safe; nullable quantities/rates/dates use dashes or null metrics rather than zero. Draft zero values are entry defaults, not measured values. Default rated_life_m=60000, currency=USD and event kind=inspect remain unless separately authorized.",
+      "Read keys, positive-vehicle enablement, AbortSignal, inherited cache/retry policies and ownership-wide write invalidation/toasts remain. No duplicate server state or manual fetch layer.",
+      "Preserve report as_of versus client load time, unknown analysis bounds, quality status/reasons/samples/coverage/window, evidence source/summary/samples/time and unsupported physical wear/recall caveats.",
+      "No per-page export callback is configured. Preserve existing table controls and export semantics if enabled by that shared pipeline; do not invent a server export or financial submission.",
+      "Table IDs ownership-consumables-stress and ownership-consumables-items remain stable. Actual lazy/SafeRoute registration is at App.tsx:251,783; route reachability was not exercised."
+    ],
+    "sourceChange": "None; only assigned report and heartbeat written."
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only one-page source audit",
+    "runtime": "Unverified; no browser, authenticated route mount, endpoint call or maintenance/financial submission.",
+    "visual": "Unverified actual appearance, contrast ratios, theme composition, overflow, density, responsive geometry and touch target size.",
+    "keyboard": "Unverified Tab/Shift+Tab, focus transfer/restoration, confirmation trap, screen-reader output and expanded history navigation.",
+    "backend": "Route registration/composition and typed frontend payloads only. No engine, persistence, authorization, currency attribution, deletion cascade, physical wear or maintenance correctness acceptance.",
+    "sharedScope": "Bounded direct dependencies and excerpts only. No independent whole-app inventory, second-page consumer audit or shared contract implementation.",
+    "validation": [
+      "Get-FileHash -Algorithm SHA256: 6b82154cebebfcb67147914add1cadce257b9a0884ee56c3ae4e8419861e4088; (Get-Content page).Count: 906.",
+      "Focused Select-String -CaseSensitive source counts: OwnershipPanel=5; EvidencePanel=1; OwnershipBrief=2; DataTable=2; form=2; StatGrid=1; ChartContainer=0; GlassPanel=0.",
+      "Focused source counts: style={{=1 (computed health width, not static styling); neon/glow/shadow=0; fixed-white class lines=2; raw button/input/textarea/select/table tags=0; prohibited direct recharts/react-leaflet/framer-motion imports=0.",
+      "Inspection confirms ownership hooks use relative paths, snake_case vehicle_id and matching mounted backend registrations; no endpoint was requested.",
+      "audit-violations skill loaded and script inspected, not run: it unconditionally invokes project-wide npx tsc --noEmit. Assignment prohibits project-wide validation; no TypeScript, lint or build run.",
+      "No source edits, Git, full-repository scan, nested agents or real writes to application data."
+    ],
+    "contractCitations": ["docs\\frontend-worker-conventions.md:1-77", "docs\\frontend-design-contract.md:11-69,110-189,foundation MDC-010 through MDC-047", "docs\\frontend-mission.md:19-105,340-388,529-625,704-778,921-1000"],
+    "reportReadback": {
+      "command": "Get-Content -Raw | ConvertFrom-Json; check required fields, route/page equality, issue properties, inspected-path existence and unchanged Get-FileHash",
+      "exitCode": 0,
+      "output": [
+        "PASS JSON requiredFields=19; issues=13; sharedRequirements=3",
+        "PASS exact page/routes; unchanged sourceHash=6b82154cebebfcb67147914add1cadce257b9a0884ee56c3ae4e8419861e4088; lines=906",
+        "PASS issue citation bounds and inspected path existence"
+      ],
+      "scope": "Structural validation and preservation hash only, never runtime acceptance."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-153.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\StatGrid.tsx",
+    "web\\src\\features\\ownership\\components\\MoneyInput.tsx",
+    "web\\src\\features\\ownership\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go"
+  ]
+}

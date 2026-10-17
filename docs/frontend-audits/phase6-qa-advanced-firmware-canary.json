@@ -1,0 +1,530 @@
+{
+  "item": "phase6-qa-advanced-firmware-canary",
+  "phase": 6,
+  "status": "DONE_SOURCE_ONLY_WITH_FINDINGS",
+  "mode": "READ_ONLY_FINISHED_PAGE_SOURCE_QA",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+  "acceptedPageNameResolution": "The assignment's AcceptedFirmwareCanaryPage means the finished accepted FirmwareCanaryPage.tsx. No separate AcceptedFirmwareCanaryPage source was found; no prior Phase6 QA report was read.",
+  "routes": [
+    "/intelligence/firmware-canary"
+  ],
+  "routeEvidence": [
+    {
+      "file": "web\\src\\App.tsx",
+      "line": 231,
+      "mechanism": "Lazy imports the current FirmwareCanaryPage source."
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "line": 765,
+      "mechanism": "Mounts intelligence/firmware-canary inside SafeRoute."
+    }
+  ],
+  "purpose": "Read-only observational firmware decision support for the workspace-selected vehicle.",
+  "primaryGoal": "Distinguish target and peer regression evidence, its quality and limits, without treating recommendations as installation or rollback controls.",
+  "authorityRead": [
+    "migration-queue.md:159-169,193-201,225",
+    "docs\\frontend-design-contract.md:1-260,274-305,525-610",
+    "docs\\frontend-mission.md:1-260,1410-1500",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\react-frontend.instructions.md:1-520",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh"
+  ],
+  "scope": {
+    "soleWriter": true,
+    "ownedFiles": [
+      "docs\\frontend-audits\\phase6-qa-advanced-firmware-canary.json",
+      "web\\logs\\phase6-qa-advanced-firmware-canary.log"
+    ],
+    "applicationSource": "READONLY",
+    "tests": "READONLY; no test body directly read or changed; no test executed",
+    "sharedTypesCatalogApiBackend": "READONLY",
+    "priorPhase6QaReportsRead": 0,
+    "prohibitedOperationsPerformed": 0,
+    "noCanaryRolloutJobVehicleCommandExperimentOrConsentAction": true,
+    "noBrowserHttpRealIdentityGitDockerInstallServerSubagentHelperExtension": true,
+    "sourceOnlyDoesNotGrantNativeOrFullPageAcceptance": true
+  },
+  "summary": {
+    "sourceConfirmedFindings": 5,
+    "candidateFindings": 3,
+    "highestPriority": "high",
+    "outcome": "Report complete; source defects remain unfixed because all application files are readonly. Runtime, native, fresh tests and full-page acceptance are NOTRUN."
+  },
+  "dataSources": [
+    {
+      "hook": "useFirmwareCanary",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "lines": [29, 34, 49, 54, 57, 81],
+      "method": "GET",
+      "hookPath": "/advanced-intelligence/firmware-canary",
+      "httpPath": "/api/v1/advanced-intelligence/firmware-canary",
+      "queryParameters": ["vehicle_id", "limit", "offset"],
+      "pageParameters": "Workspace vehicleId, limit=10, offset=(page-1)*10.",
+      "queryKey": "advanced-intelligence / firmware-canary / vehicleId / limit / offset",
+      "enablement": "Positive non-null selected vehicle only; missing selection does not call the endpoint.",
+      "cancellation": "queryFn's signal is forwarded to request<T> at line 71.",
+      "transportEvidence": "web\\src\\api\\client.ts:75-96 normalizes paths and appends /api/v1 exactly once.",
+      "backendMountEvidence": [
+        "internal\\api\\router.go:3210 enters /api/v1",
+        "internal\\api\\router.go:3960 calls advancedIntelligenceHandler.MountRoutes",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:71-73 registers GET /advanced-intelligence/firmware-canary",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:110-125 parses the list request and returns the service response"
+      ],
+      "parameterAgreement": "Source-confirmed: handler.go:405-419 requires positive vehicle_id, limit 1..100, offset 0..100000; the page's current limit=10 and offset=0 comply.",
+      "responseAgreement": "web\\src\\types\\advancedIntelligence.ts:9-32,90-104 agrees with internal\\domain\\advancedintelligence\\common.go:7-37 and twin_firmware.go:93-114 for status enums, snake_case fields, nullable measurements, quality/evidence and page envelope.",
+      "currentResultCardinality": "Service twin_firmware.go:258-268 reads one FirmwareWindow, constructs zero or one item, then pageSlice. This is not a historical multi-window list despite generic pagination support.",
+      "verification": "SOURCE_CONFIRMED_ROUTE_AND_SHAPE_AGREEMENT; HTTP_NOTRUN"
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "mechanism": "Consumes existing workspace URL/store/fleet selection rather than introducing a local vehicle picker.",
+      "endpoint": "The firmware page directly calls only useFirmwareCanary; selection itself uses the shared useVehicles dependency.",
+      "verification": "SOURCE_REVIEW_ONLY; fleet reads not executed"
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "FC01",
+      "priority": "high",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "MDC-060 data trust; unresolved/fatal/retained/paused evidence must not masquerade as a successfully empty response",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 136,
+      "relatedEvidence": [
+        "FirmwareCanaryPage.tsx:33-35 derives latest from the query and :137-139 forwards only quality/evidence/limitations",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:14-19 has no query/source-state input",
+        "EvidencePanel.tsx:40-46 mounts InsightPanel without query or sourceState",
+        "EvidencePanel.tsx:99 says No supporting evidence was returned; :115 says No additional limitations were returned",
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx:43-47 defaults a query-less, nonempty panel to ready",
+        "InsightPanel.tsx:61-80 attaches freshness and retained warnings only when query is supplied"
+      ],
+      "mechanism": "The decision panel receives the firmware query, but its companion evidence panel discards that source state. During initial loading, paused initial reads or fatal reads, latest is absent and the evidence panel renders successful-empty-response wording. Retained quality/evidence also has no local stale/refresh-failure annotation. The main decision panel's warning does not make these independent evidence statements true.",
+      "sourceDerivedRepro": [
+        "Consider a selected synthetic vehicle with an unresolved firmware query: data is undefined and isLoading is true.",
+        "Follow latest=null into EvidencePanel: quality/evidence/limitations become undefined, collections default to empty and its nested InsightPanel resolves ready.",
+        "The decision shell shows loading, while EvidencePanel asserts that no evidence and no additional limitations were returned even though no response has resolved.",
+        "The same evidence wording is produced for an initial paused or fatal read. With retained data plus refresh failure, quality can remain sufficient without a local trust warning."
+      ],
+      "reproductionExecuted": false,
+      "fix": "A separately owned narrow domain-component/caller change should forward the same source query/trust into EvidencePanel and its existing InsightPanel. Preserve all three evidence subsection shells; distinguish no-selection, unresolved/paused/fatal, successfully empty and retained states using current shared state/retry APIs.",
+      "owner": "advanced-intelligence EvidencePanel/caller integration; shared trust primitives remain unchanged",
+      "confidence": "high"
+    },
+    {
+      "id": "FC02",
+      "priority": "medium",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "MDC-060 preservation of user locale/timezone preferences",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 101,
+      "relatedEvidence": [
+        "FirmwareCanaryPage.tsx:13 imports the bare lib formatDateTime",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:6 imports the same bare helper",
+        "EvidencePanel.tsx:62 formats window_start/window_end; :90 and :92 format observed_at without options",
+        "web\\src\\lib\\dateFormat.ts:37-61 defaults missing locale/timezone options to the browser, and rejects absent/invalid dates with an em dash",
+        "web\\src\\hooks\\useDateFormat.ts:74-92 resolves saved locale, tz_display_default and useTimezone, then forwards those options reactively"
+      ],
+      "mechanism": "Generation, observation-window and evidence-observed timestamps bypass saved application locale and timezone. They continue using the browser environment even when the saved UTC/user/vehicle mode differs. Numeric percentages already react to saved formatting preferences, producing a mixed-preference display.",
+      "sourceDerivedRepro": [
+        "Consider browser local time in America/Los_Angeles and saved tz_display_default=utc, with a supported ISO timestamp near a UTC date boundary.",
+        "Follow the existing calls: no FormatOptions argument is supplied, so dateFormat.ts uses browser-local Intl conversion instead of the saved UTC mode.",
+        "Changing the saved display timezone or locale cannot affect the missing options at these call sites; no preferences were actually changed in this audit."
+      ],
+      "reproductionExecuted": false,
+      "fix": "Use the existing reactive useDateFormat at these two renderer owners. Keep the wire UTC timestamps unchanged and preserve null/invalid-date placeholders.",
+      "owner": "FirmwareCanaryPage and domain EvidencePanel; no shared formatter rewrite",
+      "confidence": "high"
+    },
+    {
+      "id": "FC03",
+      "priority": "medium",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "i18n of human-facing decision/quality enum labels",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 81,
+      "relatedEvidence": [
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:57 renders quality.status directly",
+        "web\\src\\types\\advancedIntelligence.ts:9,90 defines English wire codes",
+        "internal\\domain\\advancedintelligence\\twin_firmware.go:96-99 emits rollout/hold/investigate/insufficient",
+        "internal\\domain\\advancedintelligence\\common.go:10-12 emits sufficient/limited/insufficient",
+        "Read-only English catalog inspection found firmware keys decision/empty/excessDelta/generated/notice/peerDelta/rationale/subtitle/targetDelta/title/unsupported/version and quality keys coverage/samples/title/unsupported/window; these do not supply rendered enum labels"
+      ],
+      "mechanism": "Visible status badges render English API enum values without t(), although surrounding labels are localized. Switching UI language cannot translate these two labels through the current call sites.",
+      "sourceDerivedRepro": [
+        "Consider any supported response with decision=investigate and window_quality.status=limited in a non-English UI.",
+        "The two Badge children are the raw strings, not translation lookups, so these codes remain English regardless of the surrounding translated panel titles."
+      ],
+      "reproductionExecuted": false,
+      "fix": "Map known wire codes to localized presentation labels at the page/domain renderer. Preserve raw codes, decisions and semantic variants; handle unknown codes explicitly. Any missing catalog keys require the serialized catalog owner, not this QA worker.",
+      "owner": "page/domain presentation plus separately authorized catalog integration",
+      "confidence": "high"
+    },
+    {
+      "id": "FC04",
+      "priority": "high",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "Trustworthy decision rationale; do not claim matched peer evidence where only a target window is supported",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 116,
+      "relatedEvidence": [
+        "FirmwareCanaryPage.tsx:109-116 selects the matched-peer rationale for every decision except insufficient",
+        "internal\\app\\advancedintelligencesvc\\twin_firmware.go:321-326 only populates peer_regression_pct and matched_excess_pct when hasPeers is true",
+        "twin_firmware.go:359-374 emits limited quality and investigate for target-only regression >5, with peer/excess fields still null",
+        "The backend explicitly returns the limitation that a target-only change cannot support rollout or hold without a contemporaneous matched cohort"
+      ],
+      "mechanism": "A valid target-only investigate decision takes the page's supported branch, which says the decision reflects target regression relative to the matched peer change. The actual service can make this decision without a supported matched peer change. The null metric tiles and lower limitation do not correct the false affirmative rationale.",
+      "sourceDerivedRepro": [
+        "Consider a source-valid window with at least five drives in each target window, positive pre efficiency and >5% target regression, but fewer than ten peer drives per peer window.",
+        "BuildFirmwareCanary's hasPeers=false branch emits decision=investigate, quality=limited and null peer/excess percentages.",
+        "The page checks only decision !== insufficient and displays the matched-peer rationale, despite those peer fields being unsupported."
+      ],
+      "reproductionExecuted": false,
+      "fix": "A narrow page-only rationale change should inspect the actual nullable peer/excess evidence or quality before making a matched-peer claim. Keep the backend's investigate decision, thresholds, raw percentages and limitations unchanged; disclose target-only evidence instead of inventing rollout readiness.",
+      "owner": "FirmwareCanaryPage presentation; backend readonly",
+      "confidence": "high"
+    },
+    {
+      "id": "FC05",
+      "priority": "medium",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "Saved numeric locale must also apply to evidence sample counts",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 89,
+      "relatedEvidence": [
+        "EvidencePanel.tsx:59 correctly uses fmtInt for quality.sample_count",
+        "EvidencePanel.tsx:88-90 interpolates raw item.sample_count into sampleLine",
+        "web\\src\\hooks\\useNumberFormatting.ts:21-29,39 provides reactive locale-aware fmtInt",
+        "web\\src\\i18n\\index.ts:136 supplies interpolation escapeValue=false, not a numeric formatter",
+        "web\\src\\i18n\\en.json:34842 contains the plain {{count}} samples · {{date}} template"
+      ],
+      "mechanism": "Evidence-row sample counts bypass the existing formatter and use raw number interpolation. Their grouping/digits do not follow the saved numeric locale, while the nearby quality sample count does.",
+      "sourceDerivedRepro": [
+        "Consider a supported large sample_count and saved numeric locale de-DE or a locale using non-Latin digits.",
+        "The quality summary uses fmtInt and receives locale-specific formatting.",
+        "The evidence row passes the numeric count directly into a template with no formatting directive or interpolation formatter, so it preserves the raw count representation instead."
+      ],
+      "reproductionExecuted": false,
+      "fix": "Use the existing fmtInt for the displayed sample value while preserving a numeric plural-selection count if needed. A separate catalog owner should handle any required display-value placeholder change; keep null sample counts as unknown rather than zero.",
+      "owner": "domain EvidencePanel plus catalog owner only if a separate display placeholder is required",
+      "confidence": "high"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "FCC01",
+      "classification": "CANDIDATE_NOT_CURRENT_RESPONSE_DEFECT",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 86,
+      "relatedFile": "web\\src\\lib\\numberFormat.ts",
+      "relatedLines": [61, 94],
+      "mechanism": "Only nullness is checked before fmtNumber; shared safeNumber turns non-finite or incorrectly typed inputs into zero. A malformed cached/runtime payload could therefore appear as 0%, and optional EvidencePanel sample_count would similarly appear as 0 through fmtInt.",
+      "evidenceLimit": "Normal JSON cannot carry NaN/Infinity, and the current Go DTO requires integer sample_count. No malformed payload or cache was observed or injected; this is defensive-boundary review, not a reproduced valid-source defect.",
+      "sourceDerivedRepro": "If an out-of-contract non-null metric reaches the renderer, follow fmtNumber -> safeNumber -> 0. NOT EXECUTED.",
+      "owner": "existing shared formatter/trust boundary review; no page-side legacy converter",
+      "confidence": "medium"
+    },
+    {
+      "id": "FCC02",
+      "classification": "CANDIDATE_NATIVE_GEOMETRY_REQUIRED",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 83,
+      "mechanism": "The metric grid uses viewport sm=2/lg=4 columns rather than the available minItemWidth container-aware Grid option. EvidencePanel.tsx:47 similarly uses viewport lg=3. At a large viewport with a narrow allocated content region or 200% text, long dates, percentages and localized metadata may become crowded or overflow.",
+      "counterEvidence": "PageLayout, Grid, article, EvidencePanel and LayoutCard use min-w-0; evidence text uses break-words; Badge wraps; mobile defaults to one column. These are useful safeguards, not a measured overflow failure.",
+      "sourceDerivedRepro": "A future authorized native check should use narrow allocated containers at desktop breakpoints and 200% text with long localized labels. NOT EXECUTED.",
+      "owner": "page/domain composition only after measured evidence",
+      "confidence": "medium"
+    },
+    {
+      "id": "FCC03",
+      "classification": "CANDIDATE_DOMAIN_SEMANTIC_REVIEW",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 24,
+      "mechanism": "qualityVariant maps all statuses other than sufficient/limited to danger, including valid insufficient quality and any unexpected status. Insufficient observations may need a neutral/warning unsupported-data treatment rather than error styling under MDC-025.",
+      "evidenceLimit": "The source mapping is certain, but treating the known insufficient domain quality as danger may be an intentional risk convention. No measured contrast failure or approved domain remapping was established. Unknown out-of-contract codes are not currently emitted by the inspected backend.",
+      "sourceDerivedRepro": "Read a valid insufficient-quality response from BuildFirmwareCanary and trace its badge variant to danger; obtain domain/design disposition before changing it. NOT EXECUTED.",
+      "owner": "domain presentation/design authority",
+      "confidence": "medium"
+    }
+  ],
+  "states": {
+    "noSelectedVehicle": "Decision panel omits query, uses the explicit Select a vehicle empty message; endpoint is disabled. Evidence panel still has FC01's response-empty wording.",
+    "initialLoading": "InsightPanel.tsx:43-46 selects loading; SourceContent.tsx:42-56 supplies localized status and skeletons inside the persistent LayoutCard. Evidence trust gap FC01 remains.",
+    "initialPaused": "InsightPanel.tsx:48-52 explicitly says the initial query is paused and infers no empty response. Evidence trust gap FC01 remains.",
+    "initialFatal": "deriveDataState sets fatalError only with no retained data; InsightPanel -> SourceContent displays the local error and forwarded retry. Companion evidence does not receive the error.",
+    "resolvedEmpty": "items null/undefined becomes []; decision panel uses firmware.empty and a refresh action when a query is present. Evidence subsection shells remain mounted.",
+    "supported": "One decision article, four metrics, rationale and evidence/quality/limitations are available for the current zero-or-one-item backend response.",
+    "retainedRefreshFailure": "InsightPanel retains children, displays StaleRefreshWarning and freshness/error source information, and offers retry rather than replacing cached rows with a fatal error. Evidence lacks its own source annotation.",
+    "retainedPaused": "InsightPanel retains the payload and says the refresh is paused; it does not assert that the vehicle is offline.",
+    "backgroundFetching": "Retained data remains visible; DataFreshness gets isRefreshing. No deployment/vehicle action is introduced.",
+    "unknownAndNull": "Metric nulls become StatCard's em dash; coverage null becomes an em dash; null evidence/limitations/reasons become []; null/invalid dates format as an em dash. Zero and valid negative regressions are not dropped by truthiness guards.",
+    "partial": "Limited/insufficient domain quality is displayed with reasons and limitations. This is observation quality, not a newly invented network health or deployment state.",
+    "disabled": "Read query is disabled without a positive selected vehicle. The page has no operational mutation button.",
+    "trustReview": "Source mechanisms reviewed, not mounted state transitions or freshly passing tests."
+  },
+  "siFormattingPreferences": {
+    "wireContract": "The page displays dimensionless regression/coverage percentages, counts, a version and UTC timestamps. No distance/speed/energy/temperature/pressure value is converted by this page.",
+    "siSourceAgreement": "The inspected backend comparison uses pre/post efficiency in Wh per m and derives percentages before producing the DTO. The frontend does not multiply, rename or mutate these raw percentage fields.",
+    "useUnitsRequirement": "Not applicable to the currently rendered dimensionless metrics; adding unit conversion here would be incorrect.",
+    "numberPreferences": "Page percentages and quality coverage/counts use reactive useNumberFormatting. Evidence sample interpolation has FC05.",
+    "datePreferences": "FC02 confirms bare date helpers bypass saved locale/timezone.",
+    "unitInstructionConflict": "Read the legacy conversion examples as historical guidance; current SI-cutover/design contract and the task forbid legacy helpers or remigration.",
+    "themeDensityFontMotion": "Uses existing PageLayout/Card/Text/Badge/Icon/FadeIn owners without local theme/font/density reset. Actual saved modes, composed contrast, density and font-scale behavior were NOTRUN."
+  },
+  "dateWorkspace": {
+    "vehicleOwner": "Existing header/mobile workspace owner through useSelectedVehicle at FirmwareCanaryPage.tsx:31; no duplicate page vehicle selector.",
+    "rangeOwner": "getWorkspaceRouteScope returns range=false for /intelligence/firmware-canary because it is absent from RANGE_ENABLED_PATHS; vehicle=true because it matches no disabled path/prefix.",
+    "observationDates": "Displayed quality window dates describe backend-derived pre/post firmware evidence, not a page-owned independent analysis-range input.",
+    "endpointRangeSupport": "Current hook and parseListRequest accept vehicle_id/limit/offset only; service derives its window from current source evidence.",
+    "findingDisposition": "No duplicate picker and no visible header range whose bounds the page silently drops. The absence of a range control is not classified as a broken advertised filter; adding date support would require a separately scoped product/API decision.",
+    "runtimeHeaderMobileDrawerVerification": "NOTRUN"
+  },
+  "responsive": {
+    "sourceEvidence": [
+      "FirmwareCanaryPage.tsx:72 article min-w-0/break-words; :74 flex-wrap heading/status row",
+      "FirmwareCanaryPage.tsx:83 one/two/four viewport-based metric columns",
+      "EvidencePanel.tsx:47 one/three evidence columns with min-w-0/break-words on subsections",
+      "Pagination.tsx uses min-h/h-11 mobile targets, wraps rows, and contains its direct jump form",
+      "LayoutCard.tsx wraps actions and uses a full-width min-h-11 description-help control",
+      "PageLayout.tsx delegates width/gutters/safe-area/chrome ownership to PageContainer and the application shell"
+    ],
+    "candidate": "FCC02",
+    "widthsActuallyRendered": [],
+    "nativeViewportOverflowTouchAndTextScaling": "NOTRUN"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "EvidencePanel.tsx:48,75,104 labels its three semantic sections and uses h3 Text headings",
+      "LayoutCard connects its existing heading ID with aria-labelledby",
+      "Badge has visible status text, wraps and hides its decorative dot; color is not the only indicator",
+      "Icon defaults decorative glyphs to aria-hidden and focusable=false",
+      "InsightPanel unresolved/paused body uses role=status; retained warning uses polite status",
+      "Pagination has a named nav, localized button names, aria-current and invalid-jump feedback associations",
+      "FadeIn resolves the existing motion preference and removes its entry animation when reduce=true"
+    ],
+    "sourceConcern": "Raw English badges FC03 are not localized accessible labels.",
+    "keyboardFocusScreenReaderContrastForcedColorsReducedMotionRuntime": "NOTRUN",
+    "noAccessibilityPassClaim": true
+  },
+  "actions": {
+    "present": [
+      "Existing local source retry/refresh through InsightPanel and shared error/retained/empty recovery",
+      "Existing LayoutCard description-help controls",
+      "Generic page navigation through Pagination only if returned total exceeds 10"
+    ],
+    "currentlyReachablePagination": "Not reachable from the inspected backend's current zero-or-one-item result. The page starts at page=1 and the only setter is hidden unless total>10.",
+    "absent": [
+      "Canary execution",
+      "Install/hold/rollback or rollout command",
+      "Vehicle command",
+      "Background job control",
+      "Experiment creation",
+      "Consent mutation",
+      "Export or clipboard action"
+    ],
+    "sourceEvidence": "Page imports useFirmwareCanary, not any useMutation/useRun/useStart/useCreate hook; actual grep logged 0 mutation/direct-fetch/request matches.",
+    "actionsInvoked": 0
+  },
+  "rejectedPotentialFindings": [
+    {
+      "topic": "Pagination retained across selected vehicles",
+      "disposition": "NOT_A_CONFIRMED_CURRENT_DEFECT",
+      "reason": "Although page state has no vehicle-change reset, the current service returns at most one item and never exposes the page>1 UI. Claiming a reproducible page-2 selection failure would require an out-of-contract multi-item response or future endpoint capability."
+    },
+    {
+      "topic": "Missing SI display conversion",
+      "disposition": "NOT_A_DEFECT",
+      "reason": "All currently rendered measurements are dimensionless percentages/counts; no units are silently assumed or relabeled."
+    },
+    {
+      "topic": "Missing workspace range",
+      "disposition": "NOT_A_CONFIRMED_CURRENT_DEFECT",
+      "reason": "No range is advertised for this route and the endpoint does not expose date bounds. Do not invent a server filter or page-only date picker."
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "InsightPanel -> LayoutCard/SourceContent/useDataState/DataFreshness/StaleRefreshWarning",
+    "EvidencePanel -> InsightPanel/KVList/EmptyState",
+    "StatCard/Card/Badge/Icon/Text",
+    "Grid/FadeIn",
+    "Pagination"
+  ],
+  "duplicatedPatterns": "Existing domain EvidencePanel and InsightPanel are reused. This audit creates no parallel formatter, trust component, data query or UI helper.",
+  "preservation": {
+    "sourceSnapshots": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+        "sha256": "f3b284e406b342c4f7b9ad1b24e4b3a8229b76eaf64cf4eb8b5fd530a06db47d",
+        "lines": 148
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "sha256": "9cc182a39da7697644c2d06dedaa20e50697bc130401e47983ccd3b43bd501be",
+        "lines": 95
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "sha256": "68336512c44aca2575339906b1f016eb180a30a1abcb96e42ba0fc27fe0c39b4",
+        "lines": 132
+      }
+    ],
+    "currentPagePlusDirectDomainPartsLines": 375,
+    "pagePanelCallsites": 2,
+    "directPartsPanelCallsites": 2,
+    "glassPanelAndChartContainerCallsites": 0,
+    "metricTilesPerDecision": 4,
+    "majorSections": [
+      "Decision-support/not-deployment warning",
+      "Matched cohort decisions with version/status",
+      "Four target/peer/excess/generation metrics and decision rationale",
+      "Evidence, quality, and limitations panel"
+    ],
+    "evidenceSubsectionCount": 3,
+    "evidenceSubsections": ["Data quality", "Evidence sources", "Limitations including explicitly unsupported causality/deployment"],
+    "shells": "Warning, decision InsightPanel and EvidencePanel callsites are unconditional; only successful decision articles and generic pagination depend on their appropriate data.",
+    "historicalOriginalLineRatio": "NOTRUN; no historical original or Git baseline was accessed. The current 375-line composition is a source snapshot, not a fabricated >=70% historical comparison.",
+    "sourceWrites": 0,
+    "finalSourceHashRecheck": "Required in the final bounded receipt; log contains the actual comparison outcome."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Evidence source/trust forwarding",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsStates": "Reuse InsightPanel's existing query/source-state API for unresolved/loading/fatal/paused/retained/empty/ready and retry, rather than adding a parallel trust engine.",
+      "usedBy": ["FirmwareCanaryPage and other existing EvidencePanel consumers"],
+      "dependsOn": "A separately authorized domain-component/caller owner; no writes by this audit."
+    },
+    {
+      "name": "Serialized localization integration",
+      "existingOwner": "web\\src\\i18n\\en.json and its existing generated catalog projections",
+      "propsStates": "Decision/quality enum presentation labels and a separately formatted evidence count placeholder if required; retain numeric plural-selection semantics.",
+      "usedBy": ["FirmwareCanaryPage", "EvidencePanel"],
+      "dependsOn": "Separately serialized catalog owner; current catalog is readonly."
+    }
+  ],
+  "validation": {
+    "actualCommandResults": [
+      {
+        "shellId": "5142",
+        "command": "PowerShell Get-Content/Get-FileHash and Select-String across exactly FirmwareCanaryPage.tsx, InsightPanel.tsx and EvidencePanel.tsx",
+        "exitCode": 0,
+        "result": "Captured SHA256, 148/95/132 lines and actual regex matches; all six prohibited-pattern categories had 0 matches in each of these three files."
+      },
+      {
+        "shellId": "5154",
+        "command": "PowerShell Select-String for exact finding lines plus read-only ConvertFrom-Json -AsHashtable catalog-key inspection",
+        "exitCode": 0,
+        "result": "Recorded exact page/domain trust/date/status callsites and current English enum-related keys/sampleLine."
+      },
+      {
+        "shellId": "5157",
+        "command": "PowerShell Select-String for hook/router/handler/service/date preference evidence and page mutation/picker counts",
+        "exitCode": 0,
+        "result": "Source endpoint/path/parameters agree; PAGE_MUTATION_IMPORTS=0, PAGE_DATE_OR_VEHICLE_PICKERS=0, ROUTE_RANGE_OPT_IN=0."
+      },
+      {
+        "shellId": "5160",
+        "command": "PowerShell Select-String and a bounded backend line range for target-only investigate rationale and evidence count formatting",
+        "exitCode": 0,
+        "result": "Recorded actual source branches/calls; no derived case was executed."
+      },
+      {
+        "shellId": "5166",
+        "command": "PowerShell Select-String for i18n interpolation/sampleLine plus scope-policy receipt",
+        "exitCode": 0,
+        "result": "interpolation escapeValue=false; plain sampleLine template; no prior Phase6 reports or test bodies read; temporary initial root-log location absent after relocation to the assigned web log."
+      }
+    ],
+    "scopedGrepCounts": {
+      "files": 3,
+      "inlineStyleOpeners": 0,
+      "rawButtonInputTextareaSelectTable": 0,
+      "directRechartsLeafletFramerMotionImports": 0,
+      "oldRelativeApiImports": 0,
+      "apiV1PrefixStrings": 0,
+      "camelCaseQueryStrings": 0,
+      "caveat": "These exact bounded regex counts are not a clean full engineering audit, TypeScript pass, source-contract test or visual acceptance."
+    },
+    "auditScript": "NOTRUN: audit.sh always invokes global npx tsc --noEmit and a helper, both expressly prohibited. Its applicable pattern checks were inspected and run directly in the scoped PowerShell grep above.",
+    "hookVerificationScript": "NOTRUN: helper scripts prohibited; exact hook/router mount/handler agreement was read directly.",
+    "typescript": "NOTRUN",
+    "lintBuildSuites": "NOTRUN",
+    "freshTests": "NOTRUN; discovered/executed/passed/failed/skipped counts not claimed",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "browser": "NOTRUN",
+    "http": "NOTRUN",
+    "fullPage": "NOTRUN",
+    "commandsBounded": "All shell calls were synchronous bounded filesystem/text inspections; no async command or server was launched."
+  },
+  "evidenceLimits": [
+    "Source-derived repro steps are deductions from exact current branches, not browser reproductions, test results, API reads or real-identity observations.",
+    "No prior Phase6 QA report was used as evidence.",
+    "No source remigration, source/test/catalog/API/backend change, helper creation or execution occurred.",
+    "Native desktop/mobile, composed themes/contrast, OS forced colors, screen readers, keyboard/focus, 200% text and mounted reduced-motion behavior remain NOTRUN.",
+    "No global TypeScript/build/lint/suite, fresh focused tests or preservation CLI was run.",
+    "The report does not approve rollout readiness, deployment actions, causality, production authentication, full-page QA or application acceptance.",
+    "Read snapshots may drift with independently owned concurrent work; final source hashes cover the three directly reviewed page/domain files only."
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".gitignore",
+    "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\Grid.tsx",
+    "web\\src\\components\\data-display\\StatCard.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\feedback\\AlertBanner.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\ui\\Badge.tsx",
+    "web\\src\\components\\ui\\Icon.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\i18n\\index.ts",
+    "web\\src\\i18n\\en.json",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\app\\advancedintelligencesvc\\twin_firmware.go",
+    "internal\\domain\\advancedintelligence\\twin_firmware.go",
+    "internal\\domain\\advancedintelligence\\common.go"
+  ],
+  "release": {
+    "reportReleased": true,
+    "ignoredLogReleased": true,
+    "allCommandsReleased": true,
+    "backgroundCommandsStarted": 0,
+    "sourceOrOtherFilesClaimed": 0,
+    "postReturnWrites": false,
+    "parentLoop": false,
+    "finalVerificationReceipt": "web\\logs\\phase6-qa-advanced-firmware-canary.log"
+  }
+}

@@ -9,11 +9,12 @@
 //
 // react-i18next is mocked (not the real runtime) so `t` returns the fallback
 // deterministically AND we can assert the exact i18n key + fallback each label
-// is wired to. Interactions go through fireEvent (the repo does not ship
-// @testing-library/user-event). Nothing here touches the network.
+// is wired to. Keyboard favorite regressions use user-event for native button
+// activation; fireEvent also pins event cancellation. Nothing touches the network.
 
 import type { ComponentProps, ReactNode } from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { InputCommandTile } from './InputCommandTile';
@@ -70,6 +71,8 @@ function renderTile(overrides: Partial<Props> = {}) {
       def={def}
       onRequestDialog={onRequestDialog}
       loading={overrides.loading ?? false}
+      disabled={overrides.disabled}
+      disabledReason={overrides.disabledReason}
       lastStatus={overrides.lastStatus}
       isFavorite={overrides.isFavorite ?? false}
       onToggleFavorite={onToggleFavorite}
@@ -131,6 +134,75 @@ describe('InputCommandTile', () => {
     // A non-activating key must neither open the dialog nor cancel its default.
     expect(fireEvent.keyDown(el, { key: 'a' })).toBe(true);
     expect(onRequestDialog).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['Enter', ' '])('does not cancel favorite keydown %j or request the dialog', (key) => {
+    const { onRequestDialog, onToggleFavorite } = renderTile();
+    const fav = favorite();
+    fav.focus();
+
+    expect(fireEvent.keyDown(fav, { key })).toBe(true);
+    expect(fav).toHaveFocus();
+    expect(onRequestDialog).not.toHaveBeenCalled();
+    expect(onToggleFavorite).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Enter', '{Enter}', 'available', false, false],
+    ['Space', ' ', 'available', false, false],
+    ['Enter', '{Enter}', 'loading', true, false],
+    ['Space', ' ', 'loading', true, false],
+    ['Enter', '{Enter}', 'permission-disabled', false, true],
+    ['Space', ' ', 'permission-disabled', false, true],
+  ] as const)(
+    'toggles favorites with %s (%s) while %s without opening the dialog',
+    async (_key, keyboardInput, _state, loading, disabled) => {
+      const user = userEvent.setup();
+      const { onRequestDialog, onToggleFavorite, def, rerender } = renderTile({ loading, disabled });
+
+      await user.tab();
+      if (!loading && !disabled) {
+        expect(tile()).toHaveFocus();
+        await user.tab();
+      }
+      const fav = favorite();
+      expect(fav).toHaveFocus();
+      expect(fav).toHaveAttribute('aria-pressed', 'false');
+
+      await user.keyboard(keyboardInput);
+      expect(onToggleFavorite).toHaveBeenCalledTimes(1);
+      expect(onRequestDialog).not.toHaveBeenCalled();
+      expect(fav).toHaveFocus();
+
+      rerender(
+        <InputCommandTile
+          def={def}
+          onRequestDialog={onRequestDialog}
+          loading={loading}
+          disabled={disabled}
+          isFavorite
+          onToggleFavorite={onToggleFavorite}
+        />,
+      );
+      expect(fav).toHaveAttribute('aria-pressed', 'true');
+      await user.keyboard(keyboardInput);
+      expect(onToggleFavorite).toHaveBeenCalledTimes(2);
+      expect(onRequestDialog).not.toHaveBeenCalled();
+      expect(fav).toHaveFocus();
+    },
+  );
+
+  it('blocks mouse and tile keyboard activation when permission-disabled', () => {
+    const { onRequestDialog } = renderTile({ disabled: true, disabledReason: 'Read-only mode' });
+    const el = tile();
+
+    expect(el).toHaveAttribute('aria-disabled', 'true');
+    expect(el).toHaveAttribute('tabindex', '-1');
+    expect(el).toHaveAttribute('title', 'Read-only mode');
+    fireEvent.click(el);
+    fireEvent.keyDown(el, { key: 'Enter' });
+    fireEvent.keyDown(el, { key: ' ' });
+    expect(onRequestDialog).not.toHaveBeenCalled();
   });
 
   it('shows a spinner and blocks activation while loading', () => {

@@ -1,0 +1,294 @@
+{
+  "item": "audit-page-159",
+  "page": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+  "routes": ["/ownership/model-trust"],
+  "purpose": "Record SI-canonical forecasts before their outcomes, score actual outcomes, and explain model accuracy, calibration, baseline-relative skill, drift, provenance and limitations.",
+  "primaryGoal": "Determine which models deserve trust and inspect or score the underlying predictions without confusing missing measurements with zero.",
+  "dataSources": [
+    {
+      "hook": "useModelTrust",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 560,
+      "endpoint": "GET /api/v1/model-trust?vehicle_id={vehicleId}&window_days={windowDays}",
+      "sourceOwner": "internal\\handler\\v1\\ownershipintel\\handler.go",
+      "routeEvidence": "internal\\api\\router.go:3918 delegates to MountRoutes; internal\\handler\\v1\\ownershipintel\\handler.go:160-163 mounts the model-trust endpoints.",
+      "behavior": "Vehicle-scoped typed ModelTrustReport, default page window 90 days; query key includes vehicle and window. useVehicleQuery at useOwnership.ts:130-141 requires a positive vehicle ID and forwards AbortSignal. Null scorecard, prediction and calibration arrays are normalized locally to empty arrays."
+    },
+    {
+      "hook": "useRecordPrediction",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 568,
+      "endpoint": "POST /api/v1/model-trust/predictions",
+      "sourceOwner": "internal\\handler\\v1\\ownershipintel\\handler.go:162",
+      "behavior": "Explicit form submission writes vehicle, model, canonical target/unit, current predicted_at, horizon_s, forecast/optional interval and reference; success closes editor, invalidates ownership queries and emits existing toast. Write endpoint uses writeLimit."
+    },
+    {
+      "hook": "useRecordOutcome",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 583,
+      "endpoint": "POST /api/v1/model-trust/outcomes",
+      "sourceOwner": "internal\\handler\\v1\\ownershipintel\\handler.go:163",
+      "behavior": "Explicit scoring form writes prediction_id, observed_value and current observed_at; success closes editor, invalidates ownership queries and emits existing toast. No mutation was exercised."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "use": "Existing title/subtitle, query trust and context actions; do not replace shell or page-width owner."},
+    {"name": "OwnershipPanel", "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx", "use": "Domain adapter over canonical LayoutCard, SourceContent and useDataState; preserves shells, empty content, retained reads and unsaved editors."},
+    {"name": "OwnershipBrief", "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx", "use": "Existing OperationalBrief/useOperationalMetrics bridge, unknown-aware raw summary metrics, scope, loaded timestamp and provenance."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "use": "Two stable table IDs, custom cell renderers and mobile allow-lists; existing mobilePresentation API is the relevant preservation owner."},
+    {"name": "ChartContainer and chart category exports", "owner": "@/components/charts", "use": "Calibration bar chart, title, accessible label, tabular alternative, persistent legend identity and tooltip."},
+    {"name": "Input, Select, Button, Badge, Text", "owner": "@/components/ui", "use": "Forecast/scoring fields, labeled analysis-window control, actions, semantic interval/trust states and typography."},
+    {"name": "EvidencePanel, VerdictBadge, MutationError", "owner": "web\\src\\features\\ownership\\components\\index.ts", "use": "Existing provenance trailer, domain grade mapping and localized mutation error banner."},
+    {"name": "AlertBanner and FadeIn", "owner": "@/components/feedback and @/components/motion", "use": "Trust explanation and five section entrances; motion runtime not exercised."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 223,
+      "rule": "MDC-025/MDC-002",
+      "detail": "Error, bias, coverage and skill cells each implement local threshold-to-color branches while domain grade presentation already uses VerdictBadge. The thresholds are specialist business semantics, not grounds for a new universal status engine.",
+      "fix": "Keep thresholds and textual values; reuse semantic token styling or a small domain-local cell helper only if genuinely repeated. Do not merge different scoring meanings.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; runtime and all viewports unverified",
+    "existing": "Forecast form uses md two-column/xl four-column reflow; scoring form uses md three-column layout; EvidencePanel uses lg three-column reflow. Panels retain min-w-0. Chart height is 280.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+        "line": 530,
+        "rule": "MDC-043/MDC-023: complete mobile capability preservation",
+        "detail": "Scorecards retain only model, grade and MAPE below md; ledger at line 798 retains only model, error and when. DataTable.tsx:715-725 applies hidden md:table-cell to other cells. Neither caller supplies mobilePresentation or a detail fallback. Calibration inspection and Score it actions, predicted/observed values, intervals, horizon and many scorecard metrics are therefore hidden by the source CSS branch. Actual mounted behavior remains unverified.",
+        "fix": "Use existing DataTable mobilePresentation/full-detail mechanism to retain every column and action on narrow containers; do not simply remove metadata or build a second table pipeline. Retain stable table IDs and loaded-row semantics.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+        "line": 782,
+        "rule": "MDC-040/MDC-043",
+        "detail": "Scoring submit and cancel share a non-wrapping flex row. Long translations and enlarged text may overflow the smallest allocated widths; this is a source risk, not a measured failure.",
+        "fix": "Permit wrapping/stacking while preserving visible action order and comfortable target size; verify 320px, long translations and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, focus, contrast, touch and screen-reader behavior unverified",
+    "positiveEvidence": [
+      "Window Select has localized aria-label at ModelTrustPage.tsx:437; all editor fields use shared labeled Input/Select.",
+      "ChartContainer has localized ariaLabel and dataColumns at ModelTrustPage.tsx:560-584; decorative chart/drift icons have aria-hidden.",
+      "Trust and interval badges retain textual meaning; forecast/scoring forms use native onSubmit and shared submit buttons.",
+      "DataTables use stable identities and current shared renderer, not raw table markup."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+        "line": 396,
+        "rule": "MDC-040: important state must not depend only on decoration",
+        "detail": "Drift status is represented by aria-hidden directional icons and color; the adjacent caption exposes only the drift ratio. The source drift_status meaning (improving/degrading/stable) is not announced here.",
+        "fix": "Add localized visible or assistive text for the actual returned drift_status while preserving the ratio, icon and thresholds.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "loading": "OwnershipPanel derives loading with no data and keeps card shells; portfolio preserveSummary retains unknown-aware brief. Query source also reaches PageLayout.",
+    "empty": "Scorecards, calibration and ledger have localized reason-specific empty messages. Portfolio preserves summary. EvidencePanel separately describes absent quality/evidence/limitations.",
+    "error": "OwnershipPanel routes fatal source error and retry through SourceContent. Each mutation has MutationError inside its editor and hook-owned error toast.",
+    "retained": "OwnershipPanel uses retained state for stale source with data; editors are explicitly kept reachable on initial read failure. OwnershipBrief distinguishes source failure, retained source, refresh and unknown freshness.",
+    "offline": "No separate page-level offline source or network check is present. Whether shared trust presentation exposes disconnected state is not proved by the bounded reads.",
+    "unknownVersusZero": "Summary raw values remain undefined/null rather than fabricated zero; zero observed outcomes are checked with != null and remain measured values. Empty arrays are not presented as scored models.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+        "line": 95,
+        "rule": "MDC-032/MDC-046: preserve workspace-bound write identity",
+        "detail": "outcomeFor, outcomeDraft and forecast draft live independently of selected vehicle. Score it stores only prediction ID at line 273; submitOutcome at lines 160-171 does not compare the current vehicle to the selected prediction. A workspace vehicle change can leave a scoring form targeting the previous vehicle's prediction or silently reuse a forecast draft for the new vehicle. Page-local source does not show a scope reset or ownership label.",
+        "fix": "Bind editor identity to captured vehicle/prediction context and explicitly close, guard or confirm context changes without silently losing unsaved input. Preserve retained-data refresh behavior within the same scope.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 596,
+      "rule": "MDC-010/MDC-034: restrained canonical chart palette",
+      "detail": "Calibration bars hardcode cyan rgba(34,211,238,0.65) and amber rgba(251,191,36,0.5) at lines 596 and 603 instead of the existing chart palette. Local fill choices bypass theme/chart preference ownership.",
+      "fix": "Use the current restrained chart palette for the same error and signed bias series; retain legend identity, data meaning and user choices. Do not invent another palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 769,
+      "rule": "MDC-010/MDC-015: semantic surfaces across themes",
+      "detail": "Scoring form uses border-white/[0.07] and bg-white/[0.02]. EvidencePanel.tsx likewise uses fixed-white source cards. These are source-confirmed token bypasses, not measured contrast failures.",
+      "fix": "Compose existing neutral surface/border tokens through current layout/form primitives; keep form grouping, provenance cards and all evidence text.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 307,
+      "rule": "MDC-013: role-based typography",
+      "detail": "Trust score caption sets text-xs directly while nearby content already uses Text variant=caption.",
+      "fix": "Reuse Text/Caption with tabular-nums and existing muted role; preserve score precision and /100 suffix.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 93,
+      "rule": "MDC-032: one workspace range owner",
+      "detail": "This dated analysis owns local windowDays (90 default) and a page Analysis window Select at lines 435-444. It does not consume useRangeState. workspaceScope.ts:23-77 excludes /ownership/model-trust from RANGE_ENABLED_PATHS, so header range control is not currently available. Hook accepts only window_days; custom bounds and server filtering equivalence are not established.",
+      "fix": "Integration owner must determine and support the actual analysis-window contract before moving scope to header View settings: retain existing 30/60/90/180/365 choices and defaults, support both instant bounds if appropriate, preserve scoring-window semantics and register the exact route. Do not locally fake custom-range filtering.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 134,
+      "rule": "MDC-033/MDC-045: preserve source measurements until display formatting",
+      "detail": "Calibration mean_abs_error and mean_bias are converted through toFixed(3) before reaching both the chart and ChartContainer data table. Very small SI-domain errors can become literal zero. This is not merely number-label formatting; input series values are rounded.",
+      "fix": "Keep source numeric errors/biases in chart and export data and apply existing scientific formatting at labels/table/tooltip boundaries. Treat this as a targeted accuracy correction, not permission to alter backend scoring or units.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 562,
+      "rule": "MDC-045: explicit specialist measurement context",
+      "detail": "Chart accessible columns and Y axis describe mean absolute error/bias without selectedCard.si_unit. RMSE cell at line 358 also lacks a unit; SI unit is available in the model/target column. This makes standalone chart/table interpretation ambiguous across heterogeneous targets.",
+      "fix": "Retain canonical SI values and expose the selected model's exact source unit in axis/table/accessible/export context. Do not guess currencies or reinterpret minor-unit predictions.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+      "line": 230,
+      "rule": "MDC-023: honest table interaction contract",
+      "detail": "Several columns declare sortable:true, but neither DataTable invocation at lines 528-534 or 796-802 supplies onSort, sortKey or sorted data. DataTable.tsx:1424 and 1557 gate sort controls on onSort. Source promises of sortable columns therefore do not establish usable sorting.",
+      "fix": "Either wire existing useTableSort with actual field accessors and current source order, or accurately mark unsupported sorting; preserve actions and export behavior. Do not create a parallel sorting implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Mobile source CSS hides core inspect/scoring actions and forecast values. Scope-bound drafts and rounding are trust-sensitive preservation risks; workspace range integration requires an explicit owner. Most existing domain/shared architecture should be retained rather than rewritten.",
+    "order": ["Mobile complete details/actions", "Scope-bound editor identity", "Source precision/unit context", "Workspace range integration", "Restrained chart/surface/typography alignment"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace model-trust analysis range integration",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Register /ownership/model-trust only after useModelTrust and its backend source can preserve supported windows/defaults and consume both scoped bounds. Retain rolling/custom/timezone semantics and selected vehicle.",
+      "usedBy": ["/ownership/model-trust"],
+      "dependsOn": ["web\\src\\api\\hooks\\useOwnership.ts:560-565", "internal\\handler\\v1\\ownershipintel\\handler.go:160-163", "Backend analysis-window behavior verification"],
+      "owner": "integration"
+    },
+    {
+      "name": "Ownership evidence surface and localized domain status alignment",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Keep quality/evidence/limitations/unsupported/source/sourceEnabled API. Replace fixed-white source-card decoration with existing semantic surface tokens; localize known quality labels while preserving returned source identities and specialist text. VerdictBadge owner should offer localized known trust/drift labels, preserving neutral unknown fallback.",
+      "usedBy": ["ModelTrustPage through EvidencePanel and VerdictBadge", "Other ownership callers identified by the existing component API, not enumerated in this bounded audit"],
+      "dependsOn": ["Existing UI tokens and Badge/Text components", "Canonical localization owner"],
+      "owner": "shared"
+    }
+  ],
+  "competingImplementations": [
+    "No new layout, query-state, table, chart or stats engine is present in the assigned page. Reuse OwnershipPanel, OwnershipBrief, EvidencePanel and the current DataTable mobile API.",
+    "Page-local window selection competes conceptually with the canonical workspace range owner, though that owner is currently disabled for this route; integration must resolve semantics rather than deleting the selector blindly.",
+    "Local fixed RGBA chart fills and fixed-white form/source surfaces bypass existing shared presentation ownership; no new palette is required."
+  ],
+  "preservation": {
+    "sourceHash": "5baffdf9f16efd465a533ee8fd02fe84de1fc62132272ac615610871da65888c",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact root page file bytes, not a dependency aggregate",
+    "currentLineCount": 826,
+    "sections": [
+      {"name": "Scored against reality, not against itself", "line": 450, "kind": "notice"},
+      {"name": "Portfolio trust", "line": 459, "kind": "OwnershipPanel"},
+      {"name": "Model scorecards", "line": 515, "kind": "OwnershipPanel"},
+      {"name": "Calibration by prediction magnitude", "line": 540, "kind": "OwnershipPanel"},
+      {"name": "Prediction ledger", "line": 639, "kind": "OwnershipPanel"},
+      {"name": "Evidence, quality, and limitations", "line": 807, "kind": "EvidencePanel", "subsections": ["Data quality", "Evidence sources", "Limitations", "Explicitly not computed"]}
+    ],
+    "sectionCounts": {"topLevelSectionsIncludingNotice": 6, "directOwnershipPanels": 4, "evidencePanels": 1, "chartContainers": 1, "dataTables": 2, "formsConditional": 2, "summaryMetrics": 5},
+    "actions": [
+      "Choose 30/60/90/180/365-day analysis window; initial page default 90 days",
+      "Inspect scorecard calibration; fallback to first returned card",
+      "Toggle forecast editor; submit forecast or cancel",
+      "Select target and derived canonical SI unit from the existing 20-entry map",
+      "Score an unobserved prediction; submit actual value or cancel; never offer scoring on measured zero/already observed row",
+      "Retry source failures through current source recovery",
+      "Current shared summary detail review, table capabilities and chart toolbar/accessible-data capabilities must remain; their complete mounted inventory is unverified",
+      "Hide/show calibration series using model-trust-calibration persistence identity"
+    ],
+    "dataBehavior": [
+      "Keep every portfolio metric: score /100, trusted/watch/unreliable counts and scored/recorded denominator; unknown is not zero.",
+      "Keep all scorecard values: model, target/unit, grade/score, scored/pending, MAPE, median APE, bias, RMSE, interval coverage, skill versus naive, drift ratio/status and calibration action.",
+      "Keep ledger model/target/unit, predicted and optional interval bounds, observed/pending, percent error, interval membership, horizon, predicted date and scoring/observed timestamp.",
+      "Keep calibration bins, error/bias series, samples, accessible table, narrative, first/last scoring dates and persistent legend state; precision issue is separately reported.",
+      "Keep source evidence, quality counts/coverage/window/reasons, limitations and explicit non-capabilities: no retraining and no causal drift explanation.",
+      "Keep SI target/unit map and seconds horizon serialization; cost_minor values remain minor units with no invented currency.",
+      "Keep query key, vehicle enablement, abort signal, ownership invalidation, existing write endpoints/toasts and retained-data editor behavior.",
+      "Preserve table IDs ownership-trust-scorecards and ownership-trust-predictions and chartKey model-trust-calibration."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source audit",
+    "runtime": "unverified; page not mounted, browser not opened, no endpoint exercised",
+    "visual": "unverified; no screenshots or composed-theme contrast measurements",
+    "keyboardFocusScreenReader": "unverified",
+    "responsive": "unverified at every requested width; findings are source branches/risks",
+    "tests": "not run; ModelTrustPage.test.tsx inspected as authored context only, not current proof",
+    "backend": "Mount route registration inspected, not service scoring, allowed-target enforcement, custom-bound support, outcome immutability or response execution",
+    "sharedOwners": "Only directly relevant source slices inspected; canonical component export names are not complete implementation/runtime acceptance",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "5BAFFDF9F16EFD465A533EE8FD02FE84DE1FC62132272AC615610871DA65888C"},
+      {"command": "(Get-Content web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx).Count", "exitCode": 0, "output": "826"},
+      {"command": "Bounded Select-String source patterns on ModelTrustPage.tsx", "exitCode": 0, "output": "staticInline=0; directLibraries=0; oldApi=0; fixedWhite=2 matching lines; neon=0; panels=4; charts=1; tables=2. Initial case-insensitive rawControls=16 was false positive and superseded by explicit -CaseSensitive result rawControlsCaseSensitive=0."}
+    ],
+    "notRun": [
+      "audit-violations/audit.sh inspected but not executed because it unconditionally runs project TypeScript; assignment forbids full validation",
+      "No TypeScript, tests, builds, lint, Git, queue writes, source edits or production mutations",
+      "No baseline modernization or whole-application completion claim"
+    ],
+    "ownedWrites": ["docs\\frontend-audits\\audit-page-159.json", ".agent-status\\audit-page-159.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx",
+    "web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx",
+    "web\\src\\features\\ownership\\components\\index.ts",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go"
+  ]
+}

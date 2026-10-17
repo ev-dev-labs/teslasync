@@ -186,7 +186,7 @@ func TestSignalHistoryPoint_ProvenanceFieldsRemainNullableInJSON(t *testing.T) {
 }
 
 // TestLiveStateClassifiesSourceL1 verifies fresh values with non-zero
-// timestamps within the freshness window are reported as source="l1".
+// timestamps within the freshness window retain the legacy freshness code "l1".
 func TestLiveStateClassifiesSourceL1(t *testing.T) {
 	now := time.Now().UTC()
 	store := newFakeLiveSignalStore()
@@ -244,7 +244,7 @@ func TestLiveStateClassifiesSourceStale(t *testing.T) {
 }
 
 // TestLiveStateClassifiesSourceL2 verifies legacy zero-timestamp values
-// (Redis legacy scalars) are reported as source="l2".
+// are reported with the legacy unknown-freshness code "l2", not Redis provenance.
 func TestLiveStateClassifiesSourceL2(t *testing.T) {
 	store := newFakeLiveSignalStore()
 	store.snapshots[42] = map[string]*signal.Value{
@@ -456,5 +456,32 @@ func TestClassifyLiveSourceBoundary(t *testing.T) {
 	zeroTs := &signal.Value{Raw: float64(1)}
 	if got := classifyLiveSource(zeroTs, now); got != "l2" {
 		t.Fatalf("zero timestamp: source = %q, want l2", got)
+	}
+}
+
+func TestLiveEntryFreshnessDoesNotAttestPhysicalReadLayer(t *testing.T) {
+	now := time.Now().UTC()
+	for _, tt := range []struct {
+		name string
+		at   time.Time
+		code string
+	}{
+		{"fresh observation", now.Add(-time.Second), "l1"},
+		{"stale observation", now.Add(-5 * time.Minute), "stale"},
+		{"unknown observation time", time.Time{}, "l2"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			entry := buildLiveEntry("BatteryLevel", &signal.Value{Raw: float64(73), Timestamp: tt.at}, now)
+			if entry["source"] != tt.code || entry["value"] != float64(73) {
+				t.Fatalf("freshness code/value changed: %v", entry)
+			}
+			if _, present := entry["read_layer"]; present {
+				t.Fatalf("physical layer must not be fabricated from freshness: %v", entry)
+			}
+			_, hasAge := entry["age_ms"]
+			if hasAge != !tt.at.IsZero() {
+				t.Fatalf("age presence = %t, want %t", hasAge, !tt.at.IsZero())
+			}
+		})
 	}
 }

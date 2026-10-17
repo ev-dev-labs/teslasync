@@ -12,10 +12,9 @@
  *     and `trendValue` are present, an `up` trend paints positive (green), a
  *     `down` trend negative (red), and neither half alone renders anything;
  *   - the `valueColor` → StatCard `className` pass-through;
- *   - column resolution: explicit `cols`, the `autoCols` fallback (3-/4-/2-up by
- *     divisibility) and the `compact` override that forces a single column;
- *   - a11y: a provided icon is rendered but hidden from the accessibility tree
- *     by StatCard;
+ *   - wrapping layout: explicit/automatic maximums per row and a compact
+ *     single-row override; each tile grows from a 200px basis;
+ *   - metric tiles omit decorative icons and remain flat inside the widget;
  *   - keys: two stats sharing a label both render without React's duplicate-key
  *     warning (the composite-key fix).
  *
@@ -74,6 +73,17 @@ describe('WidgetStatGrid — empty & null-safety', () => {
 // ── Mapping ──────────────────────────────────────────────────────────────────
 
 describe('WidgetStatGrid — mapping', () => {
+  it('uses a chrome-free metric group inside the existing widget panel', () => {
+    const { container } = render(<WidgetStatGrid stats={[makeStat()]} />);
+    expect(container.querySelector('.\\!bg-transparent')).toBeInTheDocument();
+    expect(container.querySelector('.\\!border-0')).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass('flex', 'flex-wrap');
+    expect(container.firstElementChild?.firstElementChild).toHaveStyle({
+      flex: '1 1 200px',
+      minWidth: 'min(100%, 200px)',
+    });
+  });
+
   it('renders one StatCard per item with label, value and optional unit', () => {
     const stats: StatGridItem[] = [
       makeStat({ label: 'Power', value: 42, unit: 'kW' }),
@@ -98,11 +108,26 @@ describe('WidgetStatGrid — mapping', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.queryByText('—')).toBeNull();
   });
+
+  it('renders a current-value sublabel without implying a comparison trend', () => {
+    render(<WidgetStatGrid stats={[makeStat({ value: 4, sublabel: '3 online' })]} />);
+    expect(screen.getByText('3 online')).toBeInTheDocument();
+    expect(screen.queryByText('no change')).toBeNull();
+    expect(screen.queryByText('—')).toBeNull();
+  });
 });
 
 // ── Trend chip branches ──────────────────────────────────────────────────────
 
 describe('WidgetStatGrid — trend chip branches', () => {
+  it('lets callers express a declining cost as a positive result', () => {
+    const { container } = render(
+      <WidgetStatGrid stats={[makeStat({ label: 'Cost', value: 3, trend: 'down', trendValue: '12%', trendPositive: true })]} />,
+    );
+    expect(screen.getByText('↓')).toBeInTheDocument();
+    expect(container.querySelector('.text-emerald-700')).toBeInTheDocument();
+  });
+
   it('renders a positive (green) chip for an up trend with a value', () => {
     const { container } = render(
       <WidgetStatGrid stats={[makeStat({ label: 'Eff', value: 9, trend: 'up', trendValue: '+12%' })]} />,
@@ -146,41 +171,35 @@ describe('WidgetStatGrid — valueColor & icon', () => {
     expect(container.querySelector('.text-rose-300')).not.toBeNull();
   });
 
-  it('renders a provided icon but hides it from the accessibility tree', () => {
+  it('omits decorative metric icons from flat tiles', () => {
     render(
       <WidgetStatGrid
         stats={[makeStat({ label: 'Iconic', value: 1, icon: <svg data-testid="stat-icon" /> })]}
       />,
     );
-    const icon = screen.getByTestId('stat-icon');
-    expect(icon).toBeInTheDocument();
-    expect(icon.closest('span')?.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.queryByTestId('stat-icon')).not.toBeInTheDocument();
   });
 });
 
 // ── Column resolution ────────────────────────────────────────────────────────
 
-describe('WidgetStatGrid — column resolution', () => {
-  it('maps explicit cols to the container-query grid classes', () => {
-    expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={2} />).className).toContain('grid-cols-2');
-    expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={3} />).className).toContain('@sm:grid-cols-3');
-    expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={4} />).className).toContain('@sm:grid-cols-4');
+describe('WidgetStatGrid — wrapping layout', () => {
+  it('uses the explicit or compatibility maximum per row', () => {
+    expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} maxPerRow={2} />)).toHaveAttribute('data-max-per-row', '2');
+    expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={3} />)).toHaveAttribute('data-max-per-row', '3');
   });
 
-  it('auto-selects columns from the item count when cols is omitted', () => {
-    // 3 items → 3-up; 4 → 4-up; 5 (indivisible by 3 or 4) → 2-up baseline.
-    expect(gridRoot(<WidgetStatGrid stats={makeStats(3)} />).className).toContain('@sm:grid-cols-3');
-    expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} />).className).toContain('@sm:grid-cols-4');
-    const five = gridRoot(<WidgetStatGrid stats={makeStats(5)} />).className;
-    expect(five).toContain('grid-cols-2');
-    expect(five).not.toContain('@sm:grid-cols-4');
+  it('auto-selects a maximum row count from the item count when none is supplied', () => {
+    expect(gridRoot(<WidgetStatGrid stats={makeStats(3)} />)).toHaveAttribute('data-max-per-row', '3');
+    expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} />)).toHaveAttribute('data-max-per-row', '4');
+    expect(gridRoot(<WidgetStatGrid stats={makeStats(5)} />)).toHaveAttribute('data-max-per-row', '2');
   });
 
-  it('collapses to a single column (and tighter gap) when compact, overriding cols', () => {
-    const cls = gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={4} compact />).className;
-    expect(cls).toContain('grid-cols-1');
-    expect(cls).toContain('gap-2');
-    expect(cls).not.toContain('@sm:grid-cols-4');
+  it('uses full-width metric rows with a tighter gap when compact', () => {
+    const root = gridRoot(<WidgetStatGrid stats={makeStats(4)} cols={4} compact />);
+    expect(root).toHaveAttribute('data-max-per-row', '1');
+    expect(root.className).toContain('gap-2');
+    expect(root.firstElementChild).toHaveStyle({ flex: '1 1 100%' });
   });
 
   it('uses the roomier gap when not compact', () => {

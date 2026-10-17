@@ -12,8 +12,8 @@
  *   2. Vehicle spotlight — loading / error / empty / hero branches and the
  *      exact props handed to <VehicleHeroCard>.
  *   3. <FleetComparisonPanel> prop wiring (entries / loading / error / onRetry).
- *   4. Vehicle picker — visibility (>1 vehicle), change → setVehicleId with a
- *      parsed id, and the guard that rejects the empty placeholder.
+ *   4. Workspace-owned selection — no competing local picker; selection
+ *      changes scope the spotlight without re-scoping the fleet KPI rollup.
  *   5. Toolbar refresh → refetches analytics + state + vehicles.
  *   6. Quick-link navigation.
  *   7. Null-safe analytics extraction (a partial payload must not throw).
@@ -33,7 +33,8 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -68,6 +69,7 @@ const {
   useFormattingMock,
   navigateMock,
   captured,
+  heroIntegration,
 } = vi.hoisted(() => ({
   analyticsMock: vi.fn(),
   vehiclesMock: vi.fn(),
@@ -77,6 +79,7 @@ const {
   useFormattingMock: vi.fn(),
   navigateMock: vi.fn(),
   captured: {} as Record<string, Record<string, unknown>>,
+  heroIntegration: { enabled: false },
 }));
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
@@ -141,9 +144,13 @@ vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => useFormattingMock
 // Stub the two heavy children; capture the exact props the page computed.
 vi.mock('@/components/vehicles', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const { VehicleHeroCard } = await vi.importActual<typeof import('@/components/vehicles/VehicleHeroCard')>(
+    '@/components/vehicles/VehicleHeroCard',
+  );
   return {
-    VehicleHeroCard: (props: Record<string, unknown>) => {
-      captured.hero = props;
+    VehicleHeroCard: (props: import('@/components/vehicles/VehicleHeroCard').VehicleHeroCardProps) => {
+      captured.hero = { ...props };
+      if (heroIntegration.enabled) return React.createElement(VehicleHeroCard, props);
       return React.createElement('div', { 'data-testid': 'vehicle-hero' });
     },
   };
@@ -159,9 +166,21 @@ vi.mock('@/features/dashboard/components/FleetComparisonPanel', async () => {
   };
 });
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import QuickStatsPage from './QuickStatsPage';
 import type { Vehicle } from '@/types/vehicle';
 import type { AnalyticsSummary } from '@/types/analytics';
+
+const QUICK_STATS_LABELS = [
+  'Distance driven',
+  'Drives',
+  'Charging sessions',
+  'Energy used',
+  'Total cost',
+  'Avg efficiency',
+  'CO₂ saved',
+  'Fleet vehicles',
+];
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
@@ -207,6 +226,9 @@ interface FakeQuery {
   isFetching: boolean;
   isStale: boolean;
   isError: boolean;
+  isPending: boolean;
+  isSuccess: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: ReturnType<typeof vi.fn>;
 }
@@ -219,6 +241,9 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
     isFetching: false,
     isStale: false,
     isError: false,
+    isPending: false,
+    isSuccess: true,
+    fetchStatus: 'idle',
     dataUpdatedAt: Date.now(),
     refetch: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -227,23 +252,26 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
 
 function setUnits(distance: 'km' | 'mi') {
   useUnitsMock.mockReturnValue({
-    unitPrefs: { distance },
+    unitPrefs: { distance, temperature: '°C', power: 'kW' },
     formatEnergy: (wh: number) => `${(wh ?? 0) / 1000} kWh`,
   });
 }
 
-function renderPage() {
+function renderPage(path = '/quick-stats') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <QuickStatsPage />
+      <MemoryRouter initialEntries={[path]}>
+        <main id="main-content">
+          <QuickStatsPage />
+        </main>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
+  heroIntegration.enabled = false;
   analyticsMock.mockReset();
   vehiclesMock.mockReset();
   vehicleStateMock.mockReset();
@@ -265,6 +293,7 @@ beforeEach(() => {
   });
   setUnits('km');
   useFormattingMock.mockReturnValue({
+    currencySymbol: '$',
     formatCurrency: (amount: number, decimals?: number) =>
       `$${Number(amount ?? 0).toFixed(decimals ?? 2)}`,
   });
@@ -276,8 +305,9 @@ describe('QuickStatsPage', () => {
   it('renders the page shell and requests the 30-day fleet rollup', () => {
     renderPage();
 
+    expect(screen.getByRole('main')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Quick Stats' }),
+      screen.getByRole('heading', { level: 1, name: 'Quick stats' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Fleet snapshot · last 30 days')).toBeInTheDocument();
     // Both bento children mount — no gutted panels.
@@ -292,24 +322,24 @@ describe('QuickStatsPage', () => {
 
     // Labels (each unique) — every section is present.
     for (const label of [
-      'Distance Driven',
+      'Distance driven',
       'Drives',
-      'Charging Sessions',
-      'Energy Used',
-      'Total Cost',
-      'Avg Efficiency',
-      'CO₂ Saved',
-      'Fleet Vehicles',
+      'Charging sessions',
+      'Energy used',
+      'Total cost',
+      'Avg efficiency',
+      'CO₂ saved',
+      'Fleet vehicles',
     ]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
     // Distance: 12345 km → identity → "12,345 km".
-    expect(screen.getByText('12,345 km')).toBeInTheDocument();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
     // Energy: 450 kWh → *1000 → formatEnergy(450000) → "450 kWh".
     expect(screen.getByText('450 kWh')).toBeInTheDocument();
     // Cost: formatCurrency(321, 0) → "$321".
-    expect(screen.getByText('$321')).toBeInTheDocument();
+    expect(screen.getByText('$321.00')).toBeInTheDocument();
     // Efficiency: 158 Wh/km, km branch is identity → "158.00 Wh/km".
     expect(screen.getByText('158.00 Wh/km')).toBeInTheDocument();
     expect(screen.getByText('210.00 kg')).toBeInTheDocument();
@@ -322,20 +352,23 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     // 12345 km * 1000 / 1609.344 ≈ 7670.8 → fmtInt → "7,671 mi".
-    expect(screen.getByText('7,671 mi')).toBeInTheDocument();
+    expect(screen.getByText('7,670.83 mi')).toBeInTheDocument();
     // 158 Wh/km * 1.609344 = 254.276… → "254.28 Wh/mi".
     expect(screen.getByText('254.28 Wh/mi')).toBeInTheDocument();
     // The identity-unit strings must be gone once converted.
-    expect(screen.queryByText('12,345 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('12,345.00 km')).not.toBeInTheDocument();
     expect(screen.queryByText('158.00 Wh/km')).not.toBeInTheDocument();
   });
 
-  it('shows the stat-grid skeleton while the rollup is loading (no cards yet)', () => {
+  it('keeps all metric labels and suppresses values while the rollup is loading', () => {
     analyticsMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     renderPage();
 
-    expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument();
-    expect(screen.queryByText('Distance Driven')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('quick-stats-operational-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
   });
 
   it('shows a retry-able error when the rollup fails', () => {
@@ -347,8 +380,13 @@ describe('QuickStatsPage', () => {
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(retry);
     expect(q.refetch).toHaveBeenCalledTimes(1);
-    // KPI cards are not rendered in the error state.
-    expect(screen.queryByText('Distance Driven')).not.toBeInTheDocument();
+    // The summary remains visible with unknown readings, alongside recovery.
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
+    const errorBrief = screen.getByTestId('quick-stats-operational-brief');
+    expect(errorBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of QUICK_STATS_LABELS) {
+      assertOperationalMetricUnavailable(errorBrief, label);
+    }
   });
 
   it('shows the empty state when the rollup resolves to no data', () => {
@@ -356,19 +394,43 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     expect(screen.getByText('No fleet metrics available yet')).toBeInTheDocument();
-    expect(screen.queryByText('Distance Driven')).not.toBeInTheDocument();
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
   });
 
-  it('is null-safe: a partial rollup renders zeros instead of throwing', () => {
-    // Backend contract says every field is present, but the page must not
-    // assume it — a `{}` payload must degrade to zeros with an empty compare.
+  it('keeps all partial-rollup metrics visible and unknown instead of inventing zero', () => {
     analyticsMock.mockReturnValue(makeQuery({ data: {} as AnalyticsSummary }));
     renderPage();
 
-    expect(screen.getByText('Distance Driven')).toBeInTheDocument();
-    expect(screen.getByText('0 km')).toBeInTheDocument();
-    expect(screen.getByText('0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Distance driven')).toBeInTheDocument();
+    const partialBrief = screen.getByTestId('quick-stats-operational-brief');
+    for (const label of QUICK_STATS_LABELS) {
+      assertOperationalMetricUnavailable(partialBrief, label);
+    }
+    expect(screen.queryByText('0.00 km')).toBeNull();
+    expect(screen.queryByText('0 kWh')).toBeNull();
     expect((captured.fleet.entries as unknown[]).length).toBe(0);
+  });
+
+  it('distinguishes actual zero from nullable and non-finite metrics without altering valid formulas', () => {
+    analyticsMock.mockReturnValue(makeQuery({ data: {
+      ...ANALYTICS,
+      totalDistanceKm: Number.NaN,
+      totalDrives: 0,
+      totalChargingSessions: null,
+      totalEnergyKwh: null,
+      totalCost: null,
+      avgEfficiencyWhKm: Number.POSITIVE_INFINITY,
+      co2SavedKg: 0,
+      totalVehicles: null,
+    } }));
+    renderPage();
+    const metrics = screen.getByRole('region', { name: 'Fleet metrics' });
+    const zeroBrief = screen.getByTestId('quick-stats-operational-brief');
+    for (const label of ['Distance driven', 'Charging sessions', 'Energy used', 'Total cost', 'Avg efficiency', 'Fleet vehicles']) {
+      assertOperationalMetricUnavailable(zeroBrief, label);
+    }
+    expect(within(metrics).getByText('0')).toBeInTheDocument();
+    expect(within(metrics).getByText('0.00 kg')).toBeInTheDocument();
   });
 
   it('spotlights the selected vehicle, forwarding identity + live state', () => {
@@ -396,13 +458,183 @@ describe('QuickStatsPage', () => {
     expect(vehicle.display_name).toBe('Tesla');
   });
 
+  it.each([
+    { label: 'active loading', fetchStatus: 'fetching' as const, isLoading: true, paused: false },
+    { label: 'paused without data', fetchStatus: 'paused' as const, isLoading: false, paused: true },
+  ])('passes unresolved trust for $label without inventing an observation', ({ fetchStatus, isLoading, paused }) => {
+    heroIntegration.enabled = true;
+    vehicleStateMock.mockReturnValue(makeQuery({
+      isPending: true, isSuccess: false, isLoading,
+      isFetching: !paused, fetchStatus, dataUpdatedAt: Date.now(),
+    }));
+    renderPage();
+
+    expect(captured.hero.vehicleState).toBeNull();
+    expect(captured.hero.dataState).toMatchObject({
+      status: 'initial', provenance: 'unknown', hasData: false, isRefreshBlocked: paused,
+    });
+    expect(captured.hero.observation).toEqual({ observedAt: null, freshness: 'unknown' });
+    expect(screen.getByRole('status', { name: 'Loading Telemetry stream' })).toBeInTheDocument();
+    expect(screen.getByText('No verified observation time for this vehicle')).toBeInTheDocument();
+    expect(screen.queryByText('Live telemetry unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live vehicle state')).not.toBeInTheDocument();
+    if (paused) expect(screen.getByText('Paused')).toBeInTheDocument();
+  });
+
+  it('renders a successful empty state without treating the fetch time as observation', () => {
+    heroIntegration.enabled = true;
+    vehicleStateMock.mockReturnValue(makeQuery({
+      data: { state: undefined, live: false, observedAt: null, freshness: 'unknown' },
+    }));
+    renderPage();
+
+    expect(captured.hero.dataState).toMatchObject({ status: 'unavailable', hasData: true });
+    expect(captured.hero.observation).toEqual({ observedAt: null, freshness: 'unknown' });
+    expect(screen.getByText('Live telemetry unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Telemetry stream' })).not.toBeInTheDocument();
+  });
+
+  it('preserves zero, false, null and signed readings with the actual Hero', () => {
+    heroIntegration.enabled = true;
+    const readings = {
+      state: 'parked', battery_level: 0, rated_range: 0, odometer: 0,
+      inside_temp: null, outside_temp: -5, power: -2000,
+      is_locked: false, sentry_mode: false, is_charging: false,
+    };
+    const observedAt = Date.now() - 30_000;
+    vehicleStateMock.mockReturnValue(makeQuery({
+      data: { state: readings, live: true, observedAt, freshness: 'fresh' },
+      dataUpdatedAt: observedAt + 20_000,
+    }));
+    renderPage();
+
+    expect(captured.hero.vehicleState).toBe(readings);
+    expect(captured.hero.dataState).toMatchObject({ status: 'ok', provenance: 'live' });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getByText('-2.00')).toBeInTheDocument();
+    expect(screen.getAllByText('-5').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('0').length).toBeGreaterThan(0);
+    expect(screen.getByText('Telemetry stream observation does not verify individual reading timestamps or completeness.')).toBeInTheDocument();
+  });
+
+  it('retains observations through refresh failure and paused refresh, then recovers without duplicate notices', () => {
+    heroIntegration.enabled = true;
+    const observedAt = Date.now() - 60_000;
+    const data = { state: STATE, live: true, observedAt, freshness: 'fresh' };
+    const q = makeQuery({ data, error: new Error('state refresh failed'), isError: true });
+    vehicleStateMock.mockReturnValue(q);
+    const page = renderPage();
+    const rerender = () => page.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/quick-stats']}>
+          <main id="main-content"><QuickStatsPage /></main>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(captured.hero.vehicleState).toBe(STATE);
+    expect(captured.hero.dataState).toMatchObject({ status: 'stale', provenance: 'cached', fatalError: null });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.queryByText('Live vehicle state')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(q.refetch).toHaveBeenCalledTimes(1);
+
+    vehicleStateMock.mockReturnValue(makeQuery({ data, fetchStatus: 'paused' }));
+    rerender();
+    expect(captured.hero.dataState).toMatchObject({ status: 'stale', isRefreshBlocked: true, refreshError: null });
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+
+    vehicleStateMock.mockReturnValue(makeQuery({ data, dataUpdatedAt: Date.now() }));
+    rerender();
+    expect(captured.hero.dataState).toMatchObject({ status: 'ok', provenance: 'live', refreshError: null });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'fresh' });
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('forwards fatal state failure and retries without replacing the fleet content', () => {
+    heroIntegration.enabled = true;
+    const q = makeQuery({ error: new Error('state failed'), isError: true, isSuccess: false });
+    vehicleStateMock.mockReturnValue(q);
+    renderPage();
+    expect(captured.hero.dataState).toMatchObject({ status: 'initialFailure', hasData: false });
+    expect(screen.getByText('The live-state request failed. This is a fact about our pipeline, not about the vehicle.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(q.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.queryByText('Live vehicle state')).not.toBeInTheDocument();
+  });
+
+  it('uses historical provenance for the same as_of policy even if the retained payload says live', () => {
+    const observedAt = Date.parse('2026-10-01T12:00:00Z');
+    vehicleStateMock.mockReturnValue(makeQuery({
+      data: { state: STATE, live: true, observedAt, freshness: 'stale' },
+    }));
+    renderPage('/quick-stats?as_of=2026-10-01T12%3A00%3A00Z');
+    expect(captured.hero.dataState).toMatchObject({ provenance: 'historical' });
+    expect(captured.hero.observation).toEqual({ observedAt, freshness: 'stale' });
+    expect(vehicleStateMock).toHaveBeenCalledWith(1);
+    expect(analyticsMock).toHaveBeenCalledWith(30);
+  });
+
+  it('switches readings and observation metadata together with workspace selection', () => {
+    const firstObservation = Date.now() - 60_000;
+    vehicleStateMock.mockImplementation((id: number) => makeQuery({
+      data: id === 1
+        ? { state: STATE, live: true, observedAt: firstObservation, freshness: 'fresh' }
+        : { state: { battery_level: 0 }, live: false, observedAt: null, freshness: 'unknown' },
+    }));
+    const page = renderPage();
+    expect(captured.hero.observation).toEqual({ observedAt: firstObservation, freshness: 'fresh' });
+    page.unmount();
+    selectedVehicleMock.mockReturnValue({ vehicleId: 2, vehicle: makeVehicle({ id: 2 }) });
+    renderPage();
+    expect(captured.hero.vehicle).toMatchObject({ id: 2 });
+    expect(captured.hero.vehicleState).toEqual({ battery_level: 0 });
+    expect(captured.hero.observation).toEqual({ observedAt: null, freshness: 'unknown' });
+    expect(captured.hero.dataState).toMatchObject({ provenance: 'unknown' });
+  });
+
   it('shows a spotlight skeleton (not the hero/empty) while vehicles load', () => {
     vehiclesMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
-    const { container } = renderPage();
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: null,
+      vehicle: null,
+      vehicles: [],
+      setVehicleId: vi.fn(),
+    });
+    const page = renderPage();
+    const spotlight = screen.getByRole('region', { name: 'Vehicle spotlight' });
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
-    expect(screen.queryByText('No vehicle found')).not.toBeInTheDocument();
+    const placeholders = spotlight.querySelectorAll('[class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders).toHaveLength(1);
+    expect(placeholders[0]).toHaveAttribute('aria-hidden', 'true');
+    expect(placeholders[0]).toHaveClass('h-4', 'w-full', 'rounded');
+    expect(placeholders[0]).toHaveStyle({ height: '300px' });
+    expect(placeholders[0]).not.toHaveClass('animate-pulse');
+    expect(within(spotlight).queryByTestId('vehicle-hero')).not.toBeInTheDocument();
+    expect(within(spotlight).queryByText('No vehicle found')).not.toBeInTheDocument();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+
+    page.unmount();
+    vehiclesMock.mockReturnValue(makeQuery({ data: [makeVehicle()], isLoading: true }));
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: 1,
+      vehicle: makeVehicle(),
+      vehicles: [makeVehicle()],
+      setVehicleId: vi.fn(),
+    });
+    renderPage();
+    const cachedSpotlight = screen.getByRole('region', { name: 'Vehicle spotlight' });
+    expect(within(cachedSpotlight).getByTestId('vehicle-hero')).toBeInTheDocument();
+    expect(captured.hero.vehicle).toMatchObject({ id: 1, display_name: 'Model Y' });
+    expect(captured.hero.vehicleState).toEqual(STATE);
+    expect(cachedSpotlight.querySelector('.animate-pulse')).toBeNull();
+    expect(cachedSpotlight.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
+    expect(within(cachedSpotlight).queryByText('No vehicle found')).not.toBeInTheDocument();
   });
 
   it('shows a retry-able error in the spotlight when the vehicle list fails', () => {
@@ -430,7 +662,7 @@ describe('QuickStatsPage', () => {
     expect(screen.getByText('No vehicle found')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Vehicle Details' }),
+      screen.queryByRole('button', { name: 'Vehicle details' }),
     ).not.toBeInTheDocument();
   });
 
@@ -447,11 +679,44 @@ describe('QuickStatsPage', () => {
     expect(aq.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the vehicle picker only for multi-vehicle fleets', () => {
+  it('keeps all eight metrics, comparison and spotlight during failed background refresh', () => {
+    analyticsMock.mockReturnValue(makeQuery({ data: ANALYTICS, error: new Error('refresh failed'), isError: true }));
+    vehiclesMock.mockReturnValue(makeQuery({ data: [makeVehicle()], error: new Error('registry refresh failed'), isError: true }));
+    const { container } = renderPage();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.getByText('450 kWh')).toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-hero')).toBeInTheDocument();
+    expect(captured.fleet.entries).toBe(ANALYTICS.vehicleComparison);
+    expect(captured.fleet.error).toBeNull();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Cached · refresh failed')).toHaveLength(2);
+    expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Fleet metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open dashboard' })).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('quick-stats-operational-brief'), 'Retained readings');
+  });
+
+  it('opens the real review drawer with fleet scope, source units and all eight measurements', () => {
+    renderPage();
+    const brief = screen.getByTestId('quick-stats-operational-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(8);
+    assertOperationalBriefDisclosure(brief, 'All fleet vehicles · last 30 days');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('heading', { name: 'Fleet operating summary details' })).toBeInTheDocument();
+    expect(within(drawer).getByText('12,345.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByText(/source kilometres normalized to metres/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/source Wh\/km normalized to Wh\/m/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/exact rollup bounds and source coverage are not supplied/).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('vehicle-hero')).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-comparison')).toBeInTheDocument();
+  });
+
+  it('does not duplicate the workspace vehicle picker for multi-vehicle or single-vehicle fleets', () => {
+    expect(getWorkspaceRouteScope('/quick-stats').vehicle).toBe(true);
     const multi = renderPage();
-    expect(
-      screen.getByRole('combobox', { name: 'Select vehicle' }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
     multi.unmount();
 
     selectedVehicleMock.mockReturnValue({
@@ -465,24 +730,28 @@ describe('QuickStatsPage', () => {
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
 
-  it('re-scopes the spotlight on a valid pick and ignores the empty option', () => {
-    const setVehicleId = vi.fn();
+  it('consumes workspace selection changes without re-scoping the fleet KPI rollup', () => {
     selectedVehicleMock.mockReturnValue({
       vehicleId: 1,
       vehicle: makeVehicle(),
       vehicles: [makeVehicle(), makeVehicle({ id: 2, vin: 'VIN-002', display_name: 'Model 3' })],
-      setVehicleId,
+      setVehicleId: vi.fn(),
+    });
+    const first = renderPage();
+    expect(captured.hero.vehicle).toMatchObject({ id: 1 });
+    first.unmount();
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: 2,
+      vehicle: makeVehicle({ id: 2, display_name: 'Model 3' }),
+      vehicles: [makeVehicle(), makeVehicle({ id: 2 })],
+      setVehicleId: vi.fn(),
     });
     renderPage();
-
-    const picker = screen.getByRole('combobox', { name: 'Select vehicle' });
-    fireEvent.change(picker, { target: { value: '2' } });
-    expect(setVehicleId).toHaveBeenCalledWith(2);
-
-    // The empty placeholder must be guarded out (Number('') → 0, not > 0).
-    setVehicleId.mockClear();
-    fireEvent.change(picker, { target: { value: '' } });
-    expect(setVehicleId).not.toHaveBeenCalled();
+    expect(captured.hero.vehicle).toMatchObject({ id: 2 });
+    expect(vehicleStateMock).toHaveBeenCalledWith(2);
+    expect(analyticsMock).toHaveBeenLastCalledWith(30);
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 
   it('refreshes analytics, vehicle state and the vehicle list together', () => {
@@ -503,13 +772,69 @@ describe('QuickStatsPage', () => {
   it('navigates from the quick-link buttons', () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Dashboard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open dashboard' }));
     expect(navigateMock).toHaveBeenCalledWith('/');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Vehicle Details' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vehicle details' }));
     expect(navigateMock).toHaveBeenCalledWith('/vehicles/1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'View Analytics' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View analytics' }));
     expect(navigateMock).toHaveBeenCalledWith('/statistics');
+  });
+
+  it('leaves the shell as the sole main landmark while keeping all three sections', () => {
+    renderPage();
+
+    const main = screen.getByRole('main');
+    expect(main).toHaveAttribute('id', 'main-content');
+    expect(main.querySelector('main')).toBeNull();
+    expect(within(main).getByRole('region', { name: 'Fleet metrics' })).toBeInTheDocument();
+    expect(within(main).getByRole('region', { name: 'Vehicle spotlight' })).toBeInTheDocument();
+    expect(within(main).getByRole('button', { name: 'Open dashboard' })).toBeInTheDocument();
+    expect(within(main).getByText('Powered by TeslaSync')).toBeInTheDocument();
+  });
+
+  it.each([
+    { caseId: 'no selection', vehicleId: null },
+    { caseId: 'zero identifier', vehicleId: 0 },
+    { caseId: 'negative identifier', vehicleId: -1 },
+  ])('refreshes only enabled sources with $caseId', ({ vehicleId }) => {
+    const analytics = makeQuery({ data: ANALYTICS });
+    const vehicles = makeQuery({ data: [] });
+    const disabledState = makeQuery({
+      error: new Error('Disabled state must not be a participating source'),
+      isError: true,
+      dataUpdatedAt: 0,
+    });
+    analyticsMock.mockReturnValue(analytics);
+    vehiclesMock.mockReturnValue(vehicles);
+    vehicleStateMock.mockReturnValue(disabledState);
+    selectedVehicleMock.mockReturnValue({ vehicleId, vehicle: null, vehicles: [] });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quick stats' }));
+
+    expect(analytics.refetch).toHaveBeenCalledTimes(1);
+    expect(vehicles.refetch).toHaveBeenCalledTimes(1);
+    expect(disabledState.refetch).not.toHaveBeenCalled();
+    expect(vehicleStateMock).toHaveBeenCalledWith(vehicleId ?? 0);
+    expect(screen.queryByText('Disabled state must not be a participating source')).toBeNull();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle found')).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-comparison')).toBeInTheDocument();
+  });
+
+  it('keeps mobile touch targets and wrapping labels without changing navigation', () => {
+    renderPage();
+
+    for (const name of ['Refresh quick stats', 'Open dashboard', 'Vehicle details', 'View analytics']) {
+      const action = screen.getByRole('button', { name });
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+      expect(action).toHaveClass('focus-visible:outline', 'focus-visible:outline-2');
+      if (name !== 'Refresh quick stats') {
+        expect(action).toHaveClass('h-auto', 'whitespace-normal', 'max-w-full');
+      }
+    }
+    expect(screen.getAllByRole('button', { name: 'Vehicle details' })).toHaveLength(1);
   });
 });

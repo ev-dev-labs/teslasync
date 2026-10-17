@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
-import { WifiOff } from 'lucide-react'
+import { CloudOff } from 'lucide-react'
 import { AlertBanner } from './AlertBanner'
 import { VisuallyHidden } from '@/components/a11y'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
@@ -113,7 +113,7 @@ export function OfflineBanner({ presentation }: OfflineBannerProps = {}) {
       <AlertBanner
         variant="warning"
         title={title}
-        icon={<WifiOff className="h-4 w-4" aria-hidden />}
+        icon={<CloudOff className="h-4 w-4" aria-hidden />}
         role="status"
         aria-live="polite"
       >

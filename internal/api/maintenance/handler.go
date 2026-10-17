@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -19,7 +21,7 @@ import (
 // request open indefinitely.
 const maintenanceReadTimeout = 5 * time.Second
 
-// vehicleRowReader is the read port for the single "first vehicle" lookup. It
+// vehicleRowReader is the read port for a vehicle lookup. It
 // is satisfied by *pgxpool.Pool (and pgx.Tx) — the same QueryRow shape as
 // database.DBTX — so tests can inject a fake row without a live database.
 type vehicleRowReader interface {
@@ -125,15 +127,27 @@ func (h *Handler) defaultItems(vehicleID int64, currentOdometer float64) []map[s
 	return items
 }
 
-// List returns the maintenance schedule for the first vehicle. When no vehicle
+// List returns the maintenance schedule for vehicle_id, defaulting to the
+// first vehicle when no selection is supplied. When no vehicle
 // exists, the datastore is unreachable, or the handler has no database wired,
 // it degrades to an empty schedule with 200 OK so the frontend renders an empty
 // state instead of an error page.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), maintenanceReadTimeout)
+	ctx, span := otel.Tracer("api").Start(r.Context(), "maintenance.List")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, maintenanceReadTimeout)
 	defer cancel()
 
-	vehicleID, ok := h.firstVehicleID(ctx)
+	selectedID := int64(0)
+	if s := r.URL.Query().Get("vehicle_id"); s != "" {
+		v, err := strconv.ParseInt(s, 10, 64)
+		if err != nil || v <= 0 {
+			httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+			return
+		}
+		selectedID = v
+	}
+	vehicleID, ok := h.vehicleIDForScope(ctx, selectedID)
 	if !ok {
 		httpx.WriteJSON(w, http.StatusOK, []interface{}{})
 		return
@@ -148,12 +162,24 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 // result logs at debug (expected on a fresh install); any other error logs at
 // warn so an outage is visible without failing the request.
 func (h *Handler) firstVehicleID(ctx context.Context) (int64, bool) {
+	return h.vehicleIDForScope(ctx, 0)
+}
+
+// vehicleIDForScope verifies an explicit selection without falling back to a
+// different vehicle. A zero selection retains the legacy first-vehicle lookup.
+func (h *Handler) vehicleIDForScope(ctx context.Context, selectedID int64) (int64, bool) {
 	if h.db == nil {
 		log.Debug().Msg("maintenance: no database reader configured — empty schedule")
 		return 0, false
 	}
+	query := `SELECT id FROM vehicles ORDER BY id LIMIT 1`
+	var args []any
+	if selectedID > 0 {
+		query = `SELECT id FROM vehicles WHERE id = $1`
+		args = []any{selectedID}
+	}
 	var vehicleID int64
-	if err := h.db.QueryRow(ctx, `SELECT id FROM vehicles ORDER BY id LIMIT 1`).Scan(&vehicleID); err != nil {
+	if err := h.db.QueryRow(ctx, query, args...).Scan(&vehicleID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			log.Debug().Msg("maintenance: no vehicle found — empty schedule")
 		} else {

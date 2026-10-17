@@ -4,6 +4,8 @@ import { type PackInstallation, useRemoveAlertPack } from '@/api/hooks/useAlertP
 import { Button, Caption, GlassPanel, Modal, PanelTitle, Text, Toggle } from '@/components/ui'
 import { ErrorDisplay } from '@/components/feedback'
 import { formatDateTime } from '@/lib/dateFormat'
+import { useTimezone } from '@/lib/timezone'
+import { useSettings } from '@/hooks/useSettings'
 
 interface Props {
   installation: PackInstallation
@@ -13,13 +15,16 @@ interface Props {
 
 export default function InstalledPackCard({ installation, name, onEditRule }: Props) {
   const { t } = useTranslation()
+  const { settings, locale } = useSettings()
+  const tz = useTimezone(settings.tz_display_default ?? 'vehicle')
   const remove = useRemoveAlertPack()
   const [confirm, setConfirm] = useState(false)
   const [deleteIDs, setDeleteIDs] = useState<number[]>([])
   return (
     <GlassPanel className="space-y-3 p-4">
       <PanelTitle>{name}</PanelTitle>
-      <Caption>{t('alertPacks.installedVersion', 'Version {{version}} · installed {{date}}', { version: installation.version, date: formatDateTime(installation.created_at) })}</Caption>
+      <Caption>{t('alertPacks.installedVersion', 'Version {{version}} · installed {{date}}', { version: installation.version,
+        date: formatDateTime(installation.created_at, { locale, tz }) })}</Caption>
       <Text variant="bodySm">{installation.scope_key === 'all'
         ? t('alertPacks.allVehicles', 'All current and future vehicles')
         : t('alertPacks.vehicleScope', 'Vehicle IDs: {{ids}}', { ids: installation.scope_key })}</Text>

@@ -26,7 +26,8 @@
  *   - The heavy preference sections are stubbed; the REAL `SettingsActionCard`
  *     is kept (imported from its own module) so the quick-action assertions
  *     exercise the production card + its `<a href>` / `<button>` output.
- *   - `react-i18next` resolves the developer fallback string.
+ *   - Most tests resolve developer fallbacks; title regressions use the real
+ *     react-i18next hook with the canonical English resource.
  *   - `restartChecklist` and the tour-launcher event dispatch stay REAL so the
  *     action side-effects (localStorage + window CustomEvent + toast) are
  *     genuinely observed.
@@ -40,7 +41,11 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { createInstance, type i18n } from 'i18next'
+import { I18nextProvider, initReactI18next } from 'react-i18next'
 import { Input } from '@/components/ui'
+import canonicalEnglish from '@/i18n/en.json'
+import { getBaseTitle, setBaseTitle, setBasePrefix, __resetTitleStoreForTests } from '@/lib/titleStore'
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + the freshness chip read it
 // at render for the reduced-motion preference.
@@ -63,10 +68,11 @@ vi.hoisted(() => {
 
 // Hoisted test doubles so the mock factories below and the specs can both
 // reach them.
-const { useSettingsMock, useFontMock, useEditLeaseMock } = vi.hoisted(() => ({
+const { useSettingsMock, useFontMock, useEditLeaseMock, translationMode } = vi.hoisted(() => ({
   useSettingsMock: vi.fn(),
   useFontMock: vi.fn(),
   useEditLeaseMock: vi.fn(),
+  translationMode: { canonical: false },
 }))
 
 vi.mock('@/api/hooks/useSettings', () => ({
@@ -86,7 +92,9 @@ vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
     ...actual,
-    useTranslation: () => ({
+    useTranslation: (...args: Parameters<typeof actual.useTranslation>) => {
+      if (translationMode.canonical) return actual.useTranslation(...args)
+      return {
       t: (key: string, fallbackOrOpts?: unknown, maybeOpts?: unknown) => {
         const fallback = typeof fallbackOrOpts === 'string' ? fallbackOrOpts : undefined
         const opts =
@@ -105,7 +113,8 @@ vi.mock('react-i18next', async () => {
         return key
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
-    }),
+      }
+    },
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   }
 })
@@ -136,6 +145,7 @@ vi.mock('../components/ResetSection', () => ({
 }))
 
 import SettingsPage from './SettingsPage'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import { TOUR_OPEN_LAUNCHER_EVENT } from '@/lib/tourRegistry'
 import { CHECKLIST_DISMISSED_KEY } from '@/features/onboarding/checklist'
 import { ToastProvider } from '@/components/feedback/Toast'
@@ -206,11 +216,11 @@ function setFont(overrides: Partial<FontPrefs> = {}) {
 
 let scrollSpy: ReturnType<typeof vi.fn>
 
-function renderPage(initialEntries: string[] = ['/settings']) {
+function renderPage(initialEntries: string[] = ['/settings'], translationInstance?: i18n) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
-  return render(
+  const page = (
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -223,21 +233,57 @@ function renderPage(initialEntries: string[] = ['/settings']) {
           </Routes>
         </ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  return render(translationInstance
+    ? <I18nextProvider i18n={translationInstance}>{page}</I18nextProvider>
+    : page)
 }
 
-/** Return the StatCard root element that contains the given label text. */
+/** Return the actual Brief metric occurrence containing the label. */
 function statCard(label: string): HTMLElement {
   const labelEl = screen.getByText(label)
-  // label <span> → header <div> → Card root <div>
-  const card = labelEl.closest('div')?.parentElement
+  const card = labelEl.closest('[data-operational-metric]')
   if (!card) throw new Error(`no card root found for label "${label}"`)
   return card as HTMLElement
 }
 
+function preferencesSummary(): HTMLElement {
+  return screen.getByTestId('settings-preferences-summary')
+}
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(summary: HTMLElement, text: string) {
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
+// Per-metric context (sublabels) lives in the drawer's named groups now.
+function expectDrawerContext(entries: ReadonlyArray<readonly [string, string]>) {
+  const summary = preferencesSummary()
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    for (const [label, context] of entries) {
+      const group = within(drawer).getByRole('group', { name: label })
+      expect(within(group).getByText(context)).toBeInTheDocument()
+    }
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  translationMode.canonical = false
   localStorage.clear()
   useEditLeaseMock.mockReturnValue({ isOwner: false, otherTab: null, claim: vi.fn() })
   setFont()
@@ -246,9 +292,76 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = scrollSpy
 })
 
+describe('SettingsPage — canonical English title', () => {
+  it('resolves the Settings-owned key through the real flat-resource fallback and preserves navigation', async () => {
+    const instance = createInstance()
+    await instance.use(initReactI18next).init({
+      resources: { en: { translation: canonicalEnglish } },
+      lng: 'en',
+      fallbackLng: 'en',
+      fallbackNS: 'translation',
+      interpolation: { escapeValue: false },
+    })
+    const settingsT = instance.getFixedT('en', 'settings')
+    expect(instance.hasResourceBundle('en', 'settings')).toBe(false)
+    expect(settingsT('title', 'Settings')).toBe('Command center')
+    expect(instance.exists('settings.title', { ns: 'settings' })).toBe(true)
+    expect(settingsT('settings.title', { defaultValue: 'MISSING SETTINGS TITLE', returnDetails: true })).toMatchObject({
+      res: 'Settings',
+      exactUsedKey: 'settings.title',
+      usedNS: 'translation',
+      usedLng: 'en',
+    })
+
+    translationMode.canonical = true
+    __resetTitleStoreForTests()
+    setBaseTitle('Command center — TeslaSync')
+    setBasePrefix('(3) ')
+    const { unmount } = renderPage(['/settings'], instance)
+    try {
+      expect(screen.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+      expect(screen.queryByRole('heading', { name: 'Command center', exact: true })).toBeNull()
+      expect(getBaseTitle()).toBe('Settings — TeslaSync')
+      expect(document.title).toBe('(3) Settings — TeslaSync')
+      await waitFor(() => expect(screen.getByLabelText('Current preferences overview')).toBeVisible())
+      for (const section of ['general', 'workspace', 'appearance', 'typography', 'advanced', 'server', 'reset']) {
+        expect(document.getElementById(`settings-category-${section}`)).toBeInTheDocument()
+      }
+      fireEvent.click(screen.getByRole('button', { name: /Units, language & costs/ }))
+      const draft = screen.getByRole('textbox', { name: 'Draft setting' })
+      fireEvent.change(draft, { target: { value: 'Unsaved preference' } })
+      fireEvent.click(screen.getByRole('button', { name: /Appearance & experience/ }))
+      expect(draft).not.toBeVisible()
+      fireEvent.click(screen.getByRole('button', { name: /Units, language & costs/ }))
+      expect(screen.getByRole('textbox', { name: 'Draft setting' })).toBe(draft)
+      expect(draft).toHaveValue('Unsaved preference')
+      expect(screen.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+      expect(document.title).toBe('(3) Settings — TeslaSync')
+      unmount()
+      expect(document.title).toBe('(3) Command center — TeslaSync')
+    } finally {
+      unmount()
+      translationMode.canonical = false
+      __resetTitleStoreForTests()
+    }
+  })
+})
+
 // ── KPI band — loaded metric derivation ─────────────────────────────────────
 
 describe('SettingsPage — KPI band derivation', () => {
+  it('retains configuration context and the existing cost denomination in the real Review drawer', () => {
+    renderPage()
+    expect(statCard('Energy cost')).toHaveAttribute('data-value-state', 'value')
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    expect(within(drawer).getByText('$0.12')).toBeInTheDocument()
+    expect(within(drawer).getByText('per kWh')).toBeInTheDocument()
+    expect(within(drawer).getByText('100%')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-general')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Data export/i })).toBeInTheDocument()
+  })
+
   it('renders all seven preference cards from settings + font prefs (metric / rated defaults)', () => {
     renderPage()
 
@@ -265,28 +378,27 @@ describe('SettingsPage — KPI band derivation', () => {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
 
-    // Distance: metric unit value + "Rated" range sublabel, associated.
-    const distance = statCard('Distance')
-    expect(within(distance).getByText('km')).toBeInTheDocument()
-    expect(within(distance).getByText('Rated')).toBeInTheDocument()
+    // Distance: metric unit value on the face; the "Rated" range sublabel
+    // is associated context in the drawer.
+    expect(within(statCard('Distance')).getByText('km')).toBeInTheDocument()
 
     // Temperature defaults to °C (unit_of_temp !== 'F').
     expect(within(statCard('Temperature')).getByText('°C')).toBeInTheDocument()
     // Pressure passes the stored unit straight through.
     expect(within(statCard('Pressure')).getByText('bar')).toBeInTheDocument()
-    // Language: uppercased code + friendly name from the label map.
-    const language = statCard('Language')
-    expect(within(language).getByText('EN')).toBeInTheDocument()
-    expect(within(language).getByText('English')).toBeInTheDocument()
-    // Currency glyph + energy cost formatted to 2dp with a "per kWh" sublabel.
+    // Language: uppercased code on the face; friendly name in the drawer.
+    expect(within(statCard('Language')).getByText('EN')).toBeInTheDocument()
+    // Currency glyph + energy cost formatted to 2dp; "per kWh" in the drawer.
     expect(within(statCard('Currency')).getByText('$')).toBeInTheDocument()
-    const energy = statCard('Energy cost')
-    expect(within(energy).getByText('$0.12')).toBeInTheDocument()
-    expect(within(energy).getByText('per kWh')).toBeInTheDocument()
-    // Typography: friendly font family name + rounded scale percentage.
-    const typography = statCard('Typography')
-    expect(within(typography).getByText('Inter')).toBeInTheDocument()
-    expect(within(typography).getByText('100%')).toBeInTheDocument()
+    expect(within(statCard('Energy cost')).getByText('$0.12')).toBeInTheDocument()
+    // Typography: friendly font family name on the face; scale in the drawer.
+    expect(within(statCard('Typography')).getByText('Inter')).toBeInTheDocument()
+    expectDrawerContext([
+      ['Distance', 'Rated'],
+      ['Language', 'English'],
+      ['Energy cost', 'per kWh'],
+      ['Typography', '100%'],
+    ])
   })
 
   it('reflects imperial units, ideal range, a custom currency, and a localized language', () => {
@@ -305,23 +417,22 @@ describe('SettingsPage — KPI band derivation', () => {
 
     renderPage()
 
-    const distance = statCard('Distance')
-    expect(within(distance).getByText('mi')).toBeInTheDocument()
-    expect(within(distance).getByText('Ideal')).toBeInTheDocument()
+    expect(within(statCard('Distance')).getByText('mi')).toBeInTheDocument()
     expect(within(statCard('Temperature')).getByText('°F')).toBeInTheDocument()
     expect(within(statCard('Pressure')).getByText('psi')).toBeInTheDocument()
 
-    const language = statCard('Language')
-    expect(within(language).getByText('DE')).toBeInTheDocument()
-    expect(within(language).getByText('Deutsch')).toBeInTheDocument()
+    expect(within(statCard('Language')).getByText('DE')).toBeInTheDocument()
 
     expect(within(statCard('Currency')).getByText('€')).toBeInTheDocument()
     // Formatted to 2dp and prefixed with the custom glyph.
     expect(within(statCard('Energy cost')).getByText('€0.34')).toBeInTheDocument()
 
-    const typography = statCard('Typography')
-    expect(within(typography).getByText('Atkinson Hyperlegible')).toBeInTheDocument()
-    expect(within(typography).getByText('110%')).toBeInTheDocument()
+    expect(within(statCard('Typography')).getByText('Atkinson Hyperlegible')).toBeInTheDocument()
+    expectDrawerContext([
+      ['Distance', 'Ideal'],
+      ['Language', 'Deutsch'],
+      ['Typography', '110%'],
+    ])
   })
 
   it('falls back to "$" when the settings omit a currency symbol', () => {
@@ -333,13 +444,18 @@ describe('SettingsPage — KPI band derivation', () => {
     expect(within(statCard('Energy cost')).getByText('$0.20')).toBeInTheDocument()
   })
 
-  it('coalesces a blank unit string to an em-dash instead of an empty cell', () => {
+  it('omits blank unit strings instead of rendering an empty cell', () => {
     setSettings(makeSettings({ unit_of_length: '', unit_of_pressure: '   ' }))
 
     renderPage()
 
-    expect(within(statCard('Distance')).getByText('—')).toBeInTheDocument()
-    expect(within(statCard('Pressure')).getByText('—')).toBeInTheDocument()
+    const summary = preferencesSummary()
+    assertOperationalMetricUnavailable(summary, 'Distance')
+    assertOperationalMetricUnavailable(summary, 'Pressure')
+    expectHiddenCount(summary, '2 empty fields are hidden.')
+    // Neighboring tiles keep their measured values.
+    expect(within(statCard('Temperature')).getByText('°C')).toBeInTheDocument()
+    expect(within(statCard('Energy cost')).getByText('$0.12')).toBeInTheDocument()
   })
 
   it('uppercases an unknown language code and omits the friendly name', () => {
@@ -359,36 +475,109 @@ describe('SettingsPage — KPI band derivation', () => {
     renderPage()
 
     const typography = statCard('Typography')
-    // 'custom' IS mapped to "Custom"; assert the mapped label + rounded scale.
+    // 'custom' IS mapped to "Custom"; assert the mapped label on the face and
+    // the rounded scale in the drawer group.
     expect(within(typography).getByText('Custom')).toBeInTheDocument()
-    expect(within(typography).getByText('85%')).toBeInTheDocument()
+    expectDrawerContext([['Typography', '85%']])
   })
 })
 
 // ── KPI band — loading / empty states ───────────────────────────────────────
 
 describe('SettingsPage — loading & empty placeholders', () => {
-  it('renders skeleton cards (no metric labels) while settings load', () => {
+  it('keeps every settings category mounted on an initial source failure and retries only the read', () => {
+    const refetch = vi.fn()
+    useSettingsMock.mockReturnValue({
+      data: undefined, isLoading: false, isError: true, error: new Error('Read failed'), refetch,
+    })
+    renderPage()
+    expect(screen.getByTestId('stub-general')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-workspace')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-appearance')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-typography')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-advanced')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-reset')).toBeInTheDocument()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0])
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves preference readouts and mounted drafts after a retained source failure', () => {
+    useSettingsMock.mockReturnValue({
+      data: makeSettings(), isLoading: false, isError: true, error: new Error('Refresh failed'), refetch: vi.fn(),
+    })
+    renderPage()
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+    expect(screen.getByTestId('stub-general')).toBeInTheDocument()
+    expect(screen.getByLabelText('Draft setting')).toHaveValue('Original')
+    expect(screen.getByTestId('stub-workspace')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+  it('retains Brief labels with busy placeholders while settings load', () => {
     setSettings(undefined, { isLoading: true })
 
     renderPage()
 
-    // StatCard swaps its body for skeletons when loading → labels not painted.
-    expect(screen.queryByText('Distance')).toBeNull()
-    expect(screen.queryByText('Currency')).toBeNull()
+    expect(screen.getByText('Distance')).toBeInTheDocument()
+    expect(screen.getByText('Currency')).toBeInTheDocument()
+    expect(screen.getByTestId('settings-preferences-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('settings-preferences-summary').querySelectorAll('[data-operational-value]')).toHaveLength(1)
     // The rest of the page still renders (never a frozen/blank screen).
-    expect(screen.getByRole('link', { name: /Data Export/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Data export/i })).toBeInTheDocument()
+    const summary = screen.getByTestId('settings-preferences-summary')
+    const metrics = within(summary).getAllByRole('listitem')
+    expect(metrics).toHaveLength(7)
+    expect(metrics.map(metric => metric.getAttribute('data-operational-metric'))).toEqual([
+      'settings-preference-0', 'settings-preference-1', 'settings-preference-2',
+      'settings-preference-3', 'settings-preference-4', 'settings-preference-5',
+      'settings-preference-6',
+    ])
+    for (const remote of metrics.slice(0, 6)) {
+      expect(remote).toHaveAttribute('data-value-state', 'missing')
+      expect(remote.querySelector('[data-operational-value]')).toBeNull()
+      expect(remote.querySelectorAll('[aria-busy="true"]')).toHaveLength(1)
+      expect(remote.querySelector('[aria-busy="true"] [aria-hidden="true"]')).toBeInTheDocument()
+    }
+    const typography = metrics[6]
+    expect(typography).toHaveAttribute('data-value-state', 'value')
+    expect(typography.querySelector('[data-operational-value]')).toHaveTextContent('Inter')
+    expect(typography.querySelector('[aria-busy="true"]')).toBeNull()
+    return waitFor(() => {
+      expect(within(typography).getByText('Inter')).toBeVisible()
+      expect(summary).toHaveAttribute('aria-busy', 'true')
+    }).then(() => {
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+      const drawer = screen.getByRole('dialog')
+      return waitFor(() => {
+        expect(within(drawer).getByText('Inter')).toBeVisible()
+        expect(within(drawer).getByText('Inter')).not.toHaveAttribute('aria-busy')
+        const typographyGroup = within(drawer).getByRole('group', { name: 'Typography' })
+        expect(within(typographyGroup).getByText('100%')).toBeVisible()
+        expect(within(drawer).getByText('100%').closest('[aria-busy="true"]')).toBeNull()
+        const pendingDrawerValues = drawer.querySelectorAll('[aria-busy="true"]')
+        expect(pendingDrawerValues).toHaveLength(6)
+        for (const pending of pendingDrawerValues) {
+          expect(pending.querySelector('[aria-hidden="true"]')).toBeVisible()
+          expect(pending.querySelector('[data-operational-value]')).toBeNull()
+          expect(pending.textContent).toBe('')
+        }
+        expect(within(drawer).getByText('Loading source')).toBeVisible()
+        expect(summary).toHaveAttribute('aria-busy', 'true')
+      })
+    })
   })
 
-  it('renders em-dash placeholders — never blanks — when settings are unavailable', () => {
+  it('omits unavailable settings tiles — never blanks — while keeping live font prefs', () => {
     setSettings(undefined) // resolved, but no data (error/empty)
 
     renderPage()
 
-    // Labels ARE present (not loading), values fall back to the placeholder.
-    expect(screen.getByText('Distance')).toBeInTheDocument()
-    // Distance, Temperature, Pressure, Language, Currency, Energy all show "—".
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(6)
+    // The six settings-backed tiles are omitted and counted in the drawer.
+    const summary = preferencesSummary()
+    for (const label of ['Distance', 'Temperature', 'Pressure', 'Language', 'Currency', 'Energy cost']) {
+      assertOperationalMetricUnavailable(summary, label)
+    }
+    expectHiddenCount(summary, '6 empty fields are hidden.')
+    expect(screen.queryByText('—')).not.toBeInTheDocument()
     // Typography is independent of settings → still shows the live font prefs.
     expect(within(statCard('Typography')).getByText('Inter')).toBeInTheDocument()
   })
@@ -477,7 +666,7 @@ describe('SettingsPage — quick actions', () => {
   it('links the Data Export card to /data-export', () => {
     renderPage()
 
-    const link = screen.getByRole('link', { name: /Data Export/i })
+    const link = screen.getByRole('link', { name: /Data export/i })
     expect(link).toHaveAttribute('href', '/data-export')
   })
 
@@ -487,7 +676,7 @@ describe('SettingsPage — quick actions', () => {
     const handler = vi.fn()
     window.addEventListener(TOUR_OPEN_LAUNCHER_EVENT, handler)
     try {
-      fireEvent.click(screen.getByRole('button', { name: /Open Tour Launcher/i }))
+      fireEvent.click(screen.getByRole('button', { name: 'Show tours', exact: true }))
       expect(handler).toHaveBeenCalledTimes(1)
     } finally {
       window.removeEventListener(TOUR_OPEN_LAUNCHER_EVENT, handler)
@@ -500,7 +689,7 @@ describe('SettingsPage — quick actions', () => {
 
     renderPage()
 
-    fireEvent.click(screen.getByRole('button', { name: /Restart Checklist/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Restart checklist/i }))
 
     // restartChecklist() clears the dismissed flag …
     expect(localStorage.getItem(CHECKLIST_DISMISSED_KEY)).toBeNull()

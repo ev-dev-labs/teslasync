@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import type { UserActivityEntry } from '@/types/admin';
+import { chartTokens } from '@/lib/tokens';
+import { formatDayKey } from '@/lib/dateFormat';
 import { deriveMyActivityAnalytics, OTHER_CATEGORY } from './myActivityAnalytics';
 
 // ── Timezone-robust fixtures ────────────────────────────────────────────────
@@ -146,6 +148,62 @@ describe('deriveMyActivityAnalytics', () => {
     expect(r.dailyTrend[0].day).toBe('2020-01-01');
   });
 
+  it('preserves late loaded observations and labels actual coverage in bounded multi-day buckets', () => {
+    const entries = [
+      entry({ ts: '2020-01-01T12:00:00Z' }),
+      entry({ ts: '2020-01-02T12:00:00Z' }),
+      entry({ ts: '2024-12-31T12:00:00Z' }),
+      entry({ ts: '2025-01-01T12:00:00Z' }),
+    ];
+    const original = entries.map((item) => ({ ...item }));
+    const opts = { tz: 'UTC', locale: 'en-US' };
+    const r = deriveMyActivityAnalytics(entries, { start: '2020-01-01', end: '2025-01-01' }, opts);
+
+    expect(r.dailyTrend).toHaveLength(366);
+    expect(r.dailyTrend[0].count).toBe(2);
+    expect(r.dailyTrend.at(-1)?.endDay).toBe('2025-01-01');
+    expect(r.dailyTrend.at(-1)?.count).toBe(2);
+    expect(r.dailyTrend.reduce((sum, point) => sum + point.count, 0)).toBe(r.kpis.total);
+    for (const [index, point] of r.dailyTrend.entries()) {
+      expect(point.label).toBe(
+        `${formatDayKey(point.day, { ...opts, style: 'short' })} – ${formatDayKey(point.endDay!, { ...opts, style: 'short' })}`,
+      );
+      if (index > 0) {
+        const previousEnd = new Date(`${r.dailyTrend[index - 1].endDay}T00:00:00Z`).getTime();
+        expect(new Date(`${point.day}T00:00:00Z`).getTime() - previousEnd).toBe(86_400_000);
+      }
+    }
+    expect(entries).toEqual(original);
+  });
+
+  it('keeps single-day labels and all loaded counts at the 366-day boundary', () => {
+    const r = deriveMyActivityAnalytics(
+      [entry({ ts: '2020-12-31T12:00:00Z' })],
+      { start: '2020-01-01', end: '2020-12-31' },
+      { tz: 'UTC' },
+    );
+
+    expect(r.dailyTrend).toHaveLength(366);
+    expect(r.dailyTrend.every((point) => point.endDay === undefined)).toBe(true);
+    expect(r.dailyTrend.at(-1)?.count).toBe(1);
+  });
+
+  it('counts each observed day exactly once when the range first exceeds the budget', () => {
+    const entries = Array.from({ length: 367 }, (_, index) =>
+      entry({ ts: new Date(Date.UTC(2020, 0, 1 + index, 12)).toISOString() }),
+    );
+    const r = deriveMyActivityAnalytics(
+      entries,
+      { start: '2020-01-01', end: '2021-01-01' },
+      { tz: 'UTC' },
+    );
+
+    expect(r.dailyTrend).toHaveLength(366);
+    expect(r.dailyTrend.filter((point) => point.endDay !== undefined)).toHaveLength(1);
+    expect(r.dailyTrend.reduce((sum, point) => sum + point.count, 0)).toBe(367);
+    expect(r.dailyTrend.every((point) => point.count === (point.endDay ? 2 : 1))).toBe(true);
+  });
+
   it('ranks the top actions with percent, palette colour, and i18n metadata', () => {
     const entries = [
       ...Array.from({ length: 5 }, () => entry({ action: 'vehicle.command.wake' })),
@@ -168,7 +226,7 @@ describe('deriveMyActivityAnalytics', () => {
     expect(top.key).toBe('vehicle.command.wake');
     expect(top.count).toBe(5);
     expect(top.percent).toBeCloseTo((5 / 14) * 100, 5); // 14 total entries
-    expect(top.color).toBe('#3b82f6'); // first series colour
+    expect(top.color).toBe(chartTokens.series[0]); // first series colour
     expect(top.label).toBe('Wake vehicle');
     expect(top.i18nKey).toBe('activity.action.vehicleCommandWake');
     expect(top.fallback).toBe('Wake vehicle');
@@ -235,6 +293,58 @@ describe('deriveMyActivityAnalytics', () => {
     expect(r.byHour[0].count).toBe(0);
     expect(r.byHour[9].label).toBe('09');
     expect(r.byHour[23].hour).toBe(23);
+  });
+
+  it('uses display options for day/hour buckets and labels without changing raw entries or ranking', () => {
+    const entries = [
+      entry({ ts: '2026-04-02T07:30:00+00:00', action: 'auth.logout', entity_type: 'vehicle', entity_id: '1' }),
+      entry({ ts: '2026-04-02T00:30:00Z', action: 'auth.login', entity_type: 'charging_session', entity_id: '7' }),
+      entry({ ts: '2026-04-02T06:30:00Z', action: 'auth.login', entity_type: 'vehicle', entity_id: '1' }),
+    ];
+    const original = entries.map((item) => ({ ...item }));
+    const range = { start: '2026-04-01', end: '2026-04-03' };
+    const opts = { tz: 'America/Los_Angeles', locale: 'de-DE' };
+    const local = deriveMyActivityAnalytics(entries, range, opts);
+    const utc = deriveMyActivityAnalytics(entries, range, { tz: 'UTC', locale: 'en-US' });
+
+    expect(local.dailyTrend.map(({ day, count }) => ({ day, count }))).toEqual([
+      { day: '2026-04-01', count: 2 },
+      { day: '2026-04-02', count: 1 },
+      { day: '2026-04-03', count: 0 },
+    ]);
+    expect(local.dailyTrend[0].label).toBe(formatDayKey('2026-04-01', { ...opts, style: 'short' }));
+    expect(local.dailyTrend[0].label).not.toBe(utc.dailyTrend[0].label);
+    expect(local.kpis.activeDays).toBe(2);
+    expect(utc.kpis.activeDays).toBe(1);
+    expect(local.byHour[0].count).toBe(1);
+    expect(local.byHour[17].count).toBe(1);
+    expect(local.byHour[23].count).toBe(1);
+    expect(local.byHour.reduce((sum, point) => sum + point.count, 0)).toBe(3);
+    expect(local.kpis.lastActivityTs).toBe(entries[0].ts);
+    expect(local.topActions).toEqual(utc.topActions);
+    expect(local.byCategory).toEqual(utc.byCategory);
+    expect(entries).toEqual(original);
+  });
+
+  it('keeps calendar order and combines repeated display hours across daylight saving changes', () => {
+    const entries = [
+      entry({ ts: '2026-11-01T09:30:00Z' }),
+      entry({ ts: '2026-11-01T08:30:00Z' }),
+      entry({ ts: 'not-a-date' }),
+    ];
+    const result = deriveMyActivityAnalytics(
+      entries,
+      { start: '2026-10-31', end: '2026-11-02' },
+      { tz: 'America/Los_Angeles', locale: 'ar-EG', clock: { hour12: true } },
+    );
+
+    expect(result.dailyTrend.map(({ day }) => day)).toEqual(['2026-10-31', '2026-11-01', '2026-11-02']);
+    expect(result.dailyTrend.map(({ count }) => count)).toEqual([0, 2, 0]);
+    expect(result.byHour[1].count).toBe(2);
+    expect(result.byHour.map(({ hour }) => hour)).toEqual(Array.from({ length: 24 }, (_, hour) => hour));
+    expect(result.byHour[1].label).toBe('01');
+    expect(result.kpis.total).toBe(3);
+    expect(result.kpis.lastActivityTs).toBe(entries[0].ts);
   });
 
   it('ignores unparseable timestamps for time-based metrics but still counts them overall', () => {

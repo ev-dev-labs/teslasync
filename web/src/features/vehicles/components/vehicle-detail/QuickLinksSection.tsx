@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronRight } from 'lucide-react'
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui'
+import { MetricGrid } from '@/components/layout'
 import { cn } from '@/lib/cn'
 import { navRouteIcons } from '@/lib/navRouteIcons'
 
@@ -29,12 +30,10 @@ export function QuickLinksSection() {
     <GlassPanel className="p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
         <ChevronRight className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicles.detail.quickLinks', 'Quick Links')}
+        {t('vehicles.detail.quickLinks', 'Quick links')}
       </PanelTitle>
-      <nav
-        aria-label={t('vehicles.detail.quickLinks', 'Quick Links')}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
-      >
+      <nav aria-label={t('vehicles.detail.quickLinks', 'Quick links')}>
+        <MetricGrid>
         {quickLinks.map((link) => {
           const IconComp = link.icon
           return (
@@ -46,7 +45,7 @@ export function QuickLinksSection() {
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
               )}
             >
-              <GlassPanel
+              <GlassPanel variant="embedded"
                 hover
                 glow="cyan"
                 className={cn(
@@ -62,6 +61,7 @@ export function QuickLinksSection() {
             </Link>
           )
         })}
+        </MetricGrid>
       </nav>
     </GlassPanel>
   )

@@ -12,6 +12,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import english from '@/i18n/en.json';
 
 import type { NotificationChannel } from '@/api/types';
 import {
@@ -34,7 +35,7 @@ const FIELD_TYPES = new Set(['url', 'password', 'text', 'email']);
 const asRec = (v: unknown): Record<string, unknown> => v as Record<string, unknown>;
 
 /** Fully-typed channel fixtures — one per kind. */
-const channels: Record<ChannelType, NotificationChannel> = {
+const channels = {
   discord: {
     id: 1, name: 'Ops Discord', kind: 'discord', enabled: true,
     created_at: 'c', updated_at: 'u',
@@ -75,9 +76,23 @@ const channels: Record<ChannelType, NotificationChannel> = {
     created_at: 'c', updated_at: 'u',
     user_key: 'u1', app_token: 'a1', device: null, priority: 0,
   },
-};
+} satisfies Record<ChannelType, NotificationChannel>;
 
 describe('CHANNEL_TYPES catalog', () => {
+  it('ships canonical English fallbacks for provider names, field labels and translated placeholders', () => {
+    const lookup = (key: string): unknown => key.split('.').reduce<unknown>((value, part) =>
+      value && typeof value === 'object' ? (value as Record<string, unknown>)[part] : undefined, english);
+    for (const meta of CHANNEL_TYPES) {
+      expect(lookup(meta.i18nKey)).toBe(meta.label);
+      for (const field of meta.fields) {
+        expect(lookup(field.i18nKey)).toBe(field.label);
+        if (field.placeholderI18nKey) expect(lookup(field.placeholderI18nKey)).toBe(field.placeholder);
+      }
+    }
+    expect(lookup('notifications.channels.namePlaceholder')).toBe('My {{provider}}');
+    expect(lookup('notifications.channels.providerConfiguration')).toBe('{{provider}} Configuration');
+  });
+
   it('covers exactly the seven supported kinds with no duplicates', () => {
     const values = CHANNEL_TYPES.map((c) => c.value);
     expect(values).toEqual(KNOWN_KINDS);
@@ -107,6 +122,17 @@ describe('CHANNEL_TYPES catalog', () => {
       const keys = meta.fields.map((f) => f.key);
       expect(new Set(keys).size).toBe(keys.length);
     }
+  });
+
+  it('keeps URL, email, and credential types with required validation scoped to webhook URL', () => {
+    for (const kind of ['discord', 'slack', 'webhook', 'ntfy']) {
+      expect(getChannelMeta(kind).fields[0].type).toBe('url');
+    }
+    expect(getChannelMeta('email').fields.find(field => field.key === 'from_address')?.type).toBe('email');
+    expect(getChannelMeta('email').fields.find(field => field.key === 'to_addresses')?.type).toBe('text');
+    expect(CHANNEL_TYPES.flatMap(meta => meta.fields.filter(field => field.required)
+      .map(field => [meta.value, field.key]))).toEqual([['webhook', 'url']]);
+    expect(getChannelMeta('webhook').fields.find(field => field.key === 'bearer_token')?.type).toBe('password');
   });
 });
 
@@ -142,19 +168,21 @@ describe('getChannelMeta', () => {
 });
 
 describe('isSecretField', () => {
-  it('classifies token/key/password fields as secret', () => {
-    expect(isSecretField('bot_token')).toBe(true);
-    expect(isSecretField('app_token')).toBe(true);
-    expect(isSecretField('user_key')).toBe(true);
-    expect(isSecretField('smtp_password')).toBe(true);
+  it.each([
+    'webhook_url', 'url', 'bot_token', 'app_token', 'user_key',
+    'smtp_password', 'bearer_token', 'password',
+  ])('explicitly classifies %s as a credential', (key) => {
+    expect(isSecretField(key)).toBe(true);
   });
 
   it('treats non-credential fields (and empty input) as plaintext', () => {
-    expect(isSecretField('webhook_url')).toBe(false);
+    expect(isSecretField('server_url')).toBe(false);
     expect(isSecretField('chat_id')).toBe(false);
     expect(isSecretField('topic')).toBe(false);
     expect(isSecretField('smtp_host')).toBe(false);
     expect(isSecretField('')).toBe(false);
+    expect(isSecretField('keyboard_layout')).toBe(false);
+    expect(isSecretField('token_count')).toBe(false);
   });
 
   it('marks every password-typed catalog field as secret (UI masking invariant)', () => {
@@ -215,6 +243,38 @@ describe('channelToFormConfig', () => {
 });
 
 describe('buildChannelPayload', () => {
+  it.each<NotificationChannel>([
+    { ...channels.discord, kind: 'discord', username: 'Delivery bot', avatar_url: 'https://example.com/avatar.png' },
+    { ...channels.slack, kind: 'slack', channel: '#operations', username: 'Alerts' },
+    { ...channels.email, kind: 'email', use_tls: false },
+    { ...channels.webhook, kind: 'webhook', method: 'GET' },
+    { ...channels.ntfy, kind: 'ntfy', priority: 5, username: 'ops', password: 'credential' },
+    { ...channels.pushover, kind: 'pushover', device: 'phone', priority: -2 },
+    channels.telegram,
+  ])('preserves unedited typed config for $kind while updating common fields', (channel) => {
+    const { created_at, updated_at, ...expected } = channel;
+    void created_at;
+    void updated_at;
+    expect(buildChannelPayload(
+      channel.kind, 'Renamed', false, channelToFormConfig(channel), channel.id, channel,
+    )).toEqual({ ...expected, name: 'Renamed', enabled: false });
+  });
+
+  it('does not carry options across provider kinds', () => {
+    expect(buildChannelPayload('slack', 'New', true, {}, undefined, channels.discord)).toEqual({
+      kind: 'slack', name: 'New', enabled: true, webhook_url: '', channel: null, username: null,
+    });
+  });
+
+  it('updates editable webhook fields while keeping headers and template', () => {
+    expect(buildChannelPayload('webhook', 'Hook', true, {
+      url: 'https://example.com/new', method: 'PUT', bearer_token: 'new-secret',
+    }, channels.webhook.id, channels.webhook)).toMatchObject({
+      url: 'https://example.com/new', method: 'PUT', bearer_token: 'new-secret',
+      headers: { Authorization: 'Bearer t' }, body_template: '{"text":"{{message}}"}',
+    });
+  });
+
   it('includes an id only when one is supplied', () => {
     const withId = asRec(buildChannelPayload('discord', 'D', true, { webhook_url: 'x' }, 42));
     expect(withId.id).toBe(42);

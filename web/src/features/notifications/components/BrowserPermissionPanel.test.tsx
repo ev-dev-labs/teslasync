@@ -23,6 +23,7 @@
  */
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '../../../i18n';
 
 import { BrowserPermissionPanel } from './BrowserPermissionPanel';
@@ -50,6 +51,66 @@ function renderPanel(overrides: Partial<PanelProps> = {}) {
 afterEach(() => cleanup());
 
 describe('BrowserPermissionPanel', () => {
+  it('requests permission with Enter and operates granted delivery switches with Space', async () => {
+    const user = userEvent.setup();
+    const { requestPermission, setPushPrefs, rerender } = renderPanel();
+    screen.getByRole('button', { name: /enable browser notifications/i }).focus();
+    await user.keyboard('{Enter}');
+    expect(requestPermission).toHaveBeenCalledOnce();
+    rerender(
+      <BrowserPermissionPanel
+        permission="granted"
+        notificationsSupported
+        requestPermission={requestPermission}
+        pushPrefs={{ alerts: true, exportStatus: false }}
+        setPushPrefs={setPushPrefs}
+      />,
+    );
+    screen.getByRole('switch', { name: 'Alerts' }).focus();
+    await user.keyboard(' ');
+    expect(setPushPrefs).toHaveBeenCalledOnce();
+    await user.tab();
+    expect(screen.getByRole('switch', { name: 'Export completions' })).toHaveFocus();
+    await user.keyboard(' ');
+    expect(setPushPrefs).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps permission and delivery controls mobile-sized without enlarging desktop roles', () => {
+    const { rerender } = renderPanel();
+    const enable = screen.getByRole('button', { name: /enable browser notifications/i });
+    expect(enable).toHaveClass('min-h-11', 'md:min-h-10', 'focus-visible:outline-2');
+    enable.focus();
+    expect(enable).toHaveFocus();
+    rerender(
+      <BrowserPermissionPanel
+        permission="granted"
+        notificationsSupported
+        requestPermission={vi.fn().mockResolvedValue('granted')}
+        pushPrefs={{ alerts: true, exportStatus: false }}
+        setPushPrefs={vi.fn()}
+      />,
+    );
+    for (const control of screen.getAllByRole('switch')) {
+      expect(control).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:w-9', 'focus-visible:outline-2');
+      control.focus();
+      expect(control).toHaveFocus();
+    }
+  });
+
+  it('uses neutral header icon roles without changing delivery preferences', () => {
+    const { container, setPushPrefs, requestPermission } = renderPanel({
+      permission: 'granted',
+      pushPrefs: { alerts: true, exportStatus: false },
+    });
+    expect(container.querySelector('svg')?.parentElement).toHaveClass(
+      'text-[var(--text-secondary)]',
+      'bg-[var(--surface-2)]',
+      'ring-[var(--border-default)]',
+    );
+    expect(setPushPrefs).not.toHaveBeenCalled();
+    expect(requestPermission).not.toHaveBeenCalled();
+  });
+
   // Header renders in every state — the panel must never be a blank surface.
   it('always renders the titled panel header', () => {
     renderPanel({ notificationsSupported: false });

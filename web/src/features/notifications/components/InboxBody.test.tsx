@@ -35,16 +35,17 @@
  * global stubs in src/test-setup.ts.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
   screen,
   fireEvent,
   waitFor,
   within,
+  act,
   type RenderResult,
 } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 /* ── Boundary mocks ───────────────────────────────────── */
@@ -122,8 +123,12 @@ import { ContextMenuRoot } from '@/components/ui';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import { SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
-import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle } from '@/api/types';
+import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle, AlertDetail } from '@/api/types';
 import { InboxBody } from './InboxBody';
+import { notificationKeys } from '@/api/hooks/useNotifications';
+import { NotificationReportPanel } from './NotificationReportPanel';
+import { NotificationInboxDetails } from './NotificationInboxDetails';
+import { typography } from '@/lib/tokens';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 const mockedExportAsCSV = vi.mocked(exportAsCSV);
@@ -191,11 +196,15 @@ interface Handlers {
   groups?: () => Promise<unknown>;
   members?: () => Promise<unknown>;
   total?: number;
+  count?: () => Promise<{ total: number }>;
+  report?: () => Promise<unknown>;
+  detail?: (path: string, method?: string) => Promise<AlertDetail>;
 }
 
 function installRequest(h: Handlers = {}) {
   mockedRequest.mockImplementation((path: string, options?: { method?: string }) => {
     const method = options?.method;
+    if (path.startsWith('/alerts/') && h.detail) return h.detail(path, method);
     if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
       if (path.includes('mark-read')) return Promise.resolve({ updated: 1 });
       if (path.includes('unarchive')) return Promise.resolve({ updated: 1 });
@@ -203,7 +212,8 @@ function installRequest(h: Handlers = {}) {
       if (path.startsWith('/notifications/logs')) return Promise.resolve({ deleted: 1 });
       return Promise.resolve({});
     }
-    if (path.includes('count_only=true')) return Promise.resolve({ total: h.total ?? 2 });
+    if (path.startsWith('/notifications/report')) return (h.report ?? (() => Promise.reject(new Error('Report unavailable'))))();
+    if (path.includes('count_only=true')) return (h.count ?? (() => Promise.resolve({ total: h.total ?? 2 })))();
     if (path.includes('group_key=')) return (h.members ?? (() => Promise.resolve([])))();
     if (path.includes('grouped=true')) return (h.groups ?? (() => Promise.resolve([])))();
     if (path.startsWith('/notifications/logs')) return (h.logs ?? (() => Promise.resolve([])))();
@@ -233,26 +243,29 @@ function bodyOf(call: unknown[]): Record<string, unknown> {
 
 /* ── Render harness ───────────────────────────────────── */
 
-function renderInbox(opts: { archived?: boolean; route?: string } = {}): RenderResult {
+function renderInbox(opts: { archived?: boolean; route?: string; report?: boolean } = {}): RenderResult & { client: QueryClient } {
   const { archived = false, route = '/notifications/inbox' } = opts;
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  const result = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         <SelectedVehicleProvider>
           <ToastProvider>
             <InboxBody archived={archived} vehicles={VEHICLES} rules={RULES} />
+            {opts.report && <NotificationReportPanel fromInstant="2026-01-01T00:00:00Z" toExclusive="2026-02-01T00:00:00Z" timezone="UTC" />}
             <ContextMenuRoot />
           </ToastProvider>
         </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...result, client };
 }
 
 beforeEach(() => {
+  onlineManager.setOnline(true);
   mockedRequest.mockReset();
   mockedExportAsCSV.mockReset();
   mockedExportAsJSON.mockReset();
@@ -264,9 +277,36 @@ beforeEach(() => {
   installRequest();
 });
 
+afterEach(() => { onlineManager.setOnline(true); });
+
 /* ── 1. Flat view ─────────────────────────────────────── */
 
 describe('InboxBody — flat view', () => {
+  it('presents the warning URL alias while preserving raw scope and archived lifecycle on unrelated edits', async () => {
+    const logs = [
+      makeLog({ id: 71, title: 'Warning evidence', severity: 'warning', archived_at: NOW_ISO }),
+      makeLog({ id: 72, title: 'Unknown evidence', severity: 'custom', archived_at: NOW_ISO }),
+    ];
+    const original = structuredClone(logs);
+    installRequest({ logs: () => Promise.resolve(logs) });
+    renderInbox({ archived: true, route: '/notifications/archived?severity=warning,custom&read=unread' });
+    await screen.findByText('Warning evidence');
+    fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+    expect(screen.getByRole('button', { name: /^warn$/i })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Read state filter' }));
+    fireEvent.change(screen.getByLabelText('Filter by read state'), { target: { value: 'read' } });
+    await waitFor(() => expect(flatCalls().some(([path]) => new URL(String(path), 'http://teslasync.local').searchParams.get('read') === 'true')).toBe(true));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+    fireEvent.click(screen.getByRole('button', { name: /^critical$/i }));
+    await waitFor(() => expect(flatCalls().some(([path]) => new URL(String(path), 'http://teslasync.local').searchParams.get('severity') === 'critical')).toBe(true));
+    expect(screen.getByRole('button', { name: /^warn$/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(logs).toEqual(original);
+    expect(markReadPosts()).toHaveLength(0);
+    expect(callsFor((_path, method) => Boolean(method))).toHaveLength(0);
+  });
+
   it('pages through older notifications instead of stopping at the first 50', async () => {
     installRequest({
       total: 100,
@@ -322,7 +362,8 @@ describe('InboxBody — flat view', () => {
     expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full first line');
     expect(screen.getByRole('dialog', { name: 'Recovered' })).toHaveTextContent('Full second line');
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
-    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'rule' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Source filter' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Source' }), { target: { value: 'rule' } });
     await waitFor(() => {
       expect(flatCalls().some(([path]) => String(path).includes('source=rule'))).toBe(true);
       expect(callsFor((path) => path.includes('count_only=true') && path.includes('source=rule')).length).toBeGreaterThan(0);
@@ -372,7 +413,7 @@ describe('InboxBody — flat view', () => {
     renderInbox();
 
     expect(await screen.findByText('Weekly digest sent to Slack')).toBeInTheDocument();
-    expect(screen.getByText('Digest FSD Weekly')).toHaveAttribute('title', 'digest.fsd.weekly');
+    expect(screen.getByText('Digest FSD weekly')).toHaveAttribute('title', 'digest.fsd.weekly');
     expect(screen.getByRole('checkbox', { name: 'Select Weekly digest sent to Slack' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open notification: Weekly digest sent to Slack' }));
     expect(await screen.findByRole('dialog')).toHaveTextContent('Your weekly driving summary');
@@ -382,7 +423,12 @@ describe('InboxBody — flat view', () => {
     installRequest({ logs: () => new Promise<never>(() => {}) });
     const { container } = renderInbox({ route: '/notifications/inbox?view=flat' });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    const skeletons = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons).toHaveLength(5);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('h-14', 'w-full', 'rounded');
+      expect(skeleton.parentElement).toHaveClass('space-y-2');
+    }
     // Neither the populated list nor the empty state leaks during loading.
     expect(screen.queryByText('No notifications')).toBeNull();
   });
@@ -404,6 +450,52 @@ describe('InboxBody — flat view', () => {
     expect(await screen.findByText('No notifications')).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: 'Configure alert rules' });
     expect(cta).toHaveAttribute('href', '/notifications/studio');
+  });
+
+  it.each([
+    {
+      archived: false,
+      query: 'source=rule',
+      message: 'No rule-triggered notifications match these filters. Check the date range or configure a rule in alert studio.',
+    },
+    {
+      archived: false,
+      query: 'source=all&q=no-match',
+      message: 'Clear the notification filters or adjust the workspace date range to see other records.',
+    },
+    {
+      archived: true,
+      query: 'source=rule',
+      message: 'Clear the notification filters or adjust the workspace date range to see other records.',
+    },
+  ])('keeps authoritative flat no-match copy source-specific ($query, archived=$archived)', async ({ archived, query, message }) => {
+    installRequest({ total: 0 });
+    renderInbox({
+      archived,
+      route: `/notifications/${archived ? 'archived' : 'inbox'}?view=flat&${query}&from=2026-01-01&to=2026-01-30`,
+    });
+
+    expect(await screen.findByText('No notifications match these filters')).toBeInTheDocument();
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.queryByText(archived ? 'No archived notifications' : 'No notifications')).not.toBeInTheDocument();
+    if (!archived) {
+      expect(screen.getByRole('link', { name: 'Configure alert rules' })).toHaveAttribute('href', '/notifications/studio');
+    }
+
+    const clearFilters = screen.getAllByRole('button', { name: 'Clear filters' });
+    fireEvent.click(clearFilters[clearFilters.length - 1]);
+    await screen.findByText(archived ? 'No archived notifications' : 'No notifications');
+    await waitFor(() => {
+      const requests = [flatCalls().at(-1), callsFor(path => path.includes('count_only=true')).at(-1)];
+      for (const call of requests) {
+        const params = new URL(String(call?.[0]), 'http://teslasync.local').searchParams;
+        expect(params.has('source')).toBe(false);
+        expect(params.has('q')).toBe(false);
+        expect(params.get('archived')).toBe(String(archived));
+        expect(params.get('from')).toContain('2026-01-01');
+        expect(params.get('to_exclusive')).toContain('2026-01-31');
+      }
+    });
   });
 });
 
@@ -430,13 +522,113 @@ describe('InboxBody — grouped view', () => {
     expect(screen.getByText('Battery thread')).toBeInTheDocument();
     expect(screen.getByText('One-off ping')).toBeInTheDocument();
     expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(
-      '2 threads · 4 notifications',
+      '2 threads · 4 notifications in loaded threads on this page',
     );
 
     // Grouped endpoint used; the flat endpoint stays untouched.
     expect(groupedCalls().length).toBeGreaterThanOrEqual(1);
     expect(String(groupedCalls()[0][0])).toContain('grouped=true');
     expect(flatCalls()).toHaveLength(0);
+  });
+
+  describe('InboxBody — N04 source trust and recovery', () => {
+    it.each(['flat', 'grouped'])('recovers the %s count independently without making up a total', async view => {
+      let countFailed = true;
+      installRequest({
+        total: 120,
+        count: () => countFailed ? Promise.reject(new Error('Count unavailable')) : Promise.resolve({ total: 120 }),
+        logs: () => Promise.resolve([makeLog({ id: 201, title: 'Count recovery evidence' })]),
+        groups: () => Promise.resolve([makeGroup({ latest: makeLog({ id: 201, title: 'Count recovery evidence' }), count: 3 })]),
+      });
+      renderInbox({ route: `/notifications/inbox?view=${view}` });
+      await screen.findByText('Count recovery evidence');
+      const retry = await screen.findByRole('button', { name: 'Retry' });
+      expect(screen.getByTestId('inbox-result-count')).toHaveTextContent('1 loaded · total unavailable');
+      expect(screen.getByText('Page 1 of Unknown')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+      const rowRequests = flatCalls().length;
+      const threadRequests = callsFor((path, method) => !method && path.includes('grouped=true') && !path.includes('count_only=true')).length;
+      countFailed = false;
+      fireEvent.click(retry);
+      await waitFor(() => expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(view === 'grouped' ? '120 threads' : '120 notifications'));
+      expect(flatCalls()).toHaveLength(rowRequests);
+      expect(callsFor((path, method) => !method && path.includes('grouped=true') && !path.includes('count_only=true'))).toHaveLength(threadRequests);
+    });
+
+    it('retains the real count and page navigation when a count refresh fails', async () => {
+      let countFailed = false;
+      installRequest({
+        count: () => countFailed ? Promise.reject(new Error('Count refresh failed')) : Promise.resolve({ total: 120 }),
+        logs: () => Promise.resolve([makeLog({ title: 'Retained count evidence' })]),
+      });
+      const { client } = renderInbox();
+      await screen.findByText('120 notifications');
+      countFailed = true;
+      await act(async () => {
+        await client.refetchQueries({ predicate: query => query.queryKey[0] === 'notification-logs' && query.queryKey[1] === 'count' });
+      });
+      expect(screen.getByTestId('inbox-result-count')).toHaveTextContent('120 notifications');
+      expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
+      expect(await screen.findByText('Notification count may be out of date')).toBeInTheDocument();
+      countFailed = false;
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+      await waitFor(() => expect(screen.queryByText('Notification count may be out of date')).not.toBeInTheDocument());
+    });
+
+    it.each(['flat', 'grouped'])('does not call a paused unresolved %s source empty or zero', async view => {
+      installRequest();
+      onlineManager.setOnline(false);
+      renderInbox({ route: `/notifications/inbox?view=${view}` });
+      expect(screen.getAllByText(/Refresh paused/).length).toBeGreaterThan(0);
+      expect(screen.getByTestId('inbox-result-count')).toHaveTextContent('Unknown');
+      expect(screen.queryByText('No notifications')).not.toBeInTheDocument();
+      expect(screen.queryByText('No notification threads')).not.toBeInTheDocument();
+      expect(flatCalls()).toHaveLength(0);
+      expect(groupedCalls()).toHaveLength(0);
+      act(() => { onlineManager.setOnline(true); });
+      expect(await screen.findByText(view === 'flat' ? 'No notifications' : 'No notification threads')).toBeInTheDocument();
+    });
+
+    it.each([
+      ['flat', false],
+      ['grouped', false],
+      ['flat', true],
+    ] as const)('distinguishes %s no-match and clears only optional filters (archived=%s)', async (view, archived) => {
+      installRequest({ total: 0 });
+      renderInbox({ archived, route: `/notifications/${archived ? 'archived' : 'inbox'}?view=${view}&q=no-match&severity=critical&vehicle_id=1&rule_id=10&source=rule&read=unread&from=2026-01-01&to=2026-01-30` });
+      await screen.findByText('No notifications match these filters');
+      expect(screen.queryByText('No notifications')).not.toBeInTheDocument();
+      expect(screen.queryByText('No archived notifications')).not.toBeInTheDocument();
+      expect(screen.queryByText('No notification threads')).not.toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+      await waitFor(() => {
+        const call = view === 'grouped'
+          ? callsFor((path, method) => !method && path.includes('grouped=true') && !path.includes('count_only=true')).at(-1)
+          : flatCalls().at(-1);
+        const params = new URL(String(call?.[0]), 'http://teslasync.local').searchParams;
+        for (const key of ['q', 'severity', 'vehicle_id', 'rule_id', 'source', 'read']) expect(params.has(key)).toBe(false);
+        expect(params.get('from')).toContain('2026-01-01');
+        expect(params.get('to_exclusive')).toContain('2026-01-31');
+        expect(params.get('archived')).toBe(String(archived));
+      });
+    });
+
+    it('keeps persisted severity while unresolved detail lifecycle stays unknown and write-free', async () => {
+      installRequest({
+        logs: () => Promise.resolve([makeLog({ id: 205, title: 'Persisted critical evidence', severity: 'critical' })]),
+        detail: () => Promise.reject(new Error('Detail unavailable')),
+      });
+      renderInbox();
+      fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Persisted critical evidence' }));
+      const drawer = await screen.findByRole('dialog');
+      await within(drawer).findByRole('button', { name: 'Retry' });
+      expect(within(drawer).getByText('Severity').closest('dt')?.nextElementSibling).toHaveTextContent('critical');
+      expect(within(drawer).getByText('Owner').closest('dt')?.nextElementSibling).toHaveTextContent('Unknown');
+      expect(within(drawer).getByText('Resolution state').closest('dt')?.nextElementSibling).toHaveTextContent('Unknown');
+      expect(within(drawer).queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
+      expect(within(drawer).queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
+      expect(callsFor((path, method) => path.startsWith('/alerts/') && method === 'POST')).toHaveLength(0);
+    });
   });
 
   it('shows the thread-specific empty copy when there are no groups', async () => {
@@ -536,6 +728,83 @@ describe('InboxBody — view toggle', () => {
 /* ── 5. Archived mode ─────────────────────────────────── */
 
 describe('InboxBody — archived mode', () => {
+  it('retains semantic detail fields, full values, units and density-aware reachable actions', () => {
+    const restore = vi.fn();
+    const message = `Full message\n${'unbroken-message-'.repeat(30)}`;
+    const error = `Delivery explanation\n${'unbroken-error-'.repeat(30)}`;
+    const { container } = render(
+      <NotificationInboxDetails
+        log={makeLog({
+          message, error, archived_at: NOW_ISO, read_at: NOW_ISO,
+          scheduled_at: NOW_ISO, latency_ms: 1250, event_type: 'battery.low',
+        })}
+        rule={makeRule({ name: 'Original rule' })}
+        vehicle={makeVehicle(1)}
+        actions={[
+          { id: 'restore', label: 'Restore notification with its complete long action label', onClick: restore },
+          { id: 'delete', label: 'Delete', destructive: true, disabled: true, onClick: vi.fn() },
+        ]}
+      />,
+    );
+    const list = container.querySelector('dl');
+    expect(list).toHaveClass('sm:grid-cols-2', 'lg:grid-cols-3');
+    const fields = Array.from(list?.querySelectorAll('dt') ?? []);
+    expect(fields.map(field => field.textContent)).toEqual([
+      'Received', 'Sent', 'Scheduled', 'Read', 'Archived', 'Delivery latency',
+      'Type', 'Rule', 'Vehicle', 'Channel ID', 'Severity', 'Status',
+    ]);
+    for (const field of fields) {
+      expect(field.className).toBe(`${typography.role.caption} break-words`);
+      expect(field.nextElementSibling?.tagName).toBe('DD');
+      expect(field.nextElementSibling?.className).toBe(`${typography.role.bodySm} mt-1 break-words`);
+    }
+    expect(fields[5].nextElementSibling).toHaveTextContent(/1[,\s]?250 ms/);
+    expect(fields[6].nextElementSibling).toHaveTextContent('battery.low');
+    expect(fields[7].nextElementSibling).toHaveTextContent('Original rule');
+    expect(fields[8].nextElementSibling).toHaveTextContent('Model 1');
+    expect(fields[9].nextElementSibling).toHaveTextContent('1');
+    expect(fields[10].nextElementSibling).toHaveTextContent('warn');
+    expect(fields[11].nextElementSibling).toHaveTextContent('Sent');
+    for (const value of [message, error]) {
+      expect(screen.getByText(value, { exact: true, normalizer: text => text }))
+        .toHaveClass('whitespace-pre-wrap', 'break-words');
+    }
+    const action = screen.getByRole('button', { name: /Restore notification/ });
+    expect(action).toHaveClass('min-h-11', 'min-w-11', 'sm:min-h-d-row', 'py-d-pad-y', 'text-d-base');
+    expect(action.firstElementChild).toHaveClass('break-words');
+    action.focus();
+    expect(action).toHaveFocus();
+    fireEvent.click(action);
+    expect(restore).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
+  });
+
+  it('keeps archived activation targets mobile-sized with compact desktop bounds and intact names/wrapping', async () => {
+    const title = 'Archived notification with a long title that wraps without losing its accessible name';
+    const message = 'The complete archived message remains available through both activation and expanded details.';
+    installRequest({ logs: () => Promise.resolve([makeLog({
+      id: 73, title, message, archived_at: NOW_ISO, alert_id: null,
+    })]) });
+    renderInbox({ archived: true, route: '/notifications/archived' });
+
+    const open = await screen.findByRole('button', { name: `Open notification: ${title}` });
+    const readMessage = screen.getByRole('button', { name: `Read full message: ${title}` });
+    for (const target of [open, readMessage]) {
+      expect(target).toHaveClass('!h-auto', '!min-h-11', 'md:!min-h-9', 'text-left');
+      expect(target.firstElementChild).toHaveClass('line-clamp-2', 'break-words');
+    }
+    expect(screen.getByRole('button', { name: `Inspect notification: ${title}` }))
+      .toHaveClass('max-md:!h-auto', 'max-md:!min-h-11');
+
+    fireEvent.click(readMessage);
+    const dialog = await screen.findByRole('dialog', { name: title });
+    expect(dialog).toHaveTextContent(message);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: `Expand row: ${title}` }));
+    expect(screen.getByRole('region', { name: 'Notification details' })).toHaveTextContent(message);
+  });
+
   it('hides the view toggle and swaps the bulk action set to Restore', async () => {
     installRequest({ logs: () => Promise.resolve([makeLog({ id: 1, title: 'Archived row' })]) });
     renderInbox({ archived: true, route: '/notifications/archived' });
@@ -563,6 +832,59 @@ describe('InboxBody — archived mode', () => {
 /* ── 6. Bulk selection ────────────────────────────────── */
 
 describe('InboxBody — bulk selection', () => {
+  it('distinguishes selected loaded IDs from the filtered server total', async () => {
+    installRequest({
+      total: 120,
+      logs: () => Promise.resolve([makeLog({ id: 7, title: 'Loaded selection' })]),
+    });
+    renderInbox();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Loaded selection' }));
+    const toolbar = screen.getByRole('region', { name: /bulk actions/i });
+    expect(toolbar).toHaveAttribute('data-selection-scope', 'loaded');
+    expect(toolbar).toHaveTextContent('1 selected · 1 loaded notifications · 120 matching');
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Mark read' }));
+    await waitFor(() => expect(markReadPosts()).toHaveLength(1));
+    expect(bodyOf(markReadPosts()[0])).toEqual({ ids: [7] });
+  });
+
+  it('reports unknown result totals without inventing a loaded-row denominator', async () => {
+    installRequest({ logs: () => Promise.resolve([makeLog({ id: 9, title: 'Unknown total row' })]) });
+    const implementation = mockedRequest.getMockImplementation();
+    mockedRequest.mockImplementation((path: string, options?: { method?: string }) =>
+      path.includes('count_only=true')
+        ? Promise.reject(new Error('Count unavailable'))
+        : implementation?.(path, options),
+    );
+    renderInbox();
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Unknown total row' }));
+    expect(screen.getByRole('region', { name: /bulk actions/i }))
+      .toHaveTextContent('1 selected · 1 loaded notifications · total unavailable');
+  });
+
+  it('uses member IDs, never thread totals or group keys, for grouped bulk selection', async () => {
+    installRequest({
+      total: 30,
+      groups: () => Promise.resolve([makeGroup({
+        count: 12, latest: makeLog({ id: 70, title: 'Latest member' }),
+      })]),
+      members: () => Promise.resolve([makeLog({ id: 71, title: 'Expanded member' })]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=grouped' });
+    await screen.findByText('Latest member');
+    fireEvent.click(screen.getByTestId('group-expand-toggle'));
+    const member = await screen.findByText('Expanded member');
+    const row = member.closest('[aria-label="Expanded member"]');
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row as HTMLElement).getByRole('checkbox', { name: 'Select notification' }));
+    const toolbar = screen.getByRole('region', { name: /bulk actions/i });
+    expect(toolbar).toHaveAttribute('data-selection-scope', 'selected');
+    expect(toolbar).toHaveTextContent('1 selected notification members');
+    expect(toolbar).not.toHaveTextContent('30');
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Mark read' }));
+    await waitFor(() => expect(markReadPosts()).toHaveLength(1));
+    expect(bodyOf(markReadPosts()[0])).toEqual({ ids: [71] });
+  });
+
   it('drives the select-all header checkbox through none → some (indeterminate) → all', async () => {
     installRequest({
       logs: () =>
@@ -672,6 +994,46 @@ describe('InboxBody — mark all read', () => {
 /* ── 9. URL-backed filters ────────────────────────────── */
 
 describe('InboxBody — URL filters', () => {
+  it.each([
+    { archived: true, view: 'flat' },
+    { archived: false, view: 'flat' },
+    { archived: false, view: 'grouped' },
+  ])('retains only positive safe decimal ID strings ($archived, $view)', async ({ archived, view }) => {
+    installRequest({
+      logs: () => Promise.resolve([makeLog({ title: 'Valid scoped notification' })]),
+      groups: () => Promise.resolve([makeGroup({ latest: makeLog({ title: 'Valid scoped notification' }) })]),
+    });
+    const invalidIds = '0,-1,1.5,1e2,0x10,Infinity,NaN,9007199254740992,9007199254740993,,%20,%2B2';
+    renderInbox({
+      archived,
+      route: `/notifications/${archived ? 'archived' : 'inbox'}?view=${view}&vehicle_id=1,002,9007199254740991,${invalidIds}&rule_id=10,020,9007199254740991,${invalidIds}`,
+    });
+
+    expect(await screen.findByText('Valid scoped notification')).toBeInTheDocument();
+    const requests = callsFor((path, method) => !method && path.startsWith('/notifications/logs?'));
+    expect(requests.some(([path]) => String(path).includes('count_only=true'))).toBe(true);
+    for (const [path] of requests) {
+      const params = new URL(String(path), 'http://teslasync.local').searchParams;
+      expect(params.get('vehicle_id')).toBe('1,2,9007199254740991');
+      expect(params.get('rule_id')).toBe('10,20,9007199254740991');
+      expect(params.get('archived')).toBe(String(archived));
+    }
+  });
+
+  it('omits invalid-only ID filters rather than inventing a replacement ID', async () => {
+    renderInbox({
+      archived: true,
+      route: '/notifications/archived?vehicle_id=1.5,9007199254740993&rule_id=0x10,1e2',
+    });
+    await waitFor(() => expect(flatCalls().length).toBeGreaterThan(0));
+    for (const [path] of callsFor((path, method) => !method && path.startsWith('/notifications/logs?'))) {
+      const params = new URL(String(path), 'http://teslasync.local').searchParams;
+      expect(params.has('vehicle_id')).toBe(false);
+      expect(params.has('rule_id')).toBe(false);
+      expect(params.get('archived')).toBe('true');
+    }
+  });
+
   it('honors the shared seven-day workspace range instead of querying all-time history', async () => {
     localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify({
       version: 2, start: '2026-09-01', end: '2026-09-07', presetId: '7d',
@@ -729,12 +1091,323 @@ describe('InboxBody — row context menu', () => {
     const rowEl = (await screen.findByText('Context row')).closest('tr');
     expect(rowEl).not.toBeNull();
     fireEvent.contextMenu(rowEl as Element);
-
     const menu = await screen.findByTestId('context-menu');
     expect(within(menu).getByText('Mark as read')).toBeInTheDocument();
     expect(within(menu).getByText('Delete')).toBeInTheDocument();
   });
+});
 
+describe('InboxBody — redesigned evidence contracts', () => {
+      it.each([
+        { archived: false, label: 'Archive', path: '/notifications/archive' },
+        { archived: true, label: 'Restore', path: '/notifications/unarchive' },
+      ])('preserves bulk $label for the selected server-page rows', async ({ archived, label, path }) => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ id: 47, title: 'Bulk evidence' })]) });
+        renderInbox({ archived, route: archived ? '/notifications/archived' : '/notifications/inbox' });
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Bulk evidence' }));
+        fireEvent.click(screen.getByRole('button', { name: label }));
+        await waitFor(() => expect(callsFor((url, method) => url === path && method === 'POST')).toHaveLength(1));
+        expect(bodyOf(callsFor((url, method) => url === path && method === 'POST')[0])).toEqual({ ids: [47] });
+        await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Select Bulk evidence' })).not.toBeChecked());
+      });
+
+      it('retains confirmation-gated bulk delete', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ id: 48, title: 'Bulk delete evidence' })]) });
+        renderInbox();
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Bulk delete evidence' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+        expect(deleteCalls()).toHaveLength(0);
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+        await waitFor(() => expect(deleteCalls()).toHaveLength(1));
+        expect(bodyOf(deleteCalls()[0])).toEqual({ ids: [48] });
+      });
+
+      it('retains rule inspection, server acknowledgement/reopen and view-context affordances', async () => {
+        let acknowledged = false;
+        const detail = (): AlertDetail => ({
+          id: 49, vehicle_id: 1, type: 'Battery Low', severity: 'warn',
+          title: 'Rule evidence', message: 'Full rule message', is_read: true,
+          created_at: NOW_ISO, rule_id: 10, rule_signal: 'BatteryLevel',
+          acknowledged_at: acknowledged ? NOW_ISO : null, events: [],
+        });
+        installRequest({
+          logs: () => Promise.resolve([makeLog({ id: 49, title: 'Rule evidence' })]),
+          detail: (path, method) => {
+            if (method === 'POST') acknowledged = path.endsWith('/acknowledge');
+            return Promise.resolve(detail());
+          },
+        });
+        renderInbox();
+        fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Rule evidence' }));
+        const dialog = await screen.findByRole('dialog');
+        expect(dialog).toHaveTextContent('Full rule message');
+        fireEvent.click(await within(dialog).findByRole('button', { name: 'Acknowledge alert' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/alerts/49/acknowledge' && method === 'POST')).toHaveLength(1));
+        expect(acknowledged).toBe(true);
+        // The shared drawer deliberately closes after its primary action.
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        fireEvent.click(screen.getByRole('button', { name: 'Open notification: Rule evidence' }));
+        await screen.findByRole('button', { name: 'Reopen alert' });
+        // Query refresh can remount the flattened motion drawer between await and click.
+        fireEvent.click(screen.getByRole('button', { name: 'Reopen alert' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/alerts/49/reopen' && method === 'POST')).toHaveLength(1));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row: Rule evidence' }));
+        expect(within(screen.getByRole('region', { name: 'Notification details' })).getByRole('button', { name: 'View context' })).toBeInTheDocument();
+      });
+
+      it('retains cached rows and selection after a failed refresh, but reports initial failures locally', async () => {
+        let failed = false;
+        installRequest({ logs: () => failed ? Promise.reject(new Error('Refresh offline')) : Promise.resolve([makeLog({ id: 42, title: 'Retained evidence' })]) });
+        const { client } = renderInbox();
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Retained evidence' }));
+        failed = true;
+        await act(async () => { await client.refetchQueries({ queryKey: notificationKeys.logs }); });
+        expect(screen.getByRole('table', { name: 'Inbox' })).toBeInTheDocument();
+        expect(screen.getByRole('checkbox', { name: 'Deselect Retained evidence' })).toBeChecked();
+        expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+        expect(screen.queryByText('Could not load notifications')).not.toBeInTheDocument();
+      });
+
+      it('sends server-owned search, severity, vehicle, rule, source and read conditions to both rows and count', async () => {
+        renderInbox({ route: '/notifications/inbox?q=pressure&severity=warn&vehicle_id=1&rule_id=10&source=rule&read=unread&from=2026-01-01&to=2026-01-30' });
+        await waitFor(() => expect(flatCalls().length).toBeGreaterThan(0));
+        const requests = [flatCalls()[0], callsFor(path => path.includes('count_only=true'))[0]];
+        for (const call of requests) {
+          const params = new URL(String(call[0]), 'http://teslasync.local').searchParams;
+          for (const [key, value] of Object.entries({ q: 'pressure', severity: 'warn', vehicle_id: '1', rule_id: '10', source: 'rule', read: 'false' })) {
+            expect(params.get(key)).toBe(value);
+          }
+          expect(params.has('from')).toBe(true);
+          expect(params.has('to_exclusive')).toBe(true);
+        }
+        fireEvent.click(screen.getByRole('button', { name: 'Read state filter' }));
+        expect(screen.getByLabelText('Filter by read state')).toHaveValue('unread');
+        fireEvent.change(screen.getByLabelText('Filter by read state'), { target: { value: 'read' } });
+        await waitFor(() => expect(flatCalls().some(([path]) => new URL(String(path), 'http://teslasync.local').searchParams.get('read') === 'true')).toBe(true));
+      });
+
+      it('offers persistent keyboard resize, reorder and visibility without exhaustive page-local value filters', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Configurable evidence' })]) });
+        renderInbox();
+        await screen.findByText('Configurable evidence');
+        expect(screen.getByRole('columnheader', { name: 'Received' })).toHaveClass('hidden', 'md:table-cell');
+        expect(screen.getByRole('columnheader', { name: /Notification/ })).not.toHaveClass('hidden');
+        expect(screen.getByRole('button', { name: 'Expand row: Configurable evidence' })).toHaveAttribute('aria-expanded', 'false');
+        const resize = screen.getByRole('separator', { name: 'Resize column Notification' });
+        fireEvent.keyDown(resize, { key: 'ArrowRight' });
+        expect(localStorage.getItem('teslasync.table.notifications:inbox.widths')).toContain('"title":308');
+        fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+        fireEvent.click(screen.getByRole('button', { name: /move.*Notification.*up/i }));
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Show or hide Message' }));
+        expect(localStorage.getItem('teslasync.table.notifications:inbox.columns')).toContain('"message"');
+        fireEvent.keyDown(document, { key: 'Escape' });
+        expect(screen.queryByRole('columnheader', { name: 'Message' })).not.toBeInTheDocument();
+        expect(screen.queryByText('Select all values')).not.toBeInTheDocument();
+      });
+
+      it('exposes full metadata and every row action in a touch/keyboard expansion, with unknown distinct from zero', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({
+          id: 43, title: 'Failed delivery', alert_id: null, channel_id: 2, status: 'failed',
+          severity: undefined, latency_ms: 0, sent_at: null, scheduled_at: NOW_ISO,
+          error: 'Connection refused', event_type: 'system.mqtt.outage',
+        })]) });
+        renderInbox();
+        await screen.findByText('Failed delivery');
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row: Failed delivery' }));
+        const details = screen.getByRole('region', { name: 'Notification details' });
+        expect(within(details).getByText('0 ms')).toBeInTheDocument();
+        expect(within(details).getByText('Connection refused')).toBeInTheDocument();
+        expect(within(details).getByText('system.mqtt.outage')).toBeInTheDocument();
+        expect(within(details).getByText('Sent').nextElementSibling).toHaveTextContent('—');
+        expect(within(details).getByText('Severity').nextElementSibling).toHaveTextContent('—');
+        for (const name of ['Mark as read', 'Archive', 'Delete']) {
+          expect(within(details).getByRole('button', { name })).toBeInTheDocument();
+        }
+        fireEvent.click(within(details).getByRole('button', { name: 'Archive' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/notifications/archive' && method === 'POST')).toHaveLength(1));
+      });
+
+      it('restores archived evidence and marks a read row unread through expanded actions', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ id: 44, title: 'Archived evidence', archived_at: NOW_ISO, read_at: NOW_ISO })]) });
+        renderInbox({ archived: true, route: '/notifications/archived' });
+        await screen.findByText('Archived evidence');
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row: Archived evidence' }));
+        const details = screen.getByRole('region', { name: 'Notification details' });
+        fireEvent.click(within(details).getByRole('button', { name: 'Mark as unread' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/notifications/mark-unread' && method === 'POST')).toHaveLength(1));
+        fireEvent.click(within(details).getByRole('button', { name: 'Restore' }));
+        await waitFor(() => expect(callsFor((path, method) => path === '/notifications/unarchive' && method === 'POST')).toHaveLength(1));
+      });
+
+      it('does not turn missing delivery latency into zero in full inspection', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Unknown latency', alert_id: null, latency_ms: undefined })]) });
+        renderInbox();
+        fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Unknown latency' }));
+        const dialog = screen.getByRole('dialog', { name: 'Unknown latency' });
+        expect(within(dialog).getByText('Delivery latency').nextElementSibling).toHaveTextContent('—');
+        expect(within(dialog).queryByText('0 ms')).not.toBeInTheDocument();
+        await waitFor(() => expect(markReadPosts()).toHaveLength(1));
+      });
+
+      it('keeps notification evidence usable when the independent period report fails', async () => {
+        installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Independent evidence' })]) });
+        renderInbox({ report: true });
+        expect(await screen.findByText('Independent evidence')).toBeInTheDocument();
+        const report = screen.getByRole('region', { name: 'Notification activity' });
+        await waitFor(() => {
+          const reportErrors = report.querySelectorAll(':scope > [data-print-card] > [role="alert"]');
+          expect(reportErrors).toHaveLength(1);
+          for (const reportError of reportErrors) {
+            expect(reportError).toHaveTextContent("Can't reach server");
+            expect(within(reportError as HTMLElement).getByText("Can't reach server", { exact: true })).toBeInTheDocument();
+            expect(within(reportError as HTMLElement).getByText('Check your internet connection and try again.', { exact: true })).toBeInTheDocument();
+          }
+        });
+        expect(screen.getByRole('table', { name: 'Inbox' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Open notification: Independent evidence' })).toBeEnabled();
+      });
+});
+
+describe('InboxBody — controlled column-header filters', () => {
+      it.each([false, true])('keeps server-owned filters in headers and resets pagination (archived=%s)', async archived => {
+        installRequest({ total: 120, logs: () => Promise.resolve([makeLog({ title: 'Header evidence' })]) });
+        renderInbox({
+          archived,
+          route: `/notifications/${archived ? 'archived' : 'inbox'}?from=2026-01-01&to=2026-01-30&read=unread`,
+        });
+        await screen.findByText('Header evidence');
+        const table = screen.getByRole('table', { name: archived ? 'Archived' : 'Inbox' });
+        const frame = table.closest('[data-grid-frame]');
+        const footer = frame?.querySelector('[data-grid-footer]');
+        expect(footer).toContainElement(screen.getByRole('navigation', { name: 'Pagination' }));
+        expect(frame?.querySelector('[data-grid-viewport]')?.contains(footer ?? null)).toBe(false);
+        expect(screen.queryByRole('combobox', { name: 'Source' })).not.toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Search messages…')).toBeInTheDocument();
+        const initialParams = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
+
+        const assertQueries = async (expected: Record<string, string | null>) => {
+          await waitFor(() => {
+            for (const call of [flatCalls().at(-1), callsFor(path => path.includes('count_only=true')).at(-1)]) {
+              expect(call).toBeDefined();
+              const params = new URL(String(call![0]), 'http://teslasync.local').searchParams;
+              for (const [key, value] of Object.entries(expected)) expect(params.get(key)).toBe(value);
+              expect(params.get('from')).toBe(initialParams.get('from'));
+              expect(params.get('to_exclusive')).toBe(initialParams.get('to_exclusive'));
+              expect(params.get('archived')).toBe(String(archived));
+              expect(params.get('read')).toBe('false');
+            }
+          });
+        };
+        fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+        await waitFor(() => expect(String(flatCalls().at(-1)?.[0])).toContain('offset=50'));
+        fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+        fireEvent.click(within(screen.getByRole('dialog', { name: 'Severity filter' })).getByRole('button', { name: 'Warn' }));
+        await assertQueries({ severity: 'warn' });
+        expect(new URL(String(flatCalls().at(-1)?.[0]), 'http://teslasync.local').searchParams.get('offset')).toBe('0');
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Source filter' }));
+        const sourceDialog = screen.getByRole('dialog', { name: 'Source filter' });
+        fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Vehicle' }), { target: { value: '1' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1' });
+        fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Rule' }), { target: { value: '10' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1', rule_id: '10' });
+        fireEvent.change(within(sourceDialog).getByRole('combobox', { name: 'Source' }), { target: { value: 'rule' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1', rule_id: '10', source: 'rule' });
+        fireEvent.click(within(sourceDialog).getByRole('button', { name: 'Done' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Notification filter' }));
+        fireEvent.change(within(screen.getByRole('dialog', { name: 'Notification filter' })).getByPlaceholderText('Search messages…'), { target: { value: 'battery' } });
+        await assertQueries({ severity: 'warn', vehicle_id: '1', rule_id: '10', source: 'rule', q: 'battery' });
+        fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+
+        fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+        fireEvent.click(within(screen.getByRole('dialog', { name: 'Severity filter' })).getByRole('button', { name: 'Clear' }));
+        await assertQueries({ severity: null, vehicle_id: '1', rule_id: '10', source: 'rule', q: 'battery' });
+        expect(screen.queryByText('Select all values')).not.toBeInTheDocument();
+      });
+
+      it('changes server-owned page size and resets the notification offset', async () => {
+        installRequest({ total: 200, logs: () => Promise.resolve([makeLog({ title: 'Sized evidence' })]) });
+        renderInbox({ route: '/notifications/inbox?severity=warn' });
+        await screen.findByText('Sized evidence');
+        fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+        await waitFor(() => expect(String(flatCalls().at(-1)?.[0])).toContain('offset=50'));
+        fireEvent.change(screen.getByRole('combobox', { name: 'Rows per page' }), { target: { value: '100' } });
+        await waitFor(() => {
+          const params = new URL(String(flatCalls().at(-1)?.[0]), 'http://teslasync.local').searchParams;
+          expect(params.get('limit')).toBe('100');
+          expect(params.get('offset')).toBe('0');
+          expect(params.get('severity')).toBe('warn');
+        });
+        expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveValue('1');
+      });
+
+      it('keeps all filters and reset available from the visible mobile Notification header', async () => {
+        const originalMatchMedia = window.matchMedia;
+        window.matchMedia = vi.fn(query => ({
+          matches: query === '(max-width: 767px)',
+          media: query,
+          onchange: null,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }));
+        try {
+          installRequest({ logs: () => Promise.resolve([]) });
+          renderInbox({
+            archived: true,
+            route: '/notifications/archived?severity=critical&vehicle_id=1&rule_id=10&source=rule&q=pressure&read=unread&from=2026-01-01&to=2026-01-30',
+          });
+          await screen.findByText('No notifications match these filters');
+          expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+          const table = screen.getByRole('table', { name: 'Archived' });
+          expect(table.parentElement).toHaveClass('min-w-0', 'w-full', 'max-w-full');
+          expect(table.parentElement?.parentElement?.parentElement).toHaveClass('min-w-0', 'w-full', 'max-w-full');
+          const initialParams = new URL(String(flatCalls()[0][0]), 'http://teslasync.local').searchParams;
+          fireEvent.click(screen.getByRole('button', { name: 'Notification filter' }));
+          const dialog = screen.getByRole('dialog', { name: 'Notification filter' });
+          expect(within(dialog).getByRole('button', { name: 'Critical' })).toHaveAttribute('aria-pressed', 'true');
+          expect(within(dialog).getByRole('combobox', { name: 'Vehicle' })).toHaveValue('1');
+          expect(within(dialog).getByRole('combobox', { name: 'Rule' })).toHaveValue('10');
+          expect(within(dialog).getByRole('combobox', { name: 'Source' })).toHaveValue('rule');
+          for (const name of ['Vehicle', 'Rule', 'Source']) {
+            expect(within(dialog).getByRole('combobox', { name }).parentElement?.parentElement)
+              .toHaveClass('min-w-0', 'w-full', 'max-w-full');
+          }
+          expect(within(dialog).getByLabelText('Filter by read state')).toHaveValue('unread');
+          expect(within(dialog).getByPlaceholderText('Search messages…')).toHaveValue('pressure');
+          fireEvent.click(within(dialog).getByRole('button', { name: 'Clear all' }));
+          await waitFor(() => {
+            for (const call of [flatCalls().at(-1), callsFor(path => path.includes('count_only=true')).at(-1)]) {
+              const params = new URL(String(call![0]), 'http://teslasync.local').searchParams;
+              for (const key of ['severity', 'vehicle_id', 'rule_id', 'source', 'q', 'read']) expect(params.has(key)).toBe(false);
+              expect(params.get('archived')).toBe('true');
+              expect(params.get('from')).toBe(initialParams.get('from'));
+              expect(params.get('to_exclusive')).toBe(initialParams.get('to_exclusive'));
+            }
+          });
+        } finally {
+          window.matchMedia = originalMatchMedia;
+        }
+      });
+
+      it('preserves usable header filters during initial request failure', async () => {
+        installRequest({ logs: () => Promise.reject(new Error('Offline evidence')) });
+        renderInbox({ route: '/notifications/inbox?severity=warn' });
+        await screen.findByText('Could not load notifications');
+        fireEvent.click(screen.getByRole('button', { name: 'Severity filter' }));
+        expect(screen.getByRole('button', { name: 'Warn' })).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        await waitFor(() => expect(new URL(String(flatCalls().at(-1)?.[0]), 'http://teslasync.local').searchParams.has('severity')).toBe(false));
+      });
+});
+
+describe('InboxBody — single-row confirmations', () => {
   it('confirm-gates the single-row delete from the context menu', async () => {
     installRequest({
       logs: () => Promise.resolve([makeLog({ id: 1, title: 'Context row', read_at: null })]),

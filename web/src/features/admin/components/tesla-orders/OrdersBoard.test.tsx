@@ -51,7 +51,7 @@ describe('OrdersBoard', () => {
     render(<OrdersBoard orders={orders} />);
 
     // Accessible list wrapper with a discoverable name.
-    const list = screen.getByRole('list', { name: /orders board/i });
+    const list = screen.getByRole('list', { name: /Orders board/i });
     expect(list).toBeInTheDocument();
 
     // Exactly one list item per order — no more, no fewer.
@@ -84,14 +84,14 @@ describe('OrdersBoard', () => {
     );
 
     // Raw SNAKE_CASE status is title-cased for display.
-    expect(screen.getByText('Ready For Delivery')).toBeInTheDocument();
+    expect(screen.getByText('Ready for delivery')).toBeInTheDocument();
     // VIN is shown verbatim (not the "Not assigned" placeholder).
     expect(screen.getByText('5YJXCAE20LF000123')).toBeInTheDocument();
-    expect(screen.queryByText(/not assigned/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not assigned/i)).not.toBeInTheDocument();
     // Delivery date is formatted (en-US / UTC via the test stubs) — carries the year.
     expect(screen.getByText(/2025/)).toBeInTheDocument();
     // Upgradable orders surface the upgrade chip.
-    expect(screen.getByText(/upgrade available/i)).toBeInTheDocument();
+    expect(screen.getByText(/Upgrade available/i)).toBeInTheDocument();
   });
 
   it('falls back to placeholders for missing optional fields', () => {
@@ -112,17 +112,17 @@ describe('OrdersBoard', () => {
     );
 
     // Missing VIN → explicit "Not assigned" affordance.
-    expect(screen.getByText(/not assigned/i)).toBeInTheDocument();
+    expect(screen.getByText(/Not assigned/i)).toBeInTheDocument();
     // Empty model + null delivery both collapse to the em-dash placeholder.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
     // No upgrade chip when the order is not upgradable.
-    expect(screen.queryByText(/upgrade available/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Upgrade available/i)).not.toBeInTheDocument();
   });
 
   it('renders an empty but valid list when given an empty array', () => {
     render(<OrdersBoard orders={[]} />);
 
-    const list = screen.getByRole('list', { name: /orders board/i });
+    const list = screen.getByRole('list', { name: /Orders board/i });
     expect(list).toBeInTheDocument();
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });

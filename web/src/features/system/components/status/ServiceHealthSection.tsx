@@ -6,12 +6,14 @@ import { Grid } from '@/components/layout';
 import { Badge, DataTable, type Column } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { formatDateTime } from '@/lib/dateFormat';
 import { getTelemetryStatus } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ServiceHealthSection() {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -26,21 +28,23 @@ export function ServiceHealthSection() {
   type VehicleRow = (typeof vehicles)[number];
 
   const vehicleColumns = useMemo<Column<VehicleRow>[]>(() => [
-    { key: 'vin', header: t('systemStatus.serviceHealth.vin', 'VIN'), render: (row) => <span className="font-mono text-xs">{row.vin ?? '—'}</span> },
+    { key: 'vin', filterValue: (row) => row.vin ?? null, header: t('systemStatus.serviceHealth.vin', 'VIN'), render: (row) => <span className="font-mono text-xs">{row.vin ?? '—'}</span> },
     {
       key: 'status', header: t('common.status', 'Status'),
+      filterValue: (row) => row.is_streaming ?? null,
+      filterValueLabel: (_value, row) => row.is_streaming == null ? '—' : row.is_streaming ? t('systemStatus.serviceHealth.streaming', 'Streaming') : t('systemStatus.idle', 'Idle'),
       render: (row) => <Badge variant={row.is_streaming ? 'success' : 'neutral'} size="sm" dot>{row.is_streaming ? t('systemStatus.serviceHealth.streaming', 'Streaming') : t('systemStatus.idle', 'Idle')}</Badge>,
     },
-    { key: 'signal_count', header: t('systemStatus.serviceHealth.signals', 'Signals'), sortable: true, render: (row) => fmtInt(row.signal_count) },
-    { key: 'signals_per_second', header: t('systemStatus.serviceHealth.signalsPerSec', 'Signals/s'), render: (row) => fmtNumber(row.signals_per_second, 1) },
-    { key: 'latency_ms', header: t('systemStatus.latency', 'Latency'), render: (row) => `${fmtNumber(row.latency_ms, 0)} ms` },
-    { key: 'last_received', header: t('systemStatus.serviceHealth.lastReceived', 'Last Received'), render: (row) => formatDateTime(row.last_received) },
-  ], [t]);
+    { key: 'signal_count', filterValue: (row) => row.signal_count ?? null, align: 'right', groupStart: true, header: t('systemStatus.serviceHealth.signals', 'Signals'), sortable: true, render: (row) => fmtInt(row.signal_count) },
+    { key: 'signals_per_second', filterValue: (row) => row.signals_per_second ?? null, filterValueLabel: (_value, row) => fmtNumber(row.signals_per_second), align: 'right', header: t('systemStatus.serviceHealth.signalsPerSec', 'Signals/s'), render: (row) => fmtNumber(row.signals_per_second) },
+    { key: 'latency_ms', filterValue: (row) => row.latency_ms ?? null, filterValueLabel: (_value, row) => `${fmtNumber(row.latency_ms)} ms`, align: 'right', header: t('systemStatus.latency', 'Latency'), render: (row) => `${fmtNumber(row.latency_ms)} ms` },
+    { key: 'last_received', filterValue: (row) => row.last_received ?? null, filterValueLabel: (_value, row) => formatDateTime(row.last_received), header: t('systemStatus.serviceHealth.lastReceived', 'Last received'), render: (row) => formatDateTime(row.last_received) },
+  ], [t, fmtInt, fmtNumber]);
 
   return (
     <AccordionSection
       icon={<Satellite className="h-5 w-5" />}
-      title={t('systemStatus.serviceHealth.title', 'Service Health')}
+      title={t('systemStatus.serviceHealth.title', 'Service health')}
       description={t('systemStatus.serviceHealth.desc', 'Fleet Telemetry streaming status')}
       badges={
         data ? (
@@ -73,15 +77,16 @@ export function ServiceHealthSection() {
         <div className="space-y-4">
           <Grid cols={{ default: 2, md: 4 }} gap={3}>
             <MetricCard label={t('systemStatus.mode', 'Mode')} value={data.mode ?? '—'} icon={<Radio className="h-4 w-4" />} color="cyan" />
-            <MetricCard label={t('systemStatus.serviceHealth.vehiclesConnected', 'Vehicles Connected')} value={activeCount} icon={<Satellite className="h-4 w-4" />} color="green" />
-            <MetricCard label={t('systemStatus.serviceHealth.totalSignals', 'Total Signals')} value={fmtInt(data.aggregate_stats?.total_signals_received ?? 0)} icon={<Zap className="h-4 w-4" />} color="purple" />
-            <MetricCard label={t('systemStatus.serviceHealth.avgSignals', 'Avg Signals/s')} value={data.aggregate_stats?.avg_signals_per_second ?? '0'} icon={<TrendingUp className="h-4 w-4" />} color="cyan" />
+            <MetricCard label={t('systemStatus.serviceHealth.vehiclesConnected', 'Vehicles connected')} value={activeCount} icon={<Satellite className="h-4 w-4" />} color="green" />
+            <MetricCard label={t('systemStatus.serviceHealth.totalSignals', 'Total signals')} value={fmtInt(data.aggregate_stats?.total_signals_received ?? 0)} icon={<Zap className="h-4 w-4" />} color="purple" />
+            <MetricCard label={t('systemStatus.serviceHealth.avgSignals', 'Avg signals/s')} value={data.aggregate_stats?.avg_signals_per_second ?? '0'} icon={<TrendingUp className="h-4 w-4" />} color="cyan" />
           </Grid>
           <DataTable
             tableId="system:service-vehicles"
             columns={vehicleColumns}
             mobileColumns={['vin', 'status']}
             data={vehicles}
+            enableValueFilters
             keyExtractor={(v) => v.vin}
             compact
             pagination

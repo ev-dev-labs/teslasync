@@ -22,7 +22,7 @@
  *   3. Ready — two stacked series with the right keys, names, fills, stackId.
  *   4. Ready — the chart lives in a labelled `img` region and wires the date
  *      axis through `formatDateShort` + renders the tooltip and legend.
- *   5. Loading — a 256px skeleton, no chart leaks through.
+ *   5. Loading — the shared chart double's static 220px skeleton, no chart leaks through.
  *   6. Error — a retry-able banner, `onRetry` forwarded, no chart (also pins
  *      error-over-data precedence: non-empty buckets stay hidden).
  *   7. Error precedence — an error wins over a concurrent loading flag.
@@ -38,6 +38,8 @@ import type { ComponentProps, ReactNode } from 'react';
 
 import { chartTokens } from '@/lib/tokens';
 import type { SentryDayBucket } from './helpers';
+import { deriveDataState } from '@/api/dataState';
+import type { SecurityEvent } from '@/types/admin';
 
 /* ── i18n: resolve t(key, fallback) → fallback so copy is deterministic and
  *    locale-file independent. Applies to QueryError's copy too. ─────────── */
@@ -114,7 +116,7 @@ vi.mock('@/components/charts', async () => {
       <div
         data-testid="x-axis"
         data-key={String(dataKey)}
-        data-sample={tickFormatter ? tickFormatter('2026-04-30T12:00:00Z') : ''}
+        data-sample={tickFormatter ? tickFormatter('2026-04-30') : ''}
       />
     ),
     YAxis: () => <div data-testid="y-axis" />,
@@ -153,6 +155,25 @@ afterEach(() => {
   cleanup();
 });
 
+describe('SentryModeChart — calendar and source trust', () => {
+  it('labels a calendar-only day without shifting it to the previous day', () => {
+    renderChart({ sentryBuckets: [bucket()] });
+    expect(screen.getByTestId('x-axis')).toHaveAttribute('data-sample', 'Apr 30');
+  });
+
+  it('does not claim no activity when history is cold-paused', () => {
+    renderChart({ sourceState: deriveDataState<SecurityEvent[]>({ fetchStatus: 'paused' }) });
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No Sentry Mode activity is recorded in this history window.')).not.toBeInTheDocument();
+  });
+
+  it('keeps unknown samples in a separate series rather than labeling them off', () => {
+    renderChart({ sentryBuckets: [bucket({ sentryOn: 0, sentryOff: 0, sentryUnknown: 2 })] });
+    expect(screen.getAllByTestId('bar').map((bar) => bar.getAttribute('data-key'))).toEqual(['sentryOn', 'sentryOff', 'sentryUnknown']);
+    expect(screen.getAllByTestId('bar')[2]).toHaveAttribute('data-name', 'Unknown');
+  });
+});
+
 describe('SentryModeChart — panel chrome', () => {
   it('always renders the titled panel + hidden icon so it is never blank', () => {
     const cases: Partial<ChartProps>[] = [
@@ -164,7 +185,7 @@ describe('SentryModeChart — panel chrome', () => {
     for (const props of cases) {
       const { unmount } = renderChart(props);
       const heading = screen.getByRole('heading', {
-        name: /sentry mode activity/i,
+        name: /Sentry mode activity/i,
       });
       expect(heading).toBeInTheDocument();
       // The decorative Activity icon must be hidden from the a11y tree.
@@ -205,13 +226,13 @@ describe('SentryModeChart — ready state', () => {
 
     // Sentry On — first series, brand blue, stacked.
     expect(bars[0]).toHaveAttribute('data-key', 'sentryOn');
-    expect(bars[0]).toHaveAttribute('data-name', 'Sentry On');
+    expect(bars[0]).toHaveAttribute('data-name', 'Sentry on');
     expect(bars[0]).toHaveAttribute('data-fill', chartTokens.series[0]);
     expect(bars[0]).toHaveAttribute('data-stack', 'sentry');
 
     // Sentry Off — muted axis colour, same stack so the bars sum per day.
     expect(bars[1]).toHaveAttribute('data-key', 'sentryOff');
-    expect(bars[1]).toHaveAttribute('data-name', 'Sentry Off');
+    expect(bars[1]).toHaveAttribute('data-name', 'Sentry off');
     expect(bars[1]).toHaveAttribute('data-fill', chartTokens.axisStroke);
     expect(bars[1]).toHaveAttribute('data-stack', 'sentry');
   });
@@ -220,7 +241,7 @@ describe('SentryModeChart — ready state', () => {
     renderChart({ sentryBuckets: [bucket()] });
 
     expect(
-      screen.getByRole('img', { name: /sentry mode activity/i }),
+      screen.getByRole('img', { name: /Sentry mode activity/i }),
     ).toBeInTheDocument();
 
     const xAxis = screen.getByTestId('x-axis');
@@ -242,9 +263,15 @@ describe('SentryModeChart — loading + error states', () => {
   it('shows a skeleton (not the chart) while loading', () => {
     const { container } = renderChart({ isLoading: true, sentryBuckets: [] });
 
-    const skeleton = container.querySelector('.animate-pulse');
+    const skeleton = container.querySelector('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 220px"]');
     expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(skeleton).toHaveClass('bg-[var(--skeleton-bg)]');
+    expect(skeleton).toBeEmptyDOMElement();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-datum')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Sentry mode activity/i })).not.toBeInTheDocument();
   });
 
   it('renders a retry-able error, forwards onRetry, and hides the chart even with data present', () => {
@@ -272,7 +299,7 @@ describe('SentryModeChart — loading + error states', () => {
     });
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 220px"]')).toBeNull();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 });

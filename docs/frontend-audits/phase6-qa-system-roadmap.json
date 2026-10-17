@@ -1,0 +1,1605 @@
+{
+  "item": "phase6-qa-system-roadmap",
+  "attempt": 1,
+  "status": "DONE-original-finding-dispositions-only",
+  "page": "web/src/features/system/pages/RoadmapPage.tsx",
+  "routes": [
+    "/roadmap"
+  ],
+  "clock": {
+    "reservationUtc": "2026-10-14T02:29:12.925Z",
+    "returnUtc": "2026-10-14T02:49:12.925Z",
+    "hardUtc": "2026-10-14T02:54:12.925Z",
+    "noRenewal": true,
+    "firstObservedUtc": "2026-10-14T02:35:22.2313529Z",
+    "artifactCreatedUtc": "2026-10-14T02:46:26.824981+00:00",
+    "creationLimit": "Earlier actual actor creation+20/25 wins. Actor lifecycle creation API unavailable; known reservation is conservative deadline."
+  },
+  "writable": [
+    "docs/frontend-audits/phase6-qa-system-roadmap.json",
+    "web/logs/phase6-qa-system-roadmap.log"
+  ],
+  "alreadyMetObjective": {
+    "met": false,
+    "reason": "Both assigned artifacts absent initially. Completed Phase5 source acceptance does not satisfy this active read-only QA report objective.",
+    "queueRows": [
+      {
+        "line": 238,
+        "status": "[~]",
+        "item": "phase6-qa-system-roadmap",
+        "note": "RoadmapPage; no actual proposal/vote/user/provider/network mutations."
+      },
+      {
+        "line": 800,
+        "status": "[x]",
+        "item": "phase5-current-source-catalog-closure",
+        "note": "rift4/pressure2/outage6/SignalExplorer/Tariff/earlierSpeed-WhatIf, no translationcampaign. Normal generator/check/nsaudit only, no helper/config/baseline/knownmissing changes/install/testtool development.20minbox/25minhardcap,480s commandbounds. Source/WIP commits mustall persistbeforefinalprojectionacceptance. Actualactor6570f287-6312-4fdf-8b07-cfc2f0039a29, dedicated NONPAGE existingroot. ParentEnglishwritelease relinquisheduntilactualrelease; rootclaimed186exactpaths, sourceinputs stable. LastConsumed=-1; no projection acceptancebeforecontributor commits. FINALactualrootreceipt:79 exactfallbacks/31107originalleavesbytepreserved, no updates/deletes/namespacegrowth; source6250filesunchangedbefore-after-check hashCD73BA9F1FDB0CBD2C3BE69CD9C9B1E35637BAC04BB03807EF65670F9346EDFE. Normalgen/check/strict exits0/0/0, knownmissing0/new0/resolved0; baselineand2guardsbytesunchanged. ONLY15reportedEnglishpaths changed; canonical+14projections stagedafterall source/WIPs andmissedreportednewtest persistedthrough1787. ActualRoot854s/20minboxmet/186pathsreleased/no commands. ROOTPROOF only/NOTbehavior-native-fullgate; no rerun unchangedpassingguards or helperchanges. Eligible retained originalpending scopes cannowcontinue. Actualrootcommit=91650fc9de1b96f60f00a01e24f2f73a716bd817 pushed=true."
+      },
+      {
+        "line": 995,
+        "status": "[x]",
+        "item": "audit-page-193",
+        "note": "- / 1 / 2026-10-07T11:01:40.743Z / web\\src\\features\\system\\pages\\RoadmapPage.tsx; routes=/roadmap; read-only audit; report docs\\frontend-audits\\audit-page-193.json; actor=2b67119d-a24c-43f0-8222-938d351ba032; verified source audit; commit=4f36a64b0b; runtime unverified"
+      },
+      {
+        "line": 1081,
+        "status": "[x]",
+        "item": "regression-roadmap-test",
+        "note": "regression-brief-drawer-context / 1 / 2026-10-08T01:24:14.834Z / web\\src\\features\\system\\pages\\RoadmapPage.test.tsx; 1 failed case; count actual initiative cards, not added summary headings; exact total/assertions; actor=5784ee4a-56ea-44e9-a41c-d1113f3b0c7d; verified exact owned release hash and behavioral diff; original assertions retained; independent normal14-suite144 tests exit0 and scoped ESLint exit0; commit=650b9050f7; browser acceptance NOTRUN"
+      },
+      {
+        "line": 1134,
+        "status": "[x]",
+        "item": "overlay-drawer-adoption",
+        "note": "primitive-drawer,overlay-geometry-tokens / 1 / 2026-10-08T03:43:54.102Z / web\\src\\components\\ui\\Drawer.tsx and Drawer.test.tsx only; replace numeric z-[60] with approved overlay layer token; source scan also found eyebrow tracking-[0.12em]: remove arbitrary tracking override in favor of existing Text typography contract (intentional restrained presentation, preserve label/content); preserve placement/sizing/actions/trap/refs/scroll/reduced motion; no config or scanner changes; actor=8e0bc528-6dbf-4ef5-a447-0512b2973ce1; Receipt/final hashes/exact scope reviewed; reverse entire-source/test proof and all original assertions retained; parent normal4 suites62 tests/lint0; named layer+restrained eyebrow+coupled obsolete disable; source-only acceptance commit cadence354"
+      },
+      {
+        "line": 1144,
+        "status": "[x]",
+        "item": "primitive-drawer",
+        "note": "repair-summary-catalog-integration,repair-report-offline-state,repair-alert-rules-offline-state / 1 / 2026-10-08T02:43:18.397Z / web\\src\\components\\ui\\Drawer.tsx; G013 theme-aware borders/motion; preserve nested overlay/trap/dismiss/scroll/restoration/placement and actions/mobile; matching Drawer tests only; actor=d3e3b617-4537-4e32-bf77-c38b7ee1f025; Verified exclusive delivered scope/final hashes, retained exports/case/assertion intent and >=70pct source; parent normal21 suites536/536 stable and strict40-file lint0; commit=223583e28c cadence=343; static candidate classifications held in qa-forced-colors-classification and remaining overlay geometry review; browser/contrast not accepted"
+      },
+      {
+        "line": 2249,
+        "status": "[x]",
+        "item": "phase5-page-system-roadmap",
+        "note": "ial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Ready exact original scope reserved after actual old32terminal receipts, individually collected; no overlapping files/completed objective. Target32 from measured2running+30freshstarts; reservations NOT counted. Prior sourceattempt/history preserved, external0turnfailures uncharged. Only namedpage/test;20minbox/25mincap;480s scoped startup allowance/guardsON. Actualactor metadata follows. Actual fresh builtin actor=1243be37-e6c1-4589-b309-438a6c8b036c; launch returnedsuccessfully, NOT reservation projection. Exact20minbox/25mincap byrealelapsed, LastConsumed=-1; no custom cancellation/tooling workaround. Currentactualindividualintake: Actual Vitest1/307.9s external5artifactguard/ZEROalltests; lint0/scopedsource typing0/scans0. Page588vs578/test416vs352/7sections/17initiatives98bullets70shipped/9original+4added tests retained. Exact53 roadmap.entries currentfirst5 key-fallbacks needparentroot, no unrelatedcampaign. Explicitrelease/no commands.  Status=[x]/attempt1 retained. SOURCEONLY actualexternalstartup1/0executed; NOTbehavior/fixturetypes/native/fullgate, no ownproof waiver. Actualindividualsourcecommit=aa2605eaf8fae82922d2f7db7a6fbd4629f43532 pushed=true."
+      }
+    ]
+  },
+  "governingReads": {
+    "orchestrator": "Full lines1-296",
+    "contractRanges": [
+      [
+        1,
+        655
+      ],
+      [
+        2481,
+        2539
+      ]
+    ],
+    "missionRanges": [
+      [
+        1,
+        220
+      ],
+      [
+        507,
+        581
+      ],
+      [
+        673,
+        779
+      ],
+      [
+        921,
+        1080
+      ],
+      [
+        1070,
+        1210
+      ],
+      [
+        1420,
+        1530
+      ]
+    ],
+    "inventory": "Roadmap row plus audit-page-193; historical not approval",
+    "handoffRanges": [
+      [
+        1,
+        47
+      ],
+      [
+        504,
+        563
+      ],
+      [
+        2186,
+        2270
+      ]
+    ],
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      "docs/frontend-worker-conventions.md",
+      "docs/I18N_GUIDELINES.md",
+      "docs/MOBILE_GUIDELINES.md",
+      "docs/A11Y_GUIDELINES.md"
+    ],
+    "limits": "Relevant contract/common APIs read, unrelated map/annotation/shell addenda not audited. No applicable AGENTS found in checked ancestors/scoped directories. User exact-write/NOTRUN limits supersede historical server/test workflow."
+  },
+  "findings": [
+    {
+      "id": "RDM-01",
+      "classification": "confirmed-source",
+      "rule": "MDC-026/static-deployment-claim",
+      "priority": "medium",
+      "file": "web/src/features/system/pages/RoadmapPage.tsx",
+      "line": 61,
+      "owner": "page completed-phase copy plus serialized canonical catalog integration",
+      "detail": "Completed-band description asserts current deployment availability although source is bundled and adjacent scope says not live deployment telemetry. Both actual canonical and projected English catalogs repeat the claim. This is trust-copy contradiction, not evidence any capability is absent.",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/RoadmapPage.tsx",
+          "line": 61,
+          "quote": "    descFallback: 'Shipped and available in your deployment today.',"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "line": 24094,
+          "quote": "      \"done\": \"Shipped and available in your deployment today.\","
+        }
+      ],
+      "sourceOnlyRepro": [
+        "Follow PHASE_META.done through PhaseSection t(meta.descKey, meta.descFallback), then the done-band bundled-source caveat.",
+        "Resolve roadmap.phaseDesc.done from canonical and generated system catalog; neither is a deployment probe. Existing test assertion also retains wording."
+      ],
+      "fix": "Change only completed-phase deployment wording and matching assertion/catalog key, preserving every shipped initiative/bullet/phase. Catalog integration is separate serialized ownership.",
+      "narrowFiles": [
+        "web/src/features/system/pages/RoadmapPage.tsx",
+        "web/src/features/system/pages/RoadmapPage.test.tsx",
+        "web/src/i18n/en.json:roadmap.phaseDesc.done",
+        "web/src/i18n/en/locale-system.json:derived key"
+      ],
+      "queueDedup": "Already reported in audit-page-193; count once as unresolved historical debt. Phase5 page is completed SOURCEONLY, not repair authorization. Exact deployment-wording repair absent; parent must queue narrow fix, never redispatch migration."
+    },
+    {
+      "id": "RDM-02",
+      "classification": "confirmed-source",
+      "rule": "MDC-002/query-cancellation",
+      "priority": "medium",
+      "file": "web/src/hooks/useSettings.ts",
+      "line": 84,
+      "owner": "shared settings preference bridge",
+      "detail": "Actual summary formatting uses app-level queryFn:getSettings; that getSettings ignores Query context/AbortSignal and calls request without signal. Separate api/hooks/useSettings forwards signal but is not this consumer. No race/cancellation executed.",
+      "citations": [
+        {
+          "file": "web/src/hooks/useSettings.ts",
+          "line": 84,
+          "quote": "    queryFn: getSettings,"
+        },
+        {
+          "file": "web/src/api/settings.ts",
+          "line": 24,
+          "quote": "export const getSettings = () => request<AppSettings>('/settings')"
+        },
+        {
+          "file": "web/src/api/hooks/useSettings.ts",
+          "line": 30,
+          "quote": "    queryFn: ({ signal }) => request<AppSettings>('/settings', { signal }),"
+        }
+      ],
+      "sourceOnlyRepro": [
+        "Trace SystemSummaryBrief -> useOperationalMetrics -> useUnits/useFormatting -> hooks/useSettings.",
+        "Inspect zero-argument getSettings and compare signal-forwarding alternative; the query abort token is not forwarded."
+      ],
+      "fix": "Forward Query AbortSignal through existing callback/getSettings/request while preserving settings key, staleTime=300000, refetchOnMount always, retry1, defaults, retained preferences and broadcast refetch.",
+      "narrowFiles": [
+        "web/src/hooks/useSettings.ts",
+        "web/src/api/settings.ts:24",
+        "directly matching cancellation test owner under parent lease"
+      ],
+      "queueDedup": "Same shared-root mechanism as audit-page-193; one need, not one per card. Normalized exact owner searches found no settings bridge claim; unrelated watch/action-center cancellation rows do not cover it."
+    },
+    {
+      "id": "RDM-03",
+      "classification": "confirmed-source",
+      "rule": "MDC-012/theme-aware-text",
+      "priority": "medium",
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "line": 161,
+      "owner": "shared limitation renderer only",
+      "detail": "Review details receives scope and unknown-observation limitations; each is painted fixed text-amber-300 rather than current theme-aware foreground role. Source role violation confirmed, composed contrast/AA failure NOTRUN.",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+          "line": 53,
+          "quote": "        limitations: ["
+        },
+        {
+          "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+          "line": 161,
+          "quote": "              <Text key={limitation} as=\"p\" size=\"xs\" className=\"text-amber-300\">"
+        }
+      ],
+      "sourceOnlyRepro": [
+        "Follow supplied SystemSummaryBrief narrative.limitations through OperationalBrief Drawer into limitations.map; inspect Text fixed color. No browser/contrast measurement."
+      ],
+      "fix": "Use existing theme-aware warning or secondary role after meaning review; preserve limitation strings/order.",
+      "narrowFiles": [
+        "web/src/components/data-display/OperationalNarrativeDetails.tsx:161",
+        "web/src/components/data-display/OperationalNarrativeDetails.test.tsx"
+      ],
+      "queueDedup": "No exact renderer/color repair owner. Completed advanced-evidence date-preferences caller scope mentions shared source separately, not this mechanism."
+    },
+    {
+      "id": "RDM-04",
+      "classification": "confirmed-source-allocation",
+      "rule": "MDC-040/mobile-target-allocation",
+      "priority": "medium",
+      "file": "web/src/components/ui/Drawer.tsx",
+      "line": 198,
+      "owner": "shared Drawer default footer only",
+      "detail": "OperationalBrief omits footer, so default secondary Close uses Button default md/h-10, 2.5rem=40px at standard16px root, without project44px mobile allocation. Header Close is44px and Review details min-h-11. Source allocation gap, not measured native/WCAG failure.",
+      "citations": [
+        {
+          "file": "web/src/components/ui/Drawer.tsx",
+          "line": 196,
+          "quote": "            {footer === undefined ? ("
+        },
+        {
+          "file": "web/src/components/ui/Drawer.tsx",
+          "line": 198,
+          "quote": "                <Button type=\"button\" variant=\"secondary\" onClick={onClose}>"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 37,
+          "quote": "  md: 'h-10 px-4 text-sm',"
+        }
+      ],
+      "sourceOnlyRepro": [
+        "Follow omitted OperationalBrief footer -> footer===undefined -> default Close -> Button size=md -> h-10. Compare header Close h-11 and Review details min-h-11. No DOM execution."
+      ],
+      "fix": "Allocate existing responsive44px mobile target to default footer Close only, retaining desktop/custom/null footer/scroll/onClose behavior. No global Button redesign.",
+      "narrowFiles": [
+        "web/src/components/ui/Drawer.tsx:198",
+        "web/src/components/ui/Drawer.test.tsx"
+      ],
+      "queueDedup": "primitive-drawer/overlay-drawer-adoption completed, not this repair. drawer-footer/footer-target searches have0 rows. DLQ EntryDrawer is different owner."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "924b59b7cec6e15c9c154dc905801623e1bbe4eb8bfdac607b58036dc621848c",
+    "pageLines": 588,
+    "testSha256": "2a887f9ed9283832db4ce06f72d1bee3e7e197ae5661156154f8ac928311b188",
+    "testLines": 416,
+    "contentSections": 6,
+    "headerPlusContentSections": 7,
+    "countConvention": "Overview + progress + four phases = six content sections; page header adds one. Five named content landmarks = overview + four phases.",
+    "initiatives": [
+      {
+        "id": "corePlatform",
+        "phase": "done",
+        "featureCount": 11
+      },
+      {
+        "id": "smartNotifications",
+        "phase": "done",
+        "featureCount": 9
+      },
+      {
+        "id": "intelligenceObservability",
+        "phase": "done",
+        "featureCount": 8
+      },
+      {
+        "id": "fleetTelemetry",
+        "phase": "done",
+        "featureCount": 7
+      },
+      {
+        "id": "designSystem",
+        "phase": "done",
+        "featureCount": 8
+      },
+      {
+        "id": "history",
+        "phase": "done",
+        "featureCount": 6
+      },
+      {
+        "id": "charging",
+        "phase": "done",
+        "featureCount": 6
+      },
+      {
+        "id": "journeys",
+        "phase": "done",
+        "featureCount": 5
+      },
+      {
+        "id": "helixStudio",
+        "phase": "done",
+        "featureCount": 5
+      },
+      {
+        "id": "operator",
+        "phase": "done",
+        "featureCount": 5
+      },
+      {
+        "id": "reliability",
+        "phase": "current",
+        "featureCount": 4
+      },
+      {
+        "id": "helixQuality",
+        "phase": "next",
+        "featureCount": 4
+      },
+      {
+        "id": "recovery",
+        "phase": "next",
+        "featureCount": 4
+      },
+      {
+        "id": "ecosystem",
+        "phase": "future",
+        "featureCount": 4
+      },
+      {
+        "id": "fleetInsights",
+        "phase": "future",
+        "featureCount": 4
+      },
+      {
+        "id": "interoperability",
+        "phase": "future",
+        "featureCount": 4
+      },
+      {
+        "id": "accessibleOps",
+        "phase": "future",
+        "featureCount": 4
+      }
+    ],
+    "initiativeCount": 17,
+    "featureCount": 98,
+    "shippedFeatureCount": 70,
+    "phaseCounts": {
+      "done": 10,
+      "current": 1,
+      "next": 2,
+      "future": 4
+    },
+    "phaseFeatureCounts": {
+      "done": 70,
+      "current": 4,
+      "next": 8,
+      "future": 16
+    },
+    "phaseOrder": [
+      "done",
+      "current",
+      "next",
+      "future"
+    ],
+    "GlassPanelCallsites": 3,
+    "ChartContainerCallsites": 0,
+    "sourceEdits": 0
+  },
+  "inputPins": [
+    {
+      "file": ".github/copilot-instructions.md",
+      "beforeSha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "afterSha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "unchanged": true,
+      "afterBytes": 37483,
+      "afterLineCount": 707
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "beforeSha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "afterSha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "unchanged": true,
+      "afterBytes": 22645,
+      "afterLineCount": 629
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "beforeSha256": "5d8ff67ca9cecab201c214d252304eedef653230d8463067a69b8b2c94697580",
+      "afterSha256": "5d8ff67ca9cecab201c214d252304eedef653230d8463067a69b8b2c94697580",
+      "unchanged": true,
+      "afterBytes": 10771,
+      "afterLineCount": 234
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "beforeSha256": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "afterSha256": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "unchanged": true,
+      "afterBytes": 8039,
+      "afterLineCount": 216
+    },
+    {
+      "file": "docs/MOBILE_GUIDELINES.md",
+      "beforeSha256": "c2aad7d2ea44a3c2ea317a1b6f38d59c5a6cb71fd13d91816fb60a301f9f2228",
+      "afterSha256": "c2aad7d2ea44a3c2ea317a1b6f38d59c5a6cb71fd13d91816fb60a301f9f2228",
+      "unchanged": true,
+      "afterBytes": 7412,
+      "afterLineCount": 166
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-193.json",
+      "beforeSha256": "78a83b5b45bd6c24eabd23293361a8f36145fc64cec5e328e93b09d7d3a9ab61",
+      "afterSha256": "78a83b5b45bd6c24eabd23293361a8f36145fc64cec5e328e93b09d7d3a9ab61",
+      "unchanged": true,
+      "afterBytes": 23009,
+      "afterLineCount": 279
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "beforeSha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "afterSha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "unchanged": true,
+      "afterBytes": 182554,
+      "afterLineCount": 2539
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "beforeSha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "afterSha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "unchanged": true,
+      "afterBytes": 1743758,
+      "afterLineCount": 1460
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "beforeSha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "afterSha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "unchanged": true,
+      "afterBytes": 31079,
+      "afterLineCount": 1593
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "beforeSha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "afterSha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "unchanged": true,
+      "afterBytes": 8608,
+      "afterLineCount": 152
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "beforeSha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "afterSha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "unchanged": true,
+      "afterBytes": 16978,
+      "afterLineCount": 296
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "beforeSha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "afterSha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "unchanged": true,
+      "afterBytes": 163930,
+      "afterLineCount": 2460
+    },
+    {
+      "file": "migration-queue.md",
+      "beforeSha256": "3170414ec86f9721305e1fb59ca6a181755f0302d9e16fddf348935cd53f76f2",
+      "afterSha256": "8f4a383e3efe87500be2594aa8f5ebbac206be4e798f39def83940c0ed2d5c9f",
+      "unchanged": false,
+      "afterBytes": 2609834,
+      "afterLineCount": 2379
+    },
+    {
+      "file": "web/src/App.tsx",
+      "beforeSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "afterSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "unchanged": true,
+      "afterBytes": 68125,
+      "afterLineCount": 919
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "beforeSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "afterSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "unchanged": true,
+      "afterBytes": 17825,
+      "afterLineCount": 458
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true,
+      "afterBytes": 15482,
+      "afterLineCount": 434
+    },
+    {
+      "file": "web/src/api/hooks/useSettings.ts",
+      "beforeSha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "afterSha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "unchanged": true,
+      "afterBytes": 13356,
+      "afterLineCount": 381
+    },
+    {
+      "file": "web/src/api/settings.ts",
+      "beforeSha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+      "afterSha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+      "unchanged": true,
+      "afterBytes": 7750,
+      "afterLineCount": 133
+    },
+    {
+      "file": "web/src/components/data-display/CompositionRail.test.tsx",
+      "beforeSha256": "a81cc02508ef3457963e80e4ead72d4dd390c7811b4ec21ee6e8f70b41ff0f02",
+      "afterSha256": "a81cc02508ef3457963e80e4ead72d4dd390c7811b4ec21ee6e8f70b41ff0f02",
+      "unchanged": true,
+      "afterBytes": 9897,
+      "afterLineCount": 171
+    },
+    {
+      "file": "web/src/components/data-display/CompositionRail.tsx",
+      "beforeSha256": "c586fc50bd71686bce383be91eaa65d1c777d06647e262b2ae02602b18f509de",
+      "afterSha256": "c586fc50bd71686bce383be91eaa65d1c777d06647e262b2ae02602b18f509de",
+      "unchanged": true,
+      "afterBytes": 4033,
+      "afterLineCount": 105
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.test.tsx",
+      "beforeSha256": "7c5d8eec12208e8dc4dd2de06fcd3beec7a9c4fa865b1031d19c1ecd9c016880",
+      "afterSha256": "7c5d8eec12208e8dc4dd2de06fcd3beec7a9c4fa865b1031d19c1ecd9c016880",
+      "unchanged": true,
+      "afterBytes": 16477,
+      "afterLineCount": 308
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "beforeSha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "afterSha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "unchanged": true,
+      "afterBytes": 11591,
+      "afterLineCount": 321
+    },
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.test.tsx",
+      "beforeSha256": "f927fb0018fe12cbb898b88a6f27bfa90cb8d924b7d97fb990c39feb348c0bb1",
+      "afterSha256": "f927fb0018fe12cbb898b88a6f27bfa90cb8d924b7d97fb990c39feb348c0bb1",
+      "unchanged": true,
+      "afterBytes": 3893,
+      "afterLineCount": 103
+    },
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "beforeSha256": "42d86533a953d9ee7c25e933fa7200890a420ee31868fa515f01d89b4f0e6fa1",
+      "afterSha256": "42d86533a953d9ee7c25e933fa7200890a420ee31868fa515f01d89b4f0e6fa1",
+      "unchanged": true,
+      "afterBytes": 8350,
+      "afterLineCount": 244
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true,
+      "afterBytes": 10783,
+      "afterLineCount": 259
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true,
+      "afterBytes": 658,
+      "afterLineCount": 17
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "beforeSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "afterSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "unchanged": true,
+      "afterBytes": 1493,
+      "afterLineCount": 39
+    },
+    {
+      "file": "web/src/components/motion/StaggerContainer.tsx",
+      "beforeSha256": "b35dc325960ad8d1ccb0640b77c761492f87898048121cf5743893141daffdde",
+      "afterSha256": "b35dc325960ad8d1ccb0640b77c761492f87898048121cf5743893141daffdde",
+      "unchanged": true,
+      "afterBytes": 1232,
+      "afterLineCount": 32
+    },
+    {
+      "file": "web/src/components/motion/StaggerItem.tsx",
+      "beforeSha256": "1a29145d6065fcbfaad773db9ba1e1da6c6440bf5a3d5f0c90026bb380d5c0f1",
+      "afterSha256": "1a29145d6065fcbfaad773db9ba1e1da6c6440bf5a3d5f0c90026bb380d5c0f1",
+      "unchanged": true,
+      "afterBytes": 1230,
+      "afterLineCount": 30
+    },
+    {
+      "file": "web/src/components/motion/index.ts",
+      "beforeSha256": "b1bd3971b43540fb5b37f4bd81a816354ea9e4977e93edd79448441a962ee7e7",
+      "afterSha256": "b1bd3971b43540fb5b37f4bd81a816354ea9e4977e93edd79448441a962ee7e7",
+      "unchanged": true,
+      "afterBytes": 581,
+      "afterLineCount": 15
+    },
+    {
+      "file": "web/src/components/motion/runtime.ts",
+      "beforeSha256": "bc396c45c60a73e772af97a5221bf470c325b462fdd979040464d0b816a9c8bb",
+      "afterSha256": "bc396c45c60a73e772af97a5221bf470c325b462fdd979040464d0b816a9c8bb",
+      "unchanged": true,
+      "afterBytes": 173,
+      "afterLineCount": 3
+    },
+    {
+      "file": "web/src/components/ui/Badge.tsx",
+      "beforeSha256": "99296caea1e9b136ff8493f1a85ae63d5a7aa6955c6983d095eb8460b1b84abf",
+      "afterSha256": "99296caea1e9b136ff8493f1a85ae63d5a7aa6955c6983d095eb8460b1b84abf",
+      "unchanged": true,
+      "afterBytes": 2981,
+      "afterLineCount": 65
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true,
+      "afterBytes": 5174,
+      "afterLineCount": 93
+    },
+    {
+      "file": "web/src/components/ui/Drawer.test.tsx",
+      "beforeSha256": "e928d4b8db7ee97f799fc0ad872f69514923d6b9602f5d43ecc50bd87efd3de2",
+      "afterSha256": "e928d4b8db7ee97f799fc0ad872f69514923d6b9602f5d43ecc50bd87efd3de2",
+      "unchanged": true,
+      "afterBytes": 19034,
+      "afterLineCount": 498
+    },
+    {
+      "file": "web/src/components/ui/Drawer.tsx",
+      "beforeSha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+      "afterSha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+      "unchanged": true,
+      "afterBytes": 6711,
+      "afterLineCount": 211
+    },
+    {
+      "file": "web/src/components/ui/IconBox.tsx",
+      "beforeSha256": "fd0716d5a9ed24e58f5713a690ed464c2dd7d46eb40885b0506d8b7271defc02",
+      "afterSha256": "fd0716d5a9ed24e58f5713a690ed464c2dd7d46eb40885b0506d8b7271defc02",
+      "unchanged": true,
+      "afterBytes": 1143,
+      "afterLineCount": 32
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "beforeSha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "afterSha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "unchanged": true,
+      "afterBytes": 4325,
+      "afterLineCount": 115
+    },
+    {
+      "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.test.tsx",
+      "beforeSha256": "affb7986e86a1d54be36d8f2e1d8893f861e00d3086e53352029885467b0ebbf",
+      "afterSha256": "affb7986e86a1d54be36d8f2e1d8893f861e00d3086e53352029885467b0ebbf",
+      "unchanged": true,
+      "afterBytes": 4333,
+      "afterLineCount": 68
+    },
+    {
+      "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+      "beforeSha256": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+      "afterSha256": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+      "unchanged": true,
+      "afterBytes": 2399,
+      "afterLineCount": 63
+    },
+    {
+      "file": "web/src/features/system/pages/RoadmapPage.test.tsx",
+      "beforeSha256": "2a887f9ed9283832db4ce06f72d1bee3e7e197ae5661156154f8ac928311b188",
+      "afterSha256": "2a887f9ed9283832db4ce06f72d1bee3e7e197ae5661156154f8ac928311b188",
+      "unchanged": true,
+      "afterBytes": 17143,
+      "afterLineCount": 416
+    },
+    {
+      "file": "web/src/features/system/pages/RoadmapPage.tsx",
+      "beforeSha256": "924b59b7cec6e15c9c154dc905801623e1bbe4eb8bfdac607b58036dc621848c",
+      "afterSha256": "924b59b7cec6e15c9c154dc905801623e1bbe4eb8bfdac607b58036dc621848c",
+      "unchanged": true,
+      "afterBytes": 21835,
+      "afterLineCount": 588
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "beforeSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "afterSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true,
+      "afterBytes": 2035,
+      "afterLineCount": 65
+    },
+    {
+      "file": "web/src/hooks/useDialogFocus.ts",
+      "beforeSha256": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+      "afterSha256": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+      "unchanged": true,
+      "afterBytes": 11105,
+      "afterLineCount": 272
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "beforeSha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "afterSha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "unchanged": true,
+      "afterBytes": 4608,
+      "afterLineCount": 106
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "beforeSha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "afterSha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "unchanged": true,
+      "afterBytes": 2081,
+      "afterLineCount": 49
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "afterSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true,
+      "afterBytes": 2095,
+      "afterLineCount": 47
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "beforeSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "afterSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true,
+      "afterBytes": 1161,
+      "afterLineCount": 24
+    },
+    {
+      "file": "web/src/hooks/usePageTitle.ts",
+      "beforeSha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "afterSha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "unchanged": true,
+      "afterBytes": 1280,
+      "afterLineCount": 30
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "beforeSha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "afterSha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "unchanged": true,
+      "afterBytes": 5253,
+      "afterLineCount": 146
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "beforeSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "afterSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true,
+      "afterBytes": 6545,
+      "afterLineCount": 194
+    },
+    {
+      "file": "web/src/i18n/catalog-topology.mjs",
+      "beforeSha256": "09818bc28b11c46b6953f36766251737e0a0de71621ff26908d36d74e2936f88",
+      "afterSha256": "09818bc28b11c46b6953f36766251737e0a0de71621ff26908d36d74e2936f88",
+      "unchanged": true,
+      "afterBytes": 16752,
+      "afterLineCount": 390
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "beforeSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "afterSha256": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+      "unchanged": false,
+      "afterBytes": 1846735,
+      "afterLineCount": 39035
+    },
+    {
+      "file": "web/src/i18n/en/locale-system.json",
+      "beforeSha256": "aeecb425f606a0d3cc9569a3296de5d39d0a3d19a45ee76907989625484f3f8f",
+      "afterSha256": "aeecb425f606a0d3cc9569a3296de5d39d0a3d19a45ee76907989625484f3f8f",
+      "unchanged": true,
+      "afterBytes": 189158,
+      "afterLineCount": 4493
+    },
+    {
+      "file": "web/src/i18n/en/runtime-manifest.json",
+      "beforeSha256": "f12336c510017fc79ed588e01d1daa3c307f05d3fdc20a857ffcf6aa77fc9b0d",
+      "afterSha256": "f12336c510017fc79ed588e01d1daa3c307f05d3fdc20a857ffcf6aa77fc9b0d",
+      "unchanged": true,
+      "afterBytes": 81573,
+      "afterLineCount": 4144
+    },
+    {
+      "file": "web/src/i18n/index.ts",
+      "beforeSha256": "8804718879d0ccb02c876b64b139da56e67b7d117e34e5de914904242de3ec17",
+      "afterSha256": "8804718879d0ccb02c876b64b139da56e67b7d117e34e5de914904242de3ec17",
+      "unchanged": true,
+      "afterBytes": 12773,
+      "afterLineCount": 333
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "beforeSha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "afterSha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "unchanged": true,
+      "afterBytes": 7868,
+      "afterLineCount": 137
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "beforeSha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "afterSha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "unchanged": true,
+      "afterBytes": 2801,
+      "afterLineCount": 53
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "beforeSha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "afterSha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "unchanged": true,
+      "afterBytes": 11392,
+      "afterLineCount": 127
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "beforeSha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "afterSha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "unchanged": true,
+      "afterBytes": 20093,
+      "afterLineCount": 439
+    },
+    {
+      "file": "web/src/types/admin.ts",
+      "beforeSha256": "0992cba0fa0d8a23ef4989c692ce7cbc168ab048285a52f36cb36c67a33361a5",
+      "afterSha256": "0992cba0fa0d8a23ef4989c692ce7cbc168ab048285a52f36cb36c67a33361a5",
+      "unchanged": true,
+      "afterBytes": 9782,
+      "afterLineCount": 372
+    }
+  ],
+  "release": {
+    "timestampUtc": "2026-10-14T02:48:13.574689+00:00",
+    "artifactsReleased": [
+      "docs/frontend-audits/phase6-qa-system-roadmap.json",
+      "web/logs/phase6-qa-system-roadmap.log"
+    ],
+    "commandsReleased": true,
+    "activeOwnedCommandsAfterThisCommand": 0,
+    "sourceWriteClaim": "None; all source/test/route/catalog/queue READONLY throughout",
+    "beforeReturnDeadline": true,
+    "renewal": false,
+    "pageApproval": false,
+    "partialReason": "Source QA and document validation complete, but full exact early exploration raw receipts/part1 command body are in tool transcript rather than reproduced in owned log; explicitly disclosed."
+  },
+  "validation": {
+    "status": "FAIL",
+    "timestampUtc": "2026-10-14T02:48:13.574689+00:00",
+    "exactQuoteCitationsChecked": 10,
+    "citationErrors": [
+      {
+        "citation": {
+          "file": "web/src/i18n/en.json",
+          "line": 24094,
+          "quote": "      \"done\": \"Shipped and available in your deployment today.\","
+        },
+        "actual": "      \"idle\": \"Idle\","
+      },
+      {
+        "sourceDrift": [
+          "web/src/i18n/en.json"
+        ]
+      }
+    ],
+    "inputPinsChecked": 60,
+    "unchangedReadOnlyInputs": 58,
+    "changedInputs": [
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "sourceTestRouteCatalogDrift": [
+      "web/src/i18n/en.json"
+    ],
+    "queueDrift": "Concurrent orchestrator update; no worker queue edit",
+    "counts": {
+      "initiatives": 17,
+      "features": 98,
+      "completedFeatures": 70,
+      "phaseCounts": {
+        "done": 10,
+        "current": 1,
+        "next": 2,
+        "future": 4
+      },
+      "declarationStatements": 65,
+      "confirmedFindings": 4,
+      "conditionalCandidates": 3,
+      "nativeGroups": 3,
+      "canonicalKeys": 132,
+      "missingKeys": 0
+    },
+    "roundTripJson": "Parsed from disk and checked after final write",
+    "acceptance": "Document validation only; tests/native/compiler NOTRUN"
+  },
+  "sectionQA": [
+    {
+      "section": "Roadmap overview",
+      "mechanism": "SystemSummaryBrief at page560; six raw count metrics at567-572; available bundled source, unknown observation time."
+    },
+    {
+      "section": "Delivery progress",
+      "mechanism": "DeliveryProgress at579; shipped10/total17 and four categorical rail segments; not release schedule; total0 EmptyState before division."
+    },
+    {
+      "section": "Completed",
+      "initiatives": 10,
+      "features": 70
+    },
+    {
+      "section": "Active focus",
+      "initiatives": 1,
+      "features": 4
+    },
+    {
+      "section": "Up next",
+      "initiatives": 2,
+      "features": 8
+    },
+    {
+      "section": "Future",
+      "initiatives": 4,
+      "features": 16
+    }
+  ],
+  "actionQA": [
+    {
+      "action": "More info",
+      "owner": "PageContainer compactHeader default true",
+      "mechanism": "Subtitle retained in multiline Tooltip; named More info: Roadmap trigger44px mobile. No CopyLink prop supplied."
+    },
+    {
+      "action": "Review details",
+      "owner": "OperationalBrief.tsx:159-169,246-321",
+      "mechanism": "setDetailsOpen(true); real shared Drawer retains title/description/scope/freshness/six metrics/narrative/no-attention fallback."
+    },
+    {
+      "action": "Dismiss details",
+      "owner": "Drawer.tsx:85,115,169-176,198-200; useDialogFocus.ts:157-269",
+      "mechanism": "Header Close/footer Close/backdrop/Escape all onClose->setDetailsOpen(false); reference-counted body locking, Tab trap and restoration source present. Native NOTRUN."
+    },
+    {
+      "action": "Proposals/votes/retry/export/identity/provider/remote mutation",
+      "mechanism": "Absent from roadmap page source. Future items are bundled prose, not proposal submissions. No user-vote store, optimistic counts, mutation lifecycle or offline mutation queue; never fabricate one."
+    }
+  ],
+  "dataSources": [
+    {
+      "source": "roadmapItems/PHASE_META",
+      "owner": "web/src/features/system/pages/RoadmapPage.tsx",
+      "api": null,
+      "mechanism": "17 fixed editorial initiatives, useMemo grouping/count/reduce; no roadmap query."
+    },
+    {
+      "source": "preferences",
+      "trace": "SystemSummaryBrief -> useOperationalMetrics -> useUnits/useFormatting -> hooks/useSettings -> api/settings -> request GET /settings",
+      "queryKey": [
+        "settings"
+      ],
+      "staleTimeMs": 300000,
+      "refetchOnMount": "always",
+      "retry": 1,
+      "state": "useDataState retains cached payload; defaults for missing settings; API/backend behavior NOTRUN."
+    },
+    {
+      "source": "route/localization/title",
+      "mechanism": "routeLoaders.ts:117 lazy-imports page; App.tsx:308 lazy,700 /roadmap SafeRoute; PageLayout.tsx:11 real PageContainer; usePageTitle; runtime manifest /roadmap->system."
+    }
+  ],
+  "stateQA": {
+    "null": "features??[]/items??[] normalize local lists; bundled dataset is not nullable remote data. Shared narrative null impact/cause/response/score/evidence show explicit unknown/not-scored/no-record fallbacks.",
+    "loading": "No roadmap request lifecycle. Settings loads independently, defaults presentation preferences; do not invent roadmap loading. Page does not set shared summary loading.",
+    "error": "No roadmap fetch failure/retry; settings initial errors defaults, refresh errors retain payload. PageContainer wraps children in PageErrorBoundary. NOTRUN.",
+    "empty": "total===0 at441 progress shell/EmptyState; all4 phase shells always mapped at583-584, list.length===0 at504 supplies panel/EmptyState. Current source has no empty phase.",
+    "pausedOffline": "Shared settings DataState derives isRefreshBlocked separately from refreshError; cached preferences retained. Bundled page not gated on preferences. Native cache/offline mount NOTRUN.",
+    "retained": "Only settings query retains remote data; editorial entries are not retained live observations.",
+    "trust": "available means bundled source exists, freshnessUnknown explicit. Deployment wording RDM-01 unresolved.",
+    "preferences": "No setting resets/writes. Existing locale/precision/unit/currency/density/font/theme/motion owners reused; roadmap values dimensionless, no physical SI/sign/time/currency conversion needed.",
+    "counter": "10/1/2/4 reconcile17; completed feature reduce70; all bullets98. Rail width uses phase initiative count/17, not feature count; zero phases remain readable legend.",
+    "disabledSuccess": "No business pending/success/disabled lifecycle. Completed phase is editorial, not system health.",
+    "partial": "Four phases independent, no data&& gate; settings health never borrowed as roadmap availability."
+  },
+  "i18nQA": {
+    "entryKeysChecked": 132,
+    "titleDescriptionKeys": 34,
+    "featureKeys": 98,
+    "missingCanonicalEntryKeys": 0,
+    "generatedSystemRoadmapEqualsCanonical": true,
+    "knownMissingRoadmapKeys": 0,
+    "firstFiveKeys": 53,
+    "firstFiveGap": "Already addressed by current stable IDs/t fallbacks and catalogs. No duplicate closure fix.",
+    "limits": "Actual cold runtime/foreign language/RTL NOTRUN; page tests mock i18n/motion."
+  },
+  "responsiveAccessibilityQA": {
+    "source": "Cards flex-wrap/basis-48/min-w-0/break-words; phase headers wrap; grid base1/md2/xl3/3xl4; progress stacks belowlg; summary base1/sm2/md3/3xl6. Every field/bullet retained.",
+    "semantics": "h1/h2/h3 via shared Typography; named phase sections; ul/li bullets; hidden decorative icons; categorical rail role=img plus four text/count legend entries; shared localized Button/Drawer.",
+    "motion": "OS OR low bandwidth via useMotionPreference; zero durations/final geometry source wiring.",
+    "nativeMatrixWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "nativeStatus": "NOTRUN",
+    "limits": "No measured overflow, contrast, keyboard/Tab/Escape/restoration, screen-reader, custom/forced colors, safe-area, RTL,200% zoom or target acceptance."
+  },
+  "conditionalCandidates": [
+    {
+      "id": "RDM-C01",
+      "file": "web/src/features/system/pages/RoadmapPage.tsx",
+      "line": 451,
+      "rule": "MDC-044/locale-count-consistency",
+      "detail": "Overview formatMetric honors locale; progress shipped/total, phase badges and legend pass raw counts. Stored non-Latin numbering may differ across counters; current English small counts do not prove rendered failure. Owner page display formatter if verified; no raw-count/denominator change."
+    },
+    {
+      "id": "RDM-C02",
+      "file": "web/src/features/system/pages/RoadmapPage.tsx",
+      "line": 99,
+      "rule": "size/decomposition guidance",
+      "detail": "588-line accepted page includes bundled dataset and4 private renderers; exceeds generic300-line guidance but not functional regression or authority for broad remigration. Existing Phase5 shape accepted."
+    },
+    {
+      "id": "RDM-C03",
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "line": 1,
+      "rule": "direct-library-import boundary review",
+      "detail": "Raw framer-motion import matches grep outside components but belongs to designated MDC-016 OS/low-bandwidth bridge. Existing barrels do not export useReducedMotion; automatic barrel substitution could recurse. Architectural exception/owner review separate from page violation; no new helper."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "scope": "Mounted /roadmap/auth/cold locale/settings offline retained states",
+      "status": "NOTRUN"
+    },
+    {
+      "scope": "Ten widths+narrow cards/long translations/RTL/200% text/drawer safe-area-footer targets",
+      "status": "NOTRUN"
+    },
+    {
+      "scope": "Keyboard/focus/screen reader/theme/forced-colors/contrast/reduced-motion/low-bandwidth",
+      "status": "NOTRUN"
+    }
+  ],
+  "historicalDisposition": {
+    "addressed": [
+      "Shared semantic Badge replaces custom chip/count chrome",
+      "Card glow removed",
+      "Heading flex-wrap/basis-48/break-words present",
+      "First5 stable localization IDs and53 catalog keys present",
+      "neonColorMap historical IDs now semantic variable roles, shadow-none"
+    ],
+    "unresolved": [
+      "Deployment wording RDM-01",
+      "Settings cancellation RDM-02"
+    ],
+    "approval": "Historical/current source is not native approval."
+  },
+  "tests": {
+    "status": "DECLARATIONS ONLY / execution NOTRUN",
+    "pageDeclarations": [
+      {
+        "line": 135,
+        "declaration": "it('renders the page title, subtitle and all five landmark regions', () => {"
+      },
+      {
+        "line": 165,
+        "declaration": "it('derives the six KPI metrics from the roadmap data', () => {"
+      },
+      {
+        "line": 184,
+        "declaration": "it('counts Features Shipped as the total feature bullets in the completed phase, not the initiative count', () => {"
+      },
+      {
+        "line": 203,
+        "declaration": "it('renders the shipped/total summary, the accessible bar and a per-phase legend', () => {"
+      },
+      {
+        "line": 234,
+        "declaration": "it('groups initiatives into bands with a heading, count badge and description', () => {"
+      },
+      {
+        "line": 274,
+        "declaration": "it('renders a complete initiative card: title, description, feature bullets and phase chip', () => {"
+      },
+      {
+        "line": 295,
+        "declaration": "it('stamps every card with its phase chip across all four phases', () => {"
+      },
+      {
+        "line": 312,
+        "declaration": "it('does not promise features that the maintained roadmap explicitly excludes', () => {"
+      },
+      {
+        "line": 321,
+        "declaration": "it('renders every initiative as a non-empty card and reconciles with the total KPI', () => {"
+      },
+      {
+        "line": 361,
+        "declaration": "it('uses semantic status badges without decorative card glows or warning-colored future promises', () => {"
+      },
+      {
+        "line": 379,
+        "declaration": "it('retains all 98 feature bullets and independent phase sections with bundled-source provenance', () => {"
+      },
+      {
+        "line": 391,
+        "declaration": "it('routes all original first-five entry strings through stable localization identities', () => {"
+      },
+      {
+        "line": 406,
+        "declaration": "it('keeps the existing review-details action and roadmap sections reachable while the drawer is open', () => {"
+      }
+    ],
+    "pageDeclaredCount": 13,
+    "supportDeclarationCounts": {
+      "OperationalBrief.test.tsx": 12,
+      "OperationalNarrativeDetails.test.tsx": 3,
+      "CompositionRail.test.tsx": 15,
+      "Drawer.test.tsx": 22
+    },
+    "totalDeclarationStatements": 65,
+    "limit": "it.each counted as declaration, not expanded cases. No runtime discovery/pass implied. Standalone SystemSummaryBrief.test.tsx and hooks/useSettings.test.tsx probed absent.",
+    "runtime": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "historical": "Phase5 external guard startup exit1/zero executed is historical, not a current pass."
+  },
+  "sourceScans": {
+    "mode": "Local Python regex text grep + manual trace, no helper/scanner CLI/compiler",
+    "pageMatchingLines": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-jsx-text-candidate": 0,
+      "fetch-useeffect": 0
+    },
+    "missingPageContainer": "Not a violation: actual PageLayout->PageContainer adapter.",
+    "proposalVoteMutationGrep": {
+      "proposal": 0,
+      "vote": 0,
+      "useMutation": 0,
+      "onClick": 0,
+      "request": 0,
+      "fetch": 0,
+      "useQuery": 0,
+      "useEffect": 0
+    },
+    "exceptions": [
+      "CompositionRail computed width/color inline styles dynamic/allowed",
+      "Raw native HTML/vendor imports inside components expected building blocks",
+      "Settings useEffect synchronizes formatter globals and broadcast; query loads data, not fetch effect",
+      "Fallback strings and bundled entry fields route through t; grep is candidate-only, not global i18n approval"
+    ],
+    "backendRules": "Not applicable to this frontend scope; no internal/**/*.go audited; no global zero claim."
+  },
+  "summary": {
+    "confirmedSourceFindings": 4,
+    "byRule": {
+      "MDC-026/static-deployment-claim": 1,
+      "MDC-002/query-cancellation": 1,
+      "MDC-012/theme-aware-text": 1,
+      "MDC-040/mobile-target-allocation": 1
+    },
+    "conditionalCandidates": 3,
+    "nativeCandidateGroups": 3,
+    "primaryOwnerCounts": {
+      "web/src/features/system/pages/RoadmapPage.tsx": 1,
+      "web/src/hooks/useSettings.ts": 1,
+      "web/src/components/data-display/OperationalNarrativeDetails.tsx": 1,
+      "web/src/components/ui/Drawer.tsx": 1
+    },
+    "priorityOrder": [
+      "RDM-01 trust copy",
+      "RDM-02 preference cancellation",
+      "RDM-04 footer allocation",
+      "RDM-03 foreground role"
+    ],
+    "sourceTestCatalogQueueGitEdits": 0,
+    "pageApproval": false
+  },
+  "evidenceLimits": [
+    "Tests/lint/compiler including npx tsc --noEmit/build/server/browser/network/API/mutations/subagents/installs/helpers all NOTRUN.",
+    "Before checkpoints captured after initial discovery, earliest bulk02:36:32Z; later inputs pinned when resolved. No snapshot at actor creation claimed.",
+    "Queue changed concurrently by orchestrator; source/test/catalog pins unchanged. Exact row IDs, not unstable line numbers, govern dedup. No queue writes.",
+    "rg unavailable exit1; Python cp1252 Unicode error exit1; later local scans exit0. Large tool display truncation addressed by range reads; raw later command outputs in log.",
+    "Missing operationalMetrics.ts and motion/Stagger.tsx probes resolved to existing .tsx/separate owners.",
+    "Oversized report command shell3128 rejected by OS206/exit1 before execution; bounded writes used only permitted artifacts.",
+    "Log began02:37Z; early full raw exploration transcripts and part1 exact construction body exist in caller tool receipts, not entirely reproduced in log. This is an explicit logging limit, not fabricated completeness."
+  ],
+  "commandEvidence": {
+    "rawLog": "web/logs/phase6-qa-system-roadmap.log",
+    "earlyShellExits": {
+      "2672": 1,
+      "2681": 1,
+      "2705": 1,
+      "2716": 0,
+      "2734": 0,
+      "2753": 0
+    },
+    "loggedSourceShellExits": {
+      "2779": 0,
+      "2805": 0,
+      "2823": 0,
+      "2904": 0,
+      "3011": 0
+    },
+    "writeFailure": {
+      "3128": 1,
+      "error": "os error206 command too long"
+    },
+    "part1": {
+      "3150": 0
+    },
+    "executionNative": "NOTRUN"
+  },
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    "docs/A11Y_GUIDELINES.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/frontend-audits/audit-page-193.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/src/App.tsx",
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useSettings.ts",
+    "web/src/api/settings.ts",
+    "web/src/components/data-display/CompositionRail.test.tsx",
+    "web/src/components/data-display/CompositionRail.tsx",
+    "web/src/components/data-display/OperationalBrief.test.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/data-display/OperationalNarrativeDetails.test.tsx",
+    "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/motion/StaggerContainer.tsx",
+    "web/src/components/motion/StaggerItem.tsx",
+    "web/src/components/motion/index.ts",
+    "web/src/components/motion/runtime.ts",
+    "web/src/components/ui/Badge.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/Drawer.test.tsx",
+    "web/src/components/ui/Drawer.tsx",
+    "web/src/components/ui/IconBox.tsx",
+    "web/src/components/ui/Typography.tsx",
+    "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.test.tsx",
+    "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+    "web/src/features/system/pages/RoadmapPage.test.tsx",
+    "web/src/features/system/pages/RoadmapPage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDialogFocus.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useMotionPreference.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/usePageTitle.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/catalog-topology.mjs",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-system.json",
+    "web/src/i18n/en/runtime-manifest.json",
+    "web/src/i18n/index.ts",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/tokens.ts",
+    "web/src/types/admin.ts"
+  ],
+  "dispositionContinuation": {
+    "scope": "Complete only original finding dispositions against the read-only canonical queue; not a repeat source audit, implementation, runtime validation or page approval.",
+    "originalReportStatus": "PARTIAL-validation-failure",
+    "originalReportSha256": "0266f68a69750918711d672a2011419f3af8e6bd419399bd4b437c5aeea79f5e",
+    "originalReportBytes": 58631,
+    "originalLogSha256": "14364d6c3da767ba11aa6090ea67a67da4598695ff71e281c5fae6ae5b223cc3",
+    "originalLogBytes": 261118,
+    "alreadyMetObjective": {
+      "met": false,
+      "reason": "The retained report already contains findings, QA evidence and release, so those objectives need no change. It lacks explicit current canonical-queue dispositions and exact source/test ownership for the four unrepresented repair mechanisms. Only that missing document objective is completed here."
+    },
+    "clock": {
+      "actor": "4df0a89c-0f3f-4265-9b44-8740ea4550bc",
+      "canonicalStartedUtc": "2026-10-14T05:06:00Z",
+      "firstObservedUtc": "2026-10-14T05:08:45.2498535Z",
+      "returnUtc": "2026-10-14T05:26:00Z",
+      "hardUtc": "2026-10-14T05:31:00Z",
+      "noRenewal": true,
+      "limit": "Use the earlier canonical continuation start, not first observation. Original attempt-one clock and release above remain historical and unchanged."
+    },
+    "canonicalQueue": {
+      "file": "migration-queue.md",
+      "observedUtc": "2026-10-14T05:11:23.4365534Z",
+      "sha256": "7d486e556799a3765b4655e7a051baf28570737955d972961b9fb411e65784f3",
+      "item": "phase6-qa-system-roadmap",
+      "lineAtObservation": 348,
+      "statusAtObservation": "[~]",
+      "attempt": 1,
+      "dependsOn": "phase5-page-system-roadmap",
+      "method": "Read existing queue rows by exact owner paths and original mechanism terms, then distinguish audit/report mentions, completed migrations and unrelated repair scopes from an exact repair owner. Item IDs, not moving line numbers, govern.",
+      "writes": 0,
+      "scopeLimit": "Queue representation only. No new code/catalog audit or current-source repair/pass claim. Concurrent orchestrator queue updates do not belong to this worker."
+    },
+    "findingDispositions": [
+      {
+        "findingId": "RDM-01",
+        "disposition": "confirmed-original-unrepresented-repair",
+        "repairNeeded": true,
+        "dedup": {
+          "historicalFinding": "audit-page-193 states.issues: MDC-026 deployment wording",
+          "countOnce": true,
+          "exactRepairQueueItem": null,
+          "notRepairCoverage": [
+            "audit-page-193 [x]: report delivery only",
+            "repair-roadmap-unused-icon [x]: unused icon alias only",
+            "regression-roadmap-test [x]: initiative-card selector/count only",
+            "phase5-page-system-roadmap [x]: accepted source migration, not this wording repair",
+            "phase5-current-source-catalog-closure [x]: missing fallback additions, not deployment-copy reconciliation"
+          ]
+        },
+        "owner": "Narrow roadmap copy/assertion worker; separate serialized catalog integration owner",
+        "sourceFiles": [
+          "web\\src\\features\\system\\pages\\RoadmapPage.tsx"
+        ],
+        "testFiles": [
+          "web\\src\\features\\system\\pages\\RoadmapPage.test.tsx"
+        ],
+        "integrationNeed": {
+          "owner": "Orchestrator-authorized serialized canonical English catalog worker",
+          "canonicalFile": "web\\src\\i18n\\en.json",
+          "key": "roadmap.phaseDesc.done",
+          "derivedFile": "web\\src\\i18n\\en\\locale-system.json",
+          "scope": "Reconcile this exact existing key with the page fallback through the existing catalog workflow; no translation campaign, direct derived-catalog edit, generator/guard change or missing-key baseline change."
+        },
+        "fix": "Replace only the deployment-today assertion with accurate bundled-roadmap completed-phase provenance; update the directly matching assertion and serialized existing catalog key. Preserve every initiative, bullet, phase, shipped count, source caveat and action.",
+        "futureCoveringEvidence": "Owned page test should assert the corrected completed-band copy and retained non-live-deployment caveat without removing original initiative/count/provenance assertions. No test was run here.",
+        "citationLimit": "Original source quote and catalog citation are preserved. Original validation found en.json line 24094 stale and concurrent catalog drift; use the stable roadmap.phaseDesc.done key for future ownership. This continuation does not erase FAIL or claim a corrected live line citation."
+      },
+      {
+        "findingId": "RDM-02",
+        "disposition": "confirmed-original-unrepresented-shared-root-repair",
+        "repairNeeded": true,
+        "dedup": {
+          "historicalFinding": "audit-page-193 architectureIssues: MDC-002 settings cancellation",
+          "countOnce": true,
+          "exactRepairQueueItem": null,
+          "notRepairCoverage": [
+            "Other feature cancellation repairs do not own the app-level settings formatting bridge",
+            "Signal-forwarding api/hooks/useSettings.ts is a separate consumer, not the original app-level bridge"
+          ]
+        },
+        "owner": "Shared app-level settings preference bridge and transport worker",
+        "sourceFiles": [
+          "web\\src\\hooks\\useSettings.ts",
+          "web\\src\\api\\settings.ts"
+        ],
+        "testFiles": [
+          "web\\src\\api\\settings.test.ts"
+        ],
+        "newTestOwnerRequested": {
+          "file": "web\\src\\hooks\\useSettings.test.tsx",
+          "existsAtObservation": false,
+          "authorization": "Parent must include this exact new covering test path in the future repair lease; no test file is created by this QA worker."
+        },
+        "fix": "Pass the actual Query AbortSignal through the existing app-level callback and getSettings/request boundary. Preserve settings query identity, staleTime 300000, refetchOnMount always, retry 1, defaults, retained preferences, formatter synchronization and broadcast refetch.",
+        "futureCoveringEvidence": "Extend existing api/settings.test.ts transport coverage for exact AbortSignal forwarding/result/error passthrough while retaining its existing bare getSettings() GET assertion. The new app-level hook test must prove the real callback consumes the Query signal, without replacing the consumer with api/hooks/useSettings or resetting preferences. Execution, abort behavior and race acceptance remain NOTRUN.",
+        "testOwnerObservation": "Read existing settings.test.ts lines 141-153 only to resolve the previously unspecified covering owner: getSettings() currently expects request('/settings') with no options. A repair should retain that no-argument contract while adding signal-capable use."
+      },
+      {
+        "findingId": "RDM-03",
+        "disposition": "confirmed-original-unrepresented-shared-renderer-repair",
+        "repairNeeded": true,
+        "dedup": {
+          "exactRepairQueueItem": null,
+          "notRepairCoverage": [
+            "phase6-fix-advanced-evidence-date-preferences [x]: four named domain date/preference files, not this shared foreground",
+            "Shared OperationalNarrativeDetails date-callsite need is a different mechanism",
+            "Completed description/fixture repairs do not repair the limitation foreground"
+          ]
+        },
+        "owner": "Shared OperationalNarrativeDetails limitation renderer worker",
+        "sourceFiles": [
+          "web\\src\\components\\data-display\\OperationalNarrativeDetails.tsx"
+        ],
+        "testFiles": [
+          "web\\src\\components\\data-display\\OperationalNarrativeDetails.test.tsx"
+        ],
+        "fix": "Replace only the fixed text-amber-300 limitation foreground with the existing meaning-appropriate theme-aware warning or secondary role. Preserve all limitation strings, order, narrative/evidence/unknown states and public props; no token/theme redesign or date formatting expansion.",
+        "futureCoveringEvidence": "Retain original renderer assertions and add exact limitation content/order and semantic-role coverage. Effective light/dark/custom/forced-colors contrast is not inferred from a source class or mock test and remains NOTRUN.",
+        "sourceLimit": "Original source-role finding retained; no new measured contrast/WCAG failure or fresh source audit asserted."
+      },
+      {
+        "findingId": "RDM-04",
+        "disposition": "confirmed-original-unrepresented-default-footer-repair",
+        "repairNeeded": true,
+        "dedup": {
+          "exactRepairQueueItem": null,
+          "notRepairCoverage": [
+            "primitive-drawer [x]: earlier theme/motion/trap contract, not default footer target allocation",
+            "overlay-drawer-adoption [x]: overlay layer/eyebrow typography, not footer allocation",
+            "phase6-rescue-ownership-consumables-lifecycle [x]: page test footer-Close selectors, not shared Drawer allocation",
+            "EntryDrawer and caller-only footer work do not own Drawer.tsx default footer"
+          ]
+        },
+        "owner": "Shared Drawer default footer worker",
+        "sourceFiles": [
+          "web\\src\\components\\ui\\Drawer.tsx"
+        ],
+        "testFiles": [
+          "web\\src\\components\\ui\\Drawer.test.tsx"
+        ],
+        "fix": "Allocate the existing 44px mobile target to only the default footer Close control. Preserve desktop behavior, custom and null footers, header Close, close callback, placement, sizing, focus/trap/restoration, scrolling and reduced-motion behavior. Do not change global Button sizing.",
+        "futureCoveringEvidence": "Retain all original Drawer assertions; cover the default mobile-target class/contract and unchanged custom/null footer plus dismiss callback behavior. Native hit geometry, safe areas, focus and WCAG acceptance remain NOTRUN.",
+        "sourceLimit": "Original standard-root h-10 allocation finding retained, not a measured native failure."
+      }
+    ],
+    "conditionalDispositions": [
+      {
+        "findingId": "RDM-C01",
+        "disposition": "conditional-not-promoted",
+        "ownerIfConfirmed": "web\\src\\features\\system\\pages\\RoadmapPage.tsx and RoadmapPage.test.tsx",
+        "reason": "Raw count versus locale formatter source differences do not establish a rendered numbering failure. Preserve counters/denominator; no repair authorization or new locale/browser campaign from this document continuation.",
+        "newRepairNeed": false
+      },
+      {
+        "findingId": "RDM-C02",
+        "disposition": "no-change-needed-completed-objective",
+        "reason": "phase5-page-system-roadmap is [x] with accepted page/test preservation. A generic size/decomposition guideline does not authorize remigration or splitting an accepted bundled dataset page.",
+        "newRepairNeed": false
+      },
+      {
+        "findingId": "RDM-C03",
+        "disposition": "conditional-architecture-exception-not-promoted",
+        "ownerIfClarificationRequired": "Existing motion-preference bridge architecture owner; not the roadmap page worker",
+        "reason": "The original report identifies the designated OS/low-bandwidth bridge and recursion risk; a raw import match alone does not justify barrel substitution, helper development or a new repair.",
+        "newRepairNeed": false
+      }
+    ],
+    "completedObjectivesPreserved": [
+      {
+        "objective": "Historical Badge/status, glow removal, heading wrap and semantic-token adoption",
+        "disposition": "no-change-needed",
+        "basis": "Original historicalDisposition.addressed and completed phase5-page-system-roadmap retained; no repeat audit, source migration or provenance pass."
+      },
+      {
+        "objective": "First-five stable localization identities and 53 catalog keys",
+        "disposition": "no-change-needed",
+        "basis": "Original i18nQA and completed phase5-current-source-catalog-closure retained. No duplicate localization closure or catalog campaign."
+      },
+      {
+        "objective": "Original QA sections, actions, states, counts, source scans and test declarations",
+        "disposition": "retain-without-rerun",
+        "basis": "Existing source-only evidence is preserved as historical evidence; counts and declaration scans were not recomputed and do not become current executed passes."
+      },
+      {
+        "objective": "Original validation FAIL, stale catalog citation, log completeness limit and old release",
+        "disposition": "retain-without-waiver",
+        "basis": "No correction-by-revalidation or retrospective log fabrication. Document disposition completion is distinct from original validation and page acceptance."
+      }
+    ],
+    "nativeDispositions": [
+      {
+        "originalScope": "Mounted /roadmap/auth/cold locale/settings offline retained states",
+        "status": "NOTRUN",
+        "disposition": "Preserve existing acceptance need; no new source fix or mounted pass claimed."
+      },
+      {
+        "originalScope": "Ten widths+narrow cards/long translations/RTL/200% text/drawer safe-area-footer targets",
+        "status": "NOTRUN",
+        "disposition": "Preserve existing acceptance need; source target allocation and native geometry remain distinct."
+      },
+      {
+        "originalScope": "Keyboard/focus/screen reader/theme/forced-colors/contrast/reduced-motion/low-bandwidth",
+        "status": "NOTRUN",
+        "disposition": "Preserve existing acceptance need; no page/accessibility approval."
+      }
+    ],
+    "summary": {
+      "originalConfirmedFindingsDispositioned": 4,
+      "unrepresentedNarrowRepairMechanisms": 4,
+      "historicalDuplicateFindingsFoldedOnce": 2,
+      "representedExactRepairQueueItems": 0,
+      "separateExistingKeyCatalogIntegrationNeed": 1,
+      "conditionalCandidatesPromotedToRepair": 0,
+      "conditionalCandidatesDispositioned": 3,
+      "nativeGroupsRetainedNOTRUN": 3,
+      "sourceCatalogQueueGitEdits": 0,
+      "pageApproval": false,
+      "acceptance": "Original finding disposition document only; repairs are needs for parent-owned canonical queue action, not newly dispatched or implemented work."
+    },
+    "ownedFiles": [
+      "docs\\frontend-audits\\phase6-qa-system-roadmap.json",
+      "web\\logs\\phase6-qa-system-roadmap.log"
+    ],
+    "evidenceLimits": [
+      "No source audit, repeated proven pass, browser, network, provider/business action, test execution/discovery, lint, compiler, build, helper, server, install, Docker, Git or nested agent operation.",
+      "Read-only queue searches and existing report/history inspection establish dispositions, not fresh source behavior. Exact test-owner existence/read inspection is not a test pass.",
+      "Original findings/citations, validation FAIL, native NOTRUN, clock, release, input pins, source scan results and all completed objectives remain preserved; only current report status and this additive continuation change.",
+      "Original early command/log limits are retained and are not repaired by invented historical raw output.",
+      "The owned log retains original receipt text before the additive continuation. apply_patch normalized the mixed original line endings to LF; the original raw byte-prefix SHA256 no longer matches. This owned-log-only encoding change is explicitly disclosed, not claimed byte-preserved or retrospectively reconstructed."
+    ],
+    "documentValidation": {
+      "kind": "owned-document-only",
+      "timestampUtc": "2026-10-14T05:15:39.745077+00:00",
+      "status": "PASS-with-original-log-newline-limit",
+      "originalReportFieldsSha256": "0266f68a69750918711d672a2011419f3af8e6bd419399bd4b437c5aeea79f5e",
+      "originalReportFieldsPreserved": true,
+      "originalLogTextPrefixBytes": 259749,
+      "originalLogNormalizedTextSha256": "c4cee0f00db27f33548bc277a8dfa6498642bce6066155df8b825c758180c4e7",
+      "originalLogRawBytePreservation": false,
+      "confirmedDispositions": 4,
+      "conditionalDispositions": 3,
+      "nativeGroupsNOTRUN": 3,
+      "exactSourceAndTestOwners": 4,
+      "applicationCommands": "NOTRUN",
+      "pageApproval": false,
+      "errors": [],
+      "shell": "4345",
+      "exit": 0,
+      "previousOwnCheck": {
+        "shell": "4321",
+        "exit": 1,
+        "reason": "Original raw log prefix changed through patch-tool newline normalization; receipt retained and limitation disclosed, not restored or waived as byte preservation."
+      }
+    },
+    "release": {
+      "recordedUtc": "2026-10-14T05:15:39.745077+00:00",
+      "timestampBasis": "Document finalization receipt, not an actor-termination claim; final owned writes and readback follow within the same immutable clock.",
+      "artifactsReleased": [
+        "docs\\frontend-audits\\phase6-qa-system-roadmap.json",
+        "web\\logs\\phase6-qa-system-roadmap.log"
+      ],
+      "sourceWriteClaim": "None; all code, source tests, catalogs, canonical queue and Git remain read-only.",
+      "commandsReleased": true,
+      "activeOwnedBackgroundCommands": 0,
+      "beforeReturnDeadline": true,
+      "renewal": false,
+      "pageApproval": false
+    }
+  }
+}

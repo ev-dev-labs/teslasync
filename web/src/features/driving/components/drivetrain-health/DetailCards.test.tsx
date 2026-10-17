@@ -86,7 +86,7 @@ vi.mock('@/hooks/useUnits', async () => {
 const DASH = '\u2014'; // —
 const DEGC = '\u00B0C';
 const DEGF = '\u00B0F';
-const CO2_SAVED = 'CO\u2082 Saved'; // "CO₂ Saved"
+const CO2_SAVED = 'CO₂ Saved'; // "CO₂ Saved"
 
 /* ── Fixtures ─────────────────────────────────────────────────────────────── */
 function makeHealth(overrides: Partial<DrivetrainHealthData> = {}): DrivetrainHealthData {
@@ -149,8 +149,12 @@ describe('DetailCards — Temperature Details states', () => {
 
     // Both card headers are always present regardless of state.
     expect(screen.getByRole('heading', { name: 'Temperature Details' })).toBeInTheDocument();
-    // Skeleton lines render as animate-pulse bars — one per requested line.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    // Multiline Skeleton hides its wrapper; each child reserves one text row.
+    const lines = container.querySelectorAll<HTMLElement>('[aria-hidden="true"] > [class~="bg-[var(--skeleton-bg)]"]');
+    expect(lines).toHaveLength(4);
+    expect(Array.from(lines, line => line.style.width)).toEqual(['100%', '100%', '100%', '60%']);
+    for (const line of lines) expect(line).toHaveClass('h-4', 'rounded');
+    expect(screen.getByRole('heading', { name: 'Power Summary' })).toBeInTheDocument();
     // The rows and the empty state must NOT show while loading.
     expect(screen.queryByText('Front Motor Temp')).not.toBeInTheDocument();
     expect(
@@ -164,7 +168,7 @@ describe('DetailCards — Temperature Details states', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('No drivetrain health data available yet');
     // No skeleton, no temperature rows in the empty branch.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"] > [class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByText('Rear Motor Temp')).not.toBeInTheDocument();
   });
 
@@ -210,13 +214,13 @@ describe('DetailCards — Power Summary values', () => {
     renderCards();
 
     expect(screen.getByRole('heading', { name: 'Power Summary' })).toBeInTheDocument();
-    expect(rowValue('Peak Power')).toBe('305 kW');
-    expect(rowValue('Avg Peak Power')).toBe('182.4 kW');
+    expect(rowValue('Peak Power')).toBe('305.00 kW');
+    expect(rowValue('Avg Peak Power')).toBe('182.40 kW');
     // Regen floor is stored as a negative power; the card shows its magnitude.
-    expect(rowValue('Max Regen')).toBe('64.2 kW');
+    expect(rowValue('Max Regen')).toBe('64.20 kW');
     // 5400 Wh → 5.4 kWh via the real formatEnergy.
-    expect(rowValue('Total Regen')).toBe('5.4 kWh');
-    expect(rowValue(CO2_SAVED)).toBe('12.3 kg');
+    expect(rowValue('Total Regen')).toBe('5.40 kWh');
+    expect(rowValue(CO2_SAVED)).toBe('12.34 kg');
   });
 
   it('blanks every row to "—" when there is no power data and no stats', () => {
@@ -238,8 +242,8 @@ describe('DetailCards — Power Summary values', () => {
     renderCards({ stats: makeStats({ regenEnergyWh: 0, co2SavedKg: 0 }) });
 
     // A present-but-zero stat is meaningful data, not an absence.
-    expect(rowValue('Total Regen')).toBe('0.0 kWh');
-    expect(rowValue(CO2_SAVED)).toBe('0.0 kg');
+    expect(rowValue('Total Regen')).toBe('0.00 kWh');
+    expect(rowValue(CO2_SAVED)).toBe('0.00 kg');
   });
 });
 
@@ -259,9 +263,9 @@ describe('DetailCards — non-finite power/stats safety', () => {
     expect(rowValue(CO2_SAVED)).toBe(DASH);
 
     // Regression guards: the old path coerced Infinity/NaN → a fabricated 0.
-    expect(container.textContent).not.toContain('0 kW');
-    expect(container.textContent).not.toContain('0.0 kW');
-    expect(container.textContent).not.toContain('0.0 kg');
+    expect(container.textContent).not.toContain('0.00 kW');
+    expect(container.textContent).not.toContain('0.00 kW');
+    expect(container.textContent).not.toContain('0.00 kg');
     expect(container.textContent).not.toContain('NaN');
     expect(container.textContent).not.toContain('Infinity');
   });
@@ -270,7 +274,7 @@ describe('DetailCards — non-finite power/stats safety', () => {
     renderCards({ stats: makeStats({ regenEnergyWh: 5400, co2SavedKg: Number.NaN }) });
 
     // regen is finite → real value; co2 is NaN → placeholder. Independent rows.
-    expect(rowValue('Total Regen')).toBe('5.4 kWh');
+    expect(rowValue('Total Regen')).toBe('5.40 kWh');
     expect(rowValue(CO2_SAVED)).toBe(DASH);
   });
 });

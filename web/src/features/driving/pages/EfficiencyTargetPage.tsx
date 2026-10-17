@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
-import { Input } from '@/components/ui';
+import { Grid, PageLayout } from '@/components/layout';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { Button, Caption, Input, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -14,7 +15,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 
 import {
-  EfficiencyTargetKpis,
   GoalPulse,
   RecentWeekScorecard,
   TargetConsistencyChart,
@@ -24,6 +24,7 @@ import {
   type EfficiencyTargetSectionState,
 } from '../components/efficiency-target';
 import { summarizeTarget } from '../lib/efficiencyTarget';
+import { EfficiencyTargetBrief } from '../components/operationalbrief-a-m/EfficiencyTargetBrief';
 
 const DRIVE_HISTORY_LIMIT = 1000;
 const SPLIT_COLUMNS = { default: 1, xl: 5 } as const;
@@ -40,8 +41,25 @@ export default function EfficiencyTargetPage() {
     160,
   );
   const historyQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
-  const nowMs = useMemo(() => Date.now(), []);
+  const [, setCalendarRevision] = useState(0);
+  const nowMs = Date.now();
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const now = new Date();
+      const nextMonday = new Date(now);
+      nextMonday.setHours(0, 0, 0, 0);
+      nextMonday.setDate(now.getDate() + 7 - ((now.getDay() + 6) % 7));
+      timeout = setTimeout(() => {
+        setCalendarRevision((revision) => revision + 1);
+        schedule();
+      }, nextMonday.getTime() - now.getTime());
+    };
+    schedule();
+    return () => clearTimeout(timeout);
+  }, []);
   const drives = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
+  const sourceState = useDataState(historyQuery, { provenance: 'historical' });
   const summary = useMemo(
     () =>
       summarizeTarget(drives, targetWhPerKm, nowMs, {
@@ -57,12 +75,27 @@ export default function EfficiencyTargetPage() {
       ? t('effTarget.whPerMi', 'Wh/mi')
       : t('effTarget.whPerKm', 'Wh/km');
   const targetDisplay = Math.round(targetWhPerKm * efficiencyScale);
+  const targetLabel = t('effTarget.targetInput', 'Weekly consumption target');
+  const [targetDraft, setTargetDraft] = useState<{
+    text: string;
+    canonical: number;
+    unit: typeof distanceUnit;
+  } | null>(null);
+  const targetText =
+    targetDraft?.canonical === targetWhPerKm && targetDraft.unit === distanceUnit
+      ? targetDraft.text
+      : String(targetDisplay);
+  const targetInvalid =
+    targetText.trim() === '' ||
+    !Number.isFinite(Number(targetText)) ||
+    Number(targetText) <= 0;
 
   const handleTargetChange = (text: string) => {
-    if (text === '') return;
     const next = Number(text);
-    if (!Number.isFinite(next) || next <= 0) return;
-    setTargetWhPerKm(next / efficiencyScale);
+    const valid = text.trim() !== '' && Number.isFinite(next) && next > 0;
+    const canonical = valid ? next / efficiencyScale : targetWhPerKm;
+    setTargetDraft({ text, canonical, unit: distanceUnit });
+    if (valid) setTargetWhPerKm(canonical);
   };
 
   if (vehicleId == null) {
@@ -74,95 +107,123 @@ export default function EfficiencyTargetPage() {
   }
 
   const sectionState: EfficiencyTargetSectionState = {
-    isLoading: historyQuery.isLoading,
-    error: historyQuery.isError ? historyQuery.error : null,
+    isLoading: sourceState.status === 'initial',
+    error: sourceState.fatalError,
     onRetry: () => {
       void historyQuery.refetch();
     },
   };
+  const pausedTitle = sourceState.isRefreshBlocked && sourceState.refreshError == null
+    ? t('dataSources.status.paused', 'Refresh paused')
+    : undefined;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('effTarget.title', 'Efficiency Target')}
       subtitle={t(
         'effTarget.subtitle',
         'A completed-week goal workspace built from the observed history window',
       )}
       query={historyQuery}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+      contextActions={
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Input
-            key={`efficiency-target-${distanceUnit}`}
             type="number"
             inputMode="numeric"
             min={1}
             step={5}
-            aria-label={t(
-              'effTarget.targetInput',
-              'Weekly consumption target',
-            )}
-            defaultValue={targetDisplay}
+            label={targetLabel}
+            aria-label={targetLabel}
+            value={targetText}
+            error={targetInvalid ? t('common.invalidNumber', 'Enter a valid number') : undefined}
+            hint={t('effTarget.kpi.canonical', 'Saved canonically in Wh/km')}
             onChange={(event) => handleTargetChange(event.target.value)}
-            suffix={<span className="whitespace-nowrap">{efficiencyUnit}</span>}
-            className="max-w-[10rem]"
+            suffix={<Caption className="whitespace-nowrap">{efficiencyUnit}</Caption>}
+            className="w-40 min-h-11 md:min-h-10"
           />
         </div>
       }
     >
-      <FadeIn>
-        <EfficiencyTargetKpis
+      {!sourceState.hasData && sourceState.isRefreshBlocked && sourceState.fatalError == null && (
+        <AlertBanner
+          variant="info"
+          title={pausedTitle}
+          role="status"
+          aria-live="polite"
+          data-testid="efficiency-target-paused"
+        >
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('driving.brief.pending', 'Drive evidence is not available yet.')}
+          </Text>
+          <Button type="button" variant="ghost" size="sm" onClick={sectionState.onRetry}>
+            {t('common.retry', 'Retry')}
+          </Button>
+        </AlertBanner>
+      )}
+      <StaleRefreshWarning
+        state={sourceState}
+        label={t('effTarget.title', 'Efficiency Target')}
+        title={pausedTitle}
+      />
+      <SectionErrorBoundary name="EfficiencyTargetBrief">
+        <EfficiencyTargetBrief
           summary={summary}
           targetWhPerKm={targetWhPerKm}
           state={sectionState}
+          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.05}>
-        <Grid cols={SPLIT_COLUMNS} gap={4}>
+      <Grid cols={SPLIT_COLUMNS} gap={4}>
+        <SectionErrorBoundary name="EfficiencyTargetGoalPulse">
           <GoalPulse
             summary={summary}
             state={sectionState}
             className="xl:col-span-3"
           />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="EfficiencyTargetConsistency">
           <TargetConsistencyChart
             consistency={summary.consistency}
             state={sectionState}
             className="xl:col-span-2"
           />
-        </Grid>
-      </FadeIn>
+        </SectionErrorBoundary>
+      </Grid>
 
-      <FadeIn delay={0.1}>
+      <SectionErrorBoundary name="EfficiencyTargetWeekly">
         <WeeklyTargetChart
           weeks={summary.weeks}
           targetWhPerKm={targetWhPerKm}
           state={sectionState}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.15}>
-        <Grid cols={SPLIT_COLUMNS} gap={4}>
+      <Grid cols={SPLIT_COLUMNS} gap={4}>
+        <SectionErrorBoundary name="EfficiencyTargetWeekday">
           <WeekdayEfficiencyChart
             weekdays={summary.weekdays}
             targetWhPerKm={targetWhPerKm}
             state={sectionState}
             className="xl:col-span-2"
           />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="EfficiencyTargetScorecard">
           <RecentWeekScorecard
             completedWeeks={summary.completedWeeks}
             state={sectionState}
             className="xl:col-span-3"
           />
-        </Grid>
-      </FadeIn>
+        </SectionErrorBoundary>
+      </Grid>
 
-      <FadeIn delay={0.2}>
+      <SectionErrorBoundary name="EfficiencyTargetMethodology">
         <TargetMethodology
           summary={summary}
           historyLimit={DRIVE_HISTORY_LIMIT}
           state={sectionState}
         />
-      </FadeIn>
-    </PageContainer>
+      </SectionErrorBoundary>
+    </PageLayout>
   );
 }

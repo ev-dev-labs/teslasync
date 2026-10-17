@@ -11,13 +11,14 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListOrdered } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Badge, Code, type BadgeProps } from '@/components/ui';
+import { GlassPanel, PanelTitle, Badge, Caption, Code, type BadgeProps } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { SignalEntry } from '@/types/telemetry';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface TopSignal {
   name: string;
@@ -48,6 +49,7 @@ const TYPE_VARIANT: Record<SignalEntry['type'], BadgeProps['variant']> = {
 const EMPTY_SIGNALS: readonly TopSignal[] = [];
 
 export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = signals ?? EMPTY_SIGNALS;
 
@@ -64,10 +66,10 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
   );
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('liveMonitor.topSignals', 'Most Active Signals')}
+    <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+      <PanelTitle className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+        <ListOrdered className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+        {t('liveMonitor.topSignals', 'Most active signals')}
       </PanelTitle>
 
       {rows.length === 0 ? (
@@ -87,21 +89,25 @@ export function TopSignalsPanel({ signals, className }: TopSignalsPanelProps) {
           {rows.map((s) => {
             const count = s.count ?? 0;
             return (
-              <li key={s.name} className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <Code className="truncate" title={s.name}>
+              <li key={s.name} className="min-w-0 space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Code className="min-w-0 break-words [overflow-wrap:anywhere]" title={s.name}>
                     {s.name}
                   </Code>
                   <Badge variant={TYPE_VARIANT[s.type] ?? 'neutral'} size="sm">
                     {fmtInt(count)}×
                   </Badge>
                 </div>
+                <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <Caption>{t('liveMonitor.latest', 'Latest')}</Caption>
+                  <Code className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">{s.value || '—'}</Code>
+                </div>
                 <MetricBar
                   label={t('liveMonitor.latest', 'Latest')}
                   value={count}
                   max={maxCount}
                   color={TYPE_COLOR[s.type] ?? chartTokens.series[0]}
-                  sublabel={s.value || '—'}
+                  showHeader={false}
                 />
               </li>
             );

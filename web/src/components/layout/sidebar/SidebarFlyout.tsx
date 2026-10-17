@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { motion } from '@/components/motion/runtime'
+import { Text } from '@/components/ui/Typography'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 
 interface FlyoutContent {
@@ -38,10 +39,10 @@ export function SidebarFlyout({ tip, testId }: { tip: FlyoutContent | null; test
       animate={{ opacity: 1, scale: 1, y: '-50%' }}
       transition={{ duration: 0.12, ease: 'easeOut' }}
       style={{ top: tip.top }}
-      className="pointer-events-none absolute start-full z-50 ms-2 whitespace-nowrap rounded-lg bg-[var(--text-primary)] px-2.5 py-1.5 text-xs text-[var(--text-inverse)] shadow-lg forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]"
+      className="pointer-events-none absolute start-full z-50 ms-2 whitespace-nowrap rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] px-2.5 py-1.5 shadow-e2 forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]"
     >
-      <span className="block font-medium">{tip.label}</span>
-      {tip.context && <span className="block opacity-70">{tip.context}</span>}
+      <Text size="xs" weight="medium" color="primary" className="block forced-colors:text-[CanvasText]">{tip.label}</Text>
+      {tip.context && <Text size="xs" color="secondary" className="block forced-colors:text-[CanvasText]">{tip.context}</Text>}
     </motion.div>
   )
 }

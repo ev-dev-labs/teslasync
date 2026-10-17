@@ -17,15 +17,15 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { Icon, HelperText, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { cn } from '@/lib/cn';
 import { useTeslaFeatureConfig, useRefreshTeslaFeatureConfig } from '@/api/hooks/useUser';
+import { deriveDataState } from '@/api/dataState';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 
 import {
-  FeatureConfigKpis,
   FeatureConfigDistribution,
   FeatureConfigComposition,
   FeatureConfigTable,
@@ -33,16 +33,20 @@ import {
   summarizeFeatureEntries,
   buildFeatureComposition,
 } from '../components/tesla-feature-flags';
+import { FeatureConfigOperationalBrief } from '../components/statstrip-tesla-account-privacy/FeatureConfigOperationalBrief';
 
 export default function TeslaFeatureFlagsPage() {
   const { t } = useTranslation();
-  const title = t('featureConfig.title', 'Feature Flags');
+  const title = t('featureConfig.title', 'Feature flags');
   usePageTitle(title);
 
   const featureQuery = useTeslaFeatureConfig();
   const refresh = useRefreshTeslaFeatureConfig();
+  const { canWrite, writeBlockReason } = useOperationalMode();
 
-  const { data: envelope, isLoading, isError, error, refetch } = featureQuery;
+  const { data: envelope, refetch } = featureQuery;
+  const source = deriveDataState(featureQuery);
+  const isLoading = source.status === 'initial';
 
   const entries = useMemo(() => parseFeatureEntries(envelope?.data), [envelope?.data]);
   const summary = useMemo(() => summarizeFeatureEntries(entries), [entries]);
@@ -52,30 +56,34 @@ export default function TeslaFeatureFlagsPage() {
   // Only surface a blocking error panel when there is no data to fall back on.
   // A failed background refetch keeps the last-good data visible; the header
   // freshness chip + refresh toast already communicate the failure.
-  const sectionError = isError && entries.length === 0 ? error : null;
+  const sectionError = source.fatalError;
 
   const actions = (
-    <Button
-      variant="secondary"
-      size="sm"
-      icon={<RefreshCw className={cn('h-4 w-4', refresh.isPending && 'animate-spin')} aria-hidden="true" />}
-      onClick={() => refresh.mutate()}
-      disabled={refresh.isPending}
-    >
-      {t('featureConfig.refresh', 'Refresh')}
-    </Button>
+    <div className="flex min-w-0 flex-col items-start gap-2">
+      <IconButton icon={<Icon icon={RefreshCw} />} label={t('featureConfig.refresh', 'Refresh')} onClick={() => canWrite && !refresh.isPending && refresh.mutate()} busy={refresh.isPending} disabled={!canWrite || refresh.isPending} aria-describedby={writeBlockReason ? 'tesla-feature-refresh-reason' : undefined} />
+      {writeBlockReason && (
+        <HelperText id="tesla-feature-refresh-reason">{writeBlockReason}</HelperText>
+      )}
+    </div>
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('featureConfig.subtitle', 'Tesla account feature configuration')}
-      actions={actions}
+      secondaryActions={actions}
       query={featureQuery}
+      dataSources={[{
+        id: 'tesla-feature-config',
+        label: t('featureConfig.title', 'Feature flags'),
+        query: featureQuery,
+      }]}
     >
       <FadeIn>
         <section aria-label={t('featureConfig.kpi.bandLabel', 'Feature summary metrics')}>
-          <FeatureConfigKpis summary={summary} isLoading={isLoading} error={sectionError} />
+          <FeatureConfigOperationalBrief summary={source.hasData && envelope?.data != null ? summary : null}
+            fetchedAt={fetchedAt} loading={source.status === 'initial'}
+            sourceStatus={source.status} />
         </section>
       </FadeIn>
 
@@ -112,6 +120,6 @@ export default function TeslaFeatureFlagsPage() {
           onRetry={refetch}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

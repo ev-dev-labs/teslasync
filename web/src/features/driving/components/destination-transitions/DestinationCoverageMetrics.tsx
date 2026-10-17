@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
+import type { DestinationTransitionsQueryState } from './types';
 import {
   destinationDateTime,
   destinationPercent,
@@ -10,43 +11,51 @@ import {
   DestinationTransitionsMetricGroup,
   type DestinationTransitionsEvidenceMetric,
 } from './DestinationTransitionsMetricGroup';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationCoverageMetricsProps {
   model: DestinationTransitionResult;
+  state: DestinationTransitionsQueryState;
   locale: string;
   timeZone: string;
 }
 
 export function DestinationCoverageMetrics({
   model,
+  state,
   locale,
   timeZone,
 }: DestinationCoverageMetricsProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const evidence = model.evidence;
   const days = (value: number | null) =>
-    value != null ? fmtNumber(value, 1, locale) : '—';
+    value != null ? fmtNumber(value, undefined, locale) : '—';
   const metrics: DestinationTransitionsEvidenceMetric[] = [
     {
       label: t(
         'destinationTransitions.quality.coverage.activeDays',
         'Active local days',
       ),
-      value: fmtInt(evidence.activeLocalDays),
+      metricId: 'count', rawValue: evidence.activeLocalDays,
+      displayValue: fmtInt(evidence.activeLocalDays),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.activeWeeks',
         'Active local weeks',
       ),
-      value: fmtInt(evidence.activeLocalWeeks),
+      metricId: 'count', rawValue: evidence.activeLocalWeeks,
+      displayValue: fmtInt(evidence.activeLocalWeeks),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.returnedFirst',
         'First parseable returned start',
       ),
-      value: destinationDateTime(
+      metricId: 'number', rawValue: evidence.returnedFirstObservationMs,
+      description: t('destinationTransitions.quality.timestampSource', 'Source epoch milliseconds, rendered in the selected display timezone.'),
+      displayValue: destinationDateTime(
         evidence.returnedFirstObservationMs,
         locale,
         timeZone,
@@ -57,7 +66,9 @@ export function DestinationCoverageMetrics({
         'destinationTransitions.quality.coverage.returnedLast',
         'Last parseable returned start',
       ),
-      value: destinationDateTime(
+      metricId: 'number', rawValue: evidence.returnedLastObservationMs,
+      description: t('destinationTransitions.quality.timestampSource', 'Source epoch milliseconds, rendered in the selected display timezone.'),
+      displayValue: destinationDateTime(
         evidence.returnedLastObservationMs,
         locale,
         timeZone,
@@ -68,14 +79,17 @@ export function DestinationCoverageMetrics({
         'destinationTransitions.quality.coverage.returnedSpan',
         'Returned span (days)',
       ),
-      value: days(evidence.returnedSpanDays),
+      metricId: 'duration', rawValue: evidence.returnedSpanDays != null ? evidence.returnedSpanDays * 86400 : null,
+      displayValue: days(evidence.returnedSpanDays),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.includedFirst',
         'First included visit',
       ),
-      value: destinationDateTime(
+      metricId: 'number', rawValue: evidence.firstIncludedVisitMs,
+      description: t('destinationTransitions.quality.timestampSource', 'Source epoch milliseconds, rendered in the selected display timezone.'),
+      displayValue: destinationDateTime(
         evidence.firstIncludedVisitMs,
         locale,
         timeZone,
@@ -86,7 +100,9 @@ export function DestinationCoverageMetrics({
         'destinationTransitions.quality.coverage.includedLast',
         'Last included visit',
       ),
-      value: destinationDateTime(
+      metricId: 'number', rawValue: evidence.lastIncludedVisitMs,
+      description: t('destinationTransitions.quality.timestampSource', 'Source epoch milliseconds, rendered in the selected display timezone.'),
+      displayValue: destinationDateTime(
         evidence.lastIncludedVisitMs,
         locale,
         timeZone,
@@ -97,21 +113,25 @@ export function DestinationCoverageMetrics({
         'destinationTransitions.quality.coverage.includedSpan',
         'Included span (days)',
       ),
-      value: days(evidence.includedSpanDays),
+      metricId: 'duration', rawValue: evidence.includedSpanDays != null ? evidence.includedSpanDays * 86400 : null,
+      displayValue: days(evidence.includedSpanDays),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.recency',
         'Visit recency (days)',
       ),
-      value: days(evidence.daysSinceLastIncludedVisit),
+      metricId: 'duration', rawValue: evidence.daysSinceLastIncludedVisit != null ? evidence.daysSinceLastIncludedVisit * 86400 : null,
+      displayValue: days(evidence.daysSinceLastIncludedVisit),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.transitionFirst',
         'First accepted transition',
       ),
-      value: destinationDateTime(
+      metricId: 'number', rawValue: evidence.firstAcceptedTransitionMs,
+      description: t('destinationTransitions.quality.timestampSource', 'Source epoch milliseconds, rendered in the selected display timezone.'),
+      displayValue: destinationDateTime(
         evidence.firstAcceptedTransitionMs,
         locale,
         timeZone,
@@ -122,7 +142,9 @@ export function DestinationCoverageMetrics({
         'destinationTransitions.quality.coverage.transitionLast',
         'Last accepted transition',
       ),
-      value: destinationDateTime(
+      metricId: 'number', rawValue: evidence.lastAcceptedTransitionMs,
+      description: t('destinationTransitions.quality.timestampSource', 'Source epoch milliseconds, rendered in the selected display timezone.'),
+      displayValue: destinationDateTime(
         evidence.lastAcceptedTransitionMs,
         locale,
         timeZone,
@@ -133,28 +155,32 @@ export function DestinationCoverageMetrics({
         'destinationTransitions.quality.coverage.transitionSpan',
         'Accepted span (days)',
       ),
-      value: days(evidence.acceptedTransitionSpanDays),
+      metricId: 'duration', rawValue: evidence.acceptedTransitionSpanDays != null ? evidence.acceptedTransitionSpanDays * 86400 : null,
+      displayValue: days(evidence.acceptedTransitionSpanDays),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.supportedOrigins',
         'Supported origins',
       ),
-      value: fmtInt(evidence.supportedOriginStates),
+      metricId: 'count', rawValue: evidence.supportedOriginStates,
+      displayValue: fmtInt(evidence.supportedOriginStates),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.unsupportedOrigins',
         'Unsupported origins',
       ),
-      value: fmtInt(evidence.unsupportedOriginStates),
+      metricId: 'count', rawValue: evidence.unsupportedOriginStates,
+      displayValue: fmtInt(evidence.unsupportedOriginStates),
     },
     {
       label: t(
         'destinationTransitions.quality.coverage.supportedShare',
         'Supported-origin transition coverage',
       ),
-      value: destinationPercent(
+      metricId: 'percent', rawValue: evidence.supportedOriginTransitionCoverage != null ? evidence.supportedOriginTransitionCoverage * 100 : null,
+      displayValue: destinationPercent(
         evidence.supportedOriginTransitionCoverage,
         locale,
       ),
@@ -168,6 +194,8 @@ export function DestinationCoverageMetrics({
         'Spans, recency, activity, and supported coverage',
       )}
       metrics={metrics}
+      state={state}
+      testId="destination-coverage-recency-brief"
     />
   );
 }

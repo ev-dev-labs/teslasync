@@ -4,12 +4,10 @@
  * `initialKey` is provided + read-only) AND "create new flag" (when
  * `initialKey` is null). The split lives in the parent page; this
  * drawer just renders the form.
- * Value editing is a free-form JSON textarea — the backend accepts any
- * JSON value (object, array, scalar). Invalid JSON disables the Save
- * button and surfaces a parse-error helper text.
- * `reason` is required by the backend audit row and rejected if empty.
+ * Values are opaque stored text, including empty strings. The operator's
+ * value and audit reason are forwarded without parsing or trimming.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -17,9 +15,9 @@ import {
   Drawer,
   GlassPanel,
   Input,
+  Text,
   Textarea,
 } from '@/components/ui';
-import { Text } from '@/components/ui/Typography';
 import type {
   FeatureFlagEntry,
   FeatureFlagValue,
@@ -34,20 +32,6 @@ interface FlagEditDrawerProps {
   onSave: (input: { key: string; value: FeatureFlagValue; reason: string }) => void;
 }
 
-function defaultValueJson(initial: FeatureFlagEntry | null): string {
-  if (!initial) return '';
-  try {
-    // JSON.stringify returns `undefined` (NOT a string) for `undefined`,
-    // functions, and symbols — a nuance TS's lib types hide. Coalesce so the
-    // caller always receives a real string; otherwise the seeded `valueInput`
-    // becomes `undefined` and the next `valueInput.trim()` in `parsed` throws,
-    // blank-crashing the drawer for a flag whose stored value is `undefined`.
-    return JSON.stringify(initial.value, null, 2) ?? '';
-  } catch {
-    return '';
-  }
-}
-
 export function FlagEditDrawer({
   open,
   initial,
@@ -59,7 +43,7 @@ export function FlagEditDrawer({
   const editing = initial !== null;
 
   const [keyInput, setKeyInput] = useState<string>(initial?.key ?? '');
-  const [valueInput, setValueInput] = useState<string>(defaultValueJson(initial));
+  const [valueInput, setValueInput] = useState<string>(initial?.value ?? '');
   const [reason, setReason] = useState<string>('');
 
   // Re-seed the form whenever the drawer opens with a different flag.
@@ -68,34 +52,18 @@ export function FlagEditDrawer({
   useEffect(() => {
     if (open) {
       setKeyInput(initial?.key ?? '');
-      setValueInput(defaultValueJson(initial));
+      setValueInput(initial?.value ?? '');
       setReason('');
     }
   }, [open, initial]);
 
-  const parsed = useMemo<{ ok: boolean; value?: FeatureFlagValue; error?: string }>(() => {
-    if (valueInput.trim() === '') {
-      return { ok: false, error: t('admin.flags.editor.valueEmpty', 'Value is required.') };
-    }
-    try {
-      return { ok: true, value: JSON.parse(valueInput) as FeatureFlagValue };
-    } catch (e) {
-      return {
-        ok: false,
-        error: t('admin.flags.editor.valueInvalid', 'Invalid JSON: {{msg}}', {
-          msg: e instanceof Error ? e.message : String(e),
-        }),
-      };
-    }
-  }, [valueInput, t]);
-
   const keyValid = keyInput.trim().length > 0;
   const reasonValid = reason.trim().length > 0;
-  const canSave = parsed.ok && keyValid && reasonValid && !saving;
+  const canSave = keyValid && reasonValid && !saving;
 
   const handleSave = () => {
-    if (!canSave || !parsed.ok) return;
-    onSave({ key: keyInput.trim(), value: parsed.value as FeatureFlagValue, reason: reason.trim() });
+    if (!canSave) return;
+    onSave({ key: keyInput.trim(), value: valueInput, reason });
   };
 
   return (
@@ -149,13 +117,10 @@ export function FlagEditDrawer({
 
         <GlassPanel className="p-4">
           <Textarea
-            label={t('admin.flags.editor.valueLabel', 'Value (JSON)')}
+            label={t('admin.flags.cols.value', 'Value')}
             value={valueInput}
             onChange={(e) => setValueInput(e.target.value)}
             rows={8}
-            required
-            placeholder={'{\n  "enabled": true\n}'}
-            error={parsed.ok ? undefined : parsed.error}
           />
         </GlassPanel>
 

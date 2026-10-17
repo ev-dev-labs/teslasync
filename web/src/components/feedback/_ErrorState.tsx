@@ -1,11 +1,14 @@
 import { type ReactNode } from 'react'
 import { type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { severityTokens } from '@/lib/tokens'
+import { Icon as StatusIcon } from '@/components/ui/Icon'
+import { Text } from '@/components/ui/Typography'
 
 /**
  * Internal layout primitive shared by {@link QueryError} and {@link ErrorDisplay}.
  *
- * Renders the standard "icon + title + message + action" rose-tinted card
+ * Renders the standard "icon + title + message + action" semantic card
  * used for every failure mode (404 / 401 / 5xx / network). Centralising the
  * chrome here keeps the four branches in QueryError focused on copy + CTA
  * while ErrorDisplay can reuse the same look without duplicating Tailwind.
@@ -41,28 +44,20 @@ export interface ErrorStateProps {
 
 const toneClasses = {
   danger: {
-    panel: 'border-rose-500/20 bg-rose-500/5',
-    icon: 'bg-rose-500/10 text-rose-300',
-    title: 'text-rose-300',
-    message: 'text-rose-300/70',
+    panel: cn(severityTokens.critical.border, severityTokens.critical.bg),
+    icon: cn(severityTokens.critical.bg, severityTokens.critical.fg),
   },
   warning: {
-    panel: 'border-amber-500/25 bg-amber-500/5',
-    icon: 'bg-amber-500/10 text-amber-300',
-    title: 'text-amber-300',
-    message: 'text-amber-200/75',
+    panel: cn(severityTokens.warn.border, severityTokens.warn.bg),
+    icon: cn(severityTokens.warn.bg, severityTokens.warn.fg),
   },
   info: {
-    panel: 'border-cyan-500/20 bg-cyan-500/5',
-    icon: 'bg-cyan-500/10 text-cyan-300',
-    title: 'text-cyan-300',
-    message: 'text-cyan-200/75',
+    panel: cn(severityTokens.info.border, severityTokens.info.bg),
+    icon: cn(severityTokens.info.bg, severityTokens.info.fg),
   },
   neutral: {
     panel: 'border-[var(--border-default)] bg-[var(--surface-2)]',
     icon: 'bg-[var(--surface-3)] text-[var(--text-secondary)]',
-    title: 'text-[var(--text-primary)]',
-    message: 'text-[var(--text-secondary)]',
   },
 } as const
 
@@ -91,36 +86,39 @@ export function ErrorState({
       role={role}
       aria-live={ariaLiveValue}
       className={cn(
-        'rounded-xl border backdrop-blur-sm',
+        'min-w-0 rounded-panel border',
         colors.panel,
         compact ? 'p-3 mb-3' : 'p-4 mb-6',
         className,
       )}
     >
-      <div className={cn('flex items-start', compact ? 'gap-2' : 'gap-3')}>
-        <div
-          className={cn(
-            'shrink-0 rounded-lg',
-            colors.icon,
-            compact ? 'p-1.5 mt-0.5' : 'p-2 mt-0.5',
-          )}
-        >
-          <Icon
-            className={cn(compact ? 'h-3.5 w-3.5' : 'h-4 w-4')}
-            aria-hidden="true"
-          />
+      <div className={cn('flex flex-wrap items-start', compact ? 'gap-2' : 'gap-3')}>
+        <div className={cn('flex w-full min-w-0 flex-1 basis-full items-start md:basis-64', compact ? 'gap-2' : 'gap-3')}>
+          <div
+            className={cn(
+              'shrink-0 rounded-shape-sm',
+              colors.icon,
+              compact ? 'p-1.5 mt-0.5' : 'p-2 mt-0.5',
+            )}
+          >
+            <StatusIcon icon={Icon} size={compact ? 'sm' : 'md'} />
+          </div>
+          <div className="flex-1 min-w-0 break-words">
+            <Text as="p" variant="body" className="font-medium">
+              {title}
+            </Text>
+            <Text as="p" variant="bodySm" className="mt-1">
+              {message}
+            </Text>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className={cn('font-medium', colors.title, compact ? 'text-xs' : 'text-sm')}>
-            {title}
-          </p>
-          <p className={cn('mt-0.5', colors.message, compact ? 'text-2xs' : 'text-xs')}>
-            {message}
-          </p>
-        </div>
-        {action && <div className="shrink-0">{action}</div>}
+        {action && (
+          <div className="w-full min-w-0 max-w-full break-words md:w-auto [&_button]:h-auto [&_button]:min-h-11 [&_button]:min-w-11 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words [&_button]:py-2 md:[&_button]:min-h-9 md:[&_button]:min-w-0">
+            {action}
+          </div>
+        )}
       </div>
-      {footer && <div className={cn(compact ? 'mt-2' : 'mt-3')}>{footer}</div>}
+      {footer && <div className={cn('min-w-0 break-words', compact ? 'mt-2' : 'mt-3')}>{footer}</div>}
     </div>
   )
 }

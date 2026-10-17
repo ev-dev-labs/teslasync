@@ -1,0 +1,308 @@
+{
+  "item": "audit-page-044",
+  "page": "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+  "routes": ["/firmware-impact"],
+  "purpose": "Observe recorded consumption before and after installed firmware versions, without implying a causal firmware effect.",
+  "primaryGoal": "Compare version-centered consumption samples, significance and effect size, inspect per-version evidence, and export the plotted comparisons.",
+  "dataSources": [
+    {
+      "hook": "useDrives(vehicleIdStr)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 104,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected vehicle>",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "owner": "Driving hook and driveHandler.ListByVehicle",
+      "behavior": "Vehicle-gated query, drivingKeys.drives(vehicleId, window), AbortSignal forwarded, safeArray selection, FAST stale time. Page supplies no start/end/limit; hook documents the default 50-row server page at lines 86-89. Complete history is not established.",
+      "consumedFields": ["startTs", "distanceM", "energyUsedWh"],
+      "wireTrust": "Meters and watt-hours remain source measurements. Model derives Wh/km without changing hook/cache values."
+    },
+    {
+      "hook": "useSoftwareUpdates(vehicleIdStr ?? '')",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 118,
+      "endpoint": "GET /api/v1/software-updates?vehicle_id=<selected vehicle>",
+      "routeEvidence": "internal\\api\\router.go:4164",
+      "owner": "Vehicle-systems hook; internal\\api\\softwareupdate\\handler.go:42-66 delegates to softwareUpdateRepository.GetByVehicle",
+      "behavior": "Vehicle-gated software-updates cache key, AbortSignal forwarded, safeArray selection. Handler accepts limit/start/end, normalizes nil to [], and rejects invalid vehicle IDs. Page requests none of these optional bounds; repository coverage/order not inspected.",
+      "consumedFields": ["version", "installedAt", "status"],
+      "shapeEvidence": "web\\src\\types\\vehicle-systems.ts:125-132; web\\src\\api\\client.ts:284-288 exposes snake_case and camelCase."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": null,
+      "owner": "Existing workspace selection hook/store",
+      "behavior": "Page consumes workspace vehicle ID, converts it to a query string, and uses NoVehicleSelected when absent. No competing page selector."
+    },
+    {
+      "hook": "useOperationalMetrics",
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "line": 11,
+      "endpoint": null,
+      "owner": "Existing operational metric adapter, useUnits/useFormatting and formatOperationalMetrics",
+      "behavior": "Four numeric metrics retain source values and missing states. Signed best/worst deltas adapt Wh/km to the glossary's Wh/m and return specialist Wh/km text at the display boundary."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "usage": "Page line 131; title, subtitle help, query freshness, named source notices, busy state, route heading and page error boundary."},
+    {"name": "CardGrid / Section / FirmwareImpactSlot", "owner": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactSlot.tsx", "usage": "Page lines 95-129 and 147; three full-width packed slots, shared placement class, w-full/min-w-0, existing FadeIn."},
+    {"name": "FirmwareBrief / OperationalBrief", "owner": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FirmwareBrief.tsx", "usage": "Four metrics, history-limit provenance, status, methodology help, inherited Review details drawer."},
+    {"name": "FirmwareImpactChart / ChartContainer", "owner": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.tsx", "usage": "Panel-mode signed bar chart; five-column fallback table; PNG/SVG/copy-image and CSV delegation. No fullscreen prop is supplied, so fullscreen availability is not established."},
+    {"name": "FirmwareImpactDetails / LayoutCard / Table / Badge", "owner": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactDetails.tsx", "usage": "Per-version list, verdict badge and four row-header evidence fields; shared skeleton, EmptyState and QueryError."},
+    {"name": "NoVehicleSelected", "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "usage": "Page line 90; prerequisite explanation and existing /onboarding setup action."},
+    {"name": "firmwareImpactState / deriveDataState", "owner": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\firmwareImpactState.ts", "usage": "Historical provenance, independent retained inputs, dependent comparison gating, fatal versus refresh failures."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactMetrics.tsx",
+      "line": 11,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Barrel still exports an alternate same-named metric renderer (index.ts:2), while page line 17 aliases FirmwareBrief to FirmwareImpactMetrics. The alternate uses StatStrip plus two MetricCards and duplicates the count/context/methodology presentation. It is not the mounted summary on this route.",
+      "fix": "Keep FirmwareBrief as this route's summary owner. Before any later consolidation, inspect external callers/tests and retain signed precision, version context and unknown states; do not blindly delete the alternate during page modernization.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Page:95-129 uses three full-size grid items, not competing width/range controls.",
+      "FirmwareImpactSlot.tsx:15-22 forwards packed placement with w-full/min-w-0.",
+      "FirmwareImpactDetails.tsx:61-68 uses one column before lg, two afterwards, with wrapping header and break-words version text.",
+      "FirmwareImpactChart.tsx:53,64-76 fixes 340px chart height and angled version ticks.",
+      "OperationalBrief.tsx:164-169 uses compact 1/2/3/6-column breakpoints for the four actual metrics."
+    ],
+    "issues": [],
+    "risks": [
+      "Long firmware versions and many plotted versions can crowd fixed-height angled ticks; no viewport execution establishes clipping.",
+      "Four metrics in a six-column 1920px compact brief can leave unused grid space; this is a review target, not a proved rendered defect."
+    ],
+    "verification": "UNVERIFIED at all required widths: 320,375,390,430,768,1024,1280,1440,1920,2560; no browser or mobile drawer exercise."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Chart component:40-43 supplies a localized chart name; :56-62 supplies explicit fallback columns. ChartContainer.tsx:760-847 renders the hidden semantic data table and forced-color alternative.",
+      "Details:72-78 names each Table by version and uses scope=row for all four evidence labels. Verdict also has visible localized text.",
+      "PageContainer.tsx:184-201 supplies a programmatic route-focus heading; :255-256 mounts independent source notices.",
+      "OperationalBrief.tsx:152-160 owns the Review details button rather than page-specific overlay code.",
+      "Slot delegates FadeIn; actual reduced-motion behavior was not inspected/exercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+        "line": 138,
+        "rule": "MDC-040 / mission 30",
+        "detail": "Page supplies busy but not loading/error to PageLayout. PageContainer.tsx:135-142 drives its automatic load announcement only from loading/error, not busy/query. Thus this caller does not feed its source loading/failure transitions into that announcement contract. aria-busy does remain wired.",
+        "fix": "Coordinate an existing page announcement adapter or a page-owned governed announcement for dependent comparisons without passing PageLayout.loading/error in a way that replaces all three independent shells.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Keyboard, focus restoration, screen reader, target size, composed contrast, forced colors and reduced motion UNVERIFIED."
+  },
+  "states": {
+    "loading": "firmwareImpactState.ts:18-21 identifies pending missing inputs; chart/details keep their shells and skeletons, brief suppresses values. Missing paused initial source is also treated as loading.",
+    "empty": "Resolved [] counts as known input. Brief can show measured zero counts; chart excludes insufficient comparisons; details preserves insufficient rows. Details uses n>0 before showing consumption or deltas so model sentinels are not shown as zero measurements.",
+    "fatalError": "Comparison widgets receive only fatalError; page/source notices and successful source context remain mounted. Retry refetches both histories.",
+    "refreshError": "Retained inputs remain available; state.retained marks either source stale, and named source notices offer recovery for refresh failures.",
+    "offline": "Paused refreshes retain data; initial paused inputs render loading plus named source status where applicable. No simulated offline session.",
+    "partial": "Both actual input histories are required for comparisons; independent DataState payloads and page-level source notices remain.",
+    "issues": [
+      {
+        "file": "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+        "line": 80,
+        "rule": "MDC-026 / mission 25",
+        "detail": "resolveDataSourceStatus recognizes fetchStatus=paused only without retained data; retained paused sources fall through to ready at line 92. firmwareImpactState.ts:25-27 does mark these inputs retained/stale, and FirmwareBrief.tsx:39-41 shows Retained evidence, but the named source notice alone cannot identify which retained source is paused offline.",
+        "fix": "For the shared owner, preserve retained data while distinguishing paused refreshes from ready sources and showing independent retry. Coordinate with the existing historical DataState contract; do not add a page-specific competing trust system.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.tsx",
+      "line": 83,
+      "rule": "MDC-010 / MDC-025 / MDC-034 / mission 5,27",
+      "detail": "Verdicts use categorical series slots 2/5/7. Current tokens.ts:401 resolves these to amber #f59e0b for better, cyan #06b6d4 for worse, lime #84cc16 for noChange. This is a bright categorical palette rather than the success/danger/neutral semantics already used by details badges. Actual contrast is unmeasured.",
+      "fix": "Reuse governed restrained semantic verdict colors with better=success, worse=danger and noChange=neutral, preserving every signed bar, zero reference and text/table verdict. Do not change persisted theme or explicit chart choices. Update the existing source-level color assertions only alongside deliberate semantic behavior.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.tsx",
+      "line": 69,
+      "rule": "MDC-013 / MDC-034",
+      "detail": "XAxis and YAxis tick sizes are page-local 10 and 11px rather than shared chart presentation roles. Readability under narrow allocation/text scaling is not established.",
+      "fix": "Consume existing shared chart typography/tick policy while retaining version angle, axis labels and sign; review dense versions at narrow widths rather than dropping versions.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactDetails.tsx",
+      "line": 3,
+      "rule": "MDC-002 component-first production imports",
+      "detail": "Details imports LayoutCard directly from layout-reference instead of the public layout category barrel. Slot.tsx:2 also takes useCardPlacement through the reference barrel; public placement availability was not inspected.",
+      "fix": "Use the existing @/components/layout LayoutCard export. Resolve placement through its existing supported export before changing Slot; never recreate placement/measurement locally.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FirmwareBrief.tsx",
+      "line": 24,
+      "rule": "MDC-033 specialist preservation / MDC-044 locale",
+      "detail": "Specialist best/worst formatters stringify Math.round rather than applying the effective locale supplied by formatMetric. Details.tsx:80-100 similarly interpolates rounded values directly, while p and d already use shared number formatting. A translated UI therefore does not localize these numeric displays consistently.",
+      "fix": "Reuse existing numeric formatting at the specialist display boundary, retaining fixed Wh/km analysis units, one-decimal delta precision, positive signs and missing marks. Do not replace the source deltas with reciprocal economy, force generic units, or change raw/cache calculations.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "Mounted route already adopts the shared layout, operational summary, source trust and comparison shells. Main modernization work is semantic chart palette/typography, number locale consistency and bounded integration cleanup; shared paused-source notice is the trust follow-up."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Retained paused-source notice",
+      "ownerFile": "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+      "operation": "extend existing owner, not a new component",
+      "propsVariantsStates": "Keep sources:[{id,label,query,enabled?}] and existing query.fetchStatus/data/refetch fields. Distinguish retained paused refresh from healthy ready; preserve content and per-source retry. Existing DataState.isRefreshBlocked is the semantic reference.",
+      "usedBy": ["/firmware-impact through PageLayout/PageContainer"],
+      "dependsOn": ["web\\src\\api\\dataState.ts", "existing shared source-notice tests and centralized integration ownership"],
+      "evidence": "DataSourceNotice.tsx:80-92; firmwareImpactState.ts:25-27",
+      "limits": "This bounded audit confirms only this consumer; shared owner must inventory other consumers before changing public semantics."
+    },
+    {
+      "name": "Reuse existing restrained semantic chart and layout contracts",
+      "ownerFile": "web\\src\\lib\\tokens.ts",
+      "operation": "reuse; no new palette engine or speculative composite requested",
+      "propsVariantsStates": "Semantic success/danger/neutral for better/worse/noChange. Keep ChartContainer panel, ariaLabel, data/dataColumns/exportData, loading/error/empty/onRetry and current preference persistence. LayoutCard comes from the existing layout barrel.",
+      "usedBy": ["/firmware-impact chart and evidence details"],
+      "dependsOn": ["MDC-010, MDC-025, MDC-034", "existing chartTokens and badge/severity token owners"],
+      "evidence": "FirmwareImpactChart.tsx:83-88 versus tokens.ts:401 and FirmwareImpactDetails.tsx:11-15",
+      "limits": "No shared token/config mutation authorized by this audit; prefer page adoption of approved existing semantics."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "active": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FirmwareBrief.tsx",
+      "alternate": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactMetrics.tsx",
+      "evidence": "FirmwareImpactPage.tsx:17; firmware-impact-modernization\\index.ts:2",
+      "resolution": "Active route owner is FirmwareBrief. Alternate export exists but its complete caller graph is outside this audit; no deletion authorized."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "289cea1a3c8cba51a5cef76d79d4f7e3052406d381316425003bd464d1ed3a0c",
+    "hashAlgorithm": "SHA256",
+    "hashScope": "Raw bytes of root assigned page only",
+    "currentLineCount": 150,
+    "mountedPresentationLineCounts": {"page": 150, "FirmwareBrief": 51, "FirmwareImpactChart": 96, "FirmwareImpactDetails": 117, "FirmwareImpactSlot": 24},
+    "mountedPresentationTotal": 438,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Comparison overview", "id": "firmware-impact-summary", "file": "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx", "line": 101, "count": 1, "content": "Updates tested including skipped count; significant comparisons; biggest gain and regression with firmware version; history-limit provenance and methodology."},
+      {"name": "Observed consumption differences", "id": "firmware-impact-deltas", "file": "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx", "line": 112, "count": 1, "content": "Signed delta bars for sufficient comparisons, zero line, all five fallback/export fields."},
+      {"name": "Per-version evidence", "id": "firmware-impact-versions", "file": "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx", "line": 123, "count": 1, "content": "Every normalized install, including insufficient rows; version/date/verdict; before/after sample sizes and means; signed delta/share; p and absolute Cohen d; verdict explanation."}
+    ],
+    "actions": [
+      "Both-history retry: FirmwareImpactPage.tsx:84-87.",
+      "Independent source recovery through PageContainer/DataSourceNotice.",
+      "Summary methodology HelpTooltip: FirmwareBrief.tsx:44-45.",
+      "OperationalBrief Review details drawer: OperationalBrief.tsx:152-160.",
+      "Verdict methodology HelpTooltip: FirmwareImpactDetails.tsx:38-43.",
+      "Chart export PNG/SVG, copy image, CSV delegated to ChartContainer.tsx:417-428,629-633; source inspect only, browser download not exercised.",
+      "Header subtitle help inherited from PageContainer; no new page selectors.",
+      "No-vehicle prerequisite CTA to existing onboarding route."
+    ],
+    "data": [
+      "Keep vehicle-scoped query keys, gates, AbortSignal forwarding, safeArray, inherited retry and stale-time behavior.",
+      "Keep returned-history limitation explicit; do not silently promise lifetime coverage or change defaults/range scope during cosmetic migration.",
+      "workspaceScope.ts:23-77 does not opt /firmware-impact into range ownership; :156-167 yields range=false, vehicle=true. Install-centered windows are the current business scope, not a duplicate workspace picker.",
+      "Keep 30-day windows, minSample=5, alpha=0.05, minEffect=0.2; clip windows at neighboring installs.",
+      "Keep installed-only normalized parseable timestamps, earliest install per version, descending result ordering.",
+      "Keep valid drives of at least 2000m with finite positive energyUsedWh and parseable startTs.",
+      "Keep Welch unequal-variance t-test, pooled Cohen d, and both significance/effect-size gates; causal disclaimer stays visible.",
+      "Keep model rounding and missing sentinels, guard sentinel consumption/deltas with sample sizes at display, and exclude insufficient rows only from chart/export, not details.",
+      "Keep chart version/delta/share/p/verdict row fields and exact export scope; null p remains null.",
+      "Keep signed best/worst deltas, none-detected version context, known zero counts distinct from missing inputs, and raw SI wire/cache measurements.",
+      "Refresh failure and paused refresh never discard retained histories/comparisons; fatal missing input affects dependent widgets, not all source/page shells."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source audit; only assigned report and heartbeat written.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "accessibility": "UNVERIFIED except cited source structure",
+    "viewport": "UNVERIFIED",
+    "backend": "Router and software-update handler source confirmed; repositories, deployed endpoint payloads, default ordering, total coverage and statistical runtime behavior not exercised.",
+    "tests": "Existing chart/detail/slot/state test source inspected; tests not executed and mocks are not mounted/browser acceptance.",
+    "typeScriptLintBuild": "NOT RUN by explicit Phase0 scope. Skill script was inspected but not executed because it includes project-wide tsc.",
+    "patternCheck": {
+      "command": "Bounded Python source regex/count scan via PowerShell over the six assigned mounted page/renderer/state files; no recursive build, lint or mutation.",
+      "exitCode": 0,
+      "output": {
+        "staticInlineStyle": 0,
+        "rawControlsOrTable": 0,
+        "directChartMapMotionImports": 0,
+        "legacyApiImports": 0,
+        "neonText": 0,
+        "pageLines": 150,
+        "sectionOpenings": 3
+      },
+      "limits": "Pattern zeros are not a full guideline pass; palette/locale/trust/import-contract findings are independent of these patterns."
+    },
+    "historicalAcceptance": "No historical receipts treated as current proof.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-044.json", ".agent-status\\audit-page-044.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+    "web\\src\\features\\analytics\\lib\\firmwareImpact.ts",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactDetails.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactSlot.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactMetrics.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\firmwareImpactState.ts",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.test.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactDetails.test.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactSlot.test.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\firmwareImpactState.test.ts",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FirmwareBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\types\\vehicle-systems.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\operationalMetrics.tsx",
+    "web\\src\\lib\\metric-reference\\types.ts",
+    "web\\src\\lib\\metric-reference\\glossary.ts",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "web\\src\\lib\\metric-reference\\formatMetric.test.ts",
+    "web\\src\\lib\\metric-reference\\formatter.specialists.test.ts",
+    "web\\src\\components\\data-display\\stat-reference\\StatTile.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\softwareupdate\\handler.go",
+    "internal\\api\\softwareupdate\\handler_test.go",
+    "internal\\api\\softwareupdate\\doc.go"
+  ]
+}

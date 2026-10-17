@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-admin-slow-queries",
+  "phase": 6,
+  "type": "read-only-finished-page-QA",
+  "status": "DONE",
+  "sourceQaOutcome": "FAIL",
+  "nativeOutcome": "NOTRUN",
+  "pageAcceptance": "NOTRUN",
+  "summary": {
+    "sourceChecks": 19,
+    "sourcePass": 13,
+    "sourceFail": 6,
+    "confirmedIssues": 6,
+    "candidatesNotRun": 4,
+    "nativeChecks": "NOTRUN",
+    "documentValidatedUtc": "2026-10-13T16:45:38.9302914Z",
+    "documentValidationIsNotPageAcceptance": true
+  },
+  "page": "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx",
+  "routes": ["/admin/slow-queries"],
+  "routeIdentitySource": "docs\\frontend-inventory.md:78; route mounting in a browser was not checked",
+  "purpose": "Read-only source QA of top-N query execution and cache-efficiency evidence.",
+  "primaryGoal": "Keep operators able to compare the fetched query costs without confusing unavailable, unknown, filtered, retained or partial evidence with measured zero or complete historical results.",
+  "ownership": {
+    "versionedWrites": ["docs\\frontend-audits\\phase6-qa-admin-slow-queries.json"],
+    "ignoredWrites": ["web\\logs\\phase6-qa-admin-slow-queries.log"],
+    "ignoredRuleEvidence": ".gitignore contains logs/; checked with Get-Content and Select-String, not Git",
+    "applicationSourceWrites": [],
+    "testsConfigCatalogWrites": [],
+    "allClaimsReleasedOnReturn": true,
+    "releasedClaims": ["report", "ignored log", "all read/source/command ownership"],
+    "activeCommandsOnReturn": 0,
+    "browserLocksAcquired": 0,
+    "postReturnWritesAuthorized": false,
+    "stopPolicy": "Any STOP requires immediate return and release of ALL claims; no post-return writes."
+  },
+  "timebox": {
+    "assignmentTimestampUtc": "2026-10-13T16:33:27.974Z",
+    "actualActorCreationTimestamp": null,
+    "clockLimitation": "Exact host actor creation time is not exposed. The supplied assignment timestamp is used as the conservative earlier clock anchor, not a newly invented creation time. No message, command or bookkeeping resets it.",
+    "conservativeReturnBoundaryUtc": "2026-10-13T16:53:27.974Z",
+    "conservativeHardBoundaryUtc": "2026-10-13T16:58:27.974Z",
+    "commandHardLimitSeconds": 480,
+    "execution": "Synchronous, bounded source reads and document validation only; no background process started."
+  },
+  "contractEvidence": [
+    "migration-queue.md:143-156: existing rolling finished-page source QA contract and 20/25-minute, <=8-minute command limits",
+    "migration-queue.md:189: exact existing item, report ownership, accepted-page dependency and prohibition on SQL/real query capture",
+    "docs\\orchestrator-loop.md:119-147: exclusive worker scope, no Git/subagents/installs/full suites and bounded return",
+    "docs\\frontend-design-contract.md:423-437: retained versus fatal errors, paused/offline and unknown versus zero",
+    "docs\\frontend-design-contract.md:441-489: operational metrics, display-boundary units, localization and backend unknowns",
+    "docs\\frontend-design-contract.md:493-581: complete mobile details, accessibility and evidence limits",
+    "docs\\frontend-mission.md sections 0-1,15-17,22-28,30-31,43-45 (including exact excerpts at 915-970 and 1410-1520): inspected relevant sections, not whole-application acceptance",
+    ".github\\instructions\\react-frontend.instructions.md: frontend hooks, shared components, states, i18n, accessibility and mobile rules",
+    ".github\\instructions\\frontend-si-cutover.instructions.md: preserve surfaces, raw hook units, display conversion and independent states",
+    ".github\\instructions\\observability.instructions.md: frontend RUM belongs in main.tsx, not a page",
+    ".github\\instructions\\unit-conversion.instructions.md: read as requested; current SI/design-contract rules govern over legacy source-unit examples",
+    "docs\\frontend-worker-conventions.md: read-only audit ownership and distinction between source evidence and visual acceptance",
+    "docs\\session-handoff.md:1-120: inherited source/gate receipts are historical, not permission to rerun passing commands"
+  ],
+  "dataSources": [
+    {
+      "name": "slow-queries",
+      "hook": "useSlowQueriesPage -> useSlowQueries",
+      "endpoint": "GET /api/v1/admin/observability/slow-queries?order_by={mean_time|total_time|calls|max_time}&limit={10|25|50|100}",
+      "status": "PASS",
+      "evidence": [
+        "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:16-20",
+        "web\\src\\api\\hooks\\useOperatorConfidence.ts:78-79,124-138",
+        "web\\src\\api\\client.ts:75-93",
+        "internal\\api\\router.go:3210,4606,4613,4627",
+        "internal\\handler\\v1\\admin_observability_handler.go:35,56-71"
+      ],
+      "agreement": "The client adds /api/v1; the actual hook path omits it. Router delegates registration to the handler, which registers this exact GET route and reads order_by/limit. Response top-level names order_by/slow_queries match SlowQueriesResponse. The router's budget map is corroboration, not itself route registration.",
+      "policy": {
+        "queryKey": ["admin", "observability", "slow-queries", "orderBy", "limit"],
+        "abortSignalForwarded": true,
+        "staleTimeMs": 15000,
+        "pollIntervalMs": 30000,
+        "backgroundPolling": false,
+        "retry": 1,
+        "evidence": "web\\src\\api\\hooks\\useOperatorConfidence.ts:127-137; web\\src\\lib\\constants.ts:33,51"
+      },
+      "envelope": "fetchEnvelope at hook:48-60 unwraps a data property; handler:69-72 uses httputil.Respond. The actual response implementation/payload was not executed or captured.",
+      "serverRowModelCapResetEpochAuthorization": "NOTRUN: deeper service/repository/row-model tracing and live execution are outside this bounded scope."
+    },
+    {
+      "name": "number preferences",
+      "hook": "useNumberFormatting / useOperationalMetrics",
+      "status": "PASS",
+      "evidence": [
+        "web\\src\\hooks\\useNumberFormatting.ts:20-46",
+        "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:16-43",
+        "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts:24-27,46-48",
+        "web\\src\\lib\\numberFormat.ts:91-105"
+      ],
+      "agreement": "Formatting subscribes to existing locale/precision preferences. Millisecond query fields remain raw in hooks; summary latency input is converted to seconds only at the display boundary, while table/chart display explicitly named milliseconds. No physical telemetry unit field or deprecated converter is changed.",
+      "runtimePreferenceChanges": "NOTRUN"
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "evidence": "SlowQueriesPage.tsx:62-73; web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-16; web\\src\\components\\layout\\PageContainer.tsx:213-258", "preserve": "One page header; full-width content; shared freshness and source notices; no whole-page data gate."},
+    {"name": "Select / Caption", "evidence": "SlowQueriesPage.tsx:35-59; web\\src\\components\\ui\\Select.tsx:33-36,59-65,88-109", "preserve": "Native localized order/limit controls; implicit stable IDs; tokenized focus; current sm mobile min-height is 44px, not the historical 36px finding."},
+    {"name": "OperationalBrief", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:19-62", "preserve": "Six numeric metrics; top-N scope; explicitly unknown observation bounds; retained/unmeasured labels; existing details ownership."},
+    {"name": "ChartCard / EmbeddedChart / ChartContainer", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:35-55; web\\src\\components\\charts\\EmbeddedChart.tsx:19-39; web\\src\\components\\charts\\ChartContainer.tsx:502-508,795-829", "preserve": "Top-12 active metric ranking, full fingerprints in dataColumns, independent loading/error/empty; chart export and fullscreen are not enabled here."},
+    {"name": "LayoutCard / MetricBar", "evidence": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:58-76; web\\src\\components\\data-display\\MetricBar.tsx:45-65,90-95", "preserve": "Top-eight known ratios, explicit percentage text, named progressbars; no color-only measurement."},
+    {"name": "DataTable", "evidence": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:17-76,99-108; web\\src\\components\\ui\\DataTable.tsx:525-545,624-659,715-725,856-916", "preserve": "Seven fields, stable admin:slow-queries tableId, loaded-row search/value filters, local pagination and loaded-row export. Mobile reachability defect below remains open."},
+    {"name": "Source/state/motion feedback", "evidence": "web\\src\\components\\feedback\\DataSourceNotice.tsx:75-122,196-211,252-268; web\\src\\components\\motion\\FadeIn.tsx:23-35", "preserve": "Retained refresh warnings and individual retry; paused-offline status; shared motion preference; no blank section shells."}
+  ],
+  "checks": [
+    {"id": "section-shells", "status": "PASS", "kind": "source", "evidence": ["web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:84-100", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:35,58", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:82"], "detail": "Summary, ranking, cache and details are unconditional presentation sections; unsupported notice is separate."},
+    {"id": "initial-loading", "status": "PASS", "kind": "source", "evidence": ["web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:20,27", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:21-43,57", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:37,60", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:84-85"], "detail": "Initial status drives per-section loading; summary receives null readings before data exists. No page-wide loading replacement supplied."},
+    {"id": "fatal-error-retry", "status": "PASS", "kind": "source", "evidence": ["web\\src\\api\\dataState.ts:206-224", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:26,29", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:60-61", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:37,60", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:86-87"], "detail": "A non-503 fatal failure has section retry callbacks to the same read query; callback presence is not tested interaction."},
+    {"id": "retained-refresh-failure", "status": "PASS", "kind": "source", "evidence": ["web\\src\\api\\dataState.ts:227-249", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:20-28", "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:68-72,88-90", "web\\src\\components\\feedback\\DataSourceNotice.tsx:78,113-122,166-168,252-268"], "detail": "Retained data keeps fatalError null, so populated sections stay mounted. Shared source notice exposes refresh failure and source retry; summary labels retained evidence."},
+    {"id": "paused-offline", "status": "PASS", "kind": "source", "evidence": ["web\\src\\api\\dataState.ts:184,217,239-258", "web\\src\\components\\feedback\\DataSourceNotice.tsx:79,106-119,158-160,252-268"], "detail": "Paused is explicitly classified rather than invented server failure. Initial paused leaves loading shells plus source notice; retained paused leaves rows and warning/retry. Native offline rendering NOTRUN."},
+    {"id": "scope-polling-timing", "status": "PASS", "kind": "source", "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:78-79,130,134-137", "web\\src\\lib\\constants.ts:33,51", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:18,56"], "detail": "Order/limit key the read; 30-second poll and 15-second stale time are actual constants. Top-N scope and unknown observation bounds are explicit, not a complete historical window."},
+    {"id": "empty-maxima-unknown-versus-zero", "status": "FAIL", "kind": "source", "issue": "SQ-003", "evidence": ["web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:45-58", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:32-39"]},
+    {"id": "nullable-cache-unknown-versus-zero", "status": "FAIL", "kind": "source", "issue": "SQ-001", "evidence": ["web\\src\\types\\admin-operator-confidence.ts:67-68", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts:38-42", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:51-57"]},
+    {"id": "unsupported-not-authoritative-empty", "status": "FAIL", "kind": "source", "issue": "SQ-006", "evidence": ["web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:21,26-28", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:38-39,60-64", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:88,99-106"]},
+    {"id": "filter-empty-copy", "status": "FAIL", "kind": "source", "issue": "SQ-005", "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:104,106", "web\\src\\components\\ui\\DataTable.tsx:536-545,1603-1608"]},
+    {"id": "pagination-loaded-scope", "status": "PASS", "kind": "source", "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:107", "web\\src\\components\\ui\\DataTable.tsx:624-659,856-864"], "detail": "Table page size 25/50/100 is distinct from fetched limit 10/25/50/100. Pagination slices filtered loaded rows and reports filtered count, not invented server total. Data-length/filter/search changes reset page; selection of a different server order is not table-column sorting."},
+    {"id": "action-scope-disabled-state", "status": "PASS", "kind": "source", "evidence": ["web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:35-59", "web\\src\\components\\data-display\\DataFreshness.tsx:187-189,266,337-344", "web\\src\\components\\ui\\DataTable.tsx:872-916", "web\\src\\components\\charts\\EmbeddedChart.tsx:24-25"], "detail": "Scope selectors stay usable in error/loading. Shared refresh is disabled while fetching; loaded-row export is disabled with no filtered/selected rows. No query execution, write mutation, reset or chart fullscreen/export is offered by the inspected page."},
+    {"id": "i18n-canonical-admin-keys", "status": "FAIL", "kind": "source", "issue": "SQ-004", "checked": 46, "found": 42, "missing": 4, "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts:5-8", "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:43-46", "web\\src\\i18n\\en\\locale-admin.json:865-903"], "detail": "Exact PowerShell canonical-and-split lookups found orderMean/orderTotal/orderCalls/orderMax missing; other locales/runtime bundle loading NOTRUN."},
+    {"id": "semantic-labels-chart-alternative", "status": "PASS", "kind": "source", "evidence": ["web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:36-57", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:32,36,40-42,59,62,73", "web\\src\\components\\charts\\ChartContainer.tsx:502-508,847-862", "web\\src\\components\\data-display\\MetricBar.tsx:59-65"], "detail": "Selectors have localized visible/ARIA labels; chart supplies full fingerprints/value columns to shared accessible fallback; progressbars are named and show numeric percentages. DOM/screen-reader acceptance remains NOTRUN."},
+    {"id": "mobile-control-minimum-source", "status": "PASS", "kind": "source", "evidence": ["web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:39,52", "web\\src\\components\\ui\\Select.tsx:33"], "detail": "Historical audit's sm=36px candidate is no longer current: sm now has min-h-11 below md and md:min-h-9. This closes only the source-size concern, not actual native width/spacing/focus."},
+    {"id": "mobile-all-detail-fields", "status": "FAIL", "kind": "source", "issue": "SQ-002", "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:99-108", "web\\src\\components\\ui\\DataTable.tsx:238-241,504-505,715-725,1386"]},
+    {"id": "scoped-forbidden-patterns", "status": "PASS", "kind": "source-regex-only", "evidence": ["web\\logs\\phase6-qa-admin-slow-queries.log", "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:19-29", "web\\src\\api\\hooks\\useOperatorConfidence.ts:130"], "detail": "Actual case-sensitive Select-String counts: static CSS-variable inline style 0; raw controls 0; direct chart/map/motion vendor imports 0; old API imports 0; neon text 0; fixed-white text 0; any type 0. Actual request prefix/camelCase-param violations 0; two /api/v1 hits are documentation. This is not a full audit-script or compiler pass."},
+    {"id": "si-display-boundary", "status": "PASS", "kind": "source", "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:127-132", "web\\src\\types\\admin-operator-confidence.ts:62-64", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:28,32,36", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts:24-27"], "detail": "Existing explicit PostgreSQL millisecond wire fields are not renamed or converted in hooks. Seconds conversion is for the existing latency display contract only. No telemetry/model/unit migration is authorized by this report."},
+    {"id": "frontend-observability-locality", "status": "PASS", "kind": "source", "evidence": ["web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:19-29", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:1-9"], "detail": "Inspected page/direct feature dependency sources introduce no RUM bootstrap or production payload logging. Backend observability instrumentation is not audited."}
+  ],
+  "confirmedIssues": [
+    {
+      "id": "SQ-001", "status": "FAIL", "severity": "high", "owner": "page", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts", "line": 38,
+      "rule": "MDC-026: unknown is not zero",
+      "mechanism": "Both optional nullable counters are independently replaced by zero before a positive-denominator percentage is declared known. The aggregate repeats the same substitution, then the summary publishes that percentage when the envelope exists.",
+      "evidence": ["web\\src\\types\\admin-operator-confidence.ts:67-68", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts:38-42", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:51-57", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:40-43"],
+      "repro": "Source-only counterexample, NOT executed: one otherwise valid row with shared_blks_hit=null and shared_blks_read=10 yields 0%; hit=10 and read=null yields 100%. Both are accepted by the TypeScript type but neither ratio is fully observed. No SQL text or real payload is needed.",
+      "expected": "Unknown ratio remains unknown whenever a required counter is absent; aggregate explicitly accounts for incomplete evidence.",
+      "fix": "One narrow cache-evidence correction in the existing helper/controller/summary path; do not rename wire fields or invent missing counters."
+    },
+    {
+      "id": "SQ-002", "status": "FAIL", "severity": "high", "owner": "page", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx", "line": 102,
+      "rule": "MDC-023/MDC-043: all mobile details remain reachable",
+      "mechanism": "Caller allow-lists only fingerprint/mean/calls. DataTable applies hidden md:table-cell to the other four fields. No mobilePresentation, expandable/renderExpanded, row action or alternate full detail is supplied. The column menu cannot override the independent mobileSet.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:99-108", "web\\src\\components\\ui\\DataTable.tsx:238-241,504-505,715-725,1172-1176,1386"],
+      "repro": "Source-defined scenario, NOT native tested: below 768px with ordinary loaded rows, max_time_ms, total_time_ms, rows_returned and cache are hidden. Horizontal scrolling does not reveal display:none cells. A top-eight cache panel or top-twelve selected-metric chart is not an equivalent per-row detail alternative.",
+      "expected": "Every original row field and associated controls remain reachable on mobile.",
+      "fix": "One narrow caller adoption of the existing full-detail mobile presentation contract, or preserve all columns through contained horizontal scrolling; keep tableId, filters, paging and export semantics."
+    },
+    {
+      "id": "SQ-003", "status": "FAIL", "severity": "medium", "owner": "page", "confidence": "high",
+      "file": "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts", "line": 45,
+      "rule": "MDC-026/MDC-033: no fabricated measurement for an empty sample",
+      "mechanism": "maxMean and maxPeak start at zero and remain zero for an empty list. hasData denotes the response envelope, not a measured query. Summary passes those zeros as valid latency readings whenever known=true.",
+      "evidence": ["web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:20,28,45-58", "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:86-87", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:32-39"],
+      "repro": "Source-only counterexample, NOT executed: a successful envelope with slow_queries=[] gives known=true, count=0, maxMean=0, maxPeak=0. The two maxima are therefore published as measured zero-second latency despite no query observation.",
+      "expected": "Known zero query/count aggregates may remain zero; slowest mean and peak of no observations must be unknown.",
+      "fix": "One narrow empty-maxima correction preserving metric numeric APIs and the known-zero count distinction."
+    },
+    {
+      "id": "SQ-004", "status": "FAIL", "severity": "medium", "owner": "integration", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts", "line": 5,
+      "rule": "MDC-044 / frontend SI cutover: fallback English must exist in canonical catalogs",
+      "mechanism": "Four order options request translation keys absent from both canonical en.json and its locale-admin projection. Dropdown and active metric titles depend on these options, so fallbacks hide the missing resource ownership.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts:5-8", "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:43-46", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:33-34", "web\\src\\i18n\\en\\locale-admin.json:865-903", "web\\logs\\phase6-qa-admin-slow-queries.log"],
+      "missingKeys": ["admin.slowQueries.orderCalls", "admin.slowQueries.orderMax", "admin.slowQueries.orderMean", "admin.slowQueries.orderTotal"],
+      "repro": "Actually checked without rendering: extract literal admin.* keys from the six exact feature files and traverse each dotted key in canonical and split JSON. 46 checked, 42 found, these four missing.",
+      "expected": "All four canonical option labels exist under the keys used by the page; generated projections stay coherent.",
+      "fix": "A separately owned, serialized catalog-only correction at existing canonical/projection owners; this worker makes no catalog edits."
+    },
+    {
+      "id": "SQ-005", "status": "FAIL", "severity": "medium", "owner": "page", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx", "line": 106,
+      "rule": "MDC-026: filtered no-match differs from authoritatively empty",
+      "mechanism": "A loaded nonempty source mounts DataTable with local search/value filters. When filteredData is empty, DataTable emits the caller's unconditional No slow queries copy, the same assertion used for an actually empty source.",
+      "evidence": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:88-106", "web\\src\\components\\ui\\DataTable.tsx:536-545,1379-1384,1603-1608"],
+      "repro": "Source-defined scenario, NOT browser tested: start with any loaded row, enter a search with no match or choose an excluding value filter. filteredData=[] while source data is nonempty; body shows No slow queries and summary remains populated.",
+      "expected": "No matching queries for the current table filters, with the original source-empty explanation reserved for authoritatively empty rows.",
+      "fix": "One narrow caller empty-message correction preserving the existing loaded-row filter pipeline and search controls; no new server filter capability."
+    },
+    {
+      "id": "SQ-006", "status": "FAIL", "severity": "medium", "owner": "page", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx", "line": 88,
+      "rule": "MDC-026: unsupported evidence is not empty evidence",
+      "mechanism": "An initial configured-missing 503 sets subsystemMissing=true, showError=false and rows=[]. Analysis is not told the unsupported state, so ranking/cache render ordinary data-empty messages. Details skips its meaningful source-empty branch because subsystemMissing=true, then mounts an empty DataTable asserting No slow queries.",
+      "evidence": ["internal\\handler\\v1\\admin_observability_handler.go:132-135", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:21,26-28", "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:70-81,93-100", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:38-39,60-64", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:88,99-106"],
+      "repro": "Source-defined scenario, NOT API/browser tested: initial ApiError with status503 and code SUBSYSTEM_NOT_CONFIGURED, no retained data. An unsupported banner coexists with No queries to chart yet, No shared-buffer statistics and No slow queries, although no statistics read succeeded.",
+      "expected": "All section shells stay visible but identify the unsupported/not-measured source rather than asserting measured absence.",
+      "fix": "One narrow unsupported-state propagation across the existing controller/analysis/details path; keep independent shells and shared feedback."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "SQ-C01", "status": "NOTRUN", "owner": "page", "confidence": "medium",
+      "file": "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts", "line": 21,
+      "detail": "Every fatal ApiError503 is treated as missing pg_stat_statements without inspecting its structured code. A transient generic503 would therefore get installation guidance, but this audit did not establish a real alternate503 producer on this route.",
+      "evidence": ["web\\src\\lib\\resilience.ts:316-335", "web\\src\\api\\client.ts:232-241,271-272", "internal\\handler\\v1\\admin_observability_handler.go:132-135"],
+      "next": "Separately verify structured code classification with a synthetic error, not real queries; do not claim a live outage was reproduced."
+    },
+    {
+      "id": "SQ-C02", "status": "NOTRUN", "owner": "page", "confidence": "medium",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx", "line": 70,
+      "detail": "Unconditional fingerprint.length can throw for a malformed null fingerprint, despite adjacent fallback text. Type requires string; no backend null fingerprint was proven or captured.",
+      "evidence": ["web\\src\\types\\admin-operator-confidence.ts:60", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:69-73"],
+      "next": "Confirm wire nullability or add separately authorized defensive source handling; not a confirmed production crash."
+    },
+    {
+      "id": "SQ-C03", "status": "NOTRUN", "owner": "page", "confidence": "high for source candidates, unverified for visual failure",
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx", "line": 47,
+      "detail": "Actual scans found two fontSize10 axis overrides, fixed 150px axis width, one line of three fixed hex cache colors; ranking cycles CHART_COLORS and MetricBar defaults to gradient. These require typography/palette/contrast/allocated-width review, not a native failure claim.",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:47-48,52,59,71", "web\\src\\components\\data-display\\MetricBar.tsx:45,95"],
+      "next": "Use existing typography/semantic/solid-fill APIs in separately assigned corrections if confirmed; preserve palette preferences, thresholds and all chart data. Native themes/contrast/clipping NOTRUN."
+    },
+    {
+      "id": "SQ-C04", "status": "NOTRUN", "owner": "shared", "confidence": "medium",
+      "file": "web\\src\\components\\data-display\\DataFreshness.tsx", "line": 258,
+      "detail": "Shared refresh overrides normal button geometry with auto height/padding. The selectors now have source44px minima, but actual freshness/toolbar targets, spacing and forced-color focus have not been measured.",
+      "evidence": ["web\\src\\components\\data-display\\DataFreshness.tsx:252-267", "web\\src\\components\\ui\\DataTable.tsx:1345-1349"],
+      "next": "Existing shared-native owner should measure actual target rectangles and focus under the authorized mobile matrix; no source-size inference is a native pass."
+    }
+  ],
+  "states": {
+    "initial": {"status": "PASS", "evidence": "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:20,27; per-section skeleton/null metric paths inspected"},
+    "success": {"status": "PASS", "evidence": "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:84-100; four sections consume one source"},
+    "fatal": {"status": "PASS", "evidence": "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:26,29; non503 fatal callbacks supplied to all sections"},
+    "retained": {"status": "PASS", "evidence": "web\\src\\api\\dataState.ts:227-249; web\\src\\components\\feedback\\DataSourceNotice.tsx:78,113-122"},
+    "paused": {"status": "PASS", "evidence": "web\\src\\api\\dataState.ts:251-258; web\\src\\components\\feedback\\DataSourceNotice.tsx:79,158-160"},
+    "empty": {"status": "FAIL", "issues": ["SQ-003"], "evidence": "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts:45-58; web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx:32-39"},
+    "partialCounters": {"status": "FAIL", "issues": ["SQ-001"], "evidence": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts:38-42"},
+    "unsupported": {"status": "FAIL", "issues": ["SQ-006"], "evidence": "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx:88,106"},
+    "filteredNoMatch": {"status": "FAIL", "issues": ["SQ-005"], "evidence": "web\\src\\components\\ui\\DataTable.tsx:1603-1608"},
+    "actions": {"status": "PASS", "evidence": "web\\src\\components\\ui\\DataTable.tsx:856-916; loaded-row paging/export only; no action executed"},
+    "allStateRuntimeTransitions": {"status": "NOTRUN", "reason": "No mount, synthetic test harness, browser, API or query execution authorized."}
+  },
+  "responsive": {
+    "status": "FAIL",
+    "sourceDefect": "SQ-002",
+    "sourceReflowEvidence": ["web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:35", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:33-34,69"],
+    "nativeStatus": "NOTRUN",
+    "nativeWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "additionalNotRun": ["narrow allocated containers", "200% text", "long translations", "RTL", "page/table/chart overflow", "safe-area and footer reachability"]
+  },
+  "accessibility": {
+    "sourceSemantics": "PASS",
+    "mobileDetailReachability": "FAIL: SQ-002",
+    "nativeStatus": "NOTRUN",
+    "notRun": ["keyboard/open Select states", "focus order/restoration", "screen reader", "touch rectangles and spacing", "composed text/control contrast", "OS forced colors", "OS reduced motion/low bandwidth", "drawer/table/export interactions"],
+    "evidence": ["web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx:36-57", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx:36,40-42,73", "web\\src\\components\\motion\\FadeIn.tsx:23-35"]
+  },
+  "visualIssues": {"status": "NOTRUN", "candidates": ["SQ-C03", "SQ-C04"], "noNativePassClaim": true},
+  "architectureIssues": {"status": "PASS", "scope": "Existing feature orchestration, shared surfaces, typed read hooks and display-boundary adaptation preserved; no source changes or speculative replacement API."},
+  "duplicatedPatterns": [],
+  "competingImplementations": [],
+  "requiredSharedChanges": [
+    {"name": "Missing order-option catalogs", "existingOwner": "web\\src\\i18n\\en.json and existing split catalog generation owners", "usedBy": ["SlowQueriesPage dropdown", "SlowQuerySummary scope", "SlowQueryAnalysis active metric title"], "dependsOn": [], "issue": "SQ-004", "writeAuthorization": "None in this task; request an exact four-key serialized integration item."},
+    {"name": "Native shared target review", "existingOwner": "web\\src\\components\\data-display\\DataFreshness.tsx and existing table toolbar owners", "usedBy": ["SlowQueriesPage freshness", "SlowQueriesDetails controls"], "dependsOn": ["actual browser-owner release and explicit native grant"], "candidate": "SQ-C04", "writeAuthorization": "None; measure first, no speculative shared patch."}
+  ],
+  "priority": {
+    "first": ["SQ-001: preserve unknown cache evidence", "SQ-002: restore full mobile details"],
+    "next": ["SQ-003: empty maxima", "SQ-004: four option translations", "SQ-005: filtered no-match copy", "SQ-006: unsupported per-section evidence"],
+    "native": "Separate authorized mounted QA remains required; report DONE is not page/native acceptance."
+  },
+  "preservation": {
+    "status": "PASS",
+    "comparison": "Current source versus retained audit-page-023.json, not Git/original-production parity. The historical page hash and 362/501-line totals match this source snapshot. No source delta was created.",
+    "pageSha256": "7e46feb9ee84d959e65050b47de94e3d0ba439940e488e6da8ec53d7e6c197b0",
+    "pageLineCount": 102,
+    "relatedLineCounts": {
+      "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts": 90,
+      "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx": 64,
+      "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx": 81,
+      "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx": 115,
+      "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts": 49
+    },
+    "pagePlusPresentationLines": 362,
+    "pagePlusAllImmediateFeatureDependencyLines": 501,
+    "historicalComparisonPercent": 100,
+    "sectionCount": 4,
+    "historicalSectionCount": 4,
+    "sections": ["Query performance summary: six metrics", "Top queries ranking: top12", "Cache efficiency: top8", "Top queries detail table: seven columns"],
+    "directGlassPanelOrChartContainerCount": 0,
+    "actualOpeningFrameCounts": {"OperationalBrief": 1, "ChartCard": 1, "LayoutCard": 2},
+    "actions": ["four server-order choices", "four fetch-limit choices", "source retry/manual refresh", "summary details", "loaded-row search/value filters", "table visibility/density/layout persistence", "loaded-row local pagination/page size", "loaded-row CSV/JSON export"],
+    "dataBehavior": ["typed request cancellation/key/poll/retry policy", "raw millisecond source fields", "display precision and locale", "source-limited totals and rankings", "unknown observation period", "independent loading/error/retained/offline shells", "query_id identity", "no query or mutation execution"]
+  },
+  "evidenceLimits": {
+    "mode": "SOURCE ONLY",
+    "realQueriesOrPayloadsCaptured": false,
+    "nativeBrowserApiSqlExecution": "NOTRUN",
+    "typeScript": {"status": "NOTRUN", "command": "npx tsc --noEmit", "reason": "Report-only worker; global typing/full gates and unchanged passing reruns explicitly forbidden. No clean compiler claim."},
+    "auditSkillScript": {"status": "NOTRUN", "command": "bash .github\\skills\\audit-violations\\audit.sh <scope>", "reason": "Inspected only; it invokes a helper and unconditionally runs project TypeScript, contrary to exact read-only worker scope. Scoped raw built-in scans are separate evidence."},
+    "apiSkillScript": {"status": "NOTRUN", "command": "bash .github\\skills\\verify-api-hooks\\verify.sh <hook>", "reason": "Inspected only; helper and broad mounted-route traversal not authorized. Exact hook/router/registered-handler source agreement inspected instead."},
+    "tests": {"status": "NOTRUN", "discovered": 0, "executed": 0, "passed": 0, "failed": 0, "skipped": 0, "names": [], "reason": "No source/test changes; no test or unchanged passing rerun authorized. Zero execution is not a passing run."},
+    "buildLintFullSuitesDockerGit": "NOTRUN",
+    "serverRowShapeCapAuthResetEpoch": "NOTRUN",
+    "originalProductionGitParity": "NOTRUN",
+    "dynamicReproductions": "NOTRUN: counterexamples and transition steps are logical source repros, not executed tests or observed production failures.",
+    "historicalReceipts": "audit-page-023.json and handoff are retained context. In particular the old 36px selector concern is superseded by current Select source; old positive receipts were not replayed."
+  },
+  "commands": [
+    {
+      "command": "Get-Date -Format o; Get-Item exact report/root-log candidates -ErrorAction SilentlyContinue; Get-Content ..\\.gitignore | Select-String -Pattern logs",
+      "exitCode": 0,
+      "actualOutput": "2026-10-13T09:35:13.3181010-07:00; logs/; /.github/prompts/db-refactor/logs",
+      "scopeNote": "Initial root-log existence probe was read-only; contract later confirmed the sole writable log is web\\logs\\phase6-qa-admin-slow-queries.log."
+    },
+    {
+      "command": "Get-FileHash/Get-Content over the six exact feature files; attempted rg -n scoped rule loop",
+      "startedUtc": "2026-10-13T16:38:08.2055107Z",
+      "exitCode": 1,
+      "status": "FAIL",
+      "actualOutput": "Six hashes/line counts recorded, then: The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "interpretation": "Shell tool availability failure, not zero findings or passing audit; no installation/helper workaround."
+    },
+    {
+      "command": "Select-String -LiteralPath $files -Pattern $rules[$name] -CaseSensitive; exact hook prefix/parameter and section-frame scans",
+      "startedUtc": "2026-10-13T16:38:38.7964749Z",
+      "exitCode": 0,
+      "status": "PASS",
+      "files": ["src\\features\\admin\\pages\\SlowQueriesPage.tsx", "src\\features\\admin\\hooks\\useSlowQueriesPage.ts", "src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx", "src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx", "src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx", "src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts"],
+      "actualOutput": "static_inline_css_variable=0; raw_controls=0; direct_vendor_imports=0; old_api_imports=0; neon_body_candidate=0; fixed_white_candidate=0; fixed_hex_candidate=1 (SlowQueryAnalysis.tsx:71); chart_10px_candidate=2 (SlowQueryAnalysis.tsx:47-48); any_type=0. Hook prefix hits at5/28 are documentation, not requests. Four actual data-section frames.",
+      "interpretation": "Regex execution completed; individual visual candidates remain NOTRUN, not reclassified as native passes. Raw lines retained in ignored log."
+    },
+    {
+      "command": "Extract literal admin.* keys from six exact feature files; ConvertFrom-Json -AsHashtable canonical en.json and split locale-admin.json; exact source hook/router/handler Select-String",
+      "startedUtc": "2026-10-13T16:40:04.9621664Z",
+      "exitCode": 0,
+      "status": "FAIL",
+      "actualOutput": "admin_keys_checked=46 missing_canonical_or_split=4: admin.slowQueries.orderCalls, orderMax, orderMean, orderTotal. Exact GET /admin/observability/slow-queries registration and order_by/limit/top-level fields agree.",
+      "interpretation": "Command completed successfully but i18n assertions FAIL; API source agreement PASS. No response/query executed."
+    },
+    {
+      "command": "ConvertFrom-Json report validation; issue/check/source SHA256 and line checks; deadline comparison",
+      "observedUtc": "2026-10-13T16:44:53Z",
+      "exitCode": 1,
+      "status": "FAIL",
+      "actualOutput": "Could not compare DateTime to DateTimeOffset: Cannot convert the value of type System.DateTimeOffset to type System.DateTime.",
+      "interpretation": "Document-validation command failed at its deadline guard after the source checks. No completed validation PASS claimed. Correcting the comparison is a bounded own-command repair, not a passing test rerun."
+    },
+    {
+      "command": "Corrected ConvertFrom-Json identity/status/issue/source SHA256/line validation and DateTimeOffset.UtcDateTime deadline comparison",
+      "completedUtc": "2026-10-13T16:45:38.9302914Z",
+      "exitCode": 0,
+      "status": "PASS",
+      "actualOutput": "JSON_VALID=PASS; source_checks=19; confirmed_issues=6; candidates=4; native=NOTRUN; source_QA=FAIL; six_feature_hashes_unchanged=6; source_lines=501; data_sections=4; own_source_edits=0.",
+      "interpretation": "Only report/source-preservation validation passed. Six source checks still FAIL and all native checks remain NOTRUN."
+    }
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-inventory.md",
+    "docs\\frontend-audits\\audit-page-023.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    ".github\\skills\\verify-api-hooks\\contract-paths.cjs",
+    ".gitignore",
+    "web\\src\\features\\admin\\pages\\SlowQueriesPage.tsx",
+    "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQuerySummary.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\lib\\resilience.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\feedback\\QueryError.tsx",
+    "web\\src\\components\\feedback\\_StatusAwareError.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\i18n\\en.json",
+    "web\\src\\i18n\\en\\locale-admin.json",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go"
+  ],
+  "returnNeeds": "Six narrow source-proven corrections (nullable cache evidence, mobile detail reachability, empty maxima, four catalog labels, filtered-empty copy, unsupported section states); four separately bounded candidates and all native checks remain NOTRUN. ALL claims released; no post-return writes."
+}

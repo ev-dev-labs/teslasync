@@ -6,6 +6,7 @@
 //   3. SSE POST with selected dimensions
 //   4. validate_alert_message_template capture + Apply
 //   5. Reject malformed tool_result envelopes
+//   6. Draft/save-state changes retire proposals and reject stale completion
 //
 // Network is stubbed at fetch. Interactions use fireEvent.
 
@@ -156,6 +157,24 @@ async function clickSuggest() {
   return suggest
 }
 
+function controlledStream() {
+  let controller: ReadableStreamDefaultController<Uint8Array>
+  const response = new Response(new ReadableStream<Uint8Array>({
+    start(value) {
+      controller = value
+    },
+  }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+  return {
+    response,
+    send(event: string, data: unknown) {
+      controller.enqueue(new TextEncoder().encode(sseFrame(event, data)))
+    },
+    close() {
+      controller.close()
+    },
+  }
+}
+
 beforeEach(() => {
   mockUseSettings.mockReset()
   globalThis.fetch = vi.fn(async () => {
@@ -296,10 +315,178 @@ describe('AIAlertMessageTemplateSuggestion — proposal capture + apply', () => 
     await act(async () => {
       fireEvent.click(apply)
     })
+
     expect(onApply).toHaveBeenCalledTimes(1)
     expect(onApply).toHaveBeenCalledWith(validProposal.template)
   })
+})
 
+    describe('AIAlertMessageTemplateSuggestion — draft revision ownership', () => {
+      const proposalEvent = {
+        id: 'tc1',
+        name: TOOL_NAME,
+        ok: true,
+        data: validProposal,
+      }
+      const doneEvent = { finish_reason: 'stop', usage: { in: 40, out: 12 } }
+
+      it.each([
+        { severity: 'warning' },
+        { name: 'Changed alert' },
+        { value_num: 42 },
+        { value_text: 'changed' },
+        { value_bool: false },
+        { value_min: 1 },
+        { value_max: 99 },
+        { metric_window: '1h' },
+        { metric_op: '>' },
+        { metric_threshold: 10 },
+        { signal_name: 'Speed' },
+        { op: '>' },
+        { kind: 'computed_metric', metric_id: 'efficiency' },
+      ])('aborts pending work after draft change %j and ignores stale completion', async (change) => {
+        mockUseSettings.mockReturnValue(enabled())
+        const oldStream = controlledStream()
+        const newStream = controlledStream()
+        const fetchMock = vi.fn<typeof fetch>()
+          .mockResolvedValueOnce(oldStream.response)
+          .mockResolvedValueOnce(newStream.response)
+        globalThis.fetch = fetchMock
+        const onApply = vi.fn()
+        const { rerender } = render(
+          <AIAlertMessageTemplateSuggestion draft={readyDraft} onApplyTemplate={onApply} />,
+        )
+        await clickSuggest()
+        const signal = fetchMock.mock.calls[0][1]?.signal
+        rerender(
+          <AIAlertMessageTemplateSuggestion
+            draft={{ ...readyDraft, ...change }}
+            onApplyTemplate={onApply}
+          />,
+        )
+        expect(signal?.aborted).toBe(true)
+        await clickSuggest()
+        await act(async () => {
+          oldStream.send('tool_result', proposalEvent)
+          oldStream.send('done', doneEvent)
+          oldStream.close()
+        })
+        expect(screen.queryByTestId(APPLY_TESTID)).not.toBeInTheDocument()
+        expect(onApply).not.toHaveBeenCalled()
+        await act(async () => {
+          newStream.send('tool_result', proposalEvent)
+          newStream.send('done', doneEvent)
+          newStream.close()
+        })
+        const apply = await screen.findByTestId(APPLY_TESTID)
+        expect(apply).toBeEnabled()
+        expect(onApply).not.toHaveBeenCalled()
+        fireEvent.click(apply)
+        expect(onApply).toHaveBeenCalledExactlyOnceWith(validProposal.template)
+      })
+
+      it.each(['draft', 'readiness', 'disabled'] as const)(
+        'retires completed proposals when %s changes, including change-back',
+        async (change) => {
+          mockUseSettings.mockReturnValue(enabled())
+          stubStreamOnce(sseFrame('tool_result', proposalEvent) + sseFrame('done', doneEvent))
+          const onApply = vi.fn()
+          const { rerender } = render(
+            <AIAlertMessageTemplateSuggestion draft={readyDraft} onApplyTemplate={onApply} />,
+          )
+          await clickSuggest()
+          const oldApply = await screen.findByTestId(APPLY_TESTID)
+          rerender(
+            <AIAlertMessageTemplateSuggestion
+              draft={change === 'draft' ? { ...readyDraft, severity: 'critical' }
+                : change === 'readiness' ? { ...readyDraft, op: '' } : readyDraft}
+              disabled={change === 'disabled'}
+              onApplyTemplate={onApply}
+            />,
+          )
+          expect(screen.queryByTestId(APPLY_TESTID)).not.toBeInTheDocument()
+          fireEvent.click(oldApply)
+          rerender(
+            <AIAlertMessageTemplateSuggestion draft={readyDraft} onApplyTemplate={onApply} />,
+          )
+          expect(screen.queryByTestId(APPLY_TESTID)).not.toBeInTheDocument()
+          expect(onApply).not.toHaveBeenCalled()
+        },
+      )
+
+      it.each(['disabled', 'readiness'] as const)(
+        'ignores pending completion after losing %s',
+        async (change) => {
+          mockUseSettings.mockReturnValue(enabled())
+          let resolveResponse!: (response: Response) => void
+          const fetchMock = vi.fn<typeof fetch>(() => new Promise((resolve) => {
+            resolveResponse = resolve
+          }))
+          globalThis.fetch = fetchMock
+          const onApply = vi.fn()
+          const { rerender } = render(
+            <AIAlertMessageTemplateSuggestion draft={readyDraft} onApplyTemplate={onApply} />,
+          )
+          await clickSuggest()
+          rerender(
+            <AIAlertMessageTemplateSuggestion
+              draft={change === 'readiness' ? { ...readyDraft, signal_name: '' } : readyDraft}
+              disabled={change === 'disabled'}
+              onApplyTemplate={onApply}
+            />,
+          )
+          expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true)
+          await act(async () => {
+            resolveResponse(new Response(makeReadableStream([
+              sseFrame('tool_result', proposalEvent) + sseFrame('done', doneEvent),
+            ]), { status: 200 }))
+          })
+          expect(screen.queryByTestId(APPLY_TESTID)).not.toBeInTheDocument()
+          expect(screen.getByTestId(SUGGEST_TESTID)).toBeDisabled()
+          expect(onApply).not.toHaveBeenCalled()
+        },
+      )
+
+      it.each(['rejected', 'invalid', 'error', 'disconnect'] as const)(
+        'does not apply a captured proposal after %s',
+        async (outcome) => {
+          mockUseSettings.mockReturnValue(enabled())
+          const pending = controlledStream()
+          globalThis.fetch = vi.fn<typeof fetch>().mockResolvedValue(pending.response)
+          const onApply = vi.fn()
+          render(
+            <AIAlertMessageTemplateSuggestion draft={readyDraft} onApplyTemplate={onApply} />,
+          )
+          await clickSuggest()
+          await act(async () => pending.send('tool_result', proposalEvent))
+          const apply = await screen.findByTestId(APPLY_TESTID)
+          expect(apply).toBeDisabled()
+          fireEvent.click(apply)
+          expect(onApply).not.toHaveBeenCalled()
+          await act(async () => {
+            if (outcome === 'rejected' || outcome === 'invalid') {
+              pending.send('tool_result', {
+                ...proposalEvent,
+                ok: outcome !== 'rejected',
+                data: outcome === 'invalid' ? { ...validProposal, status: 'invalid' } : validProposal,
+              })
+              pending.send('done', doneEvent)
+            } else if (outcome === 'error') {
+              pending.send('error', { message: 'Provider rejected the request' })
+            }
+            pending.close()
+          })
+          const remainingApply = screen.queryByTestId(APPLY_TESTID)
+          if (remainingApply) {
+            expect(remainingApply).toBeDisabled()
+            fireEvent.click(remainingApply)
+          }
+          expect(onApply).not.toHaveBeenCalled()
+        },
+      )
+    })
+
+describe('AIAlertMessageTemplateSuggestion — proposal rejection', () => {
   it('drops a tool_result with status other than ok', async () => {
     mockUseSettings.mockReturnValue(enabled())
     const sseBody =

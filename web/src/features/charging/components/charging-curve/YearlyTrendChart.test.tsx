@@ -41,6 +41,32 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+const chartSpies = vi.hoisted(() => ({
+  bar: vi.fn((_props: Record<string, unknown>) => null),
+  line: vi.fn((_props: Record<string, unknown>) => null),
+  composed: vi.fn(),
+  yAxis: vi.fn((_props: Record<string, unknown>) => null),
+}));
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    ComposedChart: ({ children, ...props }: { children?: ReactNode; data: unknown }) => {
+      chartSpies.composed(props);
+      return <>{children}</>;
+    },
+    Bar: chartSpies.bar,
+    Line: chartSpies.line,
+    XAxis: () => null,
+    YAxis: chartSpies.yAxis,
+    CartesianGrid: () => null,
+    Tooltip: () => null,
+    ChartLegend: () => null,
+  };
+});
+
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via shared
 // UI) reads it. Install a benign stub before any shared module evaluates.
 vi.hoisted(() => {
@@ -108,12 +134,14 @@ vi.mock('@/hooks/useChartExport', () => ({
 // <ChartContainer> wires annotation hooks unconditionally; we never pass
 // `annotations`, so stub them to no-ops instead of demanding a live query.
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
 }));
 
 import YearlyTrendChart from './YearlyTrendChart';
+import { axisTickSm } from '@/components/charts';
 
 type TrendPoint = { year: string; avg10to80: number; avg20to80: number; count: number };
 
@@ -156,10 +184,75 @@ function dataRowCells(year: string): string[] {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
+describe('YearlyTrendChart — motion-aware series', () => {
+  it.each([false, true])('preserves populated bars and lines with reduced motion=%s', (reduce) => {
+    const matchMedia = window.matchMedia;
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      ...matchMedia(query),
+      matches: reduce && query.includes('prefers-reduced-motion'),
+    }));
+    renderChart(TREND);
+
+    expect(screen.getByRole('figure', { name: TITLE })).toHaveAttribute(
+      'data-chart-key', 'charging-curve-yearly-trend',
+    );
+    expect(chartSpies.composed).toHaveBeenCalledWith(expect.objectContaining({ data: TREND }));
+    const series = [...chartSpies.bar.mock.calls, ...chartSpies.line.mock.calls];
+    expect(series.map(([props]) => ({
+      dataKey: props.dataKey,
+      yAxisId: props.yAxisId,
+      isAnimationActive: props.isAnimationActive,
+      animationDuration: props.animationDuration,
+    }))).toEqual([
+      { dataKey: 'count', yAxisId: 'count', isAnimationActive: !reduce, animationDuration: reduce ? 0 : 300 },
+      { dataKey: 'avg10to80', yAxisId: 'min', isAnimationActive: !reduce, animationDuration: reduce ? 0 : 300 },
+      { dataKey: 'avg20to80', yAxisId: 'min', isAnimationActive: !reduce, animationDuration: reduce ? 0 : 300 },
+    ]);
+    expect(dataRowCells('2022')).toEqual(['2022', '45', '35', '3']);
+    expect(dataRowCells('2023')).toEqual(['2023', '40', '30', '5']);
+  });
+});
+
 describe('YearlyTrendChart — chrome + a11y', () => {
+  it('uses the shared tick token for both localized axis labels', () => {
+    renderChart(TREND);
+
+    const axes = chartSpies.yAxis.mock.calls.map(([props]) => props);
+    expect(axes).toHaveLength(2);
+    expect(axes[0]).toEqual(expect.objectContaining({
+      yAxisId: 'min',
+      orientation: 'left',
+      tick: axisTickSm,
+      label: {
+        value: 'Minutes',
+        angle: -90,
+        position: 'insideLeft',
+        style: axisTickSm,
+      },
+    }));
+    expect(axes[1]).toEqual(expect.objectContaining({
+      yAxisId: 'count',
+      orientation: 'right',
+      tick: axisTickSm,
+      label: {
+        value: 'Sessions',
+        angle: 90,
+        position: 'insideRight',
+        style: axisTickSm,
+      },
+    }));
+    for (const axis of axes) {
+      expect(axis.tick).toBe(axisTickSm);
+      expect((axis.label as { style: unknown }).style).toBe(axisTickSm);
+    }
+    expect(dataRowCells('2022')).toEqual(['2022', '45', '35', '3']);
+    expect(dataRowCells('2023')).toEqual(['2023', '40', '30', '5']);
+  });
+
   it('renders the panel title, subtitle and the accessible chart frame', () => {
     renderChart(TREND);
 

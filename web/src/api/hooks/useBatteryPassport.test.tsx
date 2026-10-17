@@ -2,7 +2,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import {
   beforeEach,
@@ -106,6 +106,28 @@ describe('useBatteryPassport', () => {
 
     expect(result.current.fetchStatus).toBe('idle');
     expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('retains certificate facts after a failed refresh and recovers through refetch', async () => {
+    const failure = new Error('certificate refresh failed');
+    const recovered = { ...passport, issued_at: '2026-08-08T12:00:00Z' };
+    requestMock.mockResolvedValueOnce(passport)
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(recovered);
+    const { Wrapper } = wrapper();
+    const { result } = renderHook(() => useBatteryPassport('7'), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await act(async () => { await result.current.refetch(); });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toEqual(passport);
+    expect(result.current.error).toBe(failure);
+
+    await act(async () => { await result.current.refetch(); });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(recovered);
+    expect(result.current.error).toBeNull();
+    expect(requestMock).toHaveBeenCalledTimes(3);
   });
 });
 

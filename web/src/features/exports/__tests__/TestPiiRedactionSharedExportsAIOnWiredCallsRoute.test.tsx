@@ -307,4 +307,181 @@ describe('TestPiiRedactionSharedExportsAIOnWiredCallsRoute (pii-redaction-shared
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-disabled', 'true');
   });
+
+  it('retires completed guidance when the catalog type changes without automatically requesting new guidance', async () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'pii-redaction-shared-exports': true },
+      }),
+    );
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(makeReadableStream([
+        sseFrame('delta', { text: 'Account catalog guidance.' }),
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 90, out: 28 } }),
+      ]), { status: 200 }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const { rerender } = render(<AIPiiRedactionSharedExports />);
+    const select = screen.getByRole('combobox', { name: /Export type/i });
+    const button = screen.getByRole('button', { name: /Suggest redactions/i });
+    fireEvent.change(select, { target: { value: 'account' } });
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Account catalog guidance.');
+      expect(button).not.toBeDisabled();
+    });
+
+    rerender(<AIPiiRedactionSharedExports />);
+    fireEvent.change(select, { target: { value: 'account' } });
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Account catalog guidance.');
+
+    fireEvent.change(select, { target: { value: 'drives' } });
+    expect(select).toHaveValue('drives');
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+    expect(button).not.toBeDisabled();
+    fireEvent.change(select, { target: { value: 'account' } });
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborts old-type streaming guidance and ignores late frames after explicitly starting the new type', async () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'pii-redaction-shared-exports': true },
+      }),
+    );
+    let oldController!: ReadableStreamDefaultController<Uint8Array>;
+    let newController!: ReadableStreamDefaultController<Uint8Array>;
+    const encoder = new TextEncoder();
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          oldController = controller;
+          controller.enqueue(encoder.encode(sseFrame('delta', { text: 'Account partial guidance.' })));
+        },
+      }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          newController = controller;
+        },
+      }), { status: 200 }));
+    globalThis.fetch = fetchMock;
+
+    render(<AIPiiRedactionSharedExports />);
+    const select = screen.getByRole('combobox', { name: /Export type/i });
+    const button = screen.getByRole('button', { name: /Suggest redactions/i });
+    fireEvent.change(select, { target: { value: 'account' } });
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Account partial guidance.'));
+    expect(button).toBeDisabled();
+    const oldSignal = fetchMock.mock.calls[0][1]?.signal;
+    expect(oldSignal?.aborted).toBe(false);
+
+    fireEvent.change(select, { target: { value: 'drives' } });
+    expect(oldSignal?.aborted).toBe(true);
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+    expect(button).not.toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(button);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe('/api/v1/ai/exports/redaction/draft');
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBe(JSON.stringify({ export_type: 'drives' }));
+    await act(async () => {
+      oldController.enqueue(encoder.encode(
+        sseFrame('delta', { text: 'Late account guidance.' }) +
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 90, out: 28 } }),
+      ));
+      oldController.close();
+    });
+    expect(screen.getByTestId('ai-output-panel')).not.toHaveTextContent(/Account|Late account/);
+    expect(button).toBeDisabled();
+    expect(init?.signal?.aborted).toBe(false);
+
+    await act(async () => {
+      newController.enqueue(encoder.encode(
+        sseFrame('delta', { text: 'Drives catalog guidance.' }) +
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 80, out: 20 } }),
+      ));
+      newController.close();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Drives catalog guidance.');
+      expect(button).not.toBeDisabled();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a delayed old-type response after clearing the selection', async () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'pii-redaction-shared-exports': true },
+      }),
+    );
+    let resolveResponse!: (response: Response) => void;
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(
+      () => new Promise<Response>((resolve) => { resolveResponse = resolve; }),
+    );
+    globalThis.fetch = fetchMock;
+
+    render(<AIPiiRedactionSharedExports />);
+    const select = screen.getByRole('combobox', { name: /Export type/i });
+    const button = screen.getByRole('button', { name: /Suggest redactions/i });
+    fireEvent.change(select, { target: { value: 'account' } });
+    fireEvent.click(button);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    fireEvent.change(select, { target: { value: '' } });
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
+    expect(button).toBeDisabled();
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveResponse(new Response(makeReadableStream([
+        sseFrame('delta', { text: 'Delayed account guidance.' }),
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 90, out: 28 } }),
+      ]), { status: 200 }));
+    });
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+    fireEvent.change(select, { target: { value: 'drives' } });
+    expect(button).not.toBeDisabled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains partial guidance with its error for the same type and retires both on a type change', async () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'pii-redaction-shared-exports': true },
+      }),
+    );
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(makeReadableStream([
+        sseFrame('delta', { text: 'Account incomplete guidance.' }),
+      ]), { status: 200 }),
+    );
+    globalThis.fetch = fetchMock;
+
+    const { rerender } = render(<AIPiiRedactionSharedExports />);
+    const select = screen.getByRole('combobox', { name: /Export type/i });
+    const button = screen.getByRole('button', { name: /Suggest redactions/i });
+    fireEvent.change(select, { target: { value: 'account' } });
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('stream_incomplete'));
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Account incomplete guidance.');
+    expect(button).not.toBeDisabled();
+
+    rerender(<AIPiiRedactionSharedExports />);
+    expect(screen.getByRole('alert')).toHaveTextContent('stream_incomplete');
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Account incomplete guidance.');
+    fireEvent.change(select, { target: { value: 'drives' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

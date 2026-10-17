@@ -109,6 +109,7 @@ export function ArrivalReliabilityMonthTrend({
             skeletonHeight={320}
           >
             <ArrivalReliabilityProfilePlot
+              chartKey="arrival-month-trend"
               rows={rows}
               normalizedName={t(
                 'arrivalReliability.profiles.normalizedSeries',

@@ -1,0 +1,105 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { UnitPref } from '@/lib/unitConversion';
+import type { StatMetric } from '@/components/data-display';
+import { DrivingSummaryBrief } from './DrivingSummaryBrief';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+
+const preferences = vi.hoisted(() => ({
+  units: {
+    distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+    energy: 'kWh', duration: 'h', power: 'kW', precision: 2, locale: 'en-US',
+  } as UnitPref,
+}));
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ unitPrefs: preferences.units }) }));
+vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
+
+function renderBrief(metrics: readonly StatMetric[], loading = false, variant?: 'standalone' | 'embedded') {
+  return render(<MemoryRouter><DrivingSummaryBrief
+    id="test-driving-brief" title="Selected-window evidence" description="Returned rows only"
+    scope="2026-01-01 — 2026-02-01" provenance="Recorded drives" metrics={metrics}
+    loading={loading}
+    variant={variant}
+  /></MemoryRouter>);
+}
+
+beforeEach(() => {
+  preferences.units = { ...preferences.units, distance: 'km', speed: 'km/h', precision: 2, locale: 'en-US' };
+});
+
+describe('DrivingSummaryBrief — real OperationalBrief and raw metric bridge', () => {
+  it('renders an embedded brief without its own surface inside an existing card', () => {
+    renderBrief([{ metricId: 'count', label: 'Drives', rawValue: 1 }], false, 'embedded');
+    const brief = screen.getByTestId('test-driving-brief');
+    expect(brief.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
+  it.each([
+    ['regen-efficiency-modernization', 'RankedDriveEvidence', 'LayoutCard', 'layout'],
+    ['regen-efficiency-modernization', 'RecoveryContext', 'LayoutCard', 'layout'],
+    ['regen-efficiency-modernization', 'RegenCardSlot', 'useCardPlacement', 'layout'],
+    ['operationalbrief-n-z', 'RegenSummaryBrief', 'StatMetric', 'data-display'],
+    ['operationalbrief-n-z', 'RegenOverviewBrief', 'StatMetric', 'data-display'],
+    ['operationalbrief-n-z', 'RegenCoverageBrief', 'StatMetric', 'data-display'],
+    ['operationalbrief-n-z', 'DrivingSummaryBrief', 'StatMetric', 'data-display'],
+  ])('%s/%s uses the public category import for %s', (directory, component, symbol, category) => {
+    const source = readFileSync(join('src', 'features', 'driving', 'components', directory, `${component}.tsx`), 'utf8');
+    expect(source).toMatch(new RegExp(`import(?: type)? \\{[^}]*\\b${symbol}\\b[^}]*\\} from '@/components/${category}';`));
+    expect(source).not.toMatch(/from ['"]@\/components\/(?:layout|data-display)\//);
+    if (symbol === 'StatMetric') {
+      expect(source).toMatch(/(?:import type \{ StatMetric \}|import \{[^}]*type StatMetric[^}]*\}) from '@\/components\/data-display';/);
+    }
+  });
+
+  it('retains the exact unclassified 50/50 denominator and measured zero separately from missing and invalid counts', () => {
+    renderBrief([
+      { metricId: 'count', occurrenceId: 'unclassified', rawValue: 50, display: { countTotal: 50 }, label: 'Unclassified' },
+      { metricId: 'count', occurrenceId: 'zero', rawValue: 0, label: 'Measured zero' },
+      { metricId: 'count', occurrenceId: 'missing', rawValue: null, label: 'Unavailable count' },
+      { metricId: 'count', occurrenceId: 'invalid', rawValue: Number.NaN, label: 'Invalid count' },
+    ]);
+    const brief = screen.getByTestId('test-driving-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelector('[data-operational-metric="unclassified"]')).toHaveAttribute('data-value-state', 'value');
+    expect(brief.querySelector('[data-operational-metric="unclassified"] [data-operational-value]')).toHaveTextContent('50/50');
+    expect(brief.querySelector('[data-operational-metric="zero"] [data-operational-value]')).toHaveTextContent('0');
+    assertOperationalMetricUnavailable(brief, 'Unavailable count');
+    assertOperationalMetricUnavailable(brief, 'Invalid count');
+  });
+
+  it('converts SI distance with saved display preferences without converting the count denominator', () => {
+    preferences.units = { ...preferences.units, distance: 'mi' };
+    renderBrief([
+      { metricId: 'distance', occurrenceId: 'distance', rawValue: 1609.344, label: 'Distance' },
+      { metricId: 'count', occurrenceId: 'coverage', rawValue: 3, display: { countTotal: 7 }, label: 'Coverage' },
+    ]);
+    expect(screen.getByTestId('test-driving-brief').querySelector('[data-operational-metric="distance"] [data-operational-value]')).toHaveTextContent('1.00 mi');
+    expect(screen.getByText('3/7')).toBeInTheDocument();
+  });
+
+  it('keeps compact loading geometry and exposes no measured-value markers before source resolution', () => {
+    renderBrief([{ metricId: 'count', rawValue: null, label: 'Rows' }], true);
+    const brief = screen.getByTestId('test-driving-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(within(brief).getByText('Rows')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+  });
+
+  it('opens the real details drawer with rich metric context and source provenance', () => {
+    renderBrief([{
+      metricId: 'distance', rawValue: 1000, label: 'Business',
+      description: 'Selected-period classified distance',
+      context: <>$25.00 · 3 drives</>,
+    }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Selected-period classified distance')).toBeInTheDocument();
+    expect(within(dialog).getByText('$25.00 · 3 drives')).toBeInTheDocument();
+    expect(within(dialog).getByText('Recorded drives')).toBeInTheDocument();
+  });
+});

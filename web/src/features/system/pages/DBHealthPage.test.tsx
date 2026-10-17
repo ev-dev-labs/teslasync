@@ -6,7 +6,7 @@
  * `useConnectionPool`) per test. Facets covered:
  *
  *   1. Populated view — honest KPI band derived from the tables + migration +
- *      pool payloads, the top-15 table-size chart, the migration-status panel
+ *      pool payloads, the top-15 table-row chart, the migration-status panel
  *      (version, clean/dirty, recent-migrations list), the per-table detail
  *      grid, and the connection-pool panel (stats + usage progressbar).
  *   2. Interactions — the Size/Rows/Name sort control re-orders the grid and
@@ -28,13 +28,15 @@
  * suite) so the page runs end-to-end without a network. i18n is stubbed to
  * return the English `defaultValue` with `{{var}}` interpolation.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ApiError } from '@/lib/resilience';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type {
   ConnectionPool,
   DBStats,
@@ -89,7 +91,7 @@ const MB = 1024 * 1024;
 const GB = 1024 * 1024 * 1024;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -170,8 +172,8 @@ function kpiRegion() {
   return within(screen.getByRole('region', { name: 'Summary metrics' }));
 }
 function metricValue(label: string): string {
-  const labelSpan = kpiRegion().getByText(label);
-  return labelSpan.closest('p')?.nextElementSibling?.textContent ?? '';
+  const tile = kpiRegion().getAllByText(label)[0].closest('[data-operational-metric]');
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 // The chart renders a visually-hidden fallback <table>; the detail grid is the
@@ -192,7 +194,16 @@ function firstBodyRowName(): string {
   );
 }
 
+function closeTableDetails() {
+  const footer = screen.getByRole('dialog', { name: 'Tables' })
+    .querySelector<HTMLElement>('[data-modal-footer]');
+  if (!footer) throw new Error('table detail footer not found');
+  fireEvent.click(within(footer).getByRole('button', { name: /^Close$/ }));
+}
+
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockUseDBStats.mockReset();
   mockUseMigrations.mockReset();
   mockUseConnectionPool.mockReset();
@@ -201,22 +212,146 @@ beforeEach(() => {
   mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool() }));
 });
 
+afterEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+});
+
+describe('DBHealthPage — row chart context and count preferences', () => {
+  it('discloses the top fifteen returned tables by rows while keeping all sixteen details and independent sorting', () => {
+    const tables = Array.from({ length: 16 }, (_, index): TableInfo => ({
+      ...TABLES[0],
+      name: `table_${String(index).padStart(2, '0')}_complete_identity`,
+      rowCount: index * 1_000,
+      sizeBytes: (16 - index) * MB,
+    }));
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ tables, tableCount: 16 }) }));
+    renderPage();
+
+    const scope = 'Showing 15 of 16 returned tables by row count. The complete table list is below.';
+    expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
+    expect(screen.getByRole('figure', { name: 'Rows' }))
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
+    const chartTable = screen.getAllByRole('table').find((table) => table !== tablesGrid())!;
+    const rankedNames = within(chartTable).getAllByRole('row').slice(1)
+      .map((row) => within(row).getAllByRole('cell')[0].textContent);
+    expect(rankedNames).toEqual(tables.slice(1).reverse().map((table) => table.name));
+    expect(within(chartTable).queryByText(tables[0].name)).toBeNull();
+    expect(within(tablesGrid()).getAllByRole('row')).toHaveLength(17);
+    expect(within(tablesGrid()).getByText(tables[0].name)).toBeInTheDocument();
+    expect(within(tablesGrid()).getAllByRole('row')[1]).toHaveTextContent(tables[0].name);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rows' }));
+    expect(within(tablesGrid()).getAllByRole('row')[1]).toHaveTextContent(tables[15].name);
+    expect(within(chartTable).getAllByRole('row').slice(1)
+      .map((row) => within(row).getAllByRole('cell')[0].textContent)).toEqual(rankedNames);
+    expect(tables[0].rowCount).toBe(0);
+    expect(tables[15].rowCount).toBe(15_000);
+  });
+
+  it('describes all returned tables when fewer than fifteen are present without claiming an omitted subset', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ tableCount: 100 }) }));
+    renderPage();
+    const scope = 'Showing 3 of 3 returned tables by row count. The complete table list is below.';
+    expect(screen.getByRole('figure', { name: 'Rows' }))
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
+    expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
+    expect(within(tablesGrid()).getAllByRole('row')).toHaveLength(4);
+  });
+
+  it('does not invent a returned-table count while statistics are unavailable', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: undefined }));
+    renderPage();
+    expect(screen.queryByText(/returned tables by row count/)).toBeNull();
+    expect(screen.getByText('No tables found')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Pool usage' })).toHaveAttribute('aria-valuenow', '20');
+  });
+
+  it('updates desktop index cells and chart count alternatives with locale preferences while preserving zero and unknown gaps', () => {
+    const tables: TableInfo[] = [
+      { ...TABLES[0], name: 'localized_counts', rowCount: 12_345, indexCount: 1_234 },
+      { ...TABLES[1], name: 'zero_counts', rowCount: 0, indexCount: 0 },
+      { ...TABLES[2], name: 'unknown_counts', rowCount: null as unknown as number, indexCount: null as unknown as number },
+    ];
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ tables }) }));
+    const { unmount } = renderPage();
+    const chartTable = screen.getAllByRole('table').find((table) => table !== tablesGrid())!;
+    const indexCell = (name: string) => within(within(tablesGrid()).getByText(name).closest('tr')!)
+      .getAllByRole('cell')[3];
+    const chartCountCell = (name: string) => within(within(chartTable).getByText(name).closest('tr')!)
+      .getAllByRole('cell')[1];
+    expect(indexCell('localized_counts')).toHaveTextContent(/^1,234$/);
+    expect(chartCountCell('localized_counts')).toHaveTextContent(/^12,345$/);
+
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(4);
+    });
+    expect(indexCell('localized_counts')).toHaveTextContent(/^1\.234$/);
+    expect(chartCountCell('localized_counts')).toHaveTextContent(/^12\.345$/);
+    expect(indexCell('zero_counts')).toHaveTextContent(/^0$/);
+    expect(chartCountCell('zero_counts')).toHaveTextContent(/^0$/);
+    expect(indexCell('unknown_counts')).toHaveTextContent(/^—$/);
+    expect(chartCountCell('unknown_counts')).toHaveTextContent(/^—$/);
+    expect(tables[0]).toMatchObject({ rowCount: 12_345, indexCount: 1_234 });
+    expect(tables[2]).toMatchObject({ rowCount: null, indexCount: null });
+    unmount();
+  });
+
+  it('uses the same localized integer index count in narrow table details without losing vacuum evidence', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(4);
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [{ ...TABLES[0], indexCount: 1_234 }] }),
+    }));
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 400));
+    try {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      const details = within(screen.getByRole('dialog', { name: 'Tables' }));
+      expect(details.getByText('1.234')).toBeInTheDocument();
+      expect(details.queryByText('1234')).toBeNull();
+      expect(details.getByText('Last vacuum')).toBeInTheDocument();
+      expect(details.getByText('zebra_events')).toBeInTheDocument();
+      closeTableDetails();
+      expect(screen.queryByRole('dialog', { name: 'Tables' })).toBeNull();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
+  it('retains accurate chart scope and all returned details when only the statistics refresh fails', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats(), isError: true, error: new Error('statistics refresh'),
+    }));
+    renderPage();
+    expect(screen.getByRole('figure', { name: 'Rows' })).toHaveAccessibleDescription(
+      /Showing 3 of 3 returned tables by row count\. The complete table list is below\./,
+    );
+    expect(within(tablesGrid()).getByText('zebra_events')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Pool usage' })).toHaveAttribute('aria-valuenow', '20');
+  });
+});
+
 describe('DBHealthPage — populated view', () => {
   it('derives honest KPIs from the loaded tables, migration and pool payloads', () => {
     renderPage();
 
     // Page scaffolding.
     expect(
-      screen.getByRole('heading', { name: 'DB Health Dashboard', level: 1 }),
+      screen.getByRole('heading', { name: 'DB health dashboard', level: 1 }),
     ).toBeInTheDocument();
 
     // KPI band — real aggregates.
-    expect(metricValue('Total DB Size')).toBe('360.0 MB');
+    expect(metricValue('Total DB size')).toBe('360.00 MB');
     expect(metricValue('Tables')).toBe('3');
-    expect(metricValue('Total Rows')).toBe('905,100'); // 100 + 5,000 + 900,000
-    expect(metricValue('Large Tables')).toBe('1'); // only zebra_events > 100 MB
+    expect(metricValue('Total rows')).toBe('905,100'); // 100 + 5,000 + 900,000
+    expect(metricValue('Large tables')).toBe('1'); // only zebra_events > 100 MB
     expect(metricValue('Migration')).toBe('185');
-    expect(metricValue('Pool Usage')).toBe('20%'); // 5 / 25
+    expect(metricValue('Pool usage')).toBe('20.00%'); // 5 / 25
   });
 
   it('renders the chart region and the migration-status panel', () => {
@@ -225,14 +360,14 @@ describe('DBHealthPage — populated view', () => {
     // The bar chart exposes its accessible name via role="img".
     expect(
       screen.getByRole('img', {
-        name: /database table sizes/i,
+        name: 'Rows',
       }),
     ).toBeInTheDocument();
 
     // Migration panel: current version + clean status + recent list entry.
-    const versionRow = screen.getByText('Current Version').closest('div')!;
+    const versionRow = screen.getByText('Current version').closest('div')!;
     expect(within(versionRow).getByText('185')).toBeInTheDocument();
-    expect(screen.getByText('Recent Migrations')).toBeInTheDocument();
+    expect(screen.getByText('Recent migrations')).toBeInTheDocument();
     expect(screen.getByText(/v185 si_canonical/)).toBeInTheDocument();
     // "Clean" appears both as the KPI subtitle and the panel status.
     expect(screen.getAllByText('Clean').length).toBeGreaterThanOrEqual(1);
@@ -243,17 +378,17 @@ describe('DBHealthPage — populated view', () => {
 
     // Detail grid carries the full column set + all three rows.
     const grid = tablesGrid();
-    expect(within(grid).getByText('Last Vacuum')).toBeInTheDocument();
+    expect(within(grid).getByText('Last vacuum')).toBeInTheDocument();
     expect(within(grid).getByText('zebra_events')).toBeInTheDocument();
     expect(within(grid).getByText('alpha_drives')).toBeInTheDocument();
     expect(within(grid).getByText('mid_charging')).toBeInTheDocument();
     // Byte formatting in the Size column (300 MB row).
-    expect(within(grid).getByText('300.0 MB')).toBeInTheDocument();
+    expect(within(grid).getByText('300.00 MB')).toBeInTheDocument();
 
     // Connection-pool panel: labelled stats + the usage progressbar.
-    expect(screen.getByText('Max Open')).toBeInTheDocument();
-    expect(screen.getByText('120ms')).toBeInTheDocument();
-    const bar = screen.getByRole('progressbar', { name: 'Pool Usage' });
+    expect(screen.getByText('Max open')).toBeInTheDocument();
+    expect(screen.getByText('120.00ms')).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '20');
     expect(bar).toHaveAttribute('aria-valuemax', '100');
   });
@@ -307,12 +442,25 @@ describe('DBHealthPage — loading', () => {
 
     const { container } = renderPage();
 
-    // Page heading still renders; the KPI labels do not exist yet.
+    // Canonical strip shells and labels remain mounted during loading.
     expect(
-      screen.getByRole('heading', { name: 'DB Health Dashboard', level: 1 }),
+      screen.getByRole('heading', { name: 'DB health dashboard', level: 1 }),
     ).toBeInTheDocument();
-    expect(kpiRegion().queryByText('Total DB Size')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(kpiRegion().getAllByText('Total DB size')[0]).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-brief][aria-busy="true"]')).toHaveLength(3);
+    expect(kpiRegion().queryByText('0')).toBeNull();
+  });
+
+  it('does not let pending statistics mask a successful migration or pool snapshot', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
+    renderPage();
+    expect(screen.getByTestId('db-health-summary-0').querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(screen.getByTestId('db-health-summary-0')).toHaveAttribute('aria-busy', 'true');
+    expect(metricValue('Migration')).toBe('185');
+    expect(metricValue('Pool usage')).toBe('20.00%');
+    expect(screen.getByTestId('db-health-summary-1')).not.toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('db-health-summary-2')).not.toHaveAttribute('aria-busy', 'true');
   });
 });
 
@@ -375,11 +523,14 @@ describe('DBHealthPage — empty states', () => {
     // Chart empty state + table empty message (distinct copy).
     expect(screen.getByText('No data available')).toBeInTheDocument();
     expect(screen.getByText('No tables found')).toBeInTheDocument();
+    expect(screen.getAllByText(
+      'Showing 0 of 0 returned tables by row count. The complete table list is below.',
+    ).length).toBeGreaterThan(0);
     // KPI band reads 0 rather than hiding.
     expect(metricValue('Tables')).toBe('0');
-    expect(metricValue('Total Rows')).toBe('0');
-    expect(metricValue('Large Tables')).toBe('0');
-    expect(metricValue('Total DB Size')).toBe('0 B');
+    expect(metricValue('Total rows')).toBe('0');
+    expect(metricValue('Large tables')).toBe('0');
+    expect(metricValue('Total DB size')).toBe('0.00 B');
   });
 
   it('shows the migration + pool "unavailable" placeholders when their data is missing', () => {
@@ -400,15 +551,26 @@ describe('DBHealthPage — empty states', () => {
     renderPage();
 
     // The panel still renders its version/status; only the list is empty.
-    expect(screen.getByText('Current Version')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
     expect(screen.getByText('No migration history available')).toBeInTheDocument();
   });
 });
 
 describe('DBHealthPage — hardening', () => {
-  it('keeps the pool-usage bar NaN-safe when inUse is missing', () => {
-    // Regression guard for the `(pool.inUse ?? 0)` fix: a payload with a
-    // maxOpen but no inUse must yield 0%, never "NaN%".
+  it('keeps incomplete row totals and missing migration health unknown', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [{ ...TABLES[0], rowCount: null as unknown as number }] }),
+    }));
+    mockUseMigrations.mockReturnValue(makeQuery({
+      data: migration({ dirty: undefined }),
+    }));
+    renderPage();
+    expect(metricValue('Total rows')).toBe('—');
+    expect(screen.queryByText('Clean')).toBeNull();
+    expect(within(tablesGrid()).getAllByText('—').length).toBeGreaterThan(0);
+  });
+
+  it('keeps missing pool readings unknown, without a fabricated zero fill', () => {
     mockUseConnectionPool.mockReturnValue(
       makeQuery({
         data: { ...pool(), inUse: undefined } as unknown as ConnectionPool,
@@ -417,11 +579,11 @@ describe('DBHealthPage — hardening', () => {
 
     renderPage();
 
-    const bar = screen.getByRole('progressbar', { name: 'Pool Usage' });
-    expect(bar).toHaveAttribute('aria-valuenow', '0');
-    const fill = bar.querySelector('div');
-    expect(fill).toHaveStyle({ width: '0%' });
-    expect(metricValue('Pool Usage')).toBe('0%');
+    const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(bar.querySelector('[data-metric-fill]')).toBeNull();
+    expect(metricValue('Pool usage')).toBe('—');
   });
 
   it('flips the usage bar to the danger color once the pool is ≥80% busy', () => {
@@ -431,10 +593,50 @@ describe('DBHealthPage — hardening', () => {
 
     renderPage();
 
-    const bar = screen.getByRole('progressbar', { name: 'Pool Usage' });
+    const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '88');
-    expect(bar.querySelector('div')?.className).toContain('bg-rose-400');
-    expect(metricValue('Pool Usage')).toBe('88%');
+    expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--semantic-danger)' });
+    expect(metricValue('Pool usage')).toBe('88.00%');
+  });
+
+  describe('DBHealthPage — retained independent sources', () => {
+    it('marks only the failed retained source stale while preserving all six canonical tiles', () => {
+      mockUseMigrations.mockReturnValue(makeQuery({
+        data: migration(), isError: true, error: new Error('migration refresh'),
+      }));
+      const { container } = renderPage();
+      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+      expect(screen.getByTestId('db-health-summary-0')).toHaveTextContent('Source loaded');
+      assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Retained source', { contains: true });
+      expect(screen.getByTestId('db-health-summary-2')).toHaveTextContent('Source loaded');
+      expect(metricValue('Migration')).toBe('185');
+      expect(metricValue('Total DB size')).toBe('360.00 MB');
+      expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Migration status snapshot');
+    });
+    it('retains table details, migration evidence and pool metrics after refresh errors', () => {
+      mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats(), isError: true, error: new Error('stats refresh') }));
+      mockUseMigrations.mockReturnValue(makeQuery({ data: migration(), isError: true, error: new Error('migration refresh') }));
+      mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool(), isError: true, error: new Error('pool refresh') }));
+
+      renderPage();
+
+      expect(within(tablesGrid()).getByText('zebra_events')).toBeInTheDocument();
+      expect(screen.getByText(/v185 si_canonical/)).toBeInTheDocument();
+      const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
+      expect(bar).toHaveAttribute('aria-valuenow', '20');
+      expect(bar.querySelector('[data-metric-track]')).toHaveClass('h-1');
+      expect(screen.queryByText("Can't reach server")).toBeNull();
+      expect(metricValue('Total rows')).toBe('905,100');
+    });
+
+    it('distinguishes a real zero pool reading from an unknown one', () => {
+      mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool({ inUse: 0 }) }));
+      renderPage();
+      const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
+      expect(bar).toHaveAttribute('aria-valuenow', '0');
+      expect(bar.querySelector('[data-metric-fill]')).not.toBeNull();
+      expect(metricValue('Pool usage')).toBe('0.00%');
+    });
   });
 
   it('honors the backend numeric `version` field over currentVersion, plus dirty + pending', () => {
@@ -478,12 +680,76 @@ describe('DBHealthPage — hardening', () => {
 
     renderPage();
 
-    expect(metricValue('Total DB Size')).toBe('2.00 GB');
+    expect(metricValue('Total DB size')).toBe('2.00 GB');
     const grid = tablesGrid();
-    expect(within(grid).getByText('512 B')).toBeInTheDocument();
-    expect(within(grid).getByText('2.0 KB')).toBeInTheDocument();
+    expect(within(grid).getByText('512.00 B')).toBeInTheDocument();
+    expect(within(grid).getByText('2.00 KB')).toBeInTheDocument();
     // A 0-byte table renders the "—" placeholder in the Size column.
     const zeroRow = within(grid).getByText('zero_table').closest('tr')!;
     expect(within(zeroRow).getAllByText('—').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps missing byte sizes after measured sizes without treating row counts as bytes', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [
+        { ...TABLES[0], sizeBytes: undefined as unknown as number, rowCount: 10_000_000 },
+        { ...TABLES[1], sizeBytes: 0 },
+        { ...TABLES[2], sizeBytes: 50 * MB },
+      ] }),
+    }));
+    renderPage();
+    const names = within(tablesGrid()).getAllByRole('row').slice(1)
+      .map((row) => within(row).getByText(/^(zebra_events|alpha_drives|mid_charging)$/).textContent);
+    expect(names).toEqual(['mid_charging', 'alpha_drives', 'zebra_events']);
+    fireEvent.click(screen.getByRole('button', { name: 'Rows' }));
+    expect(firstBodyRowName()).toBe('zebra_events');
+    expect(metricValue('Large tables')).toBe('—');
+  });
+
+  it('retains full table identities in chart alternatives and names the persistent detail table', () => {
+    const name = 'database_table_with_a_complete_long_identity';
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [{ ...TABLES[0], name }] }),
+    }));
+    renderPage();
+    const tables = screen.getAllByRole('table');
+    const chartTable = tables.find((table) => !within(table).queryByText('Indexes'));
+    expect(chartTable).toBeDefined();
+    expect(within(chartTable!).getByText(name)).toBeInTheDocument();
+    expect(tablesGrid()).toHaveAccessibleName('Tables');
+    expect(within(tablesGrid()).getByText(name)).toBeInTheDocument();
+  });
+
+  it('reflects an independently refreshing pool source and preserves mobile-sized refresh and sort actions', () => {
+    mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool(), isFetching: true }));
+    renderPage();
+    const refresh = screen.getByRole('button', { name: 'Refresh now' });
+    expect(refresh).toHaveAttribute('aria-busy', 'true');
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    expect(screen.queryByText('Auto-refresh 30s')).toBeNull();
+    for (const label of ['Size', 'Rows', 'Name']) {
+      expect(screen.getByRole('button', { name: label })).toHaveClass('min-h-11', 'min-w-11');
+    }
+    expect(metricValue('Pool usage')).toBe('20.00%');
+  });
+
+  it('keeps indexes and vacuum evidence reachable through the narrow table detail action', () => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 400));
+    try {
+      const { container } = renderPage();
+      expect(container.querySelector('[data-mobile-table]')).toHaveAccessibleName('Tables');
+      fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[0]);
+      const details = within(screen.getByRole('dialog', { name: 'Tables' }));
+      expect(details.getByText('zebra_events')).toBeInTheDocument();
+      expect(details.getByText('Indexes')).toBeInTheDocument();
+      expect(details.getByText('2')).toBeInTheDocument();
+      expect(details.getByText('Last vacuum')).toBeInTheDocument();
+      expect(details.getByText('300.00 MB')).toBeInTheDocument();
+      closeTableDetails();
+      expect(screen.queryByRole('dialog', { name: 'Tables' })).toBeNull();
+    } finally {
+      bounds.mockRestore();
+    }
   });
 });

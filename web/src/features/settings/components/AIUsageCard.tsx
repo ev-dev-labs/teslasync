@@ -5,7 +5,7 @@
  * `/ai/usage/today` endpoint via `useAiUsageToday()`
  * (TanStack Query, polled at INTERVALS.STANDARD) and renders the
  * three top-line metrics (tokens in, tokens out, estimated cost in
- * the user's locale currency).
+ * USD with locale-formatted magnitude).
  *
  * The "no per-feature toggle" rule is enforced server-side by
  * the `__usage__` meta-feature guard. The host skips this query
@@ -18,11 +18,14 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { Badge, Button, GlassPanel, PanelTitle, Caption, Text } from '@/components/ui'
+import { Badge, Button, GlassPanel, PanelTitle, Caption } from '@/components/ui'
+import type { StatMetric } from '@/components/data-display'
+import { SettingsSummaryBrief } from './operationalbrief-all/SettingsSummaryBrief'
 import { useAiUsageToday } from '@/api/hooks/useAiUsage'
 import { useDataState } from '@/hooks/useDataState'
-import { useFormatting } from '@/hooks/useFormatting'
-import { fmtInt } from '@/lib/numberFormat'
+import { useUnits } from '@/hooks/useUnits'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { fmtInt, fmtNumber } from '@/lib/numberFormat'
 
 const PLACEHOLDER = '—'
 
@@ -31,25 +34,39 @@ function formatCount(n: number | null | undefined): string {
   return fmtInt(n)
 }
 
-export function AIUsageCard({ enabled = true }: { enabled?: boolean }) {
+export function AIUsageCard({ enabled = true, showSourceNotice = true }: {
+  enabled?: boolean
+  /** Disable when the host already owns the shared daily query's recovery notice. */
+  showSourceNotice?: boolean
+}) {
   const { t } = useTranslation('settings')
-  const { formatCurrency } = useFormatting()
+  const { unitPrefs } = useUnits()
+  const { formatDateTime } = useDateFormat()
   const query = useAiUsageToday({ enabled })
   const state = useDataState(query, { provenance: 'historical' })
   const data = enabled ? state.data : undefined
-  const tokensIn = formatCount(data?.input_tokens)
-  const tokensOut = formatCount(data?.output_tokens)
   const costMicroCents = data?.cost_micro_cents
-  const amount = typeof costMicroCents === 'number' && Number.isFinite(costMicroCents)
+  const amount = typeof costMicroCents === 'number'
     ? costMicroCents / 1_000_000
     : null
-  const cost = amount === null
-    ? PLACEHOLDER
-    : formatCurrency(amount, amount > 0 && amount < 0.01 ? 6 : 2)
-  const loading = enabled && state.status === 'initial'
+  const loading = enabled && state.status === 'initial' && query.fetchStatus === 'fetching'
+  const blocked = enabled && state.isRefreshBlocked
+  const failed = enabled && (state.fatalError != null || state.refreshError != null)
+  const sourceNotice = failed || blocked
   const errors = data?.error_count === 1
     ? t('ai.settings.usage.errorOne', '1 error')
     : t('ai.settings.usage.errorMany', '{{total}} errors', { total: formatCount(data?.error_count) })
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'helix-input-tokens', rawValue: data?.input_tokens,
+      label: t('ai.settings.usage.tokensIn', 'Tokens in'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'helix-output-tokens', rawValue: data?.output_tokens,
+      label: t('ai.settings.usage.tokensOut', 'Tokens out'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'currency', occurrenceId: 'helix-estimated-cost', rawValue: amount,
+      label: t('ai.settings.usage.cost', 'Estimated cost'),
+      display: { formatter: raw => ({ value: `$${fmtNumber(raw, raw > 0 && raw < 0.01 ? 6 : 2, unitPrefs.locale)}`, unit: '' }) } },
+  ]
 
   return (
     <GlassPanel
@@ -59,45 +76,30 @@ export function AIUsageCard({ enabled = true }: { enabled?: boolean }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle>{t('ai.settings.usage.title', 'Usage today')}</PanelTitle>
-        <Badge variant={state.status === 'stale' && enabled ? 'warning' : 'neutral'}>
+        <Badge variant="neutral">
           {t('ai.settings.usage.utc', 'Today · UTC')}
         </Badge>
       </div>
-      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
-        <UsageCell
-          label={t('ai.settings.usage.tokensIn', 'Tokens in')}
-          value={tokensIn}
-          isLoading={loading}
-        />
-        <UsageCell
-          label={t('ai.settings.usage.tokensOut', 'Tokens out')}
-          value={tokensOut}
-          isLoading={loading}
-        />
-        <UsageCell
-          label={t('ai.settings.usage.cost', 'Estimated cost')}
-          value={cost}
-          isLoading={loading}
-        />
-      </div>
+      <SettingsSummaryBrief title={t('ai.settings.usage.brief.title', 'Audited usage totals')}
+        variant="embedded"
+        description={t('ai.settings.usage.brief.description', 'Input tokens, output tokens and estimated cost from the existing daily usage audit. Small non-zero costs retain six-decimal precision.')}
+        source={t('ai.settings.usage.brief.source', 'Helix daily usage audit')}
+        scope={t('ai.settings.usage.utc', 'Today · UTC')}
+        metrics={metrics} loading={loading} unavailable={!data}
+        retained={enabled && state.status === 'stale'} testId="helix-usage-summary"
+        freshness={data && state.updatedAt != null ? (
+          <Caption>
+            <time dateTime={new Date(state.updatedAt).toISOString()}>
+              {t('common:freshness.lastUpdated', 'Last updated: {{time}}', {
+                time: formatDateTime(new Date(state.updatedAt)),
+              })}
+            </time>
+          </Caption>
+        ) : undefined} />
       {!enabled ? (
         <Caption className="block">
           {t('ai.settings.usage.off', 'Helix is off. Enable it and make a call to see usage.')}
         </Caption>
-      ) : state.status === 'initialFailure' ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-2">
-          <Caption>{t('ai.settings.usage.error', 'Usage could not be loaded.')}</Caption>
-          <Button type="button" size="sm" variant="ghost" onClick={() => void query.refetch()}>
-            {t('ai.settings.usage.retry', 'Retry')}
-          </Button>
-        </div>
-      ) : state.status === 'stale' ? (
-        <div role="status" className="flex flex-wrap items-center justify-between gap-2">
-          <Caption>{t('ai.settings.usage.stale', 'Showing the last available totals. Refresh failed.')}</Caption>
-          <Button type="button" size="sm" variant="ghost" onClick={() => void query.refetch()}>
-            {t('ai.settings.usage.retry', 'Retry')}
-          </Button>
-        </div>
       ) : loading ? (
         <Caption className="block">{t('ai.settings.usage.loading', 'Loading today’s usage…')}</Caption>
       ) : data?.call_count === 0 ? (
@@ -114,31 +116,27 @@ export function AIUsageCard({ enabled = true }: { enabled?: boolean }) {
               })}
         </Caption>
       ) : null}
+      {enabled && showSourceNotice && sourceNotice ? (
+        <div role={state.fatalError != null ? 'alert' : 'status'}
+          aria-live={state.fatalError != null ? 'assertive' : 'polite'}
+          data-testid="helix-daily-source-notice"
+          className="flex flex-wrap items-center justify-between gap-2">
+          <Caption>
+            {failed
+              ? state.hasData
+                ? t('ai.settings.usage.stale', 'Showing the last available totals. Refresh failed.')
+                : t('ai.settings.usage.error', 'Usage could not be loaded.')
+              : t('common:dataSources.status.paused', 'Refresh paused')}
+          </Caption>
+          <Button type="button" size="sm" variant="ghost" className="min-h-11 md:min-h-9"
+            disabled={query.isFetching} aria-busy={query.isFetching || undefined}
+            onClick={state.retry ?? undefined}>
+            {query.isFetching
+              ? t('common:freshness.updating', 'Updating…')
+              : t('ai.settings.usage.retry', 'Retry')}
+          </Button>
+        </div>
+      ) : null}
     </GlassPanel>
-  )
-}
-
-function UsageCell({
-  label,
-  value,
-  isLoading,
-}: {
-  label: string
-  value: string
-  isLoading: boolean
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
-      <Caption>{label}</Caption>
-      <Text
-        as="span"
-        variant="bodySm"
-        className="break-words font-semibold tabular-nums"
-        data-testid="ai-usage-value"
-        aria-busy={isLoading || undefined}
-      >
-        {value}
-      </Text>
-    </div>
   )
 }

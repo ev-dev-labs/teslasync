@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GlassPanel, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import {
@@ -8,6 +8,8 @@ import {
 } from '@/components/maps';
 import { useTranslation } from 'react-i18next';
 import type { TripLocation, TripLeg, TripChargeStop } from '@/types/driving';
+import { chartTokens } from '@/lib/tokens';
+import { resolveMapRendererColor } from '@/lib/colors';
 
 interface TripPlannerMapProps {
   origin: TripLocation | null;
@@ -21,13 +23,6 @@ interface TripPlannerMapProps {
 const DEFAULT_CENTER: LatLngExpression = [39.8283, -98.5795];
 // Country-level zoom used whenever a bounding pair of points is not available.
 const FALLBACK_ZOOM = 5;
-
-// Static leaflet path styles hoisted to module scope so they are not
-// re-allocated on every render (and never re-create marker layers in leaflet).
-const ROUTE_PATH = { color: '#3b82f6', weight: 3, opacity: 0.8 };
-const ORIGIN_PATH = { color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.9 };
-const DESTINATION_PATH = { color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.9 };
-const CHARGE_STOP_PATH = { color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.9 };
 
 /**
  * A coordinate pair is usable by leaflet only when both components are finite
@@ -48,6 +43,46 @@ export function isValidCoord(lat: number | null | undefined, lng: number | null 
 
 export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripPlannerMapProps) {
   const { t } = useTranslation();
+  const [paintContext, setPaintContext] = useState<HTMLDivElement | null>(null);
+  const [paint, setPaint] = useState<(string | null)[]>([null, null, null]);
+
+  useEffect(() => {
+    if (!paintContext) return;
+    const refresh = () => {
+      const next = [0, 1, 3].map((index) =>
+        resolveMapRendererColor(chartTokens.series[index], paintContext));
+      setPaint((previous) => previous.every((color, index) => color === next[index]) ? previous : next);
+    };
+    refresh();
+    const view = paintContext.ownerDocument.defaultView;
+    const observer = view?.MutationObserver ? new view.MutationObserver(refresh) : null;
+    for (let node: HTMLElement | null = paintContext; node; node = node.parentElement) {
+      observer?.observe(node, {
+        attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-mode'],
+      });
+    }
+    const media = ['(prefers-color-scheme: dark)', '(forced-colors: active)']
+      .map((query) => view?.matchMedia?.(query));
+    media.forEach((query) => query?.addEventListener('change', refresh));
+    return () => {
+      observer?.disconnect();
+      media.forEach((query) => query?.removeEventListener('change', refresh));
+    };
+  }, [paintContext]);
+
+  const paths = useMemo(() => {
+    // Canvas cannot consume unresolved CSS variables or light-dark() roles.
+    const marker = (color: string | null) => ({
+      color: color ?? undefined, fillColor: color ?? undefined,
+      stroke: color != null, fill: color != null, fillOpacity: 0.9,
+    });
+    return {
+      route: { color: paint[0] ?? undefined, stroke: paint[0] != null, weight: 3, opacity: 0.8 },
+      origin: marker(paint[1]),
+      destination: marker(paint[2]),
+      chargeStop: marker(paint[0]),
+    };
+  }, [paint]);
 
   const validOrigin = useMemo(
     () => (origin && isValidCoord(origin.lat, origin.lng) ? origin : null),
@@ -125,6 +160,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
     <GlassPanel className="p-0 overflow-hidden rounded-xl">
       {hasData ? (
         <div
+          ref={setPaintContext}
           className="h-[400px] w-full"
           role="region"
           aria-label={t('tripPlanner.map.regionLabel', 'Trip route map')}
@@ -135,13 +171,13 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
             className="h-full w-full rounded-xl"
             scrollWheelZoom
           >
-            <MapTileLayer style="dark" />
+            <MapTileLayer />
 
             {/* Route polyline */}
             {polylinePoints.length >= 2 && (
               <Polyline
                 positions={polylinePoints}
-                pathOptions={ROUTE_PATH}
+                pathOptions={paths.route}
               />
             )}
 
@@ -150,7 +186,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
               <CircleMarker
                 center={[validOrigin.lat, validOrigin.lng]}
                 radius={8}
-                pathOptions={ORIGIN_PATH}
+                pathOptions={paths.origin}
               >
                 <Popup>
                   <Text size="sm" weight="medium">{validOrigin.name || t('tripPlanner.map.origin', 'Origin')}</Text>
@@ -163,7 +199,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
               <CircleMarker
                 center={[validDestination.lat, validDestination.lng]}
                 radius={8}
-                pathOptions={DESTINATION_PATH}
+                pathOptions={paths.destination}
               >
                 <Popup>
                   <Text size="sm" weight="medium">{validDestination.name || t('tripPlanner.map.destination', 'Destination')}</Text>
@@ -178,7 +214,7 @@ export function TripPlannerMap({ origin, destination, legs, chargeStops }: TripP
                 key={`stop-${idx}`}
                 center={[stop.location.lat, stop.location.lng]}
                 radius={7}
-                pathOptions={CHARGE_STOP_PATH}
+                pathOptions={paths.chargeStop}
               >
                 <Popup>
                   <div className="text-sm">

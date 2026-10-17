@@ -1,0 +1,711 @@
+{
+  "item": "audit-page-148",
+  "page": "web\\src\\features\\notifications\\pages\\ChannelsPage.tsx",
+  "routes": [
+    "/notifications/channels"
+  ],
+  "purpose": "Manage notification delivery channels, inspect recorded delivery outcomes, and manage browser push devices.",
+  "primaryGoal": "Configure, enable, test, edit and remove real delivery destinations without losing source trust or provider capabilities.",
+  "identity": {
+    "phase": "Phase0",
+    "mode": "READ-ONLY source audit; report and heartbeat writes only",
+    "routeEvidence": "web\\src\\App.tsx:199,625",
+    "rootSha256": "23b33d490ddc988a973566176bd660b044af310ce3880307491be34e949afa04",
+    "runtime": "unverified",
+    "rootHashVerifiedAtRelease": true,
+    "releasedAtUtc": "2026-10-07T10:27:04.8356789Z"
+  },
+  "dataSources": [
+    {
+      "name": "Configured channels",
+      "hook": "useNotificationChannels",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 738,
+      "endpoint": "GET /api/v1/notifications",
+      "routeEvidence": "internal\\api\\router.go:4026-4028",
+      "owner": "notificationHandler.ListChannels",
+      "behavior": "Shared query key, request AbortSignal and safeArray normalization; page retains successful data on refresh failure."
+    },
+    {
+      "name": "Delivery statistics",
+      "hook": "useNotificationStats",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 1265,
+      "endpoint": "GET /api/v1/notifications/stats",
+      "routeEvidence": "internal\\api\\router.go:4031",
+      "owner": "notificationHandler.GetStats",
+      "behavior": "INTERVALS.STANDARD polling, AbortSignal, independent trust state; no reported date bounds."
+    },
+    {
+      "name": "Channel actions",
+      "hooks": [
+        "useSaveChannel",
+        "useDeleteChannel",
+        "useToggleChannel",
+        "useTestChannel",
+        "useTestWebhookChannel"
+      ],
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 1282,
+      "endpoints": [
+        "POST /api/v1/notifications",
+        "PUT /api/v1/notifications/{channelID}",
+        "DELETE /api/v1/notifications/{channelID}",
+        "POST /api/v1/notifications/{channelID}/toggle",
+        "POST /api/v1/notifications/{channelID}/test",
+        "POST /api/v1/notifications/{channelID}/webhook-test"
+      ],
+      "routeEvidence": "internal\\api\\router.go:4028,4070-4081",
+      "owner": "notificationHandler; notificationChannelHandler.WebhookTest",
+      "behavior": "Mutations and invalidation/broadcast remain hook-owned. Webhook test is separately implemented in useNotificationChannels.ts:100-115. No action was invoked."
+    },
+    {
+      "name": "Webhook signature preview",
+      "hook": "useWebhookSignaturePreview",
+      "file": "web\\src\\api\\hooks\\useNotificationChannels.ts",
+      "line": 135,
+      "endpoint": "POST /api/v1/notifications/webhooks/preview-signature",
+      "routeEvidence": "internal\\api\\router.go:4062-4069",
+      "owner": "notificationChannelHandler.WebhookSignaturePreview",
+      "behavior": "300ms debounced server computation from entered secret and explicit sample test body. Sample is a signature-preview utility, not fake live delivery data."
+    },
+    {
+      "name": "Browser push",
+      "hooks": [
+        "usePushPublicKey",
+        "usePushSubscriptions",
+        "useSubscribePush",
+        "useUnsubscribePush",
+        "useWebPush"
+      ],
+      "file": "web\\src\\api\\hooks\\usePush.ts",
+      "line": 30,
+      "endpoints": [
+        "GET /api/v1/push/public-key",
+        "GET /api/v1/push/subscribe",
+        "POST /api/v1/push/subscribe",
+        "DELETE /api/v1/push/subscribe"
+      ],
+      "routeEvidence": "internal\\api\\router.go:3744-3749",
+      "owner": "pushHandler plus browser Notification/PushManager/service-worker APIs",
+      "behavior": "404 key response means server-disabled; independent key/list queries and local currentEndpoint state. Actual browser registration and permission remain unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "Existing title, subtitle, primaryAction, secondaryActions, query, dataSources, copyLink, children; independent source notices without page-wide error replacement."
+    },
+    {
+      "name": "OperationalBrief / useOperationalMetrics",
+      "owner": "existing @/components/data-display and web\\src\\hooks\\useOperationalMetrics.ts (implementation not inspected)",
+      "contract": "Four numeric count metrics; countTotal for enabled/total; source scope, timestamp and provenance retained. No competing stats renderer needed."
+    },
+    {
+      "name": "DataState / StaleRefreshWarning",
+      "owner": "web\\src\\api\\dataState.ts; web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "contract": "fatalError only replaces missing source; refreshError/offline preserve retained data and individual retry."
+    },
+    {
+      "name": "UI controls",
+      "owner": "existing @/components/ui",
+      "contract": "Button, Toggle, Badge, Heading, Text, SectionTitle, Input, Select, HelpIcon, Modal, ConfirmDialog and CopyButton; shared owners not edited."
+    },
+    {
+      "name": "Channel presentation",
+      "owner": "web\\src\\features\\notifications\\components\\channels",
+      "contract": "ChannelStatsBand, ChannelsGrid, ChannelCard, ChannelProvidersPanel, ChannelFormModal, WebhookSignaturePreview and channelMeta preserve seven provider types and typed payload mapping."
+    },
+    {
+      "name": "BrowserPushChannelCard",
+      "owner": "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx",
+      "contract": "Per-device capability/key/permission states; enable/disable, device list, removal, current-device identity and iOS instructions."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "existing @/components/motion (implementation not inspected)",
+      "contract": "Existing entrance wrapper; actual reduced-motion behavior unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx",
+      "line": 42,
+      "rule": "MDC-002 / centralized mutation feedback",
+      "detail": "Card emits success/error toasts also supplied by generic toggle/delete/test mutation hooks; generic test hook success is unconditional even when success=false, whereas card checks the result.",
+      "fix": "Choose one existing feedback owner and preserve result-sensitive failure reporting; do not add another toast pipeline.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\api\\hooks\\useNotifications.ts:1309-1350",
+        "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx:114-129"
+      ]
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": "Grid auto-fit min(min(100%,18rem),1fr); provider reference 1/2/3 columns; device/provider band stacks until xl; modal picker 2/3/4 columns.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx",
+        "line": 274,
+        "rule": "MDC-043 / preserve small-width and long-label reachability",
+        "detail": "Edit footer places Test connection, flexible spacer, Cancel and Update in one non-wrapping flex row. No wrapLabel is supplied. Long translations or narrow modal content can exceed allocated width; overflow not exercised.",
+        "fix": "Reflow footer with responsive wrapping/stacking and existing Button.wrapLabel while retaining all three actions.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportMatrix": "320/375/390/430/768/1024/1280/1440/1920/2560 all unverified; RTL, 200% text and long labels unverified."
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "Named page sections and channel list",
+      "Decorative icons hidden",
+      "Named icon-only refresh/delete/device-remove controls",
+      "Skeleton status regions",
+      "Webhook results use status/live region",
+      "Shared modal and discard guard reused"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx",
+        "line": 147,
+        "rule": "MDC-040 / radiogroup keyboard contract",
+        "detail": "Provider tiles are Buttons with role=radio and aria-checked, but no native radio inputs, arrow-key handling or roving tabIndex. All seven tiles enter tab order independently.",
+        "fix": "Reuse existing RadioCard with shared name, checked/value and onChange, preserving provider selection/config reset; confirm native keyboard behavior and focus in modal.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\components\\ui\\RadioCard.tsx:36-82"
+        ]
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx",
+        "line": 82,
+        "rule": "MDC-012 / disabled is not low-contrast interactive content",
+        "detail": "Whole disabled-channel card uses opacity-60 although its edit/test/delete/toggle controls remain interactive; effective contrast is reduced for all text and controls.",
+        "fix": "Keep disabled meaning in semantic Badge/Toggle rather than reducing the entire card's opacity; measure composed contrast.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "limits": "Keyboard/focus trap/restoration, screen reader, target spacing, composed contrast, forced colors and motion have not been exercised."
+  },
+  "states": {
+    "sourceStrengths": "Page preserves three main sections independently. ChannelsGrid has skeleton, retry error and actionable empty state; browser push has unsupported, key retry, checking, busy and action-failure states. Retained queries use StaleRefreshWarning.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelStatsBand.tsx",
+        "line": 31,
+        "rule": "MDC-026 / MDC-033 unknown is not zero",
+        "detail": "Missing stats/fields become numeric 0, including enabled/total 0/0, before the shared metric formatter. A no-stats state can publish zero metrics even while status says No statistics supplied; paused initial queries and null/malformed responses are not authoritative zeros.",
+        "fix": "Pass null/undefined numeric measurements and missing reasons through existing shared metric contract; only show zero when supplied by the source. Keep all four metrics and recorded unbounded scope.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\pages\\ChannelsPage.tsx",
+        "line": 36,
+        "rule": "MDC-026 / dependent source trust",
+        "detail": "Absent channels normalize to [] and are passed to ChannelProvidersPanel without source state. During initial loading/failure, provider counts become 0 in use and Not configured; the real list's error does not make these derived counts known.",
+        "fix": "Keep provider catalog visible but pass channels source trust into the panel, suppressing derived counts or marking them unknown/loading/error while preserving retained counts and retry.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\features\\notifications\\pages\\ChannelsPage.tsx:135-136",
+          "web\\src\\features\\notifications\\components\\channels\\ChannelProvidersPanel.tsx:43-47,68-71"
+        ]
+      },
+      {
+        "file": "web\\src\\hooks\\useWebPush.ts",
+        "line": 42,
+        "rule": "MDC-026 / unknown device state",
+        "detail": "isSubscribed defaults false before async getSubscription resolves; lookup failures are swallowed. Card can show Not subscribed and Enable without establishing current-device state.",
+        "fix": "Extend the existing hook with explicit checking/error state and retry, then consume it in the existing card; do not create a second device-state source.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\hooks\\useWebPush.ts:54-74",
+          "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx:165-168"
+        ]
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx",
+        "line": 245,
+        "rule": "MDC-026 / explicit empty state",
+        "detail": "Registered-devices list and its heading disappear on a resolved empty result; there is no affirmative empty-state explanation.",
+        "fix": "Keep registered-devices section with localized empty explanation after successful empty response, separate from loading/failure/retained states.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\hooks\\useWebPush.ts",
+        "line": 211,
+        "rule": "MDC-026 / truthful mutation outcomes",
+        "detail": "unsubscribe catches server and browser unsubscribe failures, clears local state and returns true. Card's boolean action failure surface cannot distinguish incomplete removal.",
+        "fix": "Preserve intended best-effort browser disable but return an explicit partial/failure outcome and reconcile actual subscription state; keep server-first behavior and recovery.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx",
+      "line": 165,
+      "rule": "MDC-010 / restrained semantic palette",
+      "detail": "Provider selected tiles use neon-cyan border/background and result panel uses neon-green/red tints. Provider colors are fixed hex metadata, and cards/provider rows retain fixed-white chrome. These compete with saved-theme neutral tokens.",
+      "fix": "Use existing neutral surface/border/text tokens with restrained semantic selected/result state; retain provider identity and all saved theme/chart choices without changing persistence.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx:260",
+        "web\\src\\features\\notifications\\components\\channels\\channelMeta.ts:88-119",
+        "web\\src\\features\\notifications\\components\\channels\\ChannelProvidersPanel.tsx:56",
+        "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx:82,112"
+      ]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx",
+      "line": 13,
+      "rule": "MDC-002 / category barrel imports",
+      "detail": "Feature imports useToast directly from @/components/feedback/Toast instead of the existing feedback category barrel.",
+      "fix": "Use @/components/feedback; keep existing toast implementation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx",
+      "line": 105,
+      "rule": "MDC-046 / mutation interaction lifecycle",
+      "detail": "Toggle does not receive disabled=toggleMut.isPending; repeated clicks can queue concurrent inversion requests while displayed checked state is unchanged.",
+      "fix": "Disable existing Toggle during its mutation and preserve independently scoped feedback/recovery.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 1298,
+      "rule": "MDC-046 / dependent cache consistency",
+      "detail": "Save invalidates channels only; delete/toggle also invalidate stats. Create or editing enabled state leaves configured enabled/total KPI stale until periodic polling.",
+      "fix": "Existing save hook owner should invalidate/broadcast existing stats key alongside channels without changing polling/retry/key semantics.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\channels\\channelMeta.ts",
+      "line": 142,
+      "rule": "MDC-046 / existing credential-preview policy",
+      "detail": "Preview masking checks token/key/password substrings but not webhook_url. Catalog help explicitly calls provider webhook URLs credentials; ChannelCard renders unmasked webhook_url previews.",
+      "fix": "Make existing preview helper respect explicit credential metadata, preserving fields and edit functionality without exposing credential-bearing destinations in card text.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\notifications\\components\\channels\\channelMeta.ts:44-47",
+        "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx:118-122"
+      ]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": "Correct unknown-to-zero/provider counts and browser device trust, then native radio keyboard behavior and mutation lifecycle.",
+    "next": "Subdue theme-independent chrome and make edit footer resilient without removing actions.",
+    "runtimeAcceptance": "not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing useWebPush lifecycle trust extension",
+      "owner": "web\\src\\hooks\\useWebPush.ts",
+      "props": "Retain permission, isSupported, isPushSupported, isSubscribed, currentEndpoint, subscribe and unsubscribe; add subscription lookup status/error/retry and explicit incomplete unsubscribe outcome.",
+      "variants": [
+        "checking",
+        "known subscribed",
+        "known not subscribed",
+        "lookup failure",
+        "partial unsubscribe"
+      ],
+      "states": "Do not map failed lookup to not subscribed or failed unsubscribe to unconditional success.",
+      "usedBy": [
+        "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx on /notifications/channels; other consumers not audited"
+      ],
+      "dependsOn": [
+        "Existing usePush mutation hooks",
+        "PushManager/service-worker state reconciliation",
+        "Existing card action error and retained-query surfaces"
+      ],
+      "confidence": "high"
+    },
+    {
+      "name": "Existing channel mutation feedback/cache integration",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "props": "Keep hook input/output and query keys; make test success result-aware, establish one feedback owner and invalidate stats after save.",
+      "variants": [
+        "successful test",
+        "success=false test",
+        "transport error",
+        "create",
+        "update"
+      ],
+      "states": "Preserve channel-scoped pending/error behavior and cross-tab broadcast.",
+      "usedBy": [
+        "ChannelCard",
+        "ChannelFormModal",
+        "ChannelsPage"
+      ],
+      "dependsOn": [
+        "Existing _toastHelpers contract (not inspected)",
+        "notificationKeys.channels and notificationKeys.stats",
+        "Caller result-sensitive feedback"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Manual button-based provider radiogroup versus native RadioCard",
+      "resolution": "Reuse existing RadioCard; no new picker library/shared owner required.",
+      "evidence": "ChannelFormModal.tsx:147-181; RadioCard.tsx:36-82"
+    },
+    {
+      "name": "Feature/provider fixed color chrome versus canonical saved-theme tokens",
+      "resolution": "Reuse tokens and semantic Badge/controls; no new palette engine.",
+      "evidence": "channelMeta.ts:88-119; ChannelCard.tsx:82-100"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "23b33d490ddc988a973566176bd660b044af310ce3880307491be34e949afa04",
+    "currentLineCount": 152,
+    "sections": [
+      {
+        "name": "Notification delivery summary",
+        "line": 92,
+        "metrics": [
+          "sent",
+          "failed",
+          "pending",
+          "enabled/total channels"
+        ]
+      },
+      {
+        "name": "Delivery channels",
+        "line": 106,
+        "behavior": "All configured channels and per-channel actions; loading/error/retry/empty add action"
+      },
+      {
+        "name": "Devices & providers",
+        "line": 129,
+        "children": [
+          "Browser push",
+          "Registered devices",
+          "Supported providers"
+        ]
+      }
+    ],
+    "sectionCount": 3,
+    "conditionalModalCount": 1,
+    "rootGlassPanelCount": 0,
+    "rootChartContainerCount": 0,
+    "domainProviders": [
+      "discord",
+      "slack",
+      "telegram",
+      "email",
+      "webhook",
+      "ntfy",
+      "pushover"
+    ],
+    "actions": [
+      "Page refresh of channels and stats",
+      "Copy current page link",
+      "Add channel",
+      "Edit channel",
+      "Toggle channel",
+      "Delete channel",
+      "Generic test",
+      "Structured webhook test including status/latency/body/signature",
+      "Create/update channel",
+      "Cancel with unsaved-changes guard",
+      "Change provider on create",
+      "Webhook POST/PUT method",
+      "Secret preservation on edit",
+      "Signature preview/copy",
+      "Retry failed sources",
+      "Enable/disable this browser",
+      "Remove registered device"
+    ],
+    "dataBehavior": [
+      "Preserve numeric counts versus unknown",
+      "Preserve retained data and independent neighbors on refresh failure",
+      "Preserve query keys, AbortSignals, polling and invalidation/broadcast",
+      "Preserve provider-specific fields and payload mapping/defaults",
+      "Preserve per-device endpoint identity, registration state, iOS explanation and browser permission boundary",
+      "Do not invoke tests/subscription/mutations during audit"
+    ],
+    "si": "Counts and channel configuration are not physical unit conversions. Preserve raw existing webhook-test latency_ms API field; do not infer a backend SI migration or add display conversion engines.",
+    "workspace": "Source getWorkspaceRouteScope resolves /notifications/channels to range=false, vehicle=false: path absent from RANGE_ENABLED_PATHS and /notifications is disabled prefix. No duplicate selector exists or is needed; preserve unbounded stats explanation.",
+    "sourceInventory": [
+      {
+        "file": "docs\\frontend-design-contract.md",
+        "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255",
+        "lineCount": 394,
+        "bytes": 33683,
+        "inspection": "source read"
+      },
+      {
+        "file": "docs\\frontend-worker-conventions.md",
+        "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3",
+        "lineCount": 80,
+        "bytes": 4574,
+        "inspection": "source read"
+      },
+      {
+        "file": "docs\\frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "bytes": 31079,
+        "inspection": "selected ranges / scoped matches"
+      },
+      {
+        "file": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46",
+        "lineCount": 141,
+        "bytes": 5085,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\pages\\ChannelsPage.tsx",
+        "sha256": "23b33d490ddc988a973566176bd660b044af310ce3880307491be34e949afa04",
+        "lineCount": 152,
+        "bytes": 6226,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx",
+        "sha256": "d37ba6b5c3ad7d1db0f2244a9d29c97add61d33dfe7c6f48fc28d352af4897c8",
+        "lineCount": 297,
+        "bytes": 13539,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx",
+        "sha256": "964356fc078290e967e457ef34ca54621e708ecd32bf8d20dd033cb9da700110",
+        "lineCount": 167,
+        "bytes": 7439,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx",
+        "sha256": "54baf1e1bcace190db14b7fc5f337070a40100418a59e87701ce1652d51b99ae",
+        "lineCount": 299,
+        "bytes": 12959,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelsGrid.tsx",
+        "sha256": "a1defac19f8a42386bfffa97f263abdf9d9b1c20beeb2ba5f8d3f2a06ef36875",
+        "lineCount": 86,
+        "bytes": 2933,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelStatsBand.tsx",
+        "sha256": "fcf9c16023a88a49d5441c6543534c8a17a93f90caf736b994b8c95ad2674de1",
+        "lineCount": 88,
+        "bytes": 4180,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\ChannelProvidersPanel.tsx",
+        "sha256": "3e059eb1c537cd9fde46d2ba3924fdd4aa86d85523178e330751c14f0032efb8",
+        "lineCount": 85,
+        "bytes": 3367,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\WebhookSignaturePreview.tsx",
+        "sha256": "ad8337a6fb9e791cd0733df3b72816cc6e015effea2f020116ff181ecc6fd125",
+        "lineCount": 52,
+        "bytes": 2288,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\channels\\channelMeta.ts",
+        "sha256": "bbb794b66efb218b1f4d8ff8127c25f1e8581cfd76ed2f50e4684fea12f040e2",
+        "lineCount": 238,
+        "bytes": 11143,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useNotifications.ts",
+        "sha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+        "lineCount": 1415,
+        "bytes": 51833,
+        "inspection": "selected ranges / scoped matches"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useNotificationChannels.ts",
+        "sha256": "7914f42c440800179be0ac00ab7675ce5e0df9fe933845121a0038148edac1c5",
+        "lineCount": 159,
+        "bytes": 5576,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\usePush.ts",
+        "sha256": "315616b972b9bcaf40c0bc283715e744ef3d1a9296e78656ea6ace725d920a06",
+        "lineCount": 119,
+        "bytes": 4445,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\hooks\\useWebPush.ts",
+        "sha256": "60735e9e3de6e608e1f09a1c524a3d56e9bff96c87a2829e1434c90e220f9d70",
+        "lineCount": 240,
+        "bytes": 8296,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lineCount": 65,
+        "bytes": 2035,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Toggle.tsx",
+        "sha256": "418d884148c0175a864d09cfe1a0084ea36b716ddf3d1c0ba44f18f7d3a6683a",
+        "lineCount": 139,
+        "bytes": 5167,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\ui\\RadioCard.tsx",
+        "sha256": "d1e7d3f438ce3004936060ccb351dd8c017e83b8467786ce8dbc253e70f057ba",
+        "lineCount": 110,
+        "bytes": 3855,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Button.tsx",
+        "sha256": "741fffcc9093169be795cb28f1f0bb34b8f5f1fd9d5cffa4197e73a7eaad7247",
+        "lineCount": 91,
+        "bytes": 5017,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6",
+        "lineCount": 17,
+        "bytes": 675,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\layout\\PageContainer.tsx",
+        "sha256": "0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55",
+        "lineCount": 259,
+        "bytes": 10905,
+        "inspection": "selected ranges / scoped matches"
+      },
+      {
+        "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "sha256": "6103ced7af551c52dd32499d8c62ab3ad479a8adf230d3c8059fa8b5199e87d0",
+        "lineCount": 115,
+        "bytes": 3981,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "bytes": 4411,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\api\\dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "lineCount": 434,
+        "bytes": 15482,
+        "inspection": "selected ranges / scoped matches"
+      },
+      {
+        "file": "web\\src\\api\\types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "lineCount": 4194,
+        "bytes": 120243,
+        "inspection": "selected ranges / scoped matches"
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+        "lineCount": 918,
+        "bytes": 72217,
+        "inspection": "selected ranges / scoped matches"
+      },
+      {
+        "file": "internal\\api\\router.go",
+        "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+        "lineCount": 5366,
+        "bytes": 260542,
+        "inspection": "selected ranges / scoped matches"
+      }
+    ],
+    "sourceInventoryNote": "Computed hashes and line counts below are read-snapshot identities, not runtime acceptance. Large shared files were inspected only at reported ranges.",
+    "featurePresentationLineCount": 1464.0
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "browserPush": "unverified",
+    "backendBehavior": "Only route declarations and frontend callers inspected; no handlers/database behavior, actual auth, delivery, HTTP response, server time bounds or emitted signatures verified.",
+    "tests": "Not run: assignment forbids full gates; source-only audit. No borrowed historical receipts.",
+    "violationsScript": "Read audit.sh but intentionally did not execute because it unconditionally runs project-wide npx tsc --noEmit. Scoped source-pattern counts recorded separately.",
+    "restrictions": "No Git, source/shared/queue edits, runtime mutations, messages, production requests or questions. Only assigned JSON and heartbeat written.",
+    "concurrency": "Snapshot may drift under other workers; root hash rechecked at release. No whole-feature preservation percentage claimed.",
+    "commands": [
+      {
+        "command": "Get-FileHash scoped files -Algorithm SHA256; Get-Content scoped files; scoped regex counts; ConvertFrom-Json report schema verification",
+        "exitCode": 0,
+        "output": "{\"rawInteractiveHtml\":0,\"directChartMapMotionImports\":0,\"oldApiImports\":0,\"staticCssVariableInlineStyles\":0,\"inlineStylesIncludingDynamic\":7,\"neonClassTokens\":6}",
+        "note": "Dynamic provider styles counted but not classified as prohibited static CSS-variable styles; full TypeScript/script intentionally NOTRUN."
+      }
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\ChannelsPage.tsx",
+    "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx",
+    "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx",
+    "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx",
+    "web\\src\\features\\notifications\\components\\channels\\ChannelsGrid.tsx",
+    "web\\src\\features\\notifications\\components\\channels\\ChannelStatsBand.tsx",
+    "web\\src\\features\\notifications\\components\\channels\\ChannelProvidersPanel.tsx",
+    "web\\src\\features\\notifications\\components\\channels\\WebhookSignaturePreview.tsx",
+    "web\\src\\features\\notifications\\components\\channels\\channelMeta.ts",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\hooks\\useNotificationChannels.ts",
+    "web\\src\\api\\hooks\\usePush.ts",
+    "web\\src\\hooks\\useWebPush.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "web\\src\\components\\ui\\RadioCard.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

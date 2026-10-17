@@ -1,0 +1,273 @@
+diff --git a/web/src/features/dashboard/widgets/WatchSummaryWidget.test.tsx b/web/src/features/dashboard/widgets/WatchSummaryWidget.test.tsx
+index 4a5a302708..88604d443a 100644
+--- a/web/src/features/dashboard/widgets/WatchSummaryWidget.test.tsx
++++ b/web/src/features/dashboard/widgets/WatchSummaryWidget.test.tsx
+@@ -42,9 +42,10 @@
+  * exercise the true rendered DOM.
+  */
+ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
++import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+ import { MemoryRouter } from 'react-router-dom';
+ import type { WatchSummary, WatchComplication } from '@/api/hooks/useWatch';
++import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
+ import WatchSummaryWidget, { getBatteryColor } from './WatchSummaryWidget';
+ import { BADGE_VARIANTS } from '@/components/ui';
+ import { hasGaugeColor } from '@/test/gaugeTestUtils';
+@@ -70,11 +71,15 @@ vi.hoisted(() => {
+   }
+ });
+ 
+-const { useWatchSummaryMock, useWatchComplicationMock, useUnitsMock } = vi.hoisted(() => ({
+-  useWatchSummaryMock: vi.fn(),
+-  useWatchComplicationMock: vi.fn(),
+-  useUnitsMock: vi.fn(),
+-}));
++const { useWatchSummaryMock, useWatchComplicationMock, useUnitsMock, captured } = vi.hoisted(() => {
++  const metrics: OperationalBriefProps['metrics'] = [];
++  return {
++    useWatchSummaryMock: vi.fn(),
++    useWatchComplicationMock: vi.fn(),
++    useUnitsMock: vi.fn(),
++    captured: { metrics },
++  };
++});
+ 
+ vi.mock('@/api/hooks/useWatch', () => ({
+   useWatchSummary: (vehicleId?: number) => useWatchSummaryMock(vehicleId),
+@@ -85,6 +90,21 @@ vi.mock('@/hooks/useUnits', () => ({
+   useUnits: () => useUnitsMock(),
+ }));
+ 
++vi.mock('@/hooks/useFormatting', () => ({
++  useFormatting: () => ({ currencySymbol: '$' }),
++}));
++
++vi.mock('@/components/data-display', async (importOriginal) => {
++  const actual = await importOriginal<typeof import('@/components/data-display')>();
++  return {
++    ...actual,
++    OperationalBrief: (props: OperationalBriefProps) => {
++      captured.metrics = props.metrics;
++      return <actual.OperationalBrief {...props} />;
++    },
++  };
++});
++
+ vi.mock('react-i18next', () => ({
+   useTranslation: () => ({
+     t: (key: string, defaultValue?: string | Record<string, unknown>) =>
+@@ -193,6 +213,7 @@ function renderWidget(
+ 
+ beforeEach(() => {
+   vi.clearAllMocks();
++  captured.metrics = [];
+   // Sensible defaults so a test that forgets to seed a hook still renders a
+   // populated widget rather than crashing on a destructure of `undefined`.
+   useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
+@@ -251,15 +272,13 @@ describe('WatchSummaryWidget — standard layout', () => {
+ 
+     // Range: 300 km → 300000 m → 300000 / 1609.344 = 186.4 → "186" mi.
+     expect(screen.getByText('Range')).toBeInTheDocument();
+-    expect(screen.getByText('186.41')).toBeInTheDocument();
+-    expect(screen.getByText('mi')).toBeInTheDocument();
++    expect(screen.getByText('186.41 mi')).toBeInTheDocument();
+ 
+     // Lock + cabin temp + last seen.
+     expect(screen.getByText('Lock')).toBeInTheDocument();
+     expect(screen.getByText('Locked')).toBeInTheDocument();
+     expect(screen.getByText('Cabin')).toBeInTheDocument();
+-    expect(screen.getByText('21.00')).toBeInTheDocument();
+-    expect(screen.getByText('°C')).toBeInTheDocument();
++    expect(screen.getByText('21.00°C')).toBeInTheDocument();
+     expect(screen.getByText('Last seen')).toBeInTheDocument();
+   });
+ 
+@@ -274,14 +293,105 @@ describe('WatchSummaryWidget — standard layout', () => {
+     renderWidget({ cols: 2, rows: 2 });
+ 
+     // 300 km → "300" km (no unit lift artefacts) and 20 °C → 68 °F.
+-    expect(screen.getByText('300.00')).toBeInTheDocument();
+-    expect(screen.getByText('km')).toBeInTheDocument();
+-    expect(screen.getByText('68.00')).toBeInTheDocument();
+-    expect(screen.getByText('°F')).toBeInTheDocument();
++    expect(screen.getByText('300.00 km')).toBeInTheDocument();
++    expect(screen.getByText('68.00°F')).toBeInTheDocument();
+     // The mi label must NOT appear once the preference is km.
+     expect(screen.queryByText('mi')).not.toBeInTheDocument();
+   });
+ 
++  describe('WatchSummaryWidget — actual source brief', () => {
++    it('retains numeric metres and Celsius, real zero and negative temperature, and missing measurements without parsing complication strings', () => {
++      useUnitsMock.mockReturnValue(makeUnits('km', '°C'));
++      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
++        data: makeSummary({ range_km: 0, inside_temp_c: -10 }),
++      }));
++      useWatchComplicationMock.mockReturnValue(makeComplicationQuery({
++        data: makeComplication({ range: '999 mi', battery: '99%' }),
++      }));
++      const { rerender } = renderWidget({ cols: 2, rows: 2 }, 7);
++      let brief = screen.getByTestId('dashboard-watch-measurements-brief');
++      expect(brief).toHaveAttribute('data-operational-brief');
++      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
++      expect(captured.metrics.map(metric => metric.rawValue)).toEqual([0, -10]);
++      expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'value']);
++      expect(within(brief).getByText('0.00 km')).toBeInTheDocument();
++      expect(within(brief).getByText('-10.00°C')).toBeInTheDocument();
++
++      useUnitsMock.mockReturnValue(makeUnits('mi', '°F'));
++      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
++        data: makeSummary({ range_km: 300, inside_temp_c: 0 }),
++      }));
++      rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
++      brief = screen.getByTestId('dashboard-watch-measurements-brief');
++      expect(captured.metrics.map(metric => metric.rawValue)).toEqual([300000, 0]);
++      expect(within(brief).getByText('186.41 mi')).toBeInTheDocument();
++      expect(within(brief).getByText('32.00°F')).toBeInTheDocument();
++
++      useWatchSummaryMock.mockReturnValue({
++        ...makeSummaryQuery(),
++        data: { ...makeSummary(), range_km: null, inside_temp_c: null },
++      });
++      rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
++      brief = screen.getByTestId('dashboard-watch-measurements-brief');
++      expect(captured.metrics.map(metric => metric.rawValue)).toEqual([null, null]);
++      expect(captured.metrics.map(metric => metric.valueState)).toEqual(['missing', 'missing']);
++      expect(within(brief).getAllByText('—')).toHaveLength(2);
++      expect(within(brief).queryByText(/999|186\.41|32\.00/)).not.toBeInTheDocument();
++      expect(screen.getByText('72.00')).toBeInTheDocument();
++      expect(screen.getByText('Locked')).toBeInTheDocument();
++      expect(screen.getByText('Last seen')).toBeInTheDocument();
++    });
++
++    it('uses summary trust independently of complication failure while retaining battery, status, timestamp and both refresh actions', () => {
++      const refetchSummary = vi.fn();
++      const refetchComplication = vi.fn();
++      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
++        data: makeSummary({ state: 'offline', is_locked: false, is_charging: false }),
++        refetch: refetchSummary,
++      }));
++      useWatchComplicationMock.mockReturnValue({
++        ...makeComplicationQuery({ data: makeComplication({ state: 'online', charging: true }) }),
++        isError: true,
++        error: new Error('complication refresh failed'),
++        refetch: refetchComplication,
++      });
++      const { container, rerender } = renderWidget({ cols: 2, rows: 2 }, 7);
++      let brief = screen.getByTestId('dashboard-watch-measurements-brief');
++      expect(within(brief).getByText('Source available')).toBeInTheDocument();
++      expect(brief.querySelector('[data-data-status="ok"]')).toBeTruthy();
++      expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
++      expect(screen.getByText('Offline')).toBeInTheDocument();
++      expect(screen.getByText('Unlocked')).toBeInTheDocument();
++      expect(screen.getAllByText('Charging')).toHaveLength(2);
++      expect(screen.getByText('72.00')).toBeInTheDocument();
++      expect(screen.getByText('2h ago')).toBeInTheDocument();
++      fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
++      expect(refetchSummary).toHaveBeenCalledTimes(1);
++      expect(refetchComplication).toHaveBeenCalledTimes(1);
++
++      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
++        data: makeSummary({ state: 'asleep', is_locked: true }),
++        isError: true,
++        refetch: refetchSummary,
++      }));
++      useWatchComplicationMock.mockReturnValue({
++        ...makeComplicationQuery({ data: makeComplication({ state: 'online', charging: false }) }),
++        isError: false,
++        refetch: refetchComplication,
++      });
++      rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
++      brief = screen.getByTestId('dashboard-watch-measurements-brief');
++      expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
++      expect(brief.querySelector('[data-data-status="stale"]')).toBeTruthy();
++      expect(within(brief).getByText('186.41 mi')).toBeInTheDocument();
++      expect(within(brief).getByText('21.00°C')).toBeInTheDocument();
++      expect(screen.getByText('Asleep')).toBeInTheDocument();
++      expect(screen.getByText('Locked')).toBeInTheDocument();
++      expect(screen.getByText('Inactive')).toBeInTheDocument();
++      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
++    });
++  });
++
+   it('renders the Unlocked chip when the vehicle is unlocked', () => {
+     useWatchSummaryMock.mockReturnValue(
+       makeSummaryQuery({ data: makeSummary({ is_locked: false }) }),
+diff --git a/web/src/features/dashboard/widgets/WatchSummaryWidget.tsx b/web/src/features/dashboard/widgets/WatchSummaryWidget.tsx
+index b518608086..6a50858e15 100644
+--- a/web/src/features/dashboard/widgets/WatchSummaryWidget.tsx
++++ b/web/src/features/dashboard/widgets/WatchSummaryWidget.tsx
+@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
+ import { Watch, Lock, Unlock } from 'lucide-react';
+ import { LinearGauge } from '@/components/charts';
+ import { StatusBadge, TimeStamp } from '@/components/data-display';
++import type { StatMetric } from '@/components/data-display';
+ import { Skeleton } from '@/components/feedback';
+ import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
+ import { useUnits } from '@/hooks/useUnits';
+@@ -10,7 +11,8 @@ import { useDataState } from '@/hooks/useDataState';
+ import { combineDataStates, knownNumber } from '@/api/dataState';
+ 
+ import { WidgetShell } from './WidgetShell';
+-import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid } from './shared';
++import { WidgetBigNumber, WidgetStatusGrid } from './shared';
++import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+ import { dashboardTokens } from '../lib/dashboardTokens';
+ import type { WidgetProps } from './types';
+ import { convertDistanceFromSI, convertDistanceToSI, convertTempFromSI } from '@/lib/unitConversion';
+@@ -71,10 +73,22 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
+     return convertDistanceFromSI(convertDistanceToSI(rangeKm, 'km'), distanceUnit);
+   }, [rangeKm, distanceUnit]);
+ 
+-  const displayTemp = useMemo(() => {
+-    if (insideTempC == null) return null;
+-    return convertTempFromSI(insideTempC, tempUnit);
+-  }, [insideTempC, tempUnit]);
++  const measurementMetrics: readonly StatMetric[] = [
++    {
++      metricId: 'distance',
++      occurrenceId: 'watch-summary-range',
++      rawValue: rangeKm == null ? null : convertDistanceToSI(rangeKm, 'km'),
++      label: t('widget.range', 'Range'),
++      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
++    },
++    {
++      metricId: 'temperature',
++      occurrenceId: 'watch-summary-cabin',
++      rawValue: insideTempC,
++      label: t('widget.cabinTemp', 'Cabin'),
++      display: { formatter: raw => ({ value: fmtNumber(convertTempFromSI(raw, tempUnit)), unit: tempUnit }) },
++    },
++  ];
+ 
+   const color = useMemo(
+     () => (batteryLevel != null ? getBatteryColor(batteryLevel) : '#374151'),
+@@ -163,19 +177,15 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
+             }
+           />
+ 
+-          {/* Detail grid: 2 columns */}
+-          <WidgetStatGrid cols={2} stats={[
+-            {
+-              label: t('widget.range', 'Range'),
+-              value: displayRange == null ? null : fmtNumber(displayRange),
+-              unit: displayRange == null ? undefined : distanceUnit,
+-            },
+-            {
+-              label: t('widget.cabinTemp', 'Cabin'),
+-              value: displayTemp == null ? null : fmtNumber(displayTemp),
+-              unit: displayTemp == null ? undefined : tempUnit,
+-            },
+-          ]} />
++          <DashboardSourceBrief
++            metrics={measurementMetrics}
++            state={summaryTrust}
++            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
++            title={t('widget.watchMeasurementsTitle', 'Returned watch measurements')}
++            description={t('widget.watchMeasurementsDescription', 'Range and cabin temperature come only from the watch summary; battery, vehicle state, lock and charging indicators remain separate.')}
++            scope={t('widget.watchMeasurementsScope', 'Requested vehicle {{id}} · returned watch summary snapshot; complication freshness does not establish measurement freshness or continuous recording coverage.', { id: vehicleId ?? t('widget.watchDefaultVehicle', 'default') })}
++            testId="dashboard-watch-measurements-brief"
++          />
+           <WidgetStatusGrid cols={2} cells={[
+             {
+               id: 'lock',

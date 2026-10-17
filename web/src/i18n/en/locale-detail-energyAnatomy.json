@@ -1,0 +1,27 @@
+{
+  "energyAnatomy": {
+    "battery": "Battery",
+    "driveCount": "{{count}} drives",
+    "browseDrives": "Browse drives",
+    "title": "Energy Anatomy",
+    "total": "Energy Used",
+    "biggest": "Biggest Consumer",
+    "brief": {
+      "apportionment": "Directional physical-model apportionment, not a directly measured component.",
+      "climate": "Modeled climate share of measured traction energy.",
+      "regen": "Returned regeneration energy; recovery share uses the measured energy-used denominator.",
+      "description": "Measured total energy anchors a directional physical split; component estimates are not laboratory-grade measurements.",
+      "source": "Returned drive energy and regeneration; modeled aerodynamic, rolling and climate allocation."
+    },
+    "climateCard": "Climate Overhead",
+    "regen": "Regen Credit",
+    "regenShare": "{{pct}}% recovered",
+    "subtitle": "Where a period of traction energy physically went",
+    "kpis": "Energy anatomy summary metrics",
+    "noData": "No drives with energy data in this period.",
+    "sankey": {
+      "aria": "Sankey diagram splitting {{total}} into aero drag, rolling resistance, climate, and other losses",
+      "title": "Energy Flow"
+    }
+  }
+}

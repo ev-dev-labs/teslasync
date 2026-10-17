@@ -1,0 +1,1905 @@
+{
+  "item": "phase6-qa-fleet-ops-fleet-operations",
+  "attempt": 1,
+  "status": "SOURCE_QA_COMPLETE_WITH_CONFIRMED_FINDINGS",
+  "createdAtUtc": "2026-10-14T01:29:48.346164+00:00",
+  "deadlineReturnUtc": "2026-10-14T01:44:50.678Z",
+  "deadlineHardUtc": "2026-10-14T01:49:50.678Z",
+  "page": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+  "scope": "read-only accepted page and necessary direct supports; source QA, no remigration/native acceptance",
+  "queue": [
+    {
+      "line": 56,
+      "raw": "| [~] | 6 | phase6-qa-fleet-ops-fleet-operations | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-fleet-ops-fleet-operations.json; web\\logs\\phase6-qa-fleet-ops-fleet-operations.log | phase5-page-fleet-ops-fleet-operations | 1 | reserved01:24:50.678Z; no actor yet | - | Accepted b628384ac source only; FleetOperationsPage/direct supports; confirmed source mechanisms separate from candidates/nativeNOTRUN. |"
+    },
+    {
+      "line": 1917,
+      "raw": "| [x] | 5 | phase5-page-fleet-ops-fleet-operations | original-page-migration | web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx; web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.test.tsx | - | 1 | 2026-10-12T13:32:36.2461510Z | b628384ac6d667d13b0600ec2ba87b0b8f128316 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/fleet-operations; audit=docs\\frontend-audits\\audit-page-132.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=bb0d8e65-0bfe-4c8c-a7d6-04b09e23c0f1; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 20 executed, 0 failed; file=passed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Passed source delivery awaits exact reported-file Git intake; full/native QA unaccepted. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual unchanged parent600case receipt: own file 20 cases passed,0failed/0pending. Existing worker scoped lint/style/section/line/hook evidence retained, no cases rerun for provenance. Source-only acceptance; inherited geometry/static/preservation/native resource/privacy failures remain explicitly UNACCEPTED in own receipt; no page/application QA claim.; commit=b628384ac6d667d13b0600ec2ba87b0b8f128316; pushed. |"
+    }
+  ],
+  "pins": [
+    {
+      "file": ".gitignore",
+      "sha256Before": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "bytes": 2122,
+      "lines": 130,
+      "sha256After": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "unchanged": true
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256Before": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "bytes": 260353,
+      "lines": 5363,
+      "sha256After": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "unchanged": true
+    },
+    {
+      "file": "web/package.json",
+      "sha256Before": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "bytes": 10780,
+      "lines": 189,
+      "sha256After": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256Before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482,
+      "lines": 434,
+      "sha256After": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useFleetOps.ts",
+      "sha256Before": "78c121387fee7edc0dfd2089fd70c48fd1d93a8d57abf9acd5906c2055c54972",
+      "bytes": 13811,
+      "lines": 404,
+      "sha256After": "78c121387fee7edc0dfd2089fd70c48fd1d93a8d57abf9acd5906c2055c54972",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "sha256Before": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "bytes": 70205,
+      "lines": 1898,
+      "sha256After": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256Before": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes": 68125,
+      "lines": 919,
+      "sha256After": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256Before": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes": 4093,
+      "lines": 115,
+      "sha256After": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "sha256Before": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "bytes": 1958,
+      "lines": 48,
+      "sha256After": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "sha256Before": "409641019732349e44d45adf5e2c13dd93c5b38a0f037564ae43b93fc4099a1e",
+      "bytes": 2716,
+      "lines": 67,
+      "sha256After": "409641019732349e44d45adf5e2c13dd93c5b38a0f037564ae43b93fc4099a1e",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256Before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658,
+      "lines": 17,
+      "sha256After": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256Before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783,
+      "lines": 259,
+      "sha256After": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256Before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "bytes": 77157,
+      "lines": 1707,
+      "sha256After": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "sha256Before": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "bytes": 1157,
+      "lines": 30,
+      "sha256After": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/AssignmentDialog.tsx",
+      "sha256Before": "a2f10e2042887b69f2dc8622a476ff0182a12693610adc76f2a7493ac4d2f3e4",
+      "bytes": 8051,
+      "lines": 216,
+      "sha256After": "a2f10e2042887b69f2dc8622a476ff0182a12693610adc76f2a7493ac4d2f3e4",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/AssignmentRoster.tsx",
+      "sha256Before": "2b29890f095061ed7bcfb9a2e77dae17a6e6de147e7038560cd07eca7e83b612",
+      "bytes": 4939,
+      "lines": 143,
+      "sha256After": "2b29890f095061ed7bcfb9a2e77dae17a6e6de147e7038560cd07eca7e83b612",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/AssignmentRosterPreservation.test.tsx",
+      "sha256Before": "d80880f048a70e02c3274cb884ec482dfe9e814fcf0315ac249619adbe4de108",
+      "bytes": 5121,
+      "lines": 105,
+      "sha256After": "d80880f048a70e02c3274cb884ec482dfe9e814fcf0315ac249619adbe4de108",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/AssignmentSelectionPreservation.test.tsx",
+      "sha256Before": "03396f4cafd42322f5c6b0a0eb28872af268c1f143c23247ea27b9a9b3fee16c",
+      "bytes": 4860,
+      "lines": 93,
+      "sha256After": "03396f4cafd42322f5c6b0a0eb28872af268c1f143c23247ea27b9a9b3fee16c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/CancelReservationDialog.test.tsx",
+      "sha256Before": "2c310c8c96341b0b8fd9369eaf77cce9ed331be0b10cd42b031bae8bca62b04c",
+      "bytes": 1814,
+      "lines": 63,
+      "sha256After": "2c310c8c96341b0b8fd9369eaf77cce9ed331be0b10cd42b031bae8bca62b04c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/CancelReservationDialog.tsx",
+      "sha256Before": "fbd951b6db0287c469e76ab058d923c4d74e5e7cccceb17769c00b6d81bdbcb6",
+      "bytes": 2060,
+      "lines": 72,
+      "sha256After": "fbd951b6db0287c469e76ab058d923c4d74e5e7cccceb17769c00b6d81bdbcb6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/ChargingPolicyDialog.tsx",
+      "sha256Before": "7e4f251c9c1a2c1cf2af61b12cb5966d279bc7c490e4bd668ca45a63e7d4b9f1",
+      "bytes": 10892,
+      "lines": 235,
+      "sha256After": "7e4f251c9c1a2c1cf2af61b12cb5966d279bc7c490e4bd668ca45a63e7d4b9f1",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+      "sha256Before": "300b48fe59e7512c2cd68e8749ca2bae7dd185286cf84810db62cf77f623f09b",
+      "bytes": 5908,
+      "lines": 150,
+      "sha256After": "300b48fe59e7512c2cd68e8749ca2bae7dd185286cf84810db62cf77f623f09b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx",
+      "sha256Before": "68c7df7f8ad22ef1980874305605956acdf33d99b3429413c858a01f4dcab174",
+      "bytes": 3513,
+      "lines": 88,
+      "sha256After": "68c7df7f8ad22ef1980874305605956acdf33d99b3429413c858a01f4dcab174",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/chargingWindowUtils.test.ts",
+      "sha256Before": "b0c567e5ace171d0db9bbbf63ae068a15d8b24fc31cb1b10b4afb66d0dabc8ff",
+      "bytes": 1092,
+      "lines": 33,
+      "sha256After": "b0c567e5ace171d0db9bbbf63ae068a15d8b24fc31cb1b10b4afb66d0dabc8ff",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/chargingWindowUtils.ts",
+      "sha256Before": "faf6d73b3505fc0739ed6d0418404a829e7d2add2df520eaddc079cfbf000687",
+      "bytes": 1367,
+      "lines": 41,
+      "sha256After": "faf6d73b3505fc0739ed6d0418404a829e7d2add2df520eaddc079cfbf000687",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/CostCenterAllocation.tsx",
+      "sha256Before": "c7ae130b13e452092e9df9a573c7030138d1681907567f28812b016587c09608",
+      "bytes": 5191,
+      "lines": 125,
+      "sha256After": "c7ae130b13e452092e9df9a573c7030138d1681907567f28812b016587c09608",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/CostCenterDialog.tsx",
+      "sha256Before": "be7055a95b3942f31da33d278d3555612f0d62deda0e6c2be9f6d800f82d36d1",
+      "bytes": 5472,
+      "lines": 159,
+      "sha256After": "be7055a95b3942f31da33d278d3555612f0d62deda0e6c2be9f6d800f82d36d1",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/DeleteFleetResourceDialog.tsx",
+      "sha256Before": "c92994725010c2b480513be5630fb197ca0b51db5ecdf32817ca57503a62eff5",
+      "bytes": 3207,
+      "lines": 91,
+      "sha256After": "c92994725010c2b480513be5630fb197ca0b51db5ecdf32817ca57503a62eff5",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/DriverDialog.test.tsx",
+      "sha256Before": "368c9f4763e37514376b1b97aeca11c2b4276c47fdb0304ae65739e559631037",
+      "bytes": 3618,
+      "lines": 87,
+      "sha256After": "368c9f4763e37514376b1b97aeca11c2b4276c47fdb0304ae65739e559631037",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/DriverDialog.tsx",
+      "sha256Before": "4edf80083a2708a53a7f3a0e0b9f39b4fbfaf310206502ff56949508867b1e91",
+      "bytes": 8700,
+      "lines": 227,
+      "sha256After": "4edf80083a2708a53a7f3a0e0b9f39b4fbfaf310206502ff56949508867b1e91",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/DriverRoster.tsx",
+      "sha256Before": "6f7e836c77e9f1ee50c08669d71282ccc5f1697d40cfed2e6a5e174005ee3ff2",
+      "bytes": 4953,
+      "lines": 151,
+      "sha256After": "6f7e836c77e9f1ee50c08669d71282ccc5f1697d40cfed2e6a5e174005ee3ff2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/editorTypes.ts",
+      "sha256Before": "0efae9ace3505d4eda9eac1e8de79a2acaa4e96c842e5e10e7eb12c0a849e178",
+      "bytes": 963,
+      "lines": 30,
+      "sha256After": "0efae9ace3505d4eda9eac1e8de79a2acaa4e96c842e5e10e7eb12c0a849e178",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/FleetKpis.test.tsx",
+      "sha256Before": "276aaf2a9f4f8a74fb98508647e8ff9d671af66172dae198d5a95dd97628c77f",
+      "bytes": 14279,
+      "lines": 266,
+      "sha256After": "276aaf2a9f4f8a74fb98508647e8ff9d671af66172dae198d5a95dd97628c77f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/FleetKpis.tsx",
+      "sha256Before": "52849c5c49f6f352e7baf7308503680df2a946d6ec59b4f2c9a8df09d907aeb6",
+      "bytes": 8178,
+      "lines": 172,
+      "sha256After": "52849c5c49f6f352e7baf7308503680df2a946d6ec59b4f2c9a8df09d907aeb6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/FleetResourceDialogs.test.tsx",
+      "sha256Before": "a05cab42bb2e5664523df606aa8d61f10ac15e9101bdfb01232d64bc31f85b88",
+      "bytes": 5659,
+      "lines": 214,
+      "sha256After": "a05cab42bb2e5664523df606aa8d61f10ac15e9101bdfb01232d64bc31f85b88",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/FleetResourceEditorDialog.tsx",
+      "sha256Before": "3b08803e4a3d6fde69dbe27f61ce4136db345f044a9cd0e87531b195f083633f",
+      "bytes": 3052,
+      "lines": 113,
+      "sha256After": "3b08803e4a3d6fde69dbe27f61ce4136db345f044a9cd0e87531b195f083633f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/formUtils.ts",
+      "sha256Before": "24b86a3ebca904b6421914089f953b9433167b4b7d068abd2eebab423b97a104",
+      "bytes": 912,
+      "lines": 24,
+      "sha256After": "24b86a3ebca904b6421914089f953b9433167b4b7d068abd2eebab423b97a104",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/index.ts",
+      "sha256Before": "d71de21e4fb33c72533edd419311790c6149c77b98f29499c31cd0e61c17415a",
+      "bytes": 1060,
+      "lines": 18,
+      "sha256After": "d71de21e4fb33c72533edd419311790c6149c77b98f29499c31cd0e61c17415a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/MutationErrorDialog.test.tsx",
+      "sha256Before": "0037da7b1ab8a2bd8f7685a569dbaf888931ab2eaaea78a25fef9fcdbb32c3fe",
+      "bytes": 1067,
+      "lines": 30,
+      "sha256After": "0037da7b1ab8a2bd8f7685a569dbaf888931ab2eaaea78a25fef9fcdbb32c3fe",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/MutationErrorDialog.tsx",
+      "sha256Before": "e07b70ccfa83361d34949ecc420b74fc152c52b2f734776241c1972a98f13e60",
+      "bytes": 1865,
+      "lines": 47,
+      "sha256After": "e07b70ccfa83361d34949ecc420b74fc152c52b2f734776241c1972a98f13e60",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/ReservationActions.tsx",
+      "sha256Before": "96dd9962dc7949a41e7cd4d3cf5fe0bbbcfde8c3b61939b4c1508138f748453f",
+      "bytes": 2001,
+      "lines": 67,
+      "sha256After": "96dd9962dc7949a41e7cd4d3cf5fe0bbbcfde8c3b61939b4c1508138f748453f",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/ReservationDialog.tsx",
+      "sha256Before": "875ec0554a4f2ee5d7c6999987292d674e6743daf176d55768f5c9622c7e00ea",
+      "bytes": 7413,
+      "lines": 204,
+      "sha256After": "875ec0554a4f2ee5d7c6999987292d674e6743daf176d55768f5c9622c7e00ea",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/ReservationFields.tsx",
+      "sha256Before": "971de037dda8e03daa7b36a47a712c8f351d872ca1d9390aa6a372796e2fb256",
+      "bytes": 5556,
+      "lines": 151,
+      "sha256After": "971de037dda8e03daa7b36a47a712c8f351d872ca1d9390aa6a372796e2fb256",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "sha256Before": "bf404288d3131672fa966728d54813dcc8184ef2ab6e46071e2f69f60c3880db",
+      "bytes": 6159,
+      "lines": 166,
+      "sha256After": "bf404288d3131672fa966728d54813dcc8184ef2ab6e46071e2f69f60c3880db",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/UtilizationForecastChart.tsx",
+      "sha256Before": "669ac15979f807e95f20293e2170b27794fa8eb1d37b14b9f0c069b6c7c6b4ff",
+      "bytes": 3945,
+      "lines": 110,
+      "sha256After": "669ac15979f807e95f20293e2170b27794fa8eb1d37b14b9f0c069b6c7c6b4ff",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/UtilizationForecastPreservation.test.tsx",
+      "sha256Before": "3bfea8de4e3845e312e4befd46cd09e9cdb1635b7d8300a70c76b1e7e8bc1dab",
+      "bytes": 4227,
+      "lines": 99,
+      "sha256After": "3bfea8de4e3845e312e4befd46cd09e9cdb1635b7d8300a70c76b1e7e8bc1dab",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/WorkOrderBoard.tsx",
+      "sha256Before": "2ffabe0c99297470d6018ff0e54cf7bb0e3ec621e34d403c464f82b0f64e41bc",
+      "bytes": 6343,
+      "lines": 138,
+      "sha256After": "2ffabe0c99297470d6018ff0e54cf7bb0e3ec621e34d403c464f82b0f64e41bc",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/WorkOrderDialog.tsx",
+      "sha256Before": "4ef1b8ae484458b32a620e1d0f160116a08821a5236c0a5bb3dfd9aebfece2dd",
+      "bytes": 13583,
+      "lines": 246,
+      "sha256After": "4ef1b8ae484458b32a620e1d0f160116a08821a5236c0a5bb3dfd9aebfece2dd",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/helpers.test.ts",
+      "sha256Before": "ea2a184abac7924afcabb3ef751106725873864c70b0271a2805f6cffcba0875",
+      "bytes": 3258,
+      "lines": 125,
+      "sha256After": "ea2a184abac7924afcabb3ef751106725873864c70b0271a2805f6cffcba0875",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/helpers.ts",
+      "sha256Before": "e11cd56400eeeee9fc5b802a414bd74a5be8c0a5dccb2d9b679c5bfc185ad7bc",
+      "bytes": 3658,
+      "lines": 105,
+      "sha256After": "e11cd56400eeeee9fc5b802a414bd74a5be8c0a5dccb2d9b679c5bfc185ad7bc",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.test.tsx",
+      "sha256Before": "8a8f4111bdbfee54337ee445eb014d7448156b201d6886161518a652276b0fe9",
+      "bytes": 28961,
+      "lines": 640,
+      "sha256After": "8a8f4111bdbfee54337ee445eb014d7448156b201d6886161518a652276b0fe9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+      "sha256Before": "66446508e0912bfb78e28bd6f8eb60d407cac53f12838799b268cdd1807db9f1",
+      "bytes": 14608,
+      "lines": 350,
+      "sha256After": "66446508e0912bfb78e28bd6f8eb60d407cac53f12838799b268cdd1807db9f1",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256Before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes": 2035,
+      "lines": 65,
+      "sha256After": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256Before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "bytes": 5230,
+      "lines": 148,
+      "sha256After": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256Before": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes": 1161,
+      "lines": 24,
+      "sha256After": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMode.tsx",
+      "sha256Before": "d1c366956189eb4b6eb6af1a8f3a4f5ff3bbc1b4f7e1aa07849138fef08b277c",
+      "bytes": 3188,
+      "lines": 116,
+      "sha256After": "d1c366956189eb4b6eb6af1a8f3a4f5ff3bbc1b4f7e1aa07849138fef08b277c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256Before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "bytes": 6545,
+      "lines": 194,
+      "sha256After": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256Before": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "bytes": 1842282,
+      "lines": 38994,
+      "sha256After": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256Before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes": 18863,
+      "lines": 462,
+      "sha256After": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256Before": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "bytes": 7868,
+      "lines": 137,
+      "sha256After": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "sha256Before": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "bytes": 31836,
+      "lines": 289,
+      "sha256After": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "sha256Before": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "bytes": 16774,
+      "lines": 500,
+      "sha256After": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256Before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411,
+      "lines": 168,
+      "sha256After": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en/locale-fleet-ops.json",
+      "sha256Before": "0c0865164461f6784ea09599dd1b6a940726cc870c02c6a3951608cc199e5d2c",
+      "bytes": 40729,
+      "lines": 1192,
+      "sha256After": "0c0865164461f6784ea09599dd1b6a940726cc870c02c6a3951608cc199e5d2c",
+      "unchanged": true
+    },
+    {
+      "file": "internal/api/fleetops/handler.go",
+      "sha256Before": "ccfa14c8acda0b8004d0b72e3ae49a873bb4c04c20a06bdb3a2f53d3fa93c233",
+      "bytes": 8892,
+      "lines": 242,
+      "sha256After": "ccfa14c8acda0b8004d0b72e3ae49a873bb4c04c20a06bdb3a2f53d3fa93c233",
+      "unchanged": true
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "initial-paused-as-empty",
+      "severity": "high",
+      "title": "Unresolved paused sources are displayed as empty operational records",
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "line": 118,
+      "source": "{loading ? <Skeleton lines={7} /> : error ? (",
+      "mechanism": "Page substitutes [] for absent query payloads and passes only isLoading/fatalError to these content branches. For an initial paused query isLoading=false, fatalError=null and hasData=false; the six lists select EmptyState, and the forecast selects empty=true. Source warnings return null without retained data. A vehicle-specific paused surface exists, but does not fix these seven independent sources.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "input": "data=undefined, isPending=true, isLoading=false, isFetching=false, fetchStatus=paused",
+        "observed": "deriveDataState: initial, hasData=false, isRefreshBlocked=true, fatalError=null; 6 EmptyState branches and forecast empty=true; no Skeleton in the 5 roster/board probes",
+        "execution": "actual pinned source evaluated with explicit JSX/import stubs; no mounted UI"
+      },
+      "fix": "Thread actual source availability/paused state into each existing section; unresolved is awaiting/paused, authoritative successful [] is empty. Keep retained content and independent retry.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+          "line": 118,
+          "source": "{loading ? <Skeleton lines={7} /> : error ? ("
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/DriverRoster.tsx",
+          "line": 128,
+          "source": "{loading ? <Skeleton lines={5} /> : error ? ("
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/AssignmentRoster.tsx",
+          "line": 120,
+          "source": "{loading ? <Skeleton lines={5} /> : error ? ("
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+          "line": 125,
+          "source": "{loading ? <Skeleton lines={6} /> : error ? ("
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/CostCenterAllocation.tsx",
+          "line": 55,
+          "source": "{loading ? <Skeleton lines={5} /> : error ? ("
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/WorkOrderBoard.tsx",
+          "line": 63,
+          "source": "{loading ? <Skeleton lines={8} /> : error ? ("
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/UtilizationForecastChart.tsx",
+          "line": 61,
+          "source": "empty={data.length === 0}"
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+          "line": 75,
+          "source": "const reservations = reservationsQuery.data?.items ?? [];"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59,
+          "source": "if (!state.hasData) return null;"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F02",
+      "rule": "independent-source-content-loss",
+      "severity": "high",
+      "title": "A reservation/work-order dependency erases usable cost-center records",
+      "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+      "line": 262,
+      "source": "error={costCentersState.fatalError ?? reservationsState.fatalError ?? workOrdersState.fatalError}",
+      "mechanism": "The cost-center section combines all three initial-loading flags and fatal errors. CostCenterAllocation replaces its whole body before rendering allocations, even when costCenters itself is loaded and usable.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "input": "one loaded synthetic cost center; reservations initially fail or remain loading; work orders empty",
+        "observed": "dependency fatal -> QueryError=1 and allocation StatusPill=0; dependency loading -> Skeleton=1 and allocation StatusPill=0"
+      },
+      "fix": "Render loaded cost-center identities and read/write actions independently; mark missing reservation/order-derived fields unknown with source-specific recovery.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+          "line": 262,
+          "source": "error={costCentersState.fatalError ?? reservationsState.fatalError ?? workOrdersState.fatalError}"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/CostCenterAllocation.tsx",
+          "line": 55,
+          "source": "{loading ? <Skeleton lines={5} /> : error ? ("
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+          "line": 261,
+          "source": "loading={costCentersQuery.isLoading || reservationsQuery.isLoading || workOrdersQuery.isLoading}"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F03",
+      "rule": "unknown-cost-as-zero",
+      "severity": "high",
+      "title": "Nullable maintenance costs become measured zero or a definite incomplete subtotal",
+      "file": "web/src/features/fleet-ops/helpers.ts",
+      "line": 63,
+      "source": "cost_minor: relatedOrders.reduce((sum, item) => sum + (item.cost_minor ?? 0), 0),",
+      "mechanism": "The allocation reducer substitutes zero for every null cost_minor, while a known currency allows that sum to be formatted as a definite amount. There is no unknown-cost count/completeness state.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "input": "cost_center_id=1, cost_minor=null, currency=USD; separately known 12500 plus a null order",
+        "observed": "unknown-only -> cost_minor=0 and $0.00 (identical to real zero); known-plus-unknown ->12500 without incomplete-cost qualification",
+        "limit": "Source contract permits nullable cost and currency. Prevalence/server response validation not exercised."
+      },
+      "fix": "Preserve real zero; propagate unknown/partial monetary state and qualifying counts rather than zero-coercing missing costs.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/helpers.ts",
+          "line": 63,
+          "source": "cost_minor: relatedOrders.reduce((sum, item) => sum + (item.cost_minor ?? 0), 0),"
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/features/fleet-ops/components/CostCenterAllocation.tsx",
+          "line": 112,
+          "source": "{t('fleetOps.costCenters.maintenanceCost', 'Maintenance cost')}: {formatMinorUnits(allocation.cost_minor, allocation.currency)}"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F04",
+      "rule": "currency-minor-unit-scale",
+      "severity": "high",
+      "title": "All ISO currencies are divided by 100 despite the editor promising smallest currency units",
+      "file": "web/src/features/fleet-ops/helpers.ts",
+      "line": 104,
+      "source": "return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);",
+      "mechanism": "formatMinorUnits divides every amount by 100. WorkOrderDialog accepts three-letter ISO currency codes and describes input as the smallest currency unit. ISO zero/three-decimal currencies do not satisfy that assumption.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "input": "frontend-declared smallest-unit amounts: 100 JPY and 1000 KWD",
+        "observed": "actual helper returns ¥1 and KWD 10.000; Intl resolved fractional digits are JPY=0 and KWD=3",
+        "expectedUnderFrontendDeclaration": "¥100 and KWD 1.000",
+        "limit": "No live backend currency acceptance/scale verified; reconcile wire contract before altering calculations."
+      },
+      "fix": "Resolve supported currency exponent at the existing formatting/domain boundary and preserve raw cost_minor/currency; do not guess or create a competing converter.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/helpers.ts",
+          "line": 104,
+          "source": "return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);"
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/features/fleet-ops/components/WorkOrderDialog.tsx",
+          "line": 230,
+          "source": "'Enter the smallest currency unit; for USD, 12500 represents $125.00.',"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/WorkOrderDialog.tsx",
+          "line": 171,
+          "source": "if (normalizedCurrency && !/^[A-Z]{3}$/.test(normalizedCurrency)) {"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F05",
+      "rule": "display-preferences-not-consumed",
+      "severity": "high",
+      "title": "Dates and allocated money ignore saved display locale/timezone",
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "line": 81,
+      "source": "render: (item) => `${formatDateTime(item.starts_at)} – ${formatDateTime(item.ends_at)}`,",
+      "mechanism": "Four direct date-helper consumers omit options, so their Intl formatting uses host/browser locale and zone rather than the existing useDateFormat settings binding. Money similarly invokes Intl.NumberFormat(undefined), ignoring a selected application locale. SI power/distance paths correctly use useUnits and are not included in this finding.",
+      "sourceSupportedReproduction": {
+        "commands": [
+          "source-only-reproductions",
+          "calendar-si-routes"
+        ],
+        "input": "2026-10-14T01:00:00Z with saved de-DE/Europe-Berlin or ja-JP/Asia-Tokyo versus host America/Los_Angeles; 123450 USD minor units and de-DE",
+        "observed": "default Oct 13, 2026, 06:00 PM versus explicit 14. Okt. 2026,03:00 / Japanese10:00; helper $1,234.50 versus de-DE 1.234,50 $; AST date calls each have one argument",
+        "limit": "Node Intl source probe, not browser/12-hour preference acceptance"
+      },
+      "fix": "Bind existing useDateFormat/effective money formatting preferences; preserve raw instants, source currency and timezone context.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+          "line": 81,
+          "source": "render: (item) => `${formatDateTime(item.starts_at)} – ${formatDateTime(item.ends_at)}`,"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/AssignmentRoster.tsx",
+          "line": 57,
+          "source": "filterValueLabel: (_value, item) => formatDateTime(item.starts_at),"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/FleetKpis.tsx",
+          "line": 76,
+          "source": "? t('fleetOps.brief.receivedAt', 'Received {{time}}', { time: formatDateTime(new Date(state.updatedAt)) })"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/WorkOrderBoard.tsx",
+          "line": 97,
+          "source": "? t('fleetOps.workOrders.dueDate', 'Due {{date}}', { date: formatDate(item.due_at) })"
+        },
+        {
+          "file": "web/src/features/fleet-ops/helpers.ts",
+          "line": 104,
+          "source": "return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);"
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 85,
+          "source": "const opts = useMemo<FormatOptions>(() => ({ locale, tz }), [locale, tz])"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 45,
+          "source": "const raw = opts?.locale"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F06",
+      "rule": "mobile-field-unreachable",
+      "severity": "high",
+      "title": "Four tables hide original fields below md without read-only details",
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "line": 159,
+      "source": "mobileColumns={['title', 'vehicle', 'actions']}",
+      "mechanism": "These callers supply mobileColumns but neither mobilePresentation nor an expanded renderer. DataTable applies hidden md:table-cell to disallowed keys. Mutation editors cannot substitute for readable details: they are disabled/unmounted in read-only mode.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "observedByTable": {
+          "reservations": [
+            "driver",
+            "period",
+            "status"
+          ],
+          "drivers": [
+            "status",
+            "guardrails"
+          ],
+          "assignments": [
+            "starts_at",
+            "ends_at"
+          ],
+          "charging-policies": [
+            "target",
+            "power",
+            "windows",
+            "enabled"
+          ]
+        },
+        "observed": "all four JSX declarations have mobilePresentation=null and renderExpanded=null; shared hidden-cell mechanism is source-cited",
+        "limit": "Confirmed source declaration/conditional CSS mechanism; viewport geometry not measured"
+      },
+      "fix": "Use existing mobilePresentation/allDetails/inlineActions or retain a deliberately complete contained-scroll matrix; preserve table IDs, columns, loaded filtering/export and all actions.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+          "line": 159,
+          "source": "mobileColumns={['title', 'vehicle', 'actions']}"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/DriverRoster.tsx",
+          "line": 145,
+          "source": "mobileColumns={['name', 'reference', 'actions']}"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/AssignmentRoster.tsx",
+          "line": 137,
+          "source": "mobileColumns={['driver', 'vehicle', 'actions']}"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+          "line": 143,
+          "source": "mobileColumns={['vehicle', 'policy', 'actions']}"
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 743,
+          "source": "mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F07",
+      "rule": "unlocalized-table-name",
+      "severity": "medium",
+      "title": "Accessible table names fall back to technical persistence IDs",
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "line": 154,
+      "source": "tableId=\"fleet-ops:reservations\"",
+      "mechanism": "All four tables omit caption/name. DataTable derives its aria-label from caption ?? name ?? tableId, so human-visible localized section headings do not name these tables.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "observed": "caption=null/nameProp=null on all four source JSX declarations; resulting source accessible names are fleet-ops:reservations, fleet-ops:drivers, fleet-ops:assignments and fleet-ops:charging-policies"
+      },
+      "fix": "Pass the existing translated section title as caption/name; leave technical tableId unchanged.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+          "line": 154,
+          "source": "tableId=\"fleet-ops:reservations\""
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/DriverRoster.tsx",
+          "line": 140,
+          "source": "tableId=\"fleet-ops:drivers\""
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/AssignmentRoster.tsx",
+          "line": 132,
+          "source": "tableId=\"fleet-ops:assignments\""
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+          "line": 138,
+          "source": "tableId=\"fleet-ops:charging-policies\""
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 948,
+          "source": "caption ?? name ?? tableId ?? t('table.genericName', 'Data table')"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F08",
+      "rule": "invalid-fieldset-legend",
+      "severity": "medium",
+      "title": "Charging-window group legend is nested under a div",
+      "file": "web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx",
+      "line": 38,
+      "source": "<legend className=\"text-sm font-semibold text-[var(--text-primary)]\">",
+      "mechanism": "The first fieldset child is a div; the legend is nested within it instead of being a fieldset child. This loses the native legend group naming contract even though field errors use a valid described-by identity.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "observed": "source JSX root=fieldset, firstChild=div, legendParent=div"
+      },
+      "fix": "Place the legend directly under fieldset; retain window controls, add/remove actions and error association.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx",
+          "line": 38,
+          "source": "<legend className=\"text-sm font-semibold text-[var(--text-primary)]\">"
+        }
+      ],
+      "supportingEvidence": [],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F09",
+      "rule": "empty-copy-scope-mismatch",
+      "severity": "medium",
+      "title": "Reservation empty copy claims a planning window that the list query never sends",
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "line": 123,
+      "source": "message={t('fleetOps.reservations.empty', 'No reservations in this planning window.')}",
+      "mechanism": "useFleetReservations receives only limit=100, no from/to. The independent forecast window is not a reservation-list filter. The current canonical-backed empty copy nevertheless asserts a planning-window result.",
+      "sourceSupportedReproduction": {
+        "command": "source inspection",
+        "input": "successful undated reservation list with items=[]",
+        "observed": "EmptyState displays No reservations in this planning window; actual reservation hook filter={limit:100} and FleetKpis explicitly says Operational lists are not date-filtered."
+      },
+      "fix": "Align copy with the actual undated list scope through a separately leased canonical-copy change; do not quietly change query/window semantics.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+          "line": 123,
+          "source": "message={t('fleetOps.reservations.empty', 'No reservations in this planning window.')}"
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+          "line": 59,
+          "source": "const reservationsQuery = useFleetReservations({ limit: 100 });"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/FleetKpis.tsx",
+          "line": 84,
+          "source": "const listWindow = t('fleetOps.brief.listWindow', 'Operational lists are not date-filtered.');"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F10",
+      "rule": "chart-area-tint-contract",
+      "severity": "medium",
+      "title": "Forecast uncertainty tint is 18%, above the contract maximum 8%",
+      "file": "web/src/features/fleet-ops/components/UtilizationForecastChart.tsx",
+      "line": 94,
+      "source": "fillOpacity={0.18}",
+      "mechanism": "The shared-boundary forecast Area explicitly sets 0.18 fillOpacity. MDC-034 limits area tint to at most 8%. This is a source contract mismatch, not a claim about perceived brightness/contrast.",
+      "sourceSupportedReproduction": {
+        "command": "source-only-reproductions",
+        "observed": "uncertainty Area fillOpacity=0.18; design contract maximum=0.08"
+      },
+      "fix": "Use the existing chart presentation role with at most 0.08 opacity, preserving lower-offset/uncertainty stack, expected line, bounds and data alternatives.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/UtilizationForecastChart.tsx",
+          "line": 94,
+          "source": "fillOpacity={0.18}"
+        }
+      ],
+      "supportingEvidence": [],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F11",
+      "rule": "calendar-date-identity",
+      "severity": "high",
+      "title": "Date-only UTC grouping key renders as the previous calendar day in a negative-offset zone",
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "line": 133,
+      "source": "<Text as=\"p\" weight=\"semibold\">{formatDateShort(day)}</Text>",
+      "mechanism": "Calendar derives day via starts_at.slice(0,10), then formats that bare YYYY-MM-DD through new Date (UTC midnight) in the default local zone. The heading can differ from the reservation date/time inside the same card.",
+      "sourceSupportedReproduction": {
+        "command": "calendar-si-routes",
+        "input": "starts_at=2026-10-14T17:00:00Z; Intl host zone America/Los_Angeles",
+        "observed": "groupKey=2026-10-14, calendarHeader=Oct 13, actual start-date=Oct 14, time=10:00 AM",
+        "limit": "Executed Node Intl with that zone; no browser/device access. First-five incoming-order question remains conditional."
+      },
+      "fix": "Derive and format business-day identity in one effective zone without reinterpreting a date-only key as UTC midnight; retain full table/source instants and independent reservation business dates.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+          "line": 133,
+          "source": "<Text as=\"p\" weight=\"semibold\">{formatDateShort(day)}</Text>"
+        }
+      ],
+      "supportingEvidence": [
+        {
+          "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+          "line": 47,
+          "source": "const calendarDays = [...new Set(upcoming.map((item) => item.starts_at.slice(0, 10)))].slice(0, 5);"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 75,
+          "source": "export function formatDateShort(iso: string | Date | null | undefined, opts?: FormatOptions): string {"
+        }
+      ],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    },
+    {
+      "id": "F12",
+      "rule": "missing-canonical-dynamic-key",
+      "severity": "high",
+      "title": "Both charging views request seven nonexistent weekday localization keys",
+      "file": "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+      "line": 41,
+      "source": "const day = t(`fleetOps.days.${dayKey}`, dayKey.charAt(0).toUpperCase() + dayKey.slice(1));",
+      "mechanism": "The source constructs fleetOps.days.sun/mon/tue/wed/thu/fri/sat with English abbreviation fallbacks. Neither canonical en.json nor locale-fleet-ops.json contains fleetOps.days. The literal t-call checker did not cover template-produced keys; the explicit dynamic expansion found all seven missing.",
+      "sourceSupportedReproduction": {
+        "commands": [
+          "calendar-si-routes",
+          "dynamic-days-route-followup-utf8"
+        ],
+        "observed": "364 literal t calls:0 missing; 11 explicitly expanded dynamic keys:7 missing (all weekdays), four severity keys present; canonical and generated fleetOps.days absent",
+        "actualExit": "calendar-si-routes exit1 retained; followup catalog inspection exit0"
+      },
+      "fix": "Have the catalog owner add/reuse the seven canonical weekday labels and normal generated namespace outputs; separately coordinate these two consumers. No inline fallback-only repair or catalog edits in this QA.",
+      "owner": "separately leased page/domain/catalog repair; no source write in this QA",
+      "confidence": "high",
+      "violationSites": [
+        {
+          "file": "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+          "line": 41,
+          "source": "const day = t(`fleetOps.days.${dayKey}`, dayKey.charAt(0).toUpperCase() + dayKey.slice(1));"
+        },
+        {
+          "file": "web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx",
+          "line": 57,
+          "source": "label: t(`fleetOps.days.${key}`, key.charAt(0).toUpperCase() + key.slice(1)),"
+        }
+      ],
+      "supportingEvidence": [],
+      "deduplication": {
+        "existingFixItem": null,
+        "result": "No exact existing Phase6 repair objective/file scope found in current queue searches; historical audit findings reused rather than counted twice. This report does not edit or claim the queue."
+      }
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+      "line": 57,
+      "mechanism": "Six lists request only limit=100, no server-offset navigation. Loaded coverage is disclosed for reservations/assignments/work-orders in the brief, but larger driver/policy/cost-center/choice sources can be incomplete. Actual volume, totals and required full-result navigation remain unproved.",
+      "sourceSupportedTrigger": "total > loaded length / required record outside first batch",
+      "neededEvidence": "Safe authorized complete-result/choice requirements and pagination contract proof; do not label local table pagination fullResult."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/fleet-ops/components/WorkOrderDialog.tsx",
+      "line": 57,
+      "mechanism": "Initial dueDistance snapshots display units, whereas submit converts using current unitPrefs.distance. A preference change while this same editor remains mounted can reinterpret unchanged text.",
+      "sourceSupportedTrigger": "Open a km-based existing distance; switch preference to mi without remount; submit unchanged number",
+      "neededEvidence": "Mounted allowed settings-change flow and original SI-preservation assertion; no preference mutation or browser run here."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+      "line": 47,
+      "mechanism": "First five unique raw start dates retain incoming order rather than a chronological upcoming order; actual endpoint sort and intended preview selection not verified. This is separate from confirmed date-key reinterpretation F11.",
+      "sourceSupportedTrigger": "Unsorted returned active reservations across more than five days",
+      "neededEvidence": "Read-only backend ordering/business-preview contract before altering sort/selection."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N01",
+      "topic": "Responsive geometry/targets",
+      "source": "Page default1/xl2; calendar1/sm2/xl5; board1/xl5; named row actions min-h-11/min-w-11; source Add/editor buttons often size=sm/default without page-local 44px overrides",
+      "required": "Mission widths320/375/390/430/768/1024/1280/1440/1920/2560, narrow cards, root/text scaling, long RTL labels, safe areas and measured non-overlapping 44px targets",
+      "status": "NOTRUN; no visual/target pass or additional confirmed defect"
+    },
+    {
+      "id": "N02",
+      "topic": "Composed theme/forced-colors contrast",
+      "source": "Fixed text-rose-300/text-amber-300 in row actions; semantic status text accompanies dots",
+      "required": "Actual dark/light/custom/forced-colors composed text/focus/chart contrast; inherited primitive styling not reaccepted",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "N03",
+      "topic": "Keyboard/dialog focus and mutation outcome retention",
+      "source": "Existing Modal/ConfirmDialog, discard guard, localized labels, success callbacks and versioned writes are retained; overlapping editor/cancel/delete/error workflows remain",
+      "required": "Mounted open/nested overlays, tab/Escape/return focus, pending/error/discard/retry/context changes in authorized synthetic scope",
+      "status": "NOTRUN; no mutations sent"
+    },
+    {
+      "id": "N04",
+      "topic": "Chart/motion/accessibility interpretation",
+      "source": "ChartCard dataColumns/date/expected/lower/upper, stable key, exportable; FadeIn shared boundary; reduced-motion/low-bandwidth behavior delegated",
+      "required": "Actual chart table/export reachability, SR outcome announcements, motion preferences and interpretation of inferred/retained data",
+      "status": "NOTRUN"
+    }
+  ],
+  "commands": [
+    {
+      "id": "source-pattern-ast-canonical",
+      "command": "PowerShell single-quoted here-string piped to node -; TypeScript createSourceFile traversal, regex matches and canonical t-key lookup; exact script in tool transcript",
+      "exitCode": 0,
+      "rawOutput": "GREP static-inline-style matches=0\nGREP raw-html matches=0\nGREP direct-library-import matches=0\nGREP old-api-import matches=0\nGREP double-prefix matches=0\nGREP camelcase-param matches=0\nGREP hidden-section matches=0\nGREP fetch-useeffect matches=0\nFILE_SCANNED web/src/features/fleet-ops/components/AssignmentDialog.tsx lines=216 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/AssignmentRoster.tsx lines=143 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/CancelReservationDialog.tsx lines=72 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/ChargingPolicyDialog.tsx lines=235 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx lines=150 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx lines=88 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/chargingWindowUtils.ts lines=41 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/CostCenterAllocation.tsx lines=125 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/CostCenterDialog.tsx lines=159 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/DeleteFleetResourceDialog.tsx lines=91 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/DriverDialog.tsx lines=227 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/DriverRoster.tsx lines=151 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/editorTypes.ts lines=30 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/FleetKpis.tsx lines=172 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/FleetResourceEditorDialog.tsx lines=113 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/formUtils.ts lines=24 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/index.ts lines=18 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/MutationErrorDialog.tsx lines=47 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/ReservationActions.tsx lines=67 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/ReservationDialog.tsx lines=204 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/ReservationFields.tsx lines=151 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/ReservationPanel.tsx lines=166 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/UtilizationForecastChart.tsx lines=110 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/WorkOrderBoard.tsx lines=138 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/components/WorkOrderDialog.tsx lines=246 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/helpers.ts lines=105 parseDiagnostics=0\nFILE_SCANNED web/src/features/fleet-ops/pages/FleetOperationsPage.tsx lines=350 parseDiagnostics=0\nAST_PARSE_DIAGNOSTICS 0\nHARDCODED_VISIBLE_LITERAL_CANDIDATES 1\n{\"file\":\"web/src/features/fleet-ops/components/WorkOrderDialog.tsx\",\"line\":233,\"text\":\"USD\"}\nCANONICAL_T_CALLS 364\nCANONICAL_MISSING_OCCURRENCES 0\nPAGE_LAYOUT_TAG 1\nPAGE_CONTENT_SECTIONS 8\nPAGE_QUERY_READ_HOOKS 8\nPAGE_UI_USEEFFECT_NOT_FETCH: read-only mode closes editors at lines98-103"
+    },
+    {
+      "id": "scope-routes-preferences-dedup-test-source",
+      "command": "Inline Python source ranges and exact queue file-scope/objective matching; test declaration inspection only; script retained in transcript",
+      "exitCode": 0,
+      "rawOutput": "UTC_NOW 2026-10-14T01:31:28.741220+00:00\nSOURCE web/src/lib/workspaceScope.ts\n1:import type { WorkspaceRangePreset } from './workspacePreferences';\n2:\n3:export interface WorkspaceRouteScope {\n4:  range: boolean;\n5:  vehicle: boolean;\n6:}\n7:\n8:export type WorkspaceScopedControlKind = keyof WorkspaceRouteScope;\n9:\n10:export const WORKSPACE_SCOPED_CONTROL = Symbol('teslasync.workspace-scoped-control');\n11:\n12:export type WorkspaceScopedComponent = {\n13:  [WORKSPACE_SCOPED_CONTROL]?: WorkspaceScopedControlKind;\n14:};\n15:\n16:/**\n17: * Routes that OWN the global analysis window.\n18: *\n19: * Exported so the contract can be drift-tested against the generated route\n20: * registry: a range-owning path that no longer exists means the shell shows\n21: * a control for a page that cannot consume it.\n22: */\n23:export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([\n24:  '/activity',\n25:  '/analytics',\n26:  '/analytics/carbon',\n27:  '/api-logs',\n28:  '/automations/history',\n29:  '/charging',\n30:  '/charging-curve',\n31:  '/charging-heatmap',\n32:  '/charging/costs',\n33:  '/charging/curves',\n34:  '/cold-start',\n35:  '/command-history',\n36:  '/command-reliability',\n37:  '/cost-analysis',\n38:  '/drive-calendar',\n39:  '/drive-score',\n40:  '/drives',\n41:  '/drivetrain-health',\n42:  '/driving-dynamics',\n43:  '/driving-rhythm',\n44:  '/efficiency',\n45:  '/energy',\n46:  '/energy-flow',\n47:  '/fsd',\n48:  '/locations',\n49:  '/logbook',\n50:  '/media-player',\n51:  '/me/activity',\n52:  '/notifications/archived',\n53:  '/notifications/inbox',\n54:  '/parking',\n55:  '/power-flow',\n56:  '/range-buffer',\n57:  '/regen-efficiency',\n58:  '/route-efficiency',\n59:  '/security-access',\n60:  '/share-card',\n61:  '/signal-explorer',\n62:  '/signal-log',\n63:  '/signals',\n64:  '/sleep-efficiency',\n65:  '/software-updates',\n66:  '/speed-profile',\n67:  '/speed-sweetspot',\n68:  '/state-debugger',\n69:  '/statistics',\n70:  '/tesla-charging-history',\n71:  '/tesla-charging-sessions',\n72:  '/timeline',\n73:  '/tire-pressure',\n74:  '/trips',\n75:  '/utilization',\n76:  '/vehicle-systems/software',\n77:]);\n78:\n79:const STANDARD_QUICK_PRESETS = ['24h', '7d', '30d', '90d'] as const;\n80:const CALENDAR_QUICK_PRESETS = ['7d', '30d', '90d', 'ytd'] as const;\n81:\n82:export function getWorkspaceQuickRangePresets(pathname: string): readonly (WorkspaceRangePreset | 'ytd')[] {\n83:  return normalizePathname(pathname) === '/drive-calendar'\n84:    ? CALENDAR_QUICK_PRESETS\n85:    : STANDARD_QUICK_PRESETS;\n86:}\n87:\n88:export function isWorkspaceRangePresetAvailable(pathname: string, id: string): boolean {\n89:  if (normalizePathname(pathname) === '/drive-calendar') {\n90:    return id !== 'live' && id !== '24h' && id !== 'today' && id !== '1y';\n91:  }\n92:  return id !== '1y' && id !== 'ytd';\n93:}\n94:\n95:export const VEHICLE_DISABLED_PREFIXES = [\n96:  '/account',\n97:  '/admin',\n98:  '/automations',\n99:  '/benchmarks',\n100:  '/dev',\n101:  '/docs',\n102:  '/integrations',\n103:  '/me',\n104:  '/notifications',\n105:  '/onboarding',\n106:  '/settings',\n107:] as const;\n108:\n109:export const VEHICLE_DISABLED_PATHS: ReadonlySet<string> = new Set([\n110:  '/action-center',\n111:  '/api-keys',\n112:  '/api-logs',\n113:  '/api-playground',\n114:  '/backup',\n115:  '/data-export',\n116:  '/data-repair',\n117:  '/db-health',\n118:  '/dev-tools',\n119:  '/energy-products',\n120:  '/exports',\n121:  '/fleet-api',\n122:  '/fleet-operations',\n123:  '/mqtt-inspector',\n124:  '/power-flow',\n125:  '/redis-signals',\n126:  '/roadmap',\n127:  '/search',\n128:  '/signal-diff',\n129:  '/system-status',\n130:  '/tesla-charging-history',\n131:  '/tesla-charging-sessions',\n132:  '/tesla-account',\n133:  '/vehicle-comparison',\n134:  '/vehicles',\n135:]);\n136:\n137:function normalizePathname(pathname: string): string {\n138:  const path = pathname.split(/[?#]/, 1)[0] || '/';\n139:  const absolute = path.startsWith('/') ? path : `/${path}`;\n140:  return absolute.length > 1 ? absolute.replace(/\\/+$/, '') : absolute;\n141:}\n142:\n143:function isAtOrBelow(pathname: string, prefix: string): boolean {\n144:  return pathname === prefix || pathname.startsWith(`${prefix}/`);\n145:}\n146:\n147:/**\n148: * Decides which global scope controls are meaningful for the active route.\n149: *\n150: * Range ownership is intentionally opt-in: every enabled route consumes\n151: * `useRangeState`, so changing the shell control always changes that page's\n152: * query. Vehicle ownership is broadly available across vehicle intelligence\n153: * surfaces and disabled for fleet, account, administration, and workflow\n154: * routes where a single selected vehicle would be misleading.\n155: */\n156:export function getWorkspaceRouteScope(pathname: string): WorkspaceRouteScope {\n157:  const normalized = normalizePathname(pathname);\n158:  const vehicleDisabled =\n159:    VEHICLE_DISABLED_PATHS.has(normalized) ||\n160:    VEHICLE_DISABLED_PREFIXES.some((prefix) =>\n161:      isAtOrBelow(normalized, prefix),\n162:    );\n163:\n164:  return {\n165:    range: RANGE_ENABLED_PATHS.has(normalized),\n166:    vehicle: !vehicleDisabled,\n167:  };\n168:}\nSOURCE web/src/components/layout/layout-reference/PageLayout.tsx\n1:import type { ComponentProps } from 'react';\n2:import { PageContainer } from '../PageContainer';\n3:import { cn } from '@/lib/cn';\n4:\n5:export type PageLayoutProps = ComponentProps<typeof PageContainer>;\n6:\n7:/** Shared content adapter. Navigation, header range, safe area and floating\n8: * action positioning remain owned by the existing application shell. */\n9:export function PageLayout({ className, children, ...props }: PageLayoutProps) {\n10:  return (\n11:    <PageContainer {...props} className={cn('min-w-0', className)}>\n12:      <div data-layout-reference className=\"@container flex w-full min-w-0 flex-col gap-6\">\n13:        {children}\n14:      </div>\n15:    </PageContainer>\n16:  );\n17:}\nSOURCE web/src/hooks/useDataState.ts\n1:/**\n2: * @module hooks/useDataState\n3: *\n4: * Ergonomic adapter from a TanStack Query result to the shared data-trust\n5: * contract in `api/dataState.ts`.\n6: *\n7: * Pages should read `state.fatalError` (not `query.error`) for their\n8: * page-level error surface and render `<StaleRefreshWarning state={state} />`\n9: * beside retained content, so a failed background refresh downgrades trust\n10: * instead of destroying the view.\n11: */\n12:\n13:import { useMemo } from 'react'\n14:\n15:import {\n16:  combineDataStates,\n17:  deriveDataState,\n18:  type DataState,\n19:  type DataStateSource,\n20:  type DeriveDataStateOptions,\n21:} from '@/api/dataState'\n22:\n23:/**\n24: * Memoised {@link deriveDataState}. The identity of the returned object is\n25: * stable while the underlying query fields are unchanged, so it is safe to\n26: * pass into memoised children and effect dependency arrays.\n27: *\n28: * `dataUpdatedAt` intentionally participates in the dependency list: it is\n29: * what makes `ageMs` advance across successful refetches.\n30: */\n31:export function useDataState<T>(\n32:  source: DataStateSource<T>,\n33:  options: DeriveDataStateOptions = {},\n34:): DataState<T> {\n35:  const { provenance, partial, unavailable, maxAgeMs } = options\n36:  return useMemo(\n37:    () => deriveDataState(source, { provenance, partial, unavailable, maxAgeMs }),\n38:    // Structural dependency list: `source` is a fresh object on every render,\n39:    // so the individual query fields are what actually change.\n40:    [\n41:      source.data,\n42:      source.error,\n43:      source.isError,\n44:      source.isFetching,\n45:      source.isPending,\n46:      source.fetchStatus,\n47:      source.dataUpdatedAt,\n48:      source.refetch,\n49:      provenance,\n50:      partial,\n51:      unavailable,\n52:      maxAgeMs,\n53:    ],\n54:  )\n55:}\n56:\n57:/**\n58: * Roll several panel states into the one a container should present.\n59: *\n60: * Mixed outcomes resolve to `partial` rather than to the worst member, so one\n61: * failed source in a six-source page never blanks the five that succeeded.\n62: */\n63:export function useCombinedDataState(states: readonly DataState<unknown>[]) {\n64:  return useMemo(() => combineDataStates(states), [states])\n65:}\nSOURCE web/src/hooks/useUnits.ts\n90:function deriveDistance(unitOfLength: string | undefined): DistanceUnitPref {\n91:  return unitOfLength === 'mi' ? 'mi' : 'km'\n92:}\n93:\n94:function deriveSpeed(unitOfLength: string | undefined): SpeedUnitPref {\n95:  return unitOfLength === 'mi' ? 'mph' : 'km/h'\n96:}\n97:\n98:function deriveTemperature(unitOfTemp: string | undefined): TemperatureUnitPref {\n99:  return unitOfTemp === 'F' ? '°F' : '°C'\n100:}\n101:\n102:function derivePressure(unitOfPressure: string | undefined): PressureUnitPref {\n103:  return unitOfPressure === 'psi' ? 'psi' : 'bar'\n104:}\n105:\n106:function deriveLocale(locale: string | undefined): string {\n107:  if (typeof locale === 'string' && locale.trim().length > 0) return locale\n108:  return DEFAULT_LOCALE\n109:}\n110:\n111:function derivePrecision(decimalPrecision: unknown): number | undefined {\n112:  if (typeof decimalPrecision !== 'number') return undefined\n113:  if (!Number.isFinite(decimalPrecision)) return undefined\n114:  if (decimalPrecision < 0) return undefined\n115:  return Math.floor(decimalPrecision)\n116:}\n117:\n118:export function useUnits(): UseUnitsResult {\n119:  const { settings } = useSettings()\n120:\n121:  const distance = deriveDistance(settings.unit_of_length)\n122:  const speed = deriveSpeed(settings.unit_of_length)\n123:  const temperature = deriveTemperature(settings.unit_of_temp)\n124:  const pressure = derivePressure(settings.unit_of_pressure)\n125:  const locale = deriveLocale(settings.locale)\n126:  const precision = derivePrecision(settings.decimal_precision)\n127:\n128:  const unitPrefs = useMemo<UnitPref>(\n129:    () => ({\n130:      distance,\n131:      speed,\n132:      temperature,\n133:      pressure,\n134:      energy: DEFAULT_ENERGY_PREF,\n135:      duration: DEFAULT_DURATION_PREF,\n136:      power: DEFAULT_POWER_PREF,\n137:      locale,\n138:      precision,\n139:    }),\n140:    [distance, speed, temperature, pressure, locale, precision],\n141:  )\n142:\n143:  const formatDistance = useCallback<UnitFormatter>(\n144:    (value, options) => libFormatDistance(value, unitPrefs, options),\n145:    [unitPrefs],\n146:  )\n147:  const formatSpeed = useCallback<UnitFormatter>(\n148:    (value, options) => libFormatSpeed(value, unitPrefs, options),\n149:    [unitPrefs],\n150:  )\n151:  const formatTemperature = useCallback<UnitFormatter>(\n152:    (value, options) => libFormatTemperature(value, unitPrefs, options),\n153:    [unitPrefs],\n154:  )\n155:  const formatPressure = useCallback<UnitFormatter>(\n156:    (value, options) => libFormatPressure(value, unitPrefs, options),\n157:    [unitPrefs],\n158:  )\n159:  const formatEnergy = useCallback<UnitFormatter>(\n160:    (value, options) => libFormatEnergy(value, unitPrefs, options),\n161:    [unitPrefs],\n162:  )\n163:  const formatDuration = useCallback<UnitFormatter>(\n164:    (value, options) => libFormatDuration(value, unitPrefs, options),\n165:    [unitPrefs],\n166:  )\n167:  const formatPower = useCallback<UnitFormatter>(\n168:    (value, options) => libFormatPower(value, unitPrefs, options),\n169:    [unitPrefs],\n170:  )\n171:\n172:  return useMemo(\n173:    () => ({\n174:      unitPrefs,\n175:      formatDistance,\n176:      formatSpeed,\n177:      formatTemperature,\n178:      formatPressure,\n179:      formatEnergy,\n180:      formatDuration,\n181:      formatPower,\n182:    }),\n183:    [\n184:      unitPrefs,\n185:      formatDistance,\n186:      formatSpeed,\n187:      formatTemperature,\n188:      formatPressure,\n189:      formatEnergy,\n190:      formatDuration,\n191:      formatPower,\n192:    ],\n193:  )\n194:}\nSOURCE web/src/lib/dateFormat.ts\n1:/**\n2: * Centralized date/time formatting utilities.\n3: *\n4: * All timestamps from the backend are ISO 8601 UTC (ending in \"Z\").\n5: * These helpers convert to the user's local timezone for display,\n6: * keeping the source-of-truth as UTC.\n7: *\n8: * Every helper accepts an optional second\n9: * `FormatOptions` argument carrying an IANA timezone name and a BCP-47\n10: * locale. When omitted the helper preserves its prior behavior (browser\n11: * locale + browser timezone) so existing callers stay byte-for-byte\n12: * identical. When `tz` is supplied the timestamp is rendered in that\n13: * zone via `Intl.DateTimeFormat`, which is what `<DateTime in=\"vehicle\">`\n14: * relies on to render drive/charge times in the car's local time.\n15: *\n16: * Formatter contract:\n17: * Every formatter in this file accepts `null | undefined` and any garbage\n18: * numeric input (a non-finite number such as NaN, Infinity, -Infinity, a\n19: * negative duration, or a non-number masquerading via a cast) and returns\n20: * the universal \"—\" placeholder rather than throwing or producing strings\n21: * like \"NaN:NaN\" or \"Invalid Date\". Callers should NOT pre-guard.\n22: */\n23:\n24:import { fmtNumber, getGlobalLocale, isFiniteNumber } from './numberFormat'\n25:\n26:/** Universal placeholder returned by every formatter for unrenderable input. */\n27:const FALLBACK = '—'\n28:\n29:/** Optional locale + timezone overrides for the shared formatters. */\n30:export interface FormatOptions {\n31:  /** IANA timezone name, e.g. 'America/Los_Angeles'. Defaults to browser. */\n32:  tz?: string\n33:  /** BCP-47 locale, e.g. 'en-US'. Defaults to browser locale. */\n34:  locale?: string\n35:}\n36:\n37:function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {\n38:  if (opts?.tz) {\n39:    return { ...base, timeZone: opts.tz }\n40:  }\n41:  return base\n42:}\n43:\n44:function intlLocale(opts?: FormatOptions): string | undefined {\n45:  const raw = opts?.locale\n46:  // Empty / whitespace-only strings would throw RangeError if handed to\n47:  // `Intl.*`. Treat them as \"no override\" so the runtime falls back to\n48:  // the browser's default locale.\n49:  if (typeof raw === 'string' && raw.trim().length > 0) return raw\n50:  return undefined\n51:}\n52:\n53:/** Full date + time: \"Apr 4, 2026, 2:30 AM\" */\n54:export function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n55:  if (!iso) return '—'\n56:  const d = new Date(iso)\n57:  if (isNaN(d.getTime())) return '—'\n58:  return d.toLocaleString(intlLocale(opts), intlOpts({\n59:    year: 'numeric', month: 'short', day: 'numeric',\n60:    hour: '2-digit', minute: '2-digit',\n61:  }, opts))\n62:}\n63:\n64:/** Date only: \"Apr 4, 2026\" */\n65:export function formatDate(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n66:  if (!iso) return '—'\n67:  const d = new Date(iso)\n68:  if (isNaN(d.getTime())) return '—'\n69:  return d.toLocaleDateString(intlLocale(opts), intlOpts({\n70:    year: 'numeric', month: 'short', day: 'numeric',\n71:  }, opts))\n72:}\n73:\n74:/** Short date: \"Apr 4\" */\n75:export function formatDateShort(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n76:  if (!iso) return '—'\n77:  const d = new Date(iso)\n78:  if (isNaN(d.getTime())) return '—'\n79:  return d.toLocaleDateString(intlLocale(opts), intlOpts({\n80:    month: 'short', day: 'numeric',\n81:  }, opts))\n82:}\n83:\n84:/**\n85: * Cached time-only Intl formatters keyed by locale + timezone.\n86: *\n87: * `Date#toLocaleTimeString` builds a new Intl formatter on every call\n88: * (~70µs) — chart datasets with hundreds of thousands of rows (a 48-100h\n89: * home charge) spent 40+s in `formatTime` alone. A cached\n90: * `Intl.DateTimeFormat` formats the identical string in well under a\n91: * microsecond. The key space (locales × timezones) is tiny, so no eviction\n92: * is needed. Output is unchanged: `toLocaleTimeString(l, o)` is defined as\n93: * `new Intl.DateTimeFormat(l, o).format(d)` with the same arguments.\n94: */\n95:const timeFormatterCache = new Map<string, Intl.DateTimeFormat>()\n96:\n97:function cachedTimeFormatter(opts?: FormatOptions): Intl.DateTimeFormat {\n98:  const locale = intlLocale(opts)\n99:  const key = `${locale ?? ''}|${opts?.tz ?? ''}`\n100:  let formatter = timeFormatterCache.get(key)\n101:  if (!formatter) {\n102:    formatter = new Intl.DateTimeFormat(\n103:      locale === undefined ? [] : locale,\n104:      intlOpts({ hour: '2-digit', minute: '2-digit' }, opts),\n105:    )\n106:    timeFormatterCache.set(key, formatter)\n107:  }\n108:  return formatter\n109:}\n110:\n111:/** Time only: \"02:30\" (24h) or \"2:30 AM\" (based on locale) */\n112:export function formatTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n113:  if (!iso) return '—'\n114:  const d = new Date(iso)\n115:  if (isNaN(d.getTime())) return '—'\n116:  return cachedTimeFormatter(opts).format(d)\n117:}\n118:\n119:/**\n120: * Locale-aware elapsed time: \"3m ago\" or \"in 2h\", then an absolute date\n121: * after seven days. Uses the selected formatter locale unless overridden.\n122: * English keeps its existing \"just now\" label for the first past minute.\n123: */\n124:export function formatRelative(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n125:  if (!iso) return '—'\n126:  const d = new Date(iso)\n127:  if (isNaN(d.getTime())) return '—'\n128:  const diff = d.getTime() - Date.now()\n129:  const seconds = Math.floor(Math.abs(diff) / 1000)\n130:  const locale = intlLocale(opts) ?? getGlobalLocale()\nSOURCE web/src/features/fleet-ops/components/formUtils.ts\n1:export function toLocalDateTime(iso: string | null | undefined): string {\n2:  if (!iso) return '';\n3:  const value = new Date(iso);\n4:  if (!Number.isFinite(value.getTime())) return '';\n5:  const offsetMs = value.getTimezoneOffset() * 60_000;\n6:  return new Date(value.getTime() - offsetMs).toISOString().slice(0, 16);\n7:}\n8:\n9:export function toISOStringOrNull(value: string): string | null {\n10:  if (!value) return null;\n11:  const parsed = new Date(value);\n12:  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;\n13:}\n14:\n15:export function optionalPositiveNumber(value: string): number | null {\n16:  if (!value.trim()) return null;\n17:  const parsed = Number(value);\n18:  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;\n19:}\n20:\n21:export function optionalPositiveInteger(value: string): number | null {\n22:  const parsed = optionalPositiveNumber(value);\n23:  return parsed != null && Number.isInteger(parsed) ? parsed : null;\n24:}\nGREP web/src/App.tsx pattern=FleetOperations|fleet-operations\nMATCHES 2\n228:const FleetOperations = lazy(() => import('./features/fleet-ops/pages/FleetOperationsPage'))\n762:        <Route path=\"fleet-operations\" element={<SafeRoute name=\"FleetOperations\"><FleetOperations /></SafeRoute>} />\nGREP web/src/lib/routeRegistry.ts pattern=fleet-operations\nMATCHES 1\n133:  { path: \"/fleet-operations\", name: \"FleetOperations\", label: \"Fleet operations\", i18nKey: \"routes.fleetOperations\" },\nGREP internal/api/router.go pattern=fleet-ops|FleetOps|fleetOps\nMATCHES 2\n1182:\tfleetOpsHandler := apifleetops.NewHandler(db)\n3970:\t\tapifleetops.MountRoutes(r, fleetOpsHandler)\nGREP .gitignore pattern=logs\nMATCHES 2\n80:logs/\n110:/.github/prompts/db-refactor/logs\nQUEUE_DEDUP_EXACT_TARGETS_AND_OBJECTIVES\n57 | [~] | phase6-qa-fleet-ops-fleet-operations | docs\\frontend-audits\\phase6-qa-fleet-ops-fleet-operations.json; web\\logs\\phase6-qa-fleet-ops-fleet-operations.log | Accepted b628384ac source only; FleetOperationsPage/direct supports; confirmed source mechanisms separate from candidates/nativeNOTRUN.\n529 | [x] | phase5-current-source-catalog-closure | web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-action-center.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\locale-analytics.json; web\\src\\i18n\\en\\locale-automations.json; web\\src\\i18n\\en\\locale-battery.json; web\\src\\i18n\\en\\locale-benchmarks.json; web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\locale-dashboard.json; web\\src\\i18n\\en\\locale-dashcam.json; web\\src\\i18n\\en\\locale-detail-achievements.json; web\\src\\i18n\\en\\locale-detail-activity.json; web\\src\\i18n\\en\\locale-detail-addressInput.json; web\\src\\i18n\\en\\locale-detail-alerts.json; web\\src\\i18n\\en\\locale-detail-annotation.json; web\\src\\i18n\\en\\locale-detail-anomalies.json; web\\src\\i18n\\en\\locale-detail-apiLogs.json; web\\src\\i18n\\en\\locale-detail-app.json; web\\src\\i18n\\en\\locale-detail-arrivalReliability.json; web\\src\\i18n\\en\\locale-detail-battery.json; web\\src\\i18n\\en\\locale-detail-browserNotifications.json; web\\src\\i18n\\en\\locale-detail-bulk.json; web\\src\\i18n\\en\\locale-detail-calculationDetails.json; web\\src\\i18n\\en\\locale-detail-carbon.json; web\\src\\i18n\\en\\locale-detail-chart.json; web\\src\\i18n\\en\\locale-detail-chatbot.json; web\\src\\i18n\\en\\locale-detail-coldStart.json; web\\src\\i18n\\en\\locale-detail-combobox.json; web\\src\\i18n\\en\\locale-detail-commands.json; web\\src\\i18n\\en\\locale-detail-consent.json; web\\src\\i18n\\en\\locale-detail-dashboard.json; web\\src\\i18n\\en\\locale-detail-dataState.json; web\\src\\i18n\\en\\locale-detail-date.json; web\\src\\i18n\\en\\locale-detail-dayLog.json; web\\src\\i18n\\en\\locale-detail-delta.json; web\\src\\i18n\\en\\locale-detail-departure.json; web\\src\\i18n\\en\\locale-detail-departureForecast.json; web\\src\\i18n\\en\\locale-detail-destinationTransitions.json; web\\src\\i18n\\en\\locale-detail-developerReference.json; web\\src\\i18n\\en\\locale-detail-diagnostic.json; web\\src\\i18n\\en\\locale-detail-digitalTwin.json; web\\src\\i18n\\en\\locale-detail-draft.json; web\\src\\i18n\\en\\locale-detail-driveCompare.json; web\\src\\i18n\\en\\locale-detail-driveDetail.json; web\\src\\i18n\\en\\locale-detail-driveDna.json; web\\src\\i18n\\en\\locale-detail-drives.json; web\\src\\i18n\\en\\locale-detail-driveScore.json; web\\src\\i18n\\en\\locale-detail-drivetrain.json; web\\src\\i18n\\en\\locale-detail-driving.json; web\\src\\i18n\\en\\locale-detail-drivingSecondary.json; web\\src\\i18n\\en\\locale-detail-dynamics.json; web\\src\\i18n\\en\\locale-detail-editConflict.json; web\\src\\i18n\\en\\locale-detail-efficiency.json; web\\src\\i18n\\en\\locale-detail-effTarget.json; web\\src\\i18n\\en\\locale-detail-emptyState.json; web\\src\\i18n\\en\\locale-detail-energyAnatomy.json; web\\src\\i18n\\en\\locale-detail-entityContext.json; web\\src\\i18n\\en\\locale-detail-error.json; web\\src\\i18n\\en\\locale-detail-explorer.json; web\\src\\i18n\\en\\locale-detail-export.json; web\\src\\i18n\\en\\locale-detail-exports.json; web\\src\\i18n\\en\\locale-detail-feedback.json; web\\src\\i18n\\en\\locale-detail-feedbackTriage.json; web\\src\\i18n\\en\\locale-detail-filters.json; web\\src\\i18n\\en\\locale-detail-forms.json; web\\src\\i18n\\en\\locale-detail-freshness.json; web\\src\\i18n\\en\\locale-detail-fsd.json; web\\src\\i18n\\en\\locale-detail-fsm.json; web\\src\\i18n\\en\\locale-detail-glossary.json; web\\src\\i18n\\en\\locale-detail-guard.json; web\\src\\i18n\\en\\locale-detail-helix.json; web\\src\\i18n\\en\\locale-detail-help.json; web\\src\\i18n\\en\\locale-detail-impersonation.json; web\\src\\i18n\\en\\locale-detail-journeyFragmentation.json; web\\src\\i18n\\en\\locale-detail-kiosk.json; web\\src\\i18n\\en\\locale-detail-landscape.json; web\\src\\i18n\\en\\locale-detail-live.json; web\\src\\i18n\\en\\locale-detail-liveLogs.json; web\\src\\i18n\\en\\locale-detail-logbook.json; web\\src\\i18n\\en\\locale-detail-maps.json; web\\src\\i18n\\en\\locale-detail-mqttSseInspector.json; web\\src\\i18n\\en\\locale-detail-notifications.json; web\\src\\i18n\\en\\locale-detail-onboarding.json; web\\src\\i18n\\en\\locale-detail-operationalMode.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\locale-detail-originConcentration.json; web\\src\\i18n\\en\\locale-detail-pagination.json; web\\src\\i18n\\en\\locale-detail-paint.json; web\\src\\i18n\\en\\locale-detail-palette.json; web\\src\\i18n\\en\\locale-detail-polling.json; web\\src\\i18n\\en\\locale-detail-presentation.json; web\\src\\i18n\\en\\locale-detail-problemReport.json; web\\src\\i18n\\en\\locale-detail-productPreferences.json; web\\src\\i18n\\en\\locale-detail-pwa.json; web\\src\\i18n\\en\\locale-detail-rangeBuffer.json; web\\src\\i18n\\en\\locale-detail-rbac.json; web\\src\\i18n\\en\\locale-detail-recentPages.json; web\\src\\i18n\\en\\locale-detail-regen.json; web\\src\\i18n\\en\\locale-detail-replay.json; web\\src\\i18n\\en\\locale-detail-requiresAuth.json; web\\src\\i18n\\en\\locale-detail-rhythm.json; web\\src\\i18n\\en\\locale-detail-routeEfficiency.json; web\\src\\i18n\\en\\locale-detail-savedViews.json; web\\src\\i18n\\en\\locale-detail-search.json; web\\src\\i18n\\en\\locale-detail-seasonalEfficiency.json; web\\src\\i18n\\en\\locale-detail-segments.json; web\\src\\i18n\\en\\locale-detail-serviceMode.json; web\\src\\i18n\\en\\locale-detail-session.json; web\\src\\i18n\\en\\locale-detail-settings.json; web\\src\\i18n\\en\\locale-detail-shortcuts.json; web\\src\\i18n\\en\\locale-detail-signalConfig.json; web\\src\\i18n\\en\\locale-detail-signalQuery.json; web\\src\\i18n\\en\\locale-detail-sourceLayer.json; web\\src\\i18n\\en\\locale-detail-speedProfile.json; web\\src\\i18n\\en\\locale-detail-speedSweetSpot.json; web\\src\\i18n\\en\\locale-detail-stateMachineDebugger.json; web\\src\\i18n\\en\\locale-detail-statusBar.json; web\\src\\i18n\\en\\locale-detail-sudo.json; web\\src\\i18n\\en\\locale-detail-sweetSpot.json; web\\src\\i18n\\en\\locale-detail-systemStatus.json; web\\src\\i18n\\en\\locale-detail-table.json; web\\src\\i18n\\en\\locale-detail-tagInput.json; web\\src\\i18n\\en\\locale-detail-tesla.json; web\\src\\i18n\\en\\locale-detail-teslaOnly.json; web\\src\\i18n\\en\\locale-detail-theme.json; web\\src\\i18n\\en\\locale-detail-timeline.json; web\\src\\i18n\\en\\locale-detail-timeMachine.json; web\\src\\i18n\\en\\locale-detail-toast.json; web\\src\\i18n\\en\\locale-detail-tour.json; web\\src\\i18n\\en\\locale-detail-tripPlanner.json; web\\src\\i18n\\en\\locale-detail-vehicleHero.json; web\\src\\i18n\\en\\locale-detail-voiceMode.json; web\\src\\i18n\\en\\locale-detail-watch.json; web\\src\\i18n\\en\\locale-detail-watchFaceNL.json; web\\src\\i18n\\en\\locale-detail-whatIf.json; web\\src\\i18n\\en\\locale-diagnostics.json; web\\src\\i18n\\en\\locale-driving-arrival-reliability.json; web\\src\\i18n\\en\\locale-driving-cold-start.json; web\\src\\i18n\\en\\locale-driving-departure-forecast.json; web\\src\\i18n\\en\\locale-driving-destination-transitions.json; web\\src\\i18n\\en\\locale-driving-drive-compare.json; web\\src\\i18n\\en\\locale-driving-drive-dna.json; web\\src\\i18n\\en\\locale-driving-drive-score.json; web\\src\\i18n\\en\\locale-driving-drivetrain-health.json; web\\src\\i18n\\en\\locale-driving-driving-dynamics.json; web\\src\\i18n\\en\\locale-driving-driving-rhythm.json; web\\src\\i18n\\en\\locale-driving-efficiency-target.json; web\\src\\i18n\\en\\locale-driving-efficiency.json; web\\src\\i18n\\en\\locale-driving-explorer.json; web\\src\\i18n\\en\\locale-driving-fsdinsights.json; web\\src\\i18n\\en\\locale-driving-journey-fragmentation.json; web\\src\\i18n\\en\\locale-driving-range-buffer.json; web\\src\\i18n\\en\\locale-driving-regen-efficiency.json; web\\src\\i18n\\en\\locale-driving-route-efficiency.json; web\\src\\i18n\\en\\locale-driving-seasonal-efficiency.json; web\\src\\i18n\\en\\locale-driving-segments.json; web\\src\\i18n\\en\\locale-driving-speed-profile.json; web\\src\\i18n\\en\\locale-driving-speed-sweet-spot.json; web\\src\\i18n\\en\\locale-driving-trip-logbook.json; web\\src\\i18n\\en\\locale-driving-trip-planner.json; web\\src\\i18n\\en\\locale-driving-what-if.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-explore.json; web\\src\\i18n\\en\\locale-exports.json; web\\src\\i18n\\en\\locale-fleet-ops.json; web\\src\\i18n\\en\\locale-home-energy.json; web\\src\\i18n\\en\\locale-intelligence-packs.json; web\\src\\i18n\\en\\locale-maps.json; web\\src\\i18n\\en\\locale-notifications.json; web\\src\\i18n\\en\\locale-ownership.json; web\\src\\i18n\\en\\locale-power-user.json; web\\src\\i18n\\en\\locale-resale-vault.json; web\\src\\i18n\\en\\locale-science.json; web\\src\\i18n\\en\\locale-service-intelligence.json; web\\src\\i18n\\en\\locale-settings.json; web\\src\\i18n\\en\\locale-sharing.json; web\\src\\i18n\\en\\locale-system.json; web\\src\\i18n\\en\\locale-telemetry.json; web\\src\\i18n\\en\\locale-trips.json; web\\src\\i18n\\en\\locale-unreferenced.json; web\\src\\i18n\\en\\locale-vehicle-systems.json; web\\src\\i18n\\en\\locale-vehicles.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\shell.json; web\\src\\i18n\\en\\usage-manifest.json | ONE actual shared root after current Segments/TripPlanner/QuietHours/WhatIf/APIKeys/BatteryCare/ChargeInterruption guarded runs exited1 before discovery on changed source-reference projections. This is a newly measured current-input closure, not redispatch of the completed earlier catalog snapshot or a translation campaign. Parent-only serialized canonical keys/projections, normal generator/check with guards ON; register any further exact generated paths before writing. Known precise reported keys: speedProfile.sourceBucketUnit, speedProfile.insightEvidenceText, whatIf.telemetryAssumptions; ge\n663 | [x] | audit-page-132 | web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx; docs\\frontend-audits\\audit-page-132.json | - / 1 / 2026-10-07T06:57:24.663Z / web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx; routes=/fleet-operations; read-only audit; report docs\\frontend-audits\\audit-page-132.json; actor=762f366c-a091-4d95-ac4d-2df1c87d1c7e; verified source audit; commit=2bf0849e79; runtime unverified\n1628 | [x] | phase3-suite939-file-133 | web\\src\\features\\fleet-ops\\components\\FleetKpis.test.tsx | - / 1 / 2026-10-10T10:02:06.178Z / Fresh fullsuite939 failed-file repair; sources=; tests=web\\src\\features\\fleet-ops\\components\\FleetKpis.test.tsx; dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-133-dispatch.json; frozenSHA=416a4917edab82916c39282ad9eec8b10e3081678ff7d7c425c51fbe0338a5b1; failedTests=1; one exact test file, preserve semantics/all cases; no shipping edits or historical evidence rewrites. ; reservedattempt1 dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file\n1629 | [x] | phase3-suite939-file-134 | web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.test.tsx | - / 1 / 2026-10-10T10:02:06.180Z / Fresh fullsuite939 failed-file repair; sources=; tests=web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.test.tsx; dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-134-dispatch.json; frozenSHA=b0f6e13a296de4e35ac964f6aaaa4137c9006096fd5cbc6e18725a532e722420; failedTests=1; one exact test file, preserve semantics/all cases; no shipping edits or historical evidence rewrites. ; reservedattempt1 dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939\n1918 | [x] | phase5-page-fleet-ops-fleet-operations | web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx; web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.test.tsx | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/fleet-operations; audit=docs\\frontend-audits\\audit-page-132.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously \nSTATIC_TEST_DECLARATIONS_NOT_EXECUTION\nAssignmentRosterPreservation.test.tsx declarations=2\nAssignmentSelectionPreservation.test.tsx declarations=2\nCancelReservationDialog.test.tsx declarations=1\nchargingWindowUtils.test.ts declarations=3\nDriverDialog.test.tsx declarations=3\nFleetKpis.test.tsx declarations=10\n94:it('keeps numerical raw values, missing values and invalid values distinct through the actual bridge', () => {\n109:it('preserves all original count operands, percent precision and independent source context', () => {\n133:it('keeps existing reservation statuses, distinct-vehicle counts and open-order rules unchanged', () => {\n157:it('distinguishes successful empty list counts from unavailable forecast measurements', () => {\n179:it('does not turn an unavailable reservation source into zero or blank independent sources', () => {\n193:it('retains measured values and identifies paused and failed-refresh snapshots', () => {\n209:it('explicitly distinguishes partial loaded records from source-wide totals', () => {\n218:it('uses a busy loading root only before any source measurements are available', () => {\n238:it('keeps a non-finite source forecast invalid instead of fabricating utilization or health', () => {\n249:it('opens the real details drawer with full meanings, source windows, limitations and provenance', async () => {\nFleetResourceDialogs.test.tsx declarations=2\nMutationErrorDialog.test.tsx declarations=1\nUtilizationForecastPreservation.test.tsx declarations=1\nhelpers.test.ts declarations=3\n65:it('derives KPI values without treating missing forecast as zero precision', () => {\n80:it('allocates reservations and minor-unit maintenance costs by cost center', () => {\n98:it('aggregates per-vehicle forecast points while preserving uncertainty width', () => {\nFleetOperationsPage.test.tsx declarations=20\n264:it('exposes initial vehicle failure and retries only that source without removing fleet panels', () => {\n288:it('shows initial vehicle loading rather than an empty fleet while independent records remain usable', () => {\n300:it('explains an authoritative empty fleet without hiding loaded operational records', () => {\n312:it('describes paused initial vehicle discovery without inventing an offline or empty fleet', () => {\n325:it('retains usable vehicle choices after refresh failure and preserves the accessible reservation action', () => {\n340:it('retains an intentionally empty driver value selection through failed refresh and recovery', () => {\n372:it('retains the forecast data alternative and export menu when only the forecast refresh fails', () => {\n396:it('enables loaded-value checklists only when each complete fleet list is loaded', () => {\n411:it('renders every operational panel and opens the reservation workflow', () => {\n431:it('opens the actual summary drawer without displacing operational entities or write workflows', async () => {\n451:it('keeps retained roster rows and all independently usable operational panels on refresh failure', () => {\n467:it('contains an initial driver failure without removing reservation or forecast actions', () => {\n478:it('renders the read-only explanation outside the disabled reservation action', () => {\n498:it('creates and version-updates a driver with typed payloads', () => {\n540:it('passes the current version when deleting a driver', () => {\n550:it('opens each fleet resource creation workflow', () => {\n565:it('submits normalized charging windows', () => {\n588:it('edits a timeline reservation with its optimistic version', () => {\n612:it('cancels a timeline reservation using a versioned update', () => {\n630:it('deletes a timeline reservation with its optimistic version', () => {"
+    },
+    {
+      "id": "source-only-reproductions",
+      "command": "PowerShell here-string node -; pinned TS transpileModule and vm source probes with explicit JSX/import stubs; exact script retained in transcript",
+      "exitCode": 0,
+      "rawOutput": "UTC_NOW 2026-10-14T01:33:46.474Z\nSOURCE_ONLY_PROBE: actual pinned TS transpiled in memory; JSX objects and named component/hook stubs; no DOM, React mount, request, test runner or runtime acceptance.\nINITIAL_PAUSED {\"hasData\":false,\"status\":\"initial\",\"isRefreshBlocked\":true,\"fatalError\":null}\nINITIAL_PAUSED_BRANCH ReservationPanel EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH DriverRoster EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH AssignmentRoster EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH ChargingPolicyMatrix EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH WorkOrderBoard EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH CostCenterAllocation EmptyState=1\nINITIAL_PAUSED_BRANCH UtilizationForecastChart empty=true\nDEPENDENCY_FATAL_BRANCH costCentersLoaded=1 QueryError=1 allocationsVisible=0\nDEPENDENCY_LOADING_BRANCH costCentersLoaded=1 Skeleton=1 allocationsVisible=0\nUNKNOWN_COST {\"rawCost\":null,\"result\":0,\"currency\":\"USD\",\"display\":\"$0.00\",\"knownZero\":0,\"knownPlusUnknown\":12500}\nCURRENCY_EXPONENT {\"JPY100Minor\":\"¥1\",\"JPYfractionDigits\":0,\"KWD1000Minor\":\"KWD 10.000\",\"KWDfractionDigits\":3}\nDATE_PREF_INPUT {\"stamp\":\"2026-10-14T01:00:00Z\",\"browserDefault\":\"Oct 13, 2026, 06:00 PM\",\"specifiedBerlinGerman\":\"14. Okt. 2026, 03:00\",\"specifiedTokyoJapanese\":\"2026年10月14日 10:00\"}\nMONEY_LOCALE_INPUT {\"actualHelper\":\"$1,234.50\",\"selectedGerman\":\"1.234,50 $\"}\nTABLE_DECLARATION {\"name\":\"ReservationPanel\",\"tableId\":\"fleet-ops:reservations\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"driver\",\"period\",\"status\"]}\nTABLE_DECLARATION {\"name\":\"DriverRoster\",\"tableId\":\"fleet-ops:drivers\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"status\",\"guardrails\"]}\nTABLE_DECLARATION {\"name\":\"AssignmentRoster\",\"tableId\":\"fleet-ops:assignments\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"starts_at\",\"ends_at\"]}\nTABLE_DECLARATION {\"name\":\"ChargingPolicyMatrix\",\"tableId\":\"fleet-ops:charging-policies\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"target\",\"power\",\"windows\",\"enabled\"]}\nFIELDSET_DECLARATION root=fieldset firstChild=div legendParent=div\nFORECAST_FILL_OPACITY 0.18 contractMaximum=0.08\nRETAINED_STATES [{\"kind\":\"error\",\"hasData\":true,\"status\":\"stale\",\"fatalError\":null,\"refreshError\":\"synthetic refresh\"},{\"kind\":\"paused\",\"hasData\":true,\"status\":\"stale\",\"fatalError\":null,\"refreshError\":null},{\"kind\":\"refreshing\",\"hasData\":true,\"status\":\"ok\",\"fatalError\":null,\"refreshError\":null},{\"kind\":\"zero\",\"hasData\":true,\"status\":\"ok\",\"fatalError\":null,\"refreshError\":null}]\nACTUAL_EXIT 0"
+    },
+    {
+      "id": "calendar-si-routes",
+      "command": "Inline node - pinned pure formatter/source calendar probe and router/canonical source inspections; exact script in tool transcript",
+      "exitCode": 1,
+      "rawOutput": "CALENDAR_DATE_REPRO {\"starts_at\":\"2026-10-14T17:00:00Z\",\"groupKey\":\"2026-10-14\",\"calendarHeader\":\"Oct 13\",\"actualDisplayedStartDate\":\"Oct 14\",\"actualDisplayedTime\":\"10:00 AM\",\"browserTimezone\":\"America/Los_Angeles\"}\nRAW_SI_DISPLAY {\"nullPower\":\"—\",\"zeroPower\":\"0,00 kW\",\"negativePower\":\"-11,00 kW\",\"positivePower\":\"11,00 kW\",\"distance100000M\":\"62,14 mi\",\"roundTripM\":100000}\nDATE_PREF_CALLS {\"file\":\"web/src/features/fleet-ops/components/ReservationPanel.tsx\",\"calls\":[{\"line\":81,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":81,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":133,\"name\":\"formatDateShort\",\"argumentCount\":1},{\"line\":138,\"name\":\"formatTime\",\"argumentCount\":1}]}\nDATE_PREF_CALLS {\"file\":\"web/src/features/fleet-ops/components/DriverRoster.tsx\",\"calls\":[]}\nDATE_PREF_CALLS {\"file\":\"web/src/features/fleet-ops/components/AssignmentRoster.tsx\",\"calls\":[{\"line\":57,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":58,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":65,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":66,\"name\":\"formatDateTime\",\"argumentCount\":1}]}\nDATE_PREF_CALLS {\"file\":\"web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx\",\"calls\":[]}\nDATE_PREF_CALLS {\"file\":\"web/src/features/fleet-ops/components/CostCenterAllocation.tsx\",\"calls\":[]}\nDATE_PREF_CALLS {\"file\":\"web/src/features/fleet-ops/components/FleetKpis.tsx\",\"calls\":[{\"line\":76,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":87,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":87,\"name\":\"formatDateTime\",\"argumentCount\":1},{\"line\":123,\"name\":\"formatDateTime\",\"argumentCount\":1}]}\nDATE_PREF_CALLS {\"file\":\"web/src/features/fleet-ops/components/WorkOrderBoard.tsx\",\"calls\":[{\"line\":97,\"name\":\"formatDate\",\"argumentCount\":1}]}\nDYNAMIC_CANONICAL_KEYS checked=11 missing=7\nINSPECTION_FAILURE Error: Missing keys fleetOps.days.sun,fleetOps.days.mon,fleetOps.days.tue,fleetOps.days.wed,fleetOps.days.thu,fleetOps.days.fri,fleetOps.days.sat\n    at [stdin]:5:438\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:485:12\n    at [stdin]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:483:60)\n    at evalFunction (node:internal/process/execution:317:30)\n    at evalTypeScript (node:internal/process/execution:329:3)\n    at node:internal/main/eval_stdin:51:5\n    at Socket.<anonymous> (node:internal/process/execution:239:5)\n    at Socket.emit (node:events:526:24)\nACTUAL_EXIT 1"
+    },
+    {
+      "id": "dynamic-days-route-followup-utf8",
+      "command": "Inline Python explicit UTF8 canonical/generated days lookup, shard pin, router source range, line counts; exact script in transcript",
+      "exitCode": 0,
+      "rawOutput": "UTC_NOW 2026-10-14T01:36:24.350624+00:00\nCANONICAL_FLEET_OPS_DAYS \"ABSENT\"\nCANONICAL_DAY_TOP_LEVEL {}\nADDITIONAL_PIN {\"file\": \"web/src/i18n/en/locale-fleet-ops.json\", \"sha256Before\": \"0c0865164461f6784ea09599dd1b6a940726cc870c02c6a3951608cc199e5d2c\", \"bytes\": 40729, \"lines\": 1192}\nGENERATED_FLEET_OPS_DAYS \"ABSENT\"\nGREP internal/api/router.go fleet-ops route matches=0\nIGNORED_LOG .gitignore:80 logs/; source rule inspection, Git NOTRUN\nPRODUCTION_FEATURE_TOTAL_LINES 3639\nPAGE_LINES 350\nINITIAL_VEHICLE_FINDING_RESOLVED source142-180; original20 test declarations inspected not rerun.\nPRIOR_COMMANDS_ACTUAL_EXITS shell1307=0 shell1403=1;1403 stopped before router section, no route claim from that failed command.\nACTUAL_EXIT 0"
+    },
+    {
+      "id": "route-spelling-dedup-followup",
+      "command": "Inline Python case-aware broad fleet route source grep and bounded Phase6 duplicate-objective search; exact transcript script",
+      "exitCode": 0,
+      "rawOutput": "UTC_NOW 2026-10-14T01:36:43.424535+00:00\nGREP fleet-ops|FleetOps|fleetOps matches=2\n1182:\tfleetOpsHandler := apifleetops.NewHandler(db)\n3970:\t\tapifleetops.MountRoutes(r, fleetOpsHandler)\nDEDUP_DYNAMIC_DAY_FIX_OBJECTIVES\nMATCHED_FIX_OR_QA_ROWS 0\nACTUAL_EXIT 0"
+    },
+    {
+      "id": "route-module-citations-instructions",
+      "command": "Inline Python derive mount module from actual router import, pin/read MountRoutes, local instruction existence and finding citations; exact script transcript",
+      "exitCode": 0,
+      "rawOutput": "FLEET_ROUTE_IMPORT github.com/ev-dev-labs/teslasync/internal/api/fleetops\nROUTE_MODULE D:\\repos\\teslasync\\internal\\api\\fleetops\nADDITIONAL_PIN {\"file\": \"internal/api/fleetops/handler.go\", \"sha256Before\": \"ccfa14c8acda0b8004d0b72e3ae49a873bb4c04c20a06bdb3a2f53d3fa93c233\", \"bytes\": 8892, \"lines\": 242}\nREAD_ONLY_ROUTE_SOURCE internal/api/fleetops/handler.go\n1:package fleetops\n2:\n3:import (\n4:\t\"context\"\n5:\t\"encoding/json\"\n6:\t\"errors\"\n7:\t\"io\"\n8:\t\"net/http\"\n9:\t\"strconv\"\n10:\t\"strings\"\n11:\t\"time\"\n12:\n13:\tdbfleetops \"github.com/ev-dev-labs/teslasync/internal/database/fleetops\"\n14:\tmodels \"github.com/ev-dev-labs/teslasync/internal/models/fleetops\"\n15:\t\"github.com/go-chi/chi/v5\"\n16:\t\"github.com/go-chi/httprate\"\n17:\t\"github.com/rs/zerolog/log\"\n18:\t\"go.opentelemetry.io/otel\"\n19:\t\"go.opentelemetry.io/otel/codes\"\n20:\t\"go.opentelemetry.io/otel/trace\"\n21:\n22:\t\"github.com/ev-dev-labs/teslasync/internal/api/apiparams\"\n23:\t\"github.com/ev-dev-labs/teslasync/internal/api/httpx\"\n24:\t\"github.com/ev-dev-labs/teslasync/internal/database\"\n25:)\n26:\n27:const maxBodyBytes = 64 << 10\n28:\n29:type fleetOpsService interface {\n30:\tListDrivers(context.Context, dbfleetops.DriverFilter) (*models.FleetPage[models.FleetDriver], error)\n31:\tGetDriver(context.Context, int64) (*models.FleetDriver, error)\n32:\tCreateDriver(context.Context, *models.FleetDriver) error\n33:\tUpdateDriver(context.Context, *models.FleetDriver) error\n34:\tDeleteDriver(context.Context, int64, int) error\n35:\n36:\tListCostCenters(context.Context, dbfleetops.CostCenterFilter) (*models.FleetPage[models.FleetCostCenter], error)\n37:\tGetCostCenter(context.Context, int64) (*models.FleetCostCenter, error)\n38:\tCreateCostCenter(context.Context, *models.FleetCostCenter) error\n39:\tUpdateCostCenter(context.Context, *models.FleetCostCenter) error\n40:\tDeleteCostCenter(context.Context, int64, int) error\n41:\n42:\tListAssignments(context.Context, dbfleetops.AssignmentFilter) (*models.FleetPage[models.FleetVehicleDriverAssignment], error)\n43:\tGetAssignment(context.Context, int64) (*models.FleetVehicleDriverAssignment, error)\n44:\tCreateAssignment(context.Context, *models.FleetVehicleDriverAssignment) error\n45:\tUpdateAssignment(context.Context, *models.FleetVehicleDriverAssignment) error\n46:\tDeleteAssignment(context.Context, int64, int) error\n47:\n48:\tListReservations(context.Context, dbfleetops.ReservationFilter) (*models.FleetPage[models.FleetReservation], error)\n49:\tGetReservation(context.Context, int64) (*models.FleetReservation, error)\n50:\tCreateReservation(context.Context, *models.FleetReservation) error\n51:\tUpdateReservation(context.Context, *models.FleetReservation) error\n52:\tDeleteReservation(context.Context, int64, int) error\n53:\n54:\tListChargingPolicies(context.Context, dbfleetops.ChargingPolicyFilter) (*models.FleetPage[models.FleetChargingPolicy], error)\n55:\tGetChargingPolicy(context.Context, int64) (*models.FleetChargingPolicy, error)\n56:\tCreateChargingPolicy(context.Context, *models.FleetChargingPolicy) error\n57:\tUpdateChargingPolicy(context.Context, *models.FleetChargingPolicy) error\n58:\tDeleteChargingPolicy(context.Context, int64, int) error\n59:\n60:\tListWorkOrders(context.Context, dbfleetops.WorkOrderFilter) (*models.FleetPage[models.FleetMaintenanceWorkOrder], error)\n61:\tGetWorkOrder(context.Context, int64) (*models.FleetMaintenanceWorkOrder, error)\n62:\tCreateWorkOrder(context.Context, *models.FleetMaintenanceWorkOrder) error\n63:\tUpdateWorkOrder(context.Context, *models.FleetMaintenanceWorkOrder) error\n64:\tDeleteWorkOrder(context.Context, int64, int) error\n65:\n66:\tUtilizationForecast(context.Context, *int64, time.Time, time.Time) (*models.FleetUtilizationForecast, error)\n67:}\n68:\n69:type Handler struct {\n70:\tservice fleetOpsService\n71:}\n72:\n73:func NewHandler(db *database.DB) *Handler {\n74:\trepo := dbfleetops.NewRepository(db)\n75:\treturn &Handler{service: NewService(repo)}\n76:}\n77:\n78:func newHandler(service fleetOpsService) *Handler {\n79:\treturn &Handler{service: service}\n80:}\n81:\n82:// MountRoutes mounts all feature-8 routes. The parent router calls this inside\n83:// its /api/v1 group; request paths therefore resolve under /api/v1/fleet-ops.\n84:// Every write receives a per-IP limit of 30 requests per minute.\n85:func MountRoutes(r chi.Router, h *Handler) {\n86:\twriteLimit := httprate.LimitByIP(30, time.Minute)\n87:\tr.Route(\"/fleet-ops\", func(r chi.Router) {\n88:\t\tmountCRUD := func(path string, list, create, get, update, remove http.HandlerFunc) {\n89:\t\t\tr.Get(path, list)\n90:\t\t\tr.With(writeLimit).Post(path, create)\n91:\t\t\tr.Get(path+\"/{id}\", get)\n92:\t\t\tr.With(writeLimit).Put(path+\"/{id}\", update)\n93:\t\t\tr.With(writeLimit).Delete(path+\"/{id}\", remove)\n94:\t\t}\n95:\t\tmountCRUD(\"/drivers\", h.ListDrivers, h.CreateDriver, h.GetDriver, h.UpdateDriver, h.DeleteDriver)\n96:\t\tr.Get(\"/drivers/{id}/evaluate\", h.EvaluateDriver)\n97:\t\tmountCRUD(\"/cost-centers\", h.ListCostCenters, h.CreateCostCenter, h.GetCostCenter, h.UpdateCostCenter, h.DeleteCostCenter)\n98:\t\tmountCRUD(\"/assignments\", h.ListAssignments, h.CreateAssignment, h.GetAssignment, h.UpdateAssignment, h.DeleteAssignment)\n99:\t\tmountCRUD(\"/reservations\", h.ListReservations, h.CreateReservation, h.GetReservation, h.UpdateReservation, h.DeleteReservation)\n100:\t\tmountCRUD(\"/charging-policies\", h.ListChargingPolicies, h.CreateChargingPolicy, h.GetChargingPolicy, h.UpdateChargingPolicy, h.DeleteChargingPolicy)\n101:\t\tmountCRUD(\"/work-orders\", h.ListWorkOrders, h.CreateWorkOrder, h.GetWorkOrder, h.UpdateWorkOrder, h.DeleteWorkOrder)\n102:\t\tr.Get(\"/utilization-forecast\", h.UtilizationForecast)\n103:\t})\n104:}\n105:\n106:func startHandlerSpan(r *http.Request, name string) (context.Context, trace.Span) {\n107:\treturn otel.Tracer(\"api\").Start(r.Context(), \"fleetops.\"+name)\n108:}\n109:\n110:func decodeBody(w http.ResponseWriter, r *http.Request, dst interface{}) bool {\n111:\treader := http.MaxBytesReader(w, r.Body, maxBodyBytes)\n112:\tdecoder := json.NewDecoder(reader)\n113:\tdecoder.DisallowUnknownFields()\n114:\tif err := decoder.Decode(dst); err != nil {\n115:\t\tif errors.Is(err, io.EOF) {\n116:\t\t\thttpx.WriteError(w, http.StatusBadRequest, \"request body is required\")\n117:\t\t} else {\n118:\t\t\thttpx.WriteError(w, http.StatusBadRequest, \"invalid request body\")\n119:\t\t}\n120:\t\treturn false\n121:\t}\n122:\tif decoder.Decode(&struct{}{}) != io.EOF {\n123:\t\thttpx.WriteError(w, http.StatusBadRequest, \"request body must contain one JSON object\")\n124:\t\treturn false\n125:\t}\n126:\treturn true\n127:}\n128:\n129:func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {\n130:\tid, err := strconv.ParseInt(chi.URLParam(r, \"id\"), 10, 64)\n131:\tif err != nil || id <= 0 {\n132:\t\thttpx.WriteError(w, http.StatusBadRequest, \"id must be a positive integer\")\n133:\t\treturn 0, false\n134:\t}\n135:\treturn id, true\n136:}\n137:\n138:func deleteVersion(w http.ResponseWriter, r *http.Request) (int, bool) {\n139:\tversion, err := strconv.Atoi(r.URL.Query().Get(\"version\"))\n140:\tif err != nil || version <= 0 {\n141:\t\thttpx.WriteError(w, http.StatusBadRequest, \"version query parameter must be a positive integer\")\n142:\t\treturn 0, false\n143:\t}\n144:\treturn version, true\n145:}\n146:\n147:func optionalID(raw, name string) (*int64, error) {\n148:\tif raw == \"\" {\n149:\t\treturn nil, nil\n150:\t}\n151:\tvalue, err := strconv.ParseInt(raw, 10, 64)\n152:\tif err != nil || value <= 0 {\n153:\t\treturn nil, validation(name + \" must be a positive integer\")\n154:\t}\n155:\treturn &value, nil\n156:}\n157:\n158:func optionalBool(raw, name string) (*bool, error) {\n159:\tif raw == \"\" {\n160:\t\treturn nil, nil\n161:\t}\n162:\tvalue, err := strconv.ParseBool(raw)\n163:\tif err != nil {\n164:\t\treturn nil, validation(name + \" must be true or false\")\n165:\t}\n166:\treturn &value, nil\n167:}\n168:\n169:func optionalTime(raw, name string) (*time.Time, error) {\n170:\tif raw == \"\" {\n171:\t\treturn nil, nil\n172:\t}\n173:\tvalue, err := time.Parse(time.RFC3339, raw)\n174:\tif err != nil {\n175:\t\treturn nil, validation(name + \" must be RFC3339\")\n176:\t}\n177:\tvalue = value.UTC()\n178:\treturn &value, nil\n179:}\n180:\n181:func writeHandlerError(ctx context.Context, span trace.Span, w http.ResponseWriter, operation string, err error) {\n182:\tspan.RecordError(err)\n183:\tspan.SetStatus(codes.Error, operation)\n184:\tstatus := http.StatusInternalServerError\n185:\tmessage := \"internal server error\"\n186:\tswitch {\n187:\tcase errors.Is(err, ErrValidation):\n188:\t\tstatus = http.StatusBadRequest\n189:\t\tvar domainErr *DomainError\n190:\t\tif errors.As(err, &domainErr) {\n191:\t\t\tmessage = domainErr.Message\n192:\t\t} else {\n193:\t\t\tmessage = \"invalid fleet operations request\"\n194:\t\t}\n195:\tcase errors.Is(err, dbfleetops.ErrNotFound):\n196:\t\tstatus = http.StatusNotFound\n197:\t\tmessage = \"fleet operations record not found\"\n198:\tcase errors.Is(err, dbfleetops.ErrVersionConflict):\n199:\t\tstatus = http.StatusConflict\n200:\t\tmessage = \"record changed since it was loaded; refresh and try again\"\n201:\tcase errors.Is(err, dbfleetops.ErrDriverUnavailable):\n202:\t\tstatus = http.StatusConflict\n203:\t\tmessage = \"driver is not assigned to this vehicle for the reservation period\"\n204:\tcase errors.Is(err, dbfleetops.ErrConflict):\n205:\t\tstatus = http.StatusConflict\n206:\t\tmessage = \"the requested period or unique value conflicts with an existing record\"\n207:\t}\n208:\tif status >= 500 {\n209:\t\ttraceID := trace.SpanContextFromContext(ctx).TraceID().String()\n210:\t\tlog.Error().Err(err).Str(\"trace_id\", traceID).Str(\"operation\", operation).\n211:\t\t\tMsg(\"fleet operations handler failed\")\n212:\t}\n213:\thttpx.WriteError(w, status, message)\n214:}\n215:\n216:func writeNotFound(w http.ResponseWriter, entity string) {\n217:\thttpx.WriteError(w, http.StatusNotFound, entity+\" not found\")\n218:}\n219:\n220:func listPage(r *http.Request) (int, int) {\n221:\tlimit, offset := apiparams.Pagination(r)\n222:\tif limit > 100 {\n223:\t\tlimit = 50\n224:\t}\n225:\treturn limit, offset\n226:}\n227:\n228:func validEnum(value string, allowed ...string) bool {\n229:\tif value == \"\" {\n230:\t\treturn true\n231:\t}\n232:\tfor _, candidate := range allowed {\n233:\t\tif value == candidate {\n234:\t\t\treturn true\n235:\t\t}\n236:\t}\n237:\treturn false\n238:}\n239:\n240:func requiredText(value string) bool {\n241:\treturn strings.TrimSpace(value) != \"\"\n242:}\nDIRECT_SUPPORT_LOCAL_INSTRUCTIONS\nEXACT_FINDING_CITATIONS web/src/features/fleet-ops/pages/FleetOperationsPage.tsx\n5:  useFleetAssignments,\n6:  useFleetChargingPolicies,\n7:  useFleetCostCenters,\n8:  useFleetDrivers,\n9:  useFleetReservations,\n10:  useFleetUtilizationForecast,\n11:  useFleetWorkOrders,\n13:} from '@/api/hooks/useFleetOps';\n17:import { EmptyState, OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';\n26:  CostCenterAllocation,\n57:  const driversQuery = useFleetDrivers({ limit: 100 });\n58:  const assignmentsQuery = useFleetAssignments({ limit: 100 });\n59:  const reservationsQuery = useFleetReservations({ limit: 100 });\n60:  const costCentersQuery = useFleetCostCenters({ limit: 100 });\n61:  const policiesQuery = useFleetChargingPolicies({ limit: 100 });\n62:  const workOrdersQuery = useFleetWorkOrders({ limit: 100 });\n63:  const forecastQuery = useFleetUtilizationForecast(undefined, window.from, window.to);\n154:            <div role=\"status\" aria-label={vehiclesState.isRefreshBlocked\n160:                {vehiclesState.isRefreshBlocked\n164:              <Skeleton lines={2} />\n257:          <CostCenterAllocation\n261:            loading={costCentersQuery.isLoading || reservationsQuery.isLoading || workOrdersQuery.isLoading}\n262:            error={costCentersState.fatalError ?? reservationsState.fatalError ?? workOrdersState.fatalError}\nEXACT_FINDING_CITATIONS web/src/features/fleet-ops/components/CostCenterAllocation.tsx\n11:import { costCenterAllocations, formatMinorUnits } from '../helpers';\n55:      {loading ? <Skeleton lines={5} /> : error ? (\n112:                  {t('fleetOps.costCenters.maintenanceCost', 'Maintenance cost')}: {formatMinorUnits(allocation.cost_minor, allocation.currency)}\nEXACT_FINDING_CITATIONS web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx\n32:    <fieldset\n38:        <legend className=\"text-sm font-semibold text-[var(--text-primary)]\">\n40:        </legend>\n57:              label: t(`fleetOps.days.${key}`, key.charAt(0).toUpperCase() + key.slice(1)),\n86:    </fieldset>\nEXACT_FINDING_CITATIONS web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx\n41:    const day = t(`fleetOps.days.${dayKey}`, dayKey.charAt(0).toUpperCase() + dayKey.slice(1));\n143:            mobileColumns={['vehicle', 'policy', 'actions']}\nEXACT_FINDING_CITATIONS web/src/features/fleet-ops/helpers.ts\n63:      cost_minor: relatedOrders.reduce((sum, item) => sum + (item.cost_minor ?? 0), 0),\n104:  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);\nEXACT_FINDING_CITATIONS web/src/features/fleet-ops/components/ReservationPanel.tsx\n7:import { formatDateShort, formatDateTime, formatTime } from '@/lib/dateFormat';\n47:  const calendarDays = [...new Set(upcoming.map((item) => item.starts_at.slice(0, 10)))].slice(0, 5);\n123:          message={t('fleetOps.reservations.empty', 'No reservations in this planning window.')}\n131:            {calendarDays.map((day) => (\n133:                <Text as=\"p\" weight=\"semibold\">{formatDateShort(day)}</Text>\n159:            mobileColumns={['title', 'vehicle', 'actions']}\nACTUAL_EXIT 0"
+    }
+  ],
+  "inspectionFailures": [
+    {
+      "shellId": "1137",
+      "exitCode": 1,
+      "mechanism": "UnicodeEncodeError cp1252 output of documentation; corrected utf-8 probe retained"
+    },
+    {
+      "shellIds": [
+        "1108",
+        "1137",
+        "1165"
+      ],
+      "mechanism": "Output exceeded tool display budget; raw files preserved in log, bounded relevant excerpts reread"
+    },
+    {
+      "command": "calendar-si-routes",
+      "exitCode": 1,
+      "error": "Error: Missing keys fleetOps.days.sun,fleetOps.days.mon,fleetOps.days.tue,fleetOps.days.wed,fleetOps.days.thu,fleetOps.days.fri,fleetOps.days.sat"
+    },
+    {
+      "shellId": "1415",
+      "exitCode": 1,
+      "mechanism": "UnicodeDecodeError reading node-written report using default cp1252; failed before catalog/shard/route checks; corrected explicit UTF-8"
+    },
+    {
+      "command": "pin bootstrap",
+      "exitCode": 0,
+      "mechanism": "Requested web/src/components/feedback/SourceContent.tsx absent; not used as evidence or silently treated as inspected."
+    }
+  ],
+  "scans": {
+    "productionFiles": 27,
+    "patternCounts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "fetch-useeffect": 0
+    },
+    "patternHits": [],
+    "parseDiagnostics": 0,
+    "hardcodedVisibleLiteralCandidates": [
+      {
+        "file": "web/src/features/fleet-ops/components/WorkOrderDialog.tsx",
+        "line": 233,
+        "text": "USD"
+      }
+    ],
+    "canonicalCalls": 364,
+    "canonicalMissingOccurrences": []
+  },
+  "dedupQueueRows": [
+    {
+      "line": 57,
+      "status": "[~]",
+      "item": "phase6-qa-fleet-ops-fleet-operations",
+      "files": "docs\\frontend-audits\\phase6-qa-fleet-ops-fleet-operations.json; web\\logs\\phase6-qa-fleet-ops-fleet-operations.log",
+      "note": "Accepted b628384ac source only; FleetOperationsPage/direct supports; confirmed source mechanisms separate from candidates/nativeNOTRUN."
+    },
+    {
+      "line": 529,
+      "status": "[x]",
+      "item": "phase5-current-source-catalog-closure",
+      "files": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-action-center.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\locale-analytics.json; web\\src\\i18n\\en\\locale-automations.json; web\\src\\i18n\\en\\locale-battery.json; web\\src\\i18n\\en\\locale-benchmarks.json; web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\locale-dashboard.json; web\\src\\i18n\\en\\locale-dashcam.json; web\\src\\i18n\\en\\locale-detail-achievements.json; web\\src\\i18n\\en\\locale-detail-activity.json; web\\src\\i18n\\en\\locale-detail-addressInput.json; web\\src\\i18n\\en\\locale-detail-alerts.json; web\\src\\i18n\\en\\locale-detail-annotation.json; web\\src\\i18n\\en\\locale-detail-anomalies.json; web\\src\\i18n\\en\\locale-detail-apiLogs.json; web\\src\\i18n\\en\\locale-detail-app.json; web\\src\\i18n\\en\\locale-detail-arrivalReliability.json; web\\src\\i18n\\en\\locale-detail-battery.json; web\\src\\i18n\\en\\locale-detail-browserNotifications.json; web\\src\\i18n\\en\\locale-detail-bulk.json; web\\src\\i18n\\en\\locale-detail-calculationDetails.json; web\\src\\i18n\\en\\locale-detail-carbon.json; web\\src\\i18n\\en\\locale-detail-chart.json; web\\src\\i18n\\en\\locale-detail-chatbot.json; web\\src\\i18n\\en\\locale-detail-coldStart.json; web\\src\\i18n\\en\\locale-detail-combobox.json; web\\src\\i18n\\en\\locale-detail-commands.json; web\\src\\i18n\\en\\locale-detail-consent.json; web\\src\\i18n\\en\\locale-detail-dashboard.json; web\\src\\i18n\\en\\locale-detail-dataState.json; web\\src\\i18n\\en\\locale-detail-date.json; web\\src\\i18n\\en\\locale-detail-dayLog.json; web\\src\\i18n\\en\\locale-detail-delta.json; web\\src\\i18n\\en\\locale-detail-departure.json; web\\src\\i18n\\en\\locale-detail-departureForecast.json; web\\src\\i18n\\en\\locale-detail-destinationTransitions.json; web\\src\\i18n\\en\\locale-detail-developerReference.json; web\\src\\i18n\\en\\locale-detail-diagnostic.json; web\\src\\i18n\\en\\locale-detail-digitalTwin.json; web\\src\\i18n\\en\\locale-detail-draft.json; web\\src\\i18n\\en\\locale-detail-driveCompare.json; web\\src\\i18n\\en\\locale-detail-driveDetail.json; web\\src\\i18n\\en\\locale-detail-driveDna.json; web\\src\\i18n\\en\\locale-detail-drives.json; web\\src\\i18n\\en\\locale-detail-driveScore.json; web\\src\\i18n\\en\\locale-detail-drivetrain.json; web\\src\\i18n\\en\\locale-detail-driving.json; web\\src\\i18n\\en\\locale-detail-drivingSecondary.json; web\\src\\i18n\\en\\locale-detail-dynamics.json; web\\src\\i18n\\en\\locale-detail-editConflict.json; web\\src\\i18n\\en\\locale-detail-efficiency.json; web\\src\\i18n\\en\\locale-detail-effTarget.json; web\\src\\i18n\\en\\locale-detail-emptyState.json; web\\src\\i18n\\en\\locale-detail-energyAnatomy.json; web\\src\\i18n\\en\\locale-detail-entityContext.json; web\\src\\i18n\\en\\locale-detail-error.json; web\\src\\i18n\\en\\locale-detail-explorer.json; web\\src\\i18n\\en\\locale-detail-export.json; web\\src\\i18n\\en\\locale-detail-exports.json; web\\src\\i18n\\en\\locale-detail-feedback.json; web\\src\\i18n\\en\\locale-detail-feedbackTriage.json; web\\src\\i18n\\en\\locale-detail-filters.json; web\\src\\i18n\\en\\locale-detail-forms.json; web\\src\\i18n\\en\\locale-detail-freshness.json; web\\src\\i18n\\en\\locale-detail-fsd.json; web\\src\\i18n\\en\\locale-detail-fsm.json; web\\src\\i18n\\en\\locale-detail-glossary.json; web\\src\\i18n\\en\\locale-detail-guard.json; web\\src\\i18n\\en\\locale-detail-helix.json; web\\src\\i18n\\en\\locale-detail-help.json; web\\src\\i18n\\en\\locale-detail-impersonation.json; web\\src\\i18n\\en\\locale-detail-journeyFragmentation.json; web\\src\\i18n\\en\\locale-detail-kiosk.json; web\\src\\i18n\\en\\locale-detail-landscape.json; web\\src\\i18n\\en\\locale-detail-live.json; web\\src\\i18n\\en\\locale-detail-liveLogs.json; web\\src\\i18n\\en\\locale-detail-logbook.json; web\\src\\i18n\\en\\locale-detail-maps.json; web\\src\\i18n\\en\\locale-detail-mqttSseInspector.json; web\\src\\i18n\\en\\locale-detail-notifications.json; web\\src\\i18n\\en\\locale-detail-onboarding.json; web\\src\\i18n\\en\\locale-detail-operationalMode.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\locale-detail-originConcentration.json; web\\src\\i18n\\en\\locale-detail-pagination.json; web\\src\\i18n\\en\\locale-detail-paint.json; web\\src\\i18n\\en\\locale-detail-palette.json; web\\src\\i18n\\en\\locale-detail-polling.json; web\\src\\i18n\\en\\locale-detail-presentation.json; web\\src\\i18n\\en\\locale-detail-problemReport.json; web\\src\\i18n\\en\\locale-detail-productPreferences.json; web\\src\\i18n\\en\\locale-detail-pwa.json; web\\src\\i18n\\en\\locale-detail-rangeBuffer.json; web\\src\\i18n\\en\\locale-detail-rbac.json; web\\src\\i18n\\en\\locale-detail-recentPages.json; web\\src\\i18n\\en\\locale-detail-regen.json; web\\src\\i18n\\en\\locale-detail-replay.json; web\\src\\i18n\\en\\locale-detail-requiresAuth.json; web\\src\\i18n\\en\\locale-detail-rhythm.json; web\\src\\i18n\\en\\locale-detail-routeEfficiency.json; web\\src\\i18n\\en\\locale-detail-savedViews.json; web\\src\\i18n\\en\\locale-detail-search.json; web\\src\\i18n\\en\\locale-detail-seasonalEfficiency.json; web\\src\\i18n\\en\\locale-detail-segments.json; web\\src\\i18n\\en\\locale-detail-serviceMode.json; web\\src\\i18n\\en\\locale-detail-session.json; web\\src\\i18n\\en\\locale-detail-settings.json; web\\src\\i18n\\en\\locale-detail-shortcuts.json; web\\src\\i18n\\en\\locale-detail-signalConfig.json; web\\src\\i18n\\en\\locale-detail-signalQuery.json; web\\src\\i18n\\en\\locale-detail-sourceLayer.json; web\\src\\i18n\\en\\locale-detail-speedProfile.json; web\\src\\i18n\\en\\locale-detail-speedSweetSpot.json; web\\src\\i18n\\en\\locale-detail-stateMachineDebugger.json; web\\src\\i18n\\en\\locale-detail-statusBar.json; web\\src\\i18n\\en\\locale-detail-sudo.json; web\\src\\i18n\\en\\locale-detail-sweetSpot.json; web\\src\\i18n\\en\\locale-detail-systemStatus.json; web\\src\\i18n\\en\\locale-detail-table.json; web\\src\\i18n\\en\\locale-detail-tagInput.json; web\\src\\i18n\\en\\locale-detail-tesla.json; web\\src\\i18n\\en\\locale-detail-teslaOnly.json; web\\src\\i18n\\en\\locale-detail-theme.json; web\\src\\i18n\\en\\locale-detail-timeline.json; web\\src\\i18n\\en\\locale-detail-timeMachine.json; web\\src\\i18n\\en\\locale-detail-toast.json; web\\src\\i18n\\en\\locale-detail-tour.json; web\\src\\i18n\\en\\locale-detail-tripPlanner.json; web\\src\\i18n\\en\\locale-detail-vehicleHero.json; web\\src\\i18n\\en\\locale-detail-voiceMode.json; web\\src\\i18n\\en\\locale-detail-watch.json; web\\src\\i18n\\en\\locale-detail-watchFaceNL.json; web\\src\\i18n\\en\\locale-detail-whatIf.json; web\\src\\i18n\\en\\locale-diagnostics.json; web\\src\\i18n\\en\\locale-driving-arrival-reliability.json; web\\src\\i18n\\en\\locale-driving-cold-start.json; web\\src\\i18n\\en\\locale-driving-departure-forecast.json; web\\src\\i18n\\en\\locale-driving-destination-transitions.json; web\\src\\i18n\\en\\locale-driving-drive-compare.json; web\\src\\i18n\\en\\locale-driving-drive-dna.json; web\\src\\i18n\\en\\locale-driving-drive-score.json; web\\src\\i18n\\en\\locale-driving-drivetrain-health.json; web\\src\\i18n\\en\\locale-driving-driving-dynamics.json; web\\src\\i18n\\en\\locale-driving-driving-rhythm.json; web\\src\\i18n\\en\\locale-driving-efficiency-target.json; web\\src\\i18n\\en\\locale-driving-efficiency.json; web\\src\\i18n\\en\\locale-driving-explorer.json; web\\src\\i18n\\en\\locale-driving-fsdinsights.json; web\\src\\i18n\\en\\locale-driving-journey-fragmentation.json; web\\src\\i18n\\en\\locale-driving-range-buffer.json; web\\src\\i18n\\en\\locale-driving-regen-efficiency.json; web\\src\\i18n\\en\\locale-driving-route-efficiency.json; web\\src\\i18n\\en\\locale-driving-seasonal-efficiency.json; web\\src\\i18n\\en\\locale-driving-segments.json; web\\src\\i18n\\en\\locale-driving-speed-profile.json; web\\src\\i18n\\en\\locale-driving-speed-sweet-spot.json; web\\src\\i18n\\en\\locale-driving-trip-logbook.json; web\\src\\i18n\\en\\locale-driving-trip-planner.json; web\\src\\i18n\\en\\locale-driving-what-if.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-explore.json; web\\src\\i18n\\en\\locale-exports.json; web\\src\\i18n\\en\\locale-fleet-ops.json; web\\src\\i18n\\en\\locale-home-energy.json; web\\src\\i18n\\en\\locale-intelligence-packs.json; web\\src\\i18n\\en\\locale-maps.json; web\\src\\i18n\\en\\locale-notifications.json; web\\src\\i18n\\en\\locale-ownership.json; web\\src\\i18n\\en\\locale-power-user.json; web\\src\\i18n\\en\\locale-resale-vault.json; web\\src\\i18n\\en\\locale-science.json; web\\src\\i18n\\en\\locale-service-intelligence.json; web\\src\\i18n\\en\\locale-settings.json; web\\src\\i18n\\en\\locale-sharing.json; web\\src\\i18n\\en\\locale-system.json; web\\src\\i18n\\en\\locale-telemetry.json; web\\src\\i18n\\en\\locale-trips.json; web\\src\\i18n\\en\\locale-unreferenced.json; web\\src\\i18n\\en\\locale-vehicle-systems.json; web\\src\\i18n\\en\\locale-vehicles.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\shell.json; web\\src\\i18n\\en\\usage-manifest.json",
+      "note": "ONE actual shared root after current Segments/TripPlanner/QuietHours/WhatIf/APIKeys/BatteryCare/ChargeInterruption guarded runs exited1 before discovery on changed source-reference projections. This is a newly measured current-input closure, not redispatch of the completed earlier catalog snapshot or a translation campaign. Parent-only serialized canonical keys/projections, normal generator/check with guards ON; register any further exact generated paths before writing. Known precise reported keys: speedProfile.sourceBucketUnit, speedProfile.insightEvidenceText, whatIf.telemetryAssumptions; get exact fallback strings from scoped receipts/diffs. Persist contributor source item by item; no fabricated executed tests, baseline growth, accepted-missing/guard bypass, helper development, installs or native acceptance. Current root investigation measured normal catalog check263.659s, namespace1.205s, no config defect; use480s bounds/stagger heavy proof, not old150s cutoff. Input drift from live unrelated page writers is distinguished from a generator failure. Source-only accepted leaves still require combined QA after coherent closure. Parent claim is not a running worker. Exactoutputfileset registered (186existingfiles) before anywrite. Dedicated NONPAGE i18n owner explicitly owns ONLYcanonicalEnglish andregisterednormalJSON projections; parent will NOTwriteEnglish while itruns. Allsourceproducersactuallyended/released, currentappbytes stable; parent persists contributor commits concurrently without applicationedits. Add ONLYcurrentnew/changed key-fallbacks fromactualsource/receipts, including Roadmap53/TimeMachine9/TireDrift4/pressure2/outage6/SignalExplorer/Tariff/earlierSpeed-WhatIf, no translationcampaign. Normal generator/check/nsaudit only, no helper/config/baseline/knownmissing changes/install/testtool development.20minbox/25minhardcap,480s commandbounds. Source/WIP commits mustall persistbeforefinalprojectionacceptance. Actualactor6570f287-6312-4fdf-8b07-cfc2f0039a29, dedicated NONPAGE existingroot. ParentEnglishwritelease relinquisheduntilactualrelease; rootclaimed186exactpaths, sourceinputs stable. LastConsumed=-1; no projection acceptancebeforecontributor commits. FINALactualrootreceipt:79 exactfallbacks/31107originalleavesbytepreserved, no updates/deletes/namespacegrowth; source6250filesunchangedbefore-after-check hashCD73BA9F1FDB0CBD2C3BE69CD9C9B1E35637BAC04BB03807EF65670F9346EDFE. Normalgen/check/strict exits0/0/0, knownmissing0/new0/resolved0; baselineand2guardsbytesunchanged. ONLY15reportedEnglishpaths changed; canonical+14projections stagedafterall source/WIPs andmissedreportednewtest persistedthrough1787. ActualRoot854s/20minboxmet/186pathsreleased/no commands. ROOTPROOF only/NOTbehavior-native-fullgate; no rerun unchangedpassingguards or helperchanges. Eligible retained originalpending scopes cannowcontinue. Actualrootcommit=91650fc9de1b96f60f00a01e24f2f73a716bd817 pushed=true."
+    },
+    {
+      "line": 663,
+      "status": "[x]",
+      "item": "audit-page-132",
+      "files": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx; docs\\frontend-audits\\audit-page-132.json",
+      "note": "- / 1 / 2026-10-07T06:57:24.663Z / web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx; routes=/fleet-operations; read-only audit; report docs\\frontend-audits\\audit-page-132.json; actor=762f366c-a091-4d95-ac4d-2df1c87d1c7e; verified source audit; commit=2bf0849e79; runtime unverified"
+    },
+    {
+      "line": 1628,
+      "status": "[x]",
+      "item": "phase3-suite939-file-133",
+      "files": "web\\src\\features\\fleet-ops\\components\\FleetKpis.test.tsx",
+      "note": "- / 1 / 2026-10-10T10:02:06.178Z / Fresh fullsuite939 failed-file repair; sources=; tests=web\\src\\features\\fleet-ops\\components\\FleetKpis.test.tsx; dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-133-dispatch.json; frozenSHA=416a4917edab82916c39282ad9eec8b10e3081678ff7d7c425c51fbe0338a5b1; failedTests=1; one exact test file, preserve semantics/all cases; no shipping edits or historical evidence rewrites. ; reservedattempt1 dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-133-attempt1-dispatch.json;010/033/055exhausted untouched;090/114shippingBLOCKED untouched;nextcompiler960 ; healthcheck21 actualidle terminalconsumed notzombie; parent path/hash/closed/currentproof verified; report=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-133-attempt1-report.json; accepted10 scopedPASS strictlint0"
+    },
+    {
+      "line": 1629,
+      "status": "[x]",
+      "item": "phase3-suite939-file-134",
+      "files": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.test.tsx",
+      "note": "- / 1 / 2026-10-10T10:02:06.180Z / Fresh fullsuite939 failed-file repair; sources=; tests=web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.test.tsx; dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-134-dispatch.json; frozenSHA=b0f6e13a296de4e35ac964f6aaaa4137c9006096fd5cbc6e18725a532e722420; failedTests=1; one exact test file, preserve semantics/all cases; no shipping edits or historical evidence rewrites. ; reservedattempt1 dispatch=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-134-attempt1-dispatch.json;010/033/055exhausted untouched;090/114shippingBLOCKED untouched;nextcompiler960 ; healthcheck21 actualidle terminalconsumed notzombie; parent path/hash/closed/currentproof verified; report=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-suite939-file-134-attempt1-report.json; accepted15 scopedPASS strictlint0"
+    },
+    {
+      "line": 1918,
+      "status": "[x]",
+      "item": "phase5-page-fleet-ops-fleet-operations",
+      "files": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx; web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.test.tsx",
+      "note": "Original Phase5 one-page adoption from accepted237-module inventory; aliases=/fleet-operations; audit=docs\\frontend-audits\\audit-page-132.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=bb0d8e65-0bfe-4c8c-a7d6-04b09e23c0f1; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. Actual parent wave2 scoped run: 20 executed, 0 failed; file=passed. Evidence logs\\phase5-parent-wave2-blocked-tests.json. Passed source delivery awaits exact reported-file Git intake; full/native QA unaccepted. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual unchanged parent600case receipt: own file 20 cases passed,0failed/0pending. Existing worker scoped lint/style/section/line/hook evidence retained, no cases rerun for provenance. Source-only acceptance; inherited geometry/static/preservation/native resource/privacy failures remain explicitly UNACCEPTED in own receipt; no page/application QA claim.; commit=b628384ac6d667d13b0600ec2ba87b0b8f128316; pushed."
+    }
+  ],
+  "testSourceInspection": [
+    {
+      "file": "web/src/features/fleet-ops/components/AssignmentRosterPreservation.test.tsx",
+      "declarations": [
+        {
+          "line": 46,
+          "declaration": "it('exports every matching loaded record, not just the 25-row rendered page, through both existing formats', async () => {"
+        },
+        {
+          "line": 71,
+          "declaration": "it('keeps selected driver identities when names and row order change, including the last loaded member', async () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/AssignmentSelectionPreservation.test.tsx",
+      "declarations": [
+        {
+          "line": 36,
+          "declaration": "it('keeps user-selected member IDs and unsaved notes when refreshed choice labels and order change', () => {"
+        },
+        {
+          "line": 69,
+          "declaration": "it('keeps the existing inactive assignee editable while unrelated inactive choices remain disabled', () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/CancelReservationDialog.test.tsx",
+      "declarations": [
+        {
+          "line": 31,
+          "declaration": "it('offers refresh when cancellation loses an optimistic version race', () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/chargingWindowUtils.test.ts",
+      "declarations": [
+        {
+          "line": 14,
+          "declaration": "it('accepts distinct and overnight windows', () => {"
+        },
+        {
+          "line": 21,
+          "declaration": "it('rejects overlap created by an overnight spill', () => {"
+        },
+        {
+          "line": 28,
+          "declaration": "it('rejects empty, full-day, and malformed windows', () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/DriverDialog.test.tsx",
+      "declarations": [
+        {
+          "line": 44,
+          "declaration": "it('submits charge cap + curfew in the create payload', () => {"
+        },
+        {
+          "line": 64,
+          "declaration": "it('blocks submit on a half-set curfew', () => {"
+        },
+        {
+          "line": 75,
+          "declaration": "it('seeds guardrails when editing an existing driver', () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/FleetKpis.test.tsx",
+      "declarations": [
+        {
+          "line": 94,
+          "declaration": "it('keeps numerical raw values, missing values and invalid values distinct through the actual bridge', () => {"
+        },
+        {
+          "line": 109,
+          "declaration": "it('preserves all original count operands, percent precision and independent source context', () => {"
+        },
+        {
+          "line": 133,
+          "declaration": "it('keeps existing reservation statuses, distinct-vehicle counts and open-order rules unchanged', () => {"
+        },
+        {
+          "line": 157,
+          "declaration": "it('distinguishes successful empty list counts from unavailable forecast measurements', () => {"
+        },
+        {
+          "line": 179,
+          "declaration": "it('does not turn an unavailable reservation source into zero or blank independent sources', () => {"
+        },
+        {
+          "line": 193,
+          "declaration": "it('retains measured values and identifies paused and failed-refresh snapshots', () => {"
+        },
+        {
+          "line": 209,
+          "declaration": "it('explicitly distinguishes partial loaded records from source-wide totals', () => {"
+        },
+        {
+          "line": 218,
+          "declaration": "it('uses a busy loading root only before any source measurements are available', () => {"
+        },
+        {
+          "line": 238,
+          "declaration": "it('keeps a non-finite source forecast invalid instead of fabricating utilization or health', () => {"
+        },
+        {
+          "line": 249,
+          "declaration": "it('opens the real details drawer with full meanings, source windows, limitations and provenance', async () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/FleetResourceDialogs.test.tsx",
+      "declarations": [
+        {
+          "line": 178,
+          "declaration": "it.each(cases)('$name protects dirty edits before closing', async ({"
+        },
+        {
+          "line": 196,
+          "declaration": "it.each(cases)('$name associates validation with the failing field', ({"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/MutationErrorDialog.test.tsx",
+      "declarations": [
+        {
+          "line": 16,
+          "declaration": "it('identifies optimistic conflicts and offers a refresh', () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/components/UtilizationForecastPreservation.test.tsx",
+      "declarations": [
+        {
+          "line": 59,
+          "declaration": "it('keeps all fourteen returned days and both uncertainty bounds at the real shared export boundary', async () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/helpers.test.ts",
+      "declarations": [
+        {
+          "line": 65,
+          "declaration": "it('derives KPI values without treating missing forecast as zero precision', () => {"
+        },
+        {
+          "line": 80,
+          "declaration": "it('allocates reservations and minor-unit maintenance costs by cost center', () => {"
+        },
+        {
+          "line": 98,
+          "declaration": "it('aggregates per-vehicle forecast points while preserving uncertainty width', () => {"
+        }
+      ]
+    },
+    {
+      "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.test.tsx",
+      "declarations": [
+        {
+          "line": 264,
+          "declaration": "it('exposes initial vehicle failure and retries only that source without removing fleet panels', () => {"
+        },
+        {
+          "line": 288,
+          "declaration": "it('shows initial vehicle loading rather than an empty fleet while independent records remain usable', () => {"
+        },
+        {
+          "line": 300,
+          "declaration": "it('explains an authoritative empty fleet without hiding loaded operational records', () => {"
+        },
+        {
+          "line": 312,
+          "declaration": "it('describes paused initial vehicle discovery without inventing an offline or empty fleet', () => {"
+        },
+        {
+          "line": 325,
+          "declaration": "it('retains usable vehicle choices after refresh failure and preserves the accessible reservation action', () => {"
+        },
+        {
+          "line": 340,
+          "declaration": "it('retains an intentionally empty driver value selection through failed refresh and recovery', () => {"
+        },
+        {
+          "line": 372,
+          "declaration": "it('retains the forecast data alternative and export menu when only the forecast refresh fails', () => {"
+        },
+        {
+          "line": 396,
+          "declaration": "it('enables loaded-value checklists only when each complete fleet list is loaded', () => {"
+        },
+        {
+          "line": 411,
+          "declaration": "it('renders every operational panel and opens the reservation workflow', () => {"
+        },
+        {
+          "line": 431,
+          "declaration": "it('opens the actual summary drawer without displacing operational entities or write workflows', async () => {"
+        },
+        {
+          "line": 451,
+          "declaration": "it('keeps retained roster rows and all independently usable operational panels on refresh failure', () => {"
+        },
+        {
+          "line": 467,
+          "declaration": "it('contains an initial driver failure without removing reservation or forecast actions', () => {"
+        },
+        {
+          "line": 478,
+          "declaration": "it('renders the read-only explanation outside the disabled reservation action', () => {"
+        },
+        {
+          "line": 498,
+          "declaration": "it('creates and version-updates a driver with typed payloads', () => {"
+        },
+        {
+          "line": 540,
+          "declaration": "it('passes the current version when deleting a driver', () => {"
+        },
+        {
+          "line": 550,
+          "declaration": "it('opens each fleet resource creation workflow', () => {"
+        },
+        {
+          "line": 565,
+          "declaration": "it('submits normalized charging windows', () => {"
+        },
+        {
+          "line": 588,
+          "declaration": "it('edits a timeline reservation with its optimistic version', () => {"
+        },
+        {
+          "line": 612,
+          "declaration": "it('cancels a timeline reservation using a versioned update', () => {"
+        },
+        {
+          "line": 630,
+          "declaration": "it('deletes a timeline reservation with its optimistic version', () => {"
+        }
+      ]
+    }
+  ],
+  "reproductions": {
+    "method": "source-only in-memory transpile and pure/source-declaration evaluation with explicit JSX/import stubs; not UI tests or native acceptance",
+    "rawOutput": "UTC_NOW 2026-10-14T01:33:46.474Z\nSOURCE_ONLY_PROBE: actual pinned TS transpiled in memory; JSX objects and named component/hook stubs; no DOM, React mount, request, test runner or runtime acceptance.\nINITIAL_PAUSED {\"hasData\":false,\"status\":\"initial\",\"isRefreshBlocked\":true,\"fatalError\":null}\nINITIAL_PAUSED_BRANCH ReservationPanel EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH DriverRoster EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH AssignmentRoster EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH ChargingPolicyMatrix EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH WorkOrderBoard EmptyState=1 Skeleton=0\nINITIAL_PAUSED_BRANCH CostCenterAllocation EmptyState=1\nINITIAL_PAUSED_BRANCH UtilizationForecastChart empty=true\nDEPENDENCY_FATAL_BRANCH costCentersLoaded=1 QueryError=1 allocationsVisible=0\nDEPENDENCY_LOADING_BRANCH costCentersLoaded=1 Skeleton=1 allocationsVisible=0\nUNKNOWN_COST {\"rawCost\":null,\"result\":0,\"currency\":\"USD\",\"display\":\"$0.00\",\"knownZero\":0,\"knownPlusUnknown\":12500}\nCURRENCY_EXPONENT {\"JPY100Minor\":\"¥1\",\"JPYfractionDigits\":0,\"KWD1000Minor\":\"KWD 10.000\",\"KWDfractionDigits\":3}\nDATE_PREF_INPUT {\"stamp\":\"2026-10-14T01:00:00Z\",\"browserDefault\":\"Oct 13, 2026, 06:00 PM\",\"specifiedBerlinGerman\":\"14. Okt. 2026, 03:00\",\"specifiedTokyoJapanese\":\"2026年10月14日 10:00\"}\nMONEY_LOCALE_INPUT {\"actualHelper\":\"$1,234.50\",\"selectedGerman\":\"1.234,50 $\"}\nTABLE_DECLARATION {\"name\":\"ReservationPanel\",\"tableId\":\"fleet-ops:reservations\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"driver\",\"period\",\"status\"]}\nTABLE_DECLARATION {\"name\":\"DriverRoster\",\"tableId\":\"fleet-ops:drivers\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"status\",\"guardrails\"]}\nTABLE_DECLARATION {\"name\":\"AssignmentRoster\",\"tableId\":\"fleet-ops:assignments\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"starts_at\",\"ends_at\"]}\nTABLE_DECLARATION {\"name\":\"ChargingPolicyMatrix\",\"tableId\":\"fleet-ops:charging-policies\",\"caption\":null,\"nameProp\":null,\"mobilePresentation\":null,\"renderExpanded\":null,\"hiddenBelowMd\":[\"target\",\"power\",\"windows\",\"enabled\"]}\nFIELDSET_DECLARATION root=fieldset firstChild=div legendParent=div\nFORECAST_FILL_OPACITY 0.18 contractMaximum=0.08\nRETAINED_STATES [{\"kind\":\"error\",\"hasData\":true,\"status\":\"stale\",\"fatalError\":null,\"refreshError\":\"synthetic refresh\"},{\"kind\":\"paused\",\"hasData\":true,\"status\":\"stale\",\"fatalError\":null,\"refreshError\":null},{\"kind\":\"refreshing\",\"hasData\":true,\"status\":\"ok\",\"fatalError\":null,\"refreshError\":null},{\"kind\":\"zero\",\"hasData\":true,\"status\":\"ok\",\"fatalError\":null,\"refreshError\":null}]",
+    "exitCode": 0
+  },
+  "dynamicLocalization": {
+    "keysRequested": [
+      "fleetOps.days.sun",
+      "fleetOps.days.mon",
+      "fleetOps.days.tue",
+      "fleetOps.days.wed",
+      "fleetOps.days.thu",
+      "fleetOps.days.fri",
+      "fleetOps.days.sat"
+    ],
+    "canonicalDays": null,
+    "generatedDays": null,
+    "missing": 7,
+    "sourceCallSites": [
+      {
+        "file": "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+        "line": 41
+      },
+      {
+        "file": "web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx",
+        "line": 57
+      }
+    ]
+  },
+  "dynamicDayDedupRows": [],
+  "routeSourceMatches": [
+    {
+      "file": "internal/api/router.go",
+      "line": 1182,
+      "text": "\tfleetOpsHandler := apifleetops.NewHandler(db)"
+    },
+    {
+      "file": "internal/api/router.go",
+      "line": 3970,
+      "text": "\t\tapifleetops.MountRoutes(r, fleetOpsHandler)"
+    }
+  ],
+  "backendRouteFiles": [
+    "internal/api/fleetops/handler.go"
+  ],
+  "summary": {
+    "confirmedDistinctMechanisms": 12,
+    "violationSites": 30,
+    "byRule": {
+      "initial-paused-as-empty": 1,
+      "independent-source-content-loss": 1,
+      "unknown-cost-as-zero": 1,
+      "currency-minor-unit-scale": 1,
+      "display-preferences-not-consumed": 1,
+      "mobile-field-unreachable": 1,
+      "unlocalized-table-name": 1,
+      "invalid-fieldset-legend": 1,
+      "empty-copy-scope-mismatch": 1,
+      "chart-area-tint-contract": 1,
+      "calendar-date-identity": 1,
+      "missing-canonical-dynamic-key": 1
+    },
+    "bySeverity": {
+      "high": 8,
+      "medium": 4
+    },
+    "filesWithMostPrimaryFindings": {
+      "web/src/features/fleet-ops/components/ReservationPanel.tsx": 6,
+      "web/src/features/fleet-ops/helpers.ts": 2,
+      "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx": 1,
+      "web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx": 1,
+      "web/src/features/fleet-ops/components/UtilizationForecastChart.tsx": 1,
+      "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx": 1
+    },
+    "conditionalCandidates": 3,
+    "nativeCandidates": 4,
+    "pinnedFiles": 65,
+    "unchangedPins": 65,
+    "driftedPins": [],
+    "productionFeatureFilesScanned": 27,
+    "readonlyFeatureTestsPinned": 11,
+    "freshTestsExecuted": 0,
+    "testExecutionStatus": "NOTRUN; no unchanged passing test file rerun",
+    "countConvention": "12 distinct mechanisms; grouped equivalent occurrences are not extra findings. Source sites are counted separately; lexical matches are not the semantic finding count.",
+    "failedCommands": 3,
+    "failedCommandShellIds": [
+      "1137",
+      "1403",
+      "1415"
+    ]
+  },
+  "routes": {
+    "path": "/fleet-operations",
+    "routeScope": {
+      "range": false,
+      "vehicle": false
+    },
+    "scopeEvidence": [
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "line": 122,
+        "source": "'/fleet-operations',"
+      },
+      {
+        "file": "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+        "line": 63,
+        "source": "const forecastQuery = useFleetUtilizationForecast(undefined, window.from, window.to);"
+      }
+    ],
+    "behavior": "Fleet-wide six undated operational lists plus intentionally independent 14-day UTC forecast from/to, frozen at mount. Local per-record vehicle/date selection is required workflow input, not duplicate workspace selection. No workspace-scope violation asserted.",
+    "backendSource": "internal/api/router.go:3970 delegates to internal/api/fleetops/handler.go:85-103; all six CRUD resources and utilization-forecast match hook strings. AbortSignal forwarded for reads, snake_case vehicle_id/from/to and client-added prefix preserved. Source registration only; requests/auth/totals/bound-inclusivity/model runtime NOTRUN."
+  },
+  "preservation": {
+    "currentPageSha256": "66446508e0912bfb78e28bd6f8eb60d407cac53f12838799b268cdd1807db9f1",
+    "pageLines": 350,
+    "productionFeatureLines": 3639,
+    "sectionCount": 8,
+    "sections": [
+      "Operational record summary (four raw/null metrics)",
+      "Reservation calendar and complete loaded table",
+      "Fleet drivers",
+      "Assignment roster",
+      "Cost-center allocation",
+      "Charging policy matrix",
+      "Maintenance work-order board (five lanes)",
+      "Utilization forecast with data/export alternatives"
+    ],
+    "actions": [
+      "New reservation and calendar/table edit/cancel/delete (cancel only requested/confirmed)",
+      "Add/edit/delete driver, assignment, cost center, charging policy and work order",
+      "Six kind-switched resource editors; save/cancel/discard; original versions; conflict/error recovery",
+      "Eight independent source refetches; retained refresh warnings; four stable table identities/value-filter completeness checks/local pagination/export",
+      "Forecast stable chartKey fleet-ops-utilization; date/expected/lower/upper table/export columns"
+    ],
+    "sourcePositiveChecks": [
+      "PageLayout actually forwards to PageContainer; no missing-wrapper finding",
+      "All eight sections remain page-level mounts; data-conditioned banners/dialogs are not hidden data sections",
+      "Initial vehicle failure/loading/paused/authoritative-empty support now exists at142-180; original Phase0 vehicle finding resolved and not duplicated",
+      "Read-only notice plus canWrite-disabled actions and gated editor/cancel/delete mounts; read-only transition clears targets; hooks requiresLiveMode=true and success-only invalidate/close",
+      "Retained payload/fatalError separation and independent warnings; known empty list totals are real0 and forecast missing remainsnull in KPI helper",
+      "Raw max_power_w and due_odometer_m retained in typed wire inputs; useUnits display conversion and WorkOrderDialog distance SI round trip; source probe null=—/zero=0,00kW/negative=-11,00kW/100000m->62,14mi->100000m",
+      "Reservation full-period assignment validation, vehicle change clears driver, terminal reservation/order transitions, inactive existing edit choices and unsaved-change guard remain",
+      "All four table IDs stable; value filtering only enabled when offset0 and total==loaded length; brief describes loaded/partial/independent snapshots/inferred forecast without inventing measured freshness"
+    ],
+    "historicalEvidence": "Accepted Phase5 commit from queue b628384ac6d667d13b0600ec2ba87b0b8f128316 and historical audit-page-132 316 lines are references, not fresh Git verification/native acceptance. Immutable pre-migration snapshots were not available/created; section/action crosswalk and current pins are the preservation evidence."
+  },
+  "exceptions": [
+    "WorkOrderDialog placeholder USD is an ISO currency example, not untranslated English prose; excluded from the one AST visible-literal candidate.",
+    "Page useEffect only clears local mutation targets on canWrite=false; not data fetch/useEffect loading.",
+    "CHART_COLORS array lookup/Recharts properties are dynamic/vendor API exceptions; no static-inline-style violation.",
+    "PageLayout/ChartCard/shared DataTable boundaries are actual existing wrappers; shared component raw HTML/direct internals are building blocks, not feature violations.",
+    "Fleet-wide route hides workspace vehicle/range deliberately; local reservation/policy business inputs and independent forecast bounds retained.",
+    "Conditional forecast quality/limitations banners and gated mutation dialogs are not hidden data sections."
+  ],
+  "needs": [
+    "Parent lease distinct bounded fixes for F01/F02/F03 trust/unknown allocation; preserve accepted page/direct-support read-only until a new queue claim.",
+    "Currency scale contract and saved date/money preferences: existing domain/formatter owners, no source unit changes or new conversion engine.",
+    "Four existing table callers: mobile all-details read access and localized caption/name, not new table primitives or changed IDs.",
+    "Charging-window fieldset semantic repair and separate seven-weekday canonical/generated copy lease; no source/catalog edit here.",
+    "Reservation calendar date identity plus undated empty-copy correction; forecast tint correction without series/data/export loss.",
+    "Native matrix remains unaccepted; use authorized parent-owned browser locks/server only in a separately authorized acceptance task."
+  ],
+  "limits": [
+    "Source QA only; no remigration, source/test/catalog edits, Git, installs, subagents, servers, browser/API/device access, production actions, full suites or global compiler.",
+    "Shared5173 is parent-owned; no browser lock requested, used or held.",
+    "In-memory source probes use explicit JSX/import stubs and do not mount React, execute existing tests, establish screen-reader/keyboard/visual/native acceptance, or validate backend payload prevalence.",
+    "No TypeScript-pass/lint/build/test pass claimed. AST parseDiagnostics0 is syntactic source evidence only.",
+    "Literal t-key scan and explicit dynamic expansion are bounded; no complete locale/catalog regeneration/guard gate run.",
+    "SI formatter probe stubs only finite-number/numberFormat imports; validates bounded pure source output/sign/round-trip, not full app preference subscription.",
+    "Source refs/ranges pinned; broader shared implementation/native/backend/business completeness outside direct inspected closure remains unaccepted.",
+    "Prior oversized outputs and three failed commands retained with true exits. Literal router.Route grep0 was an inspection miss, resolved through delegated MountRoutes, not absence of the endpoint."
+  ],
+  "documentsRead": [
+    "docs/orchestrator-loop.md (entire)",
+    "docs/frontend-design-contract.md (entire)",
+    "docs/frontend-mission.md (entire)",
+    "docs/frontend-inventory.md relevant FleetOperations entries and audit-page-132",
+    "docs/session-handoff.md current recovery and relevant conventions",
+    "docs/frontend-worker-conventions.md",
+    "docs/CONTRIBUTING.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "migration-queue.md exact QA/accepted Phase5 rows and relevant dedup scopes"
+  ],
+  "completedAtUtc": "2026-10-14T01:41:18.454582+00:00",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-fleet-ops-fleet-operations.json",
+    "web/logs/phase6-qa-fleet-ops-fleet-operations.log"
+  ],
+  "release": {
+    "report": "RELEASE after successful final reparse",
+    "log": "RELEASE after final verification receipt below",
+    "commands": "RELEASE: no running worker-owned command, server, browser/native lock or source-write claim; shared5173 untouched",
+    "source": "READONLY throughout; accepted page/direct supports unchanged"
+  },
+  "commandLedger": [
+    {
+      "shellId": "1108",
+      "exitCode": 0,
+      "check": "Startup clock/instructions/queue broad probe (oversized raw retained)"
+    },
+    {
+      "shellId": "1137",
+      "exitCode": 1,
+      "check": "Relevant documents/instructions probe; UnicodeEncodeError"
+    },
+    {
+      "shellId": "1165",
+      "exitCode": 0,
+      "check": "UTF8 bounded queue/handoff/features recovery probe (oversized raw retained)"
+    },
+    {
+      "shellId": "1181",
+      "exitCode": 0,
+      "check": "Feature/instruction paths and prior failure tail"
+    },
+    {
+      "shellId": "1231",
+      "exitCode": 0,
+      "check": "Authorized artifact/bootstrap 63 input pins"
+    },
+    {
+      "shellId": "1262",
+      "exitCode": 0,
+      "check": "27 production feature-file grep/AST/canonical checks"
+    },
+    {
+      "shellId": "1289",
+      "exitCode": 0,
+      "check": "Workspace/preference/routes/dedup/test declaration source inspection"
+    },
+    {
+      "shellId": "1307",
+      "exitCode": 0,
+      "check": "Dedup and page-test declaration review"
+    },
+    {
+      "shellId": "1354",
+      "exitCode": 0,
+      "check": "Explicit source-only JSX/pure mechanism probes"
+    },
+    {
+      "shellId": "1403",
+      "exitCode": 1,
+      "check": "Calendar/SI probes completed; dynamic weekday absence fails before router section"
+    },
+    {
+      "shellId": "1415",
+      "exitCode": 1,
+      "check": "Catalog/route followup failed at default cp1252 report read"
+    },
+    {
+      "shellId": "1429",
+      "exitCode": 0,
+      "check": "UTF8 canonical/generated weekday absence and shard pin"
+    },
+    {
+      "shellId": "1437",
+      "exitCode": 0,
+      "check": "Actual delegated route spelling and dynamic-fix dedup"
+    },
+    {
+      "shellId": "1452",
+      "exitCode": 0,
+      "check": "Actual route module pin/source and exact citations"
+    },
+    {
+      "shellId": "1484",
+      "exitCode": 0,
+      "check": "Report assembly and first before/after SHA256 comparison"
+    }
+  ],
+  "filesRead": [
+    ".gitignore",
+    "internal/api/router.go",
+    "web/package.json",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useFleetOps.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/App.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/layout-reference/ChartCard.tsx",
+    "web/src/components/layout/layout-reference/LayoutCard.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.types.ts",
+    "web/src/features/fleet-ops/components/AssignmentDialog.tsx",
+    "web/src/features/fleet-ops/components/AssignmentRoster.tsx",
+    "web/src/features/fleet-ops/components/AssignmentRosterPreservation.test.tsx",
+    "web/src/features/fleet-ops/components/AssignmentSelectionPreservation.test.tsx",
+    "web/src/features/fleet-ops/components/CancelReservationDialog.test.tsx",
+    "web/src/features/fleet-ops/components/CancelReservationDialog.tsx",
+    "web/src/features/fleet-ops/components/ChargingPolicyDialog.tsx",
+    "web/src/features/fleet-ops/components/ChargingPolicyMatrix.tsx",
+    "web/src/features/fleet-ops/components/ChargingWindowsEditor.tsx",
+    "web/src/features/fleet-ops/components/chargingWindowUtils.test.ts",
+    "web/src/features/fleet-ops/components/chargingWindowUtils.ts",
+    "web/src/features/fleet-ops/components/CostCenterAllocation.tsx",
+    "web/src/features/fleet-ops/components/CostCenterDialog.tsx",
+    "web/src/features/fleet-ops/components/DeleteFleetResourceDialog.tsx",
+    "web/src/features/fleet-ops/components/DriverDialog.test.tsx",
+    "web/src/features/fleet-ops/components/DriverDialog.tsx",
+    "web/src/features/fleet-ops/components/DriverRoster.tsx",
+    "web/src/features/fleet-ops/components/editorTypes.ts",
+    "web/src/features/fleet-ops/components/FleetKpis.test.tsx",
+    "web/src/features/fleet-ops/components/FleetKpis.tsx",
+    "web/src/features/fleet-ops/components/FleetResourceDialogs.test.tsx",
+    "web/src/features/fleet-ops/components/FleetResourceEditorDialog.tsx",
+    "web/src/features/fleet-ops/components/formUtils.ts",
+    "web/src/features/fleet-ops/components/index.ts",
+    "web/src/features/fleet-ops/components/MutationErrorDialog.test.tsx",
+    "web/src/features/fleet-ops/components/MutationErrorDialog.tsx",
+    "web/src/features/fleet-ops/components/ReservationActions.tsx",
+    "web/src/features/fleet-ops/components/ReservationDialog.tsx",
+    "web/src/features/fleet-ops/components/ReservationFields.tsx",
+    "web/src/features/fleet-ops/components/ReservationPanel.tsx",
+    "web/src/features/fleet-ops/components/UtilizationForecastChart.tsx",
+    "web/src/features/fleet-ops/components/UtilizationForecastPreservation.test.tsx",
+    "web/src/features/fleet-ops/components/WorkOrderBoard.tsx",
+    "web/src/features/fleet-ops/components/WorkOrderDialog.tsx",
+    "web/src/features/fleet-ops/helpers.test.ts",
+    "web/src/features/fleet-ops/helpers.ts",
+    "web/src/features/fleet-ops/pages/FleetOperationsPage.test.tsx",
+    "web/src/features/fleet-ops/pages/FleetOperationsPage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useOperationalMode.tsx",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/i18n/en/locale-fleet-ops.json",
+    "internal/api/fleetops/handler.go"
+  ],
+  "sourceReviewCoverage": {
+    "featureProduction": "27 complete source files parsed/scanned; page/presentation/dialog/helper mechanisms manually inspected",
+    "featureTests": "11 pinned and static declaration/covering source inspected; zero tests executed/discovered by runner",
+    "sharedClosure": "Relevant source excerpts and pure formatter state mechanisms only; other pin inputs are byte-integrity coverage, not a whole shared-library audit",
+    "backend": "Only delegated fleet route module/source registration inspected; no DB/query/backend runtime acceptance"
+  },
+  "finalVerification": {
+    "verifiedAtUtc": "2026-10-14T01:42:52.147905+00:00",
+    "jsonReparse": "PASS reparse and post-write pin verification required by the following executed assertions",
+    "findingCitations": "PASS exact file/line/source for12 mechanisms and30 sites",
+    "sha256Pins": "PASS65/65 unchanged",
+    "commands": "all prior bounded tool commands completed; no owned service/background command",
+    "exitCode": 0
+  }
+}

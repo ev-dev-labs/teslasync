@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { ChargingTelemetry } from '@/api/types'
 
 vi.mock('react-i18next', async () => {
@@ -35,7 +35,16 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallbackOrOptions?: unknown, maybeOptions?: unknown) => {
+        const fallback = typeof fallbackOrOptions === 'string' ? fallbackOrOptions : key
+        const options = (typeof fallbackOrOptions === 'object' && fallbackOrOptions !== null
+          ? fallbackOrOptions : maybeOptions) as Record<string, unknown> | undefined
+        const count = options?.count
+        const plural = count === 1 ? options?.defaultValue_one : options?.defaultValue_other
+        const template = typeof plural === 'string' ? plural : fallback
+        return Object.entries(options ?? {}).reduce((text, [name, value]) =>
+          text.replaceAll(`{{${name}}}`, String(value)), template)
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   }
@@ -95,7 +104,7 @@ describe('ChargingTelemetrySection — metric rendering', () => {
     expect(screen.getByText('240.00 V')).toBeInTheDocument()
     expect(screen.getByText('Current')).toBeInTheDocument()
     expect(screen.getByText('32.00 A')).toBeInTheDocument()
-    expect(screen.getByText('Battery Level')).toBeInTheDocument()
+    expect(screen.getByText('Battery level')).toBeInTheDocument()
     expect(screen.getByText('82.00%')).toBeInTheDocument()
   })
 
@@ -119,13 +128,13 @@ describe('ChargingTelemetrySection — metric rendering', () => {
     )
     expect(screen.getByText('Complete')).toBeInTheDocument()
 
-    const heading = screen.getByRole('heading', { name: /Charging Telemetry/i })
+    const heading = screen.getByRole('heading', { name: /Charging telemetry/i })
     expect(heading).toBeInTheDocument()
   })
 })
 
 describe('ChargingTelemetrySection — null safety', () => {
-  it('renders em-dash placeholders for null fields without fabricating unit strings', () => {
+  it('hides an all-empty measurement set and explains when values will appear', () => {
     render(
       <ChargingTelemetrySection
         chargingTelemetry={makeTelemetry({
@@ -141,14 +150,17 @@ describe('ChargingTelemetrySection — null safety', () => {
       />,
     )
 
-    // All eight metrics collapse to '—'.
-    expect(screen.getAllByText('—')).toHaveLength(8)
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument()
+    expect(screen.getByText('Values will appear when the source provides measurements.')).toBeInTheDocument()
     // No fabricated unit strings when the underlying value is missing.
     expect(screen.queryByText(/kW\b/)).toBeNull()
     expect(screen.queryByText(/kWh\b/)).toBeNull()
     expect(screen.queryByText(/km\/h/)).toBeNull()
-    // The labels still render so the panel never shows a blank grid.
-    expect(screen.getByText('Charger Power')).toBeInTheDocument()
+    // Metric names remain available as chips in the review drawer.
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const drawer = within(screen.getByRole('dialog'))
+    expect(drawer.getByText('Charger power')).toBeInTheDocument()
+    expect(drawer.getByText('8 empty fields are hidden.')).toBeInTheDocument()
   })
 })
 
@@ -158,8 +170,8 @@ describe('ChargingTelemetrySection — empty states', () => {
 
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('No charging telemetry available')).toBeInTheDocument()
-    expect(screen.queryByText('Charger Power')).toBeNull()
-    expect(screen.queryByText('Battery Level')).toBeNull()
+    expect(screen.queryByText('Charger power')).toBeNull()
+    expect(screen.queryByText('Battery level')).toBeNull()
   })
 
   it('renders the empty state when telemetry is undefined', () => {
@@ -176,10 +188,27 @@ describe('ChargingTelemetrySection — accessibility', () => {
       <ChargingTelemetrySection chargingTelemetry={makeTelemetry()} />,
     )
 
-    // The heading icon plus all eight metric icons are purely decorative;
-    // the adjacent label text carries the meaning, so no SVG should be
-    // exposed to the accessibility tree.
+    // The section icon and the Review details icon are decorative.
     expect(container.querySelectorAll('svg:not([aria-hidden="true"])')).toHaveLength(0)
-    expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(9)
+    expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(2)
+  })
+
+  describe('ChargingTelemetrySection — operational source review', () => {
+    it('uses the real compact brief and keeps real zero distinct from a missing signed measurement', () => {
+      render(<ChargingTelemetrySection chargingTelemetry={makeTelemetry({
+        charger_power_w: 0, charger_actual_current: -1.25, charger_voltage: null,
+      })} />)
+      const brief = screen.getByTestId('vehicle-charging-telemetry-brief')
+      expect(brief).toHaveAttribute('data-operational-brief')
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(7)
+      expect(brief.querySelector('[data-operational-metric="power"]')).toHaveAttribute('data-value-state', 'value')
+      expect(brief.querySelector('[data-operational-metric="voltage"]')).toBeNull()
+      expect(brief.querySelector('[data-operational-metric="current"]')).toHaveTextContent('-1.25 A')
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+      const drawer = screen.getByRole('dialog')
+      expect(within(drawer).getByText('0.00 kW')).toBeInTheDocument()
+      expect(within(drawer).getByText('-1.25 A')).toBeInTheDocument()
+      expect(within(drawer).getByText(/meters of range added per hour, not vehicle motion/)).toBeInTheDocument()
+    })
   })
 })

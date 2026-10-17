@@ -1,0 +1,406 @@
+{
+  "item": "audit-page-163",
+  "page": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+  "routes": [
+    {
+      "path": "/power/dashboards",
+      "evidence": ["web\\src\\App.tsx:290", "web\\src\\App.tsx:731"],
+      "mount": "Lazy PowerDashboards inside SafeRoute; route source found by scoped search, not navigated."
+    }
+  ],
+  "purpose": "Manual Grafana-oriented dashboard JSON composer with an install-wide six-panel reference catalog and an optional, explicitly applied Helix draft.",
+  "primaryGoal": "Create or edit a persistent user-owned JSON envelope, optionally review/apply an AI proposal, then copy the JSON for manual use in Grafana. This is not the home dashboard widget configuration screen.",
+  "dataSources": [
+    {
+      "name": "Manual editor draft",
+      "hook": "Page useState initializer and useEffect",
+      "endpoint": null,
+      "owner": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:50", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:99-119", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:130-153"],
+      "behavior": "Restore ai.dashboardComposer.draft verbatim; persist every nonempty edit, including whitespace; remove the key for an empty string; storage exceptions are swallowed. Copy trims the payload but does not rewrite the saved value."
+    },
+    {
+      "name": "Curated catalog",
+      "hook": "Local constant plus memoized name sorting",
+      "endpoint": null,
+      "owner": "Page constant; matching backend whitelist in internal\\api\\ainldash\\handler.go",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:62-87", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:185-188", "internal\\api\\ainldash\\handler.go:330-355"],
+      "behavior": "Six static metadata entries, not six fetched fleet measurements. Descriptions mention distance_m, energy_used_wh and source tables; neither SQL execution nor actual panel-template availability was established."
+    },
+    {
+      "name": "AI draft stream",
+      "hook": "AINLDashboardComposer -> useAiStream",
+      "endpoint": "POST /api/v1/ai/power/dashboard/draft",
+      "owner": "web\\src\\hooks\\useAiStream.ts; internal\\api\\ainldash\\handler.go",
+      "evidence": ["web\\src\\components\\ai\\AINLDashboardComposer.tsx:140-168", "web\\src\\hooks\\useAiStream.ts:330-350", "internal\\api\\router.go:3167", "internal\\api\\router.go:5107", "internal\\api\\ai_routes.go:134", "internal\\api\\ai_routes.go:767-771"],
+      "behavior": "Bare URL receives the canonical /api/v1 prefix. POST body is {prompt: trimmedInput}; only successful draft_dashboard_layout tool_result events are parsed. Draft remains separate from editor until Apply. No Grafana push endpoint is called.",
+      "knownShape": "DashboardLayoutDraft {prompt, dashboard:{title, slots:[{panel_name, grid_pos:{x,y,w,h}}]}, rationale, referenced_panels}; finite numeric grid positions checked client-side.",
+      "limits": "Route binding verified in source only; authentication, provider, server layout validation, SSE availability and Grafana import compatibility were not exercised."
+    },
+    {
+      "name": "AI configuration gate",
+      "hook": "withAiFeature -> useAiEnabled -> useSettings -> getSettings",
+      "endpoint": "GET /api/v1/settings",
+      "owner": "web\\src\\hooks\\useSettings.ts; internal settings handler",
+      "evidence": ["web\\src\\components\\ai\\withAiFeature.tsx:46-56", "web\\src\\hooks\\useAiEnabled.ts:31-39", "web\\src\\hooks\\useSettings.ts:26-59", "web\\src\\hooks\\useSettings.ts:81-105", "web\\src\\api\\settings.ts:24", "internal\\api\\router.go:3659"],
+      "behavior": "Existing settings query key ['settings'], five-minute stale time, refetchOnMount always, retry 1. Default ai_mode off and empty flags hide the AI section; non-off mode and exact true nl-dashboard-composer flag enable it. Missing settings use existing defaults; no page-owned preference writes."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / Grid",
+      "category": "Existing layout",
+      "owner": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "web\\src\\components\\layout\\PageContainer.tsx", "web\\src\\components\\layout\\Grid.tsx"],
+      "contract": "Page title/subtitle, inherited shell and full-width min-w-0 container; cols default 1/xl 3/3xl 4, gap 4. Do not add a competing page-width or workspace selector owner.",
+      "evidence": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-17", "web\\src\\components\\layout\\Grid.tsx:71-101", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:232-238"]
+    },
+    {
+      "name": "Button / CopyButton / Textarea / GlassPanel / Heading / Text / HelperText",
+      "category": "Existing UI primitives",
+      "owner": "web\\src\\components\\ui",
+      "contract": "Keep category imports, native controlled textarea, accessible name, spellCheck false, monospaced JSON, trim-aware Copy, whitespace-aware Clear, copy callbacks and stable persistence key. CopyButton invalidates pending feedback after text changes/unmount.",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:43", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:294-319", "web\\src\\components\\ui\\Textarea.tsx:44-54", "web\\src\\components\\ui\\Textarea.tsx:77-104", "web\\src\\components\\ui\\CopyButton.tsx:81-119"]
+    },
+    {
+      "name": "InlineCallout",
+      "category": "Existing feedback composite",
+      "owner": "web\\src\\components\\feedback\\InlineCallout.tsx",
+      "contract": "success/warning with icon plus localized copy guidance; non-action callout renders role=status.",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:321-334", "web\\src\\components\\feedback\\InlineCallout.tsx:106-109"]
+    },
+    {
+      "name": "AINLDashboardComposer / AIFeatureCard / AiOutputPanel / withAiFeature",
+      "category": "Existing AI domain owners",
+      "owner": "web\\src\\components\\ai",
+      "contract": "Preserve nl-dashboard-composer gate, prompt, Ask Helix contextual accessible name, streaming/disabled state, output/activity/usage presentation and separate Apply callback. Internal shared concrete imports are intentional, not feature barrel violations.",
+      "evidence": ["web\\src\\components\\ai\\AINLDashboardComposer.tsx:126-218", "web\\src\\components\\ai\\AIFeatureCard.tsx:275-309", "web\\src\\components\\ai\\AIFeatureCard.tsx:343-350", "web\\src\\components\\ai\\AiOutputPanel.tsx:72-113"]
+    },
+    {
+      "name": "FadeIn / usePageTitle",
+      "category": "Existing motion and app hooks",
+      "owner": ["web\\src\\components\\motion\\FadeIn.tsx", "web\\src\\hooks\\usePageTitle.ts"],
+      "contract": "Keep reduced-motion preference delegation and titleStore integration; no additional motion or document-title manager.",
+      "evidence": ["web\\src\\components\\motion\\FadeIn.tsx:23-36", "web\\src\\hooks\\usePageTitle.ts:24-30"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "line": 62,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Six name/description pairs duplicate the backend curated whitelist exactly at the inspected snapshot. This is intentional static reference data, but two manually edited owners can drift.",
+      "fix": "Keep the current six entries and stable identifiers. If catalog maintenance is centralized later, coordinate a generated/shared metadata contract with backend ownership; do not invent a catalog endpoint during visual modernization.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["internal\\api\\ainldash\\handler.go:330-355"]
+    },
+    {
+      "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "line": 255,
+      "rule": "mission 4 / MDC-015",
+      "detail": "Workflow steps and catalog entries repeat low-chrome bordered list-item presentation, but have different semantics and only this page was audited.",
+      "fix": "Reuse existing primitives; retain local list rendering unless independent-consumer evidence establishes a shared composite need.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:355"]
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Workflow stacks by default and uses three columns at sm: page 251.",
+      "Editor/catalog stack below xl; editor spans two of three xl columns; both span two of four 3xl columns: page 51, 282-283, 340.",
+      "Catalog changes 1 -> 2 at sm -> 1 at xl -> 2 at 3xl: page 351.",
+      "Wrapping action rows, wrapLabel, min-w-0, break-words headings and break-all panel identifiers resist overflow: page 284, 306-318, 341, 361."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+        "line": 251,
+        "rule": "MDC-043",
+        "detail": "Three workflow columns at sm and two catalog columns at sm are viewport-driven; narrow allocated shell/container widths and long localized descriptions may become cramped. This is a test risk, not observed clipping.",
+        "fix": "Exercise the existing layout at all ten contract widths, reduced allocated width, RTL and 200% text before changing breakpoints; retain all steps/catalog entries on mobile.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "runtimeStatus": "Unverified; no viewport, screenshot, compiled breakpoint or overflow measurements."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Three section h2 headings, ordered workflow and unordered catalog lists: page 242, 251, 284, 341, 351.",
+      "JSON editor and AI prompt have localized aria-labels: page 302; AINLDashboardComposer 189.",
+      "Decorative page icons are aria-hidden; noncolor panel-kind glyphs retained: page 91-96, 257-258, 285, 342.",
+      "Shared Textarea supplies stable useId, descriptions and focus token classes; page currently supplies no visible primitive label or associated hint.",
+      "Clipboard feedback uses InlineCallout role=status and CopyButton aria-live; AI errors use role=alert.",
+      "FadeIn delegates reduced motion, rather than implementing a page-level animation policy."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+        "line": 294,
+        "rule": "MDC-021 / MDC-040",
+        "detail": "Editor has an accessible name, but adjacent manual-copy/Grafana guidance is not associated via aria-describedby. AI prompt similarly relies on aria-label and an unassociated surrounding description.",
+        "fix": "Associate existing localized helper content through stable explicit IDs/aria-describedby or the existing Textarea hint API; preserve wording and controlled-field behavior.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:288-305", "web\\src\\components\\ai\\AINLDashboardComposer.tsx:182-191"]
+      },
+      {
+        "file": "web\\src\\components\\ui\\Button.tsx",
+        "line": 38,
+        "rule": "MDC-040",
+        "detail": "Default md minimum height is 40px; sm AI actions use 36px. These are below the design-contract 44px mobile default, but actual composed targets and WCAG spacing exceptions were not measured.",
+        "fix": "Use existing lg/density options where suitable; shared owner should review opt-in mobile target sizing without altering every caller's saved density/default. Validate localized wrapped labels and reachability.",
+        "owner": "shared",
+        "confidence": "medium",
+        "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:310", "web\\src\\components\\ai\\AINLDashboardComposer.tsx:199", "web\\src\\components\\ai\\AIFeatureCard.tsx:284"]
+      }
+    ],
+    "runtimeStatus": "Keyboard, actual focus order/restoration, screen-reader announcements, contrast, target dimensions, forced colors and OS reduced-motion behavior are unverified."
+  },
+  "states": {
+    "manual": {
+      "initial": "Immediate local draft or blank editor; no network loading gate appropriate for this source.",
+      "empty": "Editable textarea placeholder; Copy/Clear disabled for empty input. Whitespace disables only Copy.",
+      "success": "Localized copied-to-Grafana guidance; editor remains intact.",
+      "error": "Clipboard unavailable/rejected warnings retain editor and instruct manual selection/copy.",
+      "persistenceFailure": "Storage read/write errors silently degrade; no persistence-failure notice exists.",
+      "offlineStale": "No fleet query or freshness value in manual editor; do not label user text stale or replace it with a network error.",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:99-119", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:155-183", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:223-228"]
+    },
+    "ai": {
+      "offOrUnresolvedSettings": "Only AI section omitted; manual/editor/catalog remain visible.",
+      "idle": "Empty prompt disables draft action; output omitted before a stream.",
+      "loading": "Streaming disables draft/apply and supplies thinking/output feedback through shared owner.",
+      "empty": "Done without text displays No output was generated; a typed draft can still independently exist.",
+      "error": "Shared alert displays stream error; manual source remains independent and re-draft is available when not streaming.",
+      "partial": "Invalid individual draft slots are silently removed by parser; omitted slots produce an empty array. No truncation summary is surfaced.",
+      "offlineStale": "No explicit offline versus HTTP/SSE error presentation in this composition; no source timestamp or synthetic freshness should be invented.",
+      "evidence": ["web\\src\\components\\ai\\AINLDashboardComposer.tsx:91-125", "web\\src\\components\\ai\\AINLDashboardComposer.tsx:140-168", "web\\src\\components\\ai\\AiOutputPanel.tsx:72-113", "web\\src\\hooks\\useAiStream.ts:351-414"]
+    },
+    "issues": [
+      {
+        "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+        "line": 92,
+        "rule": "MDC-026 / MDC-044 / mission 24-25",
+        "detail": "Raw hook errors such as stream_http_404 or stream_incomplete can be shown directly. They do not explain recovery or distinguish unavailable/offline states in user language.",
+        "fix": "Shared AI owner should map known transport codes to localized, actionable messages while retaining source diagnostics, existing output/activity, manual baseline and re-draft behavior. Do not infer offline from every failure.",
+        "owner": "shared",
+        "confidence": "high",
+        "evidence": ["web\\src\\hooks\\useAiStream.ts:351-360", "web\\src\\hooks\\useAiStream.ts:391-414"]
+      },
+      {
+        "file": "web\\src\\components\\ai\\AINLDashboardComposer.tsx",
+        "line": 91,
+        "rule": "MDC-026 / preservation",
+        "detail": "Client parser drops invalid slots and defaults absent slots to []; a parseable partial proposal may be applied without a notice. This is a source behavior, not evidence that the server actually emits malformed drafts.",
+        "fix": "Integration owner should review exposing partial/malformed-proposal feedback, retaining the current editor until explicit Apply and preserving existing valid slot handling; do not silently change the tool/wire contract during presentation work.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "runtimeStatus": "All state descriptions are source inspection, not executed interactions."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "line": 257,
+      "rule": "MDC-010 / MDC-012 / mission 7",
+      "detail": "Repeated fixed cyan rings/icons plus all six cyan identifiers and heading icons spend accent emphasis on reference decoration. Fixed text-cyan-300 also bypasses theme-aware text contrast.",
+      "fix": "Use existing neutral surface/border/primary-secondary text tokens for workflow and catalog chrome; reserve accent for the primary copy action or meaningful state, retaining icons and identifiers.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:285", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:342", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:358-361"]
+    },
+    {
+      "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "line": 358,
+      "rule": "MDC-015 / mission 6-8",
+      "detail": "Catalog icon tiles use fixed white-alpha background and ring rather than shared theme surfaces. These are low-alpha whites, not pure-white body text; actual visual noise/contrast was not measured.",
+      "fix": "Replace decorative white-alpha chrome with existing neutral surface/control border tokens; do not create another card wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / MDC-020 / mission 7",
+      "detail": "Shared AI CTA overrides outline chrome with fixed cyan border/background/text/hover/focus intensities, including border-cyan-400/70 and dark:text-cyan-100. Badge also repeats cyan styling. It competes visually with the editor primary action.",
+      "fix": "Shared owner should restrain existing AI card/button/badge using canonical tokens and semantic Button variants, preserving Helix identity, labels, disabled/busy behavior and all children/output slots.",
+      "owner": "shared",
+      "confidence": "high",
+      "evidence": ["web\\src\\components\\ai\\AIFeatureCard.tsx:214-222"]
+    },
+    {
+      "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "line": 81,
+      "rule": "MDC-012 / MDC-015",
+      "detail": "Shared output surface uses bg-white/[0.02]; fixed red-300 error text is not theme-aware. No measured contrast failure is claimed.",
+      "fix": "Adopt existing surface and semantic error/text tokens in the shared renderer while keeping alert semantics and streamed/evidence content.",
+      "owner": "shared",
+      "confidence": "high",
+      "evidence": ["web\\src\\components\\ai\\AiOutputPanel.tsx:85-87"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "line": 366,
+      "rule": "MDC-044",
+      "detail": "Catalog descriptions are rendered directly from English literals, unlike surrounding localized labels. Identifiers are protocol data and should remain untranslated.",
+      "fix": "Localize description presentation through the existing canonical catalog process while preserving all six original meanings, SI SQL identifiers and stable panel names. Catalog edits need their designated shared owner.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:62-87"]
+    },
+    {
+      "file": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "line": 143,
+      "rule": "MDC-045 / evidence integrity",
+      "detail": "Comments and instructions call the typed title/slots envelope Grafana-ready, but no conversion into Grafana native panel JSON or actual import acceptance was inspected. Manual input also has no JSON parse/validation barrier by design.",
+      "fix": "Preserve freeform manual editing/copy and no-push behavior. Record Grafana compatibility as integration QA unknown; do not promise verified import, add a push action, or impose validation that removes current manual capability.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:146", "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:299", "web\\src\\components\\ai\\AINLDashboardComposer.tsx:36-50"]
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Manual workflow already uses shared layout/primitives, source-independent states and explicit AI consent. Prioritize theme-neutral reference chrome, localized catalog descriptions, helper association and shared AI error/target review; do not turn this into a fleet-metric dashboard.",
+    "acceptanceDependency": "Shared AI presentation review and focused integration/browser QA, not a speculative backend rewrite."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained AIFeatureCard presentation and mobile action sizing",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "propsVariantsStates": "Retain title, description, buttonLabel, badgeLabel, canStart, stream, inputSlot, children, buttonPlacement, onAction and contextual accessible action name; neutral outline chrome; idle/streaming/disabled/busy and wrapped mobile action reachability.",
+      "usedBy": ["web\\src\\components\\ai\\AINLDashboardComposer.tsx:171-213"],
+      "dependsOn": ["Existing Button variants/sizes at web\\src\\components\\ui\\Button.tsx:9-50", "MDC-010, MDC-020, MDC-040"],
+      "evidence": ["web\\src\\components\\ai\\AIFeatureCard.tsx:214", "web\\src\\components\\ai\\AIFeatureCard.tsx:282-309"],
+      "scopeLimit": "Other AI consumers were not audited; coordinate existing shared owner, not a replacement AI card."
+    },
+    {
+      "name": "Theme-aware, actionable AI output/error presentation",
+      "existingOwnerFile": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "propsVariantsStates": "Retain text/state/error/activity/usage/pendingChild, null idle output, initial thinking placeholder, streamed partial text, done-empty, alert error and evidence trail. Present known error codes with localized recovery and neutral surfaces; do not discard retained content or infer offline.",
+      "usedBy": ["web\\src\\components\\ai\\AIFeatureCard.tsx:343-350", "web\\src\\components\\ai\\AINLDashboardComposer.tsx:171"],
+      "dependsOn": ["Existing useAiStream transport/error ownership", "Existing canonical i18n catalogs and semantic tokens", "MDC-026, MDC-044"],
+      "evidence": ["web\\src\\components\\ai\\AiOutputPanel.tsx:72-113", "web\\src\\hooks\\useAiStream.ts:351-360"],
+      "scopeLimit": "No additional shared component or backend endpoint is required by this report."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "relatedButNotEquivalent": [
+      "router.go:3664-3665 exposes settings/dashboard-layouts, but this page does not consume them; preserve local ai.dashboardComposer.draft rather than substituting a home-dashboard settings API.",
+      "router.go:5108 and ai_routes.go:773 expose a widget draft handler, distinct from this Grafana-oriented composer. No second page implementation was inspected."
+    ],
+    "limits": "No app-wide search/inventory or claim that all competing implementations are absent. Existing static catalog duplication is documented separately."
+  },
+  "preservation": {
+    "sourceSha256": "4916FBF626E86B2B1B956A68F96A5CB794CD60707BF445B1E6DF5500A8EE298C",
+    "hashAlgorithm": "SHA-256 of original source file bytes via Get-FileHash",
+    "currentLineCount": 377,
+    "sectionCounts": {
+      "pageLevelBands": 3,
+      "alwaysVisibleNamedSections": 3,
+      "optionalAiSections": 1,
+      "pageGlassPanelOpenings": 3,
+      "pageChartContainerOpenings": 0,
+      "workflowSteps": 3,
+      "catalogEntries": 6
+    },
+    "sections": [
+      {"name": "How it works", "evidence": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:239-273", "preserve": "Intro and all three numbered pick/compose/copy instructions."},
+      {"name": "Helix natural-language dashboard composer", "evidence": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:275-277", "preserve": "Optional feature-gated prompt, draft/output/evidence and explicit Apply; intentionally absent in AI-off mode."},
+      {"name": "Manual dashboard JSON editor", "evidence": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:283-337", "preserve": "18-row monospaced freeform editor, hint/placeholder/accessibility, Copy/Clear and status."},
+      {"name": "Curated panel catalog", "evidence": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx:340-371", "preserve": "All six names, descriptions, alphabetical ordering and type glyphs."}
+    ],
+    "actions": [
+      {"name": "Edit JSON", "evidence": "DashboardsPage.tsx:294-305", "behavior": "Accept arbitrary text; clear prior status; persist raw editor value without silently parsing/reformatting."},
+      {"name": "Copy to clipboard", "evidence": "DashboardsPage.tsx:307-315", "behavior": "Enabled only for non-whitespace; copy trimmed text; success and manual-copy fallback warnings leave editor intact."},
+      {"name": "Clear", "evidence": "DashboardsPage.tsx:150-153,228,316-319", "behavior": "Enabled even for whitespace-only content; empty editor, clear status and remove persisted key."},
+      {"name": "Ask Helix / Draft dashboard", "evidence": "AINLDashboardComposer.tsx:140-163; AIFeatureCard.tsx:275-309", "behavior": "Requires trimmed prompt and enabled AI setting; reset candidate at new draft start; guard duplicate streaming submission."},
+      {"name": "Apply to editor", "evidence": "AINLDashboardComposer.tsx:165-168,195-211; DashboardsPage.tsx:141-148", "behavior": "Explicit action replaces only editor JSON with pretty-printed draft.dashboard and clears status; output is not auto-applied or pushed."},
+      {"name": "Manual selection/copy and retry after clipboard failure", "evidence": "DashboardsPage.tsx:155-183", "behavior": "Retain full text for native keyboard selection/copy; do not navigate away or discard user input."}
+    ],
+    "catalogNames": ["alerts_count_stat", "battery_soc_stat", "charging_sessions_table", "drives_per_day_timeseries", "energy_used_per_day_barchart", "vehicles_table"],
+    "configuration": [
+      "Preserve localStorage key ai.dashboardComposer.draft and raw value semantics across navigation/reload.",
+      "Preserve ai_mode and ai_features['nl-dashboard-composer'] opt-in and no automatic configuration mutations.",
+      "Preserve theme/density/font/locale preferences through existing primitives; do not reset persisted neon-cyan theme ID.",
+      "Do not add vehicle/date selectors or wire header scope into this static install-wide catalog without an actual backend contract.",
+      "No fleet statistics, chart series, saved-dashboard CRUD, direct Grafana push, authentication tokens or invented measurements are present in the page."
+    ],
+    "testEvidence": {
+      "inspected": "web\\src\\features\\power-user\\pages\\DashboardsPage.test.tsx:1-110,117-340",
+      "coverageInSource": "Manual persistence, trim-aware copy, whitespace-clear, clipboard failures/retry, stale pending-copy feedback, six-panel ordering, section scaffold and explicit draft application.",
+      "limits": "Tests were read, not run; AI composer mocked and clipboard stubbed, so even an executed page suite would not prove real provider/Grafana/browser behavior."
+    },
+    "lineCountGate": "Future page plus extracted same-feature components must retain at least 264 lines (70% of 377), or document genuinely equivalent decomposition; this audit performs no modernization.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-163.json", ".agent-status\\audit-page-163.txt"]
+  },
+  "evidenceLimits": {
+    "method": "Read-only source audit with scoped file reads/searches, source hash and literal pattern counts. Only report and heartbeat written.",
+    "instructionsRead": [
+      "docs\\frontend-worker-conventions.md:1-87",
+      "docs\\frontend-design-contract.md:1-395",
+      "docs\\frontend-mission.md:18-105,145-236,308-394,507-580,599-778,920-999,1415-1486"
+    ],
+    "scopedPatternCounts": {
+      "target": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+      "inlineStyleAttributes": 0,
+      "caseSensitiveRawButtonInputTextareaSelectTable": 0,
+      "directRechartsReactLeafletFramerMotionImports": 0,
+      "legacyRelativeApiImports": 0,
+      "literalNeonOrGlowMatches": 0,
+      "fixedWhiteTextMatches": 0,
+      "fixedCyanOrWhiteAlphaMatchedLines": 5,
+      "limitations": "Select-String initial default case-insensitive raw-control scan counted three shared Textarea references; corrected -CaseSensitive scan returned zero. Literal matches do not establish absence of inherited glow/saturation or accessible contrast."
+    },
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\power-user\\pages\\DashboardsPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\power-user\\pages\\DashboardsPage.tsx).Count", "exitCode": 0, "output": "4916FBF626E86B2B1B956A68F96A5CB794CD60707BF445B1E6DF5500A8EE298C; 377"},
+      {"command": "Select-String -CaseSensitive -Path web\\src\\features\\power-user\\pages\\DashboardsPage.tsx -Pattern '<(button|input|textarea|select|table)\\b', then Measure-Object; count '<GlassPanel\\b' and '<ChartContainer\\b' separately", "exitCode": 0, "output": "case-sensitive raw controls=0; GlassPanel openings=3; ChartContainer openings=0"},
+      {"command": "Get-Content -Raw docs\\frontend-audits\\audit-page-163.json | ConvertFrom-Json -ErrorAction Stop; compare required property names, Get-FileHash and Get-Content line count against report", "exitCode": 0, "output": "JSON parse: PASS; Required fields: 19/19; Source hash unchanged: 4916FBF626E86B2B1B956A68F96A5CB794CD60707BF445B1E6DF5500A8EE298C; Source line count: 377"}
+    ],
+    "notRun": [
+      "No Git, agents, source changes, dependency installs, full-repo lint/build, TypeScript, test suites or production mutations.",
+      "The audit skill script was inspected but not executed because it unconditionally runs project-wide TypeScript; literal checks were scoped to the assigned page.",
+      "No browser mount, screenshots, network requests, keyboard/screen-reader checks, real clipboard/storage failure simulation, contrast measurement, viewport/RTL/theme/forced-color or reduced-motion QA.",
+      "No SQL execution, provider invocation, Grafana import or server runtime proof. Backend snippets establish route/catalog source ownership only.",
+      "Transitive HelixEvidenceTrail/AIThinkingIndicator, theme engine, global CSS and localization catalogs were not independently audited; imported behavior remains an explicit evidence boundary."
+    ],
+    "sourceDrift": "Hash pins the read snapshot; disjoint concurrent writers may change dependencies. Re-read affected source before implementation/acceptance.",
+    "failedLookup": "Page comment references internal/api/ai_nl_dashboard_composer_handler.go, which is absent. Router traced the actual owner to internal\\api\\ainldash\\handler.go; no contents inferred from the missing path."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx",
+    "web\\src\\features\\power-user\\pages\\DashboardsPage.test.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\ai\\AINLDashboardComposer.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\ui\\Textarea.tsx",
+    "web\\src\\components\\feedback\\InlineCallout.tsx",
+    "web\\src\\components\\layout\\Grid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\hooks\\usePageTitle.ts",
+    "web\\src\\api\\settings.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\ainldash\\handler.go"
+  ]
+}

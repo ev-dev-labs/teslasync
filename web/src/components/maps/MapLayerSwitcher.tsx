@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
+import { Button } from '../ui/Button'
 import type { MapStyle } from './MapTileLayer'
 
 interface MapLayerSwitcherProps {
@@ -23,10 +25,9 @@ export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
       role="group"
       aria-label={t('maps.layerSwitcher.label', 'Map style')}
       className={cn(
-        'absolute bottom-6 left-2 z-[1000] flex gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] backdrop-blur-md p-1 shadow-lg',
+        'absolute bottom-6 start-2 end-2 z-map-control grid w-fit max-w-full grid-cols-4 gap-1 rounded-shape-sm border border-[var(--control-border)] bg-[var(--surface-1)] p-1 shadow-e2',
         // Windows High Contrast / forced-colors mode.
-        // The semi-transparent overlay surface + alpha border vanish under
-        // `forced-colors: active`. Pin a system-colour wrapper so the
+        // Pin a system-colour wrapper so the
         // floating layer-switcher control stays visible against the
         // raster map tiles (which Leaflet renders unchanged in
         // forced-colors mode).
@@ -37,8 +38,11 @@ export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
         const label = t(l.labelKey, l.defaultLabel)
         const active = current === l.id
         return (
-          <button
+          <Button
             key={l.id}
+            variant="ghost"
+            size="auto"
+            wrapLabel
             // Explicit type so the control never acts as a form submit
             // button when a switcher is portalled inside a <form>.
             type="button"
@@ -50,19 +54,21 @@ export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
             aria-label={label}
             aria-pressed={active}
             className={cn(
-              'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+              'min-h-11 min-w-11 gap-1 px-2 py-1 md:min-h-d-row md:min-w-d-row',
+              typography.size.xs,
+              typography.weight.medium,
               // Give each tile-style button its own
-              // system-colour border so the active selection (which only
-              // differs by background tint normally) remains distinguishable.
-              'forced-colors:border forced-colors:border-[ButtonBorder]',
+              // system-colour border and explicit selected fill so the
+              // active selection remains distinguishable.
+              'border forced-colors:border-[ButtonBorder]',
               active
-                ? 'bg-[var(--surface-2)] text-[var(--text-primary)] shadow-sm'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+                ? 'border-[var(--control-border-hover)] bg-[var(--surface-2)] text-[var(--text-primary)] forced-colors:[forced-color-adjust:none] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText] forced-colors:hover:bg-[Highlight]'
+                : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] forced-colors:bg-[ButtonFace] forced-colors:text-[ButtonText]',
             )}
           >
-            <span aria-hidden="true">{l.icon}</span>
-            <span className="hidden sm:inline">{label}</span>
-          </button>
+            <span aria-hidden="true" className="shrink-0">{l.icon}</span>
+            <span className="hidden min-w-0 break-words sm:inline">{label}</span>
+          </Button>
         )
       })}
     </div>

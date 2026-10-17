@@ -15,24 +15,32 @@ import {
   Text,
 } from '@/components/ui';
 import { useFormatting } from '@/hooks/useFormatting';
-import { chartTokens } from '@/lib/tokens';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { chartTokens, typography } from '@/lib/tokens';
+
 import { convertDistanceToSI } from '@/lib/unitConversion';
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
 import { UtilizationSectionBody } from './UtilizationSectionBody';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TimeCostOverviewProps {
   summary: UtilizationSummary;
   state: UtilizationSectionState;
+  hasSource?: boolean;
+}
+
+function finite(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }
 
 export function TimeCostOverview({
   summary,
   state,
+  hasSource = true,
 }: TimeCostOverviewProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const {
@@ -40,15 +48,26 @@ export function TimeCostOverview({
     formatDistance,
     formatEnergy,
   } = useUtilizationDisplay();
-  const observedHours = summary.window.observedDurationS / 3_600;
-  const noRecordedDriveHours = Math.max(
-    0,
-    observedHours - summary.drivingHours,
-  );
+  const observedHours = finite(summary.window.observedDurationS) &&
+    summary.window.observedDurationS > 0
+    ? summary.window.observedDurationS / 3_600 : null;
+  const drivingHours = summary.accounting.usableDurationRows > 0 &&
+    finite(summary.drivingHours) ? summary.drivingHours : null;
+  const completeDuration = summary.accounting.excludedDurationRows === 0;
+  const noRecordedDriveHours = observedHours != null &&
+    drivingHours != null && completeDuration
+    ? Math.max(0, observedHours - drivingHours) : null;
+  const partial = summary.accounting.excludedDurationRows > 0 ||
+    summary.accounting.excludedDistanceRows > 0 ||
+    summary.accounting.excludedEnergyRows > 0 ||
+    summary.accounting.truncatedDurationRows > 0;
   const distanceUnitKm =
     convertDistanceToSI(1, distanceUnit) / 1_000;
   const costPerDisplayDistance =
-    summary.costPerKm != null
+    summary.accounting.usableEnergyRows > 0 &&
+    finite(summary.pricedDistanceM) && summary.pricedDistanceM > 0 &&
+    finite(summary.costPerKm) && finite(distanceUnitKm) &&
+    finite(summary.costPerKm * distanceUnitKm)
       ? summary.costPerKm * distanceUnitKm
       : null;
 
@@ -60,7 +79,8 @@ export function TimeCostOverview({
           'Energy cost in period',
         ),
         value:
-          summary.totalEnergyCost != null
+          summary.accounting.usableEnergyRows > 0 &&
+          finite(summary.totalEnergyCost)
             ? formatCurrency(summary.totalEnergyCost)
             : '—',
       },
@@ -73,7 +93,6 @@ export function TimeCostOverview({
           costPerDisplayDistance != null
             ? `${formatCurrency(
                 costPerDisplayDistance,
-                3,
               )} / ${distanceUnit}`
             : '—',
       },
@@ -83,15 +102,17 @@ export function TimeCostOverview({
           'Energy cost per driving hour',
         ),
         value:
-          summary.costPerDrivingHour != null
+          summary.accounting.usableEnergyRows > 0 &&
+          finite(summary.pricedDrivingS) && summary.pricedDrivingS > 0 &&
+          finite(summary.costPerDrivingHour)
             ? formatCurrency(summary.costPerDrivingHour)
             : '—',
       },
       {
         label: t('utilization.energy', 'Energy used'),
         value:
-          summary.accounting.usableEnergyRows > 0
-            ? formatEnergy(summary.energyWh, { precision: 1 })
+          summary.accounting.usableEnergyRows > 0 && finite(summary.energyWh)
+            ? formatEnergy(summary.energyWh)
             : '—',
       },
       {
@@ -100,12 +121,12 @@ export function TimeCostOverview({
           'Settings electricity rate',
         ),
         value:
-          summary.ratePerKwh != null
+          finite(summary.ratePerKwh)
             ? t(
                 'utilization.energyRateValue',
                 '{{rate}} / kWh',
                 {
-                  rate: formatCurrency(summary.ratePerKwh, 3),
+                  rate: formatCurrency(summary.ratePerKwh),
                 },
               )
             : '—',
@@ -119,10 +140,10 @@ export function TimeCostOverview({
           'utilization.costCoverageValue',
           '{{measured}} of {{eligible}} eligible drives',
           {
-            measured: fmtInt(
+            measured: finite(summary.accounting.usableEnergyRows) ? fmtInt(
               summary.accounting.usableEnergyRows,
-            ),
-            eligible: fmtInt(summary.accounting.eligibleRows),
+            ) : '—',
+            eligible: finite(summary.accounting.eligibleRows) ? fmtInt(summary.accounting.eligibleRows) : '—',
           },
         ),
       },
@@ -133,7 +154,7 @@ export function TimeCostOverview({
       formatCurrency,
       formatEnergy,
       summary,
-      t,
+      t, fmtInt,
     ],
   );
 
@@ -149,10 +170,10 @@ export function TimeCostOverview({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
           <Activity
-            className="h-4 w-4 text-cyan-300"
+            className={`h-4 w-4 ${typography.color.secondary}`}
             aria-hidden="true"
           />
-          {t('utilization.timeSplit', 'Where the Hours Go')}
+          {t('utilization.timeSplit', 'Where the hours go')}
           <HelpTooltip
             size="sm"
             i18nKey="help.utilization.body"
@@ -164,12 +185,12 @@ export function TimeCostOverview({
           />
         </PanelTitle>
         <UtilizationSectionBody state={state} className="min-h-56">
-          {summary.accounting.eligibleRows === 0 ? (
+          {!hasSource || summary.accounting.eligibleRows === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               icon={
                 <Activity className="h-8 w-8" aria-hidden="true" />
               }
-              message={t(
+              message={!hasSource ? t('vehicles.evidenceBrief.status.unavailable', 'No source data') : t(
                 'utilization.noData',
                 'No drives in this period yet.',
               )}
@@ -181,13 +202,14 @@ export function TimeCostOverview({
                   'utilization.drivingHours',
                   'Driving hours',
                 )}
-                value={summary.drivingHours}
-                max={Math.max(observedHours, 1)}
+                value={drivingHours}
+                max={observedHours ?? 0}
+                fill="solid"
                 color={chartTokens.series[5]}
-                sublabel={t(
+                sublabel={drivingHours == null ? '—' : t(
                   'utilization.hours',
                   '{{h}} h',
-                  { h: fmtNumber(summary.drivingHours, 1) },
+                  { h: fmtNumber(drivingHours) },
                 )}
               />
               <MetricBar
@@ -196,12 +218,13 @@ export function TimeCostOverview({
                   'Time without a recorded drive',
                 )}
                 value={noRecordedDriveHours}
-                max={Math.max(observedHours, 1)}
+                max={observedHours ?? 0}
+                fill="solid"
                 color={chartTokens.series[4]}
-                sublabel={t(
+                sublabel={noRecordedDriveHours == null ? '—' : t(
                   'utilization.hours',
                   '{{h}} h',
-                  { h: fmtNumber(noRecordedDriveHours, 1) },
+                  { h: fmtNumber(noRecordedDriveHours) },
                 )}
               />
               <Text variant="bodySm" as="p" className="pt-1">
@@ -210,18 +233,21 @@ export function TimeCostOverview({
                   'Over this window the car was in motion {{pct}}% of the time and covered {{dist}}.',
                   {
                     pct:
-                      summary.drivingShare != null
+                      drivingHours != null && finite(summary.drivingShare)
                         ? fmtNumber(
                             summary.drivingShare * 100,
-                            1,
                           )
                         : '—',
-                    dist: formatDistance(summary.distanceM, {
-                      precision: 0,
-                    }),
+                    dist: summary.accounting.usableDistanceRows > 0 &&
+                      finite(summary.distanceM) ? formatDistance(summary.distanceM) : '—',
                   },
                 )}
               </Text>
+              {partial && (
+                <Text variant="caption" as="p">
+                  {t('vehicles.evidenceBrief.status.partial', 'Partial source coverage')}
+                </Text>
+              )}
               <Text variant="caption" as="p">
                 {t(
                   'utilization.timeSplitCaution',
@@ -236,35 +262,41 @@ export function TimeCostOverview({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-3 flex items-center gap-2">
           <Wallet
-            className="h-4 w-4 text-cyan-300"
+            className={`h-4 w-4 ${typography.color.secondary}`}
             aria-hidden="true"
           />
-          {t('utilization.ledger', 'Cost of Motion')}
+          {t('utilization.ledger', 'Cost of motion')}
         </PanelTitle>
         <UtilizationSectionBody state={state} className="min-h-56">
-          {summary.accounting.eligibleRows === 0 ? (
+          {!hasSource || summary.accounting.eligibleRows === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               icon={<Wallet className="h-8 w-8" aria-hidden="true" />}
-              message={t(
+              message={!hasSource ? t('vehicles.evidenceBrief.status.unavailable', 'No source data') : t(
                 'utilization.noData',
                 'No drives in this period yet.',
-              )}
-            />
-          ) : summary.accounting.usableEnergyRows === 0 ? (
-            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
-              icon={<Wallet className="h-8 w-8" aria-hidden="true" />}
-              message={t(
-                'utilization.costNoEnergy',
-                'No eligible drives include usable energy measurements for this period.',
               )}
             />
           ) : (
             <>
               <KVList items={costItems} />
+              {summary.accounting.usableEnergyRows === 0 && (
+                <EmptyState /* no-action: field availability follows recorded telemetry */
+                  icon={<Wallet className="h-8 w-8" aria-hidden="true" />}
+                  message={t(
+                    'utilization.costNoEnergy',
+                    'No eligible drives include usable energy measurements for this period.',
+                  )}
+                />
+              )}
+              {partial && (
+                <Text variant="caption" as="p">
+                  {t('vehicles.evidenceBrief.status.partial', 'Partial source coverage')}
+                </Text>
+              )}
               <Text variant="caption" as="p" className="mt-3">
                 {t(
                   'utilization.costAssumption',
-                  'Energy-only estimate using the Settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.',
+                  'Energy-only estimate using the settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.',
                 )}
               </Text>
             </>

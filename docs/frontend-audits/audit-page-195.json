@@ -1,0 +1,215 @@
+{
+  "item": "audit-page-195",
+  "page": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+  "routes": ["/state-debugger"],
+  "purpose": "Inspect vehicle and sub-FSM transition evidence, live state, history, snapshots and optional AI narration.",
+  "primaryGoal": "Explain how a selected vehicle entered a state by inspecting filtered transitions, triggers, historical signals and previous-snapshot differences.",
+  "dataSources": [
+    {
+      "hook": "useVehicleStateMachine",
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/state",
+      "owner": "web\\src\\api\\hooks\\useAdmin.ts",
+      "evidence": ["web\\src\\api\\hooks\\useAdmin.ts:367-374", "internal\\api\\router.go:3333", "internal\\api\\vehicle\\handler.go:55-65"],
+      "behavior": "Selected vehicle; independent live polling; AbortSignal forwarded. Hook declares VehicleState but actual response is an envelope. Page casts through unknown and reads state while ignoring envelope observation freshness and verified fields."
+    },
+    {
+      "hook": "useFSMStats",
+      "endpoint": "GET /api/v1/fsm/stats?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useFSM.ts",
+      "evidence": ["web\\src\\api\\hooks\\useFSM.ts:48-51", "web\\src\\api\\hooks\\useFSM.ts:85-92", "internal\\api\\router.go:4243-4280"],
+      "behavior": "Positive numeric ID gated; polling and cancellation; active_subs is live in-memory FSM state, not range-filtered. Backend can return enabled:false without active_subs."
+    },
+    {
+      "hook": "useFSMTransitions",
+      "endpoint": "GET /api/v1/fsm/transitions",
+      "owner": "web\\src\\api\\hooks\\useFSM.ts",
+      "evidence": ["web\\src\\api\\hooks\\useFSM.ts:63-82", "web\\src\\api\\hooks\\useFSM.ts:106-143", "internal\\api\\router.go:4281-4343"],
+      "behavior": "vehicle_id, fsm_name except all, hours, page, per_page, encoded start/end. Query key includes all bounds and pagination; polling and cancellation. Router passes parsed bounds to repository and returns data,total,page,per_page. Repository half-open filtering was not inspected."
+    },
+    {
+      "hook": "useSignalSnapshot (selected and previous)",
+      "endpoint": "GET /api/v1/signals/{vehicleID}/snapshot?at={timestamp}",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "evidence": ["web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:475-493", "web\\src\\api\\hooks\\useTelemetry.ts:353-372", "internal\\api\\router.go:4886", "internal\\api\\router.go:4909"],
+      "behavior": "Enabled only for a selected/previous transition and positive vehicle ID; empty signal CSV requests all signals. Values, source layer and age are preserved in inspector/copy JSON. No live snapshot is requested without selection despite the page comment."
+    },
+    {
+      "hook": "useAiStream via AIStateMachineDebuggerNarrator",
+      "endpoint": "POST /api/v1/ai/system/fsm/narrate",
+      "owner": "web\\src\\components\\ai\\AIStateMachineDebuggerNarrator.tsx",
+      "evidence": ["web\\src\\components\\ai\\AIStateMachineDebuggerNarrator.tsx:140-176", "internal\\api\\router.go:2671-2683", "internal\\api\\router.go:5096"],
+      "behavior": "Opt-in stream scoped by vehicle/from_unix/to_unix; shared AI gate; disabled for invalid window; source change resets stream identity. Main router constructs and injects handler; delegated route mount and backend narration capability were not inspected."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState",
+      "endpoint": null,
+      "owner": "Existing workspace selection and header View settings",
+      "evidence": ["web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:100-143", "web\\src\\lib\\workspaceScope.ts:68"],
+      "behavior": "Global vehicle selection; vehicle timezone; fsm-debugger.range preference with default 7d; both resolved instants forwarded. No duplicate page-level workspace picker. Hook internals not inspected."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "props": ["title", "subtitle", "loading", "secondaryActions", "children"], "evidence": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:1-17", "assessment": "Existing full-width min-w-0 container adapter; reuse, do not replace."},
+    {"name": "GlassPanel / Button / Select / DataTable / Pagination / CopyButton / typography / HelpTooltip", "owner": "@/components/ui", "evidence": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:6-8", "assessment": "Existing category barrel, stable table IDs, localized controls; primitive implementations other than PageLayout were not inspected."},
+    {"name": "ChartContainer / chart barrel", "owner": "@/components/charts", "evidence": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:11-14,778-828", "assessment": "Distribution frame supplies accessible data columns, loading/error/retry; shared chart palette retained."},
+    {"name": "FSMOperationalBrief", "owner": "web\\src\\features\\system\\components\\statstrip-fsm\\FSMOperationalBrief.tsx", "props": ["transitions", "stateQuery", "currentState", "period", "onRetry"], "evidence": "web\\src\\features\\system\\components\\statstrip-fsm\\FSMOperationalBrief.tsx:12-105", "assessment": "Reuses OperationalBrief/useOperationalMetrics; four source-backed metrics and independent trust/provenance."},
+    {"name": "FSMHealthPanel / FSMSubFSMPanel / FSMStateDiagram / FSMTimelineChart / StateBadge", "owner": "web\\src\\features\\system\\components", "evidence": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:28-33", "assessment": "Existing domain owners must retain flap/stuck/recovery heuristics, static graph, observed edges and session detail."},
+    {"name": "LiveControls / StateTimeline / SnapshotInspector / windowTransitions", "owner": "web\\src\\features\\system\\components\\state-machine", "evidence": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:714-762", "assessment": "Existing controlled debugger composite boundaries; preserve window, step, selection, JSON copy, diff and source layers."},
+    {"name": "StaleRefreshWarning", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "props": ["state", "label", "hideRetry"], "evidence": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:49-115", "assessment": "Already handles retained/offline/partial state and retry; page uses it for three sources but not snapshots."},
+    {"name": "AIStateMachineDebuggerNarrator", "owner": "web\\src\\components\\ai\\AIStateMachineDebuggerNarrator.tsx", "props": ["vehicleId", "fromUnix", "toUnix"], "evidence": "web\\src\\components\\ai\\AIStateMachineDebuggerNarrator.tsx:140-216", "assessment": "Existing feature-gated AI owner; retain optional narration without replacing deterministic evidence."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 47, "rule": "MDC-002/MDC-025", "detail": "Page maintains a vehicleStateStyle map while StateBadge and diagram use getStateColor from the shared FSM registry.", "fix": "Use the existing registry/style resolution for the hero; keep state labels and unknown distinct from offline.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 930, "rule": "MDC-002", "detail": "TransitionDetail repeats from/to/trigger/duration metadata also shown in SnapshotInspector. This is useful detail, not permission to remove the section.", "fix": "Reuse a domain presentation fragment only if full ID, vehicle, guard, timestamps and arbitrary context survive; retain both entry points.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "verified": "source only",
+    "existing": ["PageLayout full-width min-w-0 container", "filters stack then wrap at sm", "overview stacks then xl three-column", "analysis stacks then lg two-column", "transition detail 1/2/4 columns", "mobileColumns supplied to both DataTables", "timeline empty actions stack at sm; toolbar wraps"],
+    "issues": [
+      {"file": "web\\src\\features\\system\\components\\state-machine\\StateTimeline.tsx", "line": 178, "rule": "MDC-040/MDC-043", "detail": "Timestamp-positioned tiny tick controls can overlap for dense transitions; touch-target-overlay does not itself prove separate reachable targets. Empty-state action row does not wrap.", "fix": "Exercise 320px and dense histories; keep every tick selectable with a nonlossy fallback/detail list and allow long action labels to wrap.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.tsx", "line": 255, "rule": "MDC-043", "detail": "Signal names truncate while values wrap; long machine identifiers may not be fully discoverable on small screens.", "fix": "Wrap or expose complete identifier text using existing tooltip/detail mechanisms; retain all signal identities.", "owner": "page", "confidence": "medium"}
+    ],
+    "viewportAcceptance": "Unverified at every requested width; no browser exercised."
+  },
+  "accessibility": {
+    "verified": "source only",
+    "existing": ["Localized control labels", "Live/Freeze aria-pressed", "Named disabled step controls", "Decorative icon aria-hidden", "Distribution ariaLabel and accessible data", "Diagram hidden state summary and aria-current", "Health role=status", "Shared source warning aria-live=polite"],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 327, "rule": "MDC-040", "detail": "Transition detail toggle has a name but no aria-expanded or aria-controls; selected timeline tick has no aria-pressed/current announcement.", "fix": "Connect toggle state and stable detail region ID; expose timeline selection semantically through existing Button attributes.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.tsx", "line": 243, "rule": "MDC-012/MDC-040", "detail": "Diff mode dims unchanged signal rows with opacity-40, reducing text/source-badge contrast. Actual composed contrast is unmeasured.", "fix": "Use restrained semantic diff markers without lowering all text opacity; measure actual light/dark/forced-color contrast.", "owner": "page", "confidence": "high"}
+    ],
+    "runtime": "Keyboard order, focus, screen readers, touch reachability, contrast and reduced-motion behavior unverified."
+  },
+  "states": {
+    "existing": ["Three independent live/history source trust wrappers", "Fatal error retry without replacing retained data", "Per-source stale/offline notice", "Initial skeletons for live/sub-FSM/counts/log", "Empty range messages", "No vehicle/no state/no active sessions placeholders", "Snapshot selected/empty/outside-window/loading states", "AI invalid-scope disablement and feature gate"],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 475, "rule": "MDC-026", "detail": "Snapshot queries destructure only data/isFetching. Selected and previous errors, previous loading and retained/offline trust never reach inspector; failure can become 'No signals captured'. Diff may silently compare without a previous snapshot.", "fix": "Retain both query objects, derive independent DataState, and pass fatal/refresh/error/retry/previous availability to existing SnapshotInspector. Keep retained snapshots visible.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 855, "rule": "MDC-026", "detail": "Timeline chart receives no loading state; diagram receives default empty transition rows during initial/fatal transition load. Unavailable observations can look like a real empty history.", "fix": "Pass source trust to domain chart/diagram and distinguish static machine structure from unavailable observed overlays.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\components\\FSMHealthPanel.tsx", "line": 107, "rule": "MDC-026", "detail": "Empty loaded rows produce 'All FSMs healthy', although evidence is page-scoped and may be empty or unresolved. Historical rows can also drive present-tense stuck claims.", "fix": "Show no observed health evidence with explicit loaded-page/analysis-time provenance; preserve all existing heuristics and alert categories.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 705, "rule": "MDC-026", "detail": "enabled:false from stats and missing active_subs are collapsed into 'No active drive or charge sessions'.", "fix": "Carry enabled/availability status into the existing sub-FSM panel, separating disabled/unavailable from a confirmed empty session list.", "owner": "integration", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 648, "rule": "MDC-013/MDC-025", "detail": "Hero combines large bold tracking-wider typography, saturated state colors and perpetual pulse; map duplicates domain semantic styling.", "fix": "Use shared role typography and subdued FSM semantic presentation, preserving state prominence without ambient pulse or a new palette.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\FSMStateDiagram.tsx", "line": 101, "rule": "MDC-010/MDC-012/MDC-013", "detail": "Fixed-white fills/rings, opacity-50 inactive nodes and ad-hoc heading/body sizes compete with theme-aware surfaces and text roles.", "fix": "Use existing surface/border/text tokens and role typography; keep all graph nodes, current markers and edge summaries.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\FSMSubFSMPanel.tsx", "line": 28, "rule": "MDC-010/MDC-013/MDC-042", "detail": "Raw heading typography, fixed-white session surfaces and green pulse remain in domain presentation; HealthPanel has similar bespoke heading/alert chrome.", "fix": "Reuse PanelTitle/Text and existing semantic status primitives; retain session labels, live announcement and timestamps.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\state-machine\\LiveControls.tsx", "line": 115, "rule": "MDC-010/MDC-042", "detail": "Fixed-white toolbar/timeline/inspector sub-surfaces and live pulse repeat inside an outer panel. Reduced-motion handling in global CSS was not inspected.", "fix": "Use existing control/surface tokens and motion policy rather than independent decoration; browser-check reduced motion.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 187, "rule": "MDC-002/MDC-026", "detail": "unknown double-cast compensates for incorrectly typed live-state hook; server envelope freshness/live/data_source metadata is omitted from the hero.", "fix": "Integration owner corrects existing response type and exposes observation freshness through current trust/status components; no alternative request client.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 858, "rule": "MDC-032/MDC-045", "detail": "FSMTimelineChart receives span hours but no selected start/end. buildFsmTimeline anchors positive hours at Date.now; historical custom windows can return rows in log but plot zero buckets in a current rolling window. Labels use browser-local manual MM/DD/HH:MM rather than vehicle timezone/locale.", "fix": "Extend existing domain chart with explicit resolved bounds/timezone and use existing date formatting; preserve bucket tiers, series and server bounds.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\components\\state-machine\\LiveControls.tsx", "line": 103, "rule": "MDC-026/MDC-032", "detail": "Counter and tooltip label total loaded rows as 'in 24 h', but page defaults to 7d and sends one paginated server page, possibly a custom/all-time range.", "fix": "Add explicit source-scope label/provenance props to existing LiveControls; keep separate in-window and loaded-row counts.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 421, "rule": "MDC-046", "detail": "Freeze state does not change hook polling, window anchor or transition derivation; URL at only initializes isLive and is not used to resolve a snapshot independently of selected rows. Window helper and timeline also independently default their anchors to now.", "fix": "Define and test intended freeze/permalink semantics, retain all existing controls, use one explicit window anchor, and avoid silently promising a frozen buffer while polls replace rows.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx", "line": 775, "rule": "MDC-026/MDC-034", "detail": "Distribution, average interval, health, diagram and timeline all derive from loaded transition rows rather than complete range; only operational brief explicitly discloses page scope.", "fix": "Keep current calculations and add loaded-page scope to every derived surface; request server aggregates only through a separately assigned integration change, never invent full-range data.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {"level": "high", "reason": "Historical chart window mismatch and missing snapshot trust undermine evidence interpretation; preserve the existing 11 sections before restrained presentation adoption."},
+  "requiredSharedChanges": [
+    {"name": "Correct existing live-state response envelope typing", "owner": "web\\src\\api\\hooks\\useAdmin.ts", "props": ["state", "live", "data_source", "observed_at", "freshness", "verified_fields"], "variants": [], "states": ["fresh", "stale", "unknown", "unavailable"], "usedBy": ["StateMachineDebuggerPage useVehicleStateMachine"], "dependsOn": ["internal\\api\\vehicle\\handler.go currentStateResponse", "Existing API type/data-trust owner"], "detail": "Integration-owned typing fix, not a new hook/client; verify other callers before altering public type."},
+    {"name": "Reuse canonical FSM semantic style owner for hero", "owner": "web\\src\\types\\fsm\\index.ts", "props": ["fsmType", "state"], "variants": ["Existing getStateColor/StateBadge semantics"], "states": ["known", "unknown", "missing"], "usedBy": ["live state hero", "StateBadge", "FSMStateDiagram", "StateTimeline"], "dependsOn": ["Existing registry/style resolution; implementations not read"], "detail": "Existing exports satisfy basic reuse; no new universal status registry or shared palette is justified by this bounded audit."},
+    {"name": "Reuse existing trust notice/retry presentation", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "props": ["state", "label", "hideRetry"], "variants": ["Existing notice states"], "states": ["partial", "unavailable", "stale", "refresh blocked"], "usedBy": ["three existing page source notices", "selected/previous snapshot presentation"], "dependsOn": ["SnapshotInspector domain props", "Existing useDataState/deriveDataState"], "detail": "Reuse shared owner unchanged; domain integration must forward both snapshot source states. No new notice component required."},
+    {"name": "Extend existing debugger domain contracts, not shared primitives", "owner": "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.tsx", "props": ["selectedState", "previousState", "onRetrySelected", "onRetryPrevious", "existing transition/snapshot props"], "variants": ["Existing selected, empty, outside-window, diff modes"], "states": ["loading", "failure", "retained", "offline", "previous unavailable"], "usedBy": ["StateMachineDebuggerPage"], "dependsOn": ["useSignalSnapshot query objects", "Existing DataState"], "detail": "Single-consumer domain extension; keep copy JSON and raw SI/debug values intact."},
+    {"name": "Extend domain timeline bounds and scope props", "owner": "web\\src\\features\\system\\components\\FSMTimelineChart.tsx", "props": ["startInstant", "endInstantExclusive", "timezone", "sourceState", "loadedPageScope"], "variants": ["rolling", "custom", "all-time"], "states": ["loading", "empty", "fatal", "retained"], "usedBy": ["StateMachineDebuggerPage"], "dependsOn": ["useRangeState", "Existing date formatter", "ChartContainer"], "detail": "Do not create a new generic chart engine; preserve current bounded bucketing and dynamic series."}
+  ],
+  "competingImplementations": [
+    {"name": "Vehicle hero styling vs canonical FSM state styling", "evidence": ["web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:47-59", "web\\src\\features\\system\\components\\StateBadge.tsx:18-37", "web\\src\\types\\fsm\\index.ts:6-10"], "resolution": "Reuse existing registry; no replacement shared style engine."},
+    {"name": "Local duration/time formatting vs existing application format owners", "evidence": ["web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx:70-79", "web\\src\\features\\system\\components\\FSMTimelineChart.tsx:52-61"], "resolution": "Preserve duration rollover and invalid-value behavior; use approved shared formatter only after equivalence is demonstrated."}
+  ],
+  "preservation": {
+    "sourceHash": "36C40F2F165A6AB1D9BEBAAB7A7BA69F654169638F913D42D31AF97DB75FDB2A",
+    "currentLineCount": 1001,
+    "sectionCount": 11,
+    "sections": [
+      {"name": "Operational KPI band", "line": 541, "count": 1, "details": "Page rows, server total, flap IDs, separate live state; scope/freshness/provenance"},
+      {"name": "FSM type and per-page filters", "line": 548, "count": 1},
+      {"name": "FSM health indicators", "line": 589, "count": 1, "details": "Flapping, stuck sessions, recoveries and current all-clear behavior"},
+      {"name": "Optional AI narrator", "line": 603, "count": 1},
+      {"name": "State overview", "line": 624, "count": 1, "details": "Live hero state/mode/since and active drive/charge sub-FSMs"},
+      {"name": "Live controls, mini timeline and snapshot inspector", "line": 711, "count": 1},
+      {"name": "State diagram", "line": 768, "count": 1, "details": "Static machine nodes, observed counts, current node, reachable-state summary and top-ten edge summary"},
+      {"name": "Distribution and transition counts", "line": 773, "count": 1, "details": "Donut, legend/counts, accessible chart data, summary table and average interval"},
+      {"name": "Transitions over time", "line": 854, "count": 1, "details": "Stacked dynamic target-state count series"},
+      {"name": "Transition log", "line": 863, "count": 1, "details": "Index/time/FSM/from/to/trigger/detail, total and server pagination"},
+      {"name": "Conditional selected transition detail", "line": 912, "count": 1, "details": "ID/vehicle/FSM/from/to/trigger/guard/duration/absolute and relative timestamp/arbitrary details"}
+    ],
+    "sourceElementCounts": {"GlassPanelOpen": 9, "ChartContainerOpen": 1, "DataTableOpen": 2, "note": "Syntactic counts include alternative loading/error branches; child domain panels/charts are inventoried separately, not rendered-count claims."},
+    "actions": [
+      "Header share permalink copy",
+      "Global vehicle and header range selection",
+      "FSM filter and per-page 25/50/100 reset server page",
+      "Independent state/stats/transition retries and retained-source refresh",
+      "Operational brief retry of transition and live-state queries",
+      "Optional Narrate transitions stream through shared AI card",
+      "Live/Freeze toggles; Live clears selected ID",
+      "Previous/next chronological loaded-row step with disabled bounds",
+      "Window presets 5/10/30/120 plus dynamically widened 360/1440",
+      "Clear visible buffer after current timestamp and clear selection",
+      "Select timeline tick; widen window; jump to last transition",
+      "Snapshot copy JSON and diff-vs-previous toggle",
+      "Transition detail toggle",
+      "Server page and page-size changes",
+      "Existing DataTable persistence/export/filter capabilities via stable table IDs; exact primitive behavior unverified",
+      "Existing ChartContainer data/toolbar capabilities; exact primitive behavior unverified"
+    ],
+    "dataBehavior": [
+      "Keep raw source payloads, snapshot values/source layers/ages and arbitrary transition details; no source unit conversion or fixture insertion",
+      "Keep fsm-debugger.range 7d default, vehicle timezone and resolved start/endExclusive",
+      "Keep positive-ID gating, cancellation, polling, query keys and independent live/history scope",
+      "Keep server page size default 50 and stable system:fsm-summary/system:fsm-transitions table IDs",
+      "Keep selected/fsm/at permalink parameters and legacy vehicle/range cleanup",
+      "Keep page-scoped grouping, average timestamp gap, rounded-duration rollover and nonfinite/negative placeholder",
+      "Keep to_state-based stacked series, chart bucket tiers/cap and semantic state labels",
+      "Keep computeFlapIds reuse and existing alert categories; correct evidence labels without fabricating healthy/full-range values",
+      "Keep AI off-mode absence, valid-scope disabled state and deterministic baseline",
+      "Keep optional transition detail and optional metadata; no unconditional deletion to reduce line count"
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 read-only source audit; only assigned report and heartbeat written.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "tests": "NOT RUN",
+    "typescript": "NOT RUN; concurrent Phase0 contract forbids project-wide validation.",
+    "lintBuild": "NOT RUN as assigned.",
+    "auditScript": "Inspected audit.sh but did not execute because it invokes project-wide TypeScript; bounded source searches/counts used instead.",
+    "sourceChecks": [
+      {"command": "Get-FileHash page -Algorithm SHA256", "exitCode": 0, "output": "36C40F2F165A6AB1D9BEBAAB7A7BA69F654169638F913D42D31AF97DB75FDB2A"},
+      {"command": "Case-sensitive Select-String page '<(button|input|textarea|select|table)\\b'", "exitCode": 0, "output": "rawControls=0"},
+      {"command": "Page source inventory counts", "exitCode": 0, "output": "lineCount=1001; GlassPanelOpen=9; ChartContainerOpen=1; inlineStyles=1; directLibraries=0"},
+      {"command": "rg targeted page style/import/motion patterns", "exitCode": 0, "output": "One dynamic chart swatch inline style at 816, not a static CSS variable violation; spinner at 526, pulse at 655; no direct library import matches."}
+    ],
+    "corrections": "Initial PowerShell control count was case-insensitive and counted Select components; corrected case-sensitive count is zero. Two combined PowerShell probes exited 1 without output and are not acceptance evidence.",
+    "unknowns": ["No mounted route proof; App.tsx route registration inspected", "Backend repository half-open filtering and snapshot freshness resolution not traced", "AI delegated route mount/actual trace completeness not inspected", "Shared primitive table/chart export, focus, density and motion internals not fully inspected", "No claim of whole-feature audit coverage beyond assigned page and listed dependencies"],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-195.json", ".agent-status\\audit-page-195.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+    "web\\src\\features\\system\\components\\StateBadge.tsx",
+    "web\\src\\features\\system\\components\\FSMHealthPanel.tsx",
+    "web\\src\\features\\system\\components\\FSMSubFSMPanel.tsx",
+    "web\\src\\features\\system\\components\\FSMStateDiagram.tsx",
+    "web\\src\\features\\system\\components\\FSMTimelineChart.tsx",
+    "web\\src\\features\\system\\components\\statstrip-fsm\\FSMOperationalBrief.tsx",
+    "web\\src\\features\\system\\components\\state-machine\\LiveControls.tsx",
+    "web\\src\\features\\system\\components\\state-machine\\StateTimeline.tsx",
+    "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.tsx",
+    "web\\src\\features\\system\\components\\state-machine\\windowTransitions.ts",
+    "web\\src\\components\\ai\\AIStateMachineDebuggerNarrator.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\api\\hooks\\useAdmin.ts",
+    "web\\src\\api\\hooks\\useFSM.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\types\\fsm\\index.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\vehicle\\handler.go"
+  ]
+}

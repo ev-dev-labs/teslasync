@@ -94,7 +94,7 @@ export function downloadBlobAs(blob: Blob, filename: string): void {
 export interface RedactionDrawContext {
   drawImage(source: unknown, dx: number, dy: number, dw: number, dh: number): void;
   fillRect(x: number, y: number, w: number, h: number): void;
-  fillStyle: string;
+  fillStyle: string | CanvasGradient | CanvasPattern;
 }
 
 /**

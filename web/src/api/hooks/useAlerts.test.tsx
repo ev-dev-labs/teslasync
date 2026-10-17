@@ -66,6 +66,23 @@ vi.mock('../client', () => ({
   request: (...args: unknown[]) => requestMock(...args),
 }));
 
+vi.mock('./useSettings', () => ({
+  useSettings: () => ({
+    data: {
+      decimal_precision: 2,
+      locale: 'en-US',
+      language: 'en',
+      unit_of_length: 'km',
+      unit_of_temp: 'C',
+      unit_of_pressure: 'bar',
+      currency_symbol: '$',
+      tz_display_default: 'utc',
+      timezone_user: 'UTC',
+      time_format_default: 'absolute',
+    },
+  }),
+}));
+
 vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: toastSuccess, error: toastError }),
 }));

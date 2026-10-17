@@ -133,10 +133,20 @@ describe('AiLimitBanner', () => {
         /Try again in 2s/,
       );
 
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.getByTestId('ai-limit-banner')).toHaveTextContent(
+        /Try again in 1s/,
+      );
+
       // Tick to zero
       act(() => {
-        vi.advanceTimersByTime(2000);
+        vi.advanceTimersByTime(1000);
       });
+      expect(screen.getByTestId('ai-limit-banner')).not.toHaveTextContent(
+        /Try again in/,
+      );
 
       // Retry button now visible
       const retry = screen.getByTestId('ai-limit-banner-retry');
@@ -156,6 +166,9 @@ describe('AiLimitBanner', () => {
       // to verify the gate is on retryAfterS, not the reason.
       const retry = screen.getByTestId('ai-limit-banner-retry');
       expect(retry).toBeInTheDocument();
+      expect(screen.getByTestId('ai-limit-banner')).not.toHaveTextContent(
+        /Try again in/,
+      );
       fireEvent.click(retry);
       expect(onRetry).toHaveBeenCalledTimes(1);
     });

@@ -161,22 +161,62 @@ describe('design tokens — theme fidelity', () => {
     expect(code).toMatch(/BUTTON_VARIANTS\.secondary/);
   });
 
-  it('gives every Button the same accent focus ring regardless of variant', () => {
+  it('gives every Button the same accessible focus outline regardless of variant', () => {
     for (const variant of ['primary', 'secondary', 'outline', 'ghost'] as const) {
       const { unmount } = render(<Button variant={variant}>x</Button>);
-      expect(
-        screen.getByRole('button').className,
-        `${variant} lost the unified focus ring`,
-      ).toContain('focus-visible:ring-[var(--focus-ring)]');
+      const classes = screen.getByRole('button').className.split(/\s+/);
+      for (const treatment of [
+        'focus-visible:outline',
+        'focus-visible:outline-2',
+        'focus-visible:outline-offset-2',
+        'focus-visible:outline-[var(--focus-ring)]',
+        'forced-colors:focus-visible:outline-[Highlight]',
+      ]) {
+        expect(classes, `${variant} lost ${treatment}`).toContain(treatment);
+      }
+      expect(classes.some((cls) => /^focus-visible:ring(?:-|$)/.test(cls))).toBe(false);
       unmount();
     }
   });
 
-  it('keeps the destructive focus ring red on the danger variant', () => {
-    // Deliberate exception: a destructive action should not look identical to
-    // a benign one at the moment of keyboard focus.
-    render(<Button variant="danger">Delete</Button>);
-    expect(screen.getByRole('button').className).toContain('focus-visible:ring-red-500');
+  it('keeps destructive semantic chrome distinct with the same accessible focus outline', () => {
+    // Destructive meaning belongs to the chrome, not a shadow that disappears
+    // in forced colors; keyboard focus keeps the shared crisp outline.
+    render(
+      <>
+        <Button variant="primary">Save</Button>
+        <Button variant="danger">Delete</Button>
+      </>,
+    );
+    const primary = screen.getByRole('button', { name: 'Save' }).className.split(/\s+/);
+    const danger = screen.getByRole('button', { name: 'Delete' }).className.split(/\s+/);
+    for (const treatment of [
+      'focus-visible:outline',
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'forced-colors:focus-visible:outline-[Highlight]',
+    ]) {
+      expect(danger, `danger lost ${treatment}`).toContain(treatment);
+      expect(primary, `primary lost ${treatment}`).toContain(treatment);
+    }
+    expect(danger.some((cls) => /^focus-visible:ring(?:-|$)/.test(cls))).toBe(false);
+    for (const semantic of [
+      'text-[var(--semantic-danger)]',
+      'border-[var(--semantic-danger)]',
+      'bg-[var(--semantic-danger-bg)]',
+    ]) {
+      expect(danger).toContain(semantic);
+      expect(primary).not.toContain(semantic);
+    }
+    for (const benign of [
+      'text-[var(--theme-on-primary)]',
+      'border-transparent',
+      'bg-[var(--theme-primary)]',
+    ]) {
+      expect(primary).toContain(benign);
+      expect(danger).not.toContain(benign);
+    }
   });
 
   it('drives light-mode panels from tokens instead of pinning them to white', () => {

@@ -215,6 +215,24 @@ beforeEach(() => {
 /* ── Specs ────────────────────────────────────────────────────────── */
 
 describe('TripSummaryWidget', () => {
+  it('retains the trip and recent history during refresh failure and retries from the warning', () => {
+    const refetch = vi.fn();
+    tripsMock.mockReturnValue(makeQuery({ data: TRIPS, error: new Error('offline'), isError: true, refetch }));
+    renderWidget();
+    expect(screen.getByText('Big Sur Loop')).toBeInTheDocument();
+    expect(screen.getByText('City Hop')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders real zero distance and counts', () => {
+    tripsMock.mockReturnValue(makeQuery({ data: [makeTrip({ total_distance_m: 0, drive_count: 0, charge_count: 0 })] }));
+    renderWidget();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    expect(screen.getAllByText('0')).toHaveLength(2);
+  });
+
   it('requests exactly the five most recent trips', () => {
     renderWidget();
     expect(tripsMock).toHaveBeenCalledTimes(1);
@@ -225,26 +243,26 @@ describe('TripSummaryWidget', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Trip Summary')).toBeInTheDocument();
-    expect(screen.getByText('Last Trip')).toBeInTheDocument();
+    expect(screen.getByText('Trip summary')).toBeInTheDocument();
+    expect(screen.getByText('Last trip')).toBeInTheDocument();
 
     // Last-trip block: name + the 4-up StatCard grid.
     expect(screen.getByText('Big Sur Loop')).toBeInTheDocument();
-    for (const label of ['Distance', 'Duration', 'Drives', 'Charge Stops']) {
+    for (const label of ['Distance', 'Duration', 'Drives', 'Charge stops']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     // 50_000 m → 50.0 km; 90 min → "1h 30m"; counts pass through fmtInt.
-    expect(screen.getByText('50.0 km')).toBeInTheDocument();
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
     expect(screen.getByText('1h 30m')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('9')).toBeInTheDocument();
 
     // Recent list: the 2nd + 3rd trips (never the last trip again).
-    expect(screen.getByText('Recent Trips')).toBeInTheDocument();
+    expect(screen.getByText('Recent trips')).toBeInTheDocument();
     expect(screen.getByText('Coastal Run')).toBeInTheDocument();
     expect(screen.getByText('City Hop')).toBeInTheDocument();
-    expect(screen.getByText('10.0 km')).toBeInTheDocument();
-    expect(screen.getByText('20.0 km')).toBeInTheDocument();
+    expect(screen.getByText('10.00 km')).toBeInTheDocument();
+    expect(screen.getByText('20.00 km')).toBeInTheDocument();
     expect(screen.getByText('45m')).toBeInTheDocument();
     expect(screen.getByText('20m')).toBeInTheDocument();
     expect(screen.getByText('3 drv')).toBeInTheDocument();
@@ -256,25 +274,25 @@ describe('TripSummaryWidget', () => {
     renderWidget();
 
     // 50_000 / 1609.344 = 31.07 → "31.1"; 10_000 → 6.2; 20_000 → 12.4.
-    expect(screen.getByText('31.1 mi')).toBeInTheDocument();
-    expect(screen.getByText('6.2 mi')).toBeInTheDocument();
-    expect(screen.getByText('12.4 mi')).toBeInTheDocument();
+    expect(screen.getByText('31.07 mi')).toBeInTheDocument();
+    expect(screen.getByText('6.21 mi')).toBeInTheDocument();
+    expect(screen.getByText('12.43 mi')).toBeInTheDocument();
 
     // The km-unit strings must be gone once converted.
-    expect(screen.queryByText('50.0 km')).not.toBeInTheDocument();
-    expect(screen.queryByText('10.0 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('50.00 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('10.00 km')).not.toBeInTheDocument();
   });
 
   it('compact layout drops each recent row to distance-only', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     // The last-trip stat grid still renders in compact.
-    expect(screen.getByText('50.0 km')).toBeInTheDocument();
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
     expect(screen.getByText('Drives')).toBeInTheDocument();
 
     // Recent rows keep their distance…
-    expect(screen.getByText('10.0 km')).toBeInTheDocument();
-    expect(screen.getByText('20.0 km')).toBeInTheDocument();
+    expect(screen.getByText('10.00 km')).toBeInTheDocument();
+    expect(screen.getByText('20.00 km')).toBeInTheDocument();
     // …but drop the duration + drive badge.
     expect(screen.queryByText('45m')).not.toBeInTheDocument();
     expect(screen.queryByText('3 drv')).not.toBeInTheDocument();
@@ -286,9 +304,9 @@ describe('TripSummaryWidget', () => {
 
     // The last-trip block still renders…
     expect(screen.getByText('Big Sur Loop')).toBeInTheDocument();
-    expect(screen.getByText('50.0 km')).toBeInTheDocument();
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
     // …but there is no "Recent Trips" list with a single trip.
-    expect(screen.queryByText('Recent Trips')).not.toBeInTheDocument();
+    expect(screen.queryByText('Recent trips')).not.toBeInTheDocument();
     expect(screen.queryByText('Coastal Run')).not.toBeInTheDocument();
   });
 
@@ -315,7 +333,7 @@ describe('TripSummaryWidget', () => {
     expect(screen.getByText('Unnamed trip')).toBeInTheDocument();
   });
 
-  it('is null-safe: a partial payload renders zeros without crashing', () => {
+  it('keeps a partial trip unknown without inventing distance or counts', () => {
     // The backend contract guarantees these fields, but a malformed row must
     // degrade cleanly rather than throw inside fmtInt / the distance converter.
     const partial = {
@@ -327,30 +345,29 @@ describe('TripSummaryWidget', () => {
     tripsMock.mockReturnValue(makeQuery({ data: [partial] }));
 
     expect(() => renderWidget()).not.toThrow();
-    // distance undefined → 0 → "0.0 km"; counts undefined → 0.
-    expect(screen.getByText('0.0 km')).toBeInTheDocument();
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
     expect(screen.getByText('Sparse Trip')).toBeInTheDocument();
-    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('—')).toHaveLength(4);
   });
 
   it('shows the empty state (keeping the titled shell) when there are no trips', () => {
     tripsMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget();
 
-    expect(screen.getByText('Trip Summary')).toBeInTheDocument();
+    expect(screen.getByText('Trip summary')).toBeInTheDocument();
     expect(screen.getByText('No trips recorded yet')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // No trip content rendered.
-    expect(screen.queryByText('Last Trip')).not.toBeInTheDocument();
+    expect(screen.queryByText('Last trip')).not.toBeInTheDocument();
   });
 
   it('renders a skeleton placeholder while the trips query is loading', () => {
     tripsMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     // No shell content while loading.
-    expect(screen.queryByText('Trip Summary')).not.toBeInTheDocument();
+    expect(screen.queryByText('Trip summary')).toBeInTheDocument();
     expect(screen.queryByText('Big Sur Loop')).not.toBeInTheDocument();
   });
 
@@ -368,9 +385,9 @@ describe('TripSummaryWidget', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading empty state must NOT appear on error.
     expect(screen.queryByText('No trips recorded yet')).not.toBeInTheDocument();
-    expect(screen.queryByText('Trip Summary')).not.toBeInTheDocument();
+    expect(screen.queryByText('Trip summary')).toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('refetches when the freshness control is activated', () => {

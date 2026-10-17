@@ -47,7 +47,7 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
       : (DASHBOARD_PRESETS[0]?.id ?? '__blank__');
     setSelectedId(start);
     const preset = DASHBOARD_PRESETS.find((item) => item.id === start);
-    setName(preset ? t(`templates.${preset.id}.name`, preset.name) : t('layout.newLayoutDefault', 'New Layout'));
+    setName(preset ? t(`templates.${preset.id}.name`, preset.name) : t('layout.newLayoutDefault', 'New layout'));
     setSearch('');
     setSubmitted(false);
     setHelixDraft(null);
@@ -68,7 +68,7 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
     ? helixDraft.title
     : selected
     ? t(`templates.${selected.id}.name`, selected.name)
-    : t('templates.blank', 'Blank Dashboard');
+    : t('templates.blank', 'Blank dashboard');
   const previewDescription = selectedId === '__helix__'
     ? t('templates.helixPreview', 'Helix selected these widgets and packed them into a responsive layout.')
     : description
@@ -88,7 +88,7 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
 
   const selectTemplate = (preset: SavedDashboard | null) => {
     setSelectedId(preset?.id ?? '__blank__');
-    setName(preset ? t(`templates.${preset.id}.name`, preset.name) : t('layout.newLayoutDefault', 'New Layout'));
+    setName(preset ? t(`templates.${preset.id}.name`, preset.name) : t('layout.newLayoutDefault', 'New layout'));
     setSubmitted(false);
   };
 
@@ -161,7 +161,7 @@ export function TemplateGallery({ open, onClose, onApply, initialTemplateId }: T
                 >
                   <LayoutGrid className="h-5 w-5 shrink-0 text-[var(--theme-primary)]" aria-hidden="true" />
                   <span className="min-w-0">
-                    <span className="block font-semibold">{t('templates.blank', 'Blank Dashboard')}</span>
+                    <span className="block font-semibold">{t('templates.blank', 'Blank dashboard')}</span>
                     <span className="block text-xs text-[var(--text-secondary)]">{t('templates.blankDescription', 'Start from scratch and add widgets manually')}</span>
                   </span>
                 </Button>

@@ -27,7 +27,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useState, type ReactNode } from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 vi.mock('@/api/client', () => ({
@@ -174,7 +174,7 @@ describe('AIProviderSection — local mode structure', () => {
     const select = screen.getByTestId('ai-provider-select') as HTMLSelectElement
     expect(select.value).toBe('ollama')
     expect(screen.getByRole('option', { name: 'Ollama' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'LM Studio' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'LM studio' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'llama.cpp' })).toBeInTheDocument()
 
     expect(screen.getByTestId('ai-provider-base-url')).toBeInTheDocument()
@@ -226,10 +226,145 @@ describe('AIProviderSection — local mode structure', () => {
       'aria-label',
       'Provider configuration',
     )
+    const group = screen.getByRole('group', { name: 'Provider configuration' })
+    expect(group).toContainElement(screen.getByTestId('ai-provider-base-url'))
+    expect(screen.getByRole('heading', { name: 'Provider configuration', level: 3 })).toBeInTheDocument()
   })
 })
 
 describe('AIProviderSection — local validate outcomes', () => {
+  it.each(['success', 'rejection', 'network'] as const)(
+    'ignores an obsolete %s completion even after edits restore the submitted URL',
+    async (outcome) => {
+      const gate = deferred<{ ok: true; mode: 'local'; base_url: string }>()
+      mockedRequest.mockImplementation(async () => {
+        const result = await gate.promise
+        if (outcome === 'rejection') throw new ApiError('obsolete rejection', 422)
+        if (outcome === 'network') throw new Error('obsolete network error')
+        return result
+      })
+      renderSection({
+        initial: makeDraft({ base_url: 'http://localhost:11434' }),
+      })
+      fireEvent.click(screen.getByTestId('ai-provider-validate'))
+      await waitFor(() => expect(mockedRequest).toHaveBeenCalledOnce())
+
+      fireEvent.change(screen.getByTestId('ai-provider-base-url'), {
+        target: { value: 'http://localhost:11500' },
+      })
+      fireEvent.change(screen.getByTestId('ai-provider-base-url'), {
+        target: { value: 'http://localhost:11434' },
+      })
+      await act(async () => {
+        gate.resolve({ ok: true, mode: 'local', base_url: 'http://localhost:11434' })
+      })
+      await waitFor(() => {
+        expect(screen.getByTestId('ai-provider-validate')).not.toBeDisabled()
+      })
+      expect(screen.queryByTestId('ai-provider-validate-banner')).toBeNull()
+
+      mockedRequest.mockResolvedValue({
+        ok: true, mode: 'local', pinned_ip: '127.0.0.1',
+      })
+      fireEvent.click(screen.getByTestId('ai-provider-validate'))
+      await waitFor(() => {
+        expect(screen.getByTestId('ai-provider-validate-banner')).toHaveTextContent(
+          'OK — pinned to 127.0.0.1',
+        )
+      })
+    },
+  )
+
+  it('ignores a pending completion after the parent changes mode and draft', async () => {
+    const gate = deferred<{ ok: true; mode: 'local'; base_url: string }>()
+    mockedRequest.mockReturnValue(gate.promise)
+    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const onChange = vi.fn()
+    const view = render(
+      <QueryClientProvider client={qc}>
+        <AIProviderSection
+          value={makeDraft({ base_url: 'http://localhost:11434' })}
+          isCloud={false}
+          onChange={onChange}
+        />
+      </QueryClientProvider>,
+    )
+    fireEvent.click(screen.getByTestId('ai-provider-validate'))
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledOnce())
+    view.rerender(
+      <QueryClientProvider client={qc}>
+        <AIProviderSection
+          value={makeDraft({ provider: 'openai', model: 'gpt-4o' })}
+          isCloud
+          onChange={onChange}
+        />
+      </QueryClientProvider>,
+    )
+    await act(async () => {
+      gate.resolve({ ok: true, mode: 'local', base_url: 'http://localhost:11434' })
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-provider-validate-cloud')).not.toBeDisabled()
+    })
+    expect(screen.queryByTestId('ai-provider-validate-banner')).toBeNull()
+  })
+
+  it('keeps the newest request outcome when an older request finishes last', async () => {
+    const older = deferred<{ ok: true; mode: 'local'; pinned_ip: string }>()
+    const newer = deferred<{ ok: true; mode: 'local'; pinned_ip: string }>()
+    mockedRequest.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise)
+    renderSection({ initial: makeDraft({ base_url: 'http://localhost:11434' }) })
+    act(() => {
+      fireEvent.click(screen.getByTestId('ai-provider-validate'))
+      fireEvent.click(screen.getByTestId('ai-provider-validate'))
+    })
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      newer.resolve({ ok: true, mode: 'local', pinned_ip: '127.0.0.2' })
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-provider-validate-banner')).toHaveTextContent('127.0.0.2')
+    })
+    await act(async () => {
+      older.resolve({ ok: true, mode: 'local', pinned_ip: '127.0.0.1' })
+    })
+    expect(screen.getByTestId('ai-provider-validate-banner')).toHaveTextContent('127.0.0.2')
+  })
+
+  it.each([
+    ['ai-provider-select', 'openai'],
+    ['ai-provider-model', 'new-deployment'],
+    ['ai-provider-azure-base-url', 'https://new.services.ai.azure.com/openai/v1'],
+    ['ai-provider-api-key', 'replacement-key'],
+    ['ai-provider-azure-protocol', 'responses'],
+    ['ai-provider-azure-embedding-model', 'new-embedding'],
+    ['ai-provider-cost-cap', '7.50'],
+  ])('invalidates an in-flight cloud probe when %s changes', async (testId, nextValue) => {
+    const gate = deferred<{ ok: true; mode: 'cloud'; probed_model: string }>()
+    mockedRequest.mockReturnValue(gate.promise)
+    renderSection({
+      isCloud: true,
+      initial: makeDraft({
+        provider: 'azure',
+        base_url: 'https://example.services.ai.azure.com/openai/v1',
+        model: 'original-deployment',
+        api_key: 'original-key',
+        embedding_model: 'original-embedding',
+        cost_cap_cents: 500,
+      }),
+    })
+    fireEvent.click(screen.getByTestId('ai-provider-validate-cloud'))
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledOnce())
+    fireEvent.change(screen.getByTestId(testId), { target: { value: nextValue } })
+    await act(async () => {
+      gate.resolve({ ok: true, mode: 'cloud', probed_model: 'original-deployment' })
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-provider-validate-cloud')).not.toBeDisabled()
+    })
+    expect(screen.queryByTestId('ai-provider-validate-banner')).toBeNull()
+  })
+
   it('POSTs mode=local + base_url and shows an OK banner on success', async () => {
     mockedRequest.mockImplementation(async (path: string) => {
       if (path === VALIDATE_PATH) {
@@ -404,7 +539,7 @@ describe('AIProviderSection — cloud mode', () => {
 
     expect(screen.getByRole('option', { name: 'OpenAI' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Microsoft Foundry' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Microsoft foundry' })).toBeInTheDocument()
 
     const apiKey = screen.getByTestId('ai-provider-api-key') as HTMLInputElement
     expect(apiKey.type).toBe('password')

@@ -17,6 +17,7 @@ import type {
   NormalizationCoverageState,
   NormalizationVersionCount,
 } from '@/types/admin-operator-confidence';
+import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 
 /**
  * Common async-state props shared by every data-bound section so each panel
@@ -61,11 +62,11 @@ export function coverageTrust(
 export function formatCoveragePct(
   pct: number | null | undefined,
   state?: NormalizationCoverageState,
-  decimals = 1,
+  decimals = getGlobalPrecision(),
 ): string | null {
   if (state === 'unknown') return null;
   if (pct == null || !Number.isFinite(pct)) return null;
-  return `${pct.toFixed(decimals)}%`;
+  return `${fmtNumber(pct, decimals)}%`;
 }
 
 /**
@@ -122,17 +123,22 @@ export function countBySeverity(
  * Format a duration in seconds using coarse, honest units. Sub-minute values
  * keep second precision because the freshness of a live signal feed is
  * measured there; anything longer is rounded to whole minutes/hours/days.
+ * Digits use saved numeric preferences. Callers may supply existing localized
+ * minute/hour/day labels; the canonical seconds symbol remains `s`.
  */
-export function formatSeconds(seconds: number | null | undefined): string | null {
+export function formatSeconds(
+  seconds: number | null | undefined,
+  units: Partial<Record<'m' | 'h' | 'd', string>> = {},
+): string | null {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return null;
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-  if (seconds < 86_400) return `${Math.round(seconds / 3600)}h`;
-  return `${Math.round(seconds / 86_400)}d`;
+  if (seconds < 60) return `${fmtNumber(Math.round(seconds === 0 ? 0 : seconds), 0)}s`;
+  if (seconds < 3600) return `${fmtNumber(Math.round(seconds / 60), 0)}${units.m ?? 'm'}`;
+  if (seconds < 86_400) return `${fmtNumber(Math.round(seconds / 3600), 0)}${units.h ?? 'h'}`;
+  return `${fmtNumber(Math.round(seconds / 86_400), 0)}${units.d ?? 'd'}`;
 }
 
 /** Duplicate ratio (0..1) rendered as a percentage string. */
 export function formatDuplicateRatio(ratio: number | null | undefined): string | null {
   if (ratio == null || !Number.isFinite(ratio)) return null;
-  return `${(ratio * 100).toFixed(1)}%`;
+  return `${fmtNumber((ratio * 100))}%`;
 }

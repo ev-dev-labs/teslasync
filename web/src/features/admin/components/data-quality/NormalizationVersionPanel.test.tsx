@@ -109,8 +109,8 @@ describe('NormalizationVersionPanel', () => {
     renderPanel();
     expect(screen.getByText('300 rows')).toBeInTheDocument();
     expect(screen.getByText('500 rows')).toBeInTheDocument();
-    expect(screen.getByText('30.0% of window')).toBeInTheDocument();
-    expect(screen.getByText('50.0% of window')).toBeInTheDocument();
+    expect(screen.getByText('30.00% of window')).toBeInTheDocument();
+    expect(screen.getByText('50.00% of window')).toBeInTheDocument();
   });
 
   it('renders "Share unknown" instead of a fabricated 0% when share_pct is null', () => {
@@ -121,7 +121,7 @@ describe('NormalizationVersionPanel', () => {
       },
     });
     expect(screen.getByText('Share unknown')).toBeInTheDocument();
-    expect(screen.queryByText('0.0% of window')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00% of window')).not.toBeInTheDocument();
   });
 
   it('shows an explicit empty state when the window produced no buckets', () => {

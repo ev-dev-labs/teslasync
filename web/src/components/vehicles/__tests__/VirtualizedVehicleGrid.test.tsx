@@ -66,6 +66,7 @@ describe('VirtualizedVehicleGrid', () => {
 
     const list = screen.getByRole('list', { name: 'Vehicle fleet' });
     expect(list).toBeInTheDocument();
+    expect(list).toHaveClass('pe-1', 'overflow-y-auto');
     expect(screen.getAllByRole('listitem')).toHaveLength(4);
     expect(screen.getByText('Vehicle 1')).toBeInTheDocument();
     expect(screen.getByText('Vehicle 4')).toBeInTheDocument();
@@ -79,9 +80,82 @@ describe('VirtualizedVehicleGrid', () => {
       expect(onVisibleVehiclesChange).toHaveBeenCalled();
     });
     expect(
-      onVisibleVehiclesChange.mock.calls.at(-1)?.[0].map(
+      onVisibleVehiclesChange.mock.calls[
+        onVisibleVehiclesChange.mock.calls.length - 1
+      ]?.[0].map(
         (item: Vehicle) => item.id,
       ),
     ).toEqual([1, 2, 3, 4]);
+  });
+
+  it('keeps caller content, native links, sizing and logical row placement', () => {
+    const item: Vehicle = {
+      ...vehicle(0),
+      display_name: 'Long vehicle name '.repeat(20),
+      battery_level: 0,
+    };
+    const renderVehicle = vi.fn((entry: Vehicle) => (
+      <a href={`/vehicles/${entry.id}`}>{entry.display_name}</a>
+    ));
+
+    render(
+      <VirtualizedVehicleGrid
+        vehicles={[item]}
+        label="Registered fleet"
+        className="custom-fleet"
+        renderVehicle={renderVehicle}
+      />,
+    );
+
+    const list = screen.getByRole('list', { name: 'Registered fleet' });
+    expect(list).toHaveClass('custom-fleet', 'h-vehicle-grid', 'min-h-vehicle-grid');
+    expect(list.firstElementChild).toHaveStyle({ height: '580px' });
+    const link = screen.getByRole('link', { name: item.display_name.trim() });
+    expect(link).toHaveAttribute('href', '/vehicles/0');
+    expect(link.parentElement).toHaveAttribute('aria-posinset', '1');
+    expect(link.parentElement?.parentElement).toHaveClass('start-0');
+    expect(renderVehicle).toHaveBeenCalledWith(item);
+    link.focus();
+    expect(link).toHaveFocus();
+    expect(item.battery_level).toBe(0);
+  });
+
+  it('reports an empty source without fabricating vehicles or content', async () => {
+    const onVisibleVehiclesChange = vi.fn();
+    const renderVehicle = vi.fn((entry: Vehicle) => <span>{entry.display_name}</span>);
+
+    render(
+      <VirtualizedVehicleGrid
+        vehicles={[]}
+        label="Empty fleet"
+        renderVehicle={renderVehicle}
+        onVisibleVehiclesChange={onVisibleVehiclesChange}
+      />,
+    );
+
+    expect(screen.getByRole('list', { name: 'Empty fleet' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    expect(renderVehicle).not.toHaveBeenCalled();
+    await waitFor(() => expect(onVisibleVehiclesChange).toHaveBeenCalledWith([]));
+  });
+
+  it.each([
+    ['h-96 min-h-0', ['h-96', 'min-h-0']],
+    ['h-[640px] min-h-[320px]', ['h-[640px]', 'min-h-[320px]']],
+  ])('preserves caller sizing overrides: %s', (className, expected) => {
+    render(
+      <VirtualizedVehicleGrid
+        vehicles={[]}
+        label="Sized fleet"
+        className={className}
+        renderVehicle={(entry) => <span>{entry.display_name}</span>}
+      />,
+    );
+
+    const list = screen.getByRole('list', { name: 'Sized fleet' });
+    expect(list).toHaveClass(...expected);
+    expect(list).not.toHaveClass('h-vehicle-grid');
+    expect(list).not.toHaveClass('min-h-vehicle-grid');
+    expect(list).toHaveClass('overflow-y-auto', 'overscroll-contain', 'pe-1');
   });
 });

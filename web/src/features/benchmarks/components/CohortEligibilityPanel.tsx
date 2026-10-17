@@ -1,17 +1,22 @@
 import { UsersRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, InlineCallout, Skeleton } from '@/components/feedback';
-import { Badge, Button, GlassPanel } from '@/components/ui';
-import type { BenchmarkRelease } from '@/api/hooks/useBenchmarks';
+import { EmptyState, InlineCallout, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { Table, Badge, Button } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import type { BenchmarkPrivacyStatus, BenchmarkRelease, BenchmarkReleasePage } from '@/api/hooks/useBenchmarks';
+import type { DataState } from '@/api/dataState';
 
 interface CohortEligibilityPanelProps {
-  optedIn: boolean;
+  optedIn: boolean | undefined;
   release: BenchmarkRelease | null;
   minimumCohortSize: number;
   pending: boolean;
   loading: boolean;
   error: Error | null;
   onCreate: () => void;
+  source?: DataState<BenchmarkReleasePage>;
+  participationSource?: DataState<BenchmarkPrivacyStatus>;
+  canAct?: boolean;
 }
 
 export function CohortEligibilityPanel({
@@ -22,8 +27,12 @@ export function CohortEligibilityPanel({
   loading,
   error,
   onCreate,
+  source,
+  participationSource,
+  canAct = true,
 }: CohortEligibilityPanelProps) {
   const { t } = useTranslation();
+  const fatalError = participationSource?.fatalError ?? (optedIn === true ? source?.fatalError : null);
   const modelFamily = release
     ? t(
         `benchmarks.cohort.modelFamily.${release.model_family}`,
@@ -31,15 +40,12 @@ export function CohortEligibilityPanel({
       )
     : '';
   return (
-    <GlassPanel className="p-5 md:p-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <UsersRound className="h-5 w-5 text-emerald-300" aria-hidden />
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            {t('benchmarks.cohort.title', 'Cohort eligibility')}
-          </h2>
-        </div>
-        {loading ? (
+    <LayoutCard
+      title={t('benchmarks.cohort.title', 'Cohort eligibility')}
+      actions={
+        fatalError ? (
+          <Badge variant="danger">{t('error.loadFailed', 'Failed to load data')}</Badge>
+        ) : loading || optedIn == null ? (
           <Skeleton className="h-6 w-24 rounded-full" />
         ) : (
           <Badge variant={release && !release.suppressed ? 'success' : 'warning'} dot>
@@ -47,9 +53,19 @@ export function CohortEligibilityPanel({
               ? t('benchmarks.cohort.eligible', 'Eligible')
               : t('benchmarks.cohort.pending', 'Not released')}
           </Badge>
-        )}
-      </div>
-      {loading ? (
+        )
+      }
+    >
+      {source && optedIn === true && <StaleRefreshWarning state={source} />}
+      <SourceContent
+        state={fatalError ? 'error' : optedIn == null ? 'loading' : 'ready'}
+        label={t('benchmarks.cohort.title', 'Cohort eligibility')}
+        emptyMessage={t('benchmarks.cohort.noRelease', 'No stable release yet')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={fatalError}
+        errorRecovery={{ onRetry: (participationSource?.fatalError ? participationSource.retry : source?.retry) ?? undefined }}
+      >
+      {loading && !release ? (
         <div
           role="status"
           aria-busy="true"
@@ -79,36 +95,36 @@ export function CohortEligibilityPanel({
         />
       ) : release ? (
         <div className="space-y-3">
-          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-[var(--text-muted)]">
+          <Table aria-label={t('benchmarks.cohort.title', 'Cohort eligibility')}><tbody>
+            <tr>
+              <th scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.model', 'Model family')}
-              </dt>
-              <dd className="font-medium text-[var(--text-primary)]">
+              </th>
+              <td className="font-medium text-[var(--text-primary)]">
                 {modelFamily}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--text-muted)]">
+              </td>
+            </tr>
+            <tr>
+              <th scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.year', 'Model-year bucket')}
-              </dt>
-              <dd className="font-medium text-[var(--text-primary)]">
+              </th>
+              <td className="font-medium text-[var(--text-primary)] text-right">
                 {release.model_year_bucket > 0
                   ? `${release.model_year_bucket}–${release.model_year_bucket + 4}`
                   : t('benchmarks.cohort.unknownYear', 'Unknown')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--text-muted)]">
+              </td>
+            </tr>
+            <tr>
+              <th scope="row" className="text-[var(--text-muted)]">
                 {t('benchmarks.cohort.minimum', 'Release threshold')}
-              </dt>
-              <dd className="font-medium text-[var(--text-primary)]">
+              </th>
+              <td className="font-medium text-[var(--text-primary)]">
                 {t('benchmarks.cohort.minimumValue', 'At least {{count}} vehicles', {
                   count: release.minimum_cohort_size,
                 })}
-              </dd>
-            </div>
-          </dl>
+              </td>
+            </tr>
+          </tbody></Table>
           {release.suppressed ? (
             <InlineCallout variant="warning">
               {t(
@@ -117,23 +133,33 @@ export function CohortEligibilityPanel({
               )}
             </InlineCallout>
           ) : null}
-          <Button type="button" variant="secondary" onClick={onCreate} loading={pending}>
+          <Button type="button" variant="secondary" onClick={onCreate} loading={pending}
+            disabled={pending || !canAct} className="min-h-11 md:min-h-10" wrapLabel>
             {t('benchmarks.cohort.refresh', 'Check current source version')}
           </Button>
         </div>
       ) : (
-        <EmptyState
-          icon={<UsersRound className="h-8 w-8" />}
-          title={t('benchmarks.cohort.noRelease', 'No stable release yet')}
-          message={t(
-            'benchmarks.cohort.noReleaseMessage',
-            'Create a release for the last three completed months. Cohorts below k={{count}} remain suppressed.',
-            { count: minimumCohortSize },
-          )}
-          action={{ label: t('benchmarks.cohort.create', 'Create release'), onClick: onCreate }}
-          className="py-8"
-        />
+        <div>
+          {/* no-action: the pending-aware create control is immediately below this empty state. */}
+          <EmptyState
+            icon={<UsersRound className="h-8 w-8" />}
+            title={t('benchmarks.cohort.noRelease', 'No stable release yet')}
+            message={t(
+              'benchmarks.cohort.noReleaseMessage',
+              'Create a release for the last three completed months. Cohorts below k={{count}} remain suppressed.',
+              { count: minimumCohortSize },
+            )}
+            className="py-8"
+          />
+          <div className="flex justify-center">
+            <Button type="button" variant="secondary" onClick={onCreate}
+              loading={pending} disabled={pending || !canAct} wrapLabel className="min-h-11 md:min-h-10">
+              {t('benchmarks.cohort.create', 'Create release')}
+            </Button>
+          </div>
+        </div>
       )}
+      </SourceContent>
       {error ? (
         <InlineCallout variant="danger" className="mt-3">
           {t('benchmarks.cohort.error', 'Could not create release: {{message}}', {
@@ -141,6 +167,6 @@ export function CohortEligibilityPanel({
           })}
         </InlineCallout>
       ) : null}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

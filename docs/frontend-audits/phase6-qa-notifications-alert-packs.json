@@ -1,0 +1,977 @@
+{
+  "item": "phase6-qa-notifications-alert-packs",
+  "attempt": 1,
+  "actorFromQueue": "86570d82-2027-44a3-a679-f9ed0edc68d2",
+  "page": "web/src/features/notifications/pages/AlertPacksPage.tsx",
+  "routes": [
+    "/notifications/packs"
+  ],
+  "status": "SOURCE_ONLY_QA_REPORT_COMPLETE_WITH_NEEDS_RELEASED",
+  "acceptance": "NOT a compiler/test/lint/build/native/application pass",
+  "timestamps": {
+    "actualFirstRead": "2026-10-14T02:00:03.0176791Z",
+    "reservation": "2026-10-14T01:57:57.687Z",
+    "returnDeadline": "2026-10-14T02:17:57.687Z",
+    "hardDeadline": "2026-10-14T02:22:57.687Z",
+    "reportWrittenAt": "2026-10-14T02:13:15.172107+00:00",
+    "finalVerifiedAt": "2026-10-14T02:15:17.121291+00:00"
+  },
+  "scope": {
+    "readonly": "Target page and direct pack/hook/AI/forms/layout/trust/transport/preference supports/tests only. Shared sources examined solely to resolve direct mechanisms.",
+    "writable": [
+      "docs/frontend-audits/phase6-qa-notifications-alert-packs.json",
+      "web/logs/phase6-qa-notifications-alert-packs.log"
+    ],
+    "codeTestCatalogGitWrites": "NONE",
+    "applicationApiBrowserNetworkMutations": "NONE",
+    "subagentsInstallsServersFreshTestsLintBuildTscHelpers": "NONE"
+  },
+  "authority": {
+    "orchestrator": "docs/orchestrator-loop.md:1-296 read fully;worker110-138 applied",
+    "designContract": "Existing core49-606,state419-498,a11y500-542,acceptance560-605,explicit return-target2481-2539 and full section index inspected",
+    "mission": "Existing principles/contract,states/forms/separation,and QA43/DoD44/45 read",
+    "inventory": "Existing target audit-page-142 row and linked original report read;no reinventory",
+    "handoff": "Current recovery1-110,conventions2219-2342,nextsteps2419-2460 read",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "queue": "Original item row65,latest86,actor crosswalk54,attempt1/dependencyPhase5[x];queue moved concurrently,not edited by auditor"
+  },
+  "counts": {
+    "confirmedFindings": 9,
+    "underlyingDefectGroups": 7,
+    "conditionalNativeCandidates": 6,
+    "deduplicatedNeeds": 6,
+    "sourceNeeds": 5,
+    "futureAcceptanceNeeds": 1,
+    "byRule": {
+      "initial-paused-state": 1,
+      "empty-catalog-meaning": 1,
+      "stale-notice-context": 1,
+      "live-mutation-guard": 1,
+      "validation-association": 1,
+      "preference-bypass": 1,
+      "hardcoded-string": 3
+    },
+    "byPrimaryFile": {
+      "web/src/features/notifications/components/packs/AlertPacksPanel.tsx": 3,
+      "web/src/api/hooks/useAlertPacks.ts": 1,
+      "web/src/features/notifications/components/packs/InstallPackDialog.tsx": 1,
+      "web/src/features/notifications/components/packs/InstalledPackCard.tsx": 1,
+      "web/src/components/forms/VehicleMultiSelect.tsx": 3
+    },
+    "basis": "3 hardcoded lines count as3 records but1 defect group/owner. Other records group one causal mechanism with all evidence sites;grep candidates not findings."
+  },
+  "confirmedFindings": [
+    {
+      "id": "AP-01",
+      "rule": "initial-paused-state",
+      "file": "web/src/features/notifications/components/packs/AlertPacksPanel.tsx",
+      "line": 33,
+      "mechanism": "isLoading/fatal gates fall into data ?? [] when no-data query is pending+paused/idle with isLoading=false. Shared stale notice renders null without data. Four source paths lack an unresolved/initial-blocked state.",
+      "sourceOnlyRepro": "Trace data=undefined,error=null,isPending=true,isLoading=false,fetchStatus=paused:catalog No matching packs,installed No packs on this page,vehicle empty-fleet picker,channels no initial-blocked explanation.",
+      "fix": "Handle DataState initial/hasData/isRefreshBlocked before authoritative emptiness;retain independent fatal/retry/retained content.",
+      "ownerNeed": "N1",
+      "evidence": [
+        "web/src/features/notifications/components/packs/AlertPacksPanel.tsx:25-26,33-46,56-66",
+        "web/src/features/notifications/components/packs/InstallPackDialog.tsx:128-131,207-210",
+        "web/src/api/dataState.ts:185-216",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:58-61"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed"
+    },
+    {
+      "id": "AP-02",
+      "rule": "empty-catalog-meaning",
+      "file": "web/src/features/notifications/components/packs/AlertPacksPanel.tsx",
+      "line": 45,
+      "mechanism": "Successful empty catalog and filtered no-match share No matching packs / Try another search / Clear search.",
+      "sourceOnlyRepro": "Trace successful catalog=[] and search=\"\":clearing already-empty filter cannot recover a missing catalog.",
+      "fix": "Separate authoritative catalog empty from filter mismatch;retain installed neighbors and source retry.",
+      "ownerNeed": "N1",
+      "evidence": [
+        "web/src/features/notifications/components/packs/AlertPacksPanel.tsx:25-29,45-46",
+        "docs/frontend-audits/audit-page-142.json:states same historical root"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed"
+    },
+    {
+      "id": "AP-03",
+      "rule": "stale-notice-context",
+      "file": "web/src/features/notifications/components/packs/AlertPacksPanel.tsx",
+      "line": 49,
+      "mechanism": "Catalog/installed stale warnings follow retained decision cards and have no source labels;shared warning documents ABOVE retained content.",
+      "sourceOnlyRepro": "Trace two retained arrays with refreshError:cards then two generic Data may be stale notices. No native reading-order claim.",
+      "fix": "Place source-named existing warning before each retained list without dropping payload.",
+      "ownerNeed": "N1",
+      "evidence": [
+        "web/src/features/notifications/components/packs/AlertPacksPanel.tsx:33-49,56-66",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:12-16,80-85",
+        "docs/frontend-audits/audit-page-142.json:states same historical root"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed"
+    },
+    {
+      "id": "AP-04",
+      "rule": "live-mutation-guard",
+      "file": "web/src/api/hooks/useAlertPacks.ts",
+      "line": 93,
+      "mechanism": "Install/remove POSTs omit requiresLiveMode. request defaults false;operational guard returns without opt-in. Offline unsafe path patterns exclude these alert paths. UI enablement checks no operational mode/source-blocked readiness.",
+      "sourceOnlyRepro": "Trace valid ?as_of= with online=true and either POST:requiresLiveMode=false bypasses historical-mode rejection and proceeds toward transport. Offline dedicated guard does not reject these paths either. No requests invoked.",
+      "fix": "Opt both exact hook POSTs into requiresLiveMode;preserve body/invalidation and explain disabled live-only actions at callers. Do not alter global mutation defaults.",
+      "ownerNeed": "N2",
+      "evidence": [
+        "web/src/api/hooks/useAlertPacks.ts:92-95,106-109",
+        "web/src/api/client.ts:348-372",
+        "web/src/lib/operationalMode.ts:66-76",
+        "web/src/api/offlineCache.ts:50-73",
+        "web/src/features/notifications/components/packs/InstallPackDialog.tsx:174-182",
+        "web/src/features/notifications/components/packs/InstalledPackCard.tsx:49-53"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed",
+      "exception": "Production queryClient.ts:67-73 sets mutations retry=0,networkMode=always. No offline queue/replay defect asserted."
+    },
+    {
+      "id": "AP-05",
+      "rule": "validation-association",
+      "file": "web/src/features/notifications/components/packs/InstallPackDialog.tsx",
+      "line": 160,
+      "mechanism": "Numeric validity disables Install but generic footer Caption has no id/status/field association;threshold/master+row cooldown have native bounds but no explanatory error/description. Message error is correctly supplied.",
+      "sourceOnlyRepro": "Clear selected threshold or master cooldown:NaN stored,valid=false,Install disabled,numeric field receives no explanatory error. Native optional number emptiness alone does not explain custom business validation.",
+      "fix": "Reuse Input errors and existing summary/descriptions;preserve IDs,selected-only validation,signs,bounds,and seconds/minutes.",
+      "ownerNeed": "N3",
+      "evidence": [
+        "web/src/features/notifications/components/packs/InstallPackDialog.tsx:67-77,160,174",
+        "web/src/features/notifications/components/packs/PackRuleTriggerEditor.tsx:28-35",
+        "web/src/features/notifications/components/packs/PackDeliveryControls.tsx:18-21",
+        "web/src/features/notifications/components/packs/PackRuleDeliveryEditor.tsx:19-23",
+        "web/src/features/notifications/components/packs/PackRuleMessageEditor.tsx:23"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed"
+    },
+    {
+      "id": "AP-06",
+      "rule": "preference-bypass",
+      "file": "web/src/features/notifications/components/packs/InstalledPackCard.tsx",
+      "line": 22,
+      "mechanism": "formatDateTime(created_at) gets no locale/timezone options;helper uses browser defaults rather than saved application preferences.",
+      "sourceOnlyRepro": "Trace browser en-US and saved locale de-DE/saved timezone differing from browser:caption supplies no overrides so browser presentation wins. Not rendered.",
+      "fix": "Adopt existing provider-aware date/locale/timezone path at caller;preserve ISO and check hour-cycle capability with existing owner,not a new formatter.",
+      "ownerNeed": "N4",
+      "evidence": [
+        "web/src/features/notifications/components/packs/InstalledPackCard.tsx:22",
+        "web/src/lib/dateFormat.ts:44-61",
+        "web/src/components/data-display/format/DateTime.tsx:85-95"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed",
+      "ownerDedup": "Shared dateFormat.ts is actively claimed by phase6-fix-relative-future-dates;this is a caller need,not permission to change shared relative-date source."
+    },
+    {
+      "id": "AP-07",
+      "rule": "hardcoded-string",
+      "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+      "line": 73,
+      "mechanism": "vehicleLabel fallback hardcodes Vehicle # when display_name/model absent",
+      "sourceOnlyRepro": "Trace non-English locale and corresponding missing vehicle name/model or unknown selected ID:literal English Vehicle # remains. No browser/locale action.",
+      "fix": "Localize generated fallback via one interpolation key;preserve user names/models,IDs,VIN values and unknown selection.",
+      "ownerNeed": "N5",
+      "evidence": [
+        "web/src/components/forms/VehicleMultiSelect.tsx:73"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed"
+    },
+    {
+      "id": "AP-08",
+      "rule": "hardcoded-string",
+      "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+      "line": 155,
+      "mechanism": "Known single selected vehicle fallback hardcodes Vehicle # when display_name/model absent",
+      "sourceOnlyRepro": "Trace non-English locale and corresponding missing vehicle name/model or unknown selected ID:literal English Vehicle # remains. No browser/locale action.",
+      "fix": "Localize generated fallback via one interpolation key;preserve user names/models,IDs,VIN values and unknown selection.",
+      "ownerNeed": "N5",
+      "evidence": [
+        "web/src/components/forms/VehicleMultiSelect.tsx:155"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed"
+    },
+    {
+      "id": "AP-09",
+      "rule": "hardcoded-string",
+      "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+      "line": 156,
+      "mechanism": "Unknown single selected ID fallback hardcodes Vehicle #",
+      "sourceOnlyRepro": "Trace non-English locale and corresponding missing vehicle name/model or unknown selected ID:literal English Vehicle # remains. No browser/locale action.",
+      "fix": "Localize generated fallback via one interpolation key;preserve user names/models,IDs,VIN values and unknown selection.",
+      "ownerNeed": "N5",
+      "evidence": [
+        "web/src/components/forms/VehicleMultiSelect.tsx:156"
+      ],
+      "confirmation": "Source branch/mechanism confirmed; no runtime reproduction performed"
+    }
+  ],
+  "deduplicatedNeeds": [
+    {
+      "id": "N1",
+      "owner": "notifications pack source-state caller",
+      "findings": [
+        "AP-01",
+        "AP-02",
+        "AP-03"
+      ],
+      "files": [
+        "web/src/features/notifications/components/packs/AlertPacksPanel.tsx",
+        "web/src/features/notifications/components/packs/InstallPackDialog.tsx",
+        "web/src/features/notifications/components/packs/AlertPacksPanel.test.tsx"
+      ],
+      "dedup": "Same historical child empty/stale needs in audit-page-142/completed Phase5 row;no exact active support-file claim found. Reuse completed shared dataState/StaleRefreshWarning;do not redispatch Phase5."
+    },
+    {
+      "id": "N2",
+      "owner": "alert-pack typed mutation hook",
+      "findings": [
+        "AP-04"
+      ],
+      "files": [
+        "web/src/api/hooks/useAlertPacks.ts",
+        "web/src/api/hooks/useAlertPacks.test.tsx"
+      ],
+      "dedup": "One hook root for both POSTs;no exact active hook claim found. Caller readiness integration separately serialized;global client/offlineCache not leased."
+    },
+    {
+      "id": "N3",
+      "owner": "pack numeric validation caller",
+      "findings": [
+        "AP-05"
+      ],
+      "files": [
+        "web/src/features/notifications/components/packs/InstallPackDialog.tsx",
+        "web/src/features/notifications/components/packs/PackRuleTriggerEditor.tsx",
+        "web/src/features/notifications/components/packs/PackRuleDeliveryEditor.tsx",
+        "web/src/features/notifications/components/packs/PackDeliveryControls.tsx",
+        "web/src/features/notifications/components/packs/AlertPacksPanel.test.tsx"
+      ],
+      "dedup": "Historical validation root,not one fix per input. N1 overlapping dialog/test must release or be explicitly combined;no overlapping writers authorized."
+    },
+    {
+      "id": "N4",
+      "owner": "installed-pack date presentation caller",
+      "findings": [
+        "AP-06"
+      ],
+      "files": [
+        "web/src/features/notifications/components/packs/InstalledPackCard.tsx",
+        "web/src/features/notifications/components/packs/AlertPacksPanel.test.tsx"
+      ],
+      "dedup": "Serialize shared test overlap. dateFormat.ts/dateFormat.contract.test.ts already active phase6-fix-relative-future-dates:do not duplicate its owner."
+    },
+    {
+      "id": "N5",
+      "owner": "shared VehicleMultiSelect plus parent serialized English integration",
+      "findings": [
+        "AP-07",
+        "AP-08",
+        "AP-09"
+      ],
+      "files": [
+        "web/src/components/forms/VehicleMultiSelect.tsx",
+        "web/src/components/forms/__tests__/VehicleMultiSelect.test.tsx"
+      ],
+      "dedup": "Three sites,one root;phase3-vehicle-multi-select completed,not a fresh active fix. New narrow followup needed;catalog stays parent-owned."
+    },
+    {
+      "id": "N6",
+      "owner": "future explicitly authorized conditional/native acceptance",
+      "findings": [],
+      "candidates": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6"
+      ],
+      "files": [],
+      "dedup": "One future acceptance matrix,not six speculative implementations. No browser/API/install/remove/delivery authorization here;reuse existing fixture/lock/helper budgets only when separately authorized."
+    }
+  ],
+  "hashes": {
+    "algorithm": "SHA256",
+    "pins": [
+      {
+        "file": "web/e2e/alert-packs.smoke.spec.ts",
+        "beforeSha256": "1f3ec824fe9302f6c88de97cceb641f5cad65fdf723e56663afb7317c50d6b03",
+        "afterSha256": "1f3ec824fe9302f6c88de97cceb641f5cad65fdf723e56663afb7317c50d6b03",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "beforeSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "afterSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useAlertPacks.test.tsx",
+        "beforeSha256": "95bff1182b6f3e842c96364808b8ca05f929f2de19111fd45b178048ff9670bb",
+        "afterSha256": "95bff1182b6f3e842c96364808b8ca05f929f2de19111fd45b178048ff9670bb",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useAlertPacks.ts",
+        "beforeSha256": "95a840af229503d49bc7316b14e80d168d3727dee8a4a78f428fbf4779827364",
+        "afterSha256": "95a840af229503d49bc7316b14e80d168d3727dee8a4a78f428fbf4779827364",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useNotifications.ts",
+        "beforeSha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+        "afterSha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "beforeSha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "afterSha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/offlineCache.ts",
+        "beforeSha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+        "afterSha256": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/queryClient.ts",
+        "beforeSha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "afterSha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/queryPolicy.ts",
+        "beforeSha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+        "afterSha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AIAlertMessageTemplateButton.tsx",
+        "beforeSha256": "723ae166c17c43de7e91f2e435e43d8647c09816580883d875c550f56950fdcd",
+        "afterSha256": "723ae166c17c43de7e91f2e435e43d8647c09816580883d875c550f56950fdcd",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.test.tsx",
+        "beforeSha256": "bfc9aac3ac0f74eb252367b12fab45d92bb35edaebc6c4df48fb986aa6598a57",
+        "afterSha256": "bfc9aac3ac0f74eb252367b12fab45d92bb35edaebc6c4df48fb986aa6598a57",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx",
+        "beforeSha256": "5d0ac3622cff10627f1cfe33e6794feca2ec8751e84532801629cb538f9a1efe",
+        "afterSha256": "5d0ac3622cff10627f1cfe33e6794feca2ec8751e84532801629cb538f9a1efe",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AIAlertPackBuilder.test.tsx",
+        "beforeSha256": "fce1d402e24116de180f4c15a8117b7746358f7fe154bb95ad18fddab7547018",
+        "afterSha256": "fce1d402e24116de180f4c15a8117b7746358f7fe154bb95ad18fddab7547018",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/AIAlertPackBuilder.tsx",
+        "beforeSha256": "33a88a3f9f8e92a08d1bbe6272c4a4a5ecb95f4161b6386db087c6824840fcb5",
+        "afterSha256": "33a88a3f9f8e92a08d1bbe6272c4a4a5ecb95f4161b6386db087c6824840fcb5",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ai/withAiFeature.tsx",
+        "beforeSha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+        "afterSha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/data-display/format/DateTime.tsx",
+        "beforeSha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+        "afterSha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "beforeSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "afterSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/forms/SearchInput.tsx",
+        "beforeSha256": "cb2b0e20067112320981252bcdaee4ba6af937e746bcbe5e3308163047f9c8c5",
+        "afterSha256": "cb2b0e20067112320981252bcdaee4ba6af937e746bcbe5e3308163047f9c8c5",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+        "beforeSha256": "411d32135c5e4dfef661f1321d1abd263b5721cf3255b8f159cd84666a79852f",
+        "afterSha256": "411d32135c5e4dfef661f1321d1abd263b5721cf3255b8f159cd84666a79852f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/forms/__tests__/VehicleMultiSelect.test.tsx",
+        "beforeSha256": "8f8eb120cfb057531288b41a86f7be91e4476251c52c82c25768d25e42f8e0db",
+        "afterSha256": "8f8eb120cfb057531288b41a86f7be91e4476251c52c82c25768d25e42f8e0db",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Modal.tsx",
+        "beforeSha256": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+        "afterSha256": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/AlertPacksPanel.test.tsx",
+        "beforeSha256": "c611d89f052c390af7a657125d17616d534c30a2cab2a05f892d3220312f5aab",
+        "afterSha256": "c611d89f052c390af7a657125d17616d534c30a2cab2a05f892d3220312f5aab",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/AlertPacksPanel.tsx",
+        "beforeSha256": "8a87d7a34360f0b420979a6945a09e12a8c0ac23bb501a643a82b586a1e9fe64",
+        "afterSha256": "8a87d7a34360f0b420979a6945a09e12a8c0ac23bb501a643a82b586a1e9fe64",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/InstallPackDialog.tsx",
+        "beforeSha256": "0b15c5182bf3973fb5857b7a53239afa1d5f2bd5ac2c7e1d9a1e4ec5ba1e8d07",
+        "afterSha256": "0b15c5182bf3973fb5857b7a53239afa1d5f2bd5ac2c7e1d9a1e4ec5ba1e8d07",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/InstalledPackCard.tsx",
+        "beforeSha256": "b447e93b768786e97e3005f67c77222dfab109d97acb9c6626d04f60eb2b3671",
+        "afterSha256": "b447e93b768786e97e3005f67c77222dfab109d97acb9c6626d04f60eb2b3671",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/PackDeliveryControls.tsx",
+        "beforeSha256": "a251b6892c4b10a9b3bf58f408d6db4729b5b294ffb0038091880113103e7f4f",
+        "afterSha256": "a251b6892c4b10a9b3bf58f408d6db4729b5b294ffb0038091880113103e7f4f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/PackRuleChannels.tsx",
+        "beforeSha256": "e6f1b91610fbb66d0f81435dbb2648ba3ad63b1dcdd23fe2ae3e20baec6ef462",
+        "afterSha256": "e6f1b91610fbb66d0f81435dbb2648ba3ad63b1dcdd23fe2ae3e20baec6ef462",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/PackRuleDeliveryEditor.tsx",
+        "beforeSha256": "7cec7495a5e281362049968ccbc1aa62e821d2840b97be246de15e5a0224c8bd",
+        "afterSha256": "7cec7495a5e281362049968ccbc1aa62e821d2840b97be246de15e5a0224c8bd",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/PackRuleMessageEditor.tsx",
+        "beforeSha256": "eccd42863e2d808e85124b9c44c87ff7d08800dc9ddfdf55a00e3e1bb9cd3746",
+        "afterSha256": "eccd42863e2d808e85124b9c44c87ff7d08800dc9ddfdf55a00e3e1bb9cd3746",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/PackRulePreview.tsx",
+        "beforeSha256": "1063b71322f60850c376ac4273fbc7f043af78a4a580e745562f21dcad5f5ee4",
+        "afterSha256": "1063b71322f60850c376ac4273fbc7f043af78a4a580e745562f21dcad5f5ee4",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/PackRuleResetButton.tsx",
+        "beforeSha256": "ab5eed6f97b10677c7eda3d6b9164b06a2129effd4b313867d6ded89e9dfd712",
+        "afterSha256": "ab5eed6f97b10677c7eda3d6b9164b06a2129effd4b313867d6ded89e9dfd712",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/PackRuleTriggerEditor.tsx",
+        "beforeSha256": "fa5d37c89c9eac9e6807c0fa64d5f0f92f1339b78484dfc5794ed97b8fb4cc2c",
+        "afterSha256": "fa5d37c89c9eac9e6807c0fa64d5f0f92f1339b78484dfc5794ed97b8fb4cc2c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/packDelivery.test.ts",
+        "beforeSha256": "9af8aacd9aa1fb0f5be09d8f7f9731381aad4b2c1a04a1c27d96ceebaef6f32f",
+        "afterSha256": "9af8aacd9aa1fb0f5be09d8f7f9731381aad4b2c1a04a1c27d96ceebaef6f32f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/packDelivery.ts",
+        "beforeSha256": "854e370e5d48ed5f6f120f5268715d1dce01a902357d58f7a952d11ae5a7a193",
+        "afterSha256": "854e370e5d48ed5f6f120f5268715d1dce01a902357d58f7a952d11ae5a7a193",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/lib/alertDelivery.ts",
+        "beforeSha256": "4a46a79787ad85847749f9acacf1a7380f3e9e813d456c246a38cc7f1efb02a4",
+        "afterSha256": "4a46a79787ad85847749f9acacf1a7380f3e9e813d456c246a38cc7f1efb02a4",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/notifications/pages/AlertPacksPage.tsx",
+        "beforeSha256": "db4fda93f577ed5bd8df26c9a4b41a7ef277a909215d47d5862c50f3b60ace0d",
+        "afterSha256": "db4fda93f577ed5bd8df26c9a4b41a7ef277a909215d47d5862c50f3b60ace0d",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "beforeSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "afterSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useFormatting.ts",
+        "beforeSha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+        "afterSha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useUnits.ts",
+        "beforeSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "afterSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "beforeSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "afterSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/operationalMode.ts",
+        "beforeSha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+        "afterSha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/main.tsx",
+        "beforeSha256": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+        "afterSha256": "0f6618142f999757db4bbe8633bb5a422132f09fa3350274f3265ee77daf5d04",
+        "unchanged": true
+      }
+    ],
+    "baselineRepeatedHashDifferences": [],
+    "drift": [],
+    "meaning": "Inspection baseline/current source/test/direct-support/catalog snapshots,not a historical original preservation proof;external active shared drift must be reported,not overwritten."
+  },
+  "release": {
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-notifications-alert-packs.json",
+      "web/logs/phase6-qa-notifications-alert-packs.log"
+    ],
+    "sourceWrites": "NONE",
+    "activeCommands": [],
+    "released": true,
+    "finalJsonParse": "PASS report schema/counts/reference checks (not a code/test pass)",
+    "finalPinCheck": "MATCH",
+    "releasedAt": "2026-10-14T02:15:17.121291+00:00",
+    "noSourceTestCatalogGitWrites": true
+  },
+  "conditionalNativeCandidates": [
+    {
+      "id": "C1",
+      "kind": "native-mobile",
+      "file": "web/src/features/notifications/components/packs/PackRuleChannels.tsx",
+      "line": 38,
+      "mechanism": "sm/h-auto channel chips lack caller min-h-11;InstalledPackCard:34 sm edit and default page/footer Buttons use shared36/40px declarations. Effective CSS/font/density/spacing exceptions unmeasured.",
+      "requiredEvidence": "Measure all below-md targets,long labels,200%text,density and justified WCAG exceptions. Declarations are not a native hit-area failure.",
+      "ownerNeed": "N6"
+    },
+    {
+      "id": "C2",
+      "kind": "conditional-accessibility",
+      "file": "web/src/features/notifications/components/packs/PackRuleTriggerEditor.tsx",
+      "line": 24,
+      "mechanism": "Repeated compact generic Operator/Threshold/cooldown/message/channel names omit rule identity. Table/named-section context may suffice but native form-navigation announcements unverified.",
+      "requiredEvidence": "Screen-reader field/table context at1024+ and mobile cards;preserve explicit IDs/persistence.",
+      "ownerNeed": "N6"
+    },
+    {
+      "id": "C3",
+      "kind": "native-overlay-layout",
+      "file": "web/src/features/notifications/components/packs/InstallPackDialog.tsx",
+      "line": 157,
+      "mechanism": "Existing full Modal,sm:max-w-[96vw],1024 desktop switch and1960px contained table;shared footer/focus/portal/safe-area declarations exist,not mounted proof.",
+      "requiredEvidence": "320/375/390/430/768/1024/1280/1440/1920/2560px,narrow containers,200%text,RTL,long labels,nested AI modal,pending/Escape/discard/restoration/footer reachability. No speculative fullscreen replacement.",
+      "ownerNeed": "N6"
+    },
+    {
+      "id": "C4",
+      "kind": "conditional-channel-integration",
+      "file": "web/src/features/notifications/components/packs/InstallPackDialog.tsx",
+      "line": 174,
+      "mechanism": "Channel fatal/loading/unresolved does not disable Install. null defaults may intentionally delegate all-enabled channels to server;NOT proof of no channels or misrouting.",
+      "requiredEvidence": "Clarify degraded-source feedback and missing-ID/null/[]/explicit-ID server semantics without real delivery or rule mutations.",
+      "ownerNeed": "N6"
+    },
+    {
+      "id": "C5",
+      "kind": "conditional-SI-display-preference",
+      "file": "web/src/features/notifications/components/packs/PackRuleTriggerEditor.tsx",
+      "line": 28,
+      "mechanism": "Explicit Celsius source-unit authoring preserved;user-preferred formatTemperature equivalent only in title. No wire-unit/sign corruption asserted.",
+      "requiredEvidence": "Confirm SI authoring policy and equivalent visible to keyboard/touch/F-preference users;negative Celsius,zero,NaN,null,percent bounds.",
+      "ownerNeed": "N6"
+    },
+    {
+      "id": "C6",
+      "kind": "conditional-feedback-state-loading",
+      "file": "web/src/features/notifications/components/packs/InstalledPackCard.tsx",
+      "line": 50,
+      "mechanism": "Removal onSuccess closes/invalidate;component declares no success announcement. Install declares success banner/member summary;loading uses Spinner rather than source-shaped geometry. Effective app announcements/loading/focus behavior unmounted.",
+      "requiredEvidence": "Meaningful success/error announcements,removal focus after disappearing card,pending/draft retention,independent retries,retained-empty refresh failure/paused states and source-shaped loading geometry.",
+      "ownerNeed": "N6"
+    }
+  ],
+  "sectionActionCoverage": [
+    {
+      "section": "Shell and ordinary rule navigation",
+      "source": [
+        "AlertPacksPage.tsx:10-18",
+        "PageLayout.tsx:9-16"
+      ],
+      "declarations": "Localized title/intro and shared PageContainer via PageLayout;onEditRule navigates /notifications/rules?rule=<id>;one route header.",
+      "testSource": [
+        "AlertPacksPanel.test.tsx:84-95,461-471"
+      ]
+    },
+    {
+      "section": "Catalog/search/preview/optional custom AI",
+      "source": [
+        "AlertPacksPanel.tsx:18-51"
+      ],
+      "declarations": "Localized pack name/description,rule count/version,search/clear,explicit preview;custom catalog enables gated AI builder. Core shell remains visible independently of data.",
+      "findings": [
+        "AP-01",
+        "AP-02",
+        "AP-03"
+      ],
+      "testSource": [
+        "AlertPacksPanel.test.tsx:359-366,474-480"
+      ]
+    },
+    {
+      "section": "Installed list/refresh/page navigation",
+      "source": [
+        "AlertPacksPanel.tsx:52-70",
+        "useAlertPacks.ts:80-86"
+      ],
+      "declarations": "Independent source,refresh,20-row limit/offset,prev/next guards,page empty not declared globalzero;members safeArray-normalized.",
+      "findings": [
+        "AP-01",
+        "AP-03"
+      ]
+    },
+    {
+      "section": "Installed detail/member scope/edit/remove",
+      "source": [
+        "InstalledPackCard.tsx:20-56"
+      ],
+      "declarations": "Version/time,all-current+future vs explicit IDs,deleted/enabled/disabled/reused/shared state,ordinary edit;remove defaults keep all rules,optional deletion only owned+unshared+nondeleted;danger confirm/cancel/error,pending close protection.",
+      "findings": [
+        "AP-04",
+        "AP-06"
+      ],
+      "testSource": [
+        "AlertPacksPanel.test.tsx:426-436,461-471"
+      ]
+    },
+    {
+      "section": "Defaults/vehicle scope/readiness",
+      "source": [
+        "InstallPackDialog.tsx:32-82,120-154,174-182"
+      ],
+      "declarations": "all_sticky initial scope;specific requires IDs;900seconds=15minutes,once,titletrue,nullall-enabled;new rules initially paused,explicit enable;existing reused states untouched;pending disables editing/close. This is business-form vehicle scope,not a duplicate workspace analysis picker.",
+      "findings": [
+        "AP-01",
+        "AP-04",
+        "AP-05"
+      ],
+      "testSource": [
+        "AlertPacksPanel.test.tsx:121-248,318-357,368-411"
+      ]
+    },
+    {
+      "section": "Selection/rule properties/search/filter/paging",
+      "source": [
+        "InstallPackDialog.tsx:43-77,83-119,202-246",
+        "PackRulePreview.tsx:29-52"
+      ],
+      "declarations": "All rules initially selected;all/selected/customized filters;matching select-all preserves hidden choices;10rule paging;all selected IDs submitted,not visible-only. Both desktop/mobile preserve selection,name,severity,operator,value,cooldown,behavior,message,channels,title,reset.",
+      "findings": [
+        "AP-05"
+      ],
+      "testSource": [
+        "AlertPacksPanel.test.tsx:97-119,250-340,342-357,387-395"
+      ]
+    },
+    {
+      "section": "Delivery inheritance/reset/channels",
+      "source": [
+        "packDelivery.ts:5-23",
+        "PackRuleChannels.tsx:20-41",
+        "InstallPackDialog.tsx:48-50,113-125,140-143,181"
+      ],
+      "declarations": "undefinedinherits/nullall/[]none/explicitIDs distinct;missing channel ID label retained;defaults resolved into selected rules;reset clears only cooldown/mode/title/channel overrides while preserving reviewed operator/value/message;apply-all reaches hidden rules.",
+      "testSource": [
+        "packDelivery.test.ts:8-38",
+        "AlertPacksPanel.test.tsx:134-248"
+      ]
+    },
+    {
+      "section": "Draft/discard/pending/install/error/success",
+      "source": [
+        "InstallPackDialog.tsx:56-82,157-191"
+      ],
+      "declarations": "Dirty snapshot+navigation guard;pristine close direct;actual edits ask discard;pending cannot close;failure retains draft/error;success-only result created/reused counts,each member/disabled state,Done.",
+      "findings": [
+        "AP-04",
+        "AP-05"
+      ],
+      "testSource": [
+        "AlertPacksPanel.test.tsx:221-233,398-459"
+      ]
+    },
+    {
+      "section": "AI proposal and message-assistance actions",
+      "source": [
+        "AIAlertPackBuilder.tsx:24-80",
+        "AIAlertMessageTemplateButton.tsx:8-23",
+        "PackRuleMessageEditor.tsx:26-29"
+      ],
+      "declarations": "withAiFeature mount gate;goal5..2000;typed unique supported proposalIDs2..catalogsize;invalid events clear proposal;Review transfers draft only,not install. Message advisor receives selected operator/raw threshold;explicit Apply changes only one message via nested sharedModal. No AI/API action performed.",
+      "testSource": [
+        "AIAlertPackBuilder.test.tsx:23-51",
+        "AIAlertMessageTemplateSuggestion.test.tsx:171-336",
+        "alert-packs.smoke.spec.ts:71-225"
+      ]
+    }
+  ],
+  "sourceTrustMatrix": {
+    "catalog": "Spinner isLoading;fatal only without retained payload;retained+warning;AP01 initial-paused/idle gap/AP02 authoritative-empty mismatch/AP03 warningplacement.",
+    "installations": "Independent loading/fatal/retry/retainedwarning/emptypage;AP01 initial-blocked gap;no server-total/globalzero inferred.",
+    "vehicles": "Loading/fatal/retry/stale and preserved unknown IDs;AP01 initialpaused appears emptyfleet;allsticky valid independent form scope.",
+    "channels": "Loading/fatal/retry/successfulempty/retainedwarning;initialpaused explanation absent;install degraded semanticsC4 unknown.",
+    "fatalRetained": "useDataState fatalError only without retaineddata. Arrays retained on refreshfailure;empty array still retaineddata. No refresh-induced data-deletion finding.",
+    "pausedUnknown": "Paused does not prove offline/serverfailure. Unknown IDs/deleted rule_id remain represented,not converted to telemetryzero.",
+    "confirmationFeedback": "Explicit remove confirmation with rules keptbydefault;explicit install/defaultpaused;dirty-only discard;pending/errors/success-only transitions. Native announcement/restoration unverified."
+  },
+  "SI_signs_preferences_i18n": {
+    "wire": "Raw values preserved in hook/cache;cooldown edits minutes*60 and POSTcooldown_s;negative valid Celsius threshold preserved,percent0..100 explicit;no physical-unit conversion inside hooks.",
+    "authoring": "Explicit Celsius authoring plus useUnits formatTemperature equivalent intitle;C5 candidate,not wrong-wireunit proof.",
+    "localePrefs": "AP06 installed date ignores saved locale/timezone. No preference reset or ID changes;hour-cycle capability requires existing owner.",
+    "catalogLiteralCheck": "114unique literal tkeys checked against en.json plus one/other plural variants;0missing occurrences in this limited check. Dynamic catalog/rule IDs/fallbacks not a whole-i18n pass.",
+    "hardcoded": "3 generated Vehicle # fallback sites;user-provided name/model/signal identifiers/operators/unit symbols not treated as untranslated English sentences. Catalog reads only.",
+    "persistence": "notifications:pack-preview tableId,field IDs,vehicle IDs,theme/navigation/preferences untouched."
+  },
+  "mobileAccessibilityDeclarations": {
+    "layout": "Responsive grids/wrapping toolbars;1024px desktop branch;mobile defaultsAccordion+rulecards retain all fields;named keyboard-focusable horizontal table region;sharedModal persistentfooter,portal,focus,safe-area declarations.",
+    "labels": "Localized searches via shared placeholder/name fallback;rule-named selections/mobile sections,explicit IDs,contextual edit names,resettooltip,selectedcount aria-live=polite. AP05 numeric associations;C2 native contextualnames.",
+    "native": "NOTRUN allviewports/themes/density/RTL/200%text/forcedcolors/reducedmotion/keyboard/touch. No measured overflow,target,contrast,focustrap claim."
+  },
+  "guidelineChecks": {
+    "static-inline-style": {
+      "rawMatches": 0,
+      "confirmed": 0
+    },
+    "raw-html": {
+      "rawMatches": 1,
+      "confirmed": 0,
+      "exception": "VehicleMultiSelect comment mentioning <select>,not JSX;shared UI primitives native elements expected."
+    },
+    "direct-library-import": {
+      "rawMatches": 0,
+      "confirmed": 0
+    },
+    "old-api-import": {
+      "rawMatches": 0,
+      "confirmed": 0
+    },
+    "double-prefix": {
+      "rawMatches": 0,
+      "confirmed": 0
+    },
+    "camelcase-param": {
+      "rawMatches": 0,
+      "confirmed": 0
+    },
+    "hidden-section": {
+      "rawMatches": 18,
+      "confirmed": 0,
+      "exception": "Open-dialog/empty/error/customAI/capability conditions,not null-data hiding of core panels."
+    },
+    "hardcoded-string": {
+      "initialRawMatches": 2,
+      "initialException": "request<...> generic syntax,not JSXtext",
+      "supplementaryExactFallbackMatches": 3,
+      "confirmed": 3
+    },
+    "missing-page-container": {
+      "confirmed": 0,
+      "exception": "PageLayout delegates PageContainer:12"
+    },
+    "fetch-useeffect": {
+      "rawMatches": 4,
+      "confirmed": 0,
+      "exception": "AI cancellation and picker UI/focus/scope effects,not data loading."
+    },
+    "backendRules": {
+      "status": "NOTRUN",
+      "reason": "No assigned internal Go files"
+    }
+  },
+  "testSourceCoverage": {
+    "files": [
+      {
+        "file": "web/src/features/notifications/components/packs/AlertPacksPanel.test.tsx",
+        "declarations": 25,
+        "authoredExpanded": 26,
+        "executed": 0,
+        "status": "NOTRUN",
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      },
+      {
+        "file": "web/src/features/notifications/components/packs/packDelivery.test.ts",
+        "declarations": 4,
+        "authoredExpanded": 10,
+        "executed": 0,
+        "status": "NOTRUN",
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      },
+      {
+        "file": "web/src/api/hooks/useAlertPacks.test.tsx",
+        "declarations": 2,
+        "authoredExpanded": 2,
+        "executed": 0,
+        "status": "NOTRUN",
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      },
+      {
+        "file": "web/src/components/ai/AIAlertPackBuilder.test.tsx",
+        "declarations": 2,
+        "authoredExpanded": 2,
+        "executed": 0,
+        "status": "NOTRUN",
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      },
+      {
+        "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.test.tsx",
+        "declarations": 10,
+        "authoredExpanded": 10,
+        "executed": 0,
+        "status": "NOTRUN",
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      },
+      {
+        "file": "web/src/components/forms/__tests__/VehicleMultiSelect.test.tsx",
+        "declarations": 24,
+        "authoredExpanded": 24,
+        "executed": 0,
+        "status": "NOTRUN",
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      },
+      {
+        "file": "web/e2e/alert-packs.smoke.spec.ts",
+        "declarations": 3,
+        "authoredExpanded": 22,
+        "executed": 0,
+        "status": "NOTRUN",
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      }
+    ],
+    "unitAuthoredExpanded": 74,
+    "e2eAuthoredExpanded": 22,
+    "e2eRelevantPackPageExpanded": 16,
+    "e2eOtherRulePageCases": 6,
+    "executed": 0,
+    "missingNamedPageTest": "AlertPacksPage.test.tsx does not exist;page wiring coverage lives in AlertPacksPanel.test.tsx.",
+    "coverageGaps": [
+      "initialpaused/idle four sources",
+      "retainedempty/independent refreshfailure",
+      "live/asof/offline refusal",
+      "numeric explanatory associations",
+      "nonEnglish generatedfallbacks/saveddateprefs",
+      "nativefeedback/removalfocus",
+      "fullacceptance beyond populated synthetic fixtures"
+    ],
+    "censusCorrection": "Initial nested-array split heuristic overexpanded packDelivery.each;raw retained and superseded by JSONliteral array census. No runner discovery/execution or passclaimed."
+  },
+  "commandsAndFailures": {
+    "rawLog": "web/logs/phase6-qa-notifications-alert-packs.log",
+    "commands": "Read-only PowerShell discovery/git status;python - inline UTF8 numbered source reads,regex grep,canonicalJSON lookup,queue owner search,SHA256,test declaration census;authorizedJSON writes/finalparsepincheck. No helperfiles/run created.",
+    "failures": [
+      {
+        "shellId": "1982",
+        "exit": 1,
+        "error": "rg unavailable;transcript retained;Python regex fallback used"
+      },
+      {
+        "shellId": "2003",
+        "exit": 1,
+        "error": "cp1252 UnicodeEncodeError atcontractline50;fullorchestrator printed thenUTF8reread logged"
+      },
+      {
+        "shellId": "2314",
+        "exit": 1,
+        "error": "oserror206 oversized inlinecommand not launched;report serialized in boundedparts"
+      }
+    ],
+    "toolReadFailure": "view savedcore transcript456-730 failed:only391lines;allcorecontent read via1-230/231-455;logged",
+    "analysisCorrection": "Initial authored each expansion corrected without hiding raw result",
+    "missingPathProbes": "readOnlySession.ts,useDateTimePreferences.ts,old DateTime guessed path were NOTFOUND;real operationalMode/date owner resolved;no missing-file pass",
+    "inspectionExit": "Subsequent readonly Python reads/scans/census and boundedserialization exited0. No-match grep convention1 is not a failed Python process.",
+    "initialProbe": "First shell1954 initial discovery/read-only git status exited0,raw toolstream available;root status was repeated verbatim in shell1982 transcript before rg failed. No source writes.",
+    "notRun": [
+      "Vitest/Playwright",
+      "lint",
+      "npm build",
+      "npx tsc --noEmit",
+      "preservation/global helpers",
+      "API/HTTP/AI/SSE/delivery/browser/native/network",
+      "install/remove/edit rules/packs/notifications",
+      "Gitwrites/commits/staging",
+      "servers/installs/subagents"
+    ]
+  }
+}

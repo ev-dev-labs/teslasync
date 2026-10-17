@@ -1,0 +1,812 @@
+{
+  "item": "phase6-qa-admin-api-logs",
+  "phase": 6,
+  "outcome": "SOURCE_REVIEW_WITH_CONFIRMED_DEFECTS",
+  "fullNativeAcceptance": "NOTRUN",
+  "wholeApplicationAcceptance": "NOTRUN",
+  "timestamps": {
+    "dispatchCreation": "2026-10-13T09:11:04.952-07:00",
+    "firstActualClock": "2026-10-13T09:11:14.7580989-07:00",
+    "sourceEvidenceRechecked": "2026-10-13T09:18:09.2863234-07:00",
+    "reviewAndSourcePersistenceValidationCompleted": "2026-10-13T09:22:35.3571473-07:00",
+    "timeboxDeadline": "2026-10-13T09:31:04.952-07:00",
+    "hardDeadline": "2026-10-13T09:36:04.952-07:00"
+  },
+  "authority": {
+    "queueRow": "migration-queue.md:178",
+    "acceptedSourceRow": "migration-queue.md:1486",
+    "acceptedSourceCommitAsRecordedInQueue": "5b1a1062d9b595dd9619368607128ee409c883c1",
+    "queueReadResult": "Phase6 row was pending, attempt 0; Phase5 row done, attempt 1, source-only acceptance. This worker does not edit queue status.",
+    "soleWritableVersionedFile": "docs\\frontend-audits\\phase6-qa-admin-api-logs.json",
+    "ignoredLogWritten": false,
+    "applicationSourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "configurationWrites": 0,
+    "orchestratorWrites": 0,
+    "gitCommands": 0,
+    "delegations": 0,
+    "installs": 0,
+    "customToolOrHelperExecutions": 0,
+    "serverStarts": 0,
+    "dockerCommands": 0,
+    "networkRequests": 0,
+    "apiMutations": 0,
+    "browserGrant": false,
+    "browserCalls": 0,
+    "browserReason": "Existing native ownership is unconfirmed; admin logs may expose nonfixture identities. No browser, screenshot, fixture mount or live API read was attempted."
+  },
+  "requirementsRead": [
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md: MDC-002,010-026,030-034,040-047,060-070",
+    "docs\\frontend-mission.md: preservation, shared architecture, responsive/mobile/table requirements, loading/empty/error/offline states, localization, accessibility, and sections 43-45",
+    "docs\\session-handoff.md: current Phase6/source-only dispatch, unchanged test reuse, technical-gate receipt and native restrictions",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    "docs\\frontend-audits\\audit-page-003.json",
+    "migration-queue.md:178,1486"
+  ],
+  "instructionResolution": "Current SI cutover and design contract control over older source-unit/neon examples in instruction files. Existing diagnostic duration_ms is preserved; this is not a wire migration. Audit and hook skills were loaded, but their helper scripts were not executed because the assignment forbids helpers and full gates. Built-in read/search tools and bounded PowerShell reads were used instead.",
+  "page": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+  "routes": [
+    {
+      "path": "/api-logs",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": [
+        "web\\src\\App.tsx:259,722: lazy ApiLogs route mounted inside SafeRoute",
+        "web\\src\\lib\\routeLoaders.ts:99: imports accepted ApiLogsPage",
+        "web\\src\\lib\\routeRegistry.ts:52: actual /api-logs identity"
+      ],
+      "native": "NOTRUN"
+    }
+  ],
+  "sourceSnapshot": {
+    "firstHashCapture": "2026-10-13T09:15:23.2242069-07:00",
+    "secondHashCapture": "2026-10-13T09:18:09.1826655-07:00",
+    "allNineHashesEqualAcrossCaptures": true,
+    "atomicSnapshot": false,
+    "limitation": "Live read-only working-tree inspection, not a Git checkout or atomic snapshot. No claim that other workers or uninspected files were unchanged.",
+    "files": [
+      {
+        "path": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+        "lines": 450,
+        "sha256": "dff363b12dcd055167cf73a9ea5fb6e96d36f97d1d8d2a1782302666f10dbc31"
+      },
+      {
+        "path": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx",
+        "lines": 382,
+        "sha256": "5fea83dbaf47f23de756c6e06fbe1d449b978c4114ad546758d7ffc825059b25"
+      },
+      {
+        "path": "web\\src\\features\\admin\\components\\ApiLogsBackendErrors.tsx",
+        "lines": 87,
+        "sha256": "9e63728b7733c042e1026c1a50fa212a24b32a7c044596a46247042612d67ecc"
+      },
+      {
+        "path": "web\\src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx",
+        "lines": 79,
+        "sha256": "393ce23d61dee80f1bf3f37caca43d452fbbda5f6eac9f45b8547f6e09a0cfb8"
+      },
+      {
+        "path": "web\\src\\features\\admin\\components\\ApiLogsRuntimeCard.tsx",
+        "lines": 45,
+        "sha256": "39554bc5e4724f74776c414a662ca44c2e821bbbc82b55bc484b5f494c4ad5b6"
+      },
+      {
+        "path": "web\\src\\features\\admin\\components\\ApiLogsRuntimeList.tsx",
+        "lines": 11,
+        "sha256": "777fe776caf50754964a211fb310b7c05750ff841b64749262a3abcf1847b40b"
+      },
+      {
+        "path": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx",
+        "lines": 64,
+        "sha256": "64d216107d80a1115005b8a5099d5198097fbb19089c1076493a1a4be388a0e9"
+      },
+      {
+        "path": "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts",
+        "lines": 17,
+        "sha256": "8732d47bed79bcbaa9c518bd7ee00749d13d57b5ff172342f864da8a24045657"
+      },
+      {
+        "path": "web\\src\\features\\admin\\lib\\serviceOptions.ts",
+        "lines": 61,
+        "sha256": "972ad7ac381bcc0ff53ea3d76a6bbaf545b7af4ac1a54b8485073148a52102fe"
+      }
+    ]
+  },
+  "preservation": {
+    "status": "PASS",
+    "evidenceKind": "SOURCE_ONLY",
+    "baseline": "Existing audit-page-003.json preservation receipt; no replacement baseline created.",
+    "baselinePageLines": 440,
+    "currentPageLines": 450,
+    "baselinePagePlusEightDependenciesLines": 1186,
+    "currentPagePlusSameEightDependenciesLines": 1196,
+    "ratio": 1.008432,
+    "minimumRequiredRatio": 0.7,
+    "baselineSections": 6,
+    "currentSections": 6,
+    "structureCounts": {
+      "pageGlassPanelOpeningTags": 2,
+      "pageChartContainerOpeningTags": 0,
+      "pageSectionOpeningTags": 2,
+      "summaryOperationalBriefInstances": 2,
+      "evidenceColumns": 9,
+      "expandedEvidenceViewers": 4
+    },
+    "sections": [
+      {
+        "name": "Range request activity",
+        "status": "PASS",
+        "evidence": "ApiLogsPage.tsx:272-273; ApiLogsSummary.tsx:23-56: three metrics, scope, provenance, shared details, missing/loading/error/retained branches."
+      },
+      {
+        "name": "Independent last 24h summary",
+        "status": "PASS",
+        "evidence": "ApiLogsSummary.tsx:45-46,58-62: fourth metric; explicit independence and unavailable exact-bounds explanation."
+      },
+      {
+        "name": "By service",
+        "status": "PASS",
+        "evidence": "ApiLogsPage.tsx:290-343: persistent panel, descending counts, toggle/pressed state, tracked/known counts, initial skeleton, fatal retry and retained warning. Cold paused exception is Q001."
+      },
+      {
+        "name": "API request evidence workspace",
+        "status": "PASS",
+        "evidence": "ApiLogsPage.tsx:350-431 and ApiLogsEvidenceTable.tsx:174-382: nine columns, six server filters, clear, loaded-page CSV/JSON, pagination/sizes, preferences and single-row expansion. Q001/Q002 limit state/paging acceptance."
+      },
+      {
+        "name": "Backend process errors",
+        "status": "PASS",
+        "evidence": "ApiLogsPage.tsx:439-444; ApiLogsBackendErrors.tsx:23-85: total, uptime, categories, last message/seen, independent source state and system-health link."
+      },
+      {
+        "name": "Frontend received error reports",
+        "status": "PASS",
+        "evidence": "ApiLogsPage.tsx:445; ApiLogsFrontendErrors.tsx:15-77: independent window/as-of, total/source/route/count, state/retry and reporting-coverage disclaimer."
+      }
+    ],
+    "limitations": "Tag/line/branch evidence proves source retention, not that any section was rendered or measured in a native host. No preservation CLI was rerun."
+  },
+  "apiContracts": [
+    {
+      "hook": "useAPICallLogs",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/api-logs",
+      "evidence": [
+        "web\\src\\api\\hooks\\useAdmin.ts:141-150: page/filters/size key, offset=page*pageSize, AbortSignal, existing FAST polling",
+        "web\\src\\api\\devtools.ts:119-131: URLSearchParams and request<APICallLogResponse>",
+        "internal\\api\\router.go:4655-4656: grouped route and GET /",
+        "web\\src\\api\\types.ts:1855-1860: data/total/limit/offset envelope"
+      ],
+      "queryKeys": ["limit", "offset", "method", "status", "endpoint", "service", "client", "key", "start", "end_exclusive"],
+      "httpExecution": "NOTRUN"
+    },
+    {
+      "hook": "useAPICallLogStats",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/api-logs/stats",
+      "evidence": [
+        "web\\src\\api\\hooks\\useAdmin.ts:153-158",
+        "web\\src\\api\\devtools.ts:134-141: both bounds required together and encoded; signal forwarded",
+        "internal\\api\\router.go:4655,4657"
+      ],
+      "queryKeys": ["start", "end_exclusive"],
+      "httpExecution": "NOTRUN"
+    },
+    {
+      "hook": "useSystemErrorStats",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/system/errors/stats",
+      "evidence": [
+        "web\\src\\api\\hooks\\useAdmin.ts:161-166",
+        "web\\src\\api\\devtools.ts:156-157",
+        "internal\\api\\router.go:4395,4427"
+      ],
+      "httpExecution": "NOTRUN"
+    },
+    {
+      "hook": "useWebErrorsSummary",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/admin/web-errors/summary",
+      "evidence": [
+        "web\\src\\api\\hooks\\useAdmin.ts:286-291: independent query, signal and STANDARD polling",
+        "internal\\api\\router.go:4690-4691"
+      ],
+      "httpExecution": "NOTRUN"
+    },
+    {
+      "hook": "Supporting settings read through shared display hooks",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/settings",
+      "evidence": [
+        "web\\src\\hooks\\useSettings.ts:83-90: existing settings query; no legacy unit converters used by this page",
+        "web\\src\\api\\settings.ts:24",
+        "internal\\api\\router.go:3702"
+      ],
+      "httpExecution": "NOTRUN",
+      "limitation": "Existing settings queryFn does not accept an AbortSignal; preserved shared behavior, not a new cancellation guarantee."
+    },
+    {
+      "hook": "Supporting vehicle lookup through DateTime/useTimezone",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "method": "GET",
+      "path": "/vehicles",
+      "evidence": [
+        "web\\src\\components\\data-display\\format\\DateTime.tsx:85-95",
+        "web\\src\\lib\\timezone.ts:46-49",
+        "web\\src\\api\\hooks\\useVehicles.ts:73-79",
+        "internal\\api\\router.go:3362-3363"
+      ],
+      "httpExecution": "NOTRUN"
+    }
+  ],
+  "checks": [
+    {
+      "id": "architecture-and-prohibited-patterns",
+      "status": "PASS",
+      "evidenceKind": "SCOPED_TEXT_SCAN",
+      "evidence": "C01: nine explicit feature files: inline styles 0, raw HTML controls/tables 0, direct chart/map/motion imports 0, old API imports 0, deprecated conversion names 0, neon/glow patterns 0. One broad any-word match is a prose comment at serviceOptions.ts:31, not a type. Category barrels and existing typed query/display owners retained."
+    },
+    {
+      "id": "request-url-prefix-and-query-case",
+      "status": "PASS",
+      "evidenceKind": "SCOPED_TEXT_SCAN_AND_SOURCE",
+      "evidence": "C04: four consumed domain hook slices plus their adapters: double prefix 0, camelCase query construction 0. client.ts:90-94 adds /api/v1; devtools.ts:130 maps internal endExclusive to wire end_exclusive."
+    },
+    {
+      "id": "shared-workspace-range",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "workspaceScope.ts:27 enables /api-logs range; :112 disables fleet-global vehicle picker. useRangeState.ts:301-318 honors shared header ownership, ignoring the page fallback/persistKey. ApiLogsPage.tsx:94-99,126-145 supplies both exact bounds to stats and list. No second range/vehicle picker exists in the inspected page."
+    },
+    {
+      "id": "server-filters-and-atomic-resets",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "ApiLogsPage.tsx:120-145,158-165 uses useUrlBatch for method/status/endpoint/service/client/key and page reset. clear preserves range/size; range changes reset page at :111-118. ApiLogsEvidenceTable.tsx:174-200 retains labeled server filters with local value filters disabled at :355."
+    },
+    {
+      "id": "service-filter-completeness",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "serviceOptions.ts:44-59 unions eleven known IDs, received by_service keys and active selection, pins All services and sorts labels. Quiet/new/active unknown services remain filterable without manufacturing counts."
+    },
+    {
+      "id": "page-number-and-size-input-validation",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "ApiLogsPage.tsx:90-93 validates sizes 25/50/100, nonnegative safe integer page and safe derived offset; :106-109 canonicalizes invalid page URL. Existing test cases at ApiLogsPage.test.tsx:890-910 cover negative/fractional/unsafe inputs; NOT rerun."
+    },
+    {
+      "id": "exact-total-out-of-range-page",
+      "status": "FAIL",
+      "evidenceKind": "CONFIRMED_SOURCE_DEFECT",
+      "finding": "Q002"
+    },
+    {
+      "id": "initial-active-fetch-loading",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "Stats/services, logs and both diagnostics use initial source-specific loading branches; table/filter chrome remains mounted. ApiLogsPage.tsx:272,297-300,410-415; BackendErrors.tsx:33,42-45; FrontendErrors.tsx:33,44-47. No all-page loading prop or data gate erases independent sections."
+    },
+    {
+      "id": "source-specific-initial-failure",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "useDataState/deriveDataState separates fatal from retained refresh error. Source-specific QueryError/retry appears at ApiLogsPage.tsx:301-302,416-419, BackendErrors.tsx:46-47 and FrontendErrors.tsx:48-49. Summary shows source error at ApiLogsSummary.tsx:43,51; service-panel/global refresh retries its same query. PageLayout has no full-page error prop."
+    },
+    {
+      "id": "successful-authoritative-empty",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "Resolved empty list gives No API call logs and filtered Clear recovery; totalKind exact only when envelope exists. Services and both runtime panels distinguish zero totals from absent category breakdowns. ApiLogsPage.tsx:303-308,377-378,420-428; BackendErrors.tsx:72-77; FrontendErrors.tsx:67-75. This pass excludes Q001's unresolved paused branch."
+    },
+    {
+      "id": "retained-refresh-failure",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY_WITH_REUSED_RECEIPT_REFERENCE",
+      "evidence": "dataState.ts:198-236 retains data with fatalError null on background errors. All four source areas render StaleRefreshWarning alongside payload; summary exposes retained/error labels. Existing ApiLogsPage.test.tsx:750-773 explicitly asserts requests, inspection, KPIs, runtime values and export survive refresh failure. No fresh test execution."
+    },
+    {
+      "id": "retained-paused-source",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "deriveDataState marks retained paused payload stale/isRefreshBlocked; StaleRefreshWarning.tsx:58-96 preserves payload, marks data-refresh-blocked and does not infer that the device is offline. ApiLogsPage and both diagnostics retain their data. Effective native offline/reconnect behavior is NOTRUN."
+    },
+    {
+      "id": "cold-paused-unresolved-source",
+      "status": "FAIL",
+      "evidenceKind": "CONFIRMED_SOURCE_DEFECT",
+      "finding": "Q001"
+    },
+    {
+      "id": "null-zero-and-missing-evidence",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "logs=data?.data??[], service/runtime maps and browser top arrays use null-safe containers. Optional headers/bodies/status/installation/latency preserve missing vs zero through explicit dash/N/A/JsonViewer branches. FormattedNumber Number.tsx:17-18 rejects null/nonfinite rather than displaying zero. statusVariant code<100 is neutral, including zero. No assertion that malformed null array elements, which violate the declared API schema, are supported."
+    },
+    {
+      "id": "diagnostic-units-and-display-boundary",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "Existing API diagnostic duration_ms stays raw in hooks, exports and evidence; ApiLogsSummary.tsx:38-40 converts milliseconds to seconds only for the existing latency formatter and requests millisecond display. No physical unit fields, deprecated useSettings converters or wire/cache conversions added. This is bounded display preservation, not whole-repository SI certification."
+    },
+    {
+      "id": "timestamp-and-number-owner-reuse",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "DateTime components own UTC-input rendering, locale and safe date behavior; request details and runtime last-seen/as-of reuse them. useNumberFormatting supplies count/latency formatting and reactively tracks preferences. Error-count comparison exception is Q003; visual timezone and 12/24h acceptance remain NOTRUN."
+    },
+    {
+      "id": "error-rate-comparison-truth-and-locale",
+      "status": "FAIL",
+      "evidenceKind": "CONFIRMED_SOURCE_DEFECT",
+      "finding": "Q003"
+    },
+    {
+      "id": "static-literal-localization-keys",
+      "status": "PASS",
+      "evidenceKind": "SCOPED_CATALOG_LOOKUP",
+      "evidence": "C02 extracted 90 unique literal t keys from the nine feature files and resolved all 90 in canonical en.json. This proves key presence, not translated quality or deferred runtime loading."
+    },
+    {
+      "id": "dynamic-known-service-localization-keys",
+      "status": "FAIL",
+      "evidenceKind": "CONFIRMED_CATALOG_CONTRACT_DEFECT",
+      "finding": "Q004",
+      "evidence": "C03 found 11/11 known apiLogs.services.* keys absent. Seven platform and eight source-status keys were present."
+    },
+    {
+      "id": "loaded-page-exports-and-complete-inspection",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "ApiLogsPage.tsx:219-241,362-363,401-406 documents and exports only the loaded page with full diagnostic metadata. ApiLogsEvidenceTable.tsx:52-161 retains pretty JSON/raw fallback, headers/bodies/URL/copy and capture explanation. export.ts:26-53 calls existing redaction helpers. No export, clipboard, credential-redaction or retention/capture-limit runtime test was performed."
+    },
+    {
+      "id": "semantic-controls-and-keyboard-source-wiring",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "Named page sections/cards, labeled native-backed shared filters/copy controls, service aria-pressed, expander aria-expanded, pagination labels and keyboard-focusable runtime/table scroll regions are present. DataTable.tsx:1439-1464 includes focus/key wiring; RuntimeCard.tsx:20-27 uses generated heading identity; RuntimeList.tsx:7 uses a named focusable region. Row-specific naming concern remains C003; keyboard/focus traversal itself is NOTRUN."
+    },
+    {
+      "id": "mobile-and-motion-source-strategy",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "Page min-w-0, wrapping quick-picks/actions, mobile 44px page actions, stacked details/diagnostics, shared contained table scroll, shared responsive Pagination and FadeIn motion-preference branch are present. This limited structural pass is not measured geometry/touch/contrast/motion acceptance; C002 remains a candidate."
+    },
+    {
+      "id": "restrained-local-chrome",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "Known service badges now use neutral variants, Layers uses typography.color.muted, pressed chips use shared variants and wrapLabel, and scoped neon/glow scan found zero matches. Earlier audit's fixed-white/cyan quick-pick and unsafe page-number issues are no longer present in accepted source. Effective theme/color contrast is NOTRUN."
+    },
+    {
+      "id": "bounded-observability-contract",
+      "status": "PASS",
+      "evidenceKind": "SOURCE_ONLY",
+      "evidence": "Page uses existing typed read hooks and no RUM initialization. Browser reports explicitly say zero received reports do not prove zero errors; backend scope says current process lifetime. No sensitive diagnostic data was fetched or copied into this report. Cross-pod counts, reporting delivery and backend span/SLO behavior were not audited."
+    },
+    {
+      "id": "fresh-scoped-tests",
+      "status": "NOTRUN",
+      "evidence": "No source/test changes and existing queue reports own file 44 passed, 0 failed, 0 pending. User forbids rerunning unchanged passing tests. Fresh executed/passed/failed/skipped counts are all 0; no new test-run success claimed."
+    },
+    {
+      "id": "fresh-typescript",
+      "status": "NOTRUN",
+      "command": "npx tsc --noEmit",
+      "evidence": "Read-only documentation-only worker; no full gates allowed. Current handoff records Phase5 literal command exit 0, inspected gate log exists but is empty. That historical parent receipt is not a fresh compiler result."
+    },
+    {
+      "id": "fresh-build-lint-preservation-and-helper-audits",
+      "status": "NOTRUN",
+      "evidence": "No build, ESLint, preservation CLI, skill helper, catalog generator, full suite or Docker execution. Parent handoff reports historical build exit 0 and its existing log tail was read only. Actual scoped text scans are recorded separately, not labeled helper-audit passes."
+    },
+    {
+      "id": "native-functional-states-filters-and-exports",
+      "status": "NOTRUN",
+      "evidence": "No browser grant. Real loading/error/empty/paused/reconnect/filter/pagination/export/copy interactions not mounted."
+    },
+    {
+      "id": "native-visual-responsive-theme-extremes",
+      "status": "NOTRUN",
+      "evidence": "No captures or geometry measurements at 320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocated containers, light/dark/custom modes, long text, large data, RTL or 200% text."
+    },
+    {
+      "id": "native-keyboard-a11y-and-os-preferences",
+      "status": "NOTRUN",
+      "evidence": "No keyboard/screen reader/focus/popover/overlay/44px target overlap/composed contrast/forced-colors/reduced-motion/low-bandwidth exercise."
+    },
+    {
+      "id": "live-backend-and-performance",
+      "status": "NOTRUN",
+      "evidence": "Router declarations only. No HTTP/authentication check, database ordering/filter/aggregate proof, live reporting/redaction validation, network profile or native performance measurement."
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "Q001",
+      "severity": "medium",
+      "title": "Cold paused queries fall through to authoritative empty/error-looking branches",
+      "primaryLocation": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:297-308,410-428",
+      "supportingLocations": [
+        "web\\src\\api\\dataState.ts:186-204: no retained data yields initial, isRefreshBlocked true, fatalError null",
+        "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:58: returns null without retained data",
+        "web\\src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx:44-51",
+        "web\\src\\features\\admin\\components\\ApiLogsBackendErrors.tsx:42-49",
+        "web\\node_modules\\@tanstack\\query-core\\src\\queryObserver.ts:688-692: isLoading=isPending&&isFetching"
+      ],
+      "mechanism": "For pending + fetchStatus paused + no data/error, isLoading is false. Page branches test isLoading, then fatalError, then empty arrays, not state.isRefreshBlocked/isPending. The services panel says No service activity yet and the request panel says No API call logs although neither source resolved. Frontend diagnostic fallback says Unable to load despite no failed request. A shell-wide connectivity notice cannot make these section assertions authoritative.",
+      "deterministicRepro": [
+        "Use a fresh cache and source result data undefined, error null, status pending, fetchStatus paused, isPending true, isFetching false, isLoading false.",
+        "Evaluate the existing useDataState and page render predicates without a backend response.",
+        "Services chooses its zero-row EmptyState; logs chooses No API call logs rather than an awaiting/paused state; frontend summary chooses its load-error text."
+      ],
+      "proof": "C05 evaluated those exact boolean predicates: emptyBranch=True. This is source-predicate proof, not a mounted page test.",
+      "nativeRepro": "NOTRUN",
+      "narrowNeed": "Parent may assign one exact paused-initial-state fix scope for this page and its directly affected diagnostic components, retaining all filter/pagination chrome and independent recovery. Do not globally alter the shared trust model or claim offline from pause alone."
+    },
+    {
+      "id": "Q002",
+      "severity": "medium",
+      "title": "A valid but out-of-result page contradicts and traps exact pagination",
+      "primaryLocation": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:92-93,356-363,374-379",
+      "supportingLocations": [
+        "web\\src\\api\\hooks\\useAdmin.ts:145-146: requested URL page determines offset",
+        "web\\src\\components\\ui\\Pagination.tsx:30-42: display-only page clamp",
+        "web\\src\\components\\ui\\Pagination.tsx:89-118,131: safePage disables edges and suppresses same-page callbacks"
+      ],
+      "mechanism": "Page validates integer safety but does not reconcile page against a resolved total. Shared Pagination clamps the visual page, not the caller URL/query. With zero-based page 3, size 25, total 5 and no rows at offset 75, page caption says Showing 76-5 of 5 while footer presents page 1 and Showing 1-5 of 5. All edge controls disable because visual safePage is 1, and Go to 1 suppresses onPageChange because target equals safePage, leaving the query at offset 75.",
+      "deterministicRepro": [
+        "Visit /api-logs?page=3&size=25 with five matching records, or retain a formerly valid page while the selected dataset shrinks.",
+        "Return the valid requested-page envelope data [], total 5, limit 25, offset 75.",
+        "Evaluate caption and Pagination predicates: header 76-5/5, footerSafePage 1, Go to 1 callback false."
+      ],
+      "proof": "C05 printed requestedOffset=75 caption=76-5/5 footerSafePage=1 totalPages=1 goTo1CallsParent=False.",
+      "nativeRepro": "NOTRUN",
+      "narrowNeed": "Parent may assign an ApiLogsPage/page-test fix to reconcile the URL/query page only after an authoritative total, retaining all predicates/range/size and never clamping an unresolved unknown total."
+    },
+    {
+      "id": "Q003",
+      "severity": "medium",
+      "title": "Error count is labeled increased without a comparison and bypasses locale formatting",
+      "primaryLocation": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx:31-37",
+      "supportingLocations": [
+        "web\\src\\api\\types.ts:1862-1870: only current error_rate/error_count, no previous-period error comparison",
+        "web\\src\\hooks\\useNumberFormatting.ts:25-39: existing reactive locale/count formatter"
+      ],
+      "mechanism": "error_rate > 5 alone renders an up-arrow and VisuallyHidden increased; it proves a threshold breach, not a temporal increase. String(stats.error_count) also ignores selected count locale while neighboring totals use shared formatting.",
+      "deterministicRepro": [
+        "Provide current stats error_rate 6 and error_count 1234 with no comparison period.",
+        "Existing branch renders the accessible word increased and raw 1234 even if the real prior rate was higher, or is unknown.",
+        "With a saved locale that groups or shapes digits, raw String output remains 1234 instead of the existing formatter's locale-aware count."
+      ],
+      "nativeRepro": "NOTRUN",
+      "narrowNeed": "Parent may assign only ApiLogsSummary and its covering test: preserve the actual error count and >5 emphasis without an unsupported trend cue; use the existing count formatter. No fabricated prior-period data."
+    },
+    {
+      "id": "Q004",
+      "severity": "low",
+      "title": "All known-service dynamic translation keys are absent from canonical English",
+      "primaryLocation": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:39-50,76-80",
+      "supportingLocations": [
+        "web\\src\\i18n\\en.json:11954-12076: apiLogs namespace lacks services",
+        "web\\src\\i18n\\index.ts:64-75,151-158: deferred resources resolve canonical key paths; missing-key handling cannot create a translation"
+      ],
+      "mechanism": "Known services call t(apiLogs.services.<id>, config.label), but en.json has no apiLogs.services object. All eleven calls rely on hardcoded fallback labels rather than registered canonical leaves, contrary to the canonical fallback/key contract. Unknown service IDs intentionally remain raw identifiers and are not part of this finding.",
+      "missingKeys": [
+        "apiLogs.services.teslasync-api",
+        "apiLogs.services.tesla-api",
+        "apiLogs.services.tesla-auth",
+        "apiLogs.services.geocoder-google",
+        "apiLogs.services.geocoder-nominatim",
+        "apiLogs.services.geocoder-azure",
+        "apiLogs.services.geocoder-search",
+        "apiLogs.services.github-releases",
+        "apiLogs.services.notify-generic",
+        "apiLogs.services.system-dns-check",
+        "apiLogs.services.eia"
+      ],
+      "deterministicRepro": "Resolve each of the eleven known dynamic keys in the canonical en.json object: all absent; literal fallback labels remain the available English source. C03 performed those lookups without running i18n or changing catalogs.",
+      "nativeRepro": "NOTRUN",
+      "narrowNeed": "Parent should assess a narrowly assigned canonical/catalog integration or reuse of existing registered service labels. No worker catalog writes, generator invocation or ratchet bypass."
+    }
+  ],
+  "issueCandidates": [
+    {
+      "id": "C001",
+      "status": "NOTRUN",
+      "title": "Visible Refresh action has a three-source scope on a four-source page",
+      "sourceEvidence": "ApiLogsPage.tsx:260-263 disables/refetches only logs/stats/backend runtime. ApiLogsFrontendErrors.tsx:15 owns the fourth query and has its own retained/fatal retry and polling.",
+      "whyNotConfirmedDefect": "This is documented inherited scope in audit-page-003.json and may be intentional independent browser-report behavior. The label's user interpretation was not tested.",
+      "narrowNextCheck": "Once a browser/privacy lock is explicitly granted, verify whether a user reasonably expects Refresh to refresh frontend reports. Clarify scope or bridge independent refresh only if product contract requires it."
+    },
+    {
+      "id": "C002",
+      "status": "NOTRUN",
+      "title": "Phone table retains many minimum-width columns and repeated metadata",
+      "sourceEvidence": "ApiLogsEvidenceTable.tsx:214-240 repeats method/service/time/duration in mobile endpoint content while :346 permits method/endpoint/status/service/client/key. DataTable.tsx:1197-1203,1439-1447 supplies contained scrolling and keyboard focus.",
+      "whyNotConfirmedDefect": "Contained horizontal table scroll is explicitly permitted. No viewport/page overflow, overlapping target, clipped filter or unreachable detail was measured.",
+      "narrowNextCheck": "Use synthetic diagnostic records at 320/375/390/430 and narrow allocated containers; measure page overflow versus contained scroll, long endpoint/key labels, all six filters, expansion and pagination reachability."
+    },
+    {
+      "id": "C003",
+      "status": "NOTRUN",
+      "title": "Row expanders have generic accessible names despite rowLabel",
+      "sourceEvidence": "ApiLogsEvidenceTable.tsx:343 supplies method/endpoint rowLabel; DataTable.tsx:1135-1141 sets row identity in title but aria-label remains Expand row/Collapse row.",
+      "whyNotConfirmedDefect": "Generic aria-label is a proven source fact, but contextual table reading may still distinguish requests. No screen-reader/navigation exercise or blanket WCAG failure is claimed. Earlier audit recorded this same shared-owner concern; parent should not duplicate an existing objective.",
+      "narrowNextCheck": "Under an explicit native grant, inspect expansion control names and contextual request identification with keyboard/assistive technology. Any shared fix belongs to its assigned DataTable owner, not this read-only page worker."
+    }
+  ],
+  "reusedEvidence": {
+    "pageTests": {
+      "queueRecordedExecuted": 44,
+      "queueRecordedPassed": 44,
+      "queueRecordedFailed": 0,
+      "queueRecordedPending": 0,
+      "evidence": "migration-queue.md:1486 explicitly records actual parent wave2 file pass and unchanged 600-case intake; reused as a queue receipt, not a fresh run.",
+      "rawReceiptPathReferencedByQueue": "web\\logs\\phase5-parent-wave2-blocked-tests.json",
+      "rawReceiptAvailableHere": false,
+      "limitation": "Referenced raw JSON is absent in this working tree; no command timestamps, numeric runner exit or names were invented. Existing source test bodies were read, and no unchanged passing test was rerun."
+    },
+    "typecheck": {
+      "commandAsRecordedByParent": "npx tsc --noEmit",
+      "parentRecordedExitCode": 0,
+      "parentRecordedInterval": "2026-10-13T15:13:56.912Z to 2026-10-13T15:20:34.639Z covers serialized build followed by typecheck; per-command boundaries are not given.",
+      "runtimeAsRecordedByParent": "Node 26.11.1",
+      "log": "web\\logs\\phase5-requested-typecheck-gate.log",
+      "inspectedBytes": 0,
+      "status": "NOTRUN",
+      "limitation": "Empty stdout file alone does not prove an exit code. Exit 0 is attributed only to the existing parent handoff."
+    },
+    "build": {
+      "commandAsRecordedByParent": "npm run build",
+      "parentRecordedExitCode": 0,
+      "log": "web\\logs\\phase5-requested-build-gate.log",
+      "inspectedBytes": 196084,
+      "status": "NOTRUN",
+      "inspectedTail": [
+        "[pwa-precache] OK — route chunks remain on-demand",
+        "[pwa-contract] cached-read allowlist: 11 vetted GET endpoints",
+        "[pwa-contract] sw.js: 41.3 KB, 1 message-driven skipWaiting, build dev-2.0.0+a63bd78e6",
+        "[pwa-contract] OK — source + build contracts satisfied",
+        "[source-maps] public mode: web\\dist contains 0 map file(s) (must be 0)",
+        "[source-maps] OK — no publicly reachable source maps, serving path denies .map"
+      ],
+      "limitation": "Tail inspected only, not a new build, current whole-app certificate or this worker's exit-code receipt."
+    }
+  },
+  "commands": [
+    {
+      "id": "C01",
+      "shellId": "4493",
+      "startedAt": "2026-10-13T09:15:23.2242069-07:00",
+      "endedAt": "2026-10-13T09:15:23.4033518-07:00",
+      "exitCode": 0,
+      "command": "Write-Output \"START $(Get-Date -Format o)\"; $files = @('src\\features\\admin\\pages\\ApiLogsPage.tsx','src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx','src\\features\\admin\\components\\ApiLogsBackendErrors.tsx','src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx','src\\features\\admin\\components\\ApiLogsRuntimeCard.tsx','src\\features\\admin\\components\\ApiLogsRuntimeList.tsx','src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx','src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts','src\\features\\admin\\lib\\serviceOptions.ts'); $patterns = [ordered]@{ inlineStyles='style=\\{\\{'; rawHtml='<(button|input|textarea|select|table)\\b'; directLibraries='from.*(recharts|react-leaflet|framer-motion)'; oldApi='from.*\\.\\./(\\.\\./)?api[''\"]'; deprecatedConversions='convertDistance|convertSpeed|convertTemp|convertEfficiency|convertPressure|fmtDistance|fmtSpeed|fmtTemp|fmtPressure'; neonGlow='text-neon-|shadow-neon|glow|animate-pulse'; anyType='\\bany\\b' }; foreach ($entry in $patterns.GetEnumerator()) { $matches = @(Select-String -LiteralPath $files -Pattern $entry.Value -CaseSensitive); Write-Output \"$($entry.Key): matches=$($matches.Count)\"; if ($matches.Count) { $matches } }; $total = 0; foreach ($file in $files) { $lines = @(Get-Content -LiteralPath $file).Count; $total += $lines; $hash = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant(); Write-Output \"$file lines=$lines sha256=$hash\" }; Write-Output \"total_page_specific_lines=$total\"; foreach ($entry in ([ordered]@{pageGlassPanel='<GlassPanel\\b';pageChartContainer='<ChartContainer\\b';pageSections='<section\\b'}).GetEnumerator()) { $matches = @(Select-String -LiteralPath $files[0] -Pattern $entry.Value -CaseSensitive); Write-Output \"$($entry.Key): matches=$($matches.Count)\"; $matches | ForEach-Object { \"$($_.LineNumber):$($_.Line.Trim())\" } }; $matches = @(Select-String -LiteralPath $files[6] -Pattern '<OperationalBrief\\b' -CaseSensitive); Write-Output \"summaryOperationalBrief: matches=$($matches.Count)\"; $matches | ForEach-Object { \"$($_.LineNumber):$($_.Line.Trim())\" }; Write-Output \"END $(Get-Date -Format o)\"; exit 0",
+      "rawCountOutput": [
+        "inlineStyles: matches=0",
+        "rawHtml: matches=0",
+        "directLibraries: matches=0",
+        "oldApi: matches=0",
+        "deprecatedConversions: matches=0",
+        "neonGlow: matches=0",
+        "anyType: matches=1",
+        "src\\features\\admin\\lib\\serviceOptions.ts:31: *      appear automatically without any frontend follow-up.",
+        "total_page_specific_lines=1196",
+        "pageGlassPanel: matches=2",
+        "291:<GlassPanel className=\"p-3 sm:p-4\">",
+        "350:<GlassPanel className=\"min-w-0\">",
+        "pageChartContainer: matches=0",
+        "pageSections: matches=2",
+        "284:<section",
+        "435:<section",
+        "summaryOperationalBrief: matches=2",
+        "52:<OperationalBrief testId=\"api-logs-range-summary\" compact metrics={briefMetrics}",
+        "58:<OperationalBrief testId=\"api-logs-24h-summary\" compact metrics={rollingMetrics}"
+      ],
+      "rawFileHashAndLineOutput": "The nine exact file line/hash rows are transcribed in sourceSnapshot.files; no hash or line count is inferred from memory."
+    },
+    {
+      "id": "C02",
+      "shellId": "4490",
+      "startedAt": "2026-10-13T09:14:46.5248366-07:00",
+      "exitCode": 1,
+      "operation": "Read-only ConvertFrom-Json -AsHashtable of en.json; regex extraction '\\bt\\(\\s*[''\"]([^''\"]+)[''\"]' from the same nine feature files; nested path lookup of every unique literal key. Then attempted unguarded dynamic services.Contains lookup.",
+      "rawOutput": [
+        "static_literal_keys=90 missing=0",
+        "InvalidOperation: You cannot call a method on a null-valued expression."
+      ],
+      "disposition": "Literal-key lookup completed before the dynamic lookup failed because services was absent. The overall command did NOT pass; guarded C03 resolves the dynamic absence explicitly."
+    },
+    {
+      "id": "C03",
+      "shellId": "4496",
+      "startedAt": "2026-10-13T09:15:58.1258924-07:00",
+      "endedAt": "2026-10-13T09:15:58.3095912-07:00",
+      "exitCode": 0,
+      "command": "Write-Output \"START $(Get-Date -Format o)\"; $catalog = Get-Content -LiteralPath 'src\\i18n\\en.json' -Raw | ConvertFrom-Json -AsHashtable; $services = @('teslasync-api','tesla-api','tesla-auth','geocoder-google','geocoder-nominatim','geocoder-azure','geocoder-search','github-releases','notify-generic','system-dns-check','eia'); $missing=0; foreach ($service in $services) { $present = $catalog['apiLogs'].Contains('services') -and $catalog['apiLogs']['services'].Contains($service); if (!$present) {$missing++}; Write-Output \"apiLogs.services.$service present=$present\" }; Write-Output \"known_service_keys=11 missing=$missing\"; foreach ($platform in @('windows','macos','linux','desktop','android','ios','mobile')) { Write-Output \"apiLogs.platform.$platform present=$($catalog['apiLogs']['platform'].Contains($platform))\" }; foreach ($state in @('initial','initialFailure','ok','stale','partial','unavailable','refreshing','loading')) { Write-Output \"operations.sourceStatus.$state present=$($catalog['operations']['sourceStatus'].Contains($state))\" }; Write-Output \"END $(Get-Date -Format o)\"; exit 0",
+      "rawOutput": [
+        "apiLogs.services.teslasync-api present=False",
+        "apiLogs.services.tesla-api present=False",
+        "apiLogs.services.tesla-auth present=False",
+        "apiLogs.services.geocoder-google present=False",
+        "apiLogs.services.geocoder-nominatim present=False",
+        "apiLogs.services.geocoder-azure present=False",
+        "apiLogs.services.geocoder-search present=False",
+        "apiLogs.services.github-releases present=False",
+        "apiLogs.services.notify-generic present=False",
+        "apiLogs.services.system-dns-check present=False",
+        "apiLogs.services.eia present=False",
+        "known_service_keys=11 missing=11",
+        "apiLogs.platform.windows present=True",
+        "apiLogs.platform.macos present=True",
+        "apiLogs.platform.linux present=True",
+        "apiLogs.platform.desktop present=True",
+        "apiLogs.platform.android present=True",
+        "apiLogs.platform.ios present=True",
+        "apiLogs.platform.mobile present=True",
+        "operations.sourceStatus.initial present=True",
+        "operations.sourceStatus.initialFailure present=True",
+        "operations.sourceStatus.ok present=True",
+        "operations.sourceStatus.stale present=True",
+        "operations.sourceStatus.partial present=True",
+        "operations.sourceStatus.unavailable present=True",
+        "operations.sourceStatus.refreshing present=True",
+        "operations.sourceStatus.loading present=True"
+      ]
+    },
+    {
+      "id": "C04",
+      "shellId": "4497",
+      "startedAt": "2026-10-13T09:15:57.2579947-07:00",
+      "endedAt": "2026-10-13T09:15:57.3805553-07:00",
+      "exitCode": 0,
+      "command": "Write-Output \"START $(Get-Date -Format o)\"; $hook = @(Get-Content -LiteralPath 'src\\api\\hooks\\useAdmin.ts'); $adapter = @(Get-Content -LiteralPath 'src\\api\\devtools.ts'); $scope = @($hook[140..166]) + @($hook[285..290]) + @($adapter[103..157]); foreach ($entry in ([ordered]@{doublePrefix='request.*[''\"`]/api/v1'; camelQuery='[?&][a-z_]*[A-Z][A-Za-z_]*=|query\\.set\\([''\"][^''\"]*[A-Z]'}).GetEnumerator()) { $matches = @($scope | Select-String -Pattern $entry.Value -CaseSensitive); Write-Output \"$($entry.Key): matches=$($matches.Count)\"; $matches | ForEach-Object {$_.Line} }; Write-Output 'matched GET routes: /api-logs -> router.go:4655-4656; /api-logs/stats -> 4655-4657; /system/errors/stats -> 4395,4427; /admin/web-errors/summary -> 4690-4691'; Write-Output 'adapter query keys: limit,offset,method,status,endpoint,service,client,key,start,end_exclusive'; Write-Output \"END $(Get-Date -Format o)\"; exit 0",
+      "rawOutput": [
+        "doublePrefix: matches=0",
+        "camelQuery: matches=0",
+        "matched GET routes: /api-logs -> router.go:4655-4656; /api-logs/stats -> 4655-4657; /system/errors/stats -> 4395,4427; /admin/web-errors/summary -> 4690-4691",
+        "adapter query keys: limit,offset,method,status,endpoint,service,client,key,start,end_exclusive"
+      ],
+      "limitation": "Route matches were established by direct router/source reads, not by those printed labels or an HTTP request."
+    },
+    {
+      "id": "C05",
+      "shellId": "4501",
+      "startedAt": "2026-10-13T09:18:08.3806427-07:00",
+      "endedAt": "2026-10-13T09:18:08.4063451-07:00",
+      "exitCode": 0,
+      "command": "Write-Output \"START $(Get-Date -Format o)\"; $isPending=$true; $isFetching=$false; $hasData=$false; $fatalError=$false; $isLoading=$isPending -and $isFetching; $emptyBranch=(!$isLoading -and !$fatalError -and !$hasData); Write-Output \"cold-paused predicate: isPending=$isPending isFetching=$isFetching isLoading=$isLoading hasData=$hasData fatalError=$fatalError emptyBranch=$emptyBranch\"; $page=3; $size=25; $total=5; $totalPages=[Math]::Max(1,[Math]::Ceiling($total/$size)); $safePage=[Math]::Min($page+1,$totalPages); $captionFrom=$page*$size+1; $captionTo=[Math]::Min(($page+1)*$size,$total); Write-Output \"out-of-range predicate: requestedOffset=$($page*$size) caption=$captionFrom-$captionTo/$total footerSafePage=$safePage totalPages=$totalPages goTo1CallsParent=$([bool](1 -ne $safePage))\"; Write-Output 'These are source-predicate calculations, not a mounted page or executed regression test.'; Write-Output \"END $(Get-Date -Format o)\"; exit 0",
+      "rawOutput": [
+        "cold-paused predicate: isPending=True isFetching=False isLoading=False hasData=False fatalError=False emptyBranch=True",
+        "out-of-range predicate: requestedOffset=75 caption=76-5/5 footerSafePage=1 totalPages=1 goTo1CallsParent=False",
+        "These are source-predicate calculations, not a mounted page or executed regression test."
+      ]
+    },
+    {
+      "id": "C06",
+      "shellId": "4502",
+      "startedAt": "2026-10-13T09:18:09.1826655-07:00",
+      "endedAt": "2026-10-13T09:18:09.2863234-07:00",
+      "exitCode": 0,
+      "operation": "Get-FileHash -Algorithm SHA256 on each of the same nine explicit feature files, then read audit-page-003.json and print baseline/current line and section totals.",
+      "rawCountOutput": [
+        "baseline_page_lines=440 baseline_total_lines=1186 baseline_sections=6",
+        "current_total_lines=1196 ratio=1.008432 current_sections=6"
+      ],
+      "rawHashOutput": "All nine exact hashes matched C01 and are retained in sourceSnapshot.files."
+    },
+    {
+      "id": "C07",
+      "shellId": "4489",
+      "startedAt": "2026-10-13T09:14:45.6940518-07:00",
+      "endedAt": "2026-10-13T09:14:45.7896683-07:00",
+      "exitCode": 0,
+      "command": "Write-Output \"START $(Get-Date -Format o)\"; foreach ($file in @('logs\\phase5-requested-typecheck-gate.log','logs\\phase5-requested-build-gate.log')) { $item = Get-Item -LiteralPath $file; Write-Output \"$file bytes=$($item.Length) modified=$($item.LastWriteTime.ToString('o'))\"; Get-Content -LiteralPath $file -Tail 15 }; Write-Output \"END $(Get-Date -Format o)\"",
+      "rawSizeOutput": [
+        "logs\\phase5-requested-typecheck-gate.log bytes=0 modified=2026-10-13T08:19:08.7632515-07:00",
+        "logs\\phase5-requested-build-gate.log bytes=196084 modified=2026-10-13T08:19:08.7092352-07:00"
+      ],
+      "limitation": "This exit 0 belongs to reading the logs, not compiling/building."
+    }
+  ],
+  "otherInspectionFailures": [
+    {
+      "shellId": "4488",
+      "actualStartedAt": "2026-10-13T09:14:44.8936162-07:00",
+      "exitCode": 1,
+      "operation": "Attempted the same bounded source patterns with external rg from PowerShell.",
+      "rawError": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "disposition": "No installs or path workaround; repeated bounded scan using native Select-String in C01. Separately, built-in functions.rg worked and returned only the any-word prose-comment match."
+    },
+    {
+      "tool": "functions.rg",
+      "numericExitCode": null,
+      "operation": "Initial guessed DataFreshnessAuto.tsx path lookup",
+      "rawError": "Search paths do not exist",
+      "disposition": "Resolved actual export through scoped search in DataFreshness.tsx; no fabricated path evidence."
+    },
+    {
+      "tool": "functions.view",
+      "numericExitCode": null,
+      "operation": "Read empty typecheck log with view_range",
+      "rawError": "Invalid view_range: start line (1) is beyond the end of the file. The file has 0 lines.",
+      "disposition": "Confirmed empty size via C07; did not infer compiler success."
+    },
+    {
+      "tool": "functions.view",
+      "numericExitCode": null,
+      "operation": "Initial guessed FormattedNumber.tsx path lookup",
+      "rawError": "Path does not exist",
+      "disposition": "Resolved actual category export to format\\Number.tsx using scoped search and read its null/nonfinite branch."
+    }
+  ],
+  "testExecution": {
+    "status": "NOTRUN",
+    "freshDiscovered": 0,
+    "freshExecuted": 0,
+    "freshPassed": 0,
+    "freshFailed": 0,
+    "freshSkipped": 0,
+    "reason": "Read-only QA reuses unchanged source receipts; no test implementation or fresh runner execution authorized or needed.",
+    "existingTestBodiesInspected": [
+      "ApiLogsPage.test.tsx: pending filter edit/cache restoration, empty filter recovery, retained refresh, missing/zero latency/status, diagnostic copy, loaded-page export, range reset, server pagination, invalid page normalization, unknown vs exact zero total and restrained mobile source classes.",
+      "These are named source contracts, not a newly discovered/executed test list."
+    ]
+  },
+  "reportSafety": {
+    "containsLiveIdentitiesOrDiagnosticPayloads": false,
+    "examples": "Only synthetic predicate values, public source paths, translation keys and immutable source hashes.",
+    "securityCampaign": false,
+    "scopeExpansion": false,
+    "statement": "No real log rows, VINs, app-installation identifiers, key identities, locations, headers, credentials or request bodies were fetched or retained."
+  },
+  "reportValidation": {
+    "status": "PASS",
+    "evidenceKind": "DOCUMENT_JSON_AND_SOURCE_HASH_CHECK",
+    "shellId": "4542",
+    "startedAt": "2026-10-13T09:22:34.9706163-07:00",
+    "endedAt": "2026-10-13T09:22:35.3571473-07:00",
+    "exitCode": 0,
+    "command": "$ErrorActionPreference = 'Stop'; $started = Get-Date; Write-Output \"START $($started.ToString('o'))\"; $path = 'D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-admin-api-logs.json'; $report = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -AsHashtable; if ($report.item -ne 'phase6-qa-admin-api-logs') { throw 'Unexpected item' }; $counts = [ordered]@{PASS=0;FAIL=0;NOTRUN=0}; foreach ($check in $report.checks) { if (!$counts.Contains($check.status)) { throw \"Invalid check status $($check.status)\" }; $counts[$check.status]++ }; foreach ($snapshot in $report.sourceSnapshot.files) { $full = Join-Path 'D:\\repos\\teslasync' $snapshot.path; $hash = (Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLowerInvariant(); if ($hash -ne $snapshot.sha256) { throw \"Source drift: $($snapshot.path)\" } }; Write-Output 'JSON_PARSE=PASS'; Write-Output \"individual_checks=$($report.checks.Count) PASS=$($counts.PASS) FAIL=$($counts.FAIL) NOTRUN=$($counts.NOTRUN)\"; Write-Output \"confirmed_findings=$($report.confirmedFindings.Count) candidates=$($report.issueCandidates.Count) source_hash_matches=$($report.sourceSnapshot.files.Count)\"; Write-Output \"fresh_tests_executed=$($report.testExecution.freshExecuted) browser_calls=$($report.authority.browserCalls)\"; Write-Output \"versioned_report_bytes=$((Get-Item -LiteralPath $path).Length)\"; $finished = Get-Date; Write-Output \"END $($finished.ToString('o'))\"; Write-Output \"elapsed_from_dispatch_seconds=$([Math]::Round(($finished - [DateTimeOffset]::Parse($report.timestamps.dispatchCreation).LocalDateTime).TotalSeconds,3))\"; exit 0",
+    "rawOutput": [
+      "JSON_PARSE=PASS",
+      "individual_checks=31 PASS=20 FAIL=4 NOTRUN=7",
+      "confirmed_findings=4 candidates=3 source_hash_matches=9",
+      "fresh_tests_executed=0 browser_calls=0",
+      "versioned_report_bytes=52031",
+      "elapsed_from_dispatch_seconds=691.357"
+    ],
+    "limitations": "The 52031-byte measurement belongs to the report before appending this validation receipt. Counts and hash checks establish the inspected report/source snapshot, not a TypeScript, test, native or application acceptance pass."
+  },
+  "needs": [
+    "Parent-only intake/stage/commit/push of this exact report; no source/test changes to integrate.",
+    "Assess Q001-Q004 for narrow, deduplicated fix assignments; highest-priority source-state/page repair needs are cold-paused truth and out-of-result URL paging.",
+    "Native page acceptance remains NOTRUN until explicit browser ownership/privacy grant. C001-C003 are candidates, not fabricated runtime failures.",
+    "Preserve existing 44-case queue receipt without rerunning it; absent raw wave2 JSON remains an evidence limitation.",
+    "No whole-page, phase or whole-application certification follows from this report."
+  ],
+  "release": {
+    "source": "Never acquired write authority; no application/source/test/catalog/config/orchestrator writes. Read scope released at terminal delivery.",
+    "report": "Only this exact JSON report is writable; report-write authority ends at terminal delivery.",
+    "commands": "All worker commands were bounded synchronous reads/predicate calculations and completed; no owned command/service remains running.",
+    "browser": "Never acquired a browser/native lock or session; zero calls. Existing native owners were not touched.",
+    "postReturnWrites": "None authorized or planned."
+  }
+}

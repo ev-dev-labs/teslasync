@@ -1,0 +1,411 @@
+{
+  "item": "audit-page-131",
+  "page": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+  "routes": [
+    {
+      "path": "/exports",
+      "source": "web\\src\\App.tsx",
+      "line": 819,
+      "detail": "SafeRoute name Exports renders lazy ExportsPage; lazy import at line 300. Source registration verified, mounted runtime not exercised."
+    }
+  ],
+  "purpose": "Manage the returned export-job history through download, inspection, loaded-row CSV/JSON export and confirmed bulk deletion, alongside an independently gated catalog-based Helix redaction advisor.",
+  "primaryGoal": "Find a relevant past job, download a ready artifact, or safely remove selected jobs without losing failed selections or misrepresenting loaded-list coverage.",
+  "dataSources": [
+    {
+      "name": "Export job snapshot",
+      "hook": "useExportJobs",
+      "owner": "web\\src\\api\\hooks\\useExports.ts",
+      "file": "web\\src\\api\\hooks\\useExports.ts",
+      "line": 54,
+      "endpoint": "GET /api/v1/export/jobs",
+      "registration": "internal\\api\\router.go:4970,4979",
+      "consumer": "web\\src\\features\\exports\\pages\\ExportsPage.tsx:51-62",
+      "contract": "exportKeys.jobs = ['export-jobs']; request forwards AbortSignal; safeArray selection; default active queued/processing polling every 5000 ms; no page vehicle/date bounds or server pagination arguments.",
+      "payload": "ExportJobSummary snake_case fields id, type, format, status, created_at, optional vehicle_id/file_name/file_size/record_count/error_message/duration_ms/completed_at. Page displays six columns; no measurement/unit conversion beyond bytes display.",
+      "evidenceLimit": "Router registration only. Handler authorization, list limits/order, worker completion, artifact contents and current responses were not exercised."
+    },
+    {
+      "name": "Destructive bulk delete",
+      "hook": "useBulkExportsDelete",
+      "owner": "web\\src\\api\\hooks\\useExports.ts",
+      "file": "web\\src\\api\\hooks\\useExports.ts",
+      "line": 173,
+      "endpoint": "POST /api/v1/export/jobs/bulk",
+      "registration": "internal\\api\\router.go:4978",
+      "consumer": "web\\src\\features\\exports\\pages\\ExportsPage.tsx:65-95",
+      "contract": "JSON body {ids: string[], op: 'delete'}; ExportBulkResult {deleted, failed: [{id,reason}]}; success invalidates and broadcasts jobs/all caches, then success toast; rejection shows error toast.",
+      "evidenceLimit": "No mutation performed. Partial success response possibilities are evidenced by the interface, not a demonstrated backend response."
+    },
+    {
+      "name": "Ready artifact download",
+      "hook": "exportDownloadUrl",
+      "owner": "web\\src\\api\\hooks\\useExports.ts",
+      "file": "web\\src\\api\\hooks\\useExports.ts",
+      "line": 160,
+      "endpoint": "GET /api/v1/export/jobs/{jobID}/download",
+      "registration": "internal\\api\\router.go:4981",
+      "consumer": "web\\src\\features\\exports\\pages\\ExportsPage.tsx:165-180",
+      "contract": "Native download link only for ready jobs. Absolute /api/v1 URL is direct navigation, not a double-prefixed request() call.",
+      "evidenceLimit": "No download/navigation performed; external-server/native base-URL equivalence and auth response not verified."
+    },
+    {
+      "name": "Loaded-list statistics",
+      "hook": "deriveExportStats / useOperationalMetrics / useNumberFormatting",
+      "owner": "web\\src\\features\\exports\\components\\exportStats.ts",
+      "file": "web\\src\\features\\exports\\components\\exportStats.ts",
+      "line": 60,
+      "endpoint": null,
+      "contract": "Derived solely from loaded jobs; counts every truthy job, counts known statuses, sums only positive finite file_size bytes. Queued + processing is inProgress. Unknown statuses remain in total and bytes, but not known-status bars. Summary is unaffected by table search, value filters, pagination and selection.",
+      "provenance": "web\\src\\features\\exports\\components\\ExportKpiBand.tsx:22-49",
+      "evidenceLimit": "No all-time/fleet/date-bounded guarantee. Unknown source is not a zero; hasData false passes null raw metrics. A known zero byte footprint is intentionally displayed as an em dash."
+    },
+    {
+      "name": "Opt-in redaction narration",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AIPiiRedactionSharedExports.tsx",
+      "file": "web\\src\\components\\ai\\AIPiiRedactionSharedExports.tsx",
+      "line": 129,
+      "endpoint": "POST /api/v1/ai/exports/redaction/draft",
+      "registration": "internal\\api\\router.go:2846-2851,5100 wires PiiRedactionSharedExports handler; exact downstream route registration not inspected",
+      "contract": "Explicit selection of drives/charging/trips/analytics/backup/account; request body {export_type}; withAiFeature('pii-redaction-shared-exports') visibility gate; AIFeatureCard inputSlot, canStart, stream. Narrates static catalog privacy guidance rather than reading export rows or submitting an export.",
+      "evidenceLimit": "Frontend URL and router handler wiring inspected. Exact AI route registration, feature gate implementation, provider/tool behavior and SSE runtime unverified. Comments referencing historical tests are not current proof."
+    },
+    {
+      "name": "Table-scoped local CSV/JSON",
+      "hook": "DataTable default export controls",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 872,
+      "endpoint": null,
+      "contract": "Selected scope uses selected loaded rows; other scope uses filteredData because page supplies no exportAll. Serializes visible columns, CSV favors rendered text, JSON prefers compatible raw fields. Default filename is tableId-derived. Scope description explicitly states matching loaded rows or selected loaded rows.",
+      "evidenceLimit": "Do not call this server full-result export or equate table CSV/JSON with the downloadable job artifact. No file generated."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard",
+      "category": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "citations": [
+        "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-67",
+        "web\\src\\features\\exports\\pages\\ExportsPage.tsx:197-220"
+      ],
+      "contract": "PageLayout aliases PageContainer props, passes query/title/subtitle/secondaryActions and full-width min-w-0 container. LayoutCard keeps semantic generated heading association, shared Card surface and footer/actions capabilities."
+    },
+    {
+      "name": "ExportKpiBand -> OperationalBrief",
+      "category": "domain adapter / shared data-display",
+      "owner": "web\\src\\features\\exports\\components\\ExportKpiBand.tsx",
+      "citations": ["web\\src\\features\\exports\\components\\ExportKpiBand.tsx:11-94"],
+      "contract": "Five source-backed count/bytes metrics; compact/loading; localized source status tone/label; scope, last-success freshness, provenance, narrative limitations and specialist formatBytes formatter. Existing shared stats pipeline, not a replacement KPI grid. OperationalBrief internals not inspected."
+    },
+    {
+      "name": "DataTable, Button, Badge, Text, ConfirmDialog",
+      "category": "ui primitives/composites",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "citations": ["web\\src\\features\\exports\\pages\\ExportsPage.tsx:97-183,245-280,296", "web\\src\\components\\ui\\DataTable.tsx:144-240,865-930"],
+      "contract": "Stable tableId exports:jobs, six columns, value filters, sortable data columns, controlled multiselection, row labels, default page size 25/options 25,50,100, sticky header/maxHeight 640, column visibility/layout/width persistence and default local search/density/CSV/JSON. Shared confirmation owns overlay; focus internals not inspected."
+    },
+    {
+      "name": "ExportStatusBreakdown -> MetricBar",
+      "category": "domain adapter / data-display",
+      "owner": "web\\src\\features\\exports\\components\\ExportStatusBreakdown.tsx",
+      "citations": ["web\\src\\features\\exports\\components\\ExportStatusBreakdown.tsx:33-117", "web\\src\\components\\data-display\\MetricBar.tsx:8-96"],
+      "contract": "Known nonzero statuses in stable order, count/loaded-total percentage and known storage bytes; independent skeleton/error/unresolved/empty branches. MetricBar already supports size slim/default and fill solid/gradient, named progressbar and reduced-motion hook."
+    },
+    {
+      "name": "Data trust and recovery",
+      "category": "feedback / hooks",
+      "owner": "web\\src\\hooks\\useDataState.ts",
+      "citations": ["web\\src\\hooks\\useDataState.ts:30-53", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:45-118", "web\\src\\features\\exports\\pages\\ExportsPage.tsx:51-60,207,222-243"],
+      "contract": "fatalError rather than raw query error; retained rows with source notice; initial skeleton, QueryError retry, paused/unresolved status text, genuine empty state. No invented offline measurements."
+    },
+    {
+      "name": "AIPiiRedactionSharedExports -> AIFeatureCard",
+      "category": "shared AI domain/composite",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "citations": ["web\\src\\components\\ai\\AIPiiRedactionSharedExports.tsx:119-222", "web\\src\\components\\ai\\AIFeatureCard.tsx:257-313"],
+      "contract": "Type Select input, contextual suggestion action, disabled until input/while streaming, aria-busy and Ask Helix contextual accessible name, independent output stream. Preserve consent/gating, catalog-only explanation and baseline jobs view."
+    },
+    {
+      "name": "FadeIn / formatting / localization / Icons",
+      "category": "motion / app-level utilities",
+      "owner": "Existing category barrels and formatting hooks",
+      "citations": ["web\\src\\features\\exports\\pages\\ExportsPage.tsx:1-35,208-219,284-293"],
+      "contract": "Existing React/i18n hooks, page title, byte/date formatting and decorated-icon aria-hidden. Caller uses shared motion wrappers; actual reduced-motion behavior unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+      "line": 222,
+      "rule": "MDC-002 / mission section 33",
+      "detail": "Table and status panel repeat loading/error/unresolved/empty branching, but share one source and existing feedback primitives; this is legitimate panel-specific presentation, not evidence requiring another state engine.",
+      "fix": "Retain both independently visible panels; consider existing SourceContent only after equivalent retained and unresolved contracts are verified.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\exports\\components\\ExportKpiBand.tsx",
+      "line": 41,
+      "rule": "MDC-033",
+      "detail": "Summary and status panel both show known byte totals; distinct summary and distribution contexts make this purposeful duplication.",
+      "fix": "Keep both explanations and formatting semantics; do not remove a metric merely to reduce repetition.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "strategy": "One-column detail grid below xl; at xl jobs span 2/3, breakdown 1/3. PageLayout has min-w-0/full-width container. Download link has min-h-11.",
+    "citations": ["web\\src\\features\\exports\\pages\\ExportsPage.tsx:173,218-220,250-256", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:11-12"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+        "line": 252,
+        "rule": "MDC-023 / MDC-043 / mission sections 15-17",
+        "detail": "Mobile allowlist retains only type/status/actions; format, file size and created date receive hidden md:table-cell from DataTable. No mobilePresentation or expanded-detail renderer is passed, so no inspected page path restores these hidden details at narrow widths.",
+        "fix": "Use the existing opt-in MobileDataTablePresentation with complete job details, selection and download, or a non-lossy existing table strategy. Preserve identical loaded-row search/filter/sort/pagination/export pipeline and persisted columns.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "dependencies": ["web\\src\\components\\ui\\DataTable.tsx:185-189,714-725,504-514"],
+    "unverified": ["All ten required viewport widths", "Allocated container widths", "320px toolbar reachability", "Long job types / translated labels", "Horizontal overflow", "200% text zoom", "RTL"]
+  },
+  "accessibility": {
+    "verified": "source attributes only",
+    "positives": [
+      "Localized refresh aria-label and decorative icons hidden: ExportsPage.tsx:187-194.",
+      "Download native anchor has job-specific accessible label, minimum 44px height and focus-visible ring: ExportsPage.tsx:166-177.",
+      "Human-readable type/date row label rather than checkbox UUID: ExportsPage.tsx:261-266.",
+      "Status text accompanies semantic Badge; breakdown labels/counts accompany bars: ExportsPage.tsx:153-155 and ExportStatusBreakdown.tsx:88-97.",
+      "Loading breakdown uses role=status/aria-busy; unresolved state role=status: ExportStatusBreakdown.tsx:54-63,75-76.",
+      "MetricBar uses named progressbar and shared reduced-motion hook: MetricBar.tsx:49-63,90-92.",
+      "Shared LayoutCard associates heading via useId: LayoutCard.tsx:19,28,38."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+        "line": 173,
+        "rule": "MDC-012 / MDC-040",
+        "detail": "Download text and focus ring use fixed cyan classes instead of semantic theme tokens; effective contrast across composed light/dark/custom themes is unknown.",
+        "fix": "Compose existing semantic link/button chrome with native anchor semantics; measure text/UI contrast and preserve visible keyboard focus rather than infer failure from class names.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["Keyboard tab order", "Table sorting/filter menus/column reorder", "ConfirmDialog trapping/restoration/Escape", "Screen reader announcements", "Actual touch target geometry", "Contrast", "Forced colors", "Reduced motion", "AI output accessibility"]
+  },
+  "states": {
+    "initialLoading": "No retained source + isLoading -> three row skeletons; summary loading and independent breakdown loading remain. ExportsPage.tsx:54,210,222-228; ExportStatusBreakdown.tsx:52-68.",
+    "fatalError": "jobsState.fatalError -> QueryError with retry in jobs and breakdown; KPI passes unknown raw inputs rather than fake zeros. ExportsPage.tsx:55,229-235,285-291; ExportKpiBand.tsx:30-47.",
+    "unresolvedPaused": "Distinct query paused/unresolved copy, never inferred empty. ExportsPage.tsx:56-60,236-237.",
+    "empty": "Resolved empty jobs -> explanatory table EmptyState; no-status/zero-total -> breakdown EmptyState. ExportsPage.tsx:238-244; ExportStatusBreakdown.tsx:77-85.",
+    "retainedRefreshFailure": "Retained source stays visible with StaleRefreshWarning; fatalError is separate; summary receives retained/status/freshness. ExportsPage.tsx:52-55,207-210; StaleRefreshWarning.tsx:54-118.",
+    "refreshing": "Header refresh and warning retry, active-job polling; summary reflects refreshing source. ExportsPage.tsx:68-70,187-194; useExports.ts:60-65; ExportKpiBand.tsx:61-62.",
+    "mutationPending": "Danger action loading bound to isPending; confirmation before mutation. ExportsPage.tsx:75-86,268-278.",
+    "mutationRejected": "Catch retains selection; mutation hook surfaces toast. ExportsPage.tsx:88-92; useExports.ts:187-188.",
+    "mutationResolved": "Selection clears after resolved promise; response partial failures currently unhandled. ExportsPage.tsx:86-87.",
+    "AI": "Optional gated surface; no selected type disables action; streaming disables duplicate start and sets aria-busy; output/error lifecycle is delegated. AIPiiRedactionSharedExports.tsx:119-135,167-205,217-222; AIFeatureCard.tsx:257-260,298-301.",
+    "evidenceLimit": "No state exercised in browser. PageContainer, feature-gate, DataState derivation and AiOutputPanel internals not independently inspected; runtime preservation not claimed."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\exports\\components\\exportStats.ts",
+      "line": 20,
+      "rule": "MDC-010 / mission sections 7 and 43",
+      "detail": "Processing uses fluorescent #00f0ff; five fixed hex status colors bypass current semantic theme colors. The comment at lines 14-16 still claims MetricBar composes glow, but current inspected MetricBar has gradient fill and no glow style.",
+      "fix": "Reuse restrained semantic CSS variables for status colors; pass MetricBar fill='solid' where appropriate. Preserve status order, labels, counts and proportion; update obsolete glow comment during implementation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\exports\\components\\ExportStatusBreakdown.tsx",
+      "line": 90,
+      "rule": "MDC-010 / mission section 27",
+      "detail": "MetricBar defaults to gradient fill because caller omits fill. Combined with fluorescent processing color this adds avoidable visual intensity to secondary distribution bars.",
+      "fix": "Use existing fill='solid' contract with toned semantic colors; do not introduce a competing progress renderer or delete numeric distribution.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+      "line": 173,
+      "rule": "MDC-010 / MDC-012 / MDC-013 / MDC-020",
+      "detail": "Download anchor repeats ad-hoc action chrome/text-sm, fixed cyan text/focus and white-derived hover. This is fixed-white surface noise, not pure-white body text. No text-white or glow class was found in the assigned page.",
+      "fix": "Use existing shared link/button styling with semantic text/hover/focus tokens, retaining native href/download semantics, label and 44px target.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Shared Helix outline action fixes cyan border, background, focus and dark cyan-100 text; its surface competes with neutral operational chrome. Source risk only, not measured excess brightness or contrast failure.",
+      "fix": "Shared AI owner should align existing action with subdued semantic/brand tokens while preserving contextual accessible name, disabled/busy state, wrapping and brand identity; page must not fork this component.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+      "line": 86,
+      "rule": "MDC-026 / mission sections 24 and 33",
+      "detail": "Bulk mutation returns ExportBulkResult including per-id failed reasons, but page discards resolved result and clears all selection; hook always emits success toast on resolved result. Partial-success failure retention and useful feedback are absent in this frontend path.",
+      "fix": "Consume result.deleted/result.failed, retain failed job IDs for retry and surface localized partial outcome/reasons; coordinate shared hook toast contract without changing live deletion/auth behavior. First verify actual backend response semantics.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+      "line": 218,
+      "rule": "MDC-031 / MDC-043",
+      "detail": "Detail bento uses page-local viewport xl grid rather than shared allocated-width layout. It is currently simple and noncompeting, but container-width behavior must be validated before claiming shared responsive composition.",
+      "fix": "Prefer existing layout primitives if their span/width contract preserves the 2:1 jobs/breakdown hierarchy; do not add a new width engine or remove content.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Page already uses shared layout, operational summary, source trust and table pipeline. Prioritize non-lossy mobile detail access and bulk partial-outcome handling; then subdued status/link/AI chrome.",
+    "order": ["Resolve bulk response semantics and failed-selection feedback", "Preserve all mobile fields and scoped table actions", "Replace fluorescent/fixed colors with existing semantic contracts", "Validate states, keyboard, themes and viewport behavior"],
+    "runtimeSeverity": "Unverified; no production incident or backend failure inferred."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Bulk export outcome-aware toast contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useExports.ts",
+      "file": "web\\src\\api\\hooks\\useExports.ts",
+      "line": 182,
+      "rule": "MDC-026",
+      "detail": "Resolved partial outcomes should not receive an unconditional complete-success toast while the page preserves failed IDs.",
+      "fix": "Coordinate existing mutation's result-aware success/partial/failure messaging with the page; no new mutation or backend capability.",
+      "owner": "integration",
+      "confidence": "high",
+      "propsVariantsStates": ["Existing ExportBulkResult.deleted", "Existing ExportBulkResult.failed[].id/reason", "Full success", "Partial success", "No deletion with failures", "Network rejection", "Existing cache invalidation/broadcast"],
+      "usedBy": ["ExportsPage.handleBulkDelete; other consumers not enumerated in this one-page audit"],
+      "dependsOn": ["Confirm actual backend BulkUpdate response contract; current audit establishes route and frontend type only", "Preserve existing toast localization/catalog owners"]
+    },
+    {
+      "name": "Restrained existing Helix action treatment",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Page consumes existing shared AI card; shared cyan action chrome cannot be fixed by a page-owned replacement.",
+      "fix": "Review subdued semantic/brand styling within existing shared component. No new variant or composite required by this page.",
+      "owner": "shared",
+      "confidence": "medium",
+      "propsVariantsStates": ["buttonLabel", "canStart", "stream.state/text/error", "inputSlot", "wrapLabel", "idle/streaming/disabled/error", "Light/dark/custom theme", "Keyboard focus", "Reduced motion"],
+      "usedBy": ["AIPiiRedactionSharedExports on /exports; other AIFeatureCard production callers outside assigned scope not inspected"],
+      "dependsOn": ["Existing Button and semantic tokens", "Shared AI owner cross-consumer review before changes", "Actual composed contrast/visual evidence"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+      "line": 37,
+      "detail": "Page comment contrasts legacy system/data-export job management. That other page was not inspected; no duplication/removal recommendation is supported.",
+      "decision": "Preserve this route and all scoped actions; do not merge unrelated export creation or scheduled-export surfaces."
+    },
+    {
+      "file": "web\\src\\features\\exports\\components\\ExportKpiBand.tsx",
+      "line": 70,
+      "detail": "Already adopts shared OperationalBrief/useOperationalMetrics; jobs already use shared DataTable. No second stats, table, query, modal or export engine found in assigned source.",
+      "decision": "Extend/adopt existing contracts rather than create alternative infrastructure."
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "3D6B74B1532226D9DD248B787DDC2CA2C41C662007DA8121D40C179EC8670295",
+    "currentLineCount": 299,
+    "dependencyLineCounts": {
+      "web\\src\\features\\exports\\components\\ExportKpiBand.tsx": 94,
+      "web\\src\\features\\exports\\components\\ExportStatusBreakdown.tsx": 117,
+      "web\\src\\features\\exports\\components\\exportStats.ts": 96
+    },
+    "pageAndInspectedFeaturePresentationLines": 510,
+    "pageAndInspectedFeatureLinesIncludingDerivation": 606,
+    "comparison": "Read-only baseline; no implementation or historical line-count equivalence asserted.",
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Export operations summary", "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx", "line": 210, "contents": "Five metrics: total, ready, in-progress, failed, known byte total; source scope/freshness/provenance/narrative and existing metric detail affordances."},
+      {"name": "Optional catalog-based PII redaction advisor", "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx", "line": 215, "contents": "Six export types, selection, Ask Helix / Suggest redactions, privacy explanation and streamed output; absent by intentional feature gate when disabled."},
+      {"name": "Export jobs", "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx", "line": 220, "contents": "Six columns, loaded-row controls, row selection/bulk delete and ready download."},
+      {"name": "Status breakdown", "file": "web\\src\\features\\exports\\pages\\ExportsPage.tsx", "line": 285, "contents": "Up to five nonzero known status bars, per-status counts/percentages and known storage footprint."}
+    ],
+    "additionalSurfaces": ["Title/subtitle and refresh", "Nonblocking source warning/retry", "Destructive confirmation dialog"],
+    "sourceElementCounts": {"pageGlassPanel": 0, "pageChartContainer": 0, "pageLayoutCard": 1, "breakdownLayoutCard": 1, "pageOperationalSummary": 1, "pageAIAdvisor": 1, "pageDataTable": 1},
+    "actions": [
+      {"name": "Manual refresh / source retry", "citation": "ExportsPage.tsx:68-70,187-194,229-235; StaleRefreshWarning.tsx:98-115"},
+      {"name": "Ready artifact download", "citation": "ExportsPage.tsx:165-180"},
+      {"name": "Sort type/format/size/created/status", "citation": "ExportsPage.tsx:97-158"},
+      {"name": "Value filters and shared local search/density", "citation": "ExportsPage.tsx:245-249; DataTable.tsx:498-499"},
+      {"name": "Column visibility/order/resize persistence", "citation": "ExportsPage.tsx:246; DataTable.tsx:28-41,714-730,482"},
+      {"name": "Pagination 25/50/100 and sticky bounded table", "citation": "ExportsPage.tsx:253-255"},
+      {"name": "Multiselect and confirmed bulk delete/cancel/retry", "citation": "ExportsPage.tsx:64-95,256-278,296"},
+      {"name": "CSV/JSON for matching loaded or selected loaded rows", "citation": "DataTable.tsx:872-917"},
+      {"name": "Operational summary details/context", "citation": "ExportKpiBand.tsx:28-46,70-92; shared renderer behavior unexercised"},
+      {"name": "AI export-type select and suggestion stream", "citation": "AIPiiRedactionSharedExports.tsx:79-86,129-133,167-205"}
+    ],
+    "dataBehavior": [
+      "Keep actual typed API jobs; no fixtures, invented data or synthetic export submission.",
+      "No date window or vehicle workspace filter applies to this past-job list. Preserve truthful loaded-snapshot scope; do not add another range selector or infer global totals.",
+      "Preserve AbortSignal forwarding, existing query keys, polling enablement, inherited retry/stale policies and invalidation/broadcast.",
+      "Preserve raw bytes and snake_case payloads; localized bytes/date/number display only.",
+      "Keep table filtered/selected exports distinct from job artifacts and from unimplemented server-full-result exports.",
+      "Keep source-retained rows and all neighbors during background refresh failures; preserve no-source null metrics and unresolved/paused copy.",
+      "Preserve unknown-status rows in total and bytes; no invented status meaning, no recalculated status ratios with a changed denominator.",
+      "Preserve valid zero versus missing/invalid bytes and existing zero-as-empty explanation.",
+      "Do not add export creation/account/scheduled actions from useExports.ts merely because the hook module exposes them; they are not this page's actions.",
+      "Maintain consent/gating and catalog-only redaction narration; it does not apply redactions or trigger deterministic exports."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source inspection with line citations and SHA-256; only owned report/heartbeat written.",
+    "runtime": "NOT VERIFIED: no browser, screenshot, current API response, keyboard/contrast/viewport exercise, download, mutation, AI stream or actual export submission.",
+    "backend": "Only relevant router registration/wiring excerpts and one strategy search inspected. No handler/repository semantics, auth enforcement, list coverage, artifact contents or worker outcomes proven.",
+    "sharedDependencies": "DataTable selected contracts inspected, not its entire renderer/persistence/mobile adapter. PageLayout/LayoutCard inspected; PageContainer, OperationalBrief, useConfirm/ConfirmDialog, withAiFeature, catalogs and CSS/theme internals not read.",
+    "historicalProof": "Source comments mentioning tests and design-contract historical receipts are context, never current acceptance.",
+    "checks": [
+      {"command": "PowerShell Get-FileHash assigned page/dependencies -Algorithm SHA256; Get-Content line counts", "exitCode": 0, "result": "Page hash and line counts recorded in preservation."},
+      {"command": "PowerShell Select-String case-sensitive assigned-page patterns", "exitCode": 0, "output": "raw button/input/textarea/select/table=0; direct recharts/react-leaflet/framer-motion imports=0; old relative API imports=0; GlassPanel=0; ChartContainer=0; LayoutCard=1; earlier style= count=0; white/neon/glow/hex pattern matched only line 173."},
+      {"command": "Initial hash/source-pattern PowerShell probe", "exitCode": 1, "result": "Quoting ParserError before execution; corrected scoped probes subsequently completed."},
+      {"command": "Initial case-insensitive raw-element probe", "exitCode": 0, "result": "Two false positives were capitalized shared Button usages; rerun with -CaseSensitive confirmed zero raw elements."},
+      {"command": "rg redaction/draft|PiiRedactionSharedExports internal\\api\\ai --glob *.go", "exitCode": null, "result": "Tool path-not-found; no AI route proof inferred. Frontend URL and existing router handler wiring only are cited."}
+    ],
+    "notRun": [
+      "Scoped audit.sh was read but not executed: it always runs project-wide npx tsc --noEmit, contrary to Phase 0 validation restrictions. Its applicable page-only pattern checks were performed directly.",
+      "No TypeScript, lint, build, tests, Git, whole-repository scan or agents.",
+      "No old page/source comparison or claim of 70% historical parity; current baseline preserved."
+    ],
+    "followUpAcceptance": ["Current backend bulk outcome semantics", "Mobile full-detail/selection/export equivalence", "All ten widths and allocated-width behavior", "Light/dark/custom/forced-color themes and measured contrast", "Keyboard/table menus/confirmation focus", "Retained/offline/error/empty/AI states", "Source drift rehash before implementation"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\exports\\pages\\ExportsPage.tsx",
+    "web\\src\\features\\exports\\components\\ExportKpiBand.tsx",
+    "web\\src\\features\\exports\\components\\ExportStatusBreakdown.tsx",
+    "web\\src\\features\\exports\\components\\exportStats.ts",
+    "web\\src\\api\\hooks\\useExports.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\ai\\AIPiiRedactionSharedExports.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "internal\\ai\\strategies\\pii-redaction-shared-exports\\strategy.go"
+  ]
+}

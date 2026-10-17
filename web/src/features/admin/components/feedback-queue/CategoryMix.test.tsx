@@ -66,21 +66,21 @@ describe('CategoryMix', () => {
   it('renders each count and its share of the category total', () => {
     render(<CategoryMix counts={{ bug: 6, feature: 3, other: 1 }} />)
     // total = 10 → 60% / 30% / 10%
-    expect(screen.getByText('6 · 60%')).toBeInTheDocument()
-    expect(screen.getByText('3 · 30%')).toBeInTheDocument()
-    expect(screen.getByText('1 · 10%')).toBeInTheDocument()
+    expect(screen.getByText('6 · 60.00%')).toBeInTheDocument()
+    expect(screen.getByText('3 · 30.00%')).toBeInTheDocument()
+    expect(screen.getByText('1 · 10.00%')).toBeInTheDocument()
   })
 
   it('treats a missing category count as 0 without crashing (null-safety)', () => {
     // Only `bug` supplied → feature/other fall back to 0.
     render(<CategoryMix counts={{ bug: 4 }} />)
-    expect(screen.getByText('4 · 100%')).toBeInTheDocument()
-    expect(screen.getAllByText('0 · 0%')).toHaveLength(2)
+    expect(screen.getByText('4 · 100.00%')).toBeInTheDocument()
+    expect(screen.getAllByText('0 · 0.00%')).toHaveLength(2)
   })
 
   it('renders 0% for every bar when the mix is empty (no divide-by-zero, no blank panel)', () => {
     render(<CategoryMix counts={{}} />)
-    expect(screen.getAllByText('0 · 0%')).toHaveLength(3)
+    expect(screen.getAllByText('0 · 0.00%')).toHaveLength(3)
     // Still three named bars rather than a hidden/empty section.
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
   })
@@ -91,14 +91,14 @@ describe('CategoryMix', () => {
     const counts: FeedbackCounts = { new: 100, triaged: 50, closed: 25, bug: 1, feature: 1 }
     render(<CategoryMix counts={counts} />)
 
-    expect(screen.getAllByText('1 · 50%')).toHaveLength(2) // bug + feature
-    expect(screen.getByText('0 · 0%')).toBeInTheDocument() // other
+    expect(screen.getAllByText('1 · 50.00%')).toHaveLength(2) // bug + feature
+    expect(screen.getByText('0 · 0.00%')).toBeInTheDocument() // other
     // Had the 175 status counts leaked in, bug would read 1/177 ≈ 1%, not 50%.
-    expect(screen.queryByText('1 · 1%')).toBeNull()
+    expect(screen.queryByText('1 · 1.00%')).toBeNull()
   })
 
   it('locale-formats large integer counts with thousands separators', () => {
     render(<CategoryMix counts={{ bug: 1234, feature: 0, other: 0 }} />)
-    expect(screen.getByText('1,234 · 100%')).toBeInTheDocument()
+    expect(screen.getByText('1,234 · 100.00%')).toBeInTheDocument()
   })
 })

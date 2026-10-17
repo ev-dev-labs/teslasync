@@ -33,6 +33,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import telemetryEnglish from '@/i18n/en/locale-telemetry.json';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn> via useMotionPreference)
 // reads it during render. Install a benign stub before any module imports it.
@@ -208,6 +209,7 @@ describe('DIFF_PRESETS', () => {
     expect(d1.atB.getTime() - d1.atA.getTime()).toBe(86400 * 1000);
 
     const charge = byId['before-after-charge'].compute();
+    expect(charge.atB.getTime()).toBe(now);
     expect(charge.atB.getTime() - charge.atA.getTime()).toBe(4 * 3600 * 1000);
 
     const drive = byId['last-drive'].compute();
@@ -247,8 +249,8 @@ describe('SignalCompareControls — presets', () => {
     for (const label of [
       'Now vs 1h ago',
       'Now vs 1 day ago',
-      'Before vs after last charge',
-      'Last drive start vs end',
+      'Now vs 4h ago',
+      '90 min ago vs 5 min ago',
       'Today vs yesterday (same time)',
     ]) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
@@ -256,7 +258,7 @@ describe('SignalCompareControls — presets', () => {
   });
 
   it('applies a preset by pushing datetime-local strings into BOTH windows', () => {
-    const { onChangeA, onChangeB } = renderControls();
+    const { onChangeA, onChangeB, props } = renderControls();
     fireEvent.click(screen.getByRole('button', { name: 'Now vs 1h ago' }));
 
     expect(onChangeA).toHaveBeenCalledTimes(1);
@@ -268,6 +270,36 @@ describe('SignalCompareControls — presets', () => {
     // Window A precedes Window B by exactly one hour — asserted via the
     // round-trip epoch diff so it holds in any timezone the runner uses.
     expect(new Date(bArg).getTime() - new Date(aArg).getTime()).toBe(3600 * 1000);
+    // Integration owners, not these pure controls, commit the requested values.
+    expect(screen.getByLabelText('Window A')).toHaveValue(props.atA);
+    expect(screen.getByLabelText('Window B')).toHaveValue(props.atB);
+  });
+
+  it.each([
+    ['before-after-charge', 'beforeAfterCharge', 'Now vs 4h ago', 240, 0],
+    ['last-drive', 'lastDrive', '90 min ago vs 5 min ago', 90, 5],
+  ] as const)('labels %s as fixed offsets, not a verified event', (id, key, label, minutesA, minutesB) => {
+    vi.useFakeTimers();
+    const now = new Date('2024-06-15T12:30:00Z');
+    vi.setSystemTime(now);
+    try {
+      const preset = DIFF_PRESETS.find((item) => item.id === id);
+      expect(preset?.labelKey).toBe(`signalDiff.preset.${key}`);
+      expect(preset?.defaultLabel).toBe(label);
+      expect(telemetryEnglish.signalDiff.preset[key]).toBe(label);
+
+      const { onChangeA, onChangeB } = renderControls();
+      expect(screen.queryByRole('button', { name: /last charge|last drive/i })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: label }));
+      expect(onChangeA).toHaveBeenCalledExactlyOnceWith(
+        toLocalDatetimeInput(new Date(now.getTime() - minutesA * 60 * 1000)),
+      );
+      expect(onChangeB).toHaveBeenCalledExactlyOnceWith(
+        toLocalDatetimeInput(new Date(now.getTime() - minutesB * 60 * 1000)),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

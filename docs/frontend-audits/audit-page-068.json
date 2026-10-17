@@ -1,0 +1,662 @@
+{
+  "item": "audit-page-068",
+  "phase": 0,
+  "mode": "read-only source audit",
+  "page": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+  "routes": [
+    "/energy-ledger"
+  ],
+  "purpose": "Reconcile recorded charging, driving, inferred standby drain and stored pack energy by month, exposing unexplained residuals.",
+  "primaryGoal": "Understand where charged energy went and how complete the available history is without mistaking missing evidence for measured zero.",
+  "identity": {
+    "root": "F:\\github\\TeslaSync",
+    "sourceSha256": "02518E1876AE8007FC2BB482818879A27828591683B86426A182D87F15FC6AB4",
+    "lineCount": 333,
+    "routeEvidence": [
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 85,
+        "detail": "Lazy import points to assigned page."
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 858,
+        "detail": "energy-ledger route mounts EnergyLedger through SafeRoute; actual runtime mount unverified."
+      }
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useChargingSessions(vehicleIdStr)",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 56,
+      "endpoint": "GET /api/v1/charging-sessions?vehicle_id=<selected>",
+      "ownership": "Charging hook -> internal\\handler\\v1\\charging_handler.go:30 -> internal\\app\\chargingsvc\\service.go:81 -> charging repository port.",
+      "routeEvidence": "internal\\api\\router.go:5037 registers the handler; internal\\handler\\v1\\charging_handler.go:25 declares GET /charging-sessions.",
+      "behavior": "Vehicle-required, AbortSignal forwarded, safeArray selector, vehicle-specific query key, inherited retry policy. Handler accepts vehicle_id and delegates without range arguments.",
+      "contractRisk": "Returned domain charging fields are not the typed fields read by energyLedger; see architecture finding EL-001. Repository completeness and actual network payload were not exercised."
+    },
+    {
+      "hook": "useDrives(vehicleIdStr)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 104,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected>",
+      "ownership": "Driving hook and drives handler registered in internal\\api\\router.go:3463-3464.",
+      "behavior": "Vehicle-required, AbortSignal forwarded, safeArray selector, FAST staleTime, optional server start/end/limit contract. Page supplies none of those options.",
+      "contractRisk": "DriveWindow documentation at useDriving.ts:85-88 explicitly identifies the default 50-row page; exact live server completeness is unverified."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": "GET /api/v1/vehicles",
+      "ownership": "Existing selected-vehicle store and URL workspace owner; useVehicles.ts:73-76.",
+      "behavior": "URL/store/fleet fallback selection; page does not create a competing selector. Full provider and authentication graph are outside this bounded audit."
+    },
+    {
+      "hook": "useUnits; useHiddenSeries; buildEnergyLedger",
+      "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+      "line": 36,
+      "endpoint": null,
+      "ownership": "Existing preference formatter, URL hidden-series state, and pure battery ledger calculation.",
+      "behavior": "SI Wh/W/m stay in summary; page derives kWh chart display values. Months use browser-local Date getters; pack estimate is median of plausible wide-SoC sessions."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "Existing min-w-0 full-width container, named data sources, query freshness and shell-owned workspace."
+    },
+    {
+      "name": "BatteryEvidenceBrief / OperationalBrief",
+      "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "contract": "StatMetric -> useOperationalMetrics; loading/retained evidence, unknown period reason, review drawer; no replacement KPI pipeline."
+    },
+    {
+      "name": "ChartCard / EmbeddedChart / ChartContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "contract": "Canonical frame, toolbar/export, chartKey, accessible data table, loading/error/empty, responsive sizing."
+    },
+    {
+      "name": "LayoutCard / Text / Badge / HelpTooltip",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "contract": "Named cards, semantic typography and severity; method explanation stays reachable."
+    },
+    {
+      "name": "SourceContent / StaleRefreshWarning",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "contract": "Fatal recovery is local; retained payloads survive refresh failure; independent retries."
+    },
+    {
+      "name": "NoVehicleSelected / FadeIn",
+      "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "contract": "Existing onboarding recovery; FadeIn respects reduced motion and low bandwidth through useMotionPreference."
+    }
+  ],
+  "duplicatedPatterns": {
+    "observations": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+        "line": 289,
+        "detail": "Four local label/value pairs render month details; use existing typography and local month component if extracted. No second production consumer was inspected to justify a new shared component."
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+        "line": 103,
+        "detail": "Two percentage formatter callbacks and closure thresholds repeat locally; preserve rounding and semantics if consolidated."
+      }
+    ],
+    "newSharedComponentJustified": false
+  },
+  "responsive": {
+    "status": "source-only; all ten specified widths unverified",
+    "observed": "Shared width/min-w-0 frames; details use lg:grid-cols-2, inner pairs use grid-cols-2 and sm:grid-cols-4, month header wraps. Chart ResponsiveContainer fills a fixed 380px frame.",
+    "issues": [
+      {
+        "id": "EL-006",
+        "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+        "line": 289,
+        "rule": "MDC-043 / mission 15-16",
+        "detail": "Month-detail grid and chart at 320px, long translations, increased text size and many months have no mounted evidence; source lacks local break-word/min-w-0 safeguards on each numeric value.",
+        "fix": "Exercise allocated-width and long-label cases before changing layout; retain every detail and chart/table/export capability. Add only demonstrated local wrapping fixes.",
+        "owner": "page",
+        "confidence": "medium",
+        "classification": "validation risk, not confirmed clipping"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "keyboard, focus, assistive technology, contrast and forced colors unverified",
+    "observed": "Shared page focus heading; chart ariaLabel and six fallback data columns; semantic ul/li months; text labels accompany severity badges; meaningful help ariaLabel; summary context icons aria-hidden. Shared chart fallback remains present and exposes forced-colors table.",
+    "issues": [
+      {
+        "id": "EL-007",
+        "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+        "line": 203,
+        "rule": "MDC-013 / MDC-040",
+        "detail": "Chart ticks hardcode 10px and 11px font sizes rather than deriving from shared typography/preference policy. Legibility under font scaling is unverified.",
+        "fix": "Reuse existing canonical chart typography policy; retain axes, signed values and accessible fallback. Validate composed labels and contrast rather than claiming token names prove accessibility.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Brief loading, ChartCard loading and 180px detail skeleton; page-level loading/busy props are not passed.",
+    "empty": "Monthly card and detail card explain missing history; summary nevertheless emits numeric zeros once both queries resolve empty.",
+    "fatalError": "KPI-only SourceContent supplies retry of failed sources; chart and month detail do not receive fatal error.",
+    "refreshFailure": "Two StaleRefreshWarning instances preserve retained rows and provide independent retries; Brief marks retained status.",
+    "offline": "Shared warnings distinguish paused retained queries; paused initial query has no retained payload and isLoading can be false.",
+    "partial": "Not explicitly modeled for successful-empty source or missing pack/SoC; derived summary substitutes [] and zero values.",
+    "issues": [
+      {
+        "id": "EL-002",
+        "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+        "line": 98,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "summaryReady means only not-loading/not-fatal; two successful empty arrays yield 0% closure, 0% driving, zero drain and zero unexplained energy as available readings. Initial offline/paused requests can similarly pass this predicate because readiness does not require resolved data.",
+        "fix": "Derive eligibility from resolved source states and evidential prerequisites; keep unresolved/empty metrics null with source-specific reasons and paused recovery, distinguish genuine measured zero.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "id": "EL-003",
+        "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+        "line": 176,
+        "rule": "MDC-026 / mission 24,25,36",
+        "detail": "Fatal errors are sent only to KPI SourceContent at line 153. Chart has loading/empty but no error/onRetry; details at line 255 ignore isError. One failed source can therefore produce a seemingly valid chart/month list from the other source or a no-months empty message rather than unavailable evidence.",
+        "fix": "Use existing SourceContent/ChartCard error and retry contracts for reconciliation-dependent sections; retain healthy source data but clearly mark the derived ledger incomplete and do not imply balanced complete books.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "id": "EL-004",
+        "file": "web\\src\\features\\battery\\lib\\energyLedger.ts",
+        "line": 321,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Missing pack capacity or endpoint SoC becomes storedDeltaWh=0; unknown drive energy becomes zero at line 214 and charge energy at line 197. No qualifying idle gaps yield vampireWhPerDay=0 at line 365. Page can present inferred/unavailable quantities as numeric evidence.",
+        "fix": "Integration owner must establish completeness/prerequisite metadata for derived values and preserve known totals separately. Page renders unknown/null and explains missing evidence without silently changing business accounting formulas.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "id": "EL-008",
+      "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+      "line": 119,
+      "rule": "MDC-033 / MDC-044",
+      "detail": "Percent and drain callbacks embed Math.round/raw ASCII units; monthly YYYY-MM keys come from browser-local monthKey, rather than saved timezone and centralized locale formatting. Actual display preferences are only partially used despite useUnits for energy/power/distance.",
+      "fix": "Use existing locale/metric formatter and timezone policy at display boundary, preserving signed residual, Wh/day meaning, precision and raw SI. Do not convert cached inputs or invent a second formatter.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "id": "EL-001",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 59,
+      "rule": "MDC-045 / typed API source identity",
+      "detail": "Hook asserts ChargingSession[] with started_at, start_soc_pct, total_energy_added_wh. Registered /charging-sessions handler returns domain ChargingSession through chargingsvc; internal/domain/charging/types.go:12-22 emits startBatteryLevel, endBatteryLevel, energyAddedWh, startedAt and completedAt. Ledger reads started_at ?? start_ts (energyLedger.ts:184), never startedAt; energy and SoC fields also differ. The inspected client only applies camelCaseKeys, not a documented semantic alias remap. Thus source contracts disagree even though route exists; live serialization remains unverified.",
+      "fix": "Integration owner aligns canonical SI response and typed charging hook, or chooses the already-existing compatible charging source after verifying its exact contract. No legacy unit fields or temporary dual-source accounting; retain every row/identity and explain source window.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "id": "EL-005",
+      "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+      "line": 39,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "Dated monthly analysis uses unbounded charging hook and default-page drives hook with no useRangeState. workspaceScope.ts:23-77 omits /energy-ledger, so header range is disabled. Unknown-period copy at lines 151-152 acknowledges bounds, but does not provide workspace range or solve asymmetric input windows.",
+      "fix": "Integration owner registers dated route and supplies both header-owned instant bounds through compatible typed hooks, verifying server filtering and calendar/rolling/timezone semantics. Ledger needs explicitly documented boundary context for gaps/pack calibration; no local duplicate picker or client-only page filtering.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "EL-001",
+      "EL-002",
+      "EL-003",
+      "EL-004",
+      "EL-005",
+      "EL-008",
+      "EL-007",
+      "EL-006"
+    ],
+    "reason": "Source shape and evidence integrity precede cosmetic modernization. Current page already uses canonical frames and restrained surface/text tokens."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical charging source contract alignment",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useCharging.ts",
+      "owner": "integration",
+      "propsVariantsStates": "Typed canonical SI energy/SoC/start/end fields matching actual GET payload; AbortSignal, vehicle key, null/partial provenance and source-window metadata preserved. Existing selector must not silently lose domain fields.",
+      "usedBy": [
+        "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx"
+      ],
+      "dependsOn": [
+        "internal\\handler\\v1\\charging_handler.go",
+        "internal\\domain\\charging\\types.go",
+        "internal\\app\\chargingsvc\\service.go"
+      ],
+      "action": "Resolve contract mismatch; this audit does not authorize shared edits or claim impact on uninspected callers."
+    },
+    {
+      "name": "Header-owned ledger date scope",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "owner": "integration",
+      "propsVariantsStates": "Register /energy-ledger in RANGE_ENABLED_PATHS; typed start/end server bounds for charging and drives; preserve rolling/custom/DST/timezone, vehicle, source keys and cancellations; disclose observed completeness.",
+      "usedBy": [
+        "/energy-ledger"
+      ],
+      "dependsOn": [
+        "Canonical charging source contract alignment",
+        "web\\src\\api\\hooks\\useDriving.ts",
+        "existing useRangeState contract"
+      ],
+      "action": "Scoped integration requirement, not a competing range component."
+    },
+    {
+      "name": "Derived ledger evidence prerequisites",
+      "existingOwnerFile": "web\\src\\features\\battery\\lib\\energyLedger.ts",
+      "owner": "integration",
+      "propsVariantsStates": "Expose which capacity/SoC/energy/gap inputs are known and complete without converting SI or altering accounting silently; map missing and incomplete derived values to existing StatMetric/DataState contracts.",
+      "usedBy": [
+        "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx"
+      ],
+      "dependsOn": [
+        "Canonical charging source contract alignment"
+      ],
+      "action": "Feature data-contract correction; existing shared presentation APIs suffice, no new global component proposed."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": "Page uses category barrels and existing ledger/brief/frame/query/formatter owners. Local month cards do not establish a competing library. Shared alternative sources useChargingHistory/useDriveHistory exist but must not be adopted as a completeness guarantee."
+  },
+  "preservation": {
+    "sourceSha256": "02518E1876AE8007FC2BB482818879A27828591683B86426A182D87F15FC6AB4",
+    "currentLineCount": 333,
+    "sectionCount": 3,
+    "sections": [
+      {
+        "name": "Energy ledger metrics / evidence brief",
+        "line": 146,
+        "count": 1,
+        "metrics": [
+          "Books Closure",
+          "Reached the Wheels",
+          "Vampire Drain",
+          "Unexplained"
+        ],
+        "metricCount": 4
+      },
+      {
+        "name": "Monthly Balance",
+        "line": 163,
+        "count": 1,
+        "series": [
+          "charged",
+          "driven",
+          "standby",
+          "residual"
+        ],
+        "accessibleAndExportColumns": [
+          "month",
+          "charged",
+          "driven",
+          "standby",
+          "stored",
+          "residual"
+        ]
+      },
+      {
+        "name": "Month by Month",
+        "line": 245,
+        "count": 1,
+        "details": [
+          "month",
+          "closure badge",
+          "Weakest month",
+          "charged energy and session count",
+          "driven energy and distance",
+          "standby energy and idle hours",
+          "signed residual",
+          "ledger method help"
+        ]
+      }
+    ],
+    "sourceComponentCounts": {
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "ChartCard": 1,
+      "LayoutCard": 2,
+      "BatteryEvidenceBrief": 1
+    },
+    "countExplanation": "Two LayoutCard callsites include the alternative monthly empty shell; three logical sections remain. ChartCard forwards to canonical ChartContainer. No section was removed and no source change was made.",
+    "actions": [
+      "URL-persisted legend toggles using energy-ledger-monthly",
+      "shared chart export/toolbar",
+      "shared chart accessible table",
+      "OperationalBrief review drawer",
+      "method HelpTooltip",
+      "independent stale-source refresh",
+      "fatal-source retry",
+      "no-vehicle onboarding navigation"
+    ],
+    "dataBehavior": [
+      "selected vehicle URL/store/fleet precedence",
+      "raw Wh/W/m summary and cache",
+      "display-only energy/power/distance formatting",
+      "median capacity from >=20 percentage-point charging spans within plausible pack bounds",
+      "idle gap bounds 0.5 hours through 14 days and 2000W maximum",
+      "signed residual and closure thresholds 0.9/0.75",
+      "worst-month marker",
+      "unknown source-window explanation",
+      "retained history on refresh failure",
+      "all stored-energy accessible/export evidence even though not plotted"
+    ],
+    "prohibitedLoss": "No deletion of specialist help, chart columns, controls, source identities, preferences or month details; no fabricated measurements, recalculation shortcuts, legacy SI aliases or new palette."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified at 320/375/390/430/768/1024/1280/1440/1920/2560",
+    "tests": "NOTRUN: no validation baton; read-only Phase 0 forbids full gates.",
+    "typescript": "NOTRUN: project-wide TypeScript explicitly prohibited for this assignment.",
+    "skillScript": "NOTRUN: audit.sh always runs project TypeScript at step 7; bounded source pattern counts were used instead without modifying the script.",
+    "backend": "Route/handler/service/domain declarations inspected only; database completeness, repository implementation, response envelope and actual network payload unverified.",
+    "sourceInventory": "Only listed files/ranges were inspected. Hashes identify complete file bytes, not an assertion every line was semantically reviewed. No whole-app inventory or runtime coverage claim.",
+    "readFailures": [
+      "Attempted internal\\api\\v1 glob: directory absent; corrected from router import to internal\\handler\\v1.",
+      "Attempted internal\\handler\\v1\\charging.go: absent; resolved actual charging_handler.go."
+    ],
+    "commands": [
+      {
+        "command": "Get-FileHash 'web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx').Count",
+        "exitCode": 0,
+        "output": "SHA256 02518E1876AE8007FC2BB482818879A27828591683B86426A182D87F15FC6AB4; 333"
+      },
+      {
+        "command": "PowerShell [regex]::Matches over assigned page only: static style, raw controls/table, direct libraries, old API imports, noisy text/glow and frame callsites",
+        "exitCode": 0,
+        "output": "style=\\{\\{ : 0\n<(button|input|textarea|select|table)\\b : 0\ndirect recharts/react-leaflet/framer-motion imports : 0\nold relative api imports : 0\ntext-neon|text-white|text-gray|shadow-glow : 0\n<GlassPanel : 0\n<ChartContainer : 0\n<ChartCard : 1\n<LayoutCard : 2"
+      }
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+    "web\\src\\features\\battery\\lib\\energyLedger.ts",
+    "web\\src\\features\\battery\\lib\\energyLedger.test.ts",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\types\\driving.ts",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\charging_handler.go",
+    "internal\\app\\chargingsvc\\service.go",
+    "internal\\domain\\charging\\types.go"
+  ],
+  "sourceInventory": [
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+      "lineCount": 394,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "docs\\frontend-worker-conventions.md",
+      "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+      "lineCount": 80,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "lineCount": 1593,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": ".github\\skills\\audit-violations\\audit.sh",
+      "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+      "lineCount": 141,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+      "sha256": "02518E1876AE8007FC2BB482818879A27828591683B86426A182D87F15FC6AB4",
+      "lineCount": 333,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\features\\battery\\lib\\energyLedger.ts",
+      "sha256": "65FF8FE54E86D8E195A4C4CA28E01B1940132E2F6BA369694984B04E7718BF1B",
+      "lineCount": 375,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\features\\battery\\lib\\energyLedger.test.ts",
+      "sha256": "9F3498ADAE84A3FBBA1598CCB5CBAD18E2F50A2D45155DCD39104666C1AF8AA5",
+      "lineCount": 294,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "sha256": "E954755F164A93FFB2E056CEA1385B2466C3964D92230A45A526CDD995816AA0",
+      "lineCount": 57,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "sha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+      "lineCount": 643,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "0583322BDE1F20BE6A08388CA791CDB24C5C4DB2734849B8D416BB8CD7D60BB9",
+      "lineCount": 446,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "lineCount": 1898,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\api\\client.ts",
+      "sha256": "A9732175455ED2DC207CC59CB42DCF7E66065453303E68593EFE317A8C233428",
+      "lineCount": 478,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lineCount": 434,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lineCount": 168,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\lib\\tokens.ts",
+      "sha256": "E5178C85697F9913646670F8023668B9574B6F5A281C947DDB51141CDBA5A5C9",
+      "lineCount": 441,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+      "lineCount": 918,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lineCount": 65,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lineCount": 174,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lineCount": 194,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\hooks\\useHiddenSeries.ts",
+      "sha256": "A7CFECEBBB60E53783E13DBFABCCA5CA685B06F72AB6684FE3B6F712409D876E",
+      "lineCount": 88,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "0E2E1842FCAC1FE5BD7C4C37299A76F9515D45EAFE43AD122A8E09A0BB817D55",
+      "lineCount": 259,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6",
+      "lineCount": 17,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "sha256": "504C70538B666ECCAC09537EF59BD5F1E3D3ED4D4930A8493D94B05C5C77FB0E",
+      "lineCount": 48,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "sha256": "1FEDEB6B5CF17436D31CB0F19DAC09EE1C6591D1866B09ED511387BD110E7D9A",
+      "lineCount": 64,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "sha256": "283583E259342620CB0E24429E3F66FB6385F16498D869192F36CFFCFF9EEC43",
+      "lineCount": 72,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "sha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "lineCount": 42,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "ED81C3FEE9CC5CE739EE7B13B8CB6D4D358DAFD205A01FBFCCA83947474C47C5",
+      "lineCount": 900,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "sha256": "B24B19024EFFEBB6D8457171BE61E6899672CD8F668B41BB3814AEB29ADA42E5",
+      "lineCount": 303,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "6103CED7AF551C52DD32499D8C62AB3AD479A8ADF230D3C8059FA8B5199E87D0",
+      "lineCount": 115,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\components\\motion\\FadeIn.tsx",
+      "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "lineCount": 39,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "lineCount": 77,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\types\\charging.ts",
+      "sha256": "225CBAFAFD597261ABE9222B68F7578565280625602863BA10ADE878268B0720",
+      "lineCount": 355,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "web\\src\\types\\driving.ts",
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "lineCount": 411,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "internal\\api\\router.go",
+      "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+      "lineCount": 5366,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "internal\\handler\\v1\\charging_handler.go",
+      "sha256": "1ECC05A61CB77D41F07C1E52BBA5B434FE8155A2CD4126C9E14F3F1445F51644",
+      "lineCount": 60,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "internal\\app\\chargingsvc\\service.go",
+      "sha256": "6B5D0CEDA46E3427B5C4B0F861E9EEFD79A75502F3BCDC1F71B2CE3F51988B58",
+      "lineCount": 115,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    },
+    {
+      "file": "internal\\domain\\charging\\types.go",
+      "sha256": "805595F294934DB3B20ABE138D90B8871E3F283C1C6EB2389FCE26B550663E19",
+      "lineCount": 25,
+      "inspection": "Source inspection: full file or cited relevant ranges/search excerpts only"
+    }
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-068.json",
+    ".agent-status\\audit-page-068.txt"
+  ],
+  "auditedAtUtc": "2026-10-07T10:27:24.1058761Z"
+}

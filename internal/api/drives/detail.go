@@ -3,6 +3,7 @@ package drives
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // driveDetailHandler wraps the legacy *DriveHandler with a signal.StateReader
@@ -54,7 +56,7 @@ func NewDriveDetail(db *database.DB, state signal.StateReader, live signal.LiveS
 //
 // NOTE: per-row "power" is NOT mapped from a Tesla signal — Fleet Telemetry
 // does not emit PackPower. Power is computed from PackVoltage × PackCurrent
-// by derivePowerKw() AFTER projection. See enrichLiveDrive (same formula).
+// in watts AFTER projection. See enrichLiveDrive (same formula).
 //
 // Elevation is intentionally absent: Tesla Fleet Telemetry does not emit
 // an Elevation atomic (see internal/tesla/codec/flatten.go and the
@@ -95,8 +97,8 @@ var driveTelemetryFieldMappings = []signal.FieldMapping{
 // the legacy DriveTelemetryReading JSON shape with "ts" renamed to
 // "created_at" and per-row "power" derived from PackVoltage × PackCurrent.
 // Fields stay `any` so a missing signal still marshals as an explicit null
-// exactly like the map version did; "power" is omitempty so rows without
-// both pack readings omit the key rather than emitting null. Struct fields
+// exactly like the map version did; "power" is nullable watts so missing or
+// invalid pack readings remain distinct from measured zero. Struct fields
 // are declared in alphabetical JSON-key order to match encoding/json's
 // sorted map output key-for-key.
 //
@@ -118,7 +120,7 @@ type driveTelemetryRow struct {
 	PackCurrent   any       `json:"pack_current"`
 	PackVoltage   any       `json:"pack_voltage"`
 	PassengerTemp any       `json:"passenger_temp"`
-	Power         any       `json:"power,omitempty"`
+	Power         *float64  `json:"power"`
 	RatedRange    any       `json:"rated_range"`
 	Soc           any       `json:"soc"`
 	Speed         any       `json:"speed"`
@@ -129,10 +131,10 @@ type driveTelemetryRow struct {
 }
 
 // timelineRowsToDriveTelemetry converts ordered TimelineRows into the legacy
-// flat-pivot telemetry shape in a single pass, deriving per-row power (kW)
-// as PackVoltage × PackCurrent / 1000.0. Sign is preserved so downstream
+// flat-pivot telemetry shape in a single pass, deriving per-row power (W)
+// as PackVoltage × PackCurrent. Sign is preserved so downstream
 // chart consumers can distinguish drive (+) from regen (−); rows without
-// both pack readings carry no "power" key. This mirrors the formula used by
+// valid pack readings carry null power. This mirrors the formula used by
 // enrichLiveDrive() for live drive average-power — Tesla Fleet Telemetry
 // does not emit a per-row PackPower signal.
 func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow {
@@ -162,14 +164,31 @@ func timelineRowsToDriveTelemetry(rows []signal.TimelineRow) []driveTelemetryRow
 			TireRL:        f["tire_pressure_rl"],
 			TireRR:        f["tire_pressure_rr"],
 		}
-		if v, vOk := toFloatOk(f["pack_voltage"]); vOk {
-			if c, cOk := toFloatOk(f["pack_current"]); cOk {
-				row.Power = safeFloat(v * c / 1000.0)
+		if v, vOk := drivePackReading(f["pack_voltage"]); vOk {
+			if c, cOk := drivePackReading(f["pack_current"]); cOk {
+				power := v * c
+				if !math.IsNaN(power) && !math.IsInf(power, 0) {
+					row.Power = &power
+				}
 			}
 		}
 		out[i] = row
 	}
 	return out
+}
+
+func drivePackReading(value any) (float64, bool) {
+	// The shared signal coercer accepts legacy booleans as 0/1, but those
+	// are not measured voltage/current and must not fabricate zero power.
+	raw := value
+	if envelope, ok := raw.(map[string]any); ok {
+		raw = envelope["value"]
+	}
+	if _, ok := raw.(bool); ok {
+		return 0, false
+	}
+	number, ok := toFloatOk(value)
+	return number, ok && !math.IsNaN(number) && !math.IsInf(number, 0)
 }
 
 // drivePositionFieldMappings projects the signal_log change feed into the
@@ -250,17 +269,21 @@ func stateToSignalMap(s signal.State) map[string]interface{} {
 }
 
 func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.drives.detail")
+	defer span.End()
+
 	id, err := urlParamInt64(r, "driveID")
 	if err != nil {
+		span.RecordError(err)
 		writeError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
-	ctx := r.Context()
-
 	drive, err := h.drives.GetByID(ctx, id)
 	if err != nil {
-		log.Error().Err(err).Int64("id", id).Msg("failed to get drive")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("id", id).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get drive")
 		writeError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
@@ -277,7 +300,9 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		// In-progress drive — compute live values from signal snapshots.
 		live = true
 		if err := h.enrichLiveDrive(ctx, drive, endTs); err != nil {
-			log.Error().Err(err).Int64("driveID", id).Msg("failed to enrich live drive")
+			span.RecordError(err)
+			log.Error().Err(err).Int64("driveID", id).
+				Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to enrich live drive")
 			writeError(w, http.StatusInternalServerError, "failed to load live drive state")
 			return
 		}
@@ -289,7 +314,9 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	telemetryRows, err := h.state.Timeline(ctx,
 		drive.VehicleID, driveTelemetryFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
-		log.Error().Err(err).Int64("driveID", id).Msg("failed to get drive telemetry from signal_log")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("driveID", id).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get drive telemetry from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to load drive telemetry")
 		return
 	}
@@ -298,7 +325,9 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	positionRows, err := h.state.Timeline(ctx,
 		drive.VehicleID, drivePositionFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
-		log.Error().Err(err).Int64("driveID", id).Msg("failed to get drive positions from signal_log")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("driveID", id).
+			Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to get drive positions from signal_log")
 		writeError(w, http.StatusInternalServerError, "failed to load drive positions")
 		return
 	}
@@ -315,6 +344,8 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"end_ts":             drive.EndTs,
 		"duration_s":         drive.DurationS,
 		"distance_m":         drive.DistanceM,
+		"start_odometer_m":   drive.StartOdometerM,
+		"end_odometer_m":     drive.EndOdometerM,
 		"start_address":      drive.StartAddress,
 		"end_address":        drive.EndAddress,
 		"start_lat":          drive.StartLat,

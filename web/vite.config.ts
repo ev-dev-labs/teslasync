@@ -122,6 +122,11 @@ const appVersion = buildIdentity.appVersion
 const gitSha = buildIdentity.gitSha
 
 export default defineConfig({
+  // Catalog consumers use default imports; namespace exports duplicate payloads.
+  json: {
+    namedExports: false,
+    stringify: true,
+  },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
     'import.meta.env.VITE_GIT_SHA': JSON.stringify(gitSha),
@@ -138,7 +143,8 @@ export default defineConfig({
   plugins: [
     // See the `isVitest` note above (CLEAN-02).
     ...(isVitest ? [] : [react()]),
-    verifyEnglishCatalogSplit,
+    // Build/dev guard only: unit tests never consume the split catalog output.
+    ...(isVitest ? [] : [verifyEnglishCatalogSplit]),
     VitePWA({
       // Mocked browser suites intercept every API request. Omitting the worker
       // prevents Workbox from bypassing those fixtures; production builds and
@@ -340,7 +346,7 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api': {
+      '/api/': {
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
@@ -374,6 +380,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap,
+    // Preserve wrappers for conditional requires and cycles, not every CJS
+    // module. Vite's bundled CommonJS plugin owns that dependency analysis.
+    commonjsOptions: {
+      strictRequires: 'auto',
+    },
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       // ── CLEAN-01: cyclic cross-chunk re-exports are build errors ───────────
@@ -402,19 +413,21 @@ export default defineConfig({
         defaultHandler(warning)
       },
       output: {
+        // Dependency tables repeat chunk URLs; keep audit-significant names only.
+        chunkFileNames: ({ name }) =>
+          /^(vendor-|locale-)/.test(name) ? 'assets/[name]-[hash].js' : 'assets/[hash].js',
         manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-query': ['@tanstack/react-query'],
+          // Motion already belongs to the static shell closure. Sharing React's
+          // chunk removes cross-chunk exports and shares compression, not imports.
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next', 'framer-motion'],
           'vendor-charts': ['recharts'],
           'vendor-map': ['leaflet', 'react-leaflet'],
-          'vendor-motion': ['framer-motion'],
           // lucide-react is deliberately NOT force-grouped. Naming it here
           // hoisted every icon the whole app imports — 426 modules — into a
           // single chunk that the entry statically imports, so ~200 icons that
           // only lazy routes ever render were downloaded during cold start.
           // Letting Rollup place icons by importer keeps shell icons in the
           // startup closure and route-only icons in their route chunk.
-          'vendor-i18n': ['i18next', 'react-i18next'],
         },
       },
     },

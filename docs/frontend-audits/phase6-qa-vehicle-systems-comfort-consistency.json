@@ -1,0 +1,875 @@
+{
+  "item": "phase6-qa-vehicle-systems-comfort-consistency",
+  "attempt": 1,
+  "started_at": "2026-10-14T01:28:00.767Z",
+  "return_by": "2026-10-14T01:44:50.678Z",
+  "hard_stop": "2026-10-14T01:49:50.678Z",
+  "pins_before": [
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+    },
+    {
+      "path": "web/src/api/hooks/useSettings.ts",
+      "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicleSystems.ts",
+      "sha256": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d"
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyCoverageCadence.tsx",
+      "sha256": "c4e0b0379cb02f293d4237263bafef4f95e492eac147b1f69d69563a44800a99"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyDataAvailability.tsx",
+      "sha256": "c36f3b5ea9157660de222e0de603e2b983e90d4f0a31211c9b45181591459779"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyDeviationDistribution.tsx",
+      "sha256": "31efef09a702bfaf34c429197891ecbc1e0405741961c4244002021b21da0e0c"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyEvidenceKpiLedger.tsx",
+      "sha256": "9f82fe80e1b0521b2c489b46593f79f58fa220460b169eb7f854879e68a1f9a4"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyExactAccounting.tsx",
+      "sha256": "afa53c558d5b5f8b2628b1b457ffd05748d77b176257c8474e17e430f0cc49d4"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyHourlyProfile.tsx",
+      "sha256": "a7defebfab02f03dffcda097613bdc1427666c3743ea59248116c02f25014106"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyIntervalComposition.tsx",
+      "sha256": "c1e60d66a2adaeea88460ff755f29dc3a03fa84bffedd90f4378c4fd6c3b3a40"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyMethodology.tsx",
+      "sha256": "a33f4a66239f1b226963d578ac9844288e98f91d2ec4a361686f815cb0a1bf86"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyQueryStatus.tsx",
+      "sha256": "ee8e3bf607824b71fcbda8c7cdbf8e6bc467bd10de49b87de5eb2b4a28959328"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyRowDisposition.tsx",
+      "sha256": "7f4d5025fbed9f961b6758ab66af2f2a9290c3c856c7d6e00edf23a671c4290f"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyScoreDecomposition.tsx",
+      "sha256": "cbd9599b778866445c483f6fc4f81436b37a6e29c9ac2dea56129698ffe1c04b"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencySectionBody.tsx",
+      "sha256": "83bfe905eee26422856f7ec64583c31d5b6c0efe324b3c98ce6425f82ca1894e"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencySetpointAgreement.tsx",
+      "sha256": "180a6ca52f6d38af0f02cf75e8fddf3745f8e0f590e56720f1049b2698d47c57"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencySourceAvailability.tsx",
+      "sha256": "c3a86902591f9cc75a7ed5888d95b14846c1e418f071ae3850c26ce1ae927539"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyStabilizationOutcomes.tsx",
+      "sha256": "f10008b97c2305d0bacd7650ff8f902634201c597fc509c52b053ea255faa319"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyThresholdGateMatrix.tsx",
+      "sha256": "9230ff3620b2dc45d04606076615f315baab7e359d9b8ee41b229526db3de144"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyWindowDirectory.tsx",
+      "sha256": "2e7dfdfa77b41df965f0c9546bab09f33bf26beeffb1961358fba20b936f5df4"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/index.ts",
+      "sha256": "6c753cbf61eacea0a372a42e289be026b5c09db767dd5754c986d7ebad6bc9c1"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/types.ts",
+      "sha256": "da23a98204636de58826a0f9bc7b75f52e8f00e09845e5e19034f75221aa1a6e"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "sha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+      "sha256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/comfortConsistency.test.ts",
+      "sha256": "17d0f28b8366fc82d8c40fe6f67aeb54b1f7a4625f44a14b4c791bb9dab8b298"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/comfortConsistency.ts",
+      "sha256": "fbc47611dfdb58db6ea3d4e3a9e5f552c2afe677bc1e449f4bd744a46d06b84b"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "sha256": "e12c1eb30ac06a0a8689c2a2d9843ba3dfd6e7d2d9a82d6549ca67715ef9fdf8"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/ComfortConsistencyPage.test.tsx",
+      "sha256": "735e0d8395b85e15b43eb67d9b471e6c95100738e2453bb37b228e396d99234b"
+    },
+    {
+      "path": "web/src/features/vehicle-systems/pages/ComfortConsistencyPage.tsx",
+      "sha256": "57201220f6d4e5aae0a9203826ff91599922238bf59188021904c550c57e1994"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+    },
+    {
+      "path": "web/src/types/vehicle-systems.ts",
+      "sha256": "85b58a61a9a5d8824b77a9ffcbb29c97ae2ae3aec3237c3b3395624a06c9a0f8"
+    },
+    {
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "path": "web/src/hooks/useDateFormat.ts"
+    },
+    {
+      "sha256": "4c68db6ea70c526cca551812e692210d7d1051a60b73e62954f896d2655a5247",
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/SourceAvailabilityBrief.tsx"
+    },
+    {
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "path": "web/src/hooks/useSettings.ts"
+    },
+    {
+      "path": "web/src/lib/climateState.ts",
+      "sha256": "09e5c29b473279a17b6d14742bac7d02469bde4f3580736aa7f758389578fe6f"
+    },
+    {
+      "sha256": "76038b350eec0a6c1d1de46c3ac07801ad494fb2b95e3c354568e0a972258d5c",
+      "path": "internal/api/climate/handler.go"
+    },
+    {
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "path": "web/src/lib/timezone.ts"
+    },
+    {
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "path": "web/src/components/charts/EmbeddedChart.tsx"
+    }
+  ],
+  "schemaVersion": 1,
+  "status": "PARTIAL_SOURCE_QA_RETURN_BOUND_MISSED_NATIVE_NOTRUN",
+  "actor": "1863bd16-3eee-415a-9ac7-494d0ce35836",
+  "page": "web/src/features/vehicle-systems/pages/ComfortConsistencyPage.tsx",
+  "route": "/comfort-consistency",
+  "acceptedCommit": "dcbf74fc1444e3319cb1a4731e29f39bc3621b5d",
+  "auditKind": "Read-only source QA, not page migration or runtime acceptance",
+  "authorityRead": {
+    "orchestrator": "docs/orchestrator-loop.md:1-EOF fully, supersedes root playbook",
+    "design": "docs/frontend-design-contract.md:1-655 complete core; unrelated later addenda not fully read",
+    "mission": "docs/frontend-mission.md:1-520,820-1000,1280-1510 relevant principles/chart/a11y/motion/QA",
+    "inventory": "docs/frontend-inventory.md:270 route,575 G220,578 G223; prior audit219:1-25,70-240",
+    "handoff": "docs/session-handoff.md:1-90 new-machine recovery; Phase6 unfinished/Phase7 not started",
+    "queue": "Exact QA row59 initially/60 later and accepted phase5 row2003/2004; scoped fix-owner searches; queue changed concurrently, not written",
+    "instructions": "React/SI/unit/observability instructions read to EOF; copilot1-240 and Go-backend1-230 relevant sections. No AGENTS found by executed search. Current SI/unknown-not-zero/restrained design overrides conflicting legacy examples.",
+    "limit": "Relevant bounded inventory/handoff/queue excerpts, not full multi-megabyte reads."
+  },
+  "scope": {
+    "writable": [
+      "docs/frontend-audits/phase6-qa-vehicle-systems-comfort-consistency.json",
+      "web/logs/phase6-qa-vehicle-systems-comfort-consistency.log"
+    ],
+    "primary": "Page + all19 comfort-consistency component/type/barrel files + comfortConsistency.ts fully inspected; both direct test files fully read. Other pinned supports inspected at relevant recorded ranges, not a full shared-library/backend audit.",
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "gitWrites": 0,
+    "initialDiscoveryLimit": "Two read-only Git discovery commands ran before worker instructions loaded; no mutations or further Git. Exact commands/exits logged; their initial raw outputs remain tool transcript, not reconstructed."
+  },
+  "counts": {
+    "primaryProductionFiles": 21,
+    "pageAndComponentFiles": 20,
+    "pageAndComponentPhysicalLines": 2264,
+    "primaryProductionPhysicalLines": 3397,
+    "persistentSections": 15,
+    "charts": 3,
+    "briefDeclarations": 10,
+    "authoredPageTests": 14,
+    "authoredUtilityTests": 22,
+    "authoredTests": 36,
+    "executedTests": 0,
+    "confirmedFindings": 9,
+    "candidates": 5,
+    "deduplicatedFixNeeds": 5,
+    "sourceTestSupportPins": 47,
+    "failedCommands": 3,
+    "truncatedInspections": 4
+  },
+  "sections": {
+    "base": "web/src/features/vehicle-systems/components/comfort-consistency/",
+    "persistent": "Page89-194 mounts all15 unconditionally; SectionBody gates bodies, not shells",
+    "entries": [
+      "ComfortConsistencyEvidenceKpiLedger.tsx:115",
+      "ComfortConsistencySourceAvailability.tsx:24",
+      "ComfortConsistencyCoverageCadence.tsx:36",
+      "ComfortConsistencyRowDisposition.tsx:37",
+      "ComfortConsistencyIntervalComposition.tsx:35",
+      "ComfortConsistencyHourlyProfile.tsx:49",
+      "ComfortConsistencyDeviationDistribution.tsx:59",
+      "ComfortConsistencySetpointAgreement.tsx:30",
+      "ComfortConsistencyStabilizationOutcomes.tsx:59",
+      "ComfortConsistencyScoreDecomposition.tsx:34",
+      "ComfortConsistencyThresholdGateMatrix.tsx:56",
+      "ComfortConsistencyWindowDirectory.tsx:63",
+      "ComfortConsistencyExactAccounting.tsx:63",
+      "ComfortConsistencyDataAvailability.tsx:85",
+      "ComfortConsistencyMethodology.tsx:85"
+    ]
+  },
+  "actions": {
+    "retry": "QueryStatus59-88 exclusive paused/fatal/refresh branches; page71-73 calls refetch. Shared QueryError and VehicleSourcePause retained; no device commands/mutations.",
+    "details": "10 declared briefs delegate VehicleOperationalBrief52 to OperationalBrief164-174 Review details/drawer246 onward; no action deletion",
+    "chartUtilities": "HourlyProfile63,DeviationDistribution73,StabilizationOutcomes108 declare toolbar/exportable, ariaLabel/data/dataColumns. EmbeddedChart30-40 delegates shared capabilities. No runtime export/fullscreen claim.",
+    "scopeControls": "Header vehicle used, no duplicate local picker; header range missing."
+  },
+  "sourceMechanisms": {
+    "vehicle": "Page44-47 uses useSelectedVehicle; hook48-74 URL>persisted>first known vehicle; workspaceScope95-166 leaves vehicle enabled.",
+    "bounds": "Page47 calls vehicle-only history; hook14,37-43 key and URL lack BOTH bounds, preserve enabled/AbortSignal/safeArray. Route absent workspaceScope23-77. Backend climate handler86-96 accepts parsed start/end, default7 calendar days. Downstream exclusive-end semantics/completeness NOT inspected/exercised.",
+    "observedVersusModel": "Backend handler17-20,73-78 forward-folds timeline state. SourceAvailability29 and Methodology34 disclose non-independent sensor evidence. Library455-458 uses mean paired target or available side;511 signed cabin-minus-target. Qualified start-state step weighting641-691, run barriers/missing/gap/target shifts781-832 and censored outcomes preserved. Score975-999 explicitly descriptive weighted model with0.5 neutral missing components and confidence shrink toward50; ScoreDecomposition38-40,50-57,77-81 and Methodology77-79 disclaim Tesla grade/occupant preference/HVAC health. Do not treat score as measured physiological comfort.",
+    "unknownZeroSI": "Library300-302 preserves finite0; means/quantiles306-322 null if absent; score990-999 null without samples. Durations seconds. Hot/cold signed deviation and opposite-side overshoot729-748 preserved. Page38-39 subtracts convertedzero so Fahrenheit delta has no32 offset;55-63 dash for unknown, saved precision/units at display. Resolved[] accounting zeros and no-support confidence0 are valid, unlike CC02-04 unresolved annotations.",
+    "trust": "deriveDataState185-245 distinguishes initial/fatal/retained/paused; Page66-85 maps hasData, fatalError, refreshError, isRefreshBlocked. SectionBody58-168 maintains all shells and source-specific passive/loading/requirement states. QueryStatus26-157 covers no vehicle/loading/initial-paused/fatal/retained refresh/authoritative empty/no timestamps/no samples/sample-only/nonstabilized. Initial-paused59-62 does not infer empty; retained paused keeps bodies. Normal historical stale/freshness goes through PageContainerquery, not invented sample-observation time.",
+    "preferences": "t() on labels/actions; useUnits118-148 and useNumberFormatting20-39 preserve saved units/precision/locale. Timestamp timezone and hourly zone bypass confirmed below; String score bypass below. Saved relative/absolute time policy remains candidate, no unsupported12/24h field assumed.",
+    "a11yMobile": "PageLayout9-15 delegates PageContainer with min-w-0/container; shared heading183-197 route-focus target. All3 charts declare accessible data/labels; directory ol/li, method article, decorative icons aria-hidden, textual status alongside color, polite loading/refresh alert. Method grid1/2/3, hourly2/4/6/8, directory2/4/8. Declarations only, no measured native pass."
+  },
+  "confirmedFindings": [
+    {
+      "id": "CC01",
+      "rule": "MDC-032 workspace/both bounds",
+      "severity": "high",
+      "file": "web/src/features/vehicle-systems/pages/ComfortConsistencyPage.tsx",
+      "line": 47,
+      "mechanism": "No useRangeState or bound consumption; vehicle-only history hook and absent header range registration.",
+      "evidence": [
+        "web/src/api/hooks/useVehicleSystems.ts:14,37-43",
+        "web/src/lib/workspaceScope.ts:23-77,165",
+        "internal/api/climate/handler.go:86-96"
+      ],
+      "repro": "Source trace /comfort-consistency?vehicle_id=7&from=2026-08-01&to=2026-08-03: only vehicle read; request remains /climate?vehicle_id=7; no bound in key/URL, server uses default. Runtime NOTRUN.",
+      "fix": "Resolve G220, register route, thread both startInstant/endInstantExclusive through existing typed hook/key/server. Preserve other callers/enablement/signal/safeArray; no loaded-row-only filtering or local picker.",
+      "need": "N01"
+    },
+    {
+      "id": "CC02",
+      "rule": "MDC-026/MDC-045 unknown-zero",
+      "severity": "high",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyRowDisposition.tsx",
+      "line": 40,
+      "mechanism": "Exact balance badge outside SectionBody evaluates fallback empty summary before source resolution.",
+      "evidence": [
+        "ComfortConsistencyPage.tsx:49-51",
+        "comfortConsistency.ts:1107-1112",
+        "ComfortConsistencyRowDisposition.tsx:40-45,52"
+      ],
+      "repro": "Selected7 with data undefined and loading/pending/initial-paused/fatal produces rowsBalanced=true and Exact balance success. Test289-343 only forbids separate accounting Balances, not this badge. Source reasoning, NOT executed.",
+      "fix": "Keep shell/description, gate observational badge on resolved/retained nonfatal evidence; unknown/loading/paused fallback. Resolved[] may balance.",
+      "need": "N02"
+    },
+    {
+      "id": "CC03",
+      "rule": "MDC-026/MDC-045 unknown-zero",
+      "severity": "high",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyWindowDirectory.tsx",
+      "line": 72,
+      "mechanism": "Showing0 of0 windows caption outside resolution/windows gate83-87.",
+      "evidence": [
+        "ComfortConsistencyPage.tsx:49-51",
+        "ComfortConsistencyWindowDirectory.tsx:72-87"
+      ],
+      "repro": "Undefined-data initial/pending/paused/fatal renders fallback counts0 before body explains unresolved availability. Source reasoning, NOT executed.",
+      "fix": "Keep directory shell/subtitle/cap policy; gate observed counts until resolved/retained, distinguish pending from actual empty.",
+      "need": "N02"
+    },
+    {
+      "id": "CC04",
+      "rule": "MDC-026/MDC-045 unknown-zero",
+      "severity": "high",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyMethodology.tsx",
+      "line": 107,
+      "mechanism": "Summary-only methodology always publishes0 returned rows/samples/fragments for unresolved query.",
+      "evidence": [
+        "ComfortConsistencyMethodology.tsx:18-24,107-118",
+        "ComfortConsistencyPage.tsx:191"
+      ],
+      "repro": "No vehicle or undefined-data loading/pending/paused/fatal: static methods correctly mounted but final sentence falsely asserts observationalzero. Source reasoning, NOT executed.",
+      "fix": "Preserve six static articles; thread query state and gate only final observational count notice.",
+      "need": "N02"
+    },
+    {
+      "id": "CC05",
+      "rule": "MDC-044 date/timezone preference",
+      "severity": "medium",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyCoverageCadence.tsx",
+      "line": 33,
+      "mechanism": "Coverage/directory timestamps pass locale but no effective saved timezone, default to browser.",
+      "evidence": [
+        "ComfortConsistencyWindowDirectory.tsx:102,126",
+        "web/src/lib/dateFormat.ts:38-43,54-62",
+        "web/src/hooks/useDateFormat.ts:75-86",
+        "web/src/lib/timezone.ts:29-49"
+      ],
+      "repro": "Saved tz_display_default=utc, browser America/Los_Angeles, timestamp2026-08-08T12:00Z: no tz reaches Intl unlike existing preference-aware hook. Native displayed-time comparison NOTRUN.",
+      "fix": "Reuse existing effective formatter/options and disclose zone, preserve raw instants and null fallback.",
+      "need": "N03"
+    },
+    {
+      "id": "CC06",
+      "rule": "MDC-044 hourly timezone integration",
+      "severity": "medium",
+      "file": "web/src/features/vehicle-systems/lib/comfortConsistency.ts",
+      "line": 592,
+      "mechanism": "Host Date.setHours/getHours bucket split never receives effective timezone; saved timezone cannot affect hourly distribution. Browser-local caption is honest but fixed policy bypasses saved preference.",
+      "evidence": [
+        "comfortConsistency.ts:592-599",
+        "ComfortConsistencyPage.tsx:49-52",
+        "ComfortConsistencyHourlyProfile.tsx:54,64",
+        "comfortConsistency.test.ts:184-211"
+      ],
+      "repro": "Same UTC interval, saved UTC versus Asia/Tokyo: code always bins by browser hour; existing test covers browser boundaries only. No executed DST defect claimed.",
+      "fix": "Parent resolves G220 timezone/DST policy before extending existing derivation; retain SI duration, all24 buckets, matching zone labels, no competing timezone engine.",
+      "need": "N03"
+    },
+    {
+      "id": "CC07",
+      "rule": "MDC-044 numeric locale",
+      "severity": "medium",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyEvidenceKpiLedger.tsx",
+      "line": 55,
+      "mechanism": "Two score display formatters String(raw) bypass saved locale; neighboring metrics/decomposition use shared formatter.",
+      "evidence": [
+        "ComfortConsistencyDataAvailability.tsx:102",
+        "ComfortConsistencyScoreDecomposition.tsx:70",
+        "web/src/hooks/useNumberFormatting.ts:28-39",
+        "web/src/lib/numberFormat.ts:91-104"
+      ],
+      "repro": "Effective ar-EG and score51 produces ASCII51 via String rather than locale-aware integer digits. Mounted preference change NOTRUN; integer score rounding is intentional.",
+      "fix": "Use existing locale-aware integer score formatting at both sites while retaining raw numeric metric and integer policy.",
+      "need": "N03"
+    },
+    {
+      "id": "CC08",
+      "rule": "MDC-045 threshold-label/accounting",
+      "severity": "medium",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyDeviationDistribution.tsx",
+      "line": 48,
+      "mechanism": "Both last histogram labels say > but bins include equality >=.",
+      "evidence": [
+        "ComfortConsistencyStabilizationOutcomes.tsx:48",
+        "comfortConsistency.ts:853-854,880",
+        "comfortConsistency.test.ts:243-266"
+      ],
+      "repro": "Default deviation6C (cabin27,target21) enters bin labelled >6C; overshoot2C enters last bin labelled >2C. Existing test243-266 supplies exact2C. Source boundary fixture, NOT executed.",
+      "fix": "Align translated labels to >=/at least, retain >= calculation/bin counts/conversion; parent serializes canonical catalog delta.",
+      "need": "N04"
+    },
+    {
+      "id": "CC09",
+      "rule": "MDC-015/MDC-031 embedded composition",
+      "severity": "medium",
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "line": 52,
+      "mechanism": "embedded changes title only; unconditional standalone OperationalBrief GlassPanel/title/shadow remains nested in host LayoutCard.",
+      "evidence": [
+        "ComfortConsistencyCoverageCadence.tsx:37,49",
+        "VehicleOperationalBrief.tsx:52-56",
+        "web/src/components/data-display/OperationalBrief.tsx:128-156",
+        "docs/frontend-inventory.md:578 G223"
+      ],
+      "repro": "Source composition: coverage LayoutCard>embedded adapter>OperationalBrief>border/surface/shadow GlassPanel. Nesting proven, native visual intensity/contrast NOTRUN.",
+      "fix": "Resolve existing G223 at actual owners with public-API/independent-consumer authority. Preserve every metric, caption, trust state, semantic heading and Review details action; no competing renderer.",
+      "need": "N05"
+    }
+  ],
+  "relativeEvidencePaths": "Bare ComfortConsistency*.tsx paths refer to web/src/features/vehicle-systems/components/comfort-consistency/ except Page/Test in pages; comfortConsistency.ts/test in lib; VehicleOperationalBrief.tsx in components/operationalbrief-all.",
+  "candidates": [
+    {
+      "id": "P01",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyWindowDirectory.tsx",
+      "line": 88,
+      "question": "Bounded overflow list lacks explicit named focusable scroll-region. Browser automatic focusability and keyboard scrolling unknown, not demonstrated failure.",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "P02",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyWindowDirectory.tsx",
+      "line": 123,
+      "question": "2/4/8 detail columns and Detail27-33 without local min-w-0/break-words may overflow long labels/narrow allocations/200% text; shared Text may wrap. No measured overflow.",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "P03",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyEvidenceKpiLedger.tsx",
+      "line": 56,
+      "question": "Fixed decorative cyan/indigo/purple and separate chartTokens indices (Hourly99,Deviation102,Stabilization134) need light/custom/saved-palette/contrast/forced-colors review. No measured contrast or preference-reset defect.",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "P04",
+      "file": "web/src/features/vehicle-systems/lib/hvacCycling.ts",
+      "line": 286,
+      "question": "HVAC eligibility ORs power/AC with finite fan>0; fan-only/conflicting off+fan-on become active via comfort library464. No per-row origin/conflict display. Confirm broad observed activity versus inferred/conflict policy before changing preserved algorithm; physical correctness not established.",
+      "native": "NOTRUN"
+    },
+    {
+      "id": "P05",
+      "file": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyCoverageCadence.tsx",
+      "line": 33,
+      "question": "Absolute chronology and24h hour labels do not consume settings.time_format_default (useSettings53). Confirm intended relative/absolute policy, do not assume unsupported saved12/24h field or replace useful absolute dates automatically.",
+      "native": "NOTRUN"
+    }
+  ],
+  "fixNeeds": [
+    {
+      "id": "N01",
+      "findings": [
+        "CC01"
+      ],
+      "owner": "One parent-coordinated G220 history/workspace bounds root then exact caller/tests",
+      "dedup": "Executed queue useVehicleSystems.ts exact-file search0. Neighbor Cabin/Climate/HVAC/Preconditioning rows are QA owners, not source-fix leases. Accepted Phase5 remains done, no duplicate per-page hook roots."
+    },
+    {
+      "id": "N02",
+      "findings": [
+        "CC02",
+        "CC03",
+        "CC04"
+      ],
+      "owner": "One narrow comfort unresolved-annotation source/test owner after parent intake",
+      "dedup": "Three fallback manifestations, one need. Current report lease and old audit219 are not source-fix owners."
+    },
+    {
+      "id": "N03",
+      "findings": [
+        "CC05",
+        "CC06",
+        "CC07"
+      ],
+      "owner": "Parent-agreed hourly timezone policy and comfort display-preference adoption",
+      "dedup": "Completed phase3-date-format/use-date-format provide reusable utilities, not current caller fixes. Completed phase6-fix-advanced-evidence-date-preferences is disjoint advanced scope, do not reopen it. Reuse existing hooks/G220."
+    },
+    {
+      "id": "N04",
+      "findings": [
+        "CC08"
+      ],
+      "owner": "One two-chart boundary-label fix/test owner plus parent catalog integration",
+      "dedup": "Both labels share root; catalog projection owner not proof semantic labels fixed; no catalog writes here."
+    },
+    {
+      "id": "N05",
+      "findings": [
+        "CC09"
+      ],
+      "owner": "Parent existing G223 composition/API decision and actual brief owners",
+      "dedup": "Completed phase3-operational-brief/regression-brief-drawer-context preserved. No active exact shared brief fix found; new narrow objective requires parent intake."
+    }
+  ],
+  "ownerConstraints": "Needs are proposals, not queue edits/claims. N01/N02/N03 may overlap page; N03/N04 chart files: serialize/split exact exclusive paths. Candidates create no fix leases without confirmation.",
+  "guidelineChecks": {
+    "method": "Executed native Select-String21 primary files plus manual semantic inspection, not AST/global acceptance; all raw patterns/results in log",
+    "static-inline-style": 0,
+    "raw-html": 0,
+    "direct-library-import": 0,
+    "old-api-import": 0,
+    "double-prefix": 0,
+    "camelcase-param": 0,
+    "hidden-section-candidates": 0,
+    "jsx-bare-English-candidates": 0,
+    "fetch-useeffect-candidates": 0,
+    "pageContainer": "Page89 uses accepted PageLayout; PageLayout11 actual PageContainer, not missing wrapper",
+    "exceptions": "Charts use shared barrel, Recharts API props allowed; body requirement gates/overshoot EmptyState ternary inside mounted shells are not hidden sections. Regex is not catalog validation. Shared settings/vehicle effects are subscriptions/synchronization, not page ad-hoc loading.",
+    "falsePositives": "Initial case-insensitive raw HTML matched <Button>; camelcase matched unrelated snake_case URL. Rerun case-sensitive0. TS comparison comfortConsistency951 matched bare-text candidate; TSX-only rerun0. IDs16 included error div; section/ID16 double-counted ledger; exact <section rerun15.",
+    "backendDirectEndpoint": "Executed fmt.Sprintf/Println/panic/PoolQuery/http.NewRequest searches0 in climate handler only; Timeline95 and LiveState125 take r.Context. No whole-backend or observability acceptance."
+  },
+  "findingSummaryByRule": {
+    "workspace-bounds": 1,
+    "unknown-zero": 3,
+    "date-timezone": 2,
+    "numeric-locale": 1,
+    "threshold-label": 1,
+    "embedded-composition": 1
+  },
+  "priority": "Bounds and unresolved observational annotations first; timezone/numeric labels and boundary-bin semantics next; approved embedded composition last. WindowDirectory has CC03 and secondary CC05 plus two native candidates; secondary sites not double-counted.",
+  "tests": {
+    "status": "NOTRUN",
+    "authored": 36,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "limit": "Counts are exact source it() declarations, NOT runner discovery. Raw36 names/lines in log. Page14 covers15 shells/no vehicle/loading/deferred/initial paused/retained paused/fatal and refresh retries/empty/partial/single sample/in-band/censored/Fahrenheit. Utility22 covers accounting/null/hostile/duplicates/barriers/signs/interval vs sample/browser hours/neutral score/bins/cap/nonmutation. Outer annotation leaks, bounds URLs, effective timezone and locale-score behavior not asserted. No test pass inferred from authored bodies or historical external startup1/zero cases."
+  },
+  "native": {
+    "status": "NOTRUN",
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "matrix": "Narrow containers,200% text,long labels,RTL,dark/light/saved custom,unknown/zero/retained/initial-paused,keyboard retry/details/chart utilities,directory scrolling,contrast/forced-colors,reduced-motion/low-bandwidth",
+    "limit": "No browser lock or access; source declarations/repro reasoning establish no native pass."
+  },
+  "notRun": [
+    "scoped tests",
+    "npx tsc --noEmit",
+    "global/full tests",
+    "lint",
+    "build",
+    "preservation/helper tooling",
+    "catalog generation/validation",
+    "browser/native/screenshots",
+    "API/database/device access",
+    "servers/installs/subagents"
+  ],
+  "inspectionFailures": [
+    {
+      "shell": "1160",
+      "exit": 0,
+      "failure": "804.8KB truncated output; narrowed reads followed"
+    },
+    {
+      "shell": "1183",
+      "exit": 0,
+      "failure": "21.6KB truncated output; narrowed exact row/handoff followed"
+    },
+    {
+      "shell": "1200",
+      "exit": 0,
+      "failure": "1.7MB inventory broad output truncated; exact route/G220/G223 reread"
+    },
+    {
+      "shell": "1230",
+      "exit": 1,
+      "failure": "Manifest null-valued expression; path/pipeline corrected together, precise cause not established; corrected1248 pinned40"
+    },
+    {
+      "shell": "1263",
+      "exit": 0,
+      "failure": "22.6KB owner output truncated; compact census/exact-owner reads followed"
+    },
+    {
+      "shell": "1481",
+      "exit": 1,
+      "failure": "Report-construction nested here-string failed, tool returned no diagnostic; existing47-pin draft preserved, simpler separate literal retry used"
+    },
+    {
+      "exit": 1,
+      "failure": "Return bound exceeded; catch retained exception but discarded preceding captured stdout. Source47-pin before/after/post-reparse checks completed, deadline check failed.",
+      "shell": "1574"
+    }
+  ],
+  "log": "web/logs/phase6-qa-vehicle-systems-comfort-consistency.log",
+  "evidenceLimits": "No global clean bill/TypeScript pass/test pass/native acceptance. Source/support hashes before/after verified independently. Endpoint source read only, actual dataset/completeness/exclusive-end filtering not exercised.",
+  "release": {
+    "pendingCommands": 0,
+    "releasedUTC": "2026-10-14T01:44:21.6592877Z",
+    "sourceTestCatalogWrites": 0,
+    "report": true,
+    "commands": true,
+    "log": true
+  },
+  "pins_after": [
+    {
+      "matches_before": true,
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "path": "web/src/api/dataState.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "path": "web/src/api/hooks/useSettings.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "06474d1dc7e0b1d63be82589d14abbb39ac33a29e5319a888a1236a295881c8d",
+      "path": "web/src/api/hooks/useVehicleSystems.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "path": "web/src/components/data-display/OperationalBrief.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "path": "web/src/components/layout/PageContainer.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "c4e0b0379cb02f293d4237263bafef4f95e492eac147b1f69d69563a44800a99",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyCoverageCadence.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "c36f3b5ea9157660de222e0de603e2b983e90d4f0a31211c9b45181591459779",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyDataAvailability.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "31efef09a702bfaf34c429197891ecbc1e0405741961c4244002021b21da0e0c",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyDeviationDistribution.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "9f82fe80e1b0521b2c489b46593f79f58fa220460b169eb7f854879e68a1f9a4",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyEvidenceKpiLedger.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "afa53c558d5b5f8b2628b1b457ffd05748d77b176257c8474e17e430f0cc49d4",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyExactAccounting.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "a7defebfab02f03dffcda097613bdc1427666c3743ea59248116c02f25014106",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyHourlyProfile.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "c1e60d66a2adaeea88460ff755f29dc3a03fa84bffedd90f4378c4fd6c3b3a40",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyIntervalComposition.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "a33f4a66239f1b226963d578ac9844288e98f91d2ec4a361686f815cb0a1bf86",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyMethodology.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "ee8e3bf607824b71fcbda8c7cdbf8e6bc467bd10de49b87de5eb2b4a28959328",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyQueryStatus.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "7f4d5025fbed9f961b6758ab66af2f2a9290c3c856c7d6e00edf23a671c4290f",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyRowDisposition.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "cbd9599b778866445c483f6fc4f81436b37a6e29c9ac2dea56129698ffe1c04b",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyScoreDecomposition.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "83bfe905eee26422856f7ec64583c31d5b6c0efe324b3c98ce6425f82ca1894e",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencySectionBody.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "180a6ca52f6d38af0f02cf75e8fddf3745f8e0f590e56720f1049b2698d47c57",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencySetpointAgreement.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "c3a86902591f9cc75a7ed5888d95b14846c1e418f071ae3850c26ce1ae927539",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencySourceAvailability.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "f10008b97c2305d0bacd7650ff8f902634201c597fc509c52b053ea255faa319",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyStabilizationOutcomes.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "9230ff3620b2dc45d04606076615f315baab7e359d9b8ee41b229526db3de144",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyThresholdGateMatrix.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "2e7dfdfa77b41df965f0c9546bab09f33bf26beeffb1961358fba20b936f5df4",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/ComfortConsistencyWindowDirectory.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "6c753cbf61eacea0a372a42e289be026b5c09db767dd5754c986d7ebad6bc9c1",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/index.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "da23a98204636de58826a0f9bc7b75f52e8f00e09845e5e19034f75221aa1a6e",
+      "path": "web/src/features/vehicle-systems/components/comfort-consistency/types.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173",
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5",
+      "path": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "17d0f28b8366fc82d8c40fe6f67aeb54b1f7a4625f44a14b4c791bb9dab8b298",
+      "path": "web/src/features/vehicle-systems/lib/comfortConsistency.test.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "fbc47611dfdb58db6ea3d4e3a9e5f552c2afe677bc1e449f4bd744a46d06b84b",
+      "path": "web/src/features/vehicle-systems/lib/comfortConsistency.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "e12c1eb30ac06a0a8689c2a2d9843ba3dfd6e7d2d9a82d6549ca67715ef9fdf8",
+      "path": "web/src/features/vehicle-systems/lib/hvacCycling.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "735e0d8395b85e15b43eb67d9b471e6c95100738e2453bb37b228e396d99234b",
+      "path": "web/src/features/vehicle-systems/pages/ComfortConsistencyPage.test.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "57201220f6d4e5aae0a9203826ff91599922238bf59188021904c550c57e1994",
+      "path": "web/src/features/vehicle-systems/pages/ComfortConsistencyPage.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "path": "web/src/hooks/useNumberFormatting.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "path": "web/src/hooks/useSelectedVehicle.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "path": "web/src/hooks/useUnits.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "path": "web/src/lib/dateFormat.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "path": "web/src/lib/numberFormat.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "path": "web/src/lib/unitConversion.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "path": "web/src/lib/workspaceScope.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "85b58a61a9a5d8824b77a9ffcbb29c97ae2ae3aec3237c3b3395624a06c9a0f8",
+      "path": "web/src/types/vehicle-systems.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "path": "web/src/hooks/useDateFormat.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "4c68db6ea70c526cca551812e692210d7d1051a60b73e62954f896d2655a5247",
+      "path": "web/src/features/vehicle-systems/components/operationalbrief-all/SourceAvailabilityBrief.tsx"
+    },
+    {
+      "matches_before": true,
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "path": "web/src/hooks/useSettings.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "09e5c29b473279a17b6d14742bac7d02469bde4f3580736aa7f758389578fe6f",
+      "path": "web/src/lib/climateState.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "76038b350eec0a6c1d1de46c3ac07801ad494fb2b95e3c354568e0a972258d5c",
+      "path": "internal/api/climate/handler.go"
+    },
+    {
+      "matches_before": true,
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "path": "web/src/lib/timezone.ts"
+    },
+    {
+      "matches_before": true,
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "path": "web/src/components/charts/EmbeddedChart.tsx"
+    }
+  ],
+  "pinVerification": {
+    "status": "PASS",
+    "before": 47,
+    "changed": 0,
+    "matched": 47,
+    "algorithm": "SHA256",
+    "checkedUTC": "2026-10-14T01:44:21.6556592Z",
+    "after": 47
+  },
+  "completed_at": "2026-10-14T01:44:21.6591647Z",
+  "deadlineResult": {
+    "reason": "Final verifier1574 exited1 at explicit return-bound assertion; source hashes and JSON checks completed before that assertion. No deadline success claimed.",
+    "returnBoundMissed": true
+  }
+}

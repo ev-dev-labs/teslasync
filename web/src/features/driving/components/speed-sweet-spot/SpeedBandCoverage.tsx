@@ -9,23 +9,29 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { SweetSpotResult } from '../../lib/speedSweetSpot';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SpeedBandCoverageProps {
   summary: SweetSpotResult;
   state: SpeedSweetSpotSectionState;
+  resolved: boolean;
+  retained: boolean;
   className?: string;
 }
 
 export function SpeedBandCoverage({
   summary,
   state,
+  resolved,
+  retained,
   className,
 }: SpeedBandCoverageProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { convertDistance, distanceUnit, formatBand } =
     useSpeedSweetSpotDisplay();
@@ -71,20 +77,27 @@ export function SpeedBandCoverage({
           'Observed distance and drive count distributed across whole-drive average-speed bands',
         )}
         action={
-          <Badge variant="info" dot>
-            {t('sweetSpot.coverage.qualifiedCount', '{{count}} qualified', {
-              count: summary.qualifiedBandCount,
-            })}
+          <div className="flex flex-wrap items-center gap-2">
+          {retained && <Badge variant="warning" dot>{t('driving.brief.retained', 'Retained source')}</Badge>}
+          <Badge variant={resolved && state.error == null ? 'info' : 'neutral'} dot>
+            {resolved && state.error == null
+              ? t('sweetSpot.coverage.qualifiedCount', '{{count}} qualified', {
+                  count: summary.qualifiedBandCount,
+                })
+              : t('driving.brief.unavailable', 'Source unavailable')}
           </Badge>
+          </div>
         }
         chartKey="speed-sweet-spot-coverage"
         loading={state.isLoading}
+        error={state.error}
+        onRetry={state.onRetry}
         empty={false}
         height={330}
-        exportable={!state.error && !state.isLoading && rows.length > 0}
+        exportable={Boolean(resolved) && !state.error && !state.isLoading && rows.length > 0}
         exportFilename="speed-sweet-spot-coverage"
         exportData={rows}
-        data={state.error ? [] : rows}
+        data={!resolved || state.error ? [] : rows}
         dataColumns={[
           { key: 'band', label: t('sweetSpot.col.band', 'Speed band') },
           {
@@ -104,6 +117,8 @@ export function SpeedBandCoverage({
             <div className="flex h-full items-center justify-center">
               <QueryError error={state.error} onRetry={state.onRetry} />
             </div>
+          ) : !resolved ? (
+            <EmptyState className="h-full" message={t('driving.brief.unavailable', 'Source unavailable')} />
           ) : rows.length === 0 ? (
             <EmptyState /* no-action: the vehicle and range controls recover coverage. */
               className="h-full"
@@ -133,7 +148,7 @@ export function SpeedBandCoverage({
                   tickLine={false}
                   axisLine={false}
                   width={52}
-                  tickFormatter={(value) => fmtNumber(value, 0)}
+                  tickFormatter={(value) => fmtNumber(value)}
                 />
                 <YAxis
                   yAxisId="drives"
@@ -149,7 +164,7 @@ export function SpeedBandCoverage({
                     <ChartTooltip
                       valueFormatter={(value, name) =>
                         name === distanceName
-                          ? `${fmtNumber(value, 1)} ${distanceUnit}`
+                          ? `${fmtNumber(value)} ${distanceUnit}`
                           : t('sweetSpot.coverage.driveValue', '{{count}} drives', {
                               count: Number(value),
                             })

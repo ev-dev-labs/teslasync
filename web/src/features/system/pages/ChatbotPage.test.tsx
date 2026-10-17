@@ -51,7 +51,7 @@ import type { ChatMessage, ChatSessionInfo } from '@/api/types';
 import type { UIChatMessage } from '../components/chatbot/ChatMessageItem';
 
 /* ─── controllable AI gate (hoisted so the mock factory can read it) ─── */
-const ctrl = vi.hoisted(() => ({ aiEnabled: false }));
+const ctrl = vi.hoisted(() => ({ aiEnabled: false, reduceMotion: true }));
 
 vi.mock('@/hooks/useAiEnabled', () => ({
   useAiEnabled: () => ctrl.aiEnabled,
@@ -59,7 +59,7 @@ vi.mock('@/hooks/useAiEnabled', () => ({
 
 /* ─── deterministic instant typewriter (no rAF/timer flake) ─────────── */
 vi.mock('@/hooks/useMotionPreference', () => ({
-  useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
+  useMotionPreference: () => ({ reduce: ctrl.reduceMotion, durationMs: 0 }),
 }));
 
 /* ─── network client ─────────────────────────────────────────────────── */
@@ -140,6 +140,8 @@ vi.mock('../components/chatbot/ChatMessageItem', () => ({
         data-role={message.role}
         data-streaming={message.isStreaming ? 'true' : 'false'}
         data-actions-disabled={actionsDisabled ? 'true' : 'false'}
+        data-outcome={message.outcome ?? ''}
+        data-ai-state={message.aiState ?? ''}
       >
         <span data-testid="chat-msg-text">
           {message.streamedText ?? message.content}
@@ -268,7 +270,10 @@ function installRequest(opts?: {
       body: typeof init?.body === 'string' ? init.body : undefined,
     });
     if (url === '/chatbot/sessions') return Promise.resolve(sessions);
-    if (url.startsWith('/chatbot/history')) return Promise.resolve(history);
+    if (url.startsWith('/chatbot/history')) {
+      const sid = new URLSearchParams(url.split('?')[1]).get('session_id') ?? '';
+      return Promise.resolve(history.map((message) => ({ ...message, session_id: sid })));
+    }
     if (url === '/chatbot' && (init?.method ?? '').toUpperCase() === 'POST') {
       return Promise.resolve(reply);
     }
@@ -384,6 +389,7 @@ function lastAssistantRow(): HTMLElement {
 beforeEach(() => {
   reqCalls = [];
   ctrl.aiEnabled = false;
+  ctrl.reduceMotion = true;
   mockedRequest.mockReset();
   installRequest();
   window.localStorage.clear();
@@ -401,6 +407,134 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+describe('ChatbotPage — scoped mutation lifecycle', () => {
+  it('retains a second composer draft rejected while a baseline request is pending', async () => {
+    const response = deferred<{ response: string; session_id: string }>();
+    installRequest();
+    const route = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      url === '/chatbot' ? response.promise : route(url, init));
+    renderPage();
+    await typeAndEnter('first accepted');
+    expect(composer()).toHaveValue('');
+    await typeAndEnter('  second draft  ');
+    expect(composer()).toHaveValue('  second draft  ');
+    await act(async () => response.resolve({ response: 'first answer', session_id: 's1' }));
+    expect(composer()).toHaveValue('  second draft  ');
+  });
+
+  it('ignores late baseline completion after New chat and does not relabel its transcript', async () => {
+    const response = deferred<{ response: string; session_id: string }>();
+    installRequest({ sessions: [session('s1')] });
+    const route = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      url === '/chatbot' ? response.promise : route(url, init));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    await screen.findByRole('button', { name: 'new chat' });
+    await typeAndEnter('old request');
+    fireEvent.click(screen.getByRole('button', { name: 'new chat' }));
+    await act(async () => response.resolve({ response: 'late old answer', session_id: 'old' }));
+    expect(screen.queryByText('late old answer')).toBeNull();
+    expect(screen.getByTestId('chat-welcome')).toBeInTheDocument();
+    expect(screen.getByTestId('session-list')).toHaveAttribute('data-active', '');
+  });
+
+  it('clears previous transcript immediately when the next history is pending and ignores mismatched rows', async () => {
+    const history = deferred<ChatMessage[]>();
+    installRequest({ sessions: [session('s1'), session('s2')] });
+    const route = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      url === '/chatbot/history?session_id=s2' ? history.promise : route(url, init));
+    renderPage();
+    await typeAndEnter('first');
+    await screen.findByText('Default reply');
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    await screen.findByRole('button', { name: 'select s2' });
+    fireEvent.click(screen.getByRole('button', { name: 'select s2' }));
+    expect(screen.queryByText('Default reply')).toBeNull();
+    expect(screen.getByText('Loading conversation history…')).toBeInTheDocument();
+    await act(async () => history.resolve([serverMessage(8, 'assistant', 'wrong session')]));
+    expect(screen.queryByText('wrong session')).toBeNull();
+  });
+
+  it('retains an active conversation and draft until DELETE succeeds, including rejection recovery', async () => {
+    const deletion = deferred<unknown>();
+    installRequest({ sessions: [session('srv-1')] });
+    const route = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      init?.method === 'DELETE' ? deletion.promise : route(url, init));
+    renderPage();
+    await typeAndEnter('question');
+    await screen.findByText('Default reply');
+    fireEvent.change(composer(), { target: { value: 'retained draft' } });
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'delete srv-1' }));
+    expect(screen.getByText('Default reply')).toBeInTheDocument();
+    expect(composer()).toHaveValue('retained draft');
+    await act(async () => deletion.reject(new Error('delete rejected')));
+    expect(screen.getByText('Default reply')).toBeInTheDocument();
+    expect(composer()).toHaveValue('retained draft');
+    expect(screen.getByText(/Conversation was not deleted/)).toBeInTheDocument();
+  });
+
+  it('does not reset a different selected generation when an old DELETE succeeds', async () => {
+    const deletion = deferred<unknown>();
+    installRequest({ sessions: [session('srv-1'), session('s2')] });
+    const route = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      init?.method === 'DELETE' ? deletion.promise : route(url, init));
+    renderPage();
+    await typeAndEnter('question');
+    await screen.findByText('Default reply');
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'delete srv-1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'select s2' }));
+    fireEvent.change(composer(), { target: { value: 'new scope draft' } });
+    await act(async () => deletion.resolve({}));
+    expect(screen.getByTestId('session-list')).toHaveAttribute('data-active', 's2');
+    expect(composer()).toHaveValue('new scope draft');
+  });
+
+  it.each(['regenerate', 'edit-and-resend'])('retains the previous answer on failed %s', async (action) => {
+    installRequest();
+    renderPage();
+    await typeAndEnter('original question');
+    await screen.findByText('Default reply');
+    const route = mockedRequest.getMockImplementation()!;
+    const rejection = deferred<unknown>();
+    mockedRequest.mockImplementation((url: string, init?: ReqInit) =>
+      url === '/chatbot' ? rejection.promise : route(url, init));
+    fireEvent.click(screen.getByRole('button', { name: action }));
+    expect(screen.getByText('Default reply')).toBeInTheDocument();
+    expect(screen.getByText('original question')).toBeInTheDocument();
+    await act(async () => rejection.reject(new Error('revision rejected')));
+    expect(screen.getByText('Default reply')).toBeInTheDocument();
+    expect(screen.getByText('original question')).toBeInTheDocument();
+  });
+
+  it('settles unfinished tools on done without fabricating a zero-text answer', async () => {
+    ctrl.aiEnabled = true;
+    globalThis.fetch = vi.fn(async () => new Response(makeReadableStream([
+      sseFrame('tool_call', { id: 'pending', name: 'query_vehicle_count', arguments: {} }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 0 } }),
+    ]), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })) as typeof fetch;
+    renderPage();
+    await typeAndEnter('question');
+    await waitFor(() => expect(lastAssistantRow()).toHaveAttribute('data-outcome', 'empty'));
+    expect(lastAssistantRow()).toHaveAttribute('data-ai-state', 'done');
+    expect(lastAssistantRow()).toHaveTextContent('query_vehicle_count:failed');
+    expect(lastAssistantRow().querySelector('[data-testid="chat-msg-text"]')).toBeEmptyDOMElement();
+  });
+});
+
 describe('ChatbotPage — scaffolding, a11y, empty state', () => {
   it('renders the composer, action buttons, live log region, and welcome hero', () => {
     renderPage();
@@ -411,11 +545,16 @@ describe('ChatbotPage — scaffolding, a11y, empty state', () => {
     // Icon-only send button MUST expose an accessible name.
     const send = screen.getByRole('button', { name: 'Send message' });
     expect(send).toBeInTheDocument();
+    expect(send).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10');
+    expect(send.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // Empty composer → send disabled.
     expect(send).toBeDisabled();
 
     const history = screen.getByRole('button', { name: 'History' });
     expect(history).toHaveAttribute('aria-pressed', 'false');
+    expect(history).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    expect(history.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(box).toHaveClass('min-h-11', 'max-h-40', 'resize-none');
 
     // The conversation transcript is an aria-live log region.
     const log = screen.getByRole('log', { name: 'Conversation' });
@@ -428,6 +567,24 @@ describe('ChatbotPage — scaffolding, a11y, empty state', () => {
 });
 
 describe('ChatbotPage — history sidebar toggle + persistence', () => {
+  it('uses the shared mobile drawer with Escape dismissal and focus restoration', async () => {
+    setMatchMedia(true);
+    installRequest({ sessions: [session('s1')] });
+    renderPage();
+    const trigger = screen.getByRole('button', { name: 'History' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole('dialog', { name: 'History' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(await screen.findByRole('button', { name: 'select s1' })).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'History' })).toBeNull());
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(trigger).toHaveAttribute('aria-pressed', 'false');
+    expect(window.localStorage.getItem('teslasync-chatbot-history-visible')).toBe('false');
+  });
+
   it('opens/closes the sidebar, lists sessions, and persists visibility to localStorage', async () => {
     installRequest({ sessions: [session('s1'), session('s2')] });
     renderPage();
@@ -640,6 +797,64 @@ describe('ChatbotPage — session management + suggestions', () => {
 });
 
 describe('ChatbotPage — AI-on streaming path', () => {
+  it.each([
+    { name: 'Stop with normal motion', reduceMotion: false, escape: false },
+    { name: 'Escape with reduced motion', reduceMotion: true, escape: true },
+  ])('uses restrained waiting feedback and retains partial evidence on $name', async ({ reduceMotion, escape }) => {
+    ctrl.aiEnabled = true;
+    ctrl.reduceMotion = reduceMotion;
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    const body = new ReadableStream<Uint8Array>({
+      start(next) {
+        controller = next;
+      },
+    });
+    globalThis.fetch = vi.fn(async () =>
+      new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }),
+    ) as unknown as typeof globalThis.fetch;
+
+    renderPage();
+    await typeAndEnter('Inspect this test-only question');
+    const planning = await screen.findByText('Helix is planning the investigation…');
+    const waiting = planning.parentElement?.parentElement;
+    const iconBox = planning.parentElement?.previousElementSibling;
+    expect(iconBox).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+      'ring-[var(--border-default)]',
+    );
+    expect(iconBox?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(planning).toHaveClass('text-sm', 'text-[var(--text-secondary)]');
+    expect(waiting?.querySelector('[class*="gradient"], [class*="animate-"], [style*="animation"]')).toBeNull();
+    const stop = screen.getByRole('button', { name: 'Stop streaming' });
+    expect(stop).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10');
+    expect(stop.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+    await act(async () => {
+      controller.enqueue(new TextEncoder().encode(sseFrame('tool_call', {
+        id: 'test-tool', name: 'query_vehicle_count', arguments: {},
+      })));
+    });
+    expect(await screen.findByText('Helix is grounding the answer in TeslaSync evidence…')).toBeInTheDocument();
+    expect(lastAssistantRow()).toHaveTextContent('query_vehicle_count:running');
+
+    await act(async () => {
+      controller.enqueue(new TextEncoder().encode(sseFrame('delta', { text: 'Test-only partial answer' })));
+    });
+    await screen.findByText('Test-only partial answer');
+    expect(screen.queryByText('Helix is grounding the answer in TeslaSync evidence…')).toBeNull();
+    await act(async () => {
+      if (escape) fireEvent.keyDown(window, { key: 'Escape' });
+      else fireEvent.click(stop);
+      controller.close();
+    });
+    await waitFor(() => expect(lastAssistantRow()).toHaveAttribute('data-streaming', 'false'));
+    expect(lastAssistantRow()).toHaveTextContent('Test-only partial answer');
+    expect(lastAssistantRow()).toHaveTextContent('query_vehicle_count:failed');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+    expect(chatPosts()).toHaveLength(0);
+  });
+
   it('carries successful retrieval evidence to the completed assistant turn without trusting other tools', async () => {
     ctrl.aiEnabled = true;
     installRequest();

@@ -1,0 +1,335 @@
+{
+  "item": "audit-page-025",
+  "page": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx",
+  "routes": ["/tesla-orders"],
+  "purpose": "Present the owner's Tesla-account vehicle orders, lifecycle distribution and delivery outlook.",
+  "primaryGoal": "Review order progress, assigned VINs and upcoming deliveries, refresh the account snapshot, and search, sort, filter and export order details without losing source context.",
+  "dataSources": [
+    {
+      "hook": "useTeslaUserOrders",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 166,
+      "owner": "Tesla account API hooks",
+      "endpoint": "GET /api/v1/tesla/user/orders",
+      "queryKey": ["tesla-user-orders"],
+      "parameters": [],
+      "behavior": "Account snapshot, not vehicle- or range-scoped. request receives AbortSignal; staleTime is STALE_TIMES.SLOW (five minutes). orders defaults to [] for presentation; fetched_at remains nullable. No additional polling is configured by this hook.",
+      "contract": "TeslaOrdersEnvelope { orders: TeslaOrder[], fetched_at: string|null }. TeslaOrder retains id, order_id, model, status, delivery_date, vin, optional referral_code, is_upgradable, fetched_at, created_at and updated_at.",
+      "citations": [
+        {"file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 41},
+        {"file": "web\\src\\api\\hooks\\useUser.ts", "line": 15},
+        {"file": "web\\src\\api\\hooks\\useUser.ts", "line": 147},
+        {"file": "web\\src\\api\\hooks\\useUser.ts", "line": 169},
+        {"file": "web\\src\\lib\\constants.ts", "line": 60},
+        {"file": "web\\src\\api\\client.ts", "line": 93},
+        {"file": "internal\\api\\router.go", "line": 3599},
+        {"file": "internal\\api\\router.go", "line": 3604}
+      ],
+      "endpointVerification": "Frontend path and backend nested route match by source inspection. Handler, persistence queries, Tesla upstream behavior and HTTP responses were not inspected or exercised."
+    },
+    {
+      "hook": "useRefreshTeslaOrders",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 174,
+      "owner": "Tesla account mutation hooks",
+      "endpoint": "POST /api/v1/tesla/user/orders/refresh",
+      "behavior": "Success invalidates the existing orders query and emits a localized success toast; failure uses the existing mutation error toast. The router applies a five-per-minute IP limit. Header refresh is disabled and aria-busy while pending; empty-panel refresh lacks equivalent pending wiring.",
+      "citations": [
+        {"file": "web\\src\\api\\hooks\\useUser.ts", "line": 179},
+        {"file": "web\\src\\api\\hooks\\useUser.ts", "line": 180},
+        {"file": "web\\src\\api\\hooks\\useUser.ts", "line": 184},
+        {"file": "internal\\api\\router.go", "line": 3605},
+        {"file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 90}
+      ],
+      "endpointVerification": "Source route matches; no mutation executed."
+    },
+    {
+      "hook": "computeOrderStats / useDateFormat / useOperationalMetrics",
+      "file": "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts",
+      "line": 160,
+      "owner": "Local order derivations plus existing date and operational-metric presentation owners",
+      "endpoint": null,
+      "behavior": "One aggregate pass classifies raw statuses, counts models/VINs/upgradable orders and finds the minimum valid future delivery timestamp using Date.now(). Operational summary uses six metrics and nullable raw input. Date presentation uses saved locale and timezone; snapshot period explicitly says it is not a date-range total. No physical-unit measurements or conversion are introduced.",
+      "citations": [
+        {"file": "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts", "line": 89},
+        {"file": "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts", "line": 178},
+        {"file": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx", "line": 22},
+        {"file": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts", "line": 15},
+        {"file": "web\\src\\hooks\\useDateFormat.ts", "line": 75}
+      ],
+      "evidenceLimit": "Formatting owner internals, settings endpoints and actual server field nullability were not fully traced. Preserve raw payloads, query keys and existing classification; no backend capability is inferred."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "shared layout", "ownerFile": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "usedAt": 100, "contract": "Existing full-width min-w-0 adapter; shell owns navigation and workspace controls. Page supplies query and dataSources, not a whole-page loading/error gate."},
+    {"name": "LayoutCard", "kind": "shared labelled surface", "ownerFile": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 17, "usedAt": [148, 169], "contract": "Persistent title/actions/children/footer with existing Card, heading IDs and responsive container; keep board and detail shells."},
+    {"name": "OrdersOperationalBrief", "kind": "domain adapter to existing OperationalBrief", "ownerFile": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx", "line": 18, "usedAt": 113, "contract": "Six metrics, snapshot scope/provenance, sourceStatus and loading; preserve useOperationalMetrics rather than rebuilding a KPI grid."},
+    {"name": "OrderStatusBreakdown", "kind": "domain presentation", "ownerFile": "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx", "line": 32, "usedAt": 126, "contract": "Five lifecycle buckets, proportion bar, exact counts and percentages; shared GlassPanel/PanelTitle/Badge/Text."},
+    {"name": "DeliveryOutlookPanel", "kind": "domain presentation", "ownerFile": "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx", "line": 29, "usedAt": 133, "contract": "Upcoming delivery, upgradable/model counts, VIN assigned/total and last synced; existing KVList, TimeStamp and useDateFormat."},
+    {"name": "OrdersBoard / OrderCard", "kind": "domain presentation", "ownerFile": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx", "line": 26, "usedAt": 160, "contract": "Accessible named list with memoized GlassPanel order groups; model, raw-status presentation, ID, VIN, delivery and upgrade availability."},
+    {"name": "OrdersTable / DataTable", "kind": "domain adapter and sole shared table pipeline", "ownerFile": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx", "line": 47, "usedAt": 181, "contract": "Stable tableId admin:tesla-orders; six columns; text/value filters; model/status/delivery sorts; pagination and inherited CSV/JSON export/column persistence. Shared implementation owner is web\\src\\components\\ui\\DataTable.tsx."},
+    {"name": "OrdersSectionState", "kind": "domain state adapter", "ownerFile": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx", "line": 34, "contract": "loading/error/empty/ready; shared Skeleton, QueryError and EmptyState. Existing SourceContent is the overlapping canonical owner, not a reason to remove section-specific geometry/copy."},
+    {"name": "DataSourceNotice", "kind": "shared trust presentation", "ownerFile": "web\\src\\components\\feedback\\DataSourceNotice.tsx", "line": 120, "contract": "PageContainer renders it before retained children; resolves failure/refresh failure/paused states and existing recovery semantics."},
+    {"name": "Button / EmptyState / FadeIn / SectionErrorBoundary", "kind": "existing primitives, feedback and motion", "ownerFile": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 18, "contract": "Category imports already used. FadeIn owner web\\src\\components\\motion\\FadeIn.tsx:23 uses motion preference and initial=false when reduced. Boundary and Button internals not independently audited."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx",
+      "line": 47,
+      "rule": "MDC-002 / MDC-026",
+      "detail": "A local four-state branch duplicates the existing SourceContent loading/error/empty renderer. It correctly keeps four panel shells present, so consolidation must not replace them with one page gate.",
+      "fix": "Adapt through existing SourceContent only after mapping fatalError versus retained, specialist skeleton heights, localized query-error recovery and board/table empty actions.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx",
+      "line": 115,
+      "rule": "MDC-033 / preserve contextual repetition",
+      "detail": "Summary and outlook intentionally repeat next delivery/upgradable counts; board and table intentionally offer visual and detailed views. This is complementary context, not redundant data that may be deleted.",
+      "fix": "Keep all views; continue sharing computeOrderStats and the existing operational metric bridge.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 124, "detail": "Insights stack until xl; status breakdown takes two of three columns at xl. Header actions wrap and wrapLabel is set."},
+      {"file": "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx", "line": 83, "detail": "Bucket cards reflow through two, three and five columns."},
+      {"file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx", "line": 170, "detail": "Table wrapper has min-w-0; search width is constrained without constraining the entire page."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx",
+        "line": 33,
+        "rule": "MDC-043 / allocated-container sizing",
+        "detail": "auto-fit minmax(18rem,1fr) imposes a 288px minimum inside a padded LayoutCard and shell gutters. A 320px viewport can allocate less than this; overflow is a source-backed risk, not observed clipping.",
+        "fix": "Use the existing grid policy or a container-safe minimum bounded by 100%, retaining every card and all fields.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx",
+        "line": 198,
+        "rule": "MDC-023 / MDC-043 / no mobile information loss",
+        "detail": "mobileColumns only exposes model/status. DataTable.tsx:724-725 hides other cells below md; this caller supplies neither mobilePresentation nor expandable detail. VIN/ID/date are partly available on the separate board, but filtered table rows lose the complete row context at narrow widths.",
+        "fix": "Adopt the existing typed DataTable mobilePresentation/details contract with all six fields, retaining filters, sorting, pagination, column preferences and export scope. Do not invent a second table renderer.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      {"file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 112, "detail": "Summary/insights sections have localized accessible names; decorative page icons are aria-hidden."},
+      {"file": "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx", "line": 40, "detail": "Cards expose model/status group names and semantic dl/dt/dd fields; board uses ul/li."},
+      {"file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx", "line": 181, "detail": "Search Input has localized aria-label; shared table supplies caption/native semantics."},
+      {"file": "web\\src\\components\\motion\\FadeIn.tsx", "line": 31, "detail": "Reduced entrance sets initial=false; no local replacement motion engine is needed."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx",
+        "line": 54,
+        "rule": "MDC-040 / extreme-content reachability",
+        "detail": "Model is visually truncated without a local full-text disclosure. ID/VIN use title attributes, which do not establish touch or keyboard disclosure. Other table presentation may provide the full value; actual reachability remains unverified.",
+        "fix": "Retain full source identifiers/model in a wrapping or existing keyboard/touch-accessible detail presentation, without relying on hover titles alone.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "limits": "No mounted keyboard/focus/screen-reader, effective contrast, forced-colors, RTL, 200%-text or 44px target tests were run. The proportion bar has a generic image label and adjacent textual counts; assess their association during runtime QA."
+  },
+  "states": {
+    "initialLoading": "deriveDataState initial maps to loading for each data panel; summary receives loading and null stats. Panel geometry uses heights 180/200/320. PageContainer receives query but no loading prop, preserving all section shells.",
+    "fatalError": "Only ordersState.fatalError maps to error; four sections offer QueryError/refetch. Summary remains with unavailable metrics and source status. SectionErrorBoundary isolates breakdown group, board and table.",
+    "empty": "Board/table distinguish unsynced versus successfully synced-empty via fetched_at and offer account refresh; breakdown/outlook show their own messages. Empty successful arrays have true zero counts in the summary, not invented measurements.",
+    "ready": "All sections render from the same retained order snapshot and shared aggregate.",
+    "refreshError": "Retained data remains visible. PageContainer.tsx:253 supplies DataSourceNotice and the operational brief receives stale status; local section status remains ready/empty rather than erasing data.",
+    "offline": "deriveDataState documents retained paused requests as stale/isRefreshBlocked; shared DataSourceNotice handles initial paused requests. A retained paused source is not specifically labelled by its resolver unless another error triggers a notice; summary still exposes retained status. Runtime offline recovery is unverified.",
+    "partialUnknown": "Page does not supply partial/unavailable options or maxAgeMs to deriveDataState. Missing envelope orders defaults to [] but summary only accepts Array.isArray orders; backend malformed/partial response handling remains unknown. No local max-age threshold should be invented.",
+    "mutation": "Header pending guard and toast success/failure exist; repeated empty actions lack pending UI.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx",
+        "line": 73,
+        "rule": "MDC-020 / MDC-026 / mutation parity",
+        "detail": "Both empty-panel Refresh actions call mutate without pending/disabled wiring, while the header is disabled at line 91. EmptyState.tsx:13 and :84 only accept label/onClick, so users can request duplicate rate-limited refreshes from two panels.",
+        "fix": "Guard the existing mutate callback while pending and use the existing Button state model for visibly disabled/busy recovery. If extending EmptyState action props, the shared feedback owner must own the change; do not fork the empty-state renderer.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx",
+      "line": 91,
+      "rule": "MDC-010 / MDC-015 / mission 43",
+      "detail": "Bucket surfaces use border-white/bg-white and the bar track uses bg-white at line 62, instead of theme-aware neutral surface/border tokens. No neon/glow was found in the mounted files, but fixed-white decoration is still inconsistent across themes.",
+      "fix": "Reuse existing neutral surface/control/border variables; keep lifecycle colors and text/count alternatives semantic. Dynamic percentage width is legitimate data-driven styling.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx",
+      "line": 99,
+      "rule": "MDC-010 / restrained-noise hierarchy",
+      "detail": "Upcoming date gets a permanent cyan tinted bordered tile; neutral informational panel icons are also cyan here and in TeslaOrdersPage.tsx:149,170. Upgrade availability has a separate purple tile in OrderCard.tsx:106. Multiple accent treatments compete with lifecycle status color.",
+      "fix": "Subdue informational icon/date chrome using existing muted/neutral tokens while retaining a meaningful upgrade cue and all lifecycle distinctions; no new palette, glow, wrapper or preference reset.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx",
+      "line": 141,
+      "rule": "MDC-023 / preservation of export meaning",
+      "detail": "Computed column keys delivery/upgradable differ from raw fields delivery_date/is_upgradable and do not provide exportValue. DataTable.tsx:884-893 falls back to rendered text when the keyed raw field is undefined, so JSON may contain formatted date and Yes/em-dash strings rather than canonical source values.",
+      "fix": "Provide typed exportValue or exportRow through the existing table API after pinning current CSV/JSON expectations; preserve localized readable CSV and explicit boolean/null/date meaning. Do not silently change existing exports during cosmetic adoption.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "rationale": "Mobile complete-detail access and container overflow should precede restrained presentation cleanup; mutation recovery and export semantics need preservation-aware integration.",
+    "order": ["Pin existing sections/actions/query and export semantics", "Resolve narrow board and complete mobile table details", "Unify empty recovery pending state", "Subdue decorative surface/icon accents", "Perform authorized runtime acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse DataTable mobilePresentation; no competing mobile table",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 186,
+      "changeType": "reuse",
+      "propsVariantsStates": "Existing mobilePresentation plus stable tableId, all six fields, full row details, current filters/sorts/pagination and loaded-result CSV/JSON controls. Keep standalone/embedded policy owned by DataTable.",
+      "usedBy": ["web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx"],
+      "dependsOn": ["Shared table owner acceptance of current mobile detail contract", "Page-specific typed source adapter and runtime narrow-width parity"],
+      "note": "No shared source edit is established as necessary; caller adoption first."
+    },
+    {
+      "name": "EmptyState async recovery action parity",
+      "existingOwnerFile": "web\\src\\components\\feedback\\EmptyState.tsx",
+      "line": 13,
+      "changeType": "conditional extension, shared-owner review required",
+      "propsVariantsStates": "Optional disabled/loading/aria-busy forwarding for imperative primary and secondary actions using existing Button behavior; retain label/onClick and navigation-action precedence.",
+      "usedBy": ["TeslaOrdersPage board empty recovery", "TeslaOrdersPage table empty recovery", "OrdersSectionState forwarding adapter"],
+      "dependsOn": ["Immediate page-level pending guard", "Foundation owner confirmation from a second independent production consumer before general API extension", "Focused EmptyState/Button recovery regression cases"],
+      "note": "Two occurrences on this page do not establish two independent production consumers. This is a concrete gap, not authorization for a speculative shared API or a second recovery renderer."
+    },
+    {
+      "name": "Reuse SourceContent trust states",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "line": 12,
+      "changeType": "reuse",
+      "propsVariantsStates": "loadingContent, emptyContent/emptyRecovery, fatal errorRecovery and retained state while keeping four independent panel shells and localized specialist copy.",
+      "usedBy": ["OrdersSectionState", "OrderStatusBreakdown", "DeliveryOutlookPanel", "Orders board and detail panels"],
+      "dependsOn": ["Preserve deriveDataState fatal-versus-refresh distinction", "Keep existing DataSourceNotice and OperationalBrief source context"],
+      "note": "Existing owner covers the general state pattern. Do not introduce another universal state engine."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx", "line": 47, "rule": "MDC-002", "detail": "Local state renderer overlaps SourceContent; reuse mapping is proposed, not a new shared primitive.", "fix": "Retain domain copy and geometry through existing owner overrides.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\components\\tesla-orders\\index.ts", "line": 1, "rule": "MDC-033", "detail": "Barrel still exports TeslaOrdersKpiBand, but mounted page uses OrdersOperationalBrief. Its implementation/callers were not fully inspected; unused status is not proved.", "fix": "Do not restore the former KPI band or delete it on this audit's evidence. Canonical mounted owner is OperationalBrief/useOperationalMetrics.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 101, "rule": "MDC-030 / MDC-032", "detail": "Page has no competing vehicle/range picker. Account snapshot is explicitly not a range total.", "fix": "Keep shell selection ownership; do not add date/vehicle controls or imply server filtering absent from these hooks.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "d1355a234f9a9d290be04c58f00974c1f79f530fef19aa2d34eeb2b3fb5e8d92",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 188,
+    "mountedPresentationLineCount": 915,
+    "lineCountScope": "Page plus OrdersOperationalBrief, OrderStatusBreakdown, DeliveryOutlookPanel, OrdersBoard, OrderCard, OrdersTable and OrdersSectionState; excludes pure stats utility, barrel, unmounted old KPI component and tests.",
+    "sectionCount": 5,
+    "topLevelBandCount": 4,
+    "sections": [
+      {"name": "Order summary", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 113, "count": 1, "content": "Total, delivered, in progress, ready/transit, upgradable, next delivery; snapshot scope/provenance and source status."},
+      {"name": "Order status", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 126, "count": 1, "content": "inProgress, ready, delivered, cancelled, other; ordered proportion bar plus exact counts/percentages."},
+      {"name": "Delivery outlook", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 133, "count": 1, "content": "Upcoming delivery, upgradable orders, distinct models, assigned VIN/total, last synced."},
+      {"name": "Orders board", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 148, "count": 1, "content": "Every order card with model/status/ID/VIN/delivery/upgrade cue; accessible list and null placeholders."},
+      {"name": "Order details", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 169, "count": 1, "content": "Six columns: model, order_id, vin, status, delivery, upgradable; all table interactions and exports."}
+    ],
+    "sourceSectionMarkers": {"pageGlassPanel": 0, "pageLayoutCard": 2, "pageChartContainer": 0, "mountedComponentGlassPanel": 3, "mountedComponentLayoutCard": 0, "mountedComponentChartContainer": 0, "fadeInBands": 4, "sectionErrorBoundaries": 3},
+    "actions": [
+      {"name": "Refresh account orders", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 90, "behavior": "POST refresh, header pending/aria-busy, localized label and mutation toast feedback."},
+      {"name": "Empty board/table Refresh", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 73, "behavior": "Same mutation from two persistent empty-panel recovery controls."},
+      {"name": "Retry read", "file": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "line": 62, "behavior": "refetch GET; preserve per-section error recovery and shared source notice recovery."},
+      {"name": "Text filter", "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx", "line": 62, "behavior": "Trimmed case-insensitive model/order ID/VIN/raw status search."},
+      {"name": "Column value filters", "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx", "line": 190, "behavior": "Existing DataTable value filters seeded from all orders, not only text-filtered rows."},
+      {"name": "Sort model/status/delivery", "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx", "line": 74, "behavior": "Default model ascending, bucket-based status sorting, date epoch sorting; invalid/missing delivery sorts as zero, not a displayed measured zero."},
+      {"name": "Pagination and page size", "file": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx", "line": 197, "behavior": "Default 25; options 10/25/50; existing shared navigation."},
+      {"name": "CSV/JSON export and column preferences", "file": "web\\src\\components\\ui\\DataTable.tsx", "line": 907, "behavior": "Inherited loaded matching-result export, shared visible-column serialization and tableId-based persistence; no server-wide export or row selection is configured by OrdersTable."}
+    ],
+    "dataBehavior": [
+      "Retain every raw TeslaOrder field in the query/cache, including referral_code and per-order timestamps not currently displayed.",
+      "Preserve account-level GET/POST ownership, cancellation, staleTime, query key, mutation invalidation, toast feedback and rate-limit semantics.",
+      "Keep classification precedence: cancelled/rejected, ready/transport/transit, delivered, pending/order/book/prep/production/build, other. Do not recase stored statuses.",
+      "Keep all aggregates and next-delivery selection; current clock-dependent calculation updates on order-array recomputation, not a separate ticking interval.",
+      "Keep empty successful arrays distinct from absent/malformed data; preserve summary null input guard and unknown placeholders.",
+      "Retain locale/timezone formatting, snapshot-not-range provenance, underlying source timestamps and existing display preferences.",
+      "Keep live data visible after background refresh failure, independent panel states, retry actions and rendered section shells.",
+      "No units are inferred or transformed on wire/cache; inspected order fields are identities, dates, statuses, counts and booleans."
+    ],
+    "routeEvidence": [{"file": "web\\src\\App.tsx", "line": 262, "detail": "Lazy page import"}, {"file": "web\\src\\App.tsx", "line": 725, "detail": "tesla-orders SafeRoute mount; runtime reachability unverified"}],
+    "sourceEdited": false
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Only router snippets were inspected. No handler/repository/upstream or response verification; no account/production mutation.",
+    "tests": "Not run: TypeScript, lint, build, Vitest and browser checks. Phase0 source-only assignment forbids full lint/build; concurrent-worker contract reserves project validation to the parent. audit.sh was read but not executed because it unconditionally runs project TypeScript.",
+    "sourceAudit": {
+      "method": "PowerShell invoking inline Python re counts over eight mounted TSX files, plus direct rg/view citations. First PowerShell regex attempt failed to parse (exit 1); corrected Python count command completed (exit 0). No source edits.",
+      "output": ["page: lines=188, staticVarStyle=0, rawControls=0, directLibrary=0, oldApi=0, GlassPanel=0, LayoutCard=2, ChartContainer=0", "DeliveryOutlookPanel: lines=121, same four violation counts=0, GlassPanel=1", "OrderCard: lines=117, same four violation counts=0, GlassPanel=1", "OrdersBoard: lines=42, same four violation counts=0", "OrdersSectionState: lines=74, same four violation counts=0", "OrdersTable: lines=202, same four violation counts=0", "OrderStatusBreakdown: lines=122, same four violation counts=0, GlassPanel=1", "OrdersOperationalBrief: lines=49, same four violation counts=0"],
+      "limits": "Regex counts cover these four specific patterns, not all quality/visual/accessibility rules. Source presence is not runtime acceptance. Tests and unrelated pages were not inspected."
+    },
+    "scope": "Phase0 audit only. Exploration limited to assigned page and relevant production presentation/data owners, route snippets, mission sections and conventions. No global inventory, full suite, Git or source modifications.",
+    "reportValidation": {
+      "command": "python -c \"import json,hashlib,pathlib; r=json.loads(pathlib.Path(r'docs\\frontend-audits\\audit-page-025.json').read_text()); assert len(r['routes'])==1 and r['routes'][0]=='/tesla-orders'; assert hashlib.sha256(pathlib.Path(r['page']).read_bytes()).hexdigest()==r['preservation']['sourceHash']; print('PASS: valid JSON, exact route and current page SHA256')\"",
+      "exitCode": 0,
+      "output": "PASS: valid JSON, exact route and current page SHA256"
+    },
+    "assumptions": "Use exact route string array requested by assignment. Count five user-visible data sections within four commented layout bands; repeated per-order cards are dynamic, not extra fixed sections. No unused-component deletion is authorized."
+  },
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-025.json", ".agent-status\\audit-page-025.txt"],
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-028.json",
+    "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx",
+    "web\\src\\features\\admin\\components\\tesla-orders\\index.ts",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx",
+    "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts",
+    "web\\src\\api\\hooks\\useUser.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\feedback\\EmptyState.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go"
+  ]
+}

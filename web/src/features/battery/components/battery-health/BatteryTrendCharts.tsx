@@ -29,6 +29,7 @@ import { COLOR, STATUS_COLORS } from '@/lib/colors';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import { isProjectionTrustworthy } from './helpers';
+import { BATTERY_PANEL_CLASS } from './layout';
 
 interface BatteryTrendChartsProps {
   health: BatteryHealthAnalytics;
@@ -78,22 +79,25 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
     }));
     return points.length > 0 && points.some((point) => point.range > 0) ? points : [];
   }, [health.history, unitPrefs.distance]);
+  const trendSize = predictionChartData.length === 0 && rangeTrend.length === 0
+    ? 'compact'
+    : 'detail';
 
   return (
-    <FadeIn delay={0.1}>
+    <FadeIn delay={0.1} className="min-w-0 w-full">
       <section
         aria-label={t('battery.section.trends', 'Capacity and range trends')}
-        className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3"
       >
         <ChartContainer
-          className="h-full xl:col-span-2"
+          className={`${BATTERY_PANEL_CLASS} xl:col-span-2`}
           title={t('battery.chart.capacityTrend', 'Capacity Trend & Prediction')}
           subtitle={t('battery.chart.dashedProjected', 'Dashed = projected')}
           ariaLabel={t(
             'battery.chart.capacityTrendAria',
             'Battery capacity trend with dashed projection line over time',
           )}
-          size="detail"
+          size={trendSize}
           empty={predictionChartData.length === 0}
           emptyMessage={t('battery.chart.noTrend', 'Not enough snapshots for trend analysis')}
           data={predictionChartData}
@@ -158,13 +162,13 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
         </ChartContainer>
 
         <ChartContainer
-          className="h-full"
+          className={BATTERY_PANEL_CLASS}
           title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}
           ariaLabel={t(
             'battery.chart.rangeTrendAria',
             'Estimated battery range over time area chart',
           )}
-          size="detail"
+          size={trendSize}
           empty={rangeTrend.length === 0}
           emptyMessage={t('battery.chart.noRange', 'No range data yet')}
           data={rangeTrend}

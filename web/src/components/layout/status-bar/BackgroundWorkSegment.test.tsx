@@ -19,7 +19,7 @@
  * mirrors the mock-the-hook convention used by NotificationBellPopover.test.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react'
 import '../../../i18n'
 import type {
@@ -30,6 +30,10 @@ import type {
 // Mutable fixture the mocked hook reads fresh on every render. `mock`-prefixed
 // so vitest's factory-hoist analysis permits the reference.
 let mockJobs: BackgroundJob[] = []
+const motionPreference = vi.hoisted(() => ({ reduce: false, durationMs: 250 }))
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => motionPreference,
+}))
 
 import { BackgroundWorkSegment } from './BackgroundWorkSegment'
 
@@ -72,6 +76,7 @@ function openPopover() {
 
 beforeEach(() => {
   mockJobs = []
+  motionPreference.reduce = false
 })
 
 afterEach(() => {
@@ -120,14 +125,14 @@ describe('BackgroundWorkSegment', () => {
 
     let trigger = screen.getByRole('button', { name: /changes saved/i })
     expect(trigger).toHaveTextContent('Changes saved')
-    expect(trigger.className).toContain('text-emerald-300')
+    expect(trigger.className).toContain('text-[var(--semantic-success)]')
     expect(trigger.querySelector('.animate-spin')).toBeNull()
 
     mockJobs = [makeJob({ label: 'Sync failed', status: 'error' })]
     rerender(<TestSegment />)
     trigger = screen.getByRole('button', { name: /sync failed/i })
     expect(trigger).toHaveTextContent('Sync failed')
-    expect(trigger.className).toContain('text-rose-300')
+    expect(trigger.className).toContain('text-[var(--semantic-danger)]')
   })
 
   it('hides the visible label but keeps the spinner and aria-label in iconOnly mode', () => {
@@ -180,14 +185,9 @@ describe('BackgroundWorkSegment', () => {
   it('falls back to a default icon for an unknown job kind instead of crashing', () => {
     // Force a value outside the BackgroundJobKind union to hit the defensive
     // `?? Sparkles` branch — this must render, not throw "Element type is invalid".
-    mockJobs = [
-      {
-        id: 'legacy',
-        label: 'Legacy job',
-        kind: 'legacy',
-        startedAt: '2024-01-01T00:00:00.000Z',
-      } as unknown as BackgroundJob,
-    ]
+    const legacyJob = makeJob({ id: 'legacy', label: 'Legacy job' })
+    Reflect.set(legacyJob, 'kind', 'legacy')
+    mockJobs = [legacyJob]
     render(<TestSegment />)
     openPopover()
 
@@ -206,11 +206,12 @@ describe('BackgroundWorkSegment', () => {
     openPopover()
 
     expect(screen.getByText('Queued')).toBeInTheDocument()
-    // The secondary line is the only `text-2xs` element inside a row.
+    // The optional secondary line keeps its caption role without truncation.
     const withDescRow = screen.getByText('With desc').closest('div')!
     const noDescRow = screen.getByText('No desc').closest('div')!
-    expect(withDescRow.querySelector('.text-2xs')).toBeTruthy()
-    expect(noDescRow.querySelector('.text-2xs')).toBeNull()
+    expect(withDescRow.querySelectorAll('span.block')).toHaveLength(2)
+    expect(noDescRow.querySelectorAll('span.block')).toHaveLength(1)
+    expect(screen.getByText('Queued')).toHaveClass('text-xs', 'break-words')
   })
 
   it('closes the popover when Escape is pressed', () => {
@@ -270,5 +271,53 @@ describe('BackgroundWorkSegment', () => {
 
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps running feedback static under reduced-motion or low-bandwidth preference', () => {
+    motionPreference.reduce = true
+    mockJobs = [makeJob()]
+    render(<TestSegment />)
+    const trigger = screen.getByRole('button', { name: /background tasks/i })
+    expect(trigger).toHaveClass('text-[var(--semantic-info)]')
+    expect(trigger.querySelector('.animate-spin')).toBeNull()
+    openPopover()
+    expect(screen.getByRole('dialog').querySelector('.animate-spin')).toBeNull()
+    expect(screen.getByText('Running')).toBeInTheDocument()
+  })
+
+  it('retains complete long RTL labels and descriptions in embedded rows without a trigger', () => {
+    const label = 'عملية تصدير طويلة '.repeat(20)
+    const description = 'تفاصيل المهمة '.repeat(30)
+    mockJobs = [makeJob({ label, description })]
+    const { container } = render(<div dir="rtl"><TestSegment embedded /></div>)
+    const section = screen.getByTestId('status-bar-background-embedded')
+    const labels = section.querySelectorAll('span.block')
+    expect(labels[0]).toHaveTextContent(label.trim())
+    expect(labels[1]).toHaveTextContent(description.trim())
+    labels.forEach((element) => {
+      expect(element).toHaveClass('break-words')
+      expect(element).not.toHaveClass('truncate')
+    })
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(container.querySelector('[dir="rtl"]')).toContainElement(section)
+  })
+
+  it('uses the accepted summary and scroll geometry without changing trigger or popover behavior', () => {
+    mockJobs = [makeJob()]
+    render(<TestSegment />)
+    const trigger = screen.getByRole('button', { name: /background tasks/i })
+    expect(trigger).toHaveAttribute('type', 'button')
+    expect(trigger).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:min-h-6', 'md:min-w-6')
+    expect(within(trigger).getByText('CSV export')).toHaveClass('max-w-background-summary', 'truncate')
+    openPopover()
+    expect(screen.getByRole('dialog')).toHaveClass(
+      'max-h-status-options',
+      'min-w-background-work',
+      'overflow-y-auto',
+    )
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(within(screen.getByRole('dialog')).getByText('CSV export')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog')).getByText('Processing')).toBeInTheDocument()
   })
 })

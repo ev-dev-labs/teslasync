@@ -1,0 +1,342 @@
+{
+  "item": "phase6-proof-repair-assignee-visible-label",
+  "status": "DONE_SCOPED_RUNTIME_PASS",
+  "requestUtc": "2026-10-14T12:28:07.189Z",
+  "returnDeadlineUtc": "2026-10-14T12:48:07.189Z",
+  "releaseUtc": "2026-10-14T12:37:15.5105840Z",
+  "attempts": "UNCHANGED",
+  "sourceReference": "3995c314080939dc644e10951e9fcfdc0e2498ab",
+  "sourceReferenceAuthority": "Exact session dispatch and previous receipt; no worker Git command verifies ancestry.",
+  "prerequisite": {
+    "newCanonicalClosure": "9c7b4f",
+    "externalReceiptIntake": "d9ee",
+    "authority": "User and exact tick-resume-dispatch.json assignment; not independently Git-verified.",
+    "reasonForRetry": "All seven previously blocked covering cases were NOTRUN; new canonical closure is materially new prerequisite evidence.",
+    "historicalGenuinePassesRepeated": 0
+  },
+  "cwd": "D:\\repos\\teslasync\\web",
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-proof-repair-assignee-visible-label.json",
+    "web\\logs\\phase6-proof-repair-assignee-visible-label.log"
+  ],
+  "readOnlyFiles": [
+    "web\\src\\features\\system\\components\\RepairCaseCollaboration.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseCollaboration.test.tsx"
+  ],
+  "rawEvidenceLog": "web\\logs\\phase6-proof-repair-assignee-visible-label.log",
+  "rawEvidenceLogSha256": "D48408FE69A78306835B358B2F3AE147B640F22F001297E05041463A8061E157",
+  "historicalEvidencePreserved": {
+    "previousReceiptReleaseUtc": "2026-10-14T07:48:34.7076134Z",
+    "previousLogSha256": "F06A9BDB3462072A4B18B1EA5FC29A0ECFF1E2E29D92D7FD12485DC3D4A8E812",
+    "previousReceipt": "Complete prior JSON preserved as PRIOR_RECEIPT_JSON in the appended retry log; previous raw log retained.",
+    "priorDiscovered": 0,
+    "priorExecuted": 0,
+    "priorPassed": 0,
+    "priorFailedTests": 0,
+    "priorCoveringCasesNotRun": 7,
+    "priorExit": 1,
+    "priorExternalCatalogFailureUncharged": 1,
+    "priorStatus": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+    "earlierFixtureFailure": "Earlier missing-ToastProvider failure remains historical; no fixture or mock repair was performed for this retry."
+  },
+  "runtime": {
+    "node": "v26.8.1",
+    "vitest": "4.1.11",
+    "installedRunner": "node_modules\\vitest\\vitest.mjs",
+    "pool": "forks",
+    "maxWorkers": 2,
+    "normalConfig": "web\\vite.config.ts",
+    "configOrGuardBypass": false,
+    "dependencyInstall": false,
+    "environmentOverrides": []
+  },
+  "run": {
+    "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairCaseCollaboration.test.tsx --pool=forks --maxWorkers=2 --testNamePattern '(?:keeps\\ a\\ canonical\\ visible\\ label\\ associated\\ with\\ the\\ populated\\ assignee,\\ not\\ just\\ its\\ placeholder|localizes\\ the\\ visible\\ label\\ without\\ changing\\ field\\ identity\\ or\\ editable\\ drafts|gives\\ simultaneous\\ panels\\ independent\\ label\\ bindings\\ even\\ for\\ the\\ same\\ case|preserves\\ both\\ panels,\\ full\\ notes\\ and\\ drafts\\ when\\ editing\\ permission\\ changes|preserves\\ assignment\\ payload,\\ pending\\ state\\ and\\ rejected\\ draft\\ through\\ an\\ explicit\\ retry|retains\\ rejected\\ review\\ notes\\ and\\ clears\\ them\\ only\\ after\\ a\\ successful\\ retry|preserves\\ case-change\\ draft\\ reset\\ and\\ routes\\ subsequent\\ assignment\\ to\\ the\\ new\\ case)$' --reporter=verbose --reporter=json --outputFile.json=..\\docs\\frontend-audits\\phase6-proof-repair-assignee-visible-label.json",
+    "rawArgumentVector": "RAW_ARGUMENTS_JSON in the owned log records exact argument boundaries.",
+    "startUtc": "2026-10-14T12:30:27.3202678Z",
+    "endUtc": "2026-10-14T12:33:11.3359686Z",
+    "exit": 0,
+    "runnerExit": 0,
+    "runnerSignal": null,
+    "timedOut": false,
+    "timeoutMs": 720000,
+    "invocationsThisRetry": 1,
+    "freshVitestJsonProduced": true,
+    "jsonProvenance": "Top-level numTotalTests, testResults and other original Vitest fields are preserved from this normal run. Exact original reporter JSON and its SHA256 are retained in the raw log.",
+    "normalStartupGuardCommands": [
+      "node scripts\\split-i18n-catalog.mjs --check",
+      "node scripts\\audit-i18n-namespaces.mjs --strict"
+    ],
+    "startupEvidence": [
+      "[i18n-split] OK — 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "[i18n-namespace-audit] 2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved"
+    ],
+    "startupGuardExitEvidence": "Both synchronous normal guard commands completed without a startup exception; the normal runner discovered and executed all seven cases and exited 0. No separately fabricated guard process exit receipt.",
+    "warnings": "Unpruned baseline entries and new source-local dotless labels are retained verbatim in the raw log; no baseline/config/catalog edits were made."
+  },
+  "accounting": {
+    "staticFixtureCases": 7,
+    "intendedSelected": 7,
+    "runtimeDiscovered": 7,
+    "runtimeSelected": 7,
+    "executed": 7,
+    "passed": 7,
+    "failedTests": 0,
+    "runtimeSkipped": 0,
+    "deliberatelyUnselected": 0,
+    "coveringCasesNotRun": 0,
+    "startupErrors": 0,
+    "ownedFailuresCharged": 0,
+    "externalCatalogFailuresUncharged": 0,
+    "testFiles": 1,
+    "reporterSuiteCountCaveat": "Vitest JSON counts the file and describe node as two suites; verbose output and testResults identify one actual selected test file.",
+    "exactSevenFixtureNamesMatch": true
+  },
+  "currentness": {
+    "hashAlgorithm": "SHA256",
+    "preRunPinWindowUtc": [
+      "2026-10-14T12:30:24.4695652Z",
+      "2026-10-14T12:30:27.1146538Z"
+    ],
+    "postRunValidationUtc": "2026-10-14T12:33:37.6827678Z",
+    "pinnedFileCount": 204,
+    "unchangedPinnedFileCount": 203,
+    "changedPinnedFileCount": 1,
+    "sourceSha256": "D9730B4847640189AA585E43A6FD8E1E4B8C4714CD417605B01F7A09A447A34C",
+    "fixtureSha256": "499FBAC0BE8529960CA7BF6A612A5CA8FB6B06420CE799FA77203688508E6EC0",
+    "sourceAndFixtureMatchPriorAndRetryPins": true,
+    "changedInput": {
+      "path": "web\\src\\i18n\\en.json",
+      "preSha256": "20B99693EA4207275A05D693DDFB1D4E7E6EA21F0DFA8891FE2D9749B5A9EB61",
+      "postSha256": "6E1E8FF4DDB120705D08ECF840AC959F8DAD8E8EDA35BD088F01C3437BBB9867",
+      "postLastWriteUtc": "2026-10-14T12:33:26.9210885Z"
+    },
+    "observedCanonicalWriteAfterRun": true,
+    "currentAffectedLeavesComparedUtc": "2026-10-14T12:34:08.516Z",
+    "currentAffectedLeavesEqualUnchangedSystemProjection": true,
+    "affectedLeafComparisonLimit": "Only current canonical/projection equality was checked for assignee, assigneePlaceholder, assignmentTitle, activityTitle, saveAssignment, commentLabel, addComment and noComments. No pre-run leaf-value snapshot was taken; equality across all canonical revisions is not claimed.",
+    "concurrentPublisher": "Reported active. Canonical en.json changed between pin windows, with recorded last-write after run completion. Other writers were not stopped or altered.",
+    "claimScope": "Actual seven-case pass on the normal run's loaded inputs, not complete transitive dependency closure, immutable-checkout acceptance or final current catalog freshness.",
+    "hashManifest": "Exact before/after path, SHA256, bytes, per-file UTC and last-write UTC are retained in the owned log.",
+    "releasePins": [
+      {
+        "phase": "RELEASE_PIN",
+        "path": "src\\features\\system\\components\\RepairCaseCollaboration.tsx",
+        "utc": "2026-10-14T12:36:13.0201976Z",
+        "sha256": "D9730B4847640189AA585E43A6FD8E1E4B8C4714CD417605B01F7A09A447A34C",
+        "bytes": 4226,
+        "lastWriteUtc": "2026-10-14T06:16:54.9861245Z"
+      },
+      {
+        "phase": "RELEASE_PIN",
+        "path": "src\\features\\system\\components\\RepairCaseCollaboration.test.tsx",
+        "utc": "2026-10-14T12:36:13.0798089Z",
+        "sha256": "499FBAC0BE8529960CA7BF6A612A5CA8FB6B06420CE799FA77203688508E6EC0",
+        "bytes": 11613,
+        "lastWriteUtc": "2026-10-14T06:12:39.2151717Z"
+      },
+      {
+        "phase": "RELEASE_PIN",
+        "path": "src\\i18n\\en.json",
+        "utc": "2026-10-14T12:36:13.1133541Z",
+        "sha256": "6E1E8FF4DDB120705D08ECF840AC959F8DAD8E8EDA35BD088F01C3437BBB9867",
+        "bytes": 1854647,
+        "lastWriteUtc": "2026-10-14T12:33:26.9210885Z"
+      },
+      {
+        "phase": "RELEASE_PIN",
+        "path": "src\\i18n\\en\\locale-system.json",
+        "utc": "2026-10-14T12:36:13.1471348Z",
+        "sha256": "7690EDB20E239471C9697E51C3E1AF1F7C04A4190B762DC36534A8D3850E1D7C",
+        "bytes": 191563,
+        "lastWriteUtc": "2026-10-14T07:52:44.6067476Z"
+      },
+      {
+        "phase": "RELEASE_PIN",
+        "path": "src\\i18n\\en\\usage-manifest.json",
+        "utc": "2026-10-14T12:36:13.1784810Z",
+        "sha256": "983AAA0397E8E99C900B9DE162C783FFF1A3D8DB6A5AFB51CAC4C1A1BFF82597",
+        "bytes": 4499696,
+        "lastWriteUtc": "2026-10-14T07:52:44.6429046Z"
+      }
+    ]
+  },
+  "needs": [
+    {
+      "kind": "EXTERNAL_PUBLISHER_CURRENTNESS_LIMIT",
+      "reason": "Concurrent publisher changed canonical en.json after the observed test run; this receipt must not be promoted to a current whole-checkout/catalog gate.",
+      "nextAction": "Authorized publisher/orchestrator must reconcile its current catalog revisions at the final gate. Do not repeat these seven genuine passes unless materially changed affected input requires a new queued proof.",
+      "ownedCorrectionNeeded": false
+    }
+  ],
+  "ownedFailureRequiringCorrectionWorker": null,
+  "verificationNotRun": {
+    "globalTypeScript": "NOTRUN: readonly proof-only assignment, no application edits.",
+    "lint": "NOTRUN: outside exact runtime proof scope.",
+    "violationsAudit": "NOTRUN: outside exact runtime proof scope.",
+    "build": "NOTRUN: prohibited broader gate.",
+    "browserNative": "NOTRUN: prohibited; no native approval.",
+    "realApiOrRouterVerification": "NOTRUN: existing fixture transport only, not real endpoint or network acceptance."
+  },
+  "approval": {
+    "coveringRuntimePass": true,
+    "immutableCurrentCheckoutApproval": false,
+    "sourceAcceptance": false,
+    "nativeApproval": false,
+    "pageApproval": false,
+    "globalGateApproval": false
+  },
+  "preservation": {
+    "applicationSourceEdited": false,
+    "fixtureEdited": false,
+    "mocksOrOraclesChanged": false,
+    "assertionsWeakened": false,
+    "catalogConfigQueueEdited": false,
+    "workerGitCommandsIssued": false,
+    "nestedAgentsLaunched": false,
+    "serversBrowserDockerLaunched": false,
+    "onlyAssignedEvidenceWrites": true,
+    "normalToolInternals": "Ordinary installed Vitest may use its standard internal config-loading caches and normal Vite identity resolution; no worker Git inspection, cache/config cleanup, environment override or guard bypass was performed."
+  },
+  "release": {
+    "sourceWriteClaim": "NEVER_ACQUIRED_READONLY",
+    "fixtureWriteClaim": "NEVER_ACQUIRED_READONLY",
+    "reportWriteClaim": "RELEASED_AT_RELEASE_UTC",
+    "logWriteClaim": "RELEASED_AT_RELEASE_UTC",
+    "commands": "Bounded Vitest command completed; no background work remains."
+  },
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 2,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 7,
+  "numPassedTests": 7,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1791981183697,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [
+            "RepairCaseCollaboration visible assignee label"
+          ],
+          "fullName": "RepairCaseCollaboration visible assignee label keeps a canonical visible label associated with the populated assignee, not just its placeholder",
+          "status": "passed",
+          "title": "keeps a canonical visible label associated with the populated assignee, not just its placeholder",
+          "duration": 262.0078000000003,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "RepairCaseCollaboration visible assignee label"
+          ],
+          "fullName": "RepairCaseCollaboration visible assignee label localizes the visible label without changing field identity or editable drafts",
+          "status": "passed",
+          "title": "localizes the visible label without changing field identity or editable drafts",
+          "duration": 84.65189999999984,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "RepairCaseCollaboration visible assignee label"
+          ],
+          "fullName": "RepairCaseCollaboration visible assignee label gives simultaneous panels independent label bindings even for the same case",
+          "status": "passed",
+          "title": "gives simultaneous panels independent label bindings even for the same case",
+          "duration": 57.072400000000016,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "RepairCaseCollaboration visible assignee label"
+          ],
+          "fullName": "RepairCaseCollaboration visible assignee label preserves both panels, full notes and drafts when editing permission changes",
+          "status": "passed",
+          "title": "preserves both panels, full notes and drafts when editing permission changes",
+          "duration": 94.05469999999968,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "RepairCaseCollaboration visible assignee label"
+          ],
+          "fullName": "RepairCaseCollaboration visible assignee label preserves assignment payload, pending state and rejected draft through an explicit retry",
+          "status": "passed",
+          "title": "preserves assignment payload, pending state and rejected draft through an explicit retry",
+          "duration": 167.8218999999999,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "RepairCaseCollaboration visible assignee label"
+          ],
+          "fullName": "RepairCaseCollaboration visible assignee label retains rejected review notes and clears them only after a successful retry",
+          "status": "passed",
+          "title": "retains rejected review notes and clears them only after a successful retry",
+          "duration": 128.5738999999994,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "RepairCaseCollaboration visible assignee label"
+          ],
+          "fullName": "RepairCaseCollaboration visible assignee label preserves case-change draft reset and routes subsequent assignment to the new case",
+          "status": "passed",
+          "title": "preserves case-change draft reset and routes subsequent assignment to the new case",
+          "duration": 87.24549999999999,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1791981190336,
+      "endTime": 1791981191217.2456,
+      "status": "passed",
+      "message": "",
+      "name": "D:/repos/teslasync/web/src/features/system/components/RepairCaseCollaboration.test.tsx"
+    }
+  ],
+  "receiptValidation": {
+    "command": "PowerShell ConvertFrom-Json; compare fixture exact names against assertionResults; verify seven executed passes with zero failed/skipped/unselected; compare source and fixture release SHA256; verify retained prior NOTRUN and no native/global claim",
+    "exit": 0,
+    "rawOutput": "{\"utc\":\"2026-10-14T12:36:13.2459298Z\",\"receiptParse\":\"OK\",\"exactSevenNames\":true,\"allSelectedActuallyPassed\":true,\"runtimeAccounting\":true,\"sourceUnchanged\":true,\"fixtureUnchanged\":true,\"priorSevenNotRunPreserved\":true,\"noNativeOrGlobalApproval\":true,\"singleRunOnly\":true,\"historicalGenuinePassDuplicates\":0}",
+    "persistenceValidationRecovered": {
+      "initialExit": 1,
+      "reason": "PowerShell automatic JSON DateTime coercion caused direct releaseUtc string equality false negative; hash was correct.",
+      "correction": "ConvertFrom-Json -DateKind String",
+      "applicationCorrectionNeeded": false,
+      "repeatedVitestRuns": 0
+    }
+  }
+}

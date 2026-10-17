@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
+import { MetricGrid } from '@/components/layout';
 import {
   GlassPanel,
   PanelTitle,
@@ -151,12 +152,12 @@ export function PackCapacityKpiBand({
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <MetricGrid>
           <MetricCard
             label={t('packCapacity.kpis.current', 'Current estimate')}
             value={
               resolved
-                ? formatEnergy(result.summary.currentWh, { precision: 1 })
+                ? formatEnergy(result.summary.currentWh)
                 : '—'
             }
             subtitle={
@@ -176,9 +177,7 @@ export function PackCapacityKpiBand({
             )}
             value={
               resolved && result.summary.currentSigmaWh != null
-                ? `±${formatEnergy(result.summary.currentSigmaWh, {
-                    precision: 1,
-                  })}`
+                ? `±${formatEnergy(result.summary.currentSigmaWh)}`
                 : '—'
             }
             subtitle={
@@ -218,9 +217,7 @@ export function PackCapacityKpiBand({
             label={t('packCapacity.kpis.rawMedian', 'Raw median')}
             value={
               resolved
-                ? formatEnergy(result.summary.rawMedianWh, {
-                    precision: 1,
-                  })
+                ? formatEnergy(result.summary.rawMedianWh)
                 : '—'
             }
             subtitle={
@@ -240,7 +237,7 @@ export function PackCapacityKpiBand({
             )}
             value={
               resolved && annualChange != null
-                ? formatEnergy(annualChange, { precision: 1 })
+                ? formatEnergy(annualChange)
                 : '—'
             }
             subtitle={
@@ -271,7 +268,7 @@ export function PackCapacityKpiBand({
             icon={<ShieldCheck className="h-5 w-5" />}
             color="red"
           />
-        </div>
+        </MetricGrid>
         <PackCapacityQueryStatus result={result} state={state} />
       </GlassPanel>
     </section>

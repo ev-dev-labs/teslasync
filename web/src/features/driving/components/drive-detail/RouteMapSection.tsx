@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Flag, Navigation2 } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { MapPin, Navigation2 } from 'lucide-react';
+import { GlassPanel, Text } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -12,14 +12,17 @@ import {
   type MapStyle,
 } from '@/components/maps';
 import { useUnits } from '@/hooks/useUnits';
-import { formatTime, formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
-import { hasMeaningfulRoute, firstValidIndex } from '@/lib/geo';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
+import { hasMeaningfulRoute, firstValidIndex, isGpsFix } from '@/lib/geo';
 import type { DriveDetail } from '@/types/driving';
 import type { FsdEvidenceInterval } from '@/types/fsd';
 import type { RoutePoint, SpeedSegment } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens } from '@/lib/tokens';
+import { cn } from '@/lib/cn';
 
 /* Auto-fit map bounds to trail. Special-cases two cluster degeneracies that
  * leaflet otherwise zooms past the maxZoom for: (1) trail with N identical
@@ -63,6 +66,8 @@ interface RouteMapSectionProps {
   speedSegments: SpeedSegment[];
   routePoints?: RoutePoint[];
   fsdEvidence?: FsdEvidenceInterval[];
+  /** Render only the map body, filling its cell inside the Overview hero. */
+  embedded?: boolean;
 }
 
 export function RouteMapSection({
@@ -74,8 +79,11 @@ export function RouteMapSection({
   speedSegments,
   routePoints,
   fsdEvidence,
+  embedded = false,
 }: RouteMapSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { unitPrefs } = useUnits();
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
 
@@ -115,11 +123,15 @@ export function RouteMapSection({
    * within ~10 m of the first. Render a single anchor marker + an overlay
    * banner instead of a polyline that collapses to a single dot at maxZoom. */
   const positionLatLngs = useMemo(
-    () => (drive.positions ?? []).map((p) => ({
-      latitude: typeof p.latitude === 'number' ? p.latitude : Number(p.latitude),
-      longitude: typeof p.longitude === 'number' ? p.longitude : Number(p.longitude),
-    })),
-    [drive.positions],
+    () => (routePoints?.length ? routePoints.map((point) => ({
+      latitude: point.lat, longitude: point.lng,
+    })) : (drive.positions ?? [])
+      // Drop the (0, 0) no-fix placeholder so it neither anchors nor stretches the route.
+      .filter((p) => isGpsFix(p.latitude, p.longitude))
+      .map((p) => ({
+        latitude: p.latitude, longitude: p.longitude,
+      }))),
+    [drive.positions, routePoints],
   );
   const hasRoute = useMemo(() => hasMeaningfulRoute(positionLatLngs), [positionLatLngs]);
   const anchorIdx = useMemo(() => firstValidIndex(positionLatLngs), [positionLatLngs]);
@@ -129,100 +141,139 @@ export function RouteMapSection({
     return [p.latitude, p.longitude];
   }, [positionLatLngs, anchorIdx]);
 
+  const endpointPins = useMemo(() => {
+    const pins: Array<{ kind: 'start' | 'end'; position: [number, number] }> = [];
+    if (isGpsFix(drive.startLat, drive.startLon)) pins.push({ kind: 'start', position: [drive.startLat as number, drive.startLon as number] });
+    if (isGpsFix(drive.endLat, drive.endLon)) pins.push({ kind: 'end', position: [drive.endLat as number, drive.endLon as number] });
+    return pins;
+  }, [drive.startLat, drive.startLon, drive.endLat, drive.endLon]);
+  const endpointTrail = useMemo<LatLngExpression[]>(() => endpointPins.map((pin) => pin.position), [endpointPins]);
+  const mapHeight = embedded ? 'h-[320px] sm:h-[380px] lg:h-full lg:min-h-[440px]' : 'h-64 sm:h-80 lg:h-96';
+  const startMarker = { color: chartTokens.series[1], fillColor: chartTokens.series[1], fillOpacity: 1, weight: 2 };
+  const endMarker = { color: chartTokens.series[3], fillColor: chartTokens.series[3], fillOpacity: 1, weight: 2 };
+
+  const body = safeTrail.length > 0 ? (
+    <>
+      <div className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode={hasRoute ? 'path' : 'stationary'}>
+        <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+        <MapContainer center={centerPos} zoom={safeTrail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
+          <MapTileLayer style={mapStyle} />
+          <MapInvalidator />
+          <FitBounds trail={hasRoute ? safeTrail : []} fallbackCenter={anchorPoint} />
+          {hasRoute && safeSegments.map((seg, i) => (
+            <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
+          ))}
+          {hasRoute && fsdSegments.map((positions, index) => (
+            <Polyline
+              key={`fsd-${index}`}
+              positions={positions}
+              pathOptions={{
+                color: chartTokens.series[4],
+                weight: 6,
+                opacity: 0.9,
+                dashArray: '8 10',
+              }}
+            />
+          ))}
+          {hasRoute && startPos && (
+            <CircleMarker center={startPos} radius={8} pathOptions={{ color: chartTokens.series[1], fillColor: chartTokens.series[1], fillOpacity: 1, weight: 2 }}>
+              <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><time className="text-xs" dateTime={drive.startTs} title={drive.startTs}>{formatDateTime(drive.startTs)}</time></Popup>
+            </CircleMarker>
+          )}
+          {hasRoute && endPos && (
+            <CircleMarker center={endPos} radius={8} pathOptions={{ color: chartTokens.series[3], fillColor: chartTokens.series[3], fillOpacity: 1, weight: 2 }}>
+              <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><time className="text-xs" dateTime={drive.endTs ?? undefined} title={drive.endTs ?? undefined}>{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</time></Popup>
+            </CircleMarker>
+          )}
+          {!hasRoute && anchorPoint && (
+            <CircleMarker center={anchorPoint} radius={8} pathOptions={{ color: chartTokens.series[0], fillColor: chartTokens.series[0], fillOpacity: 0.9, weight: 2 }}>
+              <Popup><span className="text-xs font-bold">{t('driveDetail.lastKnown', 'Last known location')}</span></Popup>
+            </CircleMarker>
+          )}
+        </MapContainer>
+        {!hasRoute && (
+          <div className="pointer-events-none absolute inset-x-3 top-3 z-[400]">
+            <AlertBanner
+              variant="info"
+              icon={<Navigation2 className="h-4 w-4" />}
+              title={t('driveDetail.stationaryRouteTitle', 'Route can\'t be plotted')}
+              className="pointer-events-auto"
+            >
+              {t(
+                'driveDetail.stationaryRouteBody',
+                'Only one GPS coordinate was recorded for this drive, so the route can\'t be drawn. The drive\'s distance, duration, and other stats below are unaffected.',
+              )}
+            </AlertBanner>
+          </div>
+        )}
+      </div>
+      {fsdSegments.length > 0 && (
+        <div className="flex items-center gap-2 border-t border-[var(--border-default)] px-4 py-2 text-xs text-[var(--text-muted)]">
+          <svg width="20" height="2" aria-hidden="true"><path d="M0 1H20" stroke={chartTokens.series[4]} strokeWidth={2} strokeDasharray="4 2" /></svg>
+          {t(
+            'driveDetail.fsd.mapEvidence',
+            'Approximate area where the FSD counter increased - not an exact FSD-active segment.',
+          )}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs">
+        {hasRoute && safeTrail.length > 1 && (
+          <div className="flex flex-wrap items-center gap-3 text-[var(--text-muted)]">
+            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[1]} /></svg> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
+            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[0]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>
+            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[2]} /></svg> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
+            <span className="flex items-center gap-1"><svg width="12" height="4" aria-hidden="true"><rect width="12" height="4" rx="2" fill={chartTokens.series[3]} /></svg> ≥{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
+            <span>{speedUnit}</span>
+          </div>
+        )}
+        {!embedded && <a href="#journey" className="text-[var(--text-secondary)] underline underline-offset-4">{t('driveDetail.journeyDetails', 'Journey details')}</a>}
+      </div>
+    </>
+  ) : endpointPins.length > 0 ? (
+    // No recorded route path, but start/end coordinates exist: show both
+    // pins joined by a dashed straight line, clearly not a driven path.
+    <div className={cn(mapHeight, 'relative')} role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')} data-route-mode="endpoints">
+      <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
+      <MapContainer center={endpointPins[0].position} zoom={13} scrollWheelZoom className="h-full w-full">
+        <MapTileLayer style={mapStyle} />
+        <MapInvalidator />
+        <FitBounds trail={endpointTrail} />
+        {endpointPins.length === 2 && (
+          <Polyline positions={endpointTrail} pathOptions={{ color: chartTokens.axisStroke, weight: 3, opacity: 0.8, dashArray: '6 8' }} />
+        )}
+        {/* marker-cluster:no exactly two semantic Start/End endpoints; clustering would hide route direction */}
+        {endpointPins.map((pin) => (
+          <CircleMarker key={pin.kind} center={pin.position} radius={8} pathOptions={pin.kind === 'start' ? startMarker : endMarker}>
+            <Popup><span className="text-xs font-bold">{pin.kind === 'start' ? t('driveDetail.start', 'Start') : t('driveDetail.end', 'End')}</span></Popup>
+          </CircleMarker>
+        ))}
+      </MapContainer>
+      <div className="pointer-events-none absolute end-3 top-3 z-[400] flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-1 shadow-sm" data-testid="route-not-recorded">
+        <svg width="16" height="2" aria-hidden="true"><path d="M0 1H16" stroke={chartTokens.axisStroke} strokeWidth={2} strokeDasharray="4 3" /></svg>
+        <Text as="span" variant="caption">{t('driveDetail.routeNotRecorded', 'Route path not recorded')}</Text>
+      </div>
+    </div>
+  ) : (
+    <div className={cn(mapHeight, 'flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]')}>
+      <MapPin className="h-10 w-10 opacity-30" />
+      <p className="text-sm">{t('driveDetail.noRouteData', 'No route data available for this drive')}</p>
+    </div>
+  );
+
+  if (embedded) {
+    // h-full: the stretched hero cell gives the map a definite height to fill.
+    return <div className="flex h-full min-w-0 flex-col" data-testid="drive-route-map">{body}</div>;
+  }
+
   return (
     <FadeIn>
       <GlassPanel className="overflow-hidden">
         <div className="p-4 pb-0">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-3">
-            <MapPin className="h-4 w-4 text-cyan-400" /> {t('driveDetail.route', 'Route')}
+            <MapPin className="h-4 w-4 text-[var(--text-secondary)]" /> {t('driveDetail.route', 'Route')}
           </h3>
         </div>
-        {safeTrail.length > 0 ? (
-          <>
-            <div className="h-64 sm:h-80 lg:h-96 relative" role="region" aria-label={t('driveDetail.routeMapLabel', 'Route map')}>
-              <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
-              <MapContainer center={centerPos} zoom={safeTrail.length > 1 ? 13 : 3} scrollWheelZoom className="h-full w-full">
-                <MapTileLayer style={mapStyle} />
-                <MapInvalidator />
-                <FitBounds trail={hasRoute ? safeTrail : []} fallbackCenter={anchorPoint} />
-                {hasRoute && safeSegments.map((seg, i) => (
-                  <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
-                ))}
-                {hasRoute && fsdSegments.map((positions, index) => (
-                  <Polyline
-                    key={`fsd-${index}`}
-                    positions={positions}
-                    pathOptions={{
-                      color: '#c084fc',
-                      weight: 6,
-                      opacity: 0.9,
-                      dashArray: '8 10',
-                    }}
-                  />
-                ))}
-                {hasRoute && startPos && (
-                  <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
-                    <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><span className="text-xs">{formatDateTime(drive.startTs)}</span></Popup>
-                  </CircleMarker>
-                )}
-                {hasRoute && endPos && (
-                  <CircleMarker center={endPos} radius={8} pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 1, weight: 2 }}>
-                    <Popup><span className="text-xs font-bold">{t('driveDetail.end', 'End')}</span><br /><span className="text-xs">{drive.endTs ? formatDateTime(drive.endTs) : t('driveDetail.inProgress', 'In progress')}</span></Popup>
-                  </CircleMarker>
-                )}
-                {!hasRoute && anchorPoint && (
-                  <CircleMarker center={anchorPoint} radius={8} pathOptions={{ color: '#22d3ee', fillColor: '#22d3ee', fillOpacity: 0.9, weight: 2 }}>
-                    <Popup><span className="text-xs font-bold">{t('driveDetail.lastKnown', 'Last known location')}</span></Popup>
-                  </CircleMarker>
-                )}
-              </MapContainer>
-              {!hasRoute && (
-                <div className="pointer-events-none absolute inset-x-3 top-3 z-[400]">
-                  <AlertBanner
-                    variant="info"
-                    icon={<Navigation2 className="h-4 w-4" />}
-                    title={t('driveDetail.stationaryRouteTitle', 'Route can\'t be plotted')}
-                    className="pointer-events-auto"
-                  >
-                    {t(
-                      'driveDetail.stationaryRouteBody',
-                      'Only one GPS coordinate was recorded for this drive, so the route can\'t be drawn. The drive\'s distance, duration, and other stats below are unaffected.',
-                    )}
-                  </AlertBanner>
-                </div>
-              )}
-            </div>
-            {fsdSegments.length > 0 && (
-              <div className="flex items-center gap-2 border-t border-[var(--border-default)] px-4 py-2 text-xs text-[var(--text-muted)]">
-                <span className="w-5 border-t-2 border-dashed border-purple-400" aria-hidden="true" />
-                {t(
-                  'driveDetail.fsd.mapEvidence',
-                  'Approximate area where the FSD counter increased - not an exact FSD-active segment.',
-                )}
-              </div>
-            )}
-            <div className="flex items-center justify-between px-4 py-3 text-xs">
-              <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startTs)}</span>
-              {hasRoute && safeTrail.length > 1 && (
-                <div className="flex items-center gap-3 text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-emerald-500" /> &lt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-cyan-400" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_LOW_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-amber-500" /> {fmtNumber(toSpeedDisplay(SPEED_SEGMENT_MED_MPS))}–{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
-                  <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 rounded bg-red-500" /> &gt;{fmtNumber(toSpeedDisplay(SPEED_SEGMENT_HIGH_MPS))}</span>
-                  <span>{speedUnit}</span>
-                </div>
-              )}
-              {drive.endTs && (
-                <span className="flex items-center gap-1.5 text-red-400"><Flag className="h-3 w-3" /> {t('driveDetail.end', 'End')}: {formatTime(drive.endTs)}</span>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="h-64 sm:h-80 flex flex-col items-center justify-center gap-3 text-[var(--text-muted)]">
-            <MapPin className="h-10 w-10 opacity-30" />
-            <p className="text-sm">{t('driveDetail.noRouteData', 'No route data available for this drive')}</p>
-          </div>
-        )}
+        {body}
       </GlassPanel>
     </FadeIn>
   );

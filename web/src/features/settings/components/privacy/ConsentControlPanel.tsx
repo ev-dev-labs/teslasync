@@ -65,6 +65,8 @@ export function ConsentControlPanel({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  wrapLabel
+                  className="min-h-11 md:min-h-9"
                   onClick={onRetry}
                   icon={<RotateCw className="h-3.5 w-3.5" aria-hidden="true" />}
                 >
@@ -104,6 +106,8 @@ export function ConsentControlPanel({
         <Button
           type="button"
           variant="primary"
+          wrapLabel
+          className="min-h-11 md:min-h-10"
           onClick={onAccept}
           disabled={consent === 'accepted'}
           data-testid="privacy-consent-accept"
@@ -113,6 +117,8 @@ export function ConsentControlPanel({
         <Button
           type="button"
           variant="secondary"
+          wrapLabel
+          className="min-h-11 md:min-h-10"
           onClick={onDecline}
           disabled={consent === 'declined'}
           data-testid="privacy-consent-decline"
@@ -122,6 +128,8 @@ export function ConsentControlPanel({
         <Button
           type="button"
           variant="ghost"
+          wrapLabel
+          className="min-h-11 md:min-h-10"
           onClick={onReset}
           disabled={consent === 'unknown'}
           data-testid="privacy-consent-reset"

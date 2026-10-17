@@ -34,12 +34,18 @@
 process.env.TZ = 'America/New_York';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { BADGE_VARIANTS } from '@/components/ui';
+import { neonColorMap } from '@/lib/tokens';
 
-import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo } from '@/types/charging';
+import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo, AutopilotProfile, AutopilotSavings, AutopilotPreview } from '@/types/charging';
+import type { OcppChargePoint, OcppSession } from '@/api/hooks/useOcpp';
 
 // ── i18n stub: resolve the string fallback (or options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ──────
@@ -72,24 +78,23 @@ vi.mock('react-i18next', () => {
 
 // ── framer-motion: strip animation props, keep motion.* + AnimatePresence. ──
 vi.mock('framer-motion', () => {
+  const MotionElement = ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+    const safe: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rest)) {
+      if (
+        ['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'whileInView', 'viewport', 'variants'].includes(
+          k,
+        )
+      )
+        continue;
+      safe[k] = v;
+    }
+    return <div {...(safe as Record<string, unknown>)}>{children}</div>;
+  };
   const motionProxy: Record<string, unknown> = new Proxy(
     {},
     {
-      get:
-        () =>
-        ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
-          const safe: Record<string, unknown> = {};
-          for (const [k, v] of Object.entries(rest)) {
-            if (
-              ['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'whileInView', 'viewport', 'variants'].includes(
-                k,
-              )
-            )
-              continue;
-            safe[k] = v;
-          }
-          return <div {...(safe as Record<string, unknown>)}>{children}</div>;
-        },
+      get: () => MotionElement,
     },
   );
   return {
@@ -174,6 +179,22 @@ import {
 } from '@/api/hooks/useCharging';
 import { useOcppChargePoints, useOcppSessions } from '@/api/hooks/useOcpp';
 import SmartChargePage, { planStatusVariant, defaultDepartBy } from './SmartChargePage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+
+describe('smart charge component import boundaries', () => {
+  it.each(['AutopilotCard', 'ChargePointsCard'])('%s uses existing category barrels', component => {
+    const source = readFileSync(resolve(
+      process.cwd(), 'src', 'features', 'charging', 'components', 'smart-charge-modernization', `${component}.tsx`,
+    ), 'utf8');
+
+    expect(source).toMatch(/import \{[^}]*LayoutCard[^}]*\} from '@\/components\/layout';/);
+    expect(source).not.toMatch(/from ['"]@\/components\/(?:layout|data-display)\//);
+    if (component === 'AutopilotCard') {
+      expect(source).toMatch(/import \{[^}]*ChartCard[^}]*Grid[^}]*\} from '@\/components\/layout';/);
+      expect(source).toMatch(/import \{ type StatMetric \} from '@\/components\/data-display';/);
+    }
+  });
+});
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockOptimize = useOptimizeCharge as unknown as ReturnType<typeof vi.fn>;
@@ -189,7 +210,7 @@ const mockOcppPoints = useOcppChargePoints as unknown as ReturnType<typeof vi.fn
 const mockOcppSessions = useOcppSessions as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -207,16 +228,16 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 }
 
  
-function optimizeState(over: Record<string, unknown> = {}): any {
-  return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
+function optimizeState(over: Record<string, unknown> = {}) {
+  return { mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
  
-function applyState(over: Record<string, unknown> = {}): any {
-  return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
+function applyState(over: Record<string, unknown> = {}) {
+  return { mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
 
  
-function selected(vehicleId: number | null): any {
+function selected(vehicleId: number | null) {
   return {
     vehicleId,
     vehicle: null,
@@ -279,16 +300,42 @@ const backendRatePlans: RatePlanInfo[] = [
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <SmartChargePage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const result = render(page());
+  return { ...result, rerenderPage: () => result.rerender(page()) };
 }
 
 const optimizeButton = () => screen.getByRole('button', { name: /Find Cheapest Window/i });
+
+const COST_COMPARISON_LABELS = ['Charge now', 'Optimized cost', 'Savings', 'Energy needed'];
+
+/** Metric context moved off the brief face into the drawer's per-metric groups. */
+function expectDrawerGroupText(briefScope: Element, groupName: string, expected: string | RegExp) {
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(briefScope as HTMLElement).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByRole('group', { name: groupName })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+/** The face keeps the measured value; the "$X across N runs" context lives in the drawer group. */
+function expectSavingsValue(savingsShell: Element, value: string, context: string) {
+  expect(within(savingsShell as HTMLElement).getByText(value)).toBeInTheDocument();
+  expectDrawerGroupText(savingsShell, 'Realized savings', context);
+}
+
+const autopilotCard = () =>
+  screen.getByRole('heading', { name: 'Charging Autopilot' }).closest('[data-card]') as HTMLElement;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -306,6 +353,61 @@ beforeEach(() => {
   // Embedded ChargePointsPanel defaults (no charger reporting).
   mockOcppPoints.mockReturnValue(makeQuery({ data: [] }));
   mockOcppSessions.mockReturnValue(makeQuery({ data: [] }));
+});
+
+describe('SmartChargePage — mobile action allocation', () => {
+  it('keeps five wrapping targets, desktop minimums and keyboard actions on the actual buttons', async () => {
+    const user = userEvent.setup();
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const save = optimizeState();
+    const preview = optimizeState();
+    const run = optimizeState();
+    const apply = applyState();
+    const optimize = optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) =>
+        opts?.onSuccess?.(RESULT)),
+    });
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotPreview.mockReturnValue(preview);
+    mockAutopilotRun.mockReturnValue(run);
+    mockOptimize.mockReturnValue(optimize);
+    mockApply.mockReturnValue(apply);
+    renderPage();
+
+    const findWindow = optimizeButton();
+    findWindow.focus();
+    await user.keyboard('{Enter}');
+    expect(optimize.mutate).toHaveBeenCalledOnce();
+
+    const actions = [
+      { button: findWindow, mutation: optimize },
+      { button: screen.getByRole('button', { name: 'Apply schedule' }), mutation: apply },
+      { button: screen.getByRole('button', { name: 'Save Autopilot' }), mutation: save },
+      { button: screen.getByRole('button', { name: 'Preview next run' }), mutation: preview },
+      { button: screen.getByRole('button', { name: 'Run now' }), mutation: run },
+    ];
+    for (const { button, mutation } of actions) {
+      expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'whitespace-normal', 'max-w-full');
+      expect(button.querySelector('span.min-w-0.break-words')).not.toBeNull();
+      expect(button).toBeEnabled();
+      button.focus();
+      expect(button).toHaveFocus();
+      if (button !== findWindow) {
+        await user.keyboard(' ');
+        expect(mutation.mutate).toHaveBeenCalledOnce();
+      }
+    }
+
+    expect(screen.getByLabelText('Depart by')).toBeEnabled();
+    expect(screen.getByLabelText('Ready by (daily)')).toBeEnabled();
+    expect(screen.getByLabelText('Battery capacity')).toBeEnabled();
+    expect(screen.getByLabelText('Max amps', { selector: '#smart-charge-max-amps' })).toBeEnabled();
+  });
 });
 
 // ───────────────────────────── pure utilities ─────────────────────────────
@@ -352,13 +454,18 @@ describe('defaultDepartBy', () => {
 describe('SmartChargePage — before an optimization runs', () => {
   it('shows the labelled cost-comparison region with em-dash placeholders', () => {
     renderPage();
-    const kpi = screen.getByRole('region', { name: 'Cost comparison' });
-    expect(within(kpi).getByText('Charge Now')).toBeInTheDocument();
-    expect(within(kpi).getByText('Optimized Cost')).toBeInTheDocument();
-    expect(within(kpi).getByText('Savings')).toBeInTheDocument();
-    expect(within(kpi).getByText('Energy Needed')).toBeInTheDocument();
-    // All four metric values render the placeholder, never a blank tile.
-    expect(within(kpi).getAllByText('—')).toHaveLength(4);
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const kpi = within(costComparison).getByRole('region', { name: 'Cost comparison' });
+    // Unknown readings are omitted from the face (never em-dash tiles) with a
+    // counted explanation in Review details; the labels survive as chips.
+    expect(within(kpi).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of COST_COMPARISON_LABELS) {
+      expect(within(kpi).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(kpi, label);
+    }
+    expect(within(kpi).queryByText('—')).not.toBeInTheDocument();
   });
 
   it('renders per-panel empty states for timeline, schedule, and alternatives', () => {
@@ -377,6 +484,15 @@ describe('SmartChargePage — before an optimization runs', () => {
   it('threads the selected vehicle into the AI suggestion card', () => {
     renderPage();
     expect(screen.getByTestId('ai-suggestion').getAttribute('data-vehicle-id')).toBe('7');
+  });
+
+  it('labels the comparison as optimizer estimates rather than recorded measurements', () => {
+    renderPage();
+    const comparison = document.getElementById('smart-charge-cost-comparison') as HTMLElement;
+    assertOperationalBriefDisclosure(comparison,
+      'Optimizer estimates for the selected departure and rate plan; not measured charging costs.');
+    assertOperationalBriefDisclosure(comparison,
+      'Recorded measurements from the stated charging source and scope.', { absent: true });
   });
 });
 
@@ -428,7 +544,7 @@ describe('SmartChargePage — rate plan select', () => {
   it('surfaces the rate-plans error with retry instead of silently substituting the fallback', () => {
     const refetch = vi.fn();
     mockRatePlans.mockReturnValue(
-      makeQuery({ data: [], isError: true, error: new Error('plans down'), status: 'error', refetch }),
+      makeQuery({ data: undefined, isError: true, error: new Error('plans down'), status: 'error', refetch }),
     );
     renderPage();
     const rail = (
@@ -457,7 +573,7 @@ describe('SmartChargePage — optimize interaction', () => {
 
   it('seeds the Depart By field with a local (non-UTC) 07:30 wall-clock value', () => {
     renderPage();
-    const departInput = screen.getByLabelText('Depart By') as HTMLInputElement;
+    const departInput = screen.getByLabelText('Depart by') as HTMLInputElement;
     expect(departInput.value).toMatch(/T07:30$/);
   });
 
@@ -488,10 +604,33 @@ describe('SmartChargePage — optimize interaction', () => {
   });
 
   it('renders a spinner + skeletons and blocks re-submit while pending', () => {
-    mockOptimize.mockReturnValue(optimizeState({ isPending: true }));
+    const mutate = vi.fn();
+    mockOptimize.mockReturnValue(optimizeState({ isPending: true, mutate }));
     const { container } = renderPage();
     expect(optimizeButton()).toBeDisabled();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(optimizeButton()).toHaveAttribute('aria-busy', 'true');
+    const spinner = optimizeButton().querySelector('svg[aria-hidden="true"]');
+    expect(spinner).not.toBeNull();
+    expect(spinner).toHaveAttribute('focusable', 'false');
+    expect(spinner).toHaveClass('h-4', 'w-4');
+    const timeline = container.querySelector('[data-chart-state="loading"]');
+    expect(timeline).not.toBeNull();
+    expect(timeline).toHaveAttribute('aria-busy', 'true');
+    // The pending planner timeline never reports ready; the independent
+    // autopilot timeline keeps its own chart state in its own card.
+    expect(timeline?.closest('[data-card]')?.querySelector('[data-chart-state="ready"]')).toBeNull();
+    for (const title of ['Recommended schedule', 'Alternative windows']) {
+      const panel = screen.getByRole('heading', { name: title }).closest('[data-card]');
+      const skeleton = panel?.querySelector('[aria-hidden="true"][style="height: 120px;"]');
+      expect(skeleton).not.toBeNull();
+      expect(skeleton).toHaveClass('h-4', 'w-full', 'bg-[var(--skeleton-bg)]');
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText(/Optimize a schedule to see the recommended charge window/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Optimize a schedule to compare alternative charge windows/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
+    fireEvent.click(optimizeButton());
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it('surfaces the optimizer error message on failure', () => {
@@ -507,7 +646,7 @@ describe('SmartChargePage — optimize interaction', () => {
     mockOptimize.mockReturnValue(optimizeState({ mutate }));
     renderPage();
 
-    fireEvent.change(screen.getByLabelText('Depart By'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '' } });
     fireEvent.click(optimizeButton());
 
     // Invalid Date.toISOString() used to throw an uncaught RangeError here.
@@ -538,7 +677,7 @@ describe('SmartChargePage — optimize interaction', () => {
     renderPage();
 
     // UnitInput commits to the parent on blur/Enter, not on every keystroke.
-    const capacity = screen.getByLabelText('Battery Capacity');
+    const capacity = screen.getByLabelText('Battery capacity');
     fireEvent.change(capacity, { target: { value: '' } });
     fireEvent.blur(capacity);
     fireEvent.click(optimizeButton());
@@ -546,6 +685,57 @@ describe('SmartChargePage — optimize interaction', () => {
     expect(screen.getByText('Enter a battery capacity greater than 0.')).toBeInTheDocument();
     expect(mutate).not.toHaveBeenCalled();
   });
+
+  it.each(['pending', 'failed'] as const)(
+    'resets previous-vehicle mutation feedback after a %s optimization without resetting form choices',
+    (state) => {
+      const optimize = optimizeState({
+        isPending: state === 'pending',
+        isError: state === 'failed',
+        error: state === 'failed' ? new Error('previous vehicle optimization failed') : null,
+      });
+      optimize.reset.mockImplementation(() => {
+        Object.assign(optimize, { isPending: false, isError: false, error: null });
+      });
+      const apply = applyState({ isError: true, error: new Error('previous vehicle apply failed') });
+      apply.reset.mockImplementation(() => {
+        Object.assign(apply, { isPending: false, isError: false, error: null });
+      });
+      mockOptimize.mockReturnValue(optimize);
+      mockApply.mockReturnValue(apply);
+      renderPage();
+      fireEvent.change(screen.getByLabelText('Rate plan', { selector: '#smart-charge-rate-plan' }), {
+        target: { value: 'sce-tou-d' },
+      });
+      fireEvent.change(document.getElementById('smart-charge-max-amps') as HTMLInputElement, {
+        target: { value: '40' },
+      });
+      expect(optimize.reset).not.toHaveBeenCalled();
+      expect(apply.reset).not.toHaveBeenCalled();
+      if (state === 'pending') expect(optimizeButton()).toBeDisabled();
+      else expect(screen.getAllByText('previous vehicle optimization failed').length).toBeGreaterThan(0);
+
+      mockSelected.mockReturnValue(selected(8));
+      fireEvent.change(screen.getByLabelText('Depart by'), {
+        target: { value: '2026-01-17T07:30' },
+      });
+      expect(optimize.reset).toHaveBeenCalledTimes(1);
+      expect(apply.reset).toHaveBeenCalledTimes(1);
+      // The real observer reset rerenders; this deterministic mock needs a form render.
+      fireEvent.change(document.getElementById('smart-charge-max-amps') as HTMLInputElement, {
+        target: { value: '41' },
+      });
+      expect(optimizeButton()).toBeEnabled();
+      expect(screen.queryByText('previous vehicle optimization failed')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Rate plan', { selector: '#smart-charge-rate-plan' })).toHaveValue('sce-tou-d');
+      expect(screen.getByLabelText('Depart by')).toHaveValue('2026-01-17T07:30');
+      fireEvent.click(optimizeButton());
+      expect(optimize.mutate).toHaveBeenCalledWith(expect.objectContaining({
+        vehicle_id: 8, target_soc: 80, rate_plan_id: 'sce-tou-d',
+        max_amps: 41, battery_capacity_kwh: 75,
+      }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+    },
+  );
 });
 
 // ─────────────────────────── page: populated result ───────────────────────
@@ -562,12 +752,16 @@ describe('SmartChargePage — after a successful optimization', () => {
 
   it('fills the KPI band, energy tile, and savings delta from the response', () => {
     optimizeToResult();
-    const kpi = screen.getByRole('region', { name: 'Cost comparison' });
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const kpi = within(costComparison).getByRole('region', { name: 'Cost comparison' });
     expect(within(kpi).getByText('$8.50')).toBeInTheDocument(); // charge now
     expect(within(kpi).getByText('$3.25')).toBeInTheDocument(); // optimized
     expect(within(kpi).getByText('$5.25')).toBeInTheDocument(); // savings
-    expect(within(kpi).getByText('42.0 kWh')).toBeInTheDocument(); // energy
-    expect(within(kpi).getByText(/62%/)).toBeInTheDocument(); // savings_percent delta
+    expect(within(kpi).getByText('42.00 kWh')).toBeInTheDocument(); // energy
+    // The savings_percent delta moved off the face into the drawer's Savings group.
+    expectDrawerGroupText(kpi, 'Savings', /61\.80%/);
     // Scoped to the KPI band: sibling sections (Autopilot preview placeholders)
     // legitimately render '—' until they have their own data.
     expect(within(kpi).queryAllByText('—')).toHaveLength(0);
@@ -586,8 +780,8 @@ describe('SmartChargePage — after a successful optimization', () => {
     optimizeToResult();
     expect(screen.getAllByText('Current SOC').length).toBeGreaterThan(0);
     expect(screen.getAllByText('35%').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Start Time').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('End Time').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Start time').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('End time').length).toBeGreaterThan(0);
     expect(screen.getAllByText('SUPER_OFF_PEAK').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$4.10').length).toBeGreaterThan(0);
     expect(screen.getAllByText('$4.80').length).toBeGreaterThan(0);
@@ -607,7 +801,7 @@ describe('SmartChargePage — after a successful optimization', () => {
 
     expect(applyMutate).toHaveBeenCalledTimes(1);
     expect(applyMutate.mock.calls[0][0]).toEqual({ plan_id: 555 });
-    expect(screen.getByText('Schedule Applied!')).toBeInTheDocument();
+    expect(screen.getByText('Schedule applied!')).toBeInTheDocument();
   });
 
   it('shows the apply error copy when applying fails', () => {
@@ -621,6 +815,107 @@ describe('SmartChargePage — after a successful optimization', () => {
     fireEvent.click(optimizeButton());
     expect(screen.getByText('vehicle offline')).toBeInTheDocument();
   });
+
+  it('reports invalid optimizer measurements as unknown without manufacturing zero costs or energy', () => {
+    const invalidResult: OptimizeChargeResponse = {
+      ...RESULT,
+      kwh_needed: Number.NaN,
+      current_soc: Number.NaN,
+      comparison: { ...RESULT.comparison, charge_now_cost: Number.NaN },
+    };
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) =>
+        opts?.onSuccess?.(invalidResult)),
+    }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const brief = within(costComparison).getByRole('region', { name: 'Cost comparison' });
+    const kpi = within(brief);
+    // Invalid readings are omitted (never em-dash tiles, never zeroed) with a
+    // counted drawer explanation; the valid siblings stay on the face.
+    assertOperationalMetricUnavailable(brief, 'Charge now');
+    assertOperationalMetricUnavailable(brief, 'Energy needed');
+    expect(kpi.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(kpi.queryByText('0.00 kWh')).not.toBeInTheDocument();
+    expect(kpi.getByText('$3.25')).toBeInTheDocument();
+    expect(kpi.getByText('$5.25')).toBeInTheDocument();
+  });
+
+  it('does not display or apply a result that finishes after the selected vehicle changes', () => {
+    let finish: ((result: OptimizeChargeResponse) => void) | undefined;
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) => {
+        finish = opts?.onSuccess;
+      }),
+    }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    mockSelected.mockReturnValue(selected(8));
+    // Native field interaction forces a render with the newly selected scope.
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-17T07:30' } });
+    act(() => finish?.(RESULT));
+    expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const brief = within(costComparison).getByRole('region', { name: 'Cost comparison' });
+    for (const label of COST_COMPARISON_LABELS) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+  });
+
+  it('rejects a stale result even when vehicle selection changes away and back', () => {
+    let finish: ((result: OptimizeChargeResponse) => void) | undefined;
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) => {
+        finish = opts?.onSuccess;
+      }),
+    }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    mockSelected.mockReturnValue(selected(8));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-17T07:30' } });
+    mockSelected.mockReturnValue(selected(7));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-18T07:30' } });
+    act(() => finish?.(RESULT));
+    expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
+    const shell = document.getElementById('smart-charge-cost-comparison') as HTMLElement;
+    const comparison = within(shell);
+    for (const label of COST_COMPARISON_LABELS) {
+      assertOperationalMetricUnavailable(shell, label);
+    }
+    expect(comparison.queryByText('$3.25')).not.toBeInTheDocument();
+  });
+
+  it('does not mark a new schedule applied when an old vehicle-scope apply finishes', () => {
+    let finishApply: (() => void) | undefined;
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) =>
+        opts?.onSuccess?.(RESULT)),
+    }));
+    const mutate = vi.fn((_vars: unknown, opts?: { onSuccess?: () => void }) => {
+      finishApply = opts?.onSuccess;
+    });
+    mockApply.mockReturnValue(applyState({ mutate }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    fireEvent.click(screen.getByRole('button', { name: /Apply Schedule/i }));
+    expect(mutate).toHaveBeenCalledWith({ plan_id: 555 }, expect.objectContaining({
+      onSuccess: expect.any(Function),
+    }));
+    mockSelected.mockReturnValue(selected(8));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-17T07:30' } });
+    mockSelected.mockReturnValue(selected(7));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-18T07:30' } });
+    fireEvent.click(optimizeButton());
+    act(() => finishApply?.());
+    expect(screen.getByRole('button', { name: /Apply Schedule/i })).toBeEnabled();
+    expect(screen.queryByText('Schedule applied!')).not.toBeInTheDocument();
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ─────────────────────────── page: plan history ───────────────────────────
@@ -629,7 +924,12 @@ describe('SmartChargePage — plan history', () => {
   it('renders a skeleton while history is loading and there is nothing cached', () => {
     mockPlans.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = renderPage();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const history = screen.getByRole('heading', { name: 'Plan history' }).closest('[data-card]');
+    const skeleton = history?.querySelector('[aria-hidden="true"][style="height: 200px;"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'bg-[var(--skeleton-bg)]');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByRole('table', { name: 'charging:smart-charge-history' })).not.toBeInTheDocument();
     expect(
       screen.queryByText(/No charge plans yet/i),
     ).not.toBeInTheDocument();
@@ -641,7 +941,9 @@ describe('SmartChargePage — plan history', () => {
       makeQuery({ data: undefined, isError: true, error: new Error('history down'), refetch }),
     );
     renderPage();
-    const retry = screen.getByRole('button', { name: /Retry/i });
+    // The independent autopilot profile renders its own Retry; scope to history.
+    const history = screen.getByRole('heading', { name: 'Plan history' }).closest('[data-card]') as HTMLElement;
+    const retry = within(history).getByRole('button', { name: /Retry/i });
     fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -658,12 +960,12 @@ describe('SmartChargePage — plan history', () => {
     renderPage();
     // Scope to the single history <table> so the rate-plan cells aren't
     // confused with the identically-labelled Rate Plan <select> options.
-    const table = within(screen.getByRole('table'));
+    const table = within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
     expect(table.getByText('PG&E EV2-A')).toBeInTheDocument();
     expect(table.getByText('SCE TOU-D')).toBeInTheDocument();
     // planStatusVariant surfaced through the shared Badge colour classes.
-    expect(table.getByText('completed').className).toContain('bg-green-100');
-    expect(table.getByText('pending').className).toContain('bg-yellow-100');
+    expect(table.getByText('completed')).toHaveClass(...BADGE_VARIANTS.success.split(' '));
+    expect(table.getByText('pending')).toHaveClass(...BADGE_VARIANTS.warning.split(' '));
   });
 
   it('shows the empty message when there are no charge plans', () => {
@@ -672,5 +974,537 @@ describe('SmartChargePage — plan history', () => {
     expect(
       screen.getByText('No charge plans yet. Optimize a schedule above to get started.'),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    ['missing', undefined, '—', false],
+    ['null', null, '—', false],
+    ['NaN', Number.NaN, '—', false],
+    ['positive infinity', Number.POSITIVE_INFINITY, '—', false],
+    ['negative infinity', Number.NEGATIVE_INFINITY, '—', false],
+    ['zero', 0, '$0.00', false],
+    ['positive', 5, '$5.00', true],
+    ['negative', -5, '$-5.00', false],
+    ['positive fraction', 0.125, '$0.13', true],
+    ['negative fraction', -0.125, '$-0.13', false],
+  ] as const)('preserves %s currency in history cells and filter labels', (_label, value, label, positive) => {
+    mockPlans.mockReturnValue(makeQuery({
+      data: [makePlan({ estimated_cost: value, savings: value })],
+    }));
+    renderPage();
+    const table = within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    const cells = within(table.getAllByRole('row')[1]).getAllByRole('cell');
+    expect(cells[3]).toHaveTextContent(label);
+    expect(cells[4]).toHaveTextContent(label);
+    const saved = within(cells[4]).getByText(label);
+    if (positive) expect(saved).toHaveClass(neonColorMap.green.text);
+    else expect(saved).not.toHaveClass(neonColorMap.green.text);
+
+    for (const column of ['Cost', 'Saved']) {
+      fireEvent.click(table.getByRole('button', { name: `${column} filter` }));
+      const dialog = screen.getByRole('dialog', { name: `${column} filter` });
+      expect(within(dialog).getByRole('checkbox', { name: label })).toBeChecked();
+      expect(dialog).not.toHaveTextContent('NaN');
+      expect(dialog).not.toHaveTextContent('Infinity');
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+    }
+  });
+
+  it.each(['Cost', 'Saved'])('keeps unknown %s values distinct from measured zero when filtering', (column) => {
+    const amounts = [undefined, null, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1.25, 1.25];
+    mockPlans.mockReturnValue(makeQuery({
+      data: amounts.map((amount, index) => makePlan({
+        id: index + 1, rate_plan: `Plan ${index + 1}`, estimated_cost: amount, savings: amount,
+      })),
+    }));
+    renderPage();
+    const table = () => within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    fireEvent.click(table().getByRole('button', { name: `${column} filter` }));
+    const dialog = screen.getByRole('dialog', { name: `${column} filter` });
+    const filter = within(dialog);
+    expect(within(filter.getByRole('group', { name: 'Available values' })).getAllByRole('checkbox')).toHaveLength(4);
+    fireEvent.click(filter.getByRole('checkbox', { name: '—' }));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(table().getAllByRole('row')).toHaveLength(4);
+    expect(table().getByText('Plan 6')).toBeInTheDocument();
+    expect(table().getByText('Plan 7')).toBeInTheDocument();
+    expect(table().getByText('Plan 8')).toBeInTheDocument();
+    expect(table().queryByText('—')).not.toBeInTheDocument();
+    expect(table().getAllByText('$0.00')).toHaveLength(2);
+  });
+
+  it('keeps every history field reachable on phones through the existing scrollable table', () => {
+    mockPlans.mockReturnValue(makeQuery({ data: [makePlan()] }));
+    renderPage();
+    const tableElement = screen.getByRole('table', { name: 'charging:smart-charge-history' });
+    const table = within(tableElement);
+    expect(table.getAllByRole('columnheader')).toHaveLength(6);
+    for (const cell of table.getAllByRole('columnheader').concat(table.getAllByRole('cell'))) {
+      expect(cell).not.toHaveClass('hidden');
+    }
+    expect(table.getByText('02:00 — 05:00')).toBeInTheDocument();
+    expect(table.getByText('PG&E EV2-A')).toBeInTheDocument();
+    expect(table.getByText('$3.25')).toBeInTheDocument();
+    expect(table.getByText('$5.25')).toHaveClass(neonColorMap.green.text);
+    expect(table.getByText('completed')).toHaveClass(...BADGE_VARIANTS.success.split(' '));
+    expect(tableElement.closest('.overflow-auto')).toHaveClass('max-w-full', 'overscroll-x-contain');
+    expect(tableElement).toHaveAttribute('tabindex', '0');
+  });
+
+  it('retains history rows and shows an honest warning after a failed background refresh', () => {
+    mockPlans.mockReturnValue(makeQuery({
+      data: [makePlan()],
+      isError: true,
+      error: new Error('history refresh failed'),
+    }));
+    renderPage();
+    const history = within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    expect(history.getByText('PG&E EV2-A')).toBeInTheDocument();
+    expect(history.getByText('$3.25')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps cached rate plans selected and reports an offline refresh without substituting defaults', () => {
+    mockRatePlans.mockReturnValue(makeQuery({ data: backendRatePlans, fetchStatus: 'paused' }));
+    renderPage();
+    expect(screen.getAllByText('LADWP R1B (LADWP)').length).toBeGreaterThan(0);
+    const settings = within(screen.getByRole('group', { name: 'Charge settings' }));
+    const warning = settings.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toHaveAttribute('aria-live', 'polite');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(warning).getByText('Data may be stale')).toBeInTheDocument();
+    expect(within(warning).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeInTheDocument();
+    expect(within(warning).getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    expect(settings.getByLabelText('Rate plan')).toHaveValue('pge-ev2a');
+    expect(screen.queryByText(/device is offline/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('SCE TOU-D')).not.toBeInTheDocument();
+  });
+
+  it('sorts recorded history costs without changing their numerical values', () => {
+    mockPlans.mockReturnValue(makeQuery({
+      data: [
+        makePlan({ id: 1, rate_plan: 'Expensive', estimated_cost: 9 }),
+        makePlan({ id: 2, rate_plan: 'Affordable', estimated_cost: 2 }),
+      ],
+    }));
+    renderPage();
+    const liveTable = () => within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    fireEvent.click(liveTable().getByRole('button', { name: 'Cost' }));
+    const descendingRows = liveTable().getAllByRole('row');
+    expect(within(descendingRows[1]).getByText('Expensive')).toBeInTheDocument();
+    expect(within(descendingRows[1]).getByText('$9.00')).toBeInTheDocument();
+    expect(within(descendingRows[2]).getByText('Affordable')).toBeInTheDocument();
+    expect(within(descendingRows[2]).getByText('$2.00')).toBeInTheDocument();
+    fireEvent.click(liveTable().getByRole('button', { name: 'Cost' }));
+    const rows = liveTable().getAllByRole('row');
+    expect(within(rows[1]).getByText('Affordable')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('$2.00')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('$9.00')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['active loading', { isPending: true, isLoading: true, isFetching: true, status: 'pending', fetchStatus: 'fetching' }],
+    ['paused without data', { isPending: true, status: 'pending', fetchStatus: 'paused' }],
+    ['successful empty', { data: null }],
+    ['initial failure', { isError: true, error: new Error('profile load failed') }],
+  ])('blocks autopilot defaults during %s without hiding independent sources', (_label, query) => {
+    const save = optimizeState();
+    const preview = optimizeState();
+    const run = optimizeState();
+    const refetch = vi.fn();
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotPreview.mockReturnValue(preview);
+    mockAutopilotRun.mockReturnValue(run);
+    mockAutopilotProfile.mockReturnValue(makeQuery({ ...query, refetch }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 } }));
+    renderPage();
+
+    expect(screen.getByText('Charging Autopilot')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Autopilot on')).not.toBeInTheDocument();
+    expect(screen.queryByText('Autopilot off')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Unsaved draft:/)).not.toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Enable autopilot' })).toBeDisabled();
+    for (const name of ['Save Autopilot', 'Preview next run', 'Run now']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    expect(save.mutate).not.toHaveBeenCalled();
+    expect(preview.mutate).not.toHaveBeenCalled();
+    expect(run.mutate).not.toHaveBeenCalled();
+    expectSavingsValue(
+      document.getElementById('smart-charge-autopilot-savings') as HTMLElement,
+      '$0.00', '$0.00 across 0 runs');
+    expect(optimizeButton()).toBeEnabled();
+    expect(screen.getByText('No charge plans yet. Optimize a schedule above to get started.')).toBeInTheDocument();
+    if (!('isFetching' in query && query.isFetching)) {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('hydrates authoritative zero/false values after a paused profile recovers', () => {
+    const save = optimizeState();
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: false, ready_by: '00:00', target_soc: 0,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 0, trip_override: false,
+      precondition: false, max_amps: 0, battery_capacity_kwh: 0,
+    };
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotProfile.mockReturnValue(makeQuery({ isPending: true, fetchStatus: 'paused' }));
+    const { rerenderPage } = renderPage();
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeDisabled();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    rerenderPage();
+    expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('00:00');
+    // Both the planner rail and the autopilot profile expose Max amps; the
+    // hydrated zero belongs to the autopilot profile.
+    expect(within(autopilotCard()).getByLabelText('Max amps')).toHaveValue(0);
+    expect(screen.getByRole('switch', { name: 'Precondition before departure' })).not.toBeChecked();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
+    expect(save.mutate).toHaveBeenCalledWith(profile);
+    expect(screen.getByRole('button', { name: 'Preview next run' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+  });
+
+  it('uses the retained profile during a failed refresh and preserves edits on recovery', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const save = optimizeState();
+    const preview = optimizeState();
+    const run = optimizeState();
+    const refetch = vi.fn();
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotPreview.mockReturnValue(preview);
+    mockAutopilotRun.mockReturnValue(run);
+    mockAutopilotProfile.mockReturnValue(makeQuery({
+      data: profile, isError: true, error: new Error('profile refresh failed'), refetch,
+    }));
+    const { rerenderPage } = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable autopilot' }));
+    expect(screen.getByText('Unsaved draft: Off')).toBeInTheDocument();
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Ready by (daily)'), { target: { value: '05:30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
+    expect(save.mutate).toHaveBeenCalledWith({ ...profile, enabled: false, ready_by: '05:30' });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview next run' }));
+    expect(preview.mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
+    expect(run.mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: { ...profile }, refetch }));
+    rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('05:30');
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved draft: Off')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Enable autopilot' })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeEnabled();
+  });
+
+  it('keeps draft enable intent separate from persisted status until a successful save refresh', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: false, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const save = optimizeState();
+    const run = optimizeState();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotRun.mockReturnValue(run);
+    const { rerenderPage } = renderPage();
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable autopilot' }));
+    expect(screen.getByRole('switch', { name: 'Enable autopilot' })).toBeChecked();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved draft: On')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
+    expect(run.mutate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
+    expect(save.mutate).toHaveBeenCalledWith({ ...profile, enabled: true });
+
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isPending: true }));
+    rerenderPage();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeDisabled();
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isError: true, error: new Error('save rejected') }));
+    rerenderPage();
+    expect(screen.getByText('save rejected')).toBeInTheDocument();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved draft: On')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isSuccess: true, data: { ...profile, enabled: true } }));
+    rerenderPage();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: { ...profile, enabled: true } }));
+    rerenderPage();
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
+    expect(screen.queryByText(/Unsaved draft:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
+    expect(run.mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+  });
+
+  it('shows run completion only after success and blocks running while saving the persisted profile', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const data = { message: 'Autopilot scheduled successfully' };
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isPending: true }));
+    const { rerenderPage } = renderPage();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+    mockSaveAutopilot.mockReturnValue(optimizeState());
+    for (const state of [
+      {},
+      { isPending: true },
+      { isPending: true, isPaused: true },
+      { isError: true, error: new Error('run rejected') },
+    ]) {
+      mockAutopilotRun.mockReturnValue(optimizeState({ data, ...state }));
+      rerenderPage();
+      expect(screen.queryByText(data.message)).not.toBeInTheDocument();
+    }
+    expect(screen.getByText('run rejected')).toBeInTheDocument();
+    mockAutopilotRun.mockReturnValue(optimizeState({ data, isSuccess: true }));
+    rerenderPage();
+    expect(screen.getByText(data.message)).toBeInTheDocument();
+    expect(screen.queryByText('run rejected')).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])('describes autopilot preview as an estimate without changing historical savings (populated: %s)', populated => {
+    const preview: AutopilotPreview = {
+      effective_target_soc: 80, capped_by_health_guardrail: false, ready_by: '07:30',
+      kwh_needed: RESULT.kwh_needed, estimated_duration_hours: RESULT.estimated_duration_hours,
+      window: RESULT.schedule, ...RESULT.comparison,
+      hourly_rates: RESULT.hourly_rates, explanation: 'Estimated optimal charge window',
+    };
+    mockAutopilotPreview.mockReturnValue(optimizeState({ data: populated ? preview : null }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 12.5, runs: 3 } }));
+    const { container } = renderPage();
+    const previewShell = container.querySelector<HTMLElement>('#smart-charge-autopilot-preview')!;
+    const savingsShell = container.querySelector<HTMLElement>('#smart-charge-autopilot-savings')!;
+    const estimateDescription = 'Estimated next charge window from the current profile and SOC input; not an applied schedule.';
+    const historicalDescription = 'Recorded measurements from the stated charging source and scope.';
+
+    expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
+    assertOperationalBriefDisclosure(previewShell, estimateDescription);
+    assertOperationalBriefDisclosure(previewShell, historicalDescription, { absent: true });
+    expect(savingsShell).toHaveAttribute('data-period-kind', 'unknown');
+    assertOperationalBriefDisclosure(savingsShell, historicalDescription);
+    assertOperationalBriefDisclosure(savingsShell, estimateDescription, { absent: true });
+    expectSavingsValue(savingsShell, '$12.50', '$12.50 across 3 runs');
+    expect(within(previewShell).queryByText('$5.25') != null).toBe(populated);
+  });
+
+  it('preserves autopilot profile controls, preview/run actions and retained realized savings', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const savings: AutopilotSavings = { total_savings: 12.5, runs: 3 };
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({
+      data: savings,
+      isError: true, error: new Error('ledger refresh failed'),
+    }));
+    renderPage();
+    expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('06:45');
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Preview next run' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeEnabled();
+    expectSavingsValue(
+      document.getElementById('smart-charge-autopilot-savings') as HTMLElement,
+      '$12.50', '$12.50 across 3 runs');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+  });
+
+  it.each([
+    ['active loading', { isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching' }, true],
+    ['paused without data', { isPending: true, fetchStatus: 'paused' }, false],
+    ['successful empty', { data: null }, false],
+    ['initial failure', { isError: true, error: new Error('savings unavailable') }, false],
+  ])('keeps independent autopilot evidence shells mounted during %s', (_label, query, busy) => {
+    const refetch = vi.fn();
+    mockAutopilotProfile.mockReturnValue(makeQuery({
+      isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching',
+    }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ ...query, refetch }));
+    const { container } = renderPage();
+    const previewShell = container.querySelector('#smart-charge-autopilot-preview')!;
+    const savingsShell = container.querySelector('#smart-charge-autopilot-savings')!;
+    expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(previewShell).not.toHaveAttribute('aria-busy');
+    expect(savingsShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(savingsShell.getAttribute('aria-busy')).toBe(busy ? 'true' : null);
+    assertOperationalBriefDisclosure(previewShell, 'No source measurements');
+    expect(screen.queryByLabelText('Ready by (daily)')).not.toBeInTheDocument();
+    // Both independent timelines (planner hero + autopilot preview) stay mounted.
+    expect(screen.getAllByText('24-hour rate timeline', { selector: '[data-card-title]' })).toHaveLength(2);
+    if (!busy) {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('retains preview and savings through pending, failed and paused refreshes, then recovers independently', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const preview: AutopilotPreview = {
+      effective_target_soc: 85, capped_by_health_guardrail: false, ready_by: '06:45',
+      kwh_needed: 0, estimated_duration_hours: 0, window: RESULT.schedule,
+      charge_now_cost: 0, optimized_cost: 0, savings: 0, savings_percent: 0,
+      hourly_rates: [], explanation: 'Authoritative zero-energy preview',
+    };
+    const mutate = vi.fn();
+    const refetch = vi.fn();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockAutopilotPreview.mockReturnValue(optimizeState({ data: preview, mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 }, refetch }));
+    const { container, rerenderPage } = renderPage();
+    const shell = (id: string) => container.querySelector(`#smart-charge-autopilot-${id}`)!;
+    expect(within(shell('preview') as HTMLElement).getByText('$0.00')).toBeInTheDocument();
+    expectSavingsValue(shell('savings') as HTMLElement, '$0.00', '$0.00 across 0 runs');
+    mockAutopilotPreview.mockReturnValue(optimizeState({ isPending: true, mutate }));
+    rerenderPage();
+    expect(screen.getByText(preview.explanation)).toBeInTheDocument();
+    expect(shell('preview')).toHaveAttribute('data-retained', 'true');
+    mockAutopilotPreview.mockReturnValue(optimizeState({ isError: true, error: new Error('preview refresh failed'), mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({
+      data: { total_savings: 0, runs: 0 }, isError: true, error: new Error('savings refresh failed'), refetch,
+    }));
+    rerenderPage();
+    expect(screen.getByText(preview.explanation)).toBeInTheDocument();
+    expectSavingsValue(shell('savings') as HTMLElement, '$0.00', '$0.00 across 0 runs');
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    expect(refetch).toHaveBeenCalledOnce();
+    mockAutopilotPreview.mockReturnValue(optimizeState({ data: { ...preview, savings: 5 }, mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 }, fetchStatus: 'paused', refetch }));
+    rerenderPage();
+    expect(within(shell('preview') as HTMLElement).getByText('$5.00')).toBeInTheDocument();
+    expect(shell('preview')).not.toHaveAttribute('data-retained');
+    expect(shell('savings')).toHaveAttribute('data-retained', 'true');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 8, runs: 2 }, refetch }));
+    rerenderPage();
+    expectSavingsValue(shell('savings') as HTMLElement, '$8.00', '$8.00 across 2 runs');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(shell('savings')).not.toHaveAttribute('data-retained');
+  });
+
+  it.each([
+    ['active loading', { isPending: true }, true],
+    ['paused without data', { isPending: true, isPaused: true }, false],
+    ['successful empty', { data: null, isSuccess: true }, false],
+    ['initial failure', { isError: true, error: new Error('preview unavailable') }, false],
+  ])('keeps preview unknown rather than zero during %s', (_label, state, busy) => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const mutate = vi.fn();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockAutopilotPreview.mockReturnValue(optimizeState({ ...state, mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 } }));
+    const { container } = renderPage();
+    const previewShell = container.querySelector('#smart-charge-autopilot-preview')!;
+    expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(previewShell.getAttribute('aria-busy')).toBe(busy ? 'true' : null);
+    expect(within(previewShell as HTMLElement).queryByText('$0.00')).not.toBeInTheDocument();
+    expectSavingsValue(
+      document.getElementById('smart-charge-autopilot-savings') as HTMLElement,
+      '$0.00', '$0.00 across 0 runs');
+    if ('isError' in state) {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    }
+  });
+
+  it.each([
+    ['missing', null],
+    ['not a number', Number.NaN],
+    ['infinite', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['populated', 42000],
+  ])('separates OCPP lifecycle from %s energy for open and ended transactions', (_label, energy) => {
+    const session: OcppSession = {
+      transaction_id: 12, charge_point_id: 'charger-1', connector_id: 1,
+      started_at: '2026-01-16T02:00:00Z', ended_at: null,
+      start_meter_wh: 0, end_meter_wh: null, energy_delivered_wh: energy,
+      stop_reason: '',
+    };
+    mockOcppSessions.mockReturnValue(makeQuery({
+      data: [session, { ...session, transaction_id: 13, ended_at: '2026-01-16T03:00:00Z' }],
+    }));
+    renderPage();
+    const openRow = screen.getByText('charger-1 · #12').closest('li')!;
+    const endedRow = screen.getByText('charger-1 · #13').closest('li')!;
+    for (const row of [openRow, endedRow]) {
+      const reading = within(row).getByLabelText('Energy');
+      if (energy != null && Number.isFinite(energy)) {
+        expect(reading).toHaveTextContent(energy === 0 ? /0.*kWh/ : /42.*kWh/);
+      } else {
+        expect(reading).toHaveTextContent('Unknown');
+        expect(reading).not.toHaveTextContent(/kWh/);
+      }
+    }
+    expect(within(openRow).getByText('in progress')).toBeInTheDocument();
+    expect(within(openRow).queryByText('Completed')).not.toBeInTheDocument();
+    expect(within(endedRow).getByText('Completed')).toBeInTheDocument();
+    expect(within(endedRow).queryByText('in progress')).not.toBeInTheDocument();
+  });
+
+  it('keeps OCPP charger and transaction readings visible after independent refresh failures', () => {
+    const point: OcppChargePoint = {
+      id: 'charger-1', vendor: 'Vendor', model: 'Model',
+      serial_number: '', firmware_version: '', last_boot_at: null,
+      last_seen_at: '2026-01-16T02:00:00Z', active_sessions: 1,
+      connectors: [{ connector_id: 1, status: 'Charging', error_code: '', info: '',
+        updated_at: '2026-01-16T02:00:00Z' }],
+    };
+    const session: OcppSession = {
+      transaction_id: 12, charge_point_id: 'charger-1', connector_id: 1,
+      started_at: '2026-01-16T02:00:00Z', ended_at: '2026-01-16T03:00:00Z',
+      start_meter_wh: 0, end_meter_wh: 42000, energy_delivered_wh: 42000,
+      stop_reason: 'Local',
+    };
+    mockOcppPoints.mockReturnValue(makeQuery({
+      data: [point],
+      isError: true, error: new Error('inventory refresh failed'),
+    }));
+    mockOcppSessions.mockReturnValue(makeQuery({
+      data: [session],
+      isError: true, error: new Error('transactions refresh failed'),
+    }));
+    renderPage();
+    expect(screen.getByText('Vendor Model')).toBeInTheDocument();
+    expect(screen.getByText('#1 Charging')).toBeInTheDocument();
+    expect(screen.getByText('charger-1 · #12')).toBeInTheDocument();
+    expect(screen.getByText(/42.*kWh/)).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
   });
 });

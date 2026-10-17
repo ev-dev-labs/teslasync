@@ -228,6 +228,28 @@ describe('TotpEnrollModal — clipboard + a11y', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(SECRET))
   })
 
+  it('keeps the exact selectable secret and verification usable after clipboard denial', async () => {
+    writeText.mockRejectedValueOnce(new Error('Clipboard denied'))
+    const onVerify = vi.fn()
+    renderModal({ onVerify })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(await screen.findByText(
+      'Clipboard unavailable. Select the displayed text and copy it manually.',
+    )).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Manual entry secret' })).toHaveTextContent(SECRET)
+    expect(screen.getByTestId('totp-secret')).toHaveTextContent(SECRET)
+    expect(screen.queryByRole('button', { name: 'Copied' })).toBeNull()
+    fireEvent.click(screen.getByTestId('totp-verify-submit'))
+    expect(onVerify).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    await waitFor(() => expect(screen.queryByText(
+      'Clipboard unavailable. Select the displayed text and copy it manually.',
+    )).toBeNull())
+    expect(writeText).toHaveBeenLastCalledWith(SECRET)
+  })
+
   it('associates the code input with its label and gives the QR alt text', () => {
     renderModal()
 

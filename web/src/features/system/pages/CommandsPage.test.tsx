@@ -97,16 +97,24 @@ function installHooks({
   vehicles,
   loading = false,
   error = null,
+  pending = vehicles === undefined && error === null,
+  fetchStatus = loading ? 'fetching' : 'idle',
   selected = vehicles?.[0] ?? null,
 }: {
   vehicles?: Vehicle[];
   loading?: boolean;
   error?: Error | null;
+  pending?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   selected?: Vehicle | null;
 }) {
   useVehiclesMock.mockReturnValue({
     data: vehicles,
     isLoading: loading,
+    isPending: pending,
+    isFetching: fetchStatus === 'fetching',
+    isSuccess: vehicles !== undefined && error === null,
+    fetchStatus,
     error,
     refetch: refetchMock,
   });
@@ -137,6 +145,70 @@ beforeEach(() => {
 });
 
 describe('CommandsPage', () => {
+  it.each(['idle', 'fetching'] as const)(
+    'does not mistake a %s pending query for an authoritative empty fleet',
+    (fetchStatus) => {
+      installHooks({ pending: true, vehicles: undefined, fetchStatus });
+
+      renderPage();
+
+      expect(screen.getByLabelText('Loading your fleet')).toBeInTheDocument();
+      expect(screen.queryByText('No vehicles found')).not.toBeInTheDocument();
+      expect(screen.queryByText('Connect Tesla account')).not.toBeInTheDocument();
+    },
+  );
+
+  it('shows paused initial loading without an empty-fleet or outage diagnosis and recovers', () => {
+    installHooks({ vehicles: undefined, fetchStatus: 'paused' });
+    const { rerender } = renderPage();
+
+    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(screen.getByText('Command readiness')).toBeInTheDocument();
+    expect(screen.getByText('Command workspace')).toBeInTheDocument();
+    expect(screen.getAllByText('No requested source has returned usable data yet.')).toHaveLength(2);
+    expect(screen.queryByLabelText('Loading your fleet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No vehicles found|Service unavailable|Paused offline/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Connect Tesla account')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+
+    installHooks({ vehicles: [makeVehicle(1)] });
+    rerender(<MemoryRouter><CommandsPage /></MemoryRouter>);
+    expect(screen.getByTestId('vehicle-command-center')).toHaveTextContent('Car 1');
+    expect(screen.queryByTestId('command-center-paused')).not.toBeInTheDocument();
+  });
+
+  it('retains a confirmed empty roster when refresh fails and clears the warning on recovery', () => {
+    installHooks({ vehicles: [], error: new Error('refresh failed') });
+    const { rerender } = renderPage();
+
+    expect(screen.getByText('No vehicles found')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+
+    installHooks({ vehicles: [] });
+    rerender(<MemoryRouter><CommandsPage /></MemoryRouter>);
+    expect(screen.getByText('No vehicles found')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('retains zero last-reported-active vehicles during a paused refresh and recovery', () => {
+    const vehicle = makeVehicle(1, { state: 'asleep' });
+    installHooks({ vehicles: [vehicle], fetchStatus: 'paused' });
+    const { rerender } = renderPage();
+
+    expect(screen.getByText('0/1 last reported active')).toBeInTheDocument();
+    expect(screen.getByTestId('vehicle-command-center')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Refresh paused');
+    expect(screen.queryByText(/Service unavailable|Paused offline|No vehicles found/)).not.toBeInTheDocument();
+
+    installHooks({ vehicles: [vehicle] });
+    rerender(<MemoryRouter><CommandsPage /></MemoryRouter>);
+    expect(screen.getByText('0/1 last reported active')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
   it('renders useful section shells while the fleet is loading', () => {
     installHooks({ loading: true, vehicles: undefined, selected: null });
 
@@ -145,7 +217,7 @@ describe('CommandsPage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Vehicle Command Center',
+        name: 'Vehicle command center',
       }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Loading your fleet')).toBeInTheDocument();
@@ -209,6 +281,7 @@ describe('CommandsPage', () => {
     );
     expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
     expect(screen.getByText('1/2 last reported active')).toBeInTheDocument();
+    expect(screen.getByText('1/2 last reported active').closest('[data-action-group="metadata"]')).not.toBeNull();
 
     expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
   });
@@ -254,5 +327,79 @@ describe('CommandsPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent(
       '/command-history',
     );
+  });
+
+  it('renders canonical decorative route icons without changing the history action', () => {
+    const vehicle = makeVehicle(1);
+    installHooks({ vehicles: [vehicle], selected: vehicle });
+
+    renderPage();
+
+    const historyIcon = screen.getByRole('button', { name: 'View history' })
+      .querySelector('svg');
+    const fleetIcon = screen.getByText('1/1 last reported active')
+      .querySelector('svg');
+    expect(historyIcon).toHaveAttribute('aria-hidden', 'true');
+    expect(historyIcon).toHaveAttribute('focusable', 'false');
+    expect(historyIcon).toHaveClass('h-4', 'w-4', 'shrink-0');
+    expect(fleetIcon).toHaveAttribute('aria-hidden', 'true');
+    expect(fleetIcon).toHaveAttribute('focusable', 'false');
+    expect(fleetIcon).toHaveClass('h-3.5', 'w-3.5', 'shrink-0');
+  });
+
+  it('retains the selected command center and fleet metadata when a roster refresh fails', () => {
+    const vehicle = makeVehicle(4, { display_name: 'Retained vehicle' });
+    installHooks({
+      vehicles: [vehicle],
+      selected: vehicle,
+      error: new Error('roster refresh failed'),
+    });
+
+    const { rerender } = renderPage();
+
+    expect(screen.getByTestId('vehicle-command-center')).toHaveTextContent(
+      'Retained vehicle',
+    );
+    expect(screen.getByText('1/1 last reported active')).toBeInTheDocument();
+    expect(screen.queryByTestId('command-center-fallback')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
+      'Previously loaded data remains visible while affected sources recover.',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+    expect(setVehicleIdMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location')).toHaveTextContent('/commands');
+
+    installHooks({ vehicles: [vehicle], selected: vehicle });
+    rerender(
+      <MemoryRouter initialEntries={['/commands']}>
+        <CommandsPage />
+        <LocationProbe />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('vehicle-command-center')).toHaveTextContent(
+      'Retained vehicle',
+    );
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('retries an initial roster failure without selecting a vehicle or mounting commands', () => {
+    installHooks({
+      vehicles: undefined,
+      selected: null,
+      error: new Error('fleet unavailable'),
+    });
+
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+    expect(setVehicleIdMock).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('vehicle-command-center')).not.toBeInTheDocument();
+    expect(screen.getByText('Command readiness')).toBeInTheDocument();
+    expect(screen.getByText('Command workspace')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View history' })).toBeInTheDocument();
   });
 });

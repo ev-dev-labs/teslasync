@@ -1,0 +1,629 @@
+/**
+ * WatchSummaryWidget tests.
+ *
+ * The widget projects a Tesla "watch face" summary (`useWatchSummary`) plus a
+ * minimal charging complication (`useWatchComplication`) into two responsive
+ * layouts. Its behaviour surface — the thing under test:
+ *
+ *   1. `getBatteryColor` — the SoC → accent-color band utility (an export):
+ *        > 50 % emerald, > 20 % amber, ≤ 20 % red, with the two boundaries pinned.
+ *   2. Two layouts driven by `size.cols`:
+ *        - compact (cols <= 1): a titled watch face — a LinearGauge whose
+ *          progress stroke is `getBatteryColor(level)`, a StatusBadge, the
+ *          SI→preference converted range, and a pulsing charging indicator.
+ *        - standard (cols >= 2): a titled "Watch Summary" shell with a battery
+ *          big-number + state badge (variant derived from the state), and a 2×2
+ *          detail grid (range, lock/unlock, cabin temp, last seen).
+ *   3. Unit conversion at the display boundary: `range_km` is kilometres — the
+ *        widget lifts it to SI metres (`× 1000`) before `convertDistanceFromSI`,
+ *        so 300 km → "186" mi / "300" km; `inside_temp_c` is Celsius, so
+ *        20 °C → "68" °F. Both converters run for real.
+ *   4. The four query states each source must handle: loading (skeleton),
+ *        comp-loading (OR-aggregation still shows the skeleton), empty
+ *        (EmptyState — never a blank panel), and data.
+ *   5. Graceful degradation (the design contract): this widget never surfaces a
+ *        full-panel QueryError. A background-refetch error keeps cached content
+ *        on screen and flags the freshness dot red; an error with no data falls
+ *        through to the EmptyState, still red-dotted — never a blank panel.
+ *   6. Null-safety: a partial summary degrades every absent field to an em-dash
+ *        placeholder rather than throwing on the optional reads.
+ *   7. The freshness control: clicking refetches, but only when a fetch is not
+ *        already in flight.
+ *   8. Prop wiring: the `vehicleId` prop is threaded to BOTH query hooks.
+ *
+ * `@/api/hooks/useWatch` and `@/hooks/useUnits` are mocked so the network is
+ * never touched and every query state / unit preference is deterministic.
+ * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
+ * read the English defaults. `@/hooks/useDateFormat` + `@/hooks/useTimeFormatPreference`
+ * are stubbed so the real `<TimeStamp>` / `<DataFreshness>` render without a
+ * settings QueryClient. The shared WidgetShell / DataFreshness / LinearGauge /
+ * StatusBadge / WidgetBigNumber / Badge / EmptyState primitives and the real
+ * `convertDistanceFromSI` / `convertTempFromSI` all run for real, so assertions
+ * exercise the true rendered DOM.
+ */
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { WatchSummary, WatchComplication } from '@/api/hooks/useWatch';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
+import WatchSummaryWidget, { getBatteryColor } from './WatchSummaryWidget';
+import { BADGE_VARIANTS } from '@/components/ui';
+import { hasGaugeColor } from '@/test/gaugeTestUtils';
+
+// jsdom lacks matchMedia; DataFreshness → useMotionPreference and AnimatedNumber
+// read it during render. Report reduced-motion = true so AnimatedNumber skips
+// its rAF tween and lands on the target value synchronously — making every
+// rendered number deterministic under `render`. All other queries report false.
+vi.hoisted(() => {
+  if (typeof window !== 'undefined') {
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() {
+        return false;
+      },
+    })) as unknown as typeof window.matchMedia;
+  }
+});
+
+const { useWatchSummaryMock, useWatchComplicationMock, useUnitsMock, captured } = vi.hoisted(() => {
+  const metrics: OperationalBriefProps['metrics'] = [];
+  return {
+    useWatchSummaryMock: vi.fn(),
+    useWatchComplicationMock: vi.fn(),
+    useUnitsMock: vi.fn(),
+    captured: { metrics },
+  };
+});
+
+vi.mock('@/api/hooks/useWatch', () => ({
+  useWatchSummary: (vehicleId?: number) => useWatchSummaryMock(vehicleId),
+  useWatchComplication: (vehicleId?: number) => useWatchComplicationMock(vehicleId),
+}));
+
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => useUnitsMock(),
+}));
+
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+
+vi.mock('@/components/data-display', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/data-display')>();
+  return {
+    ...actual,
+    OperationalBrief: (props: OperationalBriefProps) => {
+      captured.metrics = props.metrics;
+      return <actual.OperationalBrief {...props} />;
+    },
+  };
+});
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
+      typeof defaultValue === 'string' ? defaultValue : key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+}));
+
+// TimeStamp (last-seen cell) and DataFreshness read the user's settings via
+// these hooks, which are otherwise backed by TanStack Query. Stub them so the
+// real components render deterministically without a settings QueryClient.
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatDate: () => 'May 1, 2024',
+    formatDateTime: () => 'May 1, 2024, 12:00 PM',
+    formatTime: () => '12:00 PM',
+    formatRelative: () => '2h ago',
+  }),
+}));
+
+vi.mock('@/hooks/useTimeFormatPreference', () => ({
+  useTimeFormatPreference: () => 'relative',
+}));
+
+// ── Fixtures ────────────────────────────────────────────────────────────────
+
+function makeUnits(distance: 'mi' | 'km' = 'mi', temperature: '°C' | '°F' = '°C') {
+  return { unitPrefs: { distance, temperature } };
+}
+
+function makeSummary(overrides: Partial<WatchSummary> = {}): WatchSummary {
+  return {
+    vehicle_name: 'Model Y',
+    state: 'online',
+    battery_level: 72,
+    range_km: 300,
+    is_charging: false,
+    charge_rate: 0,
+    time_to_full: 0,
+    is_locked: true,
+    sentry_mode: false,
+    inside_temp_c: 21,
+    outside_temp_c: 15,
+    is_climate_on: false,
+    last_updated: '2024-05-01T12:00:00Z',
+    ...overrides,
+  };
+}
+
+function makeComplication(overrides: Partial<WatchComplication> = {}): WatchComplication {
+  return {
+    battery: '72%',
+    range: '186 mi',
+    state: 'online',
+    charging: false,
+    ...overrides,
+  };
+}
+
+interface SummaryQuery {
+  data: WatchSummary | null | undefined;
+  isLoading: boolean;
+  isFetching: boolean;
+  isStale: boolean;
+  isError: boolean;
+  dataUpdatedAt: number;
+  refetch: ReturnType<typeof vi.fn>;
+}
+
+function makeSummaryQuery(overrides: Partial<SummaryQuery> = {}): SummaryQuery {
+  return {
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    isStale: false,
+    isError: false,
+    dataUpdatedAt: Date.now(),
+    refetch: vi.fn(),
+    ...overrides,
+  };
+}
+
+interface ComplicationQuery {
+  data: WatchComplication | null | undefined;
+  isLoading: boolean;
+}
+
+function makeComplicationQuery(overrides: Partial<ComplicationQuery> = {}): ComplicationQuery {
+  return {
+    data: undefined,
+    isLoading: false,
+    ...overrides,
+  };
+}
+
+function renderWidget(
+  size: { cols: number; rows: number } = { cols: 2, rows: 2 },
+  vehicleId?: number,
+) {
+  return render(
+    <MemoryRouter>
+      <WatchSummaryWidget size={size} vehicleId={vehicleId} />
+    </MemoryRouter>,
+  );
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  captured.metrics = [];
+  // Sensible defaults so a test that forgets to seed a hook still renders a
+  // populated widget rather than crashing on a destructure of `undefined`.
+  useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
+  useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary() }));
+  useWatchComplicationMock.mockReturnValue(makeComplicationQuery({ data: makeComplication() }));
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('getBatteryColor', () => {
+  it('maps healthy SoC (> 50%) to emerald', () => {
+    expect(getBatteryColor(100)).toBe('#10b981');
+    expect(getBatteryColor(72)).toBe('#10b981');
+    expect(getBatteryColor(51)).toBe('#10b981');
+  });
+
+  it('maps low SoC (> 20% and <= 50%) to amber, including the 50 boundary', () => {
+    expect(getBatteryColor(50)).toBe('#f59e0b');
+    expect(getBatteryColor(30)).toBe('#f59e0b');
+    expect(getBatteryColor(21)).toBe('#f59e0b');
+  });
+
+  it('maps critical SoC (<= 20%) to red, including the 20 boundary and zero', () => {
+    expect(getBatteryColor(20)).toBe('#ef4444');
+    expect(getBatteryColor(5)).toBe('#ef4444');
+    expect(getBatteryColor(0)).toBe('#ef4444');
+  });
+});
+
+describe('WatchSummaryWidget — standard layout', () => {
+  it('renders the title, battery big number + state badge, and the full detail grid (mi/°C)', () => {
+    useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({
+        data: makeSummary({
+          battery_level: 72,
+          range_km: 300,
+          state: 'online',
+          is_locked: true,
+          inside_temp_c: 21,
+        }),
+      }),
+    );
+
+    renderWidget({ cols: 2, rows: 2 });
+
+    // Title + hero battery.
+    expect(screen.getByText('Watch summary')).toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
+
+    // Range: 300 km → 300000 m → 300000 / 1609.344 = 186.4 → "186" mi.
+    expect(screen.getByText('Range')).toBeInTheDocument();
+    expect(screen.getByText('186.41 mi')).toBeInTheDocument();
+
+    // Lock + cabin temp + last seen.
+    expect(screen.getByText('Lock')).toBeInTheDocument();
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getByText('Cabin')).toBeInTheDocument();
+    expect(screen.getByText('21.00°C')).toBeInTheDocument();
+    expect(screen.getByText('Last seen')).toBeInTheDocument();
+  });
+
+  it('converts range to the km preference and temperature to the °F preference', () => {
+    useUnitsMock.mockReturnValue(makeUnits('km', '°F'));
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({
+        data: makeSummary({ range_km: 300, inside_temp_c: 20 }),
+      }),
+    );
+
+    renderWidget({ cols: 2, rows: 2 });
+
+    // 300 km → "300" km (no unit lift artefacts) and 20 °C → 68 °F.
+    expect(screen.getByText('300.00 km')).toBeInTheDocument();
+    expect(screen.getByText('68.00°F')).toBeInTheDocument();
+    // The mi label must NOT appear once the preference is km.
+    expect(screen.queryByText('mi')).not.toBeInTheDocument();
+  });
+
+  describe('WatchSummaryWidget — actual source brief', () => {
+    it('retains numeric metres and Celsius, real zero and negative temperature, and missing measurements without parsing complication strings', () => {
+      useUnitsMock.mockReturnValue(makeUnits('km', '°C'));
+      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
+        data: makeSummary({ range_km: 0, inside_temp_c: -10 }),
+      }));
+      useWatchComplicationMock.mockReturnValue(makeComplicationQuery({
+        data: makeComplication({ range: '999 mi', battery: '99%' }),
+      }));
+      const { rerender } = renderWidget({ cols: 2, rows: 2 }, 7);
+      let brief = screen.getByTestId('dashboard-watch-measurements-brief');
+      expect(brief).toHaveAttribute('data-operational-brief');
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
+      expect(captured.metrics.map(metric => metric.rawValue)).toEqual([0, -10]);
+      expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'value']);
+      expect(within(brief).getByText('0.00 km')).toBeInTheDocument();
+      expect(within(brief).getByText('-10.00°C')).toBeInTheDocument();
+
+      useUnitsMock.mockReturnValue(makeUnits('mi', '°F'));
+      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
+        data: makeSummary({ range_km: 300, inside_temp_c: 0 }),
+      }));
+      rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
+      brief = screen.getByTestId('dashboard-watch-measurements-brief');
+      expect(captured.metrics.map(metric => metric.rawValue)).toEqual([300000, 0]);
+      expect(within(brief).getByText('186.41 mi')).toBeInTheDocument();
+      expect(within(brief).getByText('32.00°F')).toBeInTheDocument();
+
+      useWatchSummaryMock.mockReturnValue({
+        ...makeSummaryQuery(),
+        data: { ...makeSummary(), range_km: null, inside_temp_c: null },
+      });
+      rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
+      brief = screen.getByTestId('dashboard-watch-measurements-brief');
+      expect(captured.metrics.map(metric => metric.rawValue)).toEqual([null, null]);
+      expect(captured.metrics.map(metric => metric.valueState)).toEqual(['missing', 'missing']);
+      expect(within(brief).getAllByText('—')).toHaveLength(2);
+      expect(within(brief).queryByText(/999|186\.41|32\.00/)).not.toBeInTheDocument();
+      expect(screen.getByText('72.00')).toBeInTheDocument();
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+      expect(screen.getByText('Last seen')).toBeInTheDocument();
+    });
+
+    it('uses summary trust independently of complication failure while retaining battery, status, timestamp and both refresh actions', () => {
+      const refetchSummary = vi.fn();
+      const refetchComplication = vi.fn();
+      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
+        data: makeSummary({ state: 'offline', is_locked: false, is_charging: false }),
+        refetch: refetchSummary,
+      }));
+      useWatchComplicationMock.mockReturnValue({
+        ...makeComplicationQuery({ data: makeComplication({ state: 'online', charging: true }) }),
+        isError: true,
+        error: new Error('complication refresh failed'),
+        refetch: refetchComplication,
+      });
+      const { container, rerender } = renderWidget({ cols: 2, rows: 2 }, 7);
+      let brief = screen.getByTestId('dashboard-watch-measurements-brief');
+      expect(within(brief).getByText('Source available')).toBeInTheDocument();
+      expect(brief.querySelector('[data-data-status="ok"]')).toBeTruthy();
+      expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
+      expect(screen.getByText('Offline')).toBeInTheDocument();
+      expect(screen.getByText('Unlocked')).toBeInTheDocument();
+      expect(screen.getAllByText('Charging')).toHaveLength(2);
+      expect(screen.getByText('72.00')).toBeInTheDocument();
+      expect(screen.getByText('2h ago')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+      expect(refetchSummary).toHaveBeenCalledTimes(1);
+      expect(refetchComplication).toHaveBeenCalledTimes(1);
+
+      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
+        data: makeSummary({ state: 'asleep', is_locked: true }),
+        isError: true,
+        refetch: refetchSummary,
+      }));
+      useWatchComplicationMock.mockReturnValue({
+        ...makeComplicationQuery({ data: makeComplication({ state: 'online', charging: false }) }),
+        isError: false,
+        refetch: refetchComplication,
+      });
+      rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
+      brief = screen.getByTestId('dashboard-watch-measurements-brief');
+      expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+      expect(brief.querySelector('[data-data-status="stale"]')).toBeTruthy();
+      expect(within(brief).getByText('186.41 mi')).toBeInTheDocument();
+      expect(within(brief).getByText('21.00°C')).toBeInTheDocument();
+      expect(screen.getByText('Asleep')).toBeInTheDocument();
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+      expect(screen.getByText('Inactive')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
+
+  it('renders the Unlocked chip when the vehicle is unlocked', () => {
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({ data: makeSummary({ is_locked: false }) }),
+    );
+
+    renderWidget({ cols: 2, rows: 2 });
+
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument();
+  });
+});
+
+describe('WatchSummaryWidget — state badge variants', () => {
+  const cases = [
+    { state: 'online', label: 'Online', cls: 'bg-green-100' },
+    { state: 'asleep', label: 'Asleep', cls: BADGE_VARIANTS.neutral },
+    { state: 'offline', label: 'Offline', cls: 'bg-yellow-100' },
+  ] as const;
+
+  it.each(cases)('renders "$state" with the $cls badge variant', ({ state, label, cls }) => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary({ state }) }));
+
+    renderWidget({ cols: 2, rows: 2 });
+
+    const badge = screen.getByText(label);
+    expect(badge).toBeInTheDocument();
+    expect(badge.className).toContain(cls);
+  });
+});
+
+describe('WatchSummaryWidget — compact layout', () => {
+  it('renders the compact heading, gauge, status badge and converted range', () => {
+    useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({ data: makeSummary({ battery_level: 72, range_km: 300, state: 'online' }) }),
+    );
+
+    renderWidget({ cols: 1, rows: 2 });
+
+    expect(screen.getByText('72.00')).toBeInTheDocument(); // gauge value
+    expect(screen.getByText('%')).toBeInTheDocument(); // gauge unit
+    expect(screen.getByText('online')).toBeInTheDocument(); // StatusBadge
+    expect(screen.getByText(/186/)).toBeInTheDocument(); // converted range
+    expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
+  });
+
+  it('paints the gauge progress stroke with the healthy-band color at high SoC', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary({ battery_level: 80 }) }));
+
+    const { container } = renderWidget({ cols: 1, rows: 2 });
+
+    expect(hasGaugeColor(container, '#10b981')).toBe(true);
+    expect(hasGaugeColor(container, '#ef4444')).toBe(false);
+  });
+
+  it('paints the gauge progress stroke with the critical-band color at low SoC', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary({ battery_level: 8 }) }));
+
+    const { container } = renderWidget({ cols: 1, rows: 2 });
+
+    expect(hasGaugeColor(container, '#ef4444')).toBe(true);
+    expect(hasGaugeColor(container, '#10b981')).toBe(false);
+  });
+
+  it('shows the pulsing charging indicator when the complication reports charging', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary() }));
+    useWatchComplicationMock.mockReturnValue(
+      makeComplicationQuery({ data: makeComplication({ charging: true }) }),
+    );
+
+    renderWidget({ cols: 1, rows: 2 });
+
+    expect(screen.getByText(/Charging/i)).toBeInTheDocument();
+  });
+
+  it('omits the charging indicator when not charging', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary() }));
+    useWatchComplicationMock.mockReturnValue(
+      makeComplicationQuery({ data: makeComplication({ charging: false }) }),
+    );
+
+    renderWidget({ cols: 1, rows: 2 });
+
+    expect(screen.queryByText(/Charging/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('WatchSummaryWidget — empty states (never a blank panel)', () => {
+  it('renders the titled shell with the "No watch data" placeholder when summary is absent (standard)', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: undefined }));
+
+    renderWidget({ cols: 2, rows: 2 });
+
+    expect(screen.getByText('Watch summary')).toBeInTheDocument();
+    expect(screen.getByText('No watch data')).toBeInTheDocument();
+  });
+
+  it('keeps the compact heading when summary is absent', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: null }));
+
+    renderWidget({ cols: 1, rows: 2 });
+
+    expect(screen.getByText('No watch data')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
+  });
+});
+
+describe('WatchSummaryWidget — query states', () => {
+  it('renders a skeleton while the summary query is loading, with no title or content', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ isLoading: true, data: undefined }));
+
+    const { container } = renderWidget({ cols: 2, rows: 2 });
+
+    expect(container.querySelector('[data-data-state="partial"]')).toBeTruthy();
+    expect(screen.queryByText('Watch summary')).toBeInTheDocument();
+    expect(screen.queryByText('No watch data')).not.toBeInTheDocument();
+  });
+
+  it('retains the summary while only the complication is loading', () => {
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary() }));
+    useWatchComplicationMock.mockReturnValue(makeComplicationQuery({ isLoading: true }));
+
+    const { container } = renderWidget({ cols: 2, rows: 2 });
+
+    // isLoading = summaryLoading || compLoading → the shell shows the skeleton
+    // and suppresses the content even though the summary payload has landed.
+    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText('Watch summary')).toBeInTheDocument();
+  });
+});
+
+describe('WatchSummaryWidget — graceful degradation on error', () => {
+  it('keeps cached content and flags the freshness dot red instead of a full-panel error', () => {
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({
+        data: makeSummary({ battery_level: 72, state: 'online' }),
+        isError: true,
+        isFetching: false,
+      }),
+    );
+
+    const { container } = renderWidget({ cols: 2, rows: 2 });
+
+    // Content is still on screen …
+    expect(screen.getByText('Watch summary')).toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
+    // … the full-panel QueryError is NOT shown …
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    // … and the freshness indicator is in its error state (red dot).
+    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+  });
+
+  it('shows the initial-failure retry when the summary errors with no retained data', () => {
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({ data: undefined, isError: true, isFetching: false }),
+    );
+
+    const { container } = renderWidget({ cols: 2, rows: 2 });
+
+    expect(screen.getByText('Watch summary')).toBeInTheDocument();
+    expect(screen.queryByText('No watch data')).not.toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+  });
+});
+
+describe('WatchSummaryWidget — null-safety', () => {
+  it('never draws a zero battery gauge for an unavailable compact battery', () => {
+    useWatchSummaryMock.mockReturnValue({ ...makeSummaryQuery(), data: { state: 'online' } });
+    renderWidget({ cols: 1, rows: 2 });
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('degrades a partial summary to em-dash placeholders without throwing', () => {
+    useWatchSummaryMock.mockReturnValue(
+      // Only battery_level present — every other field is absent.
+      makeSummaryQuery({ data: { battery_level: 50 } as WatchSummary }),
+    );
+
+    expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
+
+    expect(screen.getByText('50.00')).toBeInTheDocument();
+    // range, lock, cabin temp and last-seen all collapse to the "—" placeholder.
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    // No state → no badge chip.
+    expect(screen.queryByText('online')).not.toBeInTheDocument();
+  });
+});
+
+describe('WatchSummaryWidget — freshness interaction', () => {
+  it('refetches the summary when the accessible refresh control is clicked', () => {
+    const refetch = vi.fn();
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({ data: makeSummary(), refetch, isFetching: false }),
+    );
+
+    renderWidget({ cols: 2, rows: 2 });
+
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refetch while a fetch is already in flight', () => {
+    const refetch = vi.fn();
+    useWatchSummaryMock.mockReturnValue(
+      makeSummaryQuery({ data: makeSummary(), refetch, isFetching: true }),
+    );
+
+    renderWidget({ cols: 2, rows: 2 });
+
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+
+    expect(refetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('WatchSummaryWidget — prop wiring', () => {
+  it('threads an explicit vehicleId to both the summary and complication hooks', () => {
+    renderWidget({ cols: 2, rows: 2 }, 7);
+
+    expect(useWatchSummaryMock).toHaveBeenCalledWith(7);
+    expect(useWatchComplicationMock).toHaveBeenCalledWith(7);
+  });
+
+  it('passes undefined through to both hooks when no vehicleId prop is given', () => {
+    renderWidget({ cols: 2, rows: 2 });
+
+    expect(useWatchSummaryMock).toHaveBeenCalledWith(undefined);
+    expect(useWatchComplicationMock).toHaveBeenCalledWith(undefined);
+  });
+});

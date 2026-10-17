@@ -5,7 +5,7 @@
  * per test; the real localStorage-backed outbox runs underneath so the
  * queue/flush round-trip is genuinely exercised.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -34,8 +34,9 @@ vi.mock('@/api/hooks/useJourney', () => ({
   useCheckIn: vi.fn(),
 }));
 
+const { warning } = vi.hoisted(() => ({ warning: vi.fn() }));
 vi.mock('@/api/hooks/_toastHelpers', () => ({
-  useMutationToast: () => ({ success: vi.fn(), warning: vi.fn(), error: vi.fn() }),
+  useMutationToast: () => ({ success: vi.fn(), warning, error: vi.fn() }),
 }));
 
 const statusState = {
@@ -64,7 +65,7 @@ function setStatus(s: 'online' | 'offline') {
 
 import { useCheckIn } from '@/api/hooks/useJourney';
 import { useQueuedCheckIn } from './useQueuedCheckIn';
-import { enqueueCheckIn, loadOutbox } from '../lib/checkInOutbox';
+import { dequeueCheckIn, enqueueCheckIn, loadOutbox } from '../lib/checkInOutbox';
 
 const mockCheckIn = useCheckIn as unknown as ReturnType<typeof vi.fn>;
 
@@ -97,7 +98,41 @@ beforeEach(() => {
   mockCheckIn.mockReturnValue({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+  for (const entry of loadOutbox()) {
+    dequeueCheckIn(entry.session_id, entry.recorded_at);
+  }
+});
+
 describe('useQueuedCheckIn', () => {
+  it('discloses memory-only lifetime and replays original entries after a remount', async () => {
+    statusState.status = 'offline';
+    const mutateAsync = vi.fn().mockResolvedValue({ id: 9, session_id: 1 });
+    mockCheckIn.mockReturnValue({ mutate: vi.fn(), mutateAsync, isPending: false });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage full', 'QuotaExceededError');
+    });
+    const view = renderHarness();
+    fireEvent.click(screen.getByText('tap'));
+    const [entry] = loadOutbox();
+    expect(screen.getByTestId('queued')).toHaveTextContent('1');
+    expect(warning).toHaveBeenCalledWith(
+      'toast.journey.checkin.queuedMemoryOnly',
+      'Check-in queued only in this tab — reloading or closing it will lose unsent check-ins',
+    );
+    view.unmount();
+    renderHarness();
+    expect(screen.getByTestId('queued')).toHaveTextContent('1');
+    await act(async () => setStatus('online'));
+    await waitFor(() => expect(screen.getByTestId('queued')).toHaveTextContent('0'));
+    expect(mutateAsync).toHaveBeenCalledExactlyOnceWith({
+      id: entry.session_id,
+      recorded_at: entry.recorded_at,
+    });
+    expect(loadOutbox()).toEqual([]);
+  });
+
   it('sends immediately when online', () => {
     const mutate = vi.fn();
     mockCheckIn.mockReturnValue({ mutate, mutateAsync: vi.fn(), isPending: false });

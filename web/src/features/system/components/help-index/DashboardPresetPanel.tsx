@@ -198,6 +198,41 @@ const PRIMARY_ACTION: Record<PresetCardState, 'choose' | 'clear'> = {
   diverged: 'clear',
 }
 
+// Reuse canonical widget titles without loading the registry or widget code.
+const PRESET_WIDGET_LABEL_KEYS: Readonly<Record<string, string>> = {
+  'vehicle-hero': 'glance.overviewAria',
+  'battery-gauge': 'widget.battery',
+  'charge-status': 'widget.chargeStatusLive',
+  'climate-status': 'widget.climate',
+  'security-status': 'widget.security',
+  'location-map': 'widget.locationMap.title',
+  'recent-drives': 'widget.recentDrives',
+  'quick-nav': 'nav.quickNav',
+  'fleet-stats': 'widget.fleetStatsBar.title',
+  'alert-feed': 'widget.alertFeed',
+  'vehicle-hero-card': 'widget.vehicleHeroCard',
+  'recent-drives-list': 'widget.recentDrivesList',
+  'charge-history': 'widget.chargeHistory.title',
+  'geofence-status': 'widget.geofence.title',
+  'command-quick-actions': 'widget.quickActions.title',
+  'uptime-monitor': 'widget.uptime.title',
+  'energy-flow': 'widget.energyFlow',
+  'drive-efficiency-chart': 'widget.driveEfficiencyChart.title',
+  'charge-cost-tracker': 'widget.chargeCost.title',
+  'charge-session-chart': 'widget.chargeSessionChart.title',
+  'cost-breakdown': 'widget.costBreakdown.title',
+  'battery-degradation-trend': 'widget.batteryDegradation',
+  'regen-efficiency': 'widget.regenEfficiency.title',
+  'monthly-mileage': 'widget.monthlyMileage.title',
+  'system-health': 'widget.systemHealth.title',
+  'signal-health': 'widget.signalHealth.title',
+  'telemetry-errors': 'widget.telemetryErrors.title',
+  'mqtt-status': 'widget.mqtt.title',
+  'export-status': 'widget.exportStatus',
+  'backup-monitor': 'widget.backupMonitor.title',
+  'api-usage': 'widget.apiUsage.title',
+}
+
 function PresetCard({
   preset,
   selected,
@@ -285,7 +320,7 @@ function PresetCard({
               data-preset-widget={widget.widgetId}
               className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs text-[var(--text-muted)]"
             >
-              {widget.labelFallback}
+              {t(PRESET_WIDGET_LABEL_KEYS[widget.widgetId], widget.labelFallback)}
             </li>
           ))}
         </ul>
@@ -338,6 +373,7 @@ function PresetCard({
           type="button"
           variant={selected ? 'secondary' : 'ghost'}
           size="sm"
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           onClick={() => onChoose(preset.role)}
           // Mirrors `selected`, so "pressed" always means "this is my chosen
           // preset" — and it is exactly the states where the label offers to
@@ -355,6 +391,7 @@ function PresetCard({
             type="button"
             variant="ghost"
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             onClick={() => onReapply(preset.role)}
             data-testid={`reapply-preset-${preset.role}`}
           >

@@ -1,80 +1,146 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, ImageDown } from 'lucide-react';
-import { Button, GlassPanel } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
 import type { ClipRecord } from '../../lib/types';
 import type { ReconstructionResult } from '../../lib/timelineAlignment';
-import { buildIncidentManifest, downloadJson, downloadBlobAs, drawRedactedFrame, type RedactionDrawContext } from '../../lib/redactionExport';
+import { buildIncidentManifest, downloadJson, downloadBlobAs, drawRedactedFrame, type IncidentManifest } from '../../lib/redactionExport';
 
 export interface ExportManifestPanelProps {
   clip: ClipRecord;
   reconstruction: ReconstructionResult | null;
+  /** Optional scoped builder retains the caller's source trust and clock assumptions. */
+  buildManifest?: () => IncidentManifest;
 }
 
 /**
  * Local export: a JSON incident manifest (metadata + honesty disclaimers)
- * and an optional redacted-still PNG snapshot of the current video frame.
+ * and an optional redacted-still PNG snapshot of the initial decoded frame.
  * Neither export is a modified video file — this feature never claims to
  * produce one.
  */
-export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPanelProps) {
+export function ExportManifestPanel({ clip, reconstruction, buildManifest }: ExportManifestPanelProps) {
   const { t } = useTranslation();
-  const objectUrlRef = useRef<string | null>(null);
+  const attemptRef = useRef<{ dispose: () => void } | null>(null);
+  const [isPending, setIsPending] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    setIsPending(false);
+    setExportError(null);
+    return () => {
+      attemptRef.current?.dispose();
+      attemptRef.current = null;
+    };
+  }, [clip]);
 
   const handleManifestDownload = () => {
-    const manifest = buildIncidentManifest(clip, reconstruction);
-    downloadJson(`${clip.fileName}.incident-manifest.json`, manifest);
+    setExportError(null);
+    try {
+      const manifest = buildManifest ? buildManifest() : buildIncidentManifest(clip, reconstruction);
+      downloadJson(`${clip.fileName}.incident-manifest.json`, manifest);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : t('dashcam.export.manifestFailed', 'The local manifest export failed.'));
+    }
   };
 
   const handleStillExport = () => {
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    const objectUrl = URL.createObjectURL(clip.blob);
-    objectUrlRef.current = objectUrl;
-    const video = document.createElement('video');
-    video.muted = true;
-    video.style.display = 'none';
-    video.src = objectUrl;
-    // Some browsers only reliably decode frames for elements attached to
-    // the document — attach off-screen, then clean up once the frame has
-    // been drawn (success or failure).
-    document.body.appendChild(video);
-    const cleanup = () => {
-      document.body.removeChild(video);
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
+    if (attemptRef.current) return;
+    setExportError(null);
+    setIsPending(true);
+    let objectUrl: string | null = null;
+    let video: HTMLVideoElement | null = null;
+    let disposed = false;
+    let decoderReleased = false;
+    const cleanupDecoder = () => {
+      if (decoderReleased) return;
+      decoderReleased = true;
+      if (video) {
+        video.removeEventListener('loadeddata', onLoadedData);
+        video.removeEventListener('error', onDecodeError);
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        video.remove();
+      }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    const attempt = {
+      dispose: () => {
+        disposed = true;
+        cleanupDecoder();
+      },
+    };
+    const isCurrent = () => !disposed && attemptRef.current === attempt;
+    const finish = () => {
+      if (!isCurrent()) return;
+      attempt.dispose();
+      attemptRef.current = null;
+      setIsPending(false);
+    };
+    const fail = (error: unknown) => {
+      if (!isCurrent()) return;
+      setExportError(error instanceof Error ? error.message : t('dashcam.export.failed', 'The local still export failed.'));
+      finish();
+    };
+    const onDecodeError = () => {
+      if (!isCurrent()) return;
+      setExportError(video?.error?.message || t('dashcam.export.decodeFailed', 'This browser could not decode the clip for a still export.'));
+      finish();
+    };
+    const onLoadedData = () => {
+      if (!isCurrent() || !video) return;
+      try {
+        const width = video.videoWidth || 640;
+        const height = video.videoHeight || 360;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          setExportError(t('dashcam.export.canvasUnavailable', 'This browser could not create a still-image canvas.'));
+          finish();
+          return;
+        }
+        drawRedactedFrame(ctx, video, width, height, clip.redactions);
+        canvas.toBlob((blob) => {
+          if (!isCurrent()) return;
+          try {
+            if (blob) downloadBlobAs(blob, `${clip.fileName}.redacted-still.png`);
+            else setExportError(t('dashcam.export.imageUnavailable', 'This browser could not encode the still image.'));
+          } catch (error) {
+            fail(error);
+          } finally {
+            finish();
+          }
+        }, 'image/png');
+      } catch (error) {
+        fail(error);
+      } finally {
+        // Pixels are already copied; encoding may complete after this decoder is released.
+        cleanupDecoder();
       }
     };
-    video.addEventListener(
-      'loadeddata',
-      () => {
-        try {
-          const width = video.videoWidth || 640;
-          const height = video.videoHeight || 360;
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d') as unknown as RedactionDrawContext | null;
-          if (!ctx) return;
-          drawRedactedFrame(ctx, video, width, height, clip.redactions);
-          canvas.toBlob((blob) => {
-            if (blob) downloadBlobAs(blob, `${clip.fileName}.redacted-still.png`);
-          }, 'image/png');
-        } finally {
-          cleanup();
-        }
-      },
-      { once: true },
-    );
-    video.addEventListener('error', cleanup, { once: true });
+    attemptRef.current = attempt;
+    try {
+      objectUrl = URL.createObjectURL(clip.blob);
+      video = document.createElement('video');
+      video.muted = true;
+      video.className = 'hidden';
+      video.addEventListener('loadeddata', onLoadedData, { once: true });
+      video.addEventListener('error', onDecodeError, { once: true });
+      video.src = objectUrl;
+      // Attached decoders are required by some browsers; never seek or play.
+      document.body.appendChild(video);
+    } catch (error) {
+      fail(error);
+    }
   };
 
   return (
-    <GlassPanel padding="md" className="space-y-3">
-      <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-        {t('dashcam.export.title', 'Local export')}
-      </h3>
+    <LayoutCard title={t('dashcam.export.title', 'Local export')}>
       <InlineCallout variant="info">
         {t(
           'dashcam.export.disclaimer',
@@ -82,13 +148,14 @@ export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPane
         )}
       </InlineCallout>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" icon={<Download className="h-3.5 w-3.5" />} onClick={handleManifestDownload}>
+        <Button wrapLabel size="sm" variant="secondary" icon={<Download className="h-3.5 w-3.5" />} onClick={handleManifestDownload}>
           {t('dashcam.export.manifest', 'Download incident manifest (JSON)')}
         </Button>
-        <Button size="sm" variant="secondary" icon={<ImageDown className="h-3.5 w-3.5" />} onClick={handleStillExport}>
+        <Button wrapLabel size="sm" variant="secondary" disabled={isPending} aria-busy={isPending} icon={<ImageDown className="h-3.5 w-3.5" />} onClick={handleStillExport}>
           {t('dashcam.export.still', 'Export redacted still (PNG)')}
         </Button>
       </div>
-    </GlassPanel>
+      {exportError && <InlineCallout variant="danger">{exportError}</InlineCallout>}
+    </LayoutCard>
   );
 }

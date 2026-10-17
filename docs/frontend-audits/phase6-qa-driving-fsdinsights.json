@@ -1,0 +1,1852 @@
+{
+  "item": "phase6-qa-driving-fsdinsights",
+  "attempt": 1,
+  "actor": "fe87f0b9-67f1-4c4e-a090-4b8b476fff0f",
+  "mode": "Report-first read-only source QA; no remigration",
+  "page": "web/src/features/driving/pages/FSDInsightsPage.tsx",
+  "routes": [
+    "/fsd"
+  ],
+  "routeEvidence": {
+    "mount": "web/src/App.tsx:839",
+    "lazy": "web/src/lib/routeLoaders.ts:48",
+    "registry": "web/src/lib/routeRegistry.ts:134",
+    "headerScope": "web/src/lib/workspaceScope.ts:47,156-167",
+    "aliasLimit": "/analytics/fsd is confirmed as API path only, not a current UI alias; historical queue mention is not fresh route proof"
+  },
+  "purpose": "Historical supervised self-driving counter distance and aligned observed-driving share with confidence-qualified attribution, not engagement/safety/autonomy quality.",
+  "reservation": {
+    "reservedUTC": "2026-10-14T01:10:24.802Z",
+    "returnUTC": "2026-10-14T01:30:24.802Z",
+    "hardUTC": "2026-10-14T01:35:24.802Z",
+    "firstActualObservedUTC": "2026-10-14T01:12:19.380573Z",
+    "earlierAbsoluteClockWins": true,
+    "boundedCommandMaximumMinutes": 15
+  },
+  "authority": {
+    "queueInitialLine": 400,
+    "queueLaterLine": 406,
+    "acceptedItem": "phase5-page-driving-fsdinsights",
+    "acceptedQueueLineAsRead": 1864,
+    "acceptedCommitFromQueue": "dd3bbbf112529b18ccbf88d72b3312146401d0c1",
+    "historicalTests": "27 discovered/executed/passed, exit0 in accepted receipt; NOT rerun",
+    "closedPhases": "0-5 closed; 6 unfinished; 7 NOT RUN",
+    "handoffRead": "docs/session-handoff.md:1-140 current recovery",
+    "fullDocumentsRead": [
+      "docs/orchestrator-loop.md:1-296",
+      "docs/frontend-design-contract.md:1-2539",
+      "docs/frontend-mission.md including43-45"
+    ],
+    "applicableInstructionsRead": [
+      "frontend-si-cutover",
+      "react-frontend",
+      "observability",
+      "unit-conversion",
+      "frontend-worker-conventions"
+    ],
+    "noChangeDecision": "Accepted thin page remains intact. No source/test/catalog/backend/config/queue/handoff changes made or authorized.",
+    "finalQueueRowLines": [
+      439,
+      1903
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useFsdInsightsRange",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "lines": [
+        583,
+        610
+      ],
+      "requestPath": "/analytics/fsd",
+      "method": "GET contract only; no request made",
+      "mechanism": "QueryScope carries selected vehicle, start, exclusive end and timezone; scope.ts:127-135 emits vehicle_id/start/end/timezone. AbortSignal passed, scope enters cache key, enabled requires all bounds, historical policy/refetchOnMount retained. Raw meters/Wh; include_evidence defaults false.",
+      "limit": "Backend bound enforcement, complete populations and response provenance not independently verified."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "lines": [
+        49,
+        77
+      ],
+      "mechanism": "URL vehicle_id > persisted selection > first known vehicle; selection unresolved during fleet load is not authoritative no-vehicle."
+    },
+    {
+      "hook": "useRangeState",
+      "file": "web/src/hooks/useRangeState.ts",
+      "lines": [
+        298,
+        331
+      ],
+      "mechanism": "/fsd enables header range and vehicle. Saved defaultAnalysisRange/shared preference inherited. Page supplies no timezone override: browser IANA or UTC fallback. Legacy days7/30/90/365 migrated at page69-91; existing from/to wins and query disabled during migration."
+    }
+  ],
+  "preservation": {
+    "pageSHA256": "B890540BA4461AD154B5EBF29DCBAE4F8080F9A64AD457240CD1D2035ECD44FC",
+    "pageLines": 198,
+    "historicalOriginalLines": 182,
+    "historicalOriginalEvidence": "audit-page-118/accepted queue, not regenerated baseline",
+    "mountedPresentationFiles": 16,
+    "mountedPresentationLines": 2493,
+    "pagePlusPresentationLines": 2691,
+    "mountedClosureFiles": 24,
+    "mountedClosureLines": 3279,
+    "topLevelBoundaries": 8,
+    "semanticSections": 15,
+    "domainGlassPanelDeclarations": 11,
+    "chartContainerDeclarations": 3,
+    "operationalBriefInstances": 3,
+    "dataTableDeclarations": 9,
+    "mountedDataTableInstances": 11,
+    "mobileAllowListDeclarations": 7,
+    "affectedMobileTableInstances": 9,
+    "countMethod": "Native line counts and JSX declarations; explicit three GroupTable mounts; not runtime visibility.",
+    "unmountedAuxiliaries": [
+      "FsdKpiBand (type reference)",
+      "FsdPeriodControl (barrel only)"
+    ],
+    "sections": [
+      "Evidence summary",
+      "Observatory: stitched journal and commute chapters",
+      "Distance trend",
+      "Share trend",
+      "Weekday pattern",
+      "Top positive days",
+      "Previous-period comparison",
+      "Attribution/reset timeline",
+      "Contributing drives",
+      "Route/time/firmware groups (three tables)",
+      "Same-route experiment",
+      "Firmware spotlight",
+      "Commute identity",
+      "Same-route efficiency",
+      "Confidence/methodology (16 KV rows, seven notes, four conditional and three unconditional caveats)"
+    ],
+    "actions": [
+      "Header vehicle/range controls; no duplicate page picker",
+      "Legacy URL normalization preserving unrelated params",
+      "Copy current link",
+      "Fatal/retained retry and /vehicles recovery",
+      "Three existing brief details drawers",
+      "Three chart export/fullscreen/data-table alternatives; not exercised",
+      "Distance legend fsd/driving identities",
+      "Eleven table paging/column preferences and loaded exports",
+      "Contributing-drive local value filters and explicit SI CSV/JSON across positive source rows, not table page or guaranteed full server results",
+      "Reset timeline page sizes25/50/100",
+      "Journal/reset/contributing /drives/:id links",
+      "Reduced-motion-aware hash scrolling"
+    ],
+    "tableIds": [
+      "fsd:observatory-journal",
+      "fsd:observatory-commute-chapters",
+      "fsd-top-days",
+      "fsd-contributing-drives",
+      "fsd-groups-routes",
+      "fsd-groups-time",
+      "fsd-groups-firmware",
+      "fsd-commute-experiment",
+      "fsd-firmware-spotlight",
+      "fsd-commute-identity",
+      "fsd-route-efficiency"
+    ],
+    "sectionEvidence": [
+      {
+        "owner": "web/src/features/driving/components/operationalbrief-a-m/FsdEvidenceBrief.tsx:19",
+        "name": "Evidence summary"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdObservatoryPanel.tsx:43",
+        "name": "Observatory: stitched journal and commute chapters"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDistanceTrend.tsx:114",
+        "name": "Distance trend"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdShareTrend.tsx:67",
+        "name": "Share trend"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdWeekdayPattern.tsx:76",
+        "name": "Weekday pattern"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdTopDays.tsx:101",
+        "name": "Top positive days"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:80",
+        "name": "Previous-period comparison"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:132",
+        "name": "Attribution/reset timeline"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:291",
+        "name": "Contributing drives"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:505",
+        "name": "Route/time/firmware groups (three tables)"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdCommuteExperimentPanel.tsx:26",
+        "name": "Same-route experiment"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:543",
+        "name": "Firmware spotlight"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:700",
+        "name": "Commute identity"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:628",
+        "name": "Same-route efficiency"
+      },
+      {
+        "owner": "web/src/features/driving/components/fsd-insights/FsdConfidencePanel.tsx:55",
+        "name": "Confidence/methodology (16 KV rows, seven notes, four conditional and three unconditional caveats)"
+      }
+    ]
+  },
+  "observedVersusInferred": {
+    "observed": "Resettable counter deltas and quality metadata, not engagement segments, interventions, disengagements, safety or autonomy quality.",
+    "inferred": "Drive interval attribution high/estimated/ambiguous/unknown, stitched quantities and comparisons are derived evidence; high confidence is not safety certification.",
+    "denominators": "Aligned counter basis and positive driving denominator; weekday helper pairs only share-eligible same-day numerators/denominators. Null remains null; measured zero requires unchanged FSD observation.",
+    "populations": "Top days positive-only capped10; contributing positive attributed completed-inside-period contract; groups high-confidence/repeated routes>=2; distinct firmware/efficiency/monthly populations. Observatory truncation announced. Frontend declarations do not prove backend population construction.",
+    "rawSI": "Meters and Wh remain raw in hooks/cache/custom exports; chart rows convert at display. Efficiency duplicates conversion ownership (F06), not a claimed magnitude defect.",
+    "signs": "Signed distance/share/efficiency differences preserved; central distance formatter does not discard negative differences.",
+    "provenance": "Historical request provenance and normalization guard are source declarations, not live assurances. Fetch updatedAt is not observation time."
+  },
+  "states": {
+    "initial": "Source-shaped section/chart skeletons; shells mounted",
+    "initialPaused": "F03 loses blocked distinction without retained data",
+    "fatal": "Only fatalError in child QueryError/retry; no blanket PageLayout error replacement",
+    "retainedFailure": "Payload and global warning/retry retained; F02 two nested labels omit retained",
+    "retainedPaused": "Global warning retains data without claiming vehicle/device offline",
+    "empty": "Measured FSD/share gates; positive rankings omit zeros without rewriting dense series; analysis-specific empty reasons",
+    "noVehicle": "Recovery to /vehicles while shells remain; unresolved selection is not proven empty fleet",
+    "retry": "Same query refetch; network recovery NOT RUN",
+    "disabled": "Chart exports gated by blocked/loading/hasData; explicit CSV/JSON disabled without positive rows; local export not vehicle mutation"
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "rule": "mobile-field-loss",
+      "priority": "high",
+      "file": "web/src/features/driving/components/fsd-insights/FsdTopDays.tsx",
+      "line": 124,
+      "sourceSites": 7,
+      "sites": [
+        "FsdTopDays.tsx:124",
+        "FsdDriveAnalyticsPanels.tsx:425,493,605,683,764",
+        "FsdCommuteExperimentPanel.tsx:115"
+      ],
+      "mechanism": "Seven mobileColumns declarations affect nine tables. DataTable.tsx:742-743 hides omitted cells/headers below md (:1180/:1535). No affected caller provides mobilePresentation or expansion recovery; opt-in is :506. Denominators, share/reset flags, sample counts, prior-month/unknown-day values, firmware and before/after evidence become hidden.",
+      "fix": "Existing mobilePresentation/full-details adoption or complete contained-scroll columns, preserving IDs/filter/export/row actions; no new shared API proven needed.",
+      "owner": "future separately leased FSD child adapters",
+      "dedup": "Same audit-page-118/G007-P204 and accepted phase5 mobile need; no dedicated FSD fix row found."
+    },
+    {
+      "id": "F02",
+      "rule": "retained-status-loss",
+      "priority": "high",
+      "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryPanel.tsx",
+      "line": 83,
+      "sourceSites": 2,
+      "sites": [
+        "FsdObservatoryPanel.tsx:83",
+        "FsdDriveAnalyticsPanels.tsx:121"
+      ],
+      "mechanism": "Both NestedDrivingBrief callers omit retained. FsdSectionState/types.ts:7-13 carries no trust/paused state. NestedDrivingBrief.tsx:55-61 defaults retained false and labels retained refresh failure/pause Returned evidence, despite correct page-global warning.",
+      "fix": "Forward existing DataState retained/trust semantics; keep every retained metric and query.",
+      "owner": "future FSD state/caller lease",
+      "dedup": "Same prior audit/accepted phase5 child-trust need; no whole-page remigration."
+    },
+    {
+      "id": "F03",
+      "rule": "initial-paused-loading",
+      "priority": "high",
+      "file": "web/src/features/driving/pages/FSDInsightsPage.tsx",
+      "line": 117,
+      "sourceSites": 1,
+      "mechanism": "dataState.ts:204-224 exposes isRefreshBlocked without retained data; page maps initial solely to isLoading. FsdSectionBody.tsx:47-56 displays loading; StaleRefreshWarning.tsx:59 returns null without data. Initial paused is indistinguishable from active loading in page-owned content.",
+      "fix": "Existing paused/blocked presentation and recovery; no invented device/vehicle-offline or fatal claim.",
+      "owner": "future page/state integration lease",
+      "dedup": "Prior audit noted missing initial offline distinction; no dedicated FSD repair row."
+    },
+    {
+      "id": "F04",
+      "rule": "i18n-fallback-mismatch",
+      "priority": "high",
+      "file": "web/src/features/driving/components/fsd-insights/FsdMethodologyNotes.tsx",
+      "line": 44,
+      "sourceSites": 9,
+      "uniqueKeys": 7,
+      "sites": [
+        "FSDInsightsPage.tsx:57,125,142 fsd.title",
+        "DrivingSummaryBrief.tsx:43 driving.brief.loading;45 driving.brief.retained",
+        "FsdConfidenceFootnotes.tsx:86 fsd.confidence.scopeNote",
+        "FsdMethodologyNotes.tsx:32 fsd.method.delta;44 fsd.method.absence;90 fsd.method.limits"
+      ],
+      "mechanism": "304 literal t(key,fallback) calls: zero missing keys/nine byte-different fallbacks. Four semantic keys are obsolete. en.json:25269 allows driving-only observation to support measured FSD zero, contrary to current type/source contract. :25263/:25277 deny per-drive attribution while page renders confidence-qualified attribution. Generated route catalog:444,547,550-551 repeats obsolete copy. Existing catalog keys override corrected fallback; no mounted production incident asserted.",
+      "fix": "Serialized designated catalog owner reconciles exactly seven existing keys/normal projections to approved source-backed copy, prioritizing four semantic keys; preserve unrelated leaves/guards and closed closure history.",
+      "owner": "canonical English/projection integration only",
+      "dedup": "No exact FSD semantic-copy repair row found; not permission for broad catalog closure/reopening."
+    },
+    {
+      "id": "F05",
+      "rule": "hardcoded-string",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 329,
+      "sourceSites": 4,
+      "sites": [
+        "FsdDriveAnalyticsPanels.tsx:312 human-readable JSON note",
+        "FsdDriveAnalyticsPanels.tsx:329 ' to '",
+        "FsdDriveAnalyticsPanels.tsx:573 'pts'",
+        "FsdDriveAnalyticsPanels.tsx:734 'pt'"
+      ],
+      "mechanism": "English human-readable export note and rendered separator/point suffixes bypass t. Technical raw SI schema keys/unit identifier are not untranslated UI violations.",
+      "fix": "Localize complete phrases; preserve machine schema and signed values. Exact catalog copy separately assigned, no invented key here.",
+      "owner": "future child/canonical copy leases",
+      "dedup": "Separator/suffix prior audit; exact export note additional site."
+    },
+    {
+      "id": "F06",
+      "rule": "manual-unit-conversion",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 634,
+      "sourceSites": 1,
+      "mechanism": "Local 1.609344 duplicates convertEfficiencyFromSI at lib/unitConversion.ts:256-262. Preference choice is honored; defect is conversion ownership, not observed wrong magnitude.",
+      "fix": "Reuse helper with SI Wh/km, current distance preference/precision/locale; retain signed difference/populations.",
+      "owner": "future EfficiencyPanel caller lease",
+      "dedup": "No exact FSD conversion row; no shared helper expansion needed."
+    },
+    {
+      "id": "F07",
+      "rule": "date-preference-bypass",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 218,
+      "sourceSites": 6,
+      "sites": [
+        "FsdDriveAnalyticsPanels.tsx:218,320,325",
+        "useFsdConfidenceItems.ts:149,155,161"
+      ],
+      "mechanism": "Six direct formatDateTime calls use browser timezone; first three also browser locale. Quality passes locale only. lib/dateFormat.ts:54-61 accepts tz/locale; useDateFormat.ts:73-96 subscribes to saved settings. Journal already uses preference-bound hook; other timestamp displays bypass it.",
+      "fix": "Reuse existing date hook; keep calendar-bucket timezone distinct from timestamp display zone. 12/24-hour support not proved by this inspection.",
+      "owner": "future timestamp-caller leases",
+      "dedup": "No exact FSD preference row; no new formatter."
+    },
+    {
+      "id": "F08",
+      "rule": "count-formatting-bypass",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 461,
+      "sourceSites": 8,
+      "sites": [
+        "FsdDriveAnalyticsPanels.tsx:461,559,566,644,651,739",
+        "FsdCommuteExperimentPanel.tsx:54,61"
+      ],
+      "mechanism": "Eight counts use raw JSX/interpolation/String rather than locale-reactive fmtInt, unlike neighboring percentages/efficiency values.",
+      "fix": "Use fmtInt and whole localized phrases while preserving population counts/known zero/unknown.",
+      "owner": "future child display leases",
+      "dedup": "Prior audit raw-count mechanism; Q12 bounds eight exact sites."
+    },
+    {
+      "id": "F09",
+      "rule": "unlocalized-table-name",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdTopDays.tsx",
+      "line": 120,
+      "sourceSites": 7,
+      "mechanism": "Seven declarations/nine table instances omit caption and pass technical English name/tableId. DataTable.tsx:947-948 uses caption ?? name ?? tableId as accessible name; journal/chapters correctly pass localized captions.",
+      "fix": "Pass existing localized title as caption, retain name/tableId identity.",
+      "owner": "future table-caller leases",
+      "dedup": "Same prior audit accessible-caption issue; no shared naming API change.",
+      "sites": [
+        "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:421",
+        "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:489",
+        "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:601",
+        "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:679",
+        "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:760",
+        "web/src/features/driving/components/fsd-insights/FsdTopDays.tsx:120",
+        "web/src/features/driving/components/fsd-insights/FsdCommuteExperimentPanel.tsx:111"
+      ]
+    },
+    {
+      "id": "F10",
+      "rule": "mobile-target-declaration",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 396,
+      "sourceSites": 2,
+      "sites": [
+        "FsdDriveAnalyticsPanels.tsx:396",
+        "FsdDriveAnalyticsPanels.tsx:406"
+      ],
+      "mechanism": "Two export Buttons size sm lack mobile overrides. Button.tsx:36 h-9 is36px at16px root versus44px mobile default. Source allocation only, not measured rectangles or claimed WCAG incident.",
+      "fix": "Existing min-h-11/min-w-11 below md and explicit desktop restoration/wrapping; composed proof later.",
+      "owner": "future ContributingDrivesPanel lease",
+      "dedup": "Related prior target review; caller-only, no global Button resize."
+    },
+    {
+      "id": "F11",
+      "rule": "chart-palette-preference-bypass",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDistanceTrend.tsx",
+      "line": 178,
+      "sourceSites": 6,
+      "sites": [
+        "FsdDistanceTrend.tsx:32,178,187",
+        "FsdShareTrend.tsx:112,143",
+        "FsdWeekdayPattern.tsx:161"
+      ],
+      "mechanism": "Three charts paint six dot/series/gradient sites from static CHART_COLORS: chartUtils.tsx:5 reexports colors.ts:110 CB-safe constant. Existing useChartPalette.ts:46-49 subscribes to saved palette/mode but callers do not use it; chart frame does not remap caller paint.",
+      "fix": "Use existing reactive palette and dots while preserving series IDs/order/preferences. Computed colors/Recharts props are acceptable, not inline-style violations.",
+      "owner": "future three chart-caller leases",
+      "dedup": "Accepted phase5 child-palette need; completed shared palette root stays closed."
+    },
+    {
+      "id": "F12",
+      "rule": "chart-area-intensity",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdShareTrend.tsx",
+      "line": 112,
+      "sourceSites": 1,
+      "mechanism": "Top gradient opacity0.45 emitted by ChartGradient.tsx:29-36 exceeds MDC-034 area tint maximum8%. No composed contrast/saturation measurement.",
+      "fix": "Existing restrained chart fill <=0.08 retaining scales/null gaps/data/exports.",
+      "owner": "future ShareTrend caller lease",
+      "dedup": "Same prior audit fill concern; no palette reset."
+    },
+    {
+      "id": "F13",
+      "rule": "semantic-token-bypass",
+      "priority": "medium",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 111,
+      "sourceSites": 25,
+      "mechanism": "Native scan retains25 fixed cyan/purple/green/amber text/background/border statements across structural icons/navigation/warning surfaces rather than existing semantic/neutral roles. Not automatically neon or proven contrast failures. Every exact source statement retained in Q7 log.",
+      "fix": "Existing neutral structural, theme-aware navigation and semantic warning roles; preserve labels/state meaning.",
+      "owner": "future separately leased child presentation owners",
+      "dedup": "Same prior decorative/token finding; no new theme/token engine.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdCommuteExperimentPanel.tsx",
+          "line": 83,
+          "source": "        <FlaskConical className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+          "line": 28,
+          "source": "      icon: <AlertTriangle className=\"mt-0.5 h-4 w-4 shrink-0 text-amber-300\" aria-hidden=\"true\" />,"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+          "line": 40,
+          "source": "      icon: <RotateCcw className=\"mt-0.5 h-4 w-4 shrink-0 text-amber-300\" aria-hidden=\"true\" />,"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+          "line": 57,
+          "source": "      icon: <AlertTriangle className=\"mt-0.5 h-4 w-4 shrink-0 text-amber-300\" aria-hidden=\"true\" />,"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+          "line": 72,
+          "source": "      icon: <Database className=\"mt-0.5 h-4 w-4 shrink-0 text-amber-300\" aria-hidden=\"true\" />,"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+          "line": 85,
+          "source": "      icon: <Info className=\"mt-0.5 h-4 w-4 shrink-0 text-cyan-300\" aria-hidden=\"true\" />,"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+          "line": 94,
+          "source": "      icon: <CalendarRange className=\"mt-0.5 h-4 w-4 shrink-0 text-cyan-300\" aria-hidden=\"true\" />,"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+          "line": 103,
+          "source": "      icon: <Ruler className=\"mt-0.5 h-4 w-4 shrink-0 text-cyan-300\" aria-hidden=\"true\" />,"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdConfidencePanel.tsx",
+          "line": 71,
+          "source": "          <Database className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 111,
+          "source": "        <GitCompareArrows className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 169,
+          "source": "        <Scale className=\"h-4 w-4 text-purple-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 207,
+          "source": "            <AlertTriangle className=\"h-4 w-4 text-amber-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 216,
+          "source": "                  className=\"flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm\""
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 230,
+          "source": "                    <Link key={driveID} to={`/drives/${driveID}`} className=\"text-cyan-300 hover:text-cyan-200\">"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 324,
+          "source": "          <Link to={`/drives/${row.drive_id}`} className=\"font-medium text-cyan-300 hover:text-cyan-200\">"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 374,
+          "source": "          <ArrowRight className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 383,
+          "source": "        <ListChecks className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 511,
+          "source": "        <Clock3 className=\"h-4 w-4 text-green-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 582,
+          "source": "        <Cpu className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 665,
+          "source": "        <MapPinned className=\"h-4 w-4 text-amber-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+          "line": 746,
+          "source": "        <Route className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdMethodologyNotes.tsx",
+          "line": 101,
+          "source": "          <span className=\"mt-0.5 shrink-0 text-cyan-300\">{note.icon}</span>"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryJournalTable.tsx",
+          "line": 23,
+          "source": "        ? <Link to={`/drives/${event.drive_id}`} className=\"text-cyan-300 hover:underline\">{formatDateTime(event.at)}</Link>"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryPanel.tsx",
+          "line": 72,
+          "source": "          <History className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryPanel.tsx",
+          "line": 113,
+          "source": "              <BookOpen className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        }
+      ]
+    },
+    {
+      "id": "F14",
+      "rule": "component-size-limit",
+      "priority": "low",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 80,
+      "sourceSites": 2,
+      "sites": [
+        "FsdDriveAnalyticsPanels.tsx:1-794",
+        "FsdDistanceTrend.tsx:1-201"
+      ],
+      "mechanism": "794-line multi-panel dependency and201-line chart exceed200-line component limit; page198 remains thin. Seven local analytics panels plus experiment retain eight children.",
+      "fix": "Only if separately queued, bounded child extraction retaining all data/actions and GroupTable. No remigration/deletion to satisfy counts.",
+      "owner": "future child decomposition lease",
+      "dedup": "794-line prior audit; minor201 excess low priority, not release incident."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/driving/lib/fsdCommuteExperiment.ts",
+      "lines": [
+        37,
+        63
+      ],
+      "rule": "heuristic-not-causal-proof",
+      "detail": "Changed/unchanged uses two-drive/three-percentage-point thresholds; firmware sides supplied high confidence and period-wide resets gate rows. Panel:90 asks whether firmware changed commute. This is descriptive heuristic, not statistical experiment/causal proof or verified same-geofence/window matching.",
+      "needs": "Safe population/threshold/copy acceptance, no real drive data or production incident inferred."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "line": 373,
+      "rule": "bare-link-target-focus",
+      "detail": "Localized icon-only drive link has16px glyph/no caller min-target/focus chrome; other links rely on inherited geometry/focus.",
+      "needs": "Authorized measured target/spacing-exception/keyboard-focus proof with native Link semantics; not counted as measured failure."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryJournalTable.tsx",
+      "line": 83,
+      "rule": "allocated-container-scroll",
+      "detail": "Six journal/nine chapter fields retained with maxHeight480 but no explicit mobile adapter. Source implies contained scroll, not measured discoverability or no page overflow.",
+      "needs": "Authorized mission widths/narrow containers/RTL/200%-text/nested-scroll proof."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/driving/components/fsd-insights/FsdConfidencePanel.tsx",
+      "line": 98,
+      "rule": "partial-quality-empty-context",
+      "detail": "Missing quality/period yields empty KV items; methodology persists. KVList behavior/partial response not exercised; type declares required payload fields.",
+      "needs": "Safe source-state acceptance for absent quality/retained/empty explanation, no fabricated production payload."
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/FsdEvidenceBrief.tsx",
+      "line": 3,
+      "rule": "category-subpath-type-import",
+      "detail": "Five type-only imports use existing stat-reference sub-barrel. Runtime visual imports use category barrels; no direct vendor import/recursive shared runtime dependency.",
+      "needs": "Confirm approved type boundary before classifying category-only prose as violation; preserve numeric types."
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/driving/components/fsd-insights/FsdDistanceTrend.tsx",
+      "line": 176,
+      "rule": "composed-motion-theme-a11y",
+      "detail": "Chart alternatives/labeled sections and shared forced-color table fallback exist. Recharts animation, custom/light contrast, screen readers, reduced motion/low bandwidth and open states not exercised.",
+      "needs": "Separately authorized safe mounted/native QA at mission widths; no current browser lock/device/telemetry access."
+    }
+  ],
+  "queueDedup": {
+    "method": "Exact file/line/mechanism; Q1/Q4/Q6/Q12 searches. Repeated GroupTable mounts do not duplicate source issues.",
+    "knownEvidence": "audit-page-118; inventory:169 and G007/P204 at362; accepted phase5 note retains child trust/mobile/palette needs",
+    "result": "Q12 case-sensitive phase6 FSD search returned this reserved QA row only; no dedicated FSD repair row found. Parent must reconcile narrow needs against CURRENT queue before dispatch.",
+    "noNewFixIds": true,
+    "noQueueWrites": true,
+    "noHypotheticalProductionIncident": true
+  },
+  "checksNotRun": {
+    "native": "NOT RUN",
+    "runtime": "NOT RUN",
+    "pagePASS": "NOT RUN",
+    "tests": "NOT RUN",
+    "discovered": null,
+    "executed": null,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "lint": "NOT RUN",
+    "build": "NOT RUN",
+    "globalTypeScript": "NOT RUN",
+    "browser": "NOT RUN",
+    "screenshots": "NOT RUN",
+    "backendAPI": "NOT RUN",
+    "normalCatalogGuard": "NOT RUN",
+    "server": "Parent5173 not contacted/changed",
+    "browserLock": "None; Edge msedge only if later authorized; no downloads"
+  },
+  "limits": [
+    "Only bounded current page/local parts and necessary dependencies, not whole-app audit/worktree clean proof.",
+    "No real drive/autonomy/device/control/API/identity/location data or mutation; no fixtures injected.",
+    "No Git/tests/lint/build/globalTSC/browser/servers/Docker/installs/subagents/custom helpers/extensions/heartbeats.",
+    "Dependency reads are bounded; whole-file hash/line count does not imply whole-file semantic review.",
+    "Three nonexistent-path native probes exit1; two tool view failures; oversized Q13 rejected with os206 before execution. All retained honestly.",
+    "Q7 case-insensitive raw-control scan falsely matched two shared Buttons; corrected case-sensitive Q9 returned0. Lexical candidates are not AST/full guideline proof.",
+    "Queue concurrently orchestrator-owned; line400 shifted406; snapshots not ownership locks/census.",
+    "Current UI /analytics/fsd alias, backend exclusive-end enforcement/full populations, 12/24h support, extreme/runtime/a11y acceptance unverified.",
+    "Closed phases and accepted source/history retained; no page/native/application PASS."
+  ],
+  "release": {
+    "status": "DONE_SOURCE_QA_REPORT_ONLY",
+    "recommendation": "Hold full page/native acceptance pending precise needs and authorized QA; accepted source remains closed",
+    "writableFiles": [
+      "docs/frontend-audits/phase6-qa-driving-fsdinsights.json",
+      "web/logs/phase6-qa-driving-fsdinsights.log"
+    ],
+    "allReportLogCommandClaimsReleased": true,
+    "utc": "2026-10-14T01:28:38.5707999Z",
+    "noLaterWrites": true,
+    "ownedCommandsRunning": 0,
+    "sourceOrTestEdits": 0,
+    "finalJSONParse": "Native readback immediately after final report write; actual result appended to raw log and stdout"
+  },
+  "snapshotUTC": "2026-10-14T01:25:46.1530697Z",
+  "sourcePins": [
+    {
+      "file": "web/src/features/driving/pages/FSDInsightsPage.tsx",
+      "lines": 198,
+      "sha256": "B890540BA4461AD154B5EBF29DCBAE4F8080F9A64AD457240CD1D2035ECD44FC"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdCommuteExperimentPanel.tsx",
+      "lines": 130,
+      "sha256": "14ED97DA9F758838BCA3D26998E71649D4ED065A57343F8052C7EBEF8165A763"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdCommuteStoriesTable.tsx",
+      "lines": 105,
+      "sha256": "C24A1B4F61EB31C60F03F6A40C1FB52B26E710660AF5C8484FD72AB258064271"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+      "lines": 121,
+      "sha256": "E0C01FC579C425B7BA25D2F3DB37F7E4EE0A9B97394CBDDA03DA05CA5222839B"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdConfidencePanel.tsx",
+      "lines": 107,
+      "sha256": "523B93655D74404D74C1C069A1D8FF4ABF02941A871415F7E66201708553A3E2"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdDistanceTrend.tsx",
+      "lines": 201,
+      "sha256": "87DE65E34EFA0331C291967A932AA291B1BD6B760015C063B4D03806F6CAF7C8"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+      "lines": 794,
+      "sha256": "34768750D39D635A4042E37C4B428139B62E7B50537BDC7B2E65121B9A4D293F"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdKpiBand.tsx",
+      "lines": 123,
+      "sha256": "FABDEF55E59C7D38F65A6EC98888528A73CA33A9D67006A916707974409843DB"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdMethodologyNotes.tsx",
+      "lines": 109,
+      "sha256": "C101DE0EFCC43C92EB8CE818BF73F21CC2E918A5E6DEB0E4B988D88254E0F352"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryJournalTable.tsx",
+      "lines": 97,
+      "sha256": "E7AFE41A4D954CE9061C19EBD0486D3B3DB97FB0859FBAD81348F86A41031F3F"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryPanel.tsx",
+      "lines": 142,
+      "sha256": "69812F0E5E71327AD438E384995F90149756B8314A043FAEFAF814D1907C9F2F"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdPeriodControl.tsx",
+      "lines": 120,
+      "sha256": "0CE25CE1381908BB3DE2F0EC6B09F31A387545D867D17003F1E256BD93E94442"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdSectionBody.tsx",
+      "lines": 60,
+      "sha256": "7078DD504882D89C2592CA6FE2189BEE7D32E4ED65D31EE90B4621375CB42505"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdShareTrend.tsx",
+      "lines": 153,
+      "sha256": "E6B5CAEBFDED1F5EFC1D62212583F8DCF79B32AAB4B9AB206270851A322D3194"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdTopDays.tsx",
+      "lines": 136,
+      "sha256": "04E1EC22949260A0130469C78C6AEE928EF1F473C74C5405F8E8516028BB481B"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/FsdWeekdayPattern.tsx",
+      "lines": 170,
+      "sha256": "C6708096C652F446ADF990C2A1564D077A48C408B309103CC7F5052DCC3BCDC5"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/helpers.ts",
+      "lines": 174,
+      "sha256": "B009A8E6170F85768A8E92449964C5EFF4718DD3AF9BFFFA387C22CF6B8B5008"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/index.ts",
+      "lines": 26,
+      "sha256": "63DC98B4E20A624E67607A26AE3F96C5F4BCE4E65688CEC31E59C65FFF5D8248"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/types.ts",
+      "lines": 13,
+      "sha256": "25A6F798C63A773F6129C027F953622F18508993CA35549710ACA016FB8FDA1C"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/useClientPagination.ts",
+      "lines": 35,
+      "sha256": "F3E4DD419446A811EFE70D25A82C943E1F7D6FAD93920145FA6E09CB7CFC915A"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/useFsdConfidenceItems.ts",
+      "lines": 165,
+      "sha256": "E5ECF5D8F5BEAAAD21654556D2B7EDDBCA8FA2659801BA302C05BE1954033BE5"
+    },
+    {
+      "file": "web/src/features/driving/components/fsd-insights/useFsdWeekdayLabel.ts",
+      "lines": 29,
+      "sha256": "33BDF134668EC645AC044EE975F4A001532F10E30D213673513DE0BC729F6AFB"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "lines": 53,
+      "sha256": "29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/FsdEvidenceBrief.tsx",
+      "lines": 52,
+      "sha256": "71BAE706C2DF308C05470E42BB83B7CC4C53AF4B16677462D2B837084CCB392A"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "lines": 63,
+      "sha256": "682A5D14BB65BA04739960E8C9E08AD15A8C39D32B9D6E5941A7946C226891BA"
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "lines": 296,
+      "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "lines": 2539,
+      "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "lines": 1593,
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "lines": 2460,
+      "sha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2"
+    },
+    {
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "lines": 642,
+      "sha256": "F775818AC815813432F0A576AB6E22DBDBBD5106D513AA81FB56B953C5DADB20"
+    },
+    {
+      "file": "web/src/api/scope.ts",
+      "lines": 372,
+      "sha256": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "lines": 434,
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "lines": 168,
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "lines": 694,
+      "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "lines": 174,
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "lines": 194,
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "lines": 65,
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "lines": 47,
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "lines": 148,
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542"
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "lines": 49,
+      "sha256": "8B58474ED3E45309F3F7BF29ADCC802D056128CDBE7FA937E3F15C2DB649E333"
+    },
+    {
+      "file": "web/src/types/fsd.ts",
+      "lines": 348,
+      "sha256": "EA89C5EBFF576F4ADFF29D355DF87E0E98F20B91C7CDB8DEB767F8D0347A22EC"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "lines": 919,
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C"
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "lines": 127,
+      "sha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "lines": 289,
+      "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "lines": 462,
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "lines": 500,
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE"
+    },
+    {
+      "file": "web/src/lib/colors.ts",
+      "lines": 388,
+      "sha256": "A5C53FAEAAA3A2D07C6475F0D64F67DDCE9E36E6C3405AC983584F4A1FCF5E93"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "lines": 17,
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "lines": 259,
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "lines": 115,
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "lines": 93,
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "lines": 1707,
+      "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282"
+    },
+    {
+      "file": "web/src/components/charts/index.ts",
+      "lines": 88,
+      "sha256": "7C088ADD21D5D43F2D37F41C72517DB9B2EB7738174914BD8BF21B9FBC62DE5D"
+    },
+    {
+      "file": "web/src/components/charts/ChartGradient.tsx",
+      "lines": 41,
+      "sha256": "9C77209C111EABDD13239E0DA5C45272CF491A1DE059DD4DAD153151798E843F"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "lines": 1006,
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "lines": 38994,
+      "sha256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893"
+    },
+    {
+      "file": "web/src/features/driving/lib/fsdCommuteExperiment.ts",
+      "lines": 146,
+      "sha256": "EAC82E825E88D5E0070A19AB6577941BD465B967AC3A14CEF6FA05F53977B5BD"
+    },
+    {
+      "file": "web/src/components/charts/chartUtils.tsx",
+      "lines": 28,
+      "sha256": "A9EC06AA5E321797194B9FB278AAD015272B5D7809A01F01C655508F114303D2"
+    },
+    {
+      "file": "web/src/i18n/en/locale-driving-fsdinsights.json",
+      "lines": 1070,
+      "sha256": "2C745E867A2540F46DC9DBE54BF6D5A8E69160EAF7455EBB95DAC0FA2E821FBB"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-118.json",
+      "lines": 367,
+      "sha256": "EA77902FB339E59D8A21720878145389A66FD212B1F0429B568AEB46DB9483DD"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "lines": 152,
+      "sha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "lines": 94,
+      "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "lines": 629,
+      "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E"
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "lines": 45,
+      "sha256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "lines": 221,
+      "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315"
+    },
+    {
+      "file": ".gitignore",
+      "lines": 130,
+      "sha256": "5E0056D6747E60450D4B2134BABA2152CEEC59C79E89AAE06D3712CC441F3A7E"
+    }
+  ],
+  "boundedScans": [
+    {
+      "rule": "static-inline-style",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern style\\s*=\\s*\\{\\{",
+      "numericExit": 0,
+      "matchedLines": 0,
+      "rawOutput": "CHECK static-inline-style | regex=style\\s*=\\s*\\{\\{ | matchedLines=0 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "raw-html",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern <\\s*(button|input|textarea|select|table)\\b",
+      "numericExit": 0,
+      "matchedLines": 2,
+      "rawOutput": "CHECK raw-html | regex=<\\s*(button|input|textarea|select|table)\\b | matchedLines=2 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "direct-library-import",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]",
+      "numericExit": 0,
+      "matchedLines": 0,
+      "rawOutput": "CHECK direct-library-import | regex=from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"] | matchedLines=0 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "old-api-import",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern from\\s+['\\\"](?:\\.\\./){1,2}api['\\\"]",
+      "numericExit": 0,
+      "matchedLines": 0,
+      "rawOutput": "CHECK old-api-import | regex=from\\s+['\\\"](?:\\.\\./){1,2}api['\\\"] | matchedLines=0 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "double-prefix",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern /api/v1/",
+      "numericExit": 0,
+      "matchedLines": 0,
+      "rawOutput": "CHECK double-prefix | regex=/api/v1/ | matchedLines=0 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "camelcase-param",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern [?&][a-z]+[A-Z][a-zA-Z]*=",
+      "numericExit": 0,
+      "matchedLines": 0,
+      "rawOutput": "CHECK camelcase-param | regex=[?&][a-z]+[A-Z][a-zA-Z]*= | matchedLines=0 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "hidden-section-candidate",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern &&\\s*<\\s*(GlassPanel|ChartContainer|section)",
+      "numericExit": 0,
+      "matchedLines": 0,
+      "rawOutput": "CHECK hidden-section-candidate | regex=&&\\s*<\\s*(GlassPanel|ChartContainer|section) | matchedLines=0 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "hardcoded-markup-candidate",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern >\\s*[A-Za-z][A-Za-z ]+\\s*<|\\{['\\\"] to ['\\\"]\\}|\\} (pts|pt)",
+      "numericExit": 0,
+      "matchedLines": 3,
+      "rawOutput": "CHECK hardcoded-markup-candidate | regex=>\\s*[A-Za-z][A-Za-z ]+\\s*<|\\{['\\\"] to ['\\\"]\\}|\\} (pts|pt) | matchedLines=3 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "fetch-useeffect-candidate",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern \\bfetch\\s*\\(|\\buseEffect\\s*\\(",
+      "numericExit": 0,
+      "matchedLines": 2,
+      "rawOutput": "CHECK fetch-useeffect-candidate | regex=\\bfetch\\s*\\(|\\buseEffect\\s*\\( | matchedLines=2 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "fixed-color-candidate",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern (?:text|bg|border)-(?:cyan|purple|green|amber|emerald|rose|white|neon)[-/]",
+      "numericExit": 0,
+      "matchedLines": 25,
+      "rawOutput": "CHECK fixed-color-candidate | regex=(?:text|bg|border)-(?:cyan|purple|green|amber|emerald|rose|white|neon)[-/] | matchedLines=25 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "category-subpath-candidate",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern @/components/[^'\\\"]+/[^'\\\"]+",
+      "numericExit": 0,
+      "matchedLines": 5,
+      "rawOutput": "CHECK category-subpath-candidate | regex=@/components/[^'\\\"]+/[^'\\\"]+ | matchedLines=5 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "manual-unit-conversion",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern 1\\.609344",
+      "numericExit": 0,
+      "matchedLines": 1,
+      "rawOutput": "CHECK manual-unit-conversion | regex=1\\.609344 | matchedLines=1 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "mobile-columns-declaration",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern mobileColumns=",
+      "numericExit": 0,
+      "matchedLines": 7,
+      "rawOutput": "CHECK mobile-columns-declaration | regex=mobileColumns= | matchedLines=7 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "page-layout",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern <PageLayout",
+      "numericExit": 0,
+      "matchedLines": 1,
+      "rawOutput": "CHECK page-layout | regex=<PageLayout | matchedLines=1 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "section-boundary",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern <SectionErrorBoundary",
+      "numericExit": 0,
+      "matchedLines": 8,
+      "rawOutput": "CHECK section-boundary | regex=<SectionErrorBoundary | matchedLines=8 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "panel-shell",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern <GlassPanel|<ChartContainer",
+      "numericExit": 0,
+      "matchedLines": 14,
+      "rawOutput": "CHECK panel-shell | regex=<GlassPanel|<ChartContainer | matchedLines=14 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    },
+    {
+      "rule": "table-declaration",
+      "command": "Select-String -LiteralPath <Q7 explicit 24-file mounted closure> -Pattern <DataTable",
+      "numericExit": 0,
+      "matchedLines": 9,
+      "rawOutput": "CHECK table-declaration | regex=<DataTable | matchedLines=9 | commandExit=0",
+      "scopeFilesField": "mountedScanFiles (24 exact current paths)"
+    }
+  ],
+  "scanCorrections": {
+    "rawHTML": {
+      "matches": 0,
+      "priorFalsePositives": 2,
+      "exit": 0,
+      "command": "Select-String -LiteralPath <same24files> -Pattern '<\\s*(button|input|textarea|select|table)\\b' -CaseSensitive"
+    },
+    "hook583to610": {
+      "camelcaseURLMatches": 0,
+      "exit": 0,
+      "fetchUseEffectMatches": 0,
+      "doublePrefixMatches": 0
+    },
+    "localization": {
+      "weekdayPairs": 8,
+      "uniqueKeys": 7,
+      "literalCalls": 304,
+      "exit": 0,
+      "weekdayMismatches": 0,
+      "fallbackMismatches": 9,
+      "missingKeys": 0,
+      "normalGuardRun": false
+    }
+  },
+  "commandReceipts": [
+    {
+      "id": "Q1",
+      "command": "Exact queue rows, local inventory, logs ignore",
+      "exit": 0
+    },
+    {
+      "id": "Q2",
+      "command": "Pin buffer then nonexistent src/router.tsx; buffer not emitted",
+      "exit": 1
+    },
+    {
+      "id": "Q3",
+      "command": "Current FSD whole-byte SHA256+line pins and real route discovery",
+      "exit": 0
+    },
+    {
+      "id": "Q4",
+      "command": "Actual mount/shared mechanics plus exact child queue dedup",
+      "exit": 0
+    },
+    {
+      "id": "Q5",
+      "command": "Nonexistent DataTableRow.tsx; buffer not emitted",
+      "exit": 1
+    },
+    {
+      "id": "Q6",
+      "command": "Existing shared mechanics and bounded queue patterns",
+      "exit": 0
+    },
+    {
+      "id": "Q7",
+      "command": "17 native rule/count patterns; exact raw outputs in boundedScans/log",
+      "exit": 0
+    },
+    {
+      "id": "Q8",
+      "command": "Actual App/lib route alias scan",
+      "exit": 0
+    },
+    {
+      "id": "Q9",
+      "command": "Corrected raw HTML, hook range checks, palette/export/date anchors",
+      "exit": 0
+    },
+    {
+      "id": "Q10",
+      "command": "Nonexistent chartUtils.ts; buffer not emitted",
+      "exit": 1
+    },
+    {
+      "id": "Q11",
+      "command": "Corrected localization projection/native counts/hashes",
+      "exit": 0
+    },
+    {
+      "id": "Q12",
+      "command": "Canonical/generated semantic-copy/count sites/dynamic weekday/dedup/pins",
+      "exit": 0
+    },
+    {
+      "id": "Q13",
+      "command": "Oversized inline report: tool os206 rejection; NOT EXECUTED",
+      "exit": 1
+    },
+    {
+      "exit": 0,
+      "id": "Q14",
+      "command": "Bounded JSON base creation + native parse after tool os206"
+    },
+    {
+      "exit": 0,
+      "id": "Q15",
+      "command": "14 exact mechanism write, native declaration-line readback; raw log retained"
+    },
+    {
+      "exit": 0,
+      "id": "Q16",
+      "command": "Final ConvertFrom-Json, source SHA256/line pin comparisons, exact count assertions and all report/log/command release"
+    }
+  ],
+  "rawLog": "web/logs/phase6-qa-driving-fsdinsights.log",
+  "summary": {
+    "confirmedMechanisms": 14,
+    "confirmedSourceSites": 81.0,
+    "candidateMechanisms": 6,
+    "countConvention": "Mechanisms deduplicated; statement/declaration sites separate; repeat GroupTable instances do not multiply sites",
+    "byRule": [
+      {
+        "sourceSites": 7,
+        "rule": "mobile-field-loss",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 2,
+        "rule": "retained-status-loss",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 1,
+        "rule": "initial-paused-loading",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 9,
+        "rule": "i18n-fallback-mismatch",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 4,
+        "rule": "hardcoded-string",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 1,
+        "rule": "manual-unit-conversion",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 6,
+        "rule": "date-preference-bypass",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 8,
+        "rule": "count-formatting-bypass",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 7,
+        "rule": "unlocalized-table-name",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 2,
+        "rule": "mobile-target-declaration",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 6,
+        "rule": "chart-palette-preference-bypass",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 1,
+        "rule": "chart-area-intensity",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 25,
+        "rule": "semantic-token-bypass",
+        "mechanisms": 1
+      },
+      {
+        "sourceSites": 2,
+        "rule": "component-size-limit",
+        "mechanisms": 1
+      }
+    ],
+    "mostIssues": "FsdDriveAnalyticsPanels.tsx child dependency; semantic catalog mismatch highest priority"
+  },
+  "preciseNeeds": [
+    {
+      "priority": 1,
+      "findings": [
+        "F04",
+        "F05",
+        "F08",
+        "F09"
+      ],
+      "need": "Exact seven existing canonical key reconciliation plus localized whole caller phrases/counts/captions; catalog owner alone edits normal projections under separate lease, unrelated guards/closed roots unchanged"
+    },
+    {
+      "priority": 1,
+      "findings": [
+        "F01",
+        "F02",
+        "F03"
+      ],
+      "need": "Existing mobile full-detail adoption for nine affected table instances and existing DataState retained/initial-paused propagation; no new shared table/trust engine"
+    },
+    {
+      "priority": 2,
+      "findings": [
+        "F06",
+        "F07",
+        "F10",
+        "F11",
+        "F12",
+        "F13"
+      ],
+      "need": "Caller-only adoption of central efficiency/date/palette/semantic roles and mobile export minima, preserving rawSI/signs/identities/preferences"
+    },
+    {
+      "priority": 3,
+      "findings": [
+        "F14"
+      ],
+      "need": "Only explicitly queued narrow child extraction, never remigrate accepted page"
+    },
+    {
+      "priority": 1,
+      "need": "Separate safe evidence disposition; no source edits or real data execution based on candidates",
+      "candidates": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "C06"
+      ]
+    }
+  ],
+  "mountedScanFiles": [
+    "web/src/features/driving/pages/FSDInsightsPage.tsx",
+    "web/src/features/driving/components/operationalbrief-a-m/FsdEvidenceBrief.tsx",
+    "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+    "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+    "web/src/features/driving/lib/fsdCommuteExperiment.ts",
+    "web/src/features/driving/components/fsd-insights/FsdCommuteExperimentPanel.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdCommuteStoriesTable.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdConfidencePanel.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdDistanceTrend.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdMethodologyNotes.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdObservatoryJournalTable.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdObservatoryPanel.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdSectionBody.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdShareTrend.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdTopDays.tsx",
+    "web/src/features/driving/components/fsd-insights/FsdWeekdayPattern.tsx",
+    "web/src/features/driving/components/fsd-insights/helpers.ts",
+    "web/src/features/driving/components/fsd-insights/index.ts",
+    "web/src/features/driving/components/fsd-insights/types.ts",
+    "web/src/features/driving/components/fsd-insights/useClientPagination.ts",
+    "web/src/features/driving/components/fsd-insights/useFsdConfidenceItems.ts",
+    "web/src/features/driving/components/fsd-insights/useFsdWeekdayLabel.ts"
+  ],
+  "ruleDisposition": {
+    "staticInlineStyle": "Q7 matched0",
+    "camelcaseURL": "Q7/Q9 matched0; QueryScope camelCase normalized before wire",
+    "hiddenSections": "Q7 matched0; conditional badges/notes are not section disappearance",
+    "directVendor": "Q7 matched0; shared chart owner imports expected",
+    "rawHTML": "Q9 case-sensitive matched0; prior Button false positives retained",
+    "pageContainer": "PageLayout wraps PageContainer; not missing wrapper",
+    "hardcodedStrings": "F05 four confirmed source sites",
+    "oldAPI": "Q7 matched0",
+    "fetchUseEffect": "Two page effects normalize URL/scroll only, not data fetching; hook subset matched0",
+    "doublePrefix": "Q7/Q9 matched0",
+    "backend": "Not audited; no SQL/log/panic/context claims"
+  },
+  "acceptableExceptions": [
+    "Type-only stat-reference imports candidate, not direct-library violations",
+    "Dynamic chart paints/Recharts API props not inline-style violations",
+    "Barrel/shared chartUtils direct recharts import expected building block",
+    "Conditional flags/badges/caveats retain all section shells",
+    "SI machine export field/unit identifiers not English UI strings",
+    "Browser-local-day footnote matches current no-timezone-override page path; no unsupported timezone-mismatch finding"
+  ],
+  "finalPinVerification": {
+    "results": [
+      {
+        "expected": "B890540BA4461AD154B5EBF29DCBAE4F8080F9A64AD457240CD1D2035ECD44FC",
+        "file": "web/src/features/driving/pages/FSDInsightsPage.tsx",
+        "actual": "B890540BA4461AD154B5EBF29DCBAE4F8080F9A64AD457240CD1D2035ECD44FC",
+        "matches": true
+      },
+      {
+        "expected": "14ED97DA9F758838BCA3D26998E71649D4ED065A57343F8052C7EBEF8165A763",
+        "file": "web/src/features/driving/components/fsd-insights/FsdCommuteExperimentPanel.tsx",
+        "actual": "14ED97DA9F758838BCA3D26998E71649D4ED065A57343F8052C7EBEF8165A763",
+        "matches": true
+      },
+      {
+        "expected": "C24A1B4F61EB31C60F03F6A40C1FB52B26E710660AF5C8484FD72AB258064271",
+        "file": "web/src/features/driving/components/fsd-insights/FsdCommuteStoriesTable.tsx",
+        "actual": "C24A1B4F61EB31C60F03F6A40C1FB52B26E710660AF5C8484FD72AB258064271",
+        "matches": true
+      },
+      {
+        "expected": "E0C01FC579C425B7BA25D2F3DB37F7E4EE0A9B97394CBDDA03DA05CA5222839B",
+        "file": "web/src/features/driving/components/fsd-insights/FsdConfidenceFootnotes.tsx",
+        "actual": "E0C01FC579C425B7BA25D2F3DB37F7E4EE0A9B97394CBDDA03DA05CA5222839B",
+        "matches": true
+      },
+      {
+        "expected": "523B93655D74404D74C1C069A1D8FF4ABF02941A871415F7E66201708553A3E2",
+        "file": "web/src/features/driving/components/fsd-insights/FsdConfidencePanel.tsx",
+        "actual": "523B93655D74404D74C1C069A1D8FF4ABF02941A871415F7E66201708553A3E2",
+        "matches": true
+      },
+      {
+        "expected": "87DE65E34EFA0331C291967A932AA291B1BD6B760015C063B4D03806F6CAF7C8",
+        "file": "web/src/features/driving/components/fsd-insights/FsdDistanceTrend.tsx",
+        "actual": "87DE65E34EFA0331C291967A932AA291B1BD6B760015C063B4D03806F6CAF7C8",
+        "matches": true
+      },
+      {
+        "expected": "34768750D39D635A4042E37C4B428139B62E7B50537BDC7B2E65121B9A4D293F",
+        "file": "web/src/features/driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx",
+        "actual": "34768750D39D635A4042E37C4B428139B62E7B50537BDC7B2E65121B9A4D293F",
+        "matches": true
+      },
+      {
+        "expected": "FABDEF55E59C7D38F65A6EC98888528A73CA33A9D67006A916707974409843DB",
+        "file": "web/src/features/driving/components/fsd-insights/FsdKpiBand.tsx",
+        "actual": "FABDEF55E59C7D38F65A6EC98888528A73CA33A9D67006A916707974409843DB",
+        "matches": true
+      },
+      {
+        "expected": "C101DE0EFCC43C92EB8CE818BF73F21CC2E918A5E6DEB0E4B988D88254E0F352",
+        "file": "web/src/features/driving/components/fsd-insights/FsdMethodologyNotes.tsx",
+        "actual": "C101DE0EFCC43C92EB8CE818BF73F21CC2E918A5E6DEB0E4B988D88254E0F352",
+        "matches": true
+      },
+      {
+        "expected": "E7AFE41A4D954CE9061C19EBD0486D3B3DB97FB0859FBAD81348F86A41031F3F",
+        "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryJournalTable.tsx",
+        "actual": "E7AFE41A4D954CE9061C19EBD0486D3B3DB97FB0859FBAD81348F86A41031F3F",
+        "matches": true
+      },
+      {
+        "expected": "69812F0E5E71327AD438E384995F90149756B8314A043FAEFAF814D1907C9F2F",
+        "file": "web/src/features/driving/components/fsd-insights/FsdObservatoryPanel.tsx",
+        "actual": "69812F0E5E71327AD438E384995F90149756B8314A043FAEFAF814D1907C9F2F",
+        "matches": true
+      },
+      {
+        "expected": "0CE25CE1381908BB3DE2F0EC6B09F31A387545D867D17003F1E256BD93E94442",
+        "file": "web/src/features/driving/components/fsd-insights/FsdPeriodControl.tsx",
+        "actual": "0CE25CE1381908BB3DE2F0EC6B09F31A387545D867D17003F1E256BD93E94442",
+        "matches": true
+      },
+      {
+        "expected": "7078DD504882D89C2592CA6FE2189BEE7D32E4ED65D31EE90B4621375CB42505",
+        "file": "web/src/features/driving/components/fsd-insights/FsdSectionBody.tsx",
+        "actual": "7078DD504882D89C2592CA6FE2189BEE7D32E4ED65D31EE90B4621375CB42505",
+        "matches": true
+      },
+      {
+        "expected": "E6B5CAEBFDED1F5EFC1D62212583F8DCF79B32AAB4B9AB206270851A322D3194",
+        "file": "web/src/features/driving/components/fsd-insights/FsdShareTrend.tsx",
+        "actual": "E6B5CAEBFDED1F5EFC1D62212583F8DCF79B32AAB4B9AB206270851A322D3194",
+        "matches": true
+      },
+      {
+        "expected": "04E1EC22949260A0130469C78C6AEE928EF1F473C74C5405F8E8516028BB481B",
+        "file": "web/src/features/driving/components/fsd-insights/FsdTopDays.tsx",
+        "actual": "04E1EC22949260A0130469C78C6AEE928EF1F473C74C5405F8E8516028BB481B",
+        "matches": true
+      },
+      {
+        "expected": "C6708096C652F446ADF990C2A1564D077A48C408B309103CC7F5052DCC3BCDC5",
+        "file": "web/src/features/driving/components/fsd-insights/FsdWeekdayPattern.tsx",
+        "actual": "C6708096C652F446ADF990C2A1564D077A48C408B309103CC7F5052DCC3BCDC5",
+        "matches": true
+      },
+      {
+        "expected": "B009A8E6170F85768A8E92449964C5EFF4718DD3AF9BFFFA387C22CF6B8B5008",
+        "file": "web/src/features/driving/components/fsd-insights/helpers.ts",
+        "actual": "B009A8E6170F85768A8E92449964C5EFF4718DD3AF9BFFFA387C22CF6B8B5008",
+        "matches": true
+      },
+      {
+        "expected": "63DC98B4E20A624E67607A26AE3F96C5F4BCE4E65688CEC31E59C65FFF5D8248",
+        "file": "web/src/features/driving/components/fsd-insights/index.ts",
+        "actual": "63DC98B4E20A624E67607A26AE3F96C5F4BCE4E65688CEC31E59C65FFF5D8248",
+        "matches": true
+      },
+      {
+        "expected": "25A6F798C63A773F6129C027F953622F18508993CA35549710ACA016FB8FDA1C",
+        "file": "web/src/features/driving/components/fsd-insights/types.ts",
+        "actual": "25A6F798C63A773F6129C027F953622F18508993CA35549710ACA016FB8FDA1C",
+        "matches": true
+      },
+      {
+        "expected": "F3E4DD419446A811EFE70D25A82C943E1F7D6FAD93920145FA6E09CB7CFC915A",
+        "file": "web/src/features/driving/components/fsd-insights/useClientPagination.ts",
+        "actual": "F3E4DD419446A811EFE70D25A82C943E1F7D6FAD93920145FA6E09CB7CFC915A",
+        "matches": true
+      },
+      {
+        "expected": "E5ECF5D8F5BEAAAD21654556D2B7EDDBCA8FA2659801BA302C05BE1954033BE5",
+        "file": "web/src/features/driving/components/fsd-insights/useFsdConfidenceItems.ts",
+        "actual": "E5ECF5D8F5BEAAAD21654556D2B7EDDBCA8FA2659801BA302C05BE1954033BE5",
+        "matches": true
+      },
+      {
+        "expected": "33BDF134668EC645AC044EE975F4A001532F10E30D213673513DE0BC729F6AFB",
+        "file": "web/src/features/driving/components/fsd-insights/useFsdWeekdayLabel.ts",
+        "actual": "33BDF134668EC645AC044EE975F4A001532F10E30D213673513DE0BC729F6AFB",
+        "matches": true
+      },
+      {
+        "expected": "29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93",
+        "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "actual": "29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93",
+        "matches": true
+      },
+      {
+        "expected": "71BAE706C2DF308C05470E42BB83B7CC4C53AF4B16677462D2B837084CCB392A",
+        "file": "web/src/features/driving/components/operationalbrief-a-m/FsdEvidenceBrief.tsx",
+        "actual": "71BAE706C2DF308C05470E42BB83B7CC4C53AF4B16677462D2B837084CCB392A",
+        "matches": true
+      },
+      {
+        "expected": "682A5D14BB65BA04739960E8C9E08AD15A8C39D32B9D6E5941A7946C226891BA",
+        "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+        "actual": "682A5D14BB65BA04739960E8C9E08AD15A8C39D32B9D6E5941A7946C226891BA",
+        "matches": true
+      },
+      {
+        "expected": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "file": "docs/orchestrator-loop.md",
+        "actual": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "matches": true
+      },
+      {
+        "expected": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "file": "docs/frontend-design-contract.md",
+        "actual": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "matches": true
+      },
+      {
+        "expected": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "file": "docs/frontend-mission.md",
+        "actual": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "matches": true
+      },
+      {
+        "expected": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+        "file": "docs/session-handoff.md",
+        "actual": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+        "matches": true
+      },
+      {
+        "expected": "F775818AC815813432F0A576AB6E22DBDBBD5106D513AA81FB56B953C5DADB20",
+        "file": "web/src/api/hooks/useAnalytics.ts",
+        "actual": "F775818AC815813432F0A576AB6E22DBDBBD5106D513AA81FB56B953C5DADB20",
+        "matches": true
+      },
+      {
+        "expected": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+        "file": "web/src/api/scope.ts",
+        "actual": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+        "matches": true
+      },
+      {
+        "expected": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "file": "web/src/api/dataState.ts",
+        "actual": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "matches": true
+      },
+      {
+        "expected": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "file": "web/src/lib/workspaceScope.ts",
+        "actual": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "matches": true
+      },
+      {
+        "expected": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "file": "web/src/hooks/useRangeState.ts",
+        "actual": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "matches": true
+      },
+      {
+        "expected": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "actual": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "matches": true
+      },
+      {
+        "expected": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "file": "web/src/hooks/useUnits.ts",
+        "actual": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "matches": true
+      },
+      {
+        "expected": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "file": "web/src/hooks/useDataState.ts",
+        "actual": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "matches": true
+      },
+      {
+        "expected": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "actual": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "matches": true
+      },
+      {
+        "expected": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "file": "web/src/hooks/useDateFormat.ts",
+        "actual": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+        "matches": true
+      },
+      {
+        "expected": "8B58474ED3E45309F3F7BF29ADCC802D056128CDBE7FA937E3F15C2DB649E333",
+        "file": "web/src/hooks/useChartPalette.ts",
+        "actual": "8B58474ED3E45309F3F7BF29ADCC802D056128CDBE7FA937E3F15C2DB649E333",
+        "matches": true
+      },
+      {
+        "expected": "EA89C5EBFF576F4ADFF29D355DF87E0E98F20B91C7CDB8DEB767F8D0347A22EC",
+        "file": "web/src/types/fsd.ts",
+        "actual": "EA89C5EBFF576F4ADFF29D355DF87E0E98F20B91C7CDB8DEB767F8D0347A22EC",
+        "matches": true
+      },
+      {
+        "expected": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "file": "web/src/App.tsx",
+        "actual": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "matches": true
+      },
+      {
+        "expected": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+        "file": "web/src/lib/routeLoaders.ts",
+        "actual": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+        "matches": true
+      },
+      {
+        "expected": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+        "file": "web/src/lib/routeRegistry.ts",
+        "actual": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+        "matches": true
+      },
+      {
+        "expected": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "file": "web/src/lib/dateFormat.ts",
+        "actual": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "matches": true
+      },
+      {
+        "expected": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "file": "web/src/lib/unitConversion.ts",
+        "actual": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "matches": true
+      },
+      {
+        "expected": "A5C53FAEAAA3A2D07C6475F0D64F67DDCE9E36E6C3405AC983584F4A1FCF5E93",
+        "file": "web/src/lib/colors.ts",
+        "actual": "A5C53FAEAAA3A2D07C6475F0D64F67DDCE9E36E6C3405AC983584F4A1FCF5E93",
+        "matches": true
+      },
+      {
+        "expected": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "actual": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "matches": true
+      },
+      {
+        "expected": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "actual": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "matches": true
+      },
+      {
+        "expected": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "actual": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "matches": true
+      },
+      {
+        "expected": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "file": "web/src/components/ui/Button.tsx",
+        "actual": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "matches": true
+      },
+      {
+        "expected": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "file": "web/src/components/ui/DataTable.tsx",
+        "actual": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "matches": true
+      },
+      {
+        "expected": "7C088ADD21D5D43F2D37F41C72517DB9B2EB7738174914BD8BF21B9FBC62DE5D",
+        "file": "web/src/components/charts/index.ts",
+        "actual": "7C088ADD21D5D43F2D37F41C72517DB9B2EB7738174914BD8BF21B9FBC62DE5D",
+        "matches": true
+      },
+      {
+        "expected": "9C77209C111EABDD13239E0DA5C45272CF491A1DE059DD4DAD153151798E843F",
+        "file": "web/src/components/charts/ChartGradient.tsx",
+        "actual": "9C77209C111EABDD13239E0DA5C45272CF491A1DE059DD4DAD153151798E843F",
+        "matches": true
+      },
+      {
+        "expected": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "file": "web/src/components/charts/ChartContainer.tsx",
+        "actual": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "matches": true
+      },
+      {
+        "expected": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+        "file": "web/src/i18n/en.json",
+        "actual": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+        "matches": true
+      },
+      {
+        "expected": "EAC82E825E88D5E0070A19AB6577941BD465B967AC3A14CEF6FA05F53977B5BD",
+        "file": "web/src/features/driving/lib/fsdCommuteExperiment.ts",
+        "actual": "EAC82E825E88D5E0070A19AB6577941BD465B967AC3A14CEF6FA05F53977B5BD",
+        "matches": true
+      },
+      {
+        "expected": "A9EC06AA5E321797194B9FB278AAD015272B5D7809A01F01C655508F114303D2",
+        "file": "web/src/components/charts/chartUtils.tsx",
+        "actual": "A9EC06AA5E321797194B9FB278AAD015272B5D7809A01F01C655508F114303D2",
+        "matches": true
+      },
+      {
+        "expected": "2C745E867A2540F46DC9DBE54BF6D5A8E69160EAF7455EBB95DAC0FA2E821FBB",
+        "file": "web/src/i18n/en/locale-driving-fsdinsights.json",
+        "actual": "2C745E867A2540F46DC9DBE54BF6D5A8E69160EAF7455EBB95DAC0FA2E821FBB",
+        "matches": true
+      },
+      {
+        "expected": "EA77902FB339E59D8A21720878145389A66FD212B1F0429B568AEB46DB9483DD",
+        "file": "docs/frontend-audits/audit-page-118.json",
+        "actual": "EA77902FB339E59D8A21720878145389A66FD212B1F0429B568AEB46DB9483DD",
+        "matches": true
+      },
+      {
+        "expected": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+        "file": "docs/frontend-worker-conventions.md",
+        "actual": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+        "matches": true
+      },
+      {
+        "expected": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "actual": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+        "matches": true
+      },
+      {
+        "expected": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "actual": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+        "matches": true
+      },
+      {
+        "expected": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42",
+        "file": ".github/instructions/observability.instructions.md",
+        "actual": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42",
+        "matches": true
+      },
+      {
+        "expected": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "actual": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+        "matches": true
+      },
+      {
+        "expected": "5E0056D6747E60450D4B2134BABA2152CEEC59C79E89AAE06D3712CC441F3A7E",
+        "file": ".gitignore",
+        "actual": "5E0056D6747E60450D4B2134BABA2152CEEC59C79E89AAE06D3712CC441F3A7E",
+        "matches": true
+      }
+    ],
+    "checked": 66,
+    "applicationOrCatalogDrift": 0,
+    "matched": 66,
+    "numericExit": 0,
+    "contextDrift": 0
+  }
+}

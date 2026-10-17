@@ -15,8 +15,8 @@
 //      backend which trims and rejects an empty prompt with a 400
 //      (internal/api/aisearch/handler.go).
 //
-//   3. Textarea a11y + control. The prompt textarea carries an
-//      aria-label (accessible name), a placeholder, and a maxLength
+//   3. Textarea a11y + control. The prompt textarea carries a visible
+//      associated label, a placeholder, and a maxLength
 //      matching the backend's maxPromptChars cap, and is a controlled
 //      input that reflects typed text.
 //
@@ -31,14 +31,15 @@
 // provider is mounted, so button/label assertions match the default
 // copy. getApiBase() returns '' under jsdom, so the fetch URL is the
 // bare /api/v1 path. Network is fully mocked — no real requests.
-// @testing-library/user-event is intentionally NOT a dependency of
-// this codebase (see web/package.json), so we drive interactions with
-// fireEvent, consistent with every other SSE wiring test.
+// Existing SSE wiring cases use fireEvent. The visible-label cases use
+// userEvent to exercise native label focus and keyboard interaction.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import type { AppSettings } from '@/api/types'
+import * as aiStream from '@/hooks/useAiStream'
 
 // File-level mock wins over the global useSettings stub registered in
 // src/test-setup.ts (which defaults ai_mode='off'). Each test drives
@@ -325,6 +326,126 @@ describe('AINLSearch — stream wiring', () => {
     // The accumulated delta renders inside the gated wrapper.
     await waitFor(() => {
       expect(screen.getByText(/Found 3 drives last weekend/)).toBeInTheDocument()
+    })
+  })
+
+  describe('AINLSearch — visible prompt label (SS09)', () => {
+    it('keeps a visible native label after typing and supports label focus, multiline entry, and keyboard search', async () => {
+      enableFeature()
+      const start = vi.fn()
+      const hook = vi.spyOn(aiStream, 'useAiStream').mockReturnValue({
+        start,
+        cancel: vi.fn(),
+        state: 'idle',
+        text: '',
+        error: null,
+        limit: null,
+        activity: [],
+        usage: null,
+        finishReason: null,
+      })
+      const user = userEvent.setup()
+      render(<AINLSearch />)
+
+      const textarea = screen.getByLabelText('Search query') as HTMLTextAreaElement
+      const label = screen.getByText('Search query', { selector: 'label' }) as HTMLLabelElement
+      expect(label).toBeVisible()
+      expect(label).toHaveAttribute('for', textarea.id)
+      expect(label.control).toBe(textarea)
+      expect(Array.from(textarea.labels ?? [])).toContain(label)
+      expect(label.closest('[hidden], [aria-hidden="true"], .sr-only')).toBeNull()
+      expect(searchButton()).toBeDisabled()
+
+      await user.click(label)
+      expect(textarea).toHaveFocus()
+      await user.type(textarea, 'charging sessions')
+      await user.keyboard('{Enter}')
+      await user.type(textarea, 'with alerts')
+      expect(textarea).toHaveValue('charging sessions\nwith alerts')
+      expect(label).toBeVisible()
+      expect(textarea).toHaveAccessibleName('Search query')
+      expect(start).not.toHaveBeenCalled()
+      expect(hook).toHaveBeenLastCalledWith({
+        url: '/ai/search/query',
+        body: { prompt: 'charging sessions\nwith alerts' },
+        onEvent: expect.any(Function),
+      })
+
+      await user.tab()
+      expect(searchButton()).toHaveFocus()
+      await user.keyboard('{Enter}')
+      expect(start).toHaveBeenCalledTimes(1)
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    })
+
+    it('preserves the visible label and keyboard-disabled action while showing streaming feedback', async () => {
+      enableFeature()
+      const start = vi.fn()
+      vi.spyOn(aiStream, 'useAiStream').mockReturnValue({
+        start,
+        cancel: vi.fn(),
+        state: 'streaming',
+        text: '',
+        error: null,
+        limit: null,
+        activity: [],
+        usage: null,
+        finishReason: null,
+      })
+      const user = userEvent.setup()
+      render(<AINLSearch />)
+
+      const label = screen.getByText('Search query', { selector: 'label' })
+      await user.click(label)
+      await user.type(promptInput(), 'drives with alerts')
+      await user.keyboard('{Enter}')
+      await user.tab()
+      await user.keyboard('{Enter}')
+      await user.click(searchButton())
+
+      expect(label).toBeVisible()
+      expect(screen.getByLabelText('Search query')).toBe(promptInput())
+      expect(searchButton()).toBeDisabled()
+      expect(searchButton()).toHaveAttribute('aria-disabled', 'true')
+      expect(searchButton()).toHaveAttribute('aria-busy', 'true')
+      expect(screen.getByTestId('ai-output-panel')).toBeVisible()
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(/Helix is thinking/i)
+      expect(start).not.toHaveBeenCalled()
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    })
+
+    it('keeps the visible label, editable prompt, retained results, and keyboard retry alongside an error', async () => {
+      enableFeature()
+      const start = vi.fn()
+      vi.spyOn(aiStream, 'useAiStream').mockReturnValue({
+        start,
+        cancel: vi.fn(),
+        state: 'error',
+        text: 'Partial synthetic search results',
+        error: 'stream_http_404',
+        limit: null,
+        activity: [],
+        usage: null,
+        finishReason: null,
+      })
+      const user = userEvent.setup()
+      render(<AINLSearch />)
+
+      const label = screen.getByText('Search query', { selector: 'label' })
+      expect(label).toBeVisible()
+      expect(screen.getByRole('alert')).toHaveTextContent(/Helix error.*stream_http_404/i)
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Partial synthetic search results')
+      await user.click(label)
+      expect(promptInput()).toHaveFocus()
+      await user.type(promptInput(), 'alerts from last Tuesday')
+      expect(label).toBeVisible()
+      expect(promptInput()).toHaveValue('alerts from last Tuesday')
+      expect(searchButton()).not.toBeDisabled()
+      await user.tab()
+      expect(searchButton()).toHaveFocus()
+      await user.keyboard(' ')
+      expect(start).toHaveBeenCalledTimes(1)
+      expect(globalThis.fetch).not.toHaveBeenCalled()
     })
   })
 

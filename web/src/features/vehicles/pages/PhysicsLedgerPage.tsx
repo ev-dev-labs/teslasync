@@ -5,15 +5,20 @@ import { usePhysicsLedger } from '@/api/hooks/usePhysicsLedger';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, GlassPanel, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAnalysisWindow } from '@/hooks/useAnalysisWindow';
+import { useRangeState } from '@/hooks/useRangeState';
+import { useSearchParams } from 'react-router-dom';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
+import { neonColorMap } from '@/lib/tokens';
 import { PendingPanels } from '@/features/vehicles/components/physics-ledger/PendingPanels';
 import {
   BlackBoxPanel,
@@ -31,19 +36,42 @@ import {
 
 type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 
-const WINDOW_PRESETS = [6, 24] as const;
+const LEGACY_WINDOW_PRESETS = [6, 24] as const;
+
+const UNRESOLVED_SECTIONS = [
+  ['ledger-summary', 'physicsLedger.briefTitle', 'Returned ledger evidence'],
+  ['ledger-dynamics', 'physicsLedger.dynamics.title', 'Longitudinal dynamics'],
+  ['ledger-drive', 'physicsLedger.drive.title', 'Drive energy ledger'],
+  ['ledger-charge', 'physicsLedger.charge.title', 'Charge physics'],
+  ['ledger-park', 'physicsLedger.park.title', 'Park / vampire physics'],
+  ['ledger-thermal', 'physicsLedger.thermal.title', 'Thermal'],
+  ['ledger-range', 'physicsLedger.range.title', 'Range disagreement'],
+  ['ledger-tires', 'physicsLedger.tires.title', 'Tires'],
+  ['ledger-epochs', 'physicsLedger.epochs.title', 'Firmware epochs'],
+  ['ledger-unknown', 'physicsLedger.unknown.title', 'Unknown budget'],
+  ['ledger-blackbox', 'physicsLedger.blackBox.title', 'Black box: last 90 s'],
+  ['ledger-markers', 'physicsLedger.markers.title', 'Chapter markers'],
+] as const;
 
 export default function PhysicsLedgerPage() {
+  const { formatDateTime } = useDateFormat();
   const { t: translate } = useTranslation();
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
-  const { selected: hours, window, pickWindow } = useAnalysisWindow('hours', WINDOW_PRESETS, 24);
+  const [params] = useSearchParams();
+  const range = useRangeState();
+  const legacyWindow = useAnalysisWindow('hours', LEGACY_WINDOW_PRESETS, 24);
+  const hasSharedRange = params.has('from') || params.has('to') || params.has('time_scope');
+  const hasLegacyRange = !hasSharedRange && (params.has('hours') || params.has('start') || params.has('end'));
+  const window = hasLegacyRange
+    ? legacyWindow.window
+    : { start: range.startInstant, end: range.endInstantExclusive };
 
-  const title = t('physicsLedger.title', 'Physics Ledger');
+  const title = t('physicsLedger.title', 'Physics ledger');
   usePageTitle(title);
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const query = usePhysicsLedger({ vehicleId: vehicleIdStr, start: window.start, end: window.end });
-  const state = useDataState(query, { provenance: 'historical' });
+  const state = useDataState(query, { provenance: 'historical', partial: query.data?.truncated === true });
   const ledger = state.data;
 
   if (vehicleId == null) {
@@ -51,11 +79,11 @@ export default function PhysicsLedgerPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('physicsLedger.subtitle', 'Predicted vs measured energy and force. Residual is unexplained, never zero-filled.')}
       copyLink
-      contextActions={(
+      metadataActions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <DataProvenanceBadge
             provenance={state.provenance}
@@ -66,28 +94,27 @@ export default function PhysicsLedgerPage() {
       )}
       query={query}
     >
-      <StaleRefreshWarning state={state} label={title} />
+      <StaleRefreshWarning
+        state={state}
+        label={title}
+        title={state.status === 'partial' ? t('dataState.partial.title', 'Partial data') : undefined}
+        message={state.status === 'partial'
+          ? t('physicsLedger.truncated', 'Sample cap hit — oldest prefix solved')
+          : undefined}
+      />
       <Text as="p" size="sm" color="secondary">
         <Link
           to="/tesla-physics"
-          className="text-[var(--theme-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
+          className={cn(
+            'inline-flex min-h-11 items-center rounded-shape-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] md:min-h-6',
+            neonColorMap.cyan.text,
+          )}
         >
           {t('teslaOnly.hub', 'All Tesla physics')}
         </Link>
       </Text>
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('physicsLedger.window.label', 'Window')}>
-        {WINDOW_PRESETS.map((preset) => (
-          <Button
-            key={preset}
-            variant={preset === hours ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => { pickWindow(preset); }}
-            aria-pressed={preset === hours}
-          >
-            {t('physicsLedger.window.hours', 'Last {{hours}}h', { hours: preset })}
-          </Button>
-        ))}
         <Text as="span" size="sm" color="secondary">
           {formatDateTime(window.start)} → {formatDateTime(window.end)}
         </Text>
@@ -99,14 +126,19 @@ export default function PhysicsLedgerPage() {
       {ledger ? (
         <div className="space-y-6">
           <FadeIn>
-            <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-summary">
-              <Text as="p" size="sm" color="secondary">
-                {ledger.honesty}
-              </Text>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="neutral" size="sm">
-                  {t('physicsLedger.kind', 'Window')}: {ledger.kind}
-                </Badge>
+            <VehicleEvidenceBrief refreshFailed={state.refreshError != null} id="ledger-summary"
+              title={t('physicsLedger.briefTitle', 'Returned ledger evidence')}
+              description={ledger.honesty}
+              status={state.status}
+              provenance={t('physicsLedger.briefSource', 'Bounded physics ledger')}
+              scope={t('physicsLedger.briefWindow', '{{start}} → {{end}}', {
+                start: formatDateTime(window.start), end: formatDateTime(window.end),
+              })}
+              freshness={<DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />}
+              metrics={[{
+                metricId: 'status', occurrenceId: 'ledger-kind',
+                label: t('physicsLedger.kind', 'Window'), rawValue: ledger.kind,
+                context: <div className="flex flex-wrap gap-2">
                 {ledger.truncated ? (
                   <Badge variant="danger" size="sm">
                     {t('physicsLedger.truncated', 'Sample cap hit — oldest prefix solved')}
@@ -122,24 +154,35 @@ export default function PhysicsLedgerPage() {
                     {t('physicsLedger.missingSignals', 'Missing signals')}: {(ledger.missing_signals ?? []).join(', ')}
                   </Badge>
                 ) : null}
-              </div>
-            </GlassPanel>
+                </div>,
+              }]} />
           </FadeIn>
-          <DynamicsPanel ledger={ledger} />
+          <DynamicsPanel ledger={ledger} status={state.status} />
           <DriveLedgerPanel ledger={ledger.drive} />
           <ChargeLedgerPanel ledger={ledger} />
           <ParkLedgerPanel ledger={ledger} />
-          <ThermalPanel ledger={ledger} />
-          <RangePanel ledger={ledger} />
-          <TiresPanel ledger={ledger} />
+          <ThermalPanel ledger={ledger} status={state.status} />
+          <RangePanel ledger={ledger} status={state.status} />
+          <TiresPanel ledger={ledger} status={state.status} />
           <EpochsPanel ledger={ledger} />
           <UnknownPanel ledger={ledger} />
           <BlackBoxPanel points={ledger.black_box} />
           <MarkersPanel ledger={ledger} />
         </div>
+      ) : state.fatalError || state.isRefreshBlocked ? (
+        <div className="space-y-6">
+          {UNRESOLVED_SECTIONS.map(([id, key, heading]) => (
+            <GlassPanel key={id} padding="auto" className="space-y-4" data-testid={id}>
+              <PanelTitle>{t(key, heading)}</PanelTitle>
+              <Text as="p" variant="bodySm" color="secondary">
+                {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              </Text>
+            </GlassPanel>
+          ))}
+        </div>
       ) : (
         <PendingPanels loading={state.status === 'initial'} />
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

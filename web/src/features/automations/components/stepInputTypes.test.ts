@@ -76,6 +76,7 @@ const actionInputs: AutomationActionStepInput[] = [
   { kind: 'action_notify', channel_id: 2, template: 'Hello' },
   { kind: 'action_set_setting', setting_key: 'charge_limit', value_num: 80 },
   { kind: 'action_call_automation', target_automation_id: 9 },
+  { kind: 'action_wait', duration_s: 30 },
 ];
 
 const allInputs: AutomationStepInput[] = [...triggerInputs, ...conditionInputs, ...actionInputs];
@@ -113,6 +114,8 @@ function summarize(step: AutomationStepInput): string {
       return `setting ${step.setting_key}`;
     case 'action_call_automation':
       return `call ${step.target_automation_id}`;
+    case 'action_wait':
+      return `wait ${step.duration_s}`;
     default: {
       // Compile-time exhaustiveness guard: a new kind makes `step` non-`never`.
       const _exhaustive: never = step;
@@ -192,13 +195,15 @@ describe('AutomationActionStepInput', () => {
       'action_notify',
       'action_set_setting',
       'action_call_automation',
+      'action_wait',
     ]);
 
-    const [command, notify, setSetting, call] = actionInputs;
+    const [command, notify, setSetting, call, wait] = actionInputs;
     expect(command).toEqual({ kind: 'action_command', command_name: 'climate_on', command_params: { temp: 21 } });
     expect(notify).toEqual({ kind: 'action_notify', channel_id: 2, template: 'Hello' });
     expect(setSetting).toEqual({ kind: 'action_set_setting', setting_key: 'charge_limit', value_num: 80 });
     expect(call).toEqual({ kind: 'action_call_automation', target_automation_id: 9 });
+    expect(wait).toEqual({ kind: 'action_wait', duration_s: 30 });
   });
 
   it('drops every persistence/meta key on all members', () => {
@@ -215,7 +220,7 @@ describe('AutomationStepInput (umbrella union)', () => {
     expect(summarize(actionInputs[0])).toBe('command climate_on');
     expect(summarize(actionInputs[3])).toBe('call 9');
 
-    // Every one of the twelve members narrows to its own fields and produces
+    // Every one of the thirteen members narrows to its own fields and produces
     // the exact summary — proof the distributive Omit preserved each branch.
     const expectedSummaries: Record<AutomationStepInput['kind'], string> = {
       trigger_signal: 'signal battery_level <',
@@ -230,6 +235,7 @@ describe('AutomationStepInput (umbrella union)', () => {
       action_notify: 'notify 2',
       action_set_setting: 'setting charge_limit',
       action_call_automation: 'call 9',
+      action_wait: 'wait 30',
     };
     for (const step of allInputs) {
       expect(summarize(step)).toBe(expectedSummaries[step.kind]);
@@ -237,7 +243,7 @@ describe('AutomationStepInput (umbrella union)', () => {
   });
 
   it('classifies each member into the correct lane and stays meta-free', () => {
-    expect(allInputs).toHaveLength(12);
+    expect(allInputs).toHaveLength(13);
     expect(triggerInputs.every((t) => laneOf(t.kind) === 'trigger')).toBe(true);
     expect(conditionInputs.every((c) => laneOf(c.kind) === 'condition')).toBe(true);
     expect(actionInputs.every((a) => laneOf(a.kind) === 'action')).toBe(true);

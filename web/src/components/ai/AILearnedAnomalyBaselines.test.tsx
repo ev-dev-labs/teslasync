@@ -36,6 +36,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
+import type { FormEvent } from 'react'
 
 import type { AppSettings } from '@/api/types'
 
@@ -249,6 +250,47 @@ describe('AILearnedAnomalyBaselines — vehicleId input guard', () => {
 })
 
 describe('AILearnedAnomalyBaselines — stream wiring', () => {
+  it('keeps training an explicit native button action inside an enclosing form', async () => {
+    enableFeature()
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault())
+    const calls = installStreamingFetch(sseFrame('done', { finish_reason: 'stop' }))
+
+    render(
+      <form onSubmit={onSubmit}>
+        <AILearnedAnomalyBaselines vehicleId={42} />
+      </form>,
+    )
+
+    expect(trainButton()).toHaveAttribute('type', 'button')
+    expect(calls).toHaveLength(0)
+    await act(async () => {
+      fireEvent.click(trainButton())
+    })
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('clears the previous vehicle narrative when the vehicle becomes unresolved without retraining', async () => {
+    enableFeature()
+    const narrative = 'Baseline history belongs to vehicle 42.'
+    const calls = installStreamingFetch(
+      sseFrame('delta', { text: narrative }) + sseFrame('done', { finish_reason: 'stop' }),
+    )
+    const { rerender } = render(<AILearnedAnomalyBaselines vehicleId={42} />)
+
+    await act(async () => {
+      fireEvent.click(trainButton())
+    })
+    expect(await screen.findByText(narrative)).toBeInTheDocument()
+
+    rerender(<AILearnedAnomalyBaselines />)
+
+    await waitFor(() => expect(screen.queryByText(narrative)).not.toBeInTheDocument())
+    expect(screen.getByText('Learn per-vehicle baseline')).toBeInTheDocument()
+    expect(trainButton()).toBeDisabled()
+    expect(calls).toHaveLength(1)
+  })
+
   it('POSTs once to the train route with vehicle_id + the fixed 14-day window and renders the delta', async () => {
     enableFeature()
 

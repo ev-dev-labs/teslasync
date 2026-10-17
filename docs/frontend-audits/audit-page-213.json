@@ -1,0 +1,378 @@
+{
+  "item": "audit-page-213",
+  "page": "web\\src\\features\\trips\\pages\\JourneysPage.tsx",
+  "routes": [
+    {
+      "path": "/journeys",
+      "file": "web\\src\\App.tsx",
+      "line": 678,
+      "detail": "Lazy JourneysPage inside SafeRoute; import at line 66. Registration is source evidence, not exercised route reachability."
+    }
+  ],
+  "purpose": "Journey Autopilot session management: plan a named vehicle trip, manage its lifecycle and versioned plans, score stops, assess departure/readiness, follow a live session, replan, prepare arrival and inspect its debrief.",
+  "primaryGoal": "Select the workspace vehicle, create or open its journey session and use source-backed planning/live/debrief actions without conflating sessions with recorded drives or inferred observed journeys.",
+  "dataSources": [
+    {
+      "hooks": ["useSelectedVehicle", "useVehicles"],
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "endpoints": ["GET /vehicles"],
+      "endpointEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-76; internal\\api\\router.go:3319",
+      "ownership": "Shared workspace selection: path/query vehicle_id, persisted selection, then fleet fallback. JourneysPage consumes vehicleId at line 18 and renders no competing picker.",
+      "limits": "Fleet errors/loading are not exposed in SelectedVehicleResult; no mounted fleet or header behavior verified."
+    },
+    {
+      "hooks": ["useJourneys", "useJourney", "useCreateJourney", "useTransitionJourney"],
+      "file": "web\\src\\api\\hooks\\useJourney.ts",
+      "line": 237,
+      "endpoints": ["GET /journey/sessions?vehicle_id=&status=", "GET /journey/sessions/{id}", "POST /journey/sessions", "POST /journey/sessions/{id}/start", "POST /journey/sessions/{id}/pause", "POST /journey/sessions/{id}/resume", "POST /journey/sessions/{id}/complete", "POST /journey/sessions/{id}/abort"],
+      "endpointEvidence": "useJourney.ts:247-306,513-529; internal\\api\\router.go:3988-3996",
+      "ownership": "Session and plan payloads owned by journey API; next_statuses drives allowed buttons, not a replacement frontend state machine. JourneyPanel owns filter, selected session and draft.",
+      "contracts": "journeyKeys includes vehicle/status for lists and session ID for detail. Reads forward AbortSignal, normalize nullable arrays and reuse queryPolicy('operational'); mutations invalidateAndBroadcast and toast.",
+      "limits": "No backend handler/query implementation or API response exercised. No date-range list behavior inferred."
+    },
+    {
+      "hooks": ["useWaitOracleSites", "useScoreStops", "useDeparture", "useChecklist", "useRefreshChecklist", "useNudge"],
+      "file": "web\\src\\api\\hooks\\useJourney.ts",
+      "line": 312,
+      "endpoints": ["GET /waitoracle/sites", "POST /journey/sessions/{id}/score-stops", "GET /journey/sessions/{id}/departure?from=&to=", "GET /journey/sessions/{id}/checklist", "POST /journey/sessions/{id}/checklist/runs", "GET /journey/sessions/{id}/nudge"],
+      "endpointEvidence": "useJourney.ts:312-395,497-511; web\\src\\api\\hooks\\useCharging.ts:374-385; internal\\api\\router.go:3982-3984,3998-4001,4008",
+      "ownership": "Fleet-known charging candidate sites are a distinct historical source, not journey session records. Scores persist a plan through the mutation contract. Departure uses independent future business windows; checklist latest 404 means never run in caller logic.",
+      "contracts": "Candidate cap 10, first 20 sites shown; coordinate prerequisites. energy_wh, wait_s and corridor_m remain canonical payload fields. Departure forecast window uses 12/24/48 hours, not workspace analysis range.",
+      "limits": "Forecast/scoring/readiness algorithms, persistence and 404 meaning are frontend contracts/comments only, not backend/runtime proof."
+    },
+    {
+      "hooks": ["useJourneyLive", "useQueuedCheckIn", "useCheckIn", "useReplanAssessment", "useRequestReplan", "useArrival", "useReport"],
+      "file": "web\\src\\api\\hooks\\useJourney.ts",
+      "line": 408,
+      "endpoints": ["GET /journey/sessions/{id}/live", "POST /journey/sessions/{id}/checkpoints", "GET /journey/sessions/{id}/replan", "POST /journey/sessions/{id}/replan", "GET /journey/sessions/{id}/arrival", "GET /journey/sessions/{id}/report"],
+      "endpointEvidence": "useJourney.ts:397-495; internal\\api\\router.go:4002-4007",
+      "ownership": "Journey session live checkpoints/progress/range and journey report remain distinct from route-history factor/trip support and checklist denominators.",
+      "contracts": "Live/arrival use live query policy; assessments/report use operational. Reads forward cancellation. Check-in invalidates live/replan/arrival/report; replan invalidates detail/live/replan/report. Outbox stores session_id plus original recorded_at and replays sequentially on online status.",
+      "limits": "Backend 15-second ambient tick, timestamp acceptance/idempotency and real offline replay are NOT verified. No mutations performed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard / SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "evidence": ["JourneysPage.tsx:2,23-32", "JourneyPanel.tsx:15,207-308", "SourceContent.tsx:9-31,39-80", "PageLayout.tsx:5-15"],
+      "contract": "Existing page adapter forwards PageContainer props and allocated-width container; persistent section shells, ready/loading/error/empty/retained source bodies with caller recovery. No new wrapper/layout engine."
+    },
+    {
+      "name": "JourneyPanel and lifecycle subpanels",
+      "owner": "web\\src\\features\\trips\\components\\JourneyPanel.tsx",
+      "evidence": ["JourneyPanel.tsx:21-28,107-150,374-403"],
+      "contract": "Feature orchestration owner. Stop scoring always within a selected detail; planned nudge, active/paused live/replan/arrival, completed/aborted report; departure/checklist for any selected detail."
+    },
+    {
+      "name": "DataTable / StopScoreTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "evidence": ["JourneyPanel.tsx:297-304", "StopScoreTable.tsx:17-125", "DataTable.tsx:238-248,1385-1408", "MobileDataTableAdapter.tsx:145-154"],
+      "contract": "Retain journey-sessions, journey-stop-scores and journey-replan-scores table IDs, session/site row keys, all source columns, value filters on score tables and existing shared table/export behavior. Mobile details can render all columns when the opt-in presentation is supplied."
+    },
+    {
+      "name": "Badge / Button / Input / Select / Checkbox / Text / MetricValue / FormSection / UnitInput",
+      "owner": "Existing ui/forms category owners",
+      "evidence": ["JourneyPanel.tsx:14-17,212-272", "StopScorePanel.tsx:7-10,113-146", "UnitInput.tsx:53-59"],
+      "contract": "Localized names, semantic status labels, shared focus/field handling and canonical numeric input. Do not create raw controls or independent status registry."
+    },
+    {
+      "name": "MetricBar / KVList / TripOperationalBrief / JourneyEvidenceList",
+      "owner": "Existing data-display owners plus trips feature components",
+      "evidence": ["LiveTripPanel.tsx:124-132", "ChecklistPanel.tsx:132-154", "ReportPanel.tsx:34-72", "TripOperationalBrief.tsx:11-34", "JourneyEvidenceList.tsx:3-14"],
+      "contract": "Report uses shared useOperationalMetrics/OperationalBrief, numeric raw metrics and provenance/freshness. Evidence list retains actual server strings, wraps long content, and intentionally renders nothing for absent evidence."
+    },
+    {
+      "name": "useDataState / useUnits / useFormatting / dateFormat / useNumberFormatting / FadeIn",
+      "owner": "Existing hooks/lib/motion owners",
+      "evidence": ["useDataState.ts:30-53", "api\\dataState.ts:128-177", "LiveTripPanel.tsx:9-17", "StopScoreTable.tsx:2-3,18-21", "JourneysPage.tsx:4,30"],
+      "contract": "Retain source trust/cancellation and display-only formatting with user settings; shared motion remains the owner. Full formatter/motion internals not inspected."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\trips\\components\\NudgePanel.tsx",
+      "line": 55,
+      "rule": "MDC-002/MDC-026",
+      "detail": "Seven advice/live/report panels repeat DataState-to-SourceContent branching; JourneyPanel maps state differently. Shared source component already exists; duplication is adapter logic, not missing card primitive.",
+      "fix": "Reuse current SourceContent and trust adapter contracts; coordinate any common state mapping only after independent-consumer evidence, preserving checklist 404 and live no-fix exceptions.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\trips\\components\\StopScoreTable.tsx",
+      "line": 17,
+      "rule": "MDC-002",
+      "detail": "Initial scoring and replans already share identical score presentation.",
+      "fix": "Preserve StopScoreTable rather than creating separate ranking tables.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceBehavior": [
+      "JourneyPanel.tsx:205 stacks then xl two columns; 396-402 departure/checklist span full row and lg two columns.",
+      "JourneyPanel.tsx:210,325 uses wrapped action rows; 158,363 wraps journey/plan text. StopScorePanel.tsx:110 bounds candidate scrolling and 125 reflows form at sm.",
+      "DeparturePanel.tsx:68,117 wraps controls/slots; ArrivalPanel.tsx:71,75 wraps destination and ETA."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\trips\\components\\JourneyPanel.tsx",
+        "line": 299,
+        "rule": "MDC-023/MDC-043",
+        "detail": "mobileColumns omits open and plan, while Open is the only explicit session selection control. Caller supplies no mobilePresentation. Shared table documents hidden nonlisted cells below md. This is a source-confirmed preservation risk, not exercised mobile loss.",
+        "fix": "Use existing DataTable mobile presentation/row-open or details contract to keep session selection and plan version reachable at every width; do not remove hidden metadata. Check score-table price/health/corridor full details too.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredChecks": ["320/375/390/430/768/1024/1280/1440/1920/2560 widths", "Allocated container width, long names/addresses/evidence", "Open/plan/version and all ranking columns reachable", "200% text, RTL, form open and source-state geometry"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "JourneyPanel.tsx:213 status selector has localized aria-label; inputs have labels and required name; decorative icons aria-hidden.",
+      "DeparturePanel.tsx:68-76 group label and aria-pressed horizon choices.",
+      "StopScorePanel.tsx:111-119 labeled checkbox group; LiveTripPanel.tsx:130 and StopScoreTable.tsx:58 label metric bars.",
+      "SourceContent.tsx:43,66 uses loading/status announcements; statuses have readable Badge text rather than color alone."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\trips\\components\\DeparturePanel.tsx",
+        "line": 122,
+        "rule": "MDC-040/MDC-044",
+        "detail": "Forecast severity is exposed as raw title={slot.level}, while badge text is only time. Localized none/watch/warning text is not visibly or accessibly bound to each slot; tooltip title alone is weak touch/keyboard severity communication.",
+        "fix": "Retain time and source severity with localized accessible/visible text using existing Badge/Text/help contracts.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredChecks": ["Keyboard through filter/form/table/detail/actions", "Focus after create/select/status changes", "Real composed contrast in both themes and forced colors", "44px mobile targets with small controls", "Screen-reader names, form validation and evidence", "Reduced-motion behavior of shared FadeIn"]
+  },
+  "states": {
+    "initialLoading": "JourneyPanel.tsx:281,320 list/detail skeletons; each subpanel uses contextual ListSkeleton inside SourceContent.",
+    "empty": "List offers Plan journey; detail offers selection guidance; score/departure retain prerequisite shells; checklist special-cases latest 404 as never run.",
+    "fatalError": "List/detail QueryError with retry; subpanels pass fatalError and retry to persistent SourceContent shells.",
+    "retained": "Subpanels map stale to retained and keep payload; report additionally displays freshness/provenance through TripOperationalBrief.",
+    "offline": "Queued check-ins supported by useQueuedCheckIn.ts:32-80; other source trust messages are generic retained text, not explicit offline details.",
+    "partialUnknown": "Range/deviation/readiness/nudge have unknown labels; nullable SI measurements remain guarded. No invented zero metrics required.",
+    "mutations": "Create/transition rely on hook toast feedback; score/replan/checklist have inline errors and pending indicators; check-in queues network/non-ApiError failures.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\trips\\components\\JourneyPanel.tsx",
+        "line": 275,
+        "rule": "MDC-026",
+        "detail": "List/detail SourceContent only checks refreshError to select retained (detail line 310). Shared DataState can be stale when refresh is paused/offline without error, so these callers label that retained content ready and supply no retained retry.",
+        "fix": "Map full shared source status including blocked refresh, retaining list/detail and actionable recovery; do not collapse offline into empty/failure.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\trips\\components\\JourneyPanel.tsx",
+        "line": 396,
+        "rule": "MDC-026/MDC-031",
+        "detail": "Departure and checklist shells disappear entirely without detail; all planning/live/debrief subpanels exist only within successful detail branch. Distinguish legitimate lifecycle-specific applicability from unknown/not-yet-loaded source so modernization does not silently erase capabilities.",
+        "fix": "Preserve lifecycle gates and provide explicit unavailable/loading selection context for persistent appropriate sections; never fetch/mutate a nonexistent session.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\trips\\components\\JourneyPanel.tsx",
+        "line": 266,
+        "rule": "MDC-026/MDC-032",
+        "detail": "Create disables on null vehicle but empty state still invites planning; page consumes only vehicleId, so loading/no fleet/failed fleet are not distinguished here.",
+        "fix": "Use existing workspace/fleet state guidance without a second vehicle picker; expose the real reason creation is unavailable.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\trips\\components\\LiveTripPanel.tsx",
+      "line": 127,
+      "rule": "MDC-010/MDC-025",
+      "detail": "Progress hardcodes emerald fallback #10b981; score bar similarly uses emerald #34d399 (StopScoreTable.tsx:54). These are saturation/theme-token review targets, not proof of neon/glow or failed contrast. Both explicitly set solid fill.",
+      "fix": "Reuse existing semantic progress/score tokens with restrained intensity after composed-theme review; retain measured progress/score and accessible labels.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\trips\\components\\DeparturePanel.tsx",
+      "line": 125,
+      "rule": "MDC-010",
+      "detail": "Recommended slot adds emerald border/background around a semantic Badge; mild duplicate emphasis worth reviewing against the page intensity budget.",
+      "fix": "Use existing semantic token treatment, retain the recommendation distinction and severity, avoid stronger glow/gradients.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\trips\\components\\StopScorePanel.tsx",
+      "line": 73,
+      "rule": "MDC-045",
+      "detail": "UnitInput energy value/onChange is canonical Wh (UnitInput.tsx:53-59), but chargeNeed initializes to 40 at line 37 and submit multiplies it by 1000. This source wiring is inconsistent: an edited canonical Wh value would be multiplied again. Default intended charge need is not proven.",
+      "fix": "Keep the controlled draft explicitly in Wh and send energy_wh unchanged; resolve intended default from authoritative behavior, not invented data. This is a caller integration correction, not permission to change UnitInput's SI API.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\trips\\components\\JourneyPanel.tsx",
+      "line": 374,
+      "rule": "MDC-046",
+      "detail": "Subpanels are reused without session keys/reset. StopScorePanel retains selected candidates, arrival, chargeNeed and mutation result; ReplanPanel retains result. When opening another session of the same lifecycle, previous score/winner/version can remain associated visually with the new session.",
+      "fix": "Bind session-local drafts/results to session identity or reset on session change; preserve shared query keys and do not clear unrelated outbox entries.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\trips\\components\\StopScoreTable.tsx",
+      "line": 86,
+      "rule": "MDC-044/MDC-045",
+      "detail": "Price header defaults to $/kWh while cells use formatCurrency preferences and unit_price has no explicit unit/currency metadata in the inspected TS interface. Backend price basis is unknown.",
+      "fix": "Preserve real unit_price and clarify authoritative source price basis before changing labels/conversions; do not infer Wh-normalization or USD from the display string.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Canonical energy input mismatch and cross-session retained mutation results are source-backed correctness risks. Mobile session actions and stale/offline mapping follow; cosmetic page rewrite is unnecessary.",
+    "order": ["Resolve caller SI/session ownership risks", "Preserve all actions/mobile details and source states", "Validate accessibility/source severity", "Subdue only confirmed local presentation noise"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse SourceContent and DataState retained/offline mapping contract; no new shared component authorized",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "propsVariantsStates": "Existing state ready/loading/error/empty/retained, errorRecovery.onRetry, retainedMessage, loadingContent and emptyContent; DataState supplies isRefreshBlocked, status, refreshError and updatedAt. If unified paused/freshness presentation is needed, extend the existing owner only after inventory reconciliation.",
+      "usedBy": ["JourneyPanel", "DeparturePanel", "ChecklistPanel", "NudgePanel", "LiveTripPanel", "ReplanPanel", "ArrivalPanel", "ReportPanel"],
+      "dependsOn": ["web\\src\\api\\dataState.ts", "web\\src\\hooks\\useDataState.ts", "MDC-026", "Independent production-consumer inventory"],
+      "changeNeeded": "Coordination/reuse first; this audit does not demonstrate a mandatory shared implementation gap."
+    },
+    {
+      "name": "Reuse DataTable mobile row activation and full-detail contract",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Existing mobilePresentation with onOpenRow/inlineActions and all-column detail rendering; keep processed row order, table IDs, filtering/export ownership and source-backed columns. No replacement table.",
+      "usedBy": ["JourneyPanel", "StopScoreTable initial scores", "StopScoreTable replans"],
+      "dependsOn": ["web\\src\\components\\ui\\MobileDataTableAdapter.tsx", "MDC-023", "MDC-043", "Runtime mobile acceptance"],
+      "changeNeeded": "Caller adoption/verification; shared implementation change not yet justified."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\trips\\pages\\JourneysPage.tsx",
+      "line": 10,
+      "detail": "Named Journey Autopilot sessions and lifecycle are NOT equivalent to /trips recorded history or inferred observed journeys. Scoped search also found featureCatalog.ts:100 describes /journeys as stitched drives, inconsistent with the mounted page comment; only that search excerpt was inspected.",
+      "decision": "Preserve distinct source/domain meaning. Catalog description reconciliation belongs to the shared/integration owner, not this audit writer."
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 23,
+      "detail": "/journeys is not an analysis-range-enabled route; vehicle control is enabled by default at lines 155-166. Departure horizons and stop arrival input are independent business dates.",
+      "decision": "Do not add a page date/vehicle selector or force analysis-range semantics onto lifecycle sessions."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "3FCD28103CDAF4DDAFDEAE512D49F94B623F048C096684EE89F2FB9364DB2AD8",
+    "hashAlgorithm": "SHA-256 of raw current page bytes",
+    "currentLineCount": 35,
+    "presentationDependencyLineCount": 1694,
+    "pagePlusPresentationLineCount": 1729,
+    "lineCountDefinition": "Get-Content line counts of the page and twelve inspected presentation components; does not include hooks, outbox or shared library.",
+    "sections": [
+      {"name": "Page title/subtitle", "file": "web\\src\\features\\trips\\pages\\JourneysPage.tsx", "line": 23, "count": 1},
+      {"name": "Planned journeys list, status filter and create form", "file": "web\\src\\features\\trips\\components\\JourneyPanel.tsx", "line": 207, "count": 1},
+      {"name": "Journey detail, server lifecycle actions and plan-version history", "file": "web\\src\\features\\trips\\components\\JourneyPanel.tsx", "line": 308, "count": 1},
+      {"name": "Score stops", "file": "web\\src\\features\\trips\\components\\StopScorePanel.tsx", "line": 96, "count": 1},
+      {"name": "When to leave", "file": "web\\src\\features\\trips\\components\\DeparturePanel.tsx", "line": 65, "count": 1},
+      {"name": "Ready to roll", "file": "web\\src\\features\\trips\\components\\ChecklistPanel.tsx", "line": 93, "count": 1},
+      {"name": "Leave now?", "file": "web\\src\\features\\trips\\components\\NudgePanel.tsx", "line": 54, "count": 1, "condition": "planned"},
+      {"name": "Live trip", "file": "web\\src\\features\\trips\\components\\LiveTripPanel.tsx", "line": 78, "count": 1, "condition": "active/paused"},
+      {"name": "Replan", "file": "web\\src\\features\\trips\\components\\ReplanPanel.tsx", "line": 63, "count": 1, "condition": "active/paused"},
+      {"name": "Arrival", "file": "web\\src\\features\\trips\\components\\ArrivalPanel.tsx", "line": 57, "count": 1, "condition": "active/paused"},
+      {"name": "Trip report/debrief", "file": "web\\src\\features\\trips\\components\\ReportPanel.tsx", "line": 66, "count": 1, "condition": "completed/aborted"}
+    ],
+    "sectionCounts": {"domainPanelIdentities": 10, "literalLayoutCardOpenings": 12, "prerequisiteAlternateShells": 2, "GlassPanel": 0, "ChartContainer": 0, "reportMetrics": 7},
+    "actions": [
+      "Filter all/planned/active/paused/completed/aborted; open selected session; automatic first available session selection.",
+      "Plan/cancel draft; required trimmed name up to 200 chars, optional trimmed origin/destination up to 300; create for workspace vehicle.",
+      "Server next_statuses controls start/pause/resume/complete/abort; retain pending and toast/error feedback.",
+      "Read plan versions, notes and timestamps.",
+      "Choose fleet sites with 10 candidate limit, set arrival instant and real canonical energy demand, score and show winner/version/all six score columns plus evidence.",
+      "Open charging history recovery link when no sites.",
+      "Choose independent 12/24/48h departure window; inspect recommendation, charge context and source hourly severities.",
+      "Run/re-check persisted readiness snapshot; retain checked timestamp, item details/statuses and 404-never-run recovery.",
+      "Inspect planned-session nudge, blockers and evidence.",
+      "Check in now/queue offline/replay ordered original instants; inspect live progress, have/need energy, next stop/wait, last fix and trail count.",
+      "Rescore from latest fix; inspect corridor verdict/deviation and resulting winner/version/ranking.",
+      "Inspect arrival ETA/moving state/pace/remaining distance, verdict/shortfall and route-history support.",
+      "Inspect seven report metrics: distance, duration, detour, fixes, replans of plans, usual factor over route-history trips, readiness count of checklist total; preserve summary details and freshness/provenance.",
+      "Source-local retry, retained content, shared table controls/value filters and existing export semantics must survive."
+    ],
+    "dataBehavior": [
+      "Canonical meters, seconds and Wh stay raw in cache/hooks/wire; useUnits at display boundary. pace_ms is passed to formatSpeed but authoritative backend naming/units were not inspected.",
+      "Preserve percent SOC, dimensionless score/health/factors and independent denominators; absence is not zero.",
+      "Keep real evidence strings and source timestamps; never substitute fixture data.",
+      "Preserve status-appropriate sections rather than rendering live mutations for completed/nonexistent sessions.",
+      "Preserve query keys, enablement, AbortSignal, queryPolicy and invalidateAndBroadcast.",
+      "Outbox key teslasync.journey.checkin-outbox, session identity, original recorded_at and 50-entry cap are current source behavior; server replay/idempotency is unproven.",
+      "Journey session records, fleet charging sites, live checkpoints, checklist runs and route-history support are independent source identities."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source audit; only assigned JSON and heartbeat written",
+    "runtime": "NOTRUN: no browser, mounted route, network calls, journey mutations or backend behavior tests",
+    "visualKeyboardContrastViewport": "UNVERIFIED: no screenshots, theme/contrast measurements, keyboard/screen-reader or responsive execution",
+    "validation": "No Git, agents, full-repository lint/build/tests or TypeScript run. audit.sh was read but not executed because it unconditionally runs project TypeScript, contrary to this bounded audit's validation restrictions.",
+    "sourceScans": {
+      "command": "PowerShell Select-String over explicit page/presentation dependency files; raw HTML repeated with -CaseSensitive to avoid capitalized shared-control false positives",
+      "exitCode": 0,
+      "output": ["style= COUNT=0", "direct recharts/react-leaflet/framer-motion imports COUNT=0", "neon|glow|text-white|bg-white|#fff COUNT=0", "CASE_SENSITIVE_RAW_HTML_COUNT=0", "LayoutCard COUNT=12", "GlassPanel|ChartContainer COUNT=0", "PRESENTATION_TOTAL_LINES=1729"],
+      "qualification": "Literal scans only, not proof shared primitives/shell render without white/neon/glow or contrast failures. Initial case-insensitive raw-element scan returned 14 shared Button/Input/Select false positives; corrected count is zero."
+    },
+    "backend": "Only router registration excerpts inspected; routes matched source hook paths. Handlers, DB/source correctness, units of unit_price/pace_ms, auth, filtering and live tick behavior not verified.",
+    "coverage": "Page and direct trips presentation/data dependencies plus narrowly relevant shared contracts; no whole-app inventory/acceptance claim. Shared libraries read only cited ranges; scoped search excerpts are listed explicitly.",
+    "sourceDrift": "Page hash pins inspected snapshot; other concurrent writers may change dependencies. Report does not lock their source.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-213.json", ".agent-status\\audit-page-213.txt"]
+  },
+  "filesRead": [
+    {"path": "docs\\frontend-worker-conventions.md", "scope": "full Phase 0 contract"},
+    {"path": "docs\\frontend-design-contract.md", "scope": "Full via 1-240 (truncated near MDC-047),185-205,205-239,235-395"},
+    {"path": "docs\\frontend-mission.md", "scope": "1-160,270-350,450-570,640-1200"},
+    {"path": ".github\\skills\\audit-violations\\audit.sh", "scope": "full; not executed"},
+    {"path": ".github\\instructions\\prompt-engineering.instructions.md", "scope": "full; no prompt changes"},
+    {"path": "web\\src\\features\\trips\\pages\\JourneysPage.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\JourneyPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\StopScorePanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\DeparturePanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\ChecklistPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\NudgePanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\LiveTripPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\ReplanPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\ArrivalPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\ReportPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\StopScoreTable.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\continuation-mobility-trips-watch\\JourneyEvidenceList.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\hooks\\useQueuedCheckIn.ts", "scope": "full"},
+    {"path": "web\\src\\features\\trips\\lib\\checkInOutbox.ts", "scope": "full"},
+    {"path": "web\\src\\api\\hooks\\useJourney.ts", "scope": "full"},
+    {"path": "web\\src\\api\\hooks\\useCharging.ts", "scope": "340-402 and scoped search"},
+    {"path": "web\\src\\api\\hooks\\useVehicles.ts", "scope": "1-65 and useVehicles request search excerpt"},
+    {"path": "web\\src\\hooks\\useSelectedVehicle.ts", "scope": "1-140"},
+    {"path": "web\\src\\hooks\\useDataState.ts", "scope": "full"},
+    {"path": "web\\src\\api\\dataState.ts", "scope": "90-190"},
+    {"path": "web\\src\\lib\\workspaceScope.ts", "scope": "1-175"},
+    {"path": "web\\src\\components\\forms\\UnitInput.tsx", "scope": "1-160"},
+    {"path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "scope": "full"},
+    {"path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "scope": "full"},
+    {"path": "web\\src\\components\\ui\\DataTable.tsx", "scope": "1-150,190-255,1380-1425 and scoped contract search"},
+    {"path": "web\\src\\components\\ui\\MobileDataTableAdapter.tsx", "scope": "1-155"},
+    {"path": "internal\\api\\router.go", "scope": "journey/waitoracle/vehicle registration searches only"},
+    {"path": "web\\src\\App.tsx", "scope": "Journeys import/route search excerpts only"},
+    {"path": "web\\src\\features\\explore\\featureCatalog.ts", "scope": "/journeys description search excerpt only"}
+  ]
+}

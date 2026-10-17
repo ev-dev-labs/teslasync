@@ -27,7 +27,18 @@
  * web/package.json).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import './operationalbrief-all/metricPreferencesTestSetup';
+import { formatTime as formatTimeWithOptions } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatTime: (value: string | Date | null | undefined) =>
+      formatTimeWithOptions(value, datePreferences),
+  }),
+}));
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn> via useReducedMotion) reads
 // it during render. Install a benign stub before any module imports it.
@@ -55,7 +66,20 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        let template = typeof fallback === 'string' ? fallback : key;
+        // Mirror the global mock's plural selection and interpolation so
+        // accessible names resolve exactly as production i18next renders.
+        if (options && typeof options.count === 'number') {
+          const plural = options.count === 1 ? options.defaultValue_one : options.defaultValue_other;
+          if (typeof plural === 'string') template = plural;
+        }
+        if (options) {
+          template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
+            options[name] != null ? String(options[name]) : `{{${name}}}`);
+        }
+        return template;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -96,14 +120,46 @@ function renderTail(over: Partial<LiveSignalTailProps> = {}) {
 // Scope a query to a single StatCard by its label — the Card root carries the
 // `flex-col` utility, so we climb to it and search within.
 function statCard(label: string) {
-  const card = screen.getByText(label).closest('div.flex-col') as HTMLElement;
+  const card = screen.getByText(label).closest('[data-operational-metric]') as HTMLElement;
   return within(card);
+}
+
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId('live-tail-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
   idSeq = 0;
   vi.clearAllMocks();
   window.localStorage.clear();
+  datePreferences.locale = 'en-US';
+  datePreferences.tz = 'UTC';
+});
+
+it('does not claim observation freshness from a recently received frame', () => {
+  renderTail({
+    showStats: false,
+    entries: [makeEntry({ timestamp: new Date().toISOString(), name: 'speed', value: '0' })],
+  });
+
+  expect(screen.getByText('speed')).toBeInTheDocument();
+  expect(screen.getByText('0')).toBeInTheDocument();
+  // The freshness cell stays a read-only indicator whose accessible name must
+  // not vary with the frame timestamp (updatedAt stays null): the exact-name
+  // pin fails if the tail ever derives freshness from entry timestamps.
+  // NOTE: the shared dot names its null state 'Up to date' while describing it
+  // as 'Never updated' — reported as a shared FreshnessDot bug; the pin below
+  // tracks the observed name until that is fixed.
+  const freshness = screen.getByRole('button', { name: 'Data freshness: Up to date' });
+  expect(freshness).toBeDisabled();
 });
 
 describe('LiveSignalTail — stat band', () => {
@@ -117,11 +173,12 @@ describe('LiveSignalTail — stat band', () => {
 
     expect(statCard('Signals / sec').getByText('7')).toBeInTheDocument();
 
-    const buffer = statCard('Buffer Size');
+    const buffer = statCard('Buffer size');
     expect(buffer.getByText('3')).toBeInTheDocument();
-    expect(buffer.getByText('/ 500')).toBeInTheDocument();
+    expect(buffer.queryByText('/ 500')).toBeNull();
+    expectDrawerGroupText('Buffer size', '/ 500');
 
-    expect(statCard('Unique Signals').getByText('2')).toBeInTheDocument();
+    expect(statCard('Unique signals').getByText('2')).toBeInTheDocument();
     expect(statCard('Filtered').getByText('3')).toBeInTheDocument();
   });
 
@@ -133,7 +190,7 @@ describe('LiveSignalTail — stat band', () => {
     });
 
     expect(screen.queryByText('Signals / sec')).not.toBeInTheDocument();
-    expect(screen.queryByText('Buffer Size')).not.toBeInTheDocument();
+    expect(screen.queryByText('Buffer size')).not.toBeInTheDocument();
     // The tail itself (title + row) still renders.
     expect(screen.getByText('Live Signal Tail')).toBeInTheDocument();
     expect(screen.getByText('battery_level')).toBeInTheDocument();
@@ -165,7 +222,7 @@ describe('LiveSignalTail — signal rows', () => {
     expect(screen.getByText('boolean')).toBeInTheDocument();
   });
 
-  it('tints numeric / string / boolean values distinctly by type', () => {
+  it('keeps values neutral while retaining explicit type badges', () => {
     renderTail({
       entries: [
         makeEntry({ name: 'a', value: 'num', type: 'number' }),
@@ -174,9 +231,24 @@ describe('LiveSignalTail — signal rows', () => {
       ],
     });
 
-    expect(screen.getByText('num').className).toContain('text-cyan-300');
-    expect(screen.getByText('str').className).toContain('text-emerald-300');
-    expect(screen.getByText('bool').className).toContain('text-amber-300');
+    for (const value of ['num', 'str', 'bool']) {
+      expect(screen.getByText(value)).toHaveClass('whitespace-pre-wrap', 'break-words');
+      expect(screen.getByText(value).className).not.toMatch(/text-(cyan|emerald|amber)-300/);
+    }
+    for (const type of ['number', 'string', 'boolean']) {
+      expect(screen.getByText(type)).toBeInTheDocument();
+    }
+  });
+
+  it('reacts to timezone and locale changes without changing raw timestamps', () => {
+    const entry = makeEntry();
+    const { rerender, props } = renderTail({ entries: [entry], showStats: false });
+    expect(screen.getByText(formatTimeWithOptions(entry.timestamp, datePreferences))).toBeInTheDocument();
+    datePreferences.locale = 'de-DE';
+    datePreferences.tz = 'America/Los_Angeles';
+    rerender(<LiveSignalTail {...props} />);
+    expect(screen.getByText(formatTimeWithOptions(entry.timestamp, datePreferences))).toBeInTheDocument();
+    expect(entry.timestamp).toBe('2024-01-01T00:00:00.000Z');
   });
 });
 
@@ -184,7 +256,7 @@ describe('LiveSignalTail — filtering + empty states', () => {
   it('shows the waiting message and a zero buffer when there are no entries', () => {
     renderTail({ entries: [] });
     expect(screen.getByText('Waiting for signals…')).toBeInTheDocument();
-    expect(statCard('Buffer Size').getByText('0')).toBeInTheDocument();
+    expect(statCard('Buffer size').getByText('0')).toBeInTheDocument();
   });
 
   it('filters rows case-insensitively and updates the Filtered stat', () => {
@@ -222,18 +294,23 @@ describe('LiveSignalTail — controls', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
     expect(onPauseToggle).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute('aria-pressed', 'false');
 
     // When paused, the control invites resuming instead.
     rerender(<LiveSignalTail {...props} paused />);
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument();
   });
 
-  it('fires onClear when the clear button is pressed', () => {
+  it('fires onClear when the clear button is pressed', async () => {
     const { onClear } = renderTail({ entries: [makeEntry()] });
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
-    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onClear).not.toHaveBeenCalled();
+    expect(screen.getByText('Clear the stream?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(onClear).toHaveBeenCalledTimes(1));
   });
 
   it('toggles the auto-scroll control and exposes its state via aria-pressed', () => {
@@ -257,7 +334,29 @@ describe('LiveSignalTail — optional slots + resilience', () => {
     });
 
     expect(screen.getByText('Live Signal Tail')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Live Signal Tail' })).toBeInTheDocument();
     expect(screen.getByTestId('conn-badge')).toHaveTextContent('Connected');
+  });
+
+  it('retains full raw names, values and units while controls remain reachable in a constrained host', async () => {
+    const name = 'VehicleSpeedTelemetrySignal'.repeat(4);
+    const value = '32.75 m/s; producer=FleetTelemetry; sample='.repeat(6);
+    const { container, onPauseToggle, onClear } = renderTail({
+      entries: [makeEntry({ name, value })],
+      showStats: false,
+      title: 'Detailed live telemetry',
+    });
+    expect(screen.getByText(name)).toHaveTextContent(name);
+    expect(screen.getByText(value)).toHaveTextContent(value);
+    expect(container.querySelector('[data-print-card]')).toHaveClass('min-w-0', 'max-w-full');
+    fireEvent.change(screen.getByLabelText('Filter signals'), { target: { value: 'telemetrysignal' } });
+    expect(screen.getByText(value)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByText('Clear the stream?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    expect(onPauseToggle).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onClear).toHaveBeenCalledTimes(1));
   });
 
   it('omits the title header when none is given but still renders the filter + tail', () => {
@@ -274,6 +373,92 @@ describe('LiveSignalTail — optional slots + resilience', () => {
     ).not.toThrow();
 
     expect(screen.getByText('Waiting for signals…')).toBeInTheDocument();
-    expect(statCard('Buffer Size').getByText('0')).toBeInTheDocument();
+    expect(statCard('Buffer size').getByText('0')).toBeInTheDocument();
+  });
+});
+
+describe('LiveSignalTail — mobile full-row presentation', () => {
+  it('updates card and full-row time after preferences change', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      const entry = makeEntry();
+      const { rerender, props } = renderTail({ entries: [entry], showStats: false });
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(screen.getByText(formatTimeWithOptions(entry.timestamp, datePreferences))).toBeInTheDocument();
+      datePreferences.locale = 'de-DE';
+      datePreferences.tz = 'America/Los_Angeles';
+      rerender(<LiveSignalTail {...props} />);
+      const expected = formatTimeWithOptions(entry.timestamp, datePreferences);
+      expect(screen.getByText(expected)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      expect(within(screen.getByRole('dialog')).getByText(expected)).toBeInTheDocument();
+      expect(entry.timestamp).toBe('2024-01-01T00:00:00.000Z');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('retains paused raw readings, all detail fields and unknown freshness in a narrow host', async () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      const name = 'VehicleSpeedTelemetrySignal'.repeat(4);
+      const value = '0 m/s; producer=FleetTelemetry; sample='.repeat(6);
+      const { container, onPauseToggle, onClear } = renderTail({
+        entries: [makeEntry({ name, value, timestamp: '' })],
+        paused: true,
+        title: 'Live Signal Tail',
+        headerExtra: <span data-testid="mobile-connection">Transport evidence</span>,
+      });
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(container.querySelector('[data-mobile-table]')).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-connection')).toHaveTextContent('Transport evidence');
+      expect(screen.queryByText('Tail paused')).toBeNull();
+      assertOperationalBriefDisclosure(screen.getByTestId('live-tail-summary'), 'Tail paused');
+      expect(statCard('Buffer size').getByText('1')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      const detail = within(screen.getByRole('dialog', { name: 'telemetry:live-signal-tail' }));
+      for (const label of ['Time', 'Signal', 'Value', 'Type', 'Freshness']) {
+        expect(detail.getByText(label)).toBeInTheDocument();
+      }
+      expect(detail.getByText(name)).toHaveTextContent(name);
+      expect(detail.getByText(value)).toHaveTextContent(value);
+      expect(detail.getByText('number')).toBeInTheDocument();
+      expect(detail.getByRole('button', { name: 'Data freshness: Up to date' })).toBeDisabled();
+      fireEvent.click(detail.getByLabelText('Close', { selector: 'button' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+      expect(screen.getByText('Clear the stream?')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      expect(onPauseToggle).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(onClear).toHaveBeenCalledTimes(1));
+      const autoScroll = screen.getByRole('button', { name: 'Auto-scroll' });
+      expect(autoScroll).toHaveClass('min-h-11', 'md:min-h-0');
+      fireEvent.click(autoScroll);
+      expect(autoScroll).toHaveAttribute('aria-pressed', 'false');
+      fireEvent.change(screen.getByLabelText('Filter signals'), { target: { value: 'no-match' } });
+      expect(screen.getByText('No signals match filter')).toBeInTheDocument();
+      expect(statCard('Filtered').getByText('0')).toBeInTheDocument();
+      expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

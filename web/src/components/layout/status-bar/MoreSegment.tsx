@@ -6,27 +6,48 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, Popover, Text, Tooltip } from '@/components/ui/runtime';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { Popover } from '@/components/ui/Popover';
+import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type { UseBackgroundJobsResult } from '@/hooks/useBackgroundJobs';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
+import { HelixMark } from '@/components/branding/HelixMark';
 import { BackgroundWorkSegment } from './BackgroundWorkSegment';
 import { HelpSegment } from './HelpSegment';
+import { HonestyMeterSegment } from './HonestyMeterSegment';
+import { OperationalModeSegment } from './OperationalModeSegment';
 import { PresentationModeSegment } from './PresentationModeSegment';
+import { RecentPagesSegment } from './RecentPagesSegment';
 import { useStatusBarPopover } from './StatusBarContext';
+import { StatusOverflowRowContent, statusOverflowRowClass } from './StatusOverflowRow';
 import { useBuildNews } from './useAboutBuild';
 
 export interface MoreSegmentProps {
   backgroundJobs: UseBackgroundJobsResult;
   onOpenAbout: () => void;
   iconOnly?: boolean;
+  /**
+   * Narrow screens move telemetry honesty, data time, recent pages and
+   * Helix out of the bar; the menu then lists them with labels and values.
+   */
+  overflowStatus?: boolean;
+  /** Opens Helix chat; required for the Helix row when `overflowStatus`. */
+  onOpenHelix?: () => void;
 }
 
 export function MoreSegment({
   backgroundJobs,
   onOpenAbout,
   iconOnly = false,
+  overflowStatus = false,
+  onOpenHelix,
 }: MoreSegmentProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   const { hasBuildNews } = useBuildNews();
   const { open, toggle, close } = useStatusBarPopover('more');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -73,14 +94,14 @@ export function MoreSegment({
         ? CheckCircle2
         : Ellipsis;
   const triggerTone = hasError
-    ? 'text-rose-300'
+    ? neonColorMap.red.text
     : hasRunning
-      ? 'text-amber-300'
+      ? neonColorMap.amber.text
       : backgroundJobs.hasJobs
-        ? 'text-emerald-300'
+        ? neonColorMap.green.text
         : hasBuildNews
-          ? 'text-amber-300'
-          : 'text-[var(--text-muted)]';
+          ? neonColorMap.amber.text
+          : typography.color.muted;
 
   return (
     <>
@@ -103,27 +124,31 @@ export function MoreSegment({
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'relative h-5 min-h-0 gap-1.5 rounded px-1.5 py-0',
+            'relative h-11 min-h-11 min-w-11 shrink-0 flex-row items-center gap-1.5 whitespace-nowrap rounded px-1.5 py-0 leading-none xl:h-5 xl:min-h-0 xl:min-w-0',
             triggerTone,
           )}
           data-testid="status-bar-more-trigger"
           data-tour="keyboard-hint"
         >
-          <TriggerIcon
+          <Icon
+            icon={TriggerIcon}
+            size="sm"
             className={cn(
-              'h-3.5 w-3.5',
-              hasRunning && 'animate-spin',
+              hasRunning && !reduce && 'animate-spin motion-reduce:animate-none',
             )}
             aria-hidden
           />
           {!iconOnly && (
-            <Text as="span" size="xs" weight="medium" color="secondary">
+            <Text as="span" size="xs" weight="medium" color="secondary" className="whitespace-nowrap leading-none">
               {label}
             </Text>
           )}
           {hasBuildNews && (
             <span
-              className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-amber-400"
+              className={cn(
+                'absolute end-0.5 top-2.5 h-1.5 w-1.5 rounded-full xl:top-0.5',
+                neonColorMap.amber.dot,
+              )}
               aria-hidden
             />
           )}
@@ -137,8 +162,38 @@ export function MoreSegment({
         side="top"
         align="end"
         ariaLabel={label}
-        className="max-h-[min(70vh,520px)] w-[min(92vw,320px)] overflow-y-auto"
+        className="max-h-more-menu w-connection-diagnostics overflow-y-auto"
       >
+        {overflowStatus && (
+          <>
+            <section
+              className="border-b border-[var(--border-subtle)] p-2"
+              data-testid="status-bar-more-status"
+            >
+              <PanelTitle className="px-2 pb-1 pt-1">
+                {t('statusBar.more.statusTitle', 'Status')}
+              </PanelTitle>
+              <HonestyMeterSegment embedded onAction={close} />
+              <OperationalModeSegment embedded onAction={close} />
+              {onOpenHelix && (
+                <button
+                  type="button"
+                  className={statusOverflowRowClass}
+                  onClick={() => {
+                    close();
+                    onOpenHelix();
+                  }}
+                >
+                  <StatusOverflowRowContent
+                    icon={<HelixMark className="h-4 w-4" aria-hidden="true" />}
+                    label={t('statusBar.helix.open', 'Open Helix chat')}
+                  />
+                </button>
+              )}
+            </section>
+            <RecentPagesSegment embedded onAction={close} />
+          </>
+        )}
         <BackgroundWorkSegment
           embedded
           backgroundJobs={backgroundJobs}

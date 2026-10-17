@@ -22,7 +22,29 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
+import { CHART_COLORS } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
+import { formatDateShort, formatTime } from '@/lib/dateFormat';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { tz_display_default: 'user' }, locale: 'de-DE' }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'Asia/Tokyo',
+}));
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    Area: (props: ComponentProps<typeof actual.Area>) =>
+      <actual.Area {...props} isAnimationActive={false} />,
+    ResponsiveContainer: ({ children }: { children: ReactElement<{ width?: number; height?: number }> }) =>
+      cloneElement(children, { width: 800, height: 220 }),
+  };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -48,6 +70,7 @@ vi.mock('@/hooks/useChartExport', () => ({
 // The container calls the annotation hooks unconditionally; stub them so no
 // QueryClient is required.
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
@@ -92,6 +115,49 @@ function totalCount(buckets: FsmTimelinePoint[]): number {
 const minutesAgo = (mins: number) => new Date(Date.now() - mins * 60_000).toISOString();
 
 describe('buildFsmTimeline', () => {
+  it.each([
+    ['rolling', '2026-06-14T12:07:12.345Z', '2026-06-15T12:07:12.345Z'],
+    ['historical custom', '2026-03-08T00:00:00-08:00', '2026-03-09T00:00:00-07:00'],
+  ])('uses exact half-open %s bounds instead of the current clock', (_name, start, end) => {
+    const startMs = Date.parse(start);
+    const endMs = Date.parse(end);
+    const rows = [
+      tx('vehicle', new Date(startMs - 1).toISOString()),
+      tx('vehicle', start),
+      tx('vehicle', new Date(endMs - 1).toISOString()),
+      tx('vehicle', end),
+      tx('vehicle', new Date(endMs + 1).toISOString()),
+    ];
+    const timeline = buildFsmTimeline(rows, 1, NOW, start, end);
+    expect(totalCount(timeline.buckets)).toBe(2);
+    expect(timeline.buckets.length).toBeGreaterThan(40);
+  });
+
+  it('does not seed a bucket at an aligned exclusive upper bound', () => {
+    const start = '2026-06-01T00:00:00Z';
+    const end = '2026-06-01T01:00:00Z';
+    const timeline = buildFsmTimeline([tx('vehicle', start), tx('vehicle', end)], 0, NOW, start, end);
+    expect(timeline.buckets).toHaveLength(6);
+    expect(totalCount(timeline.buckets)).toBe(1);
+  });
+
+  it('caps an exact window including its partially aligned first bucket', () => {
+    const startMs = NOW - 5000 * 2 * HOUR - 1;
+    const start = new Date(startMs).toISOString();
+    const end = new Date(NOW).toISOString();
+    const timeline = buildFsmTimeline([tx('vehicle', start)], 0, NOW, start, end);
+    expect(timeline.buckets.length).toBeLessThanOrEqual(5000);
+    expect(totalCount(timeline.buckets)).toBe(1);
+  });
+
+  it('rejects malformed or reversed explicit windows rather than falling back to now', () => {
+    const rows = [tx('vehicle', new Date(NOW).toISOString())];
+    expect(() => buildFsmTimeline(rows, 24, NOW, 'invalid', new Date(NOW).toISOString()))
+      .toThrow(RangeError);
+    expect(() => buildFsmTimeline(rows, 24, NOW, new Date(NOW).toISOString(), new Date(NOW).toISOString()))
+      .toThrow(RangeError);
+  });
+
   it('returns an empty timeline for empty, null, or undefined input', () => {
     expect(buildFsmTimeline([], 24, NOW)).toEqual({ buckets: [], fsmTypes: [] });
     expect(buildFsmTimeline(null, 24, NOW)).toEqual({ buckets: [], fsmTypes: [] });
@@ -191,17 +257,68 @@ describe('buildFsmTimeline', () => {
     const labels = buckets.map((b) => String(b.time));
 
     expect(new Set(labels).size).toBe(labels.length); // all unique
-    expect(labels.every((l) => l.includes('/'))).toBe(true); // MM/DD prefix
+    expect(labels.every((l) => /[A-Za-z]/.test(l))).toBe(true);
   });
 
   it('keeps bare HH:MM labels inside a single-day window', () => {
     const rows = [tx('driving', new Date(NOW - 60 * 60_000).toISOString())];
-    const { buckets } = buildFsmTimeline(rows, 6, NOW);
-    expect(buckets.every((b) => /^\d{2}:\d{2}$/.test(String(b.time)))).toBe(true);
+    const { buckets } = buildFsmTimeline(rows, 3, NOW);
+    expect(buckets[0]?.time).toBe(formatTime(new Date(NOW - 3 * HOUR)));
+  });
+
+  it('uses the saved display zone and locale across a local midnight without changing counts', () => {
+    const opts = { locale: 'de-DE', tz: 'Asia/Tokyo' };
+    const start = '2026-10-01T14:30:00Z';
+    const end = '2026-10-01T15:30:00Z';
+    const rows = [tx('vehicle', start), tx('vehicle', 'invalid'), tx('vehicle', '')];
+    const timeline = buildFsmTimeline(rows, 1, NOW, start, end, opts);
+    expect(timeline.buckets[0]?.time).toBe(`${formatDateShort(start, opts)} ${formatTime(start, opts)}`);
+    expect(timeline.buckets.at(-1)?.time).toContain(formatDateShort(end, opts));
+    expect(totalCount(timeline.buckets)).toBe(1);
   });
 });
 
 describe('<FSMTimelineChart>', () => {
+  it('recomputes when only the exact bounds change with the same rows and hours', () => {
+    const transitions = [tx('vehicle', '2026-06-01T00:15:00Z')];
+    const { container, rerender } = render(
+      <FSMTimelineChart transitions={transitions} hours={1}
+        startInstant="2026-06-01T00:00:00Z" endInstantExclusive="2026-06-01T01:00:00Z" />,
+    );
+    const originalPath = container.querySelector('.recharts-area-area')?.getAttribute('d');
+    expect(originalPath).toBeTruthy();
+    rerender(
+      <FSMTimelineChart transitions={transitions} hours={1}
+        startInstant="2026-06-02T00:00:00Z" endInstantExclusive="2026-06-02T01:00:00Z" />,
+    );
+    expect(container.querySelector('.recharts-area-area')?.getAttribute('d')).not.toBe(originalPath);
+  });
+
+  it('uses restrained renderer roles without changing stacked series, palette, or axes', () => {
+    const { container } = render(
+      <FSMTimelineChart
+        transitions={[tx('driving', minutesAgo(5)), tx('parked', minutesAgo(3))]}
+        hours={6}
+      />,
+    );
+
+    const areas = container.querySelectorAll('.recharts-area');
+    expect(areas).toHaveLength(2);
+    areas.forEach((area, index) => {
+      const fill = area.querySelector('.recharts-area-area');
+      const stroke = area.querySelector('.recharts-area-curve');
+      expect(fill).toHaveAttribute('fill', CHART_COLORS[index]);
+      expect(fill).toHaveAttribute('fill-opacity', '0.08');
+      expect(stroke).toHaveAttribute('stroke', CHART_COLORS[index]);
+      expect(stroke).toHaveAttribute('stroke-width', '2');
+    });
+    expect(container.querySelector('.recharts-cartesian-grid-horizontal line'))
+      .toHaveAttribute('stroke', chartTokens.gridStroke);
+    expect(container.querySelectorAll('.recharts-xAxis')).toHaveLength(1);
+    expect(container.querySelectorAll('.recharts-yAxis')).toHaveLength(1);
+    expect(screen.queryByText('No transition data for timeline')).not.toBeInTheDocument();
+  });
+
   it('renders the labelled chart figure when there is data to plot', () => {
     render(
       <FSMTimelineChart
@@ -210,7 +327,7 @@ describe('<FSMTimelineChart>', () => {
       />,
     );
 
-    expect(screen.getByRole('figure', { name: /Transitions Over Time/ })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: /Transitions over time/ })).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: /FSM transitions over time/ }),
     ).toBeInTheDocument();
@@ -240,7 +357,7 @@ describe('<FSMTimelineChart>', () => {
       <FSMTimelineChart transitions={[tx('driving', minutesAgo(5))]} hours={Infinity} />,
     );
 
-    expect(screen.getByRole('figure', { name: /Transitions Over Time/ })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: /Transitions over time/ })).toBeInTheDocument();
     expect(screen.queryByText('No transition data for timeline')).not.toBeInTheDocument();
   });
 });

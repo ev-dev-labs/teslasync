@@ -16,8 +16,10 @@ import {
   XAxis,
   YAxis,
   axisTick,
+  useChartHiddenSeries,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface OriginConcentrationRow {
   [key: string]: string | number | null | undefined;
@@ -49,7 +51,9 @@ export function OriginConcentrationPlot({
   hiddenLeadingShare = false,
   ariaLabel,
 }: OriginConcentrationPlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const hostSeries = useChartHiddenSeries();
 
   const effectiveAriaLabel =
     ariaLabel ??
@@ -64,78 +68,104 @@ export function OriginConcentrationPlot({
       {
         key: 'concentration',
         label: concentrationName,
-        format: (v) => fmtNumber(v as number, 1, locale),
+        format: (v) => fmtNumber(v as number, undefined, locale),
       },
       {
         key: 'leadingShare',
         label: leadingName,
-        format: (v) => fmtNumber(v as number, 1, locale),
+        format: (v) => fmtNumber(v as number, undefined, locale),
+      },
+      {
+        key: 'outgoing',
+        label: t('destinationTransitions.originChart.column.outgoing', 'Outgoing transitions'),
+      },
+      {
+        key: 'successors',
+        label: t('destinationTransitions.originChart.column.successors', 'Distinct observed successors'),
+      },
+      {
+        key: 'supportIndex',
+        label: t('destinationTransitions.originChart.column.supportIndex', 'Support index'),
+      },
+      {
+        key: 'support',
+        label: t('destinationTransitions.originChart.column.support', 'Evidence band'),
       },
     ],
-    [t, concentrationName, leadingName, locale],
+    [t, concentrationName, leadingName, locale, fmtNumber],
   );
+
+  const renderPlot = ({
+    hiddenSeries,
+  }: { hiddenSeries: ReturnType<typeof useChartHiddenSeries> }) => (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={rows}>
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="var(--glass-border)"
+          strokeOpacity={0.4}
+        />
+        <XAxis
+          dataKey="origin"
+          tick={axisTick}
+          tickLine={false}
+          axisLine={false}
+          interval={0}
+        />
+        <YAxis
+          domain={[0, 100]}
+          tick={axisTick}
+          tickLine={false}
+          axisLine={false}
+        />
+        <Tooltip
+          content={
+            <ChartTooltip
+              valueFormatter={(value) => fmtNumber(value, undefined, locale)}
+            />
+          }
+        />
+        <ChartLegend
+          state={hiddenSeries ?? undefined}
+          verticalAlign="top"
+          align="right"
+        />
+        <Bar
+          dataKey="concentration"
+          name={concentrationName}
+          fill={CHART_COLORS[1]}
+          radius={[3, 3, 0, 0]}
+          hide={
+            (hiddenSeries?.isHidden('concentration') ?? false) ||
+            hiddenConcentration
+          }
+        />
+        <Line
+          type="monotone"
+          dataKey="leadingShare"
+          name={leadingName}
+          stroke={CHART_COLORS[2]}
+          strokeWidth={2}
+          hide={
+            (hiddenSeries?.isHidden('leadingShare') ?? false) ||
+            hiddenLeadingShare
+          }
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+
+  if (hostSeries) return renderPlot({ hiddenSeries: hostSeries });
 
   return (
     <EmbeddedChart
       chartKey="origin-concentration"
-      title={t('originConcentration.title', 'Origin Concentration')}
+      title={t('originConcentration.title', 'Origin concentration')}
       ariaLabel={effectiveAriaLabel}
       data={rows}
       dataColumns={dataColumns}
     >
-      {({ hiddenSeries }) => (
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={rows}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="var(--glass-border)"
-              strokeOpacity={0.4}
-            />
-            <XAxis
-              dataKey="origin"
-              tick={axisTick}
-              tickLine={false}
-              axisLine={false}
-              interval={0}
-            />
-            <YAxis
-              domain={[0, 100]}
-              tick={axisTick}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip
-              content={
-                <ChartTooltip
-                  valueFormatter={(value) => fmtNumber(value, 1, locale)}
-                />
-              }
-            />
-            <ChartLegend verticalAlign="top" align="right" />
-            <Bar
-              dataKey="concentration"
-              name={concentrationName}
-              fill={CHART_COLORS[1]}
-              radius={[3, 3, 0, 0]}
-              hide={
-                (hiddenSeries?.isHidden('concentration') ?? false) ||
-                hiddenConcentration
-              }
-            />
-            <Line
-              type="monotone"
-              dataKey="leadingShare"
-              name={leadingName}
-              stroke={CHART_COLORS[2]}
-              strokeWidth={2}
-              hide={
-                (hiddenSeries?.isHidden('leadingShare') ?? false) ||
-                hiddenLeadingShare
-              }
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      )}
+      {renderPlot}
     </EmbeddedChart>
   );
 }

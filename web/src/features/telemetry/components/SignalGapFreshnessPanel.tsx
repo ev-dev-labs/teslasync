@@ -12,7 +12,8 @@ import { AlertTriangle, CheckCircle2, Gauge } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { ProgressRing } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 
 import { GAP_BUCKET_COLORS, formatStaleness } from '../signalGapUtils';
 import type { SignalGapAnalysis } from '../hooks/useSignalGapAnalysis';
@@ -31,15 +32,17 @@ function freshnessColor(pct: number): string {
 export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFreshnessPanelProps) {
   const { t } = useTranslation();
   const { query, buckets, freshnessPct, topStale } = analysis;
+  const sourceState = useDataState(query, { provenance: 'live' });
   const receiving = buckets.active + buckets.aging;
   const neverCount = buckets.never;
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
+    <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
         <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('signalGap.freshnessTitle', 'Freshness')}
       </PanelTitle>
+      {hasVehicle && <StaleRefreshWarning state={sourceState} label={t('signalGap.freshnessTitle', 'Freshness')} />}
 
       {!hasVehicle ? (
         <EmptyState
@@ -49,8 +52,8 @@ export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFresh
         />
       ) : query.isLoading ? (
         <Skeleton height={260} />
-      ) : query.isError ? (
-        <QueryError error={query.error} onRetry={() => query.refetch()} />
+      ) : sourceState.fatalError ? (
+        <QueryError error={sourceState.fatalError} onRetry={() => query.refetch()} />
       ) : buckets.total === 0 ? (
         // no-action: transient — this vehicle is selected but hasn't streamed a single signal yet; resolves on its own once telemetry arrives.
         <EmptyState
@@ -107,11 +110,11 @@ export function SignalGapFreshnessPanel({ analysis, hasVehicle }: SignalGapFresh
                 {topStale.map((row) => (
                   <li
                     key={row.name}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-300" aria-hidden="true" />
-                      <Text variant="code" className="truncate">
+                      <Text variant="code" className="min-w-0 break-words">
                         {row.name}
                       </Text>
                     </span>

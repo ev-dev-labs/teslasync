@@ -14,10 +14,10 @@ describe('DataStateNotice', () => {
     expect(container.firstChild).toHaveAttribute('data-data-state', state)
     expect(container.firstChild).toHaveClass(
       tone === 'danger'
-        ? 'border-neon-red/25'
+        ? 'border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)]'
         : tone === 'warning'
-          ? 'border-neon-amber/25'
-          : 'border-neon-cyan/25',
+          ? 'border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)]'
+          : 'border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)]',
     )
   })
 

@@ -10,7 +10,7 @@
  *      KPI band counts (total / boolean / structured / deletes / contributors)
  *      and the value-composition buckets from the flag values.
  *   2. "Add flag" opens the Drawer in CREATE mode (empty, editable key).
- *   3. Filling + saving forwards the parsed JSON value to `setFlag` and closes
+ *   3. Filling + saving forwards opaque stored text to `setFlag` and closes
  *      the drawer on success.
  *   4. A save rejection keeps the drawer open so the operator can retry.
  *   5. Row "Edit" opens the Drawer in EDIT mode with a disabled, pre-filled key.
@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -68,7 +68,8 @@ const hoisted = vi.hoisted(() => ({
   state: {} as HookState,
 }));
 
-vi.mock('@/api/hooks/useFeatureFlags', () => ({
+vi.mock('@/api/hooks/useFeatureFlags', async () => ({
+  ...(await vi.importActual<typeof import('@/api/hooks/useFeatureFlags')>('@/api/hooks/useFeatureFlags')),
   useFlags: () => hoisted.state.flags,
   useFlagChanges: () => hoisted.state.changes,
   useSetFlag: () => ({
@@ -127,10 +128,10 @@ if (!window.matchMedia) {
 }
 
 const FLAGS: FeatureFlagEntry[] = [
-  { key: 'dlq.replay_enabled', value: true },
-  { key: 'ui.new_dashboard', value: false },
-  { key: 'limits.config', value: { max: 10 } },
-  { key: 'rollout.buckets', value: [1, 2, 3] },
+  { key: 'dlq.replay_enabled', value: 'true' },
+  { key: 'ui.new_dashboard', value: 'false' },
+  { key: 'limits.config', value: '{"max":10}' },
+  { key: 'rollout.buckets', value: '[1,2,3]' },
   { key: 'banner.text', value: 'hello' },
 ];
 
@@ -143,7 +144,7 @@ const CHANGES: FeatureFlagChange[] = [
     flag_key: 'dlq.replay_enabled',
     operation: 'set',
     old_value: null,
-    new_value: true,
+    new_value: 'true',
     reason: 'enable replay',
     trace_id: 't1',
   },
@@ -154,7 +155,7 @@ const CHANGES: FeatureFlagChange[] = [
     actor_ip: '10.0.0.2',
     flag_key: 'legacy.removed',
     operation: 'delete',
-    old_value: 42,
+    old_value: '42',
     new_value: null,
     reason: 'cleanup legacy',
     trace_id: 't2',
@@ -193,19 +194,21 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const page = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <FeatureFlagsPage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const result = render(page());
+  return { ...result, rerenderPage: () => result.rerender(page()) };
 }
 
 /** Read a MetricCard's rendered value by its visible label. */
 function metricValue(label: string): string {
-  const labelEl = screen.getByText(label);
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? '';
+  const labelEl = screen.getAllByText(label).find((element) => element.closest('[data-operational-metric]'));
+  return labelEl?.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 /** The `<tr>` in the registry table that owns the given flag key. */
@@ -226,7 +229,7 @@ beforeEach(() => {
     .mockResolvedValue({ key: '', old_value: null, audit_id: 1 });
   hoisted.deleteFlagMutateAsync
     .mockReset()
-    .mockResolvedValue({ key: '', old_value: null, deleted: true, audit_id: 2 });
+    .mockImplementation(async ({ key }: { key: string }) => ({ key, deleted: true, audit_id: 2 }));
   hoisted.flagsRefetch.mockReset();
   hoisted.changesRefetch.mockReset();
   hoisted.state.flags = makeFlagsQuery();
@@ -241,18 +244,17 @@ describe('FeatureFlagsPage', () => {
 
     // Page + section chrome.
     expect(
-      screen.getByRole('heading', { name: 'Feature Flags', level: 1 }),
+      screen.getByRole('heading', { name: 'Feature flags', level: 1 }),
     ).toBeInTheDocument();
     expect(screen.getByText('Registry')).toBeInTheDocument();
     expect(screen.getByText('Value composition')).toBeInTheDocument();
-    expect(screen.getByText('Recent changes')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent changes' })).toBeInTheDocument();
 
-    // KPI band counts derived from BOTH feeds (5 flags: 2 boolean, 2
-    // structured, 1 string; 2 changes: 1 delete, 2 distinct actors).
-    expect(metricValue('Total Flags')).toBe('5');
-    expect(metricValue('Boolean Toggles')).toBe('2');
-    expect(metricValue('Structured')).toBe('2');
-    expect(metricValue('Recent Changes')).toBe('2');
+    // Scalar-looking and structured-looking contents are still stored strings.
+    expect(metricValue('Total flags')).toBe('5');
+    expect(metricValue('Boolean toggles')).toBe('0');
+    expect(metricValue('Structured')).toBe('0');
+    expect(metricValue('Recent changes')).toBe('2');
     expect(metricValue('Deletes')).toBe('1');
     expect(metricValue('Contributors')).toBe('2');
 
@@ -262,8 +264,8 @@ describe('FeatureFlagsPage', () => {
     expect(screen.getByText('rollout.buckets')).toBeInTheDocument();
 
     // Composition: only non-empty value buckets are drawn (null bucket absent).
-    expect(screen.getByText('Boolean')).toBeInTheDocument();
-    expect(screen.getByText('Object')).toBeInTheDocument();
+    expect(screen.getByText('String')).toBeInTheDocument();
+    expect(screen.queryByText('Object')).not.toBeInTheDocument();
     expect(screen.queryByText('Null')).not.toBeInTheDocument();
 
     // Change-audit log: actors, operations, reasons.
@@ -280,37 +282,37 @@ describe('FeatureFlagsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
 
     expect(screen.getByText('Create flag')).toBeInTheDocument();
-    const keyInput = screen.getByLabelText(/flag key/i) as HTMLInputElement;
+    const keyInput = screen.getByRole('textbox', { name: /^Flag key\b/i }) as HTMLInputElement;
     expect(keyInput).toHaveValue('');
     expect(keyInput).not.toBeDisabled();
     // Nothing is committed just by opening the drawer.
     expect(hoisted.setFlagMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('forwards the parsed JSON value to setFlag and closes the drawer on save', async () => {
+  it('forwards stored text and exact reason to setFlag and closes the drawer on save', async () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
 
-    fireEvent.change(screen.getByLabelText(/flag key/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
-    fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
+    fireEvent.change(screen.getByLabelText(/^Value$/i), {
       target: { value: '{"enabled":true}' },
     });
-    fireEvent.change(screen.getByLabelText(/reason/i), {
-      target: { value: 'rolling out' },
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: '  rolling out  ' },
     });
 
-    const save = screen.getByRole('button', { name: /save flag/i });
+    const save = screen.getByRole('button', { name: /Save flag/i });
     expect(save).not.toBeDisabled();
     fireEvent.click(save);
 
     await waitFor(() =>
       expect(hoisted.setFlagMutateAsync).toHaveBeenCalledWith({
         key: 'feature.new',
-        value: { enabled: true },
-        reason: 'rolling out',
+        value: '{"enabled":true}',
+        reason: '  rolling out  ',
       }),
     );
     await waitFor(() =>
@@ -325,17 +327,17 @@ describe('FeatureFlagsPage', () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
-    fireEvent.change(screen.getByLabelText(/flag key/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
-    fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
+    fireEvent.change(screen.getByLabelText(/^Value$/i), {
       target: { value: 'false' },
     });
-    fireEvent.change(screen.getByLabelText(/reason/i), {
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
       target: { value: 'attempt' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /save flag/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Save flag/i }));
 
     await waitFor(() =>
       expect(hoisted.setFlagMutateAsync).toHaveBeenCalledTimes(1),
@@ -343,6 +345,71 @@ describe('FeatureFlagsPage', () => {
     // Drawer stays mounted so the operator can retry without retyping.
     expect(screen.getByText('Create flag')).toBeInTheDocument();
   });
+
+  it.each(['header Close', 'backdrop', 'Escape'] as const)(
+    'retains the draft through %s during a pending save and allows dismissal after rejection',
+    async (dismissal) => {
+      let rejectSave!: (error: Error) => void;
+      const saveAttempt = new Promise<void>((_resolve, reject) => {
+        rejectSave = reject;
+      });
+      hoisted.setFlagMutateAsync.mockImplementationOnce(() => {
+        hoisted.state.setFlagPending = true;
+        return saveAttempt;
+      });
+      const view = renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
+        target: { value: 'feature.pending' },
+      });
+      fireEvent.change(screen.getByLabelText(/^Value$/i), {
+        target: { value: '  false  ' },
+      });
+      fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+        target: { value: '  preserve this draft  ' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /Save flag/i }));
+      view.rerenderPage();
+
+      const dialog = screen.getByRole('dialog', { name: 'Create flag' });
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+      if (dismissal === 'header Close') {
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      } else if (dismissal === 'backdrop') {
+        const backdrop = dialog.firstElementChild;
+        if (!backdrop) throw new Error('Drawer backdrop is missing');
+        expect(backdrop).toHaveAttribute('aria-hidden', 'true');
+        fireEvent.click(backdrop);
+      } else {
+        const editor = within(dialog).getByLabelText(/^Value$/i);
+        editor.focus();
+        fireEvent.keyDown(editor, { key: 'Escape' });
+      }
+      expect(screen.getByRole('dialog', { name: 'Create flag' })).toBe(dialog);
+      expect(within(dialog).getByLabelText(/^Value$/i)).toHaveValue('  false  ');
+      expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  preserve this draft  ');
+      expect(hoisted.setFlagMutateAsync).toHaveBeenCalledExactlyOnceWith({
+        key: 'feature.pending',
+        value: '  false  ',
+        reason: '  preserve this draft  ',
+      });
+
+      await act(async () => {
+        hoisted.state.setFlagPending = false;
+        rejectSave(new Error('Sudo challenge canceled'));
+        await saveAttempt.catch(() => undefined);
+      });
+      view.rerenderPage();
+      expect(screen.getByRole('dialog', { name: 'Create flag' })).toBe(dialog);
+      expect(within(dialog).getByLabelText(/^Value$/i)).toHaveValue('  false  ');
+      expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  preserve this draft  ');
+      expect(within(dialog).getByRole('button', { name: /Save flag/i })).not.toBeDisabled();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      expect(screen.queryByRole('dialog', { name: 'Create flag' })).not.toBeInTheDocument();
+      expect(hoisted.setFlagMutateAsync).toHaveBeenCalledTimes(1);
+      expect(hoisted.deleteFlagMutateAsync).not.toHaveBeenCalled();
+    },
+  );
 
   it('opens the edit drawer in edit mode with a disabled, pre-filled key', () => {
     renderPage();
@@ -353,11 +420,11 @@ describe('FeatureFlagsPage', () => {
     expect(
       screen.getByText('Edit flag "ui.new_dashboard"'),
     ).toBeInTheDocument();
-    const keyInput = screen.getByLabelText(/flag key/i) as HTMLInputElement;
+    const keyInput = screen.getByRole('textbox', { name: /^Flag key\b/i }) as HTMLInputElement;
     expect(keyInput).toBeDisabled();
     expect(keyInput).toHaveValue('ui.new_dashboard');
-    // The stored `false` value is seeded into the JSON editor.
-    expect(screen.getByLabelText(/value \(json\)/i)).toHaveValue('false');
+    // The stored text is seeded without adding JSON quotes.
+    expect(screen.getByLabelText(/^Value$/i)).toHaveValue('false');
   });
 
   it('gates the delete confirm on a reason then forwards { key, reason } to deleteFlag', async () => {
@@ -372,8 +439,8 @@ describe('FeatureFlagsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete flag' })).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText(/reason/i), {
-      target: { value: 'no longer needed' },
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: '  no longer needed  ' },
     });
 
     const confirm = screen.getByRole('button', { name: 'Delete flag' });
@@ -383,12 +450,80 @@ describe('FeatureFlagsPage', () => {
     await waitFor(() =>
       expect(hoisted.deleteFlagMutateAsync).toHaveBeenCalledWith({
         key: 'limits.config',
-        reason: 'no longer needed',
+        reason: '  no longer needed  ',
       }),
     );
     await waitFor(() =>
       expect(screen.queryByText('Delete flag?')).not.toBeInTheDocument(),
     );
+  });
+
+  it.each([false, undefined])('closes the dialog for an audited absent flag (deleted=%s)', async (deleted) => {
+    hoisted.deleteFlagMutateAsync.mockResolvedValueOnce({
+      key: 'limits.config',
+      audit_id: 3,
+      ...(deleted === undefined ? {} : { deleted }),
+    });
+    renderPage();
+    fireEvent.click(within(registryRow('limits.config')).getByRole('button', { name: /Delete flag/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: 'already removed elsewhere' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete flag?' })).not.toBeInTheDocument());
+    expect(hoisted.deleteFlagMutateAsync).toHaveBeenCalledExactlyOnceWith({
+      key: 'limits.config',
+      reason: 'already removed elsewhere',
+    });
+  });
+
+  it.each([
+    { key: 'limits.config', deleted: true, audit_id: 0 },
+    { key: 'limits.config', deleted: false, audit_id: 0 },
+    { key: 'limits.config', audit_id: 0 },
+    { key: 'limits.config', deleted: true },
+    { key: 'wrong.flag', deleted: true, audit_id: 2 },
+    { key: 'limits.config', deleted: 'true', audit_id: 2 },
+    null,
+  ])('retains the selected flag and exact reason for rejected result %j, then allows retry', async (response) => {
+    hoisted.deleteFlagMutateAsync.mockResolvedValueOnce(response);
+    renderPage();
+    fireEvent.click(within(registryRow('limits.config')).getByRole('button', { name: /Delete flag/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: '  retain the audit reason  ' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Delete flag?' });
+    expect(within(dialog).getByText(/Permanently remove flag "limits.config"/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  retain the audit reason  ');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete flag' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete flag?' })).not.toBeInTheDocument());
+    expect(hoisted.deleteFlagMutateAsync).toHaveBeenNthCalledWith(2, {
+      key: 'limits.config',
+      reason: '  retain the audit reason  ',
+    });
+  });
+
+  it('retains the dialog and reason when delete rejects, then allows an audited retry', async () => {
+    hoisted.deleteFlagMutateAsync.mockRejectedValueOnce(new Error('Audit persistence failed'));
+    renderPage();
+    fireEvent.click(within(registryRow('limits.config')).getByRole('button', { name: /Delete flag/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+      target: { value: '  retry without retyping  ' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete flag' }));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Delete flag?' });
+    expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  retry without retyping  ');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete flag' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete flag?' })).not.toBeInTheDocument());
+    expect(hoisted.deleteFlagMutateAsync).toHaveBeenNthCalledWith(2, {
+      key: 'limits.config',
+      reason: '  retry without retyping  ',
+    });
   });
 
   it('surfaces retryable error panels and refetches when the flags query fails', () => {
@@ -422,7 +557,9 @@ describe('FeatureFlagsPage', () => {
     // The flags feed is healthy, so the registry table still renders.
     expect(screen.getAllByRole('button', { name: /Edit flag/ })).toHaveLength(5);
 
-    const retry = screen.getByRole('button', { name: /retry/i });
+    const auditCard = screen.getByRole('heading', { name: 'Recent changes' }).closest('[data-card]');
+    if (!auditCard) throw new Error('Recent changes card is missing');
+    const retry = within(auditCard as HTMLElement).getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
     expect(hoisted.changesRefetch).toHaveBeenCalled();
   });
@@ -435,7 +572,8 @@ describe('FeatureFlagsPage', () => {
     expect(screen.getByText(/Loading flags/)).toBeInTheDocument();
     expect(screen.getByText(/Loading audit log/)).toBeInTheDocument();
     // The KPI band collapses to skeletons — no derived metric labels yet.
-    expect(screen.queryByText('Total Flags')).not.toBeInTheDocument();
+    expect(screen.getByTestId('feature-flags-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('feature-flags-summary').querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('renders per-section empty messaging when both feeds are empty', () => {
@@ -443,12 +581,53 @@ describe('FeatureFlagsPage', () => {
     hoisted.state.changes = makeChangesQuery({
       data: { count: 0, flag_key: '', limit: 50, rows: [] },
     });
+
     renderPage();
 
-    expect(metricValue('Total Flags')).toBe('0');
+    expect(metricValue('Total flags')).toBe('0');
     expect(
       screen.getByText('No feature flags are set on this server.'),
     ).toBeInTheDocument();
     expect(screen.getByText('No flag changes yet')).toBeInTheDocument();
+  });
+
+  it('retains both feeds, metric values and exact delete target after failed refreshes; cancellation writes nothing', () => {
+    hoisted.state.flags = makeFlagsQuery({ error: new Error('registry refresh failed'), isError: true });
+    hoisted.state.changes = makeChangesQuery({ error: new Error('audit refresh failed'), isError: true });
+    renderPage();
+    expect(metricValue('Total flags')).toBe('5');
+    expect(metricValue('Recent changes')).toBe('2');
+    expect(screen.getByText('cleanup legacy')).toBeInTheDocument();
+    fireEvent.click(within(registryRow('limits.config')).getByRole('button', { name: /Delete flag/ }));
+    expect(screen.getByText(/Permanently remove flag "limits.config"/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete flag' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(hoisted.deleteFlagMutateAsync).not.toHaveBeenCalled();
+    expect(hoisted.setFlagMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('keeps known registry counts but marks audit counts unknown when only the audit source failed its first load', () => {
+    hoisted.state.changes = makeChangesQuery({ data: undefined, error: new Error('audit unavailable'), isError: true });
+    renderPage();
+    expect(metricValue('Total flags')).toBe('5');
+    expect(metricValue('Boolean toggles')).toBe('0');
+    expect(metricValue('Recent changes')).toBe('—');
+    expect(metricValue('Deletes')).toBe('—');
+    expect(metricValue('Contributors')).toBe('—');
+    expect(screen.getAllByRole('button', { name: /Edit flag/ })).toHaveLength(5);
+  });
+
+  it('retains the immutable-key helper and write-free cancellation with the shared UI barrel', () => {
+    renderPage();
+    fireEvent.click(within(registryRow('ui.new_dashboard')).getByRole('button', { name: /Edit flag/ }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Edit flag "ui.new_dashboard"' });
+    expect(within(dialog).getByText('Flag keys are immutable once created. Delete + re-create to rename.')).toBeInTheDocument();
+    expect(within(dialog).getByRole('textbox', { name: /^Flag key\b/i })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(hoisted.setFlagMutateAsync).not.toHaveBeenCalled();
+    expect(hoisted.deleteFlagMutateAsync).not.toHaveBeenCalled();
   });
 });

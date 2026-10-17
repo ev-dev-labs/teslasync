@@ -1,0 +1,22 @@
+{
+  "releasedUtc": "2026-10-07T06:20:39.9097531Z",
+  "actualStartUtc": "2026-10-07T06:16:46.9948135Z",
+  "hardStopUtc": "2026-10-07T06:36:46.9948135Z",
+  "readWritePair": {
+    "readSource": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+    "writeSource": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+    "writeTest": "web\\src\\features\\maps\\pages\\GeofencesPage.catalogCopy.test.tsx",
+    "readCanonical": "web\\src\\i18n\\en.json (read only)"
+  },
+  "sourceWriteReleased": true,
+  "testWriteReleased": true,
+  "allReadLeasesReleased": true,
+  "outstandingWork": "Parent-owned append-only canonical selectHint integration, followed by deferred consolidated validation",
+  "repositoryEdits": [
+    "web\\src\\features\\maps\\pages\\GeofencesPage.tsx",
+    "web\\src\\features\\maps\\pages\\GeofencesPage.catalogCopy.test.tsx"
+  ],
+  "artifactRoot": ".agents\\atomic-geofence-copy-20261007T061758Z",
+  "noCatalogGeneratedCoreBackendWrites": true,
+  "noValidationOrPublication": true
+}

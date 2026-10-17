@@ -113,6 +113,75 @@ describe('usePhysicsLedger', () => {
 });
 
 describe('readPhysicsLedger', () => {
+  it('keeps marker IDs and source order without adding display colors or inferred statuses', () => {
+    const markers = [
+      { at: '2026-09-14T12:00:00Z', kind: 'charge', id: 9, edge: 'end' },
+      { at: '2026-09-13T12:00:00Z', kind: 'drive', id: 7, edge: 'start' },
+    ];
+    const ledger = { kind: 'range', markers, contradictions: [], missing_signals: [] };
+    for (const body of [ledger, { data: ledger }]) {
+      const result = readPhysicsLedger(body);
+      expect(result).toBe(ledger);
+      expect(result.markers).toBe(markers);
+      expect(result.markers?.map(marker => marker.id)).toEqual([9, 7]);
+      expect(result).toEqual(ledger);
+      for (const marker of result.markers ?? []) {
+        expect(marker).not.toHaveProperty('color');
+        expect(marker).not.toHaveProperty('status');
+      }
+      expect(result).not.toHaveProperty('success');
+      expect(result).not.toHaveProperty('warning');
+    }
+  });
+
+  it('retains motion series timestamps, signed SI values, zeros and null gaps in either envelope', () => {
+    const points = [
+      { at: '2026-09-14T11:58:30Z', speed_mps: 20, power_pack_w: -8000, force_long_n: -200, latch: 'moving' },
+      { at: '2026-09-14T11:59:00Z', speed_mps: null, power_pack_w: null, force_long_n: null, latch: 'unknown' },
+      { at: '2026-09-14T11:59:30Z', speed_mps: 0, power_pack_w: 0, force_long_n: 0, latch: 'parked' },
+    ];
+    const dynamicsPoints = points.map((point, index) => ({
+      ...point,
+      accel_mps2: index === 1 ? null : -0.125,
+      power_mech_w: index === 1 ? null : -4000,
+      friction_brake_w: index === 1 ? null : 0,
+      unknown: index === 1,
+    }));
+    const ledger = { kind: 'range', dynamics: { points: dynamicsPoints }, black_box: points };
+    for (const body of [ledger, { data: ledger }]) {
+      const result = readPhysicsLedger(body);
+      expect(result).toBe(ledger);
+      expect(result.dynamics.points).toBe(dynamicsPoints);
+      expect(result.black_box).toBe(points);
+      expect(JSON.parse(JSON.stringify(result))).toEqual(ledger);
+    }
+  });
+
+  it('preserves raw epoch SI and evidence identically through root and legacy envelopes', () => {
+    const ledger = {
+      kind: 'range', vehicle_id: 1,
+      start: '2026-09-13T12:00:00Z', end: '2026-09-14T12:00:00Z',
+      epochs: [{ firmware: '2026.24.3', measured_wh: 0, predicted_wh: null,
+        unexplained_wh: -25.125, sample_count: 120, honesty: 'Correlation.' }],
+      truncated: true, missing_signals: ['elevation'],
+      unknown_intervals: null, contradictions: ['gear_P_with_speed'],
+    };
+    for (const body of [ledger, { data: ledger }]) {
+      const result = readPhysicsLedger(body);
+      expect(result).toBe(ledger);
+      expect(result.epochs).toBe(ledger.epochs);
+      expect(JSON.parse(JSON.stringify(result))).toEqual(ledger);
+    }
+  });
+
+  it.each([null, []])('preserves unknown interval evidence without inferring completeness: %j', (intervals) => {
+    const ledger = { kind: 'range', unknown_intervals: intervals, unknown_hours: 0, truncated: true };
+    expect(readPhysicsLedger(ledger)).toBe(ledger);
+    expect(readPhysicsLedger({ data: ledger })).toBe(ledger);
+    expect(readPhysicsLedger(ledger).unknown_intervals).toBe(intervals);
+    expect(readPhysicsLedger(ledger)).not.toHaveProperty('complete');
+  });
+
   it('returns a root ledger unchanged', () => {
     const ledger = { kind: 'drive', honesty: 'Drive energy' };
     expect(readPhysicsLedger(ledger)).toBe(ledger);

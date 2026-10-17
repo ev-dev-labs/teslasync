@@ -1,0 +1,305 @@
+{
+  "item": "audit-page-232",
+  "page": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+  "routes": ["/physics-cockpit"],
+  "purpose": "Present independently reported Tesla cockpit measurements, FSD trip-meter evidence and confirmed-Park accounting, with an exportable session-boundary certificate.",
+  "primaryGoal": "Inspect the selected vehicle's available physics evidence without treating unknown measurements as zero or its FSD trip meter as an engagement flag.",
+  "dataSources": [
+    {
+      "hook": "usePhysicsCockpit",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 59,
+      "endpoint": "GET /api/v1/physics/cockpit?vehicle_id=<selected>",
+      "routeEvidence": "internal\\api\\router.go:3515-3516",
+      "owner": "internal\\api\\teslaphysics\\handler.go:184-208; cockpit.go:10-34",
+      "behavior": "Vehicle-scoped, enabled only with a vehicle; cancellation signal forwarded; physicsKeys.cockpit and live query policy. Handler combines LiveState with ten minutes of park-field timeline; returned numerics remain SI. Page uses useDataState with live provenance."
+    },
+    {
+      "hook": "useFsdHeartbeat",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 69,
+      "endpoint": "GET /api/v1/physics/heartbeat?vehicle_id=<selected>",
+      "routeEvidence": "internal\\api\\router.go:3517",
+      "owner": "internal\\api\\teslaphysics\\handler.go:211-238; heartbeat.go:14-28",
+      "behavior": "Vehicle-scoped live query with cancellation. Combines LiveState and up to thirty minutes of motion timeline. Historical timeline failure is logged but a successful heartbeat response is still returned. FSD distance is a meter, not an engagement indicator."
+    },
+    {
+      "hook": "useSessionCertificate",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 119,
+      "endpoint": "GET /api/v1/physics/certificate?vehicle_id=<selected>",
+      "routeEvidence": "internal\\api\\router.go:3522",
+      "owner": "internal\\api\\teslaphysics\\handler.go:286-339; certificate.go:25-72",
+      "behavior": "Historical query, vehicle-scoped and cancellable. Page supplies no date bounds; handler defaults to now minus thirty days through now and requests at most 1000 drives and 1000 charges. Client downloads the returned object unchanged. Actual repository completeness and signing configuration were not established."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": "Not independently traced in this bounded audit",
+      "owner": "Existing workspace vehicle selection/store owner",
+      "behavior": "URL vehicle ID, persisted selected vehicle and first-fleet fallback are reconciled by the existing shared hook. The page creates no competing picker. Fleet request/error UI was not traced."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:9-16; web\\src\\components\\layout\\PageContainer.tsx:79-111,166-240",
+      "contract": "Existing full-width min-w-0 container, page title, overflow actions and query freshness; shell retains workspace controls."
+    },
+    {
+      "name": "LayoutCard / SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "evidence": "SourceContent.tsx:10-31,35-79; LayoutCard.tsx:7-64",
+      "contract": "Persistent labeled card; ready/loading/error/empty/retained body with loadingContent, emptyContent, retainedMessage and errorRecovery. Fatal error replaces only its own source."
+    },
+    {
+      "name": "VehicleEvidenceBrief",
+      "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+      "evidence": "VehicleEvidenceBrief.tsx:7-16,22-41",
+      "contract": "Typed StatMetric inputs, independent DataStatus, scope/provenance/freshness/loading; useOperationalMetrics bridges source data into canonical OperationalBrief."
+    },
+    {
+      "name": "OperationalBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "evidence": "OperationalBrief.tsx:43-62,119-202,235-255",
+      "contract": "Labeled section, restrained token surfaces, responsive metric grid, Review details drawer and source narrative. Preserve summary plus details, not a replacement KPI grid."
+    },
+    {
+      "name": "Button, Badge, Text; QueryError, StaleRefreshWarning; DataProvenanceBadge",
+      "owner": "Existing ui, feedback and data-display category barrels",
+      "evidence": "PhysicsCockpitPage.tsx:5-8,63-74,81-83,93,97,113-117,155-172",
+      "contract": "Localized actions/status text, decorative download icon hidden, retained-data warning and retry, source-specific provenance. Button/Drawer internals were not exhaustively audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+      "line": 100,
+      "rule": "MDC-026 / mission sections 24-25",
+      "detail": "Heartbeat stale state receives both the preceding StaleRefreshWarning and SourceContent retained message/retry; park also receives the cockpit warning plus retained message/retry.",
+      "fix": "Reuse the existing source-state owners and choose one source-labeled recovery surface per section, preserving retained content and retry. Do not add a second generic state component.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["PhysicsCockpitPage.tsx:81,97-105,134-141", "SourceContent.tsx:60-75", "StaleRefreshWarning.tsx:104-125"]
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "PageLayout.tsx:12 supplies a full-width container and min-w-0.",
+      "LayoutCard.tsx:30-36,39-41 supplies min-w-0 and wrapped card headers.",
+      "OperationalBrief.tsx:169-174 makes compact metrics one column, two at sm, three at md and six at 1920px; values break words at 189-192.",
+      "PhysicsCockpitPage.tsx:112-115,154-173 wraps mode/status badges."
+    ],
+    "issues": [],
+    "unverified": "No rendered viewport, drawer, overflow-action, long-label, RTL, 200%-text or container-width testing. All ten mission widths remain unverified; source classes are not acceptance."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "PhysicsCockpitPage.tsx:72 hides its decorative Download icon; export and retry actions use shared controls.",
+      "OperationalBrief.tsx:119 labels its section and sets aria-busy; 166-183 uses list/listitem semantics.",
+      "SourceContent.tsx:42 gives loading a localized status; 64-65 announces retained data politely.",
+      "LayoutCard.tsx:28,42 associates its heading with the card; PageContainer.tsx:194-200 retains route-focus heading semantics."
+    ],
+    "issues": [],
+    "unverified": "Keyboard order, focus visibility/restoration, actual drawer trapping, screen-reader announcements, effective contrast, touch targets, reduced-motion and forced-colors behavior were not exercised."
+  },
+  "states": {
+    "loading": "Cockpit passes isLoading to its brief; heartbeat/park SourceContent provide contextual loading skeletons.",
+    "empty": "Heartbeat and park have named empty messages. Cockpit retains all nine metric slots with nullable inputs, but no explicit no-vehicle prerequisite.",
+    "error": "Cockpit fatal error has QueryError/refetch; heartbeat and park use SourceContent fatal-error recovery without blanking neighboring sources.",
+    "staleOffline": "Cockpit and heartbeat derive retained DataState and mount StaleRefreshWarning. SourceContent supports retained body/retry. Certificate has no equivalent state presentation.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+        "line": 66,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "Certificate availability is represented only by data truthiness. Initial failure/loading/no vehicle all produce the same disabled export; retained certificate after a failed refresh remains downloadable with no stale/error context. Certificate is also excluded from the page query metadata at line 76.",
+        "fix": "Derive historical certificate DataState and expose localized loading, prerequisite, fatal recovery and retained-data context beside the export using existing primitives. Preserve export eligibility for actual retained source data and export the full raw certificate unchanged.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["PhysicsCockpitPage.tsx:28-30,62-76", "useTeslaPhysics.ts:120-128"]
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+        "line": 89,
+        "rule": "MDC-026 / MDC-032",
+        "detail": "When vehicleId is absent, all physics queries are disabled. useDataState has initial status without data, but cockpit overrides brief loading with isLoading; the resulting source label can say Loading source while showing unknown metric values indefinitely. Heartbeat and park instead show no-evidence empty messages, not the missing vehicle prerequisite.",
+        "fix": "Distinguish fleet loading and missing selected vehicle from enabled source loading and resolved-empty evidence. Keep all section shells and existing header-owned vehicle selection; use SourceContent.emptyContent or existing EmptyState with localized prerequisite guidance, not another picker.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["PhysicsCockpitPage.tsx:24-30,85-95,100-103,135-138", "useTeslaPhysics.ts:65,75,125", "api\\dataState.ts:188-210", "VehicleEvidenceBrief.tsx:28-41"]
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+        "line": 124,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "A null last_tick_at is always described as No trip-meter tick in the recent window. The heartbeat handler can log a history-read failure and still return HTTP success with live state, so this response does not prove recent-window history eligibility or completeness.",
+        "fix": "Retain the trip-meter distinction and nullable timestamp. Report unknown recent-window coverage honestly; any explicit history-eligibility indicator requires an integration-owned contract rather than page-invented data.",
+        "owner": "integration",
+        "confidence": "high",
+        "relatedEvidence": ["internal\\api\\teslaphysics\\handler.go:225-238", "internal\\api\\teslaphysics\\heartbeat.go:26-28,40-51"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+      "line": 98,
+      "rule": "MDC-015 / mission sections 7-8",
+      "detail": "Heartbeat and park place a self-contained OperationalBrief/GlassPanel inside LayoutCard/Card with another title; cockpit uses the brief directly. Source shows duplicated surface/title hierarchy, although its actual visual impact is unverified.",
+      "fix": "Review the existing card/brief composition contract with the shared owner before flattening presentation. Preserve both specialist titles, all narrative, freshness, states, badges, metrics and Review details actions; do not remove sections or invent a new card.",
+      "owner": "page",
+      "confidence": "medium",
+      "relatedEvidence": ["PhysicsCockpitPage.tsx:98,108-110,133,143-145", "LayoutCard.tsx:22-42", "OperationalBrief.tsx:120-125,143"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+      "line": 148,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Park's ten-minute historical accounting is labeled Live vehicle state; heartbeat also combines current fields with historical tick evidence. DataProvenanceBadge updatedAt is query success time, not telemetry observation time; cockpit scope explicitly admits observation time is not supplied.",
+      "fix": "Preserve current source semantics while describing mixed live/history accounting accurately. Do not repurpose dataUpdatedAt as observation time, invent freshness metadata or weaken confirmed-Park eligibility. Any backend freshness/coverage addition is integration-owned.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["PhysicsCockpitPage.tsx:91-93,116-117,147-148", "internal\\api\\teslaphysics\\handler.go:198-208,225-237", "DataProvenanceBadge.tsx:115-131", "api\\dataState.ts:196-199"]
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+      "line": 69,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "Export scope is not explained in the UI: useSessionCertificate supplies only selected vehicle, while the handler defaults to thirty days and caps both source lists at 1000. The route is intentionally not range-enabled for its live readings. This does not establish an incorrect export, but makes scope/completeness opaque.",
+      "fix": "Expose actual certificate from/to and server-established limitations without making the live cockpit a historical page or adding a second date picker. If broader certificate scope/completeness is needed, coordinate typed integration and shared workspace ownership; do not claim full-range coverage.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["useTeslaPhysics.ts:120-127", "internal\\api\\teslaphysics\\handler.go:293-307", "web\\src\\lib\\workspaceScope.ts:23-77"]
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": "Certificate trust/recovery and no-vehicle prerequisites",
+    "next": "Source eligibility wording and export scope",
+    "last": "Verify nested card hierarchy visually before scoped presentation changes"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Heartbeat history-coverage metadata, if explicit eligibility is required",
+      "existingOwnerFile": "internal\\api\\teslaphysics\\handler.go",
+      "propsVariantsStates": "Needs a source-owned typed distinction between successful history with no tick, unavailable history, and truncated history; exact API is not designed or authorized by this audit.",
+      "usedBy": ["/physics-cockpit"],
+      "dependsOn": ["internal\\api\\teslaphysics\\types.go", "web\\src\\types\\teslaPhysics.ts", "web\\src\\api\\hooks\\useTeslaPhysics.ts"],
+      "owner": "integration",
+      "evidence": "handler.go:225-238 currently logs timeline failure without encoding it in the response.",
+      "status": "Conditional integration requirement; no shared presentation-library extension proven necessary"
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "assessment": "Page uses existing layout, state, metric bridge and OperationalBrief owners. Do not introduce new metric, source-state, palette or workspace-selector implementations.",
+    "sharedContractsToReuse": [
+      {
+        "name": "SourceContent",
+        "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "propsVariantsStates": "ready/loading/error/empty/retained; emptyContent for prerequisites; errorRecovery.onRetry; retainedMessage",
+        "usedBy": ["/physics-cockpit heartbeat", "/physics-cockpit park"],
+        "dependsOn": ["DataState.fatalError versus refreshError", "existing feedback primitives"]
+      },
+      {
+        "name": "OperationalBrief via VehicleEvidenceBrief",
+        "existingOwnerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "propsVariantsStates": "compact; loading; rawValue/valueState; scope/provenance/freshness; typed StatMetric bridge; existing details drawer",
+        "usedBy": ["/physics-cockpit cockpit", "/physics-cockpit heartbeat", "/physics-cockpit park"],
+        "dependsOn": ["useOperationalMetrics", "existing SI display preferences", "existing Drawer"]
+      }
+    ]
+  },
+  "preservation": {
+    "sourceHash": "81036251b19f2c0136eba4be07517428ff3db414de6a2534fe1aabc3d9a05918",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashFile": "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+    "currentLineCount": 183,
+    "inventory": {
+      "page": "183 lines",
+      "pageSpecificPresentationDependency": "VehicleEvidenceBrief.tsx, 43 lines",
+      "sections": [
+        {"name": "Live cockpit readings", "line": 85, "metricCount": 9},
+        {"name": "FSD trip-meter heartbeat / Trip-meter evidence", "line": 98, "metricCount": 3},
+        {"name": "Park truth / Park accounting evidence", "line": 133, "metricCount": 1}
+      ],
+      "sectionCount": 3,
+      "vehicleEvidenceBriefCount": 3,
+      "layoutCardCount": 2,
+      "sourceContentCount": 2,
+      "directGlassPanelCount": 0,
+      "directChartContainerCount": 0,
+      "chartCount": 0,
+      "tableCount": 0
+    },
+    "actions": [
+      "Download raw session certificate JSON with existing date-based filename when source data exists",
+      "Retry cockpit and park source through cockpitQuery.refetch",
+      "Retry heartbeat independently",
+      "Stale retained-source refresh",
+      "Review details for each of the three source briefs through existing OperationalBrief drawer"
+    ],
+    "dataBehavior": [
+      "Keep all nine cockpit readings: gear, detailed/normal charge fallback, latch/open fallback, battery percentage, independent pack voltage/current, energy remaining Wh, driving distance m and speed m/s.",
+      "Keep heartbeat distance, nullable last tick, firmware, server label/honesty and nullable valet/service mode semantics; FSD distance never implies engagement.",
+      "Keep confirmed Park, neutral rolling, reported-versus-counted sentry/overheat/preconditioning badges, park honesty and every rejected reason.",
+      "Numeric null remains unknown, not zero. Preserve meaningful numeric zero, sign and specialist formatting; preserve nullable mode inputs rather than infer false from absence.",
+      "Preserve raw SI in API/cache/export and existing display-only useUnits/useNumberFormatting. Do not change saved unit/locale/theme settings.",
+      "Preserve certificate vehicle_id, issued_at, from, to, rules, drives/charges, nullable ended_at and hmac_sha256, integrity_sha256 and honesty unchanged. Do not fabricate signatures, close open sessions, infer missing ledger values or claim complete export eligibility.",
+      "Preserve selected-vehicle scope keys, enabled guards, request AbortSignal, historical/live policy, retained payloads, fatal-versus-refresh errors and independent-source recovery.",
+      "Keep shell-owned vehicle selection; route currently has vehicle scope and no workspace range. Historical windows here are backend-owned; do not silently alter them during presentation modernization.",
+      "Preserve honesty/context text and all detail drawers. Unknown source eligibility remains unknown."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 source-only read-only audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "accessibility": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "apiRequests": "No HTTP requests executed; three physics paths confirmed against current router source.",
+    "validation": "No TypeScript, tests, lint, Git, full builds, browser or production mutations. audit.sh was read but not executed because it runs package-wide TypeScript, outside this assignment's source-only validation scope.",
+    "sourceChecks": "Targeted source search found no direct inline style, raw button/input/textarea/select/table, fixed-white/neon text or direct recharts/react-leaflet/framer-motion imports in the assigned page. This is not a whole-repository violations certificate.",
+    "unknowns": "Shared Button/Drawer behavior, catalogs, fleet endpoint, complete repository filtering, certificate HMAC configuration and operational server behavior were not established. Missing-path reads of useOperationalMetrics.ts and operationalMetrics.ts yielded no evidence; the actual useOperationalMetrics.tsx was subsequently read.",
+    "writes": ["docs\\frontend-audits\\audit-page-232.json", ".agent-status\\audit-page-232.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\PhysicsCockpitPage.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+    "web\\src\\types\\teslaPhysics.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\DataProvenanceBadge.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\csvExport.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\teslaphysics\\handler.go",
+    "internal\\api\\teslaphysics\\cockpit.go",
+    "internal\\api\\teslaphysics\\heartbeat.go",
+    "internal\\api\\teslaphysics\\certificate.go"
+  ]
+}

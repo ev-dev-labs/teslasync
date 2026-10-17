@@ -6,8 +6,8 @@ import {
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
 import type { DepartureDirectoryItem } from '../../lib/preconditioningEffectiveness';
 import {
   preconditioningDispositionLabel,
@@ -15,6 +15,7 @@ import {
   preconditioningRegimeLabel,
 } from './labels';
 import type { TemperatureDeltaFormatter } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningDepartureCardProps {
   item: DepartureDirectoryItem;
@@ -36,10 +37,11 @@ function Detail({ label, value }: { label: string; value: string }) {
 
 export function PreconditioningDepartureCard({
   item,
-  locale,
   formatDuration,
   formatDelta,
 }: PreconditioningDepartureCardProps) {
+  const { formatDateTime } = useDateFormat();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -52,7 +54,7 @@ export function PreconditioningDepartureCard({
             })}
           </Text>
           <Text as="p" variant="caption" className="mt-1">
-            {formatDateTime(new Date(item.departureMs), { locale })}
+            {formatDateTime(new Date(item.departureMs))}
           </Text>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -89,15 +91,15 @@ export function PreconditioningDepartureCard({
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.firstLead', 'First-state lead')}
-          value={formatDuration(item.firstSampleLeadS, { precision: 2 })}
+          value={formatDuration(item.firstSampleLeadS)}
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.finalLead', 'Final-state lead')}
-          value={formatDuration(item.lastSampleLeadS, { precision: 2 })}
+          value={formatDuration(item.lastSampleLeadS)}
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.span', 'Observation span')}
-          value={formatDuration(item.observationSpanS, { precision: 2 })}
+          value={formatDuration(item.observationSpanS)}
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.targetShift', 'Target shift')}

@@ -1,0 +1,773 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-dispose-remaining-reports-03",
+  "status": "BOUNDED_21_REPORT_DISPOSITION_ONLY",
+  "assignmentUTC": "2026-10-14T12:28:06.992Z",
+  "returnBeforeUTC": "2026-10-14T12:48:06.992Z",
+  "deadlineReset": false,
+  "completionMeaning": "Existing-report disposition and drain-only export proposals, not a new audit, registration, repair, policy decision, source acceptance or application/native approval.",
+  "authority": {
+    "workerContract": "docs\\orchestrator-loop.md",
+    "acceptedMaps": ["docs\\frontend-audits\\phase6-confirmed-fix-owner-map.json", "docs\\frontend-audits\\phase6-confirmed-fix-owner-map-next.json"],
+    "queueReadOnly": "migration-queue.md",
+    "exactDispatch": "session files\\tick-resume-dispatch.json:batch[id=phase6-dispose-remaining-reports-03]",
+    "writableReport": "docs\\frontend-audits\\phase6-dispose-remaining-reports-03.json",
+    "writableIgnoredLog": "web\\logs\\phase6-dispose-remaining-reports-03.log",
+    "parentAloneMergesNineChunksAndExportsRootWorkItems": true,
+    "newQueueRows": 0,
+    "sourceGrantsCreated": 0,
+    "dispatchAuthorized": false,
+    "drainOnly": true
+  },
+  "method": {
+    "onlyAssignedExistingQaReportsRead": true,
+    "productionSourceOrFixtureInvestigation": false,
+    "compilerApplicationTestsBrowserApiGitInstallServerDockerSubagents": "NOTRUN",
+    "newAuditFindings": 0,
+    "paths": "All files arrays use repository-relative Windows paths already explicitly reported or currently granted in the queue. No source/test existence checks were performed. files is a proposed maximum scope, never a write grant.",
+    "tests": "Only explicitly reported test paths are named. Where none is reported, a covering-test file grant is an explicit blocker; no guessed new filename or fabricated test case is supplied.",
+    "dependencies": "Changed wire/provenance contracts and exact shared-file serialization only. Existing available formatter/chart/state capabilities, QA delivery, full-feature completion and native acceptance are not invented prerequisites for source work.",
+    "dedup": "Mechanism identity, not common filenames or completed migration/audit rows, establishes correction ownership. Shared roots and parent canonical-copy work require cross-chunk dedup before any export is considered runnable.",
+    "preservation": "Every original JSON record remains untouched at its reportDisposition.originalRecord path. Field selectors below reference complete records, not excerpts. Original commands, numeric counts, failures, candidates, source pins, historical pins, safety/privacy restrictions, observations and NOTRUN fields retain their original meaning and timestamps. Existing-source preservation is not fresh correctness evidence.",
+    "findingCounting": "A report/id pair is counted once even if its consumer and producer appear in two proposed owners. Sleep Q13-Q17 are candidates despite residing in findings. Departure needs classifications are not all defects. Duplicate singular/plural automation mechanisms remain separately traceable original observations of one shared correction.",
+    "queueSnapshotIsNotActorLifecycle": true
+  },
+  "existingCanonicalOwners": [
+    {
+      "id": "phase6-live-vehicle-identity-reset",
+      "queueStatus": "[x]",
+      "boundary": "Completed vehicle-switch scalar reset with reported 27 discovered/passed, zero failed/skipped. CA-S02 field presence and CA-S03 per-field freshness are different mechanisms and remain missing; preserve all 136 public fields and original identity reset."
+    },
+    {
+      "id": "phase6-fix-relative-future-dates",
+      "queueStatus": "[x]",
+      "boundary": "Reported 23 discovered/executed/passed, zero failed/skipped, safe relative future/past and preference contracts. AHQA-08 negative elapsed-duration validity is distinct. Caller date-option omissions do not authorize reopening the completed relative formatter."
+    },
+    {
+      "id": "phase6-fix-selection-prerequisite-trust",
+      "queueStatus": "[x]",
+      "remainingCanonicalOwner": "phase6-proof-selection-prerequisite-trust",
+      "boundary": "vehiclesState capability delivered; normal proof remains pending with external catalog guard exit1 and zero executed. Candidate selection gaps require caller adoption/actual flow evidence, not another shared-hook rewrite or a renewed proof campaign."
+    },
+    {
+      "id": "phase6-drivetrain-exact-range-integration",
+      "queueStatus": "[x]",
+      "boundary": "Completed drivetrain-specific model/caller plus exact useDriving/drives stats/listing bound integration. Reuse accepted capability and preserve retained failure/recovery history; it does not establish charging, energy, sleep, battery-health, advisor coverage or each new caller's use of both bounds."
+    },
+    {
+      "id": "phase6-fix-workspace-inbox-alias-and-dashboard-picker",
+      "queueStatus": "[x]",
+      "remainingCanonicalOwner": "phase6-fix-admin-audit-workspace-range-registration",
+      "boundary": "Completed inbox alias/dashboard vehicle scope; separate audit-route registration currently claims workspaceScope.ts. Battery routes and benchmarks policy are distinct objectives requiring parent serialization/cross-chunk root dedup, not remigration of shell/header."
+    },
+    {
+      "id": "phase6-rescue-battery-battery-cells",
+      "queueStatus": "[x]",
+      "boundary": "Reported 20 discovered/executed/passed, zero failed/skipped, unchanged source/test; formatTime mock/unary tick rescue. BC-QA-001..008 are not owned by that rescue. Original attempts2 and rescue chronology remain unchanged; native/global proof is not established."
+    },
+    {
+      "id": "phase6-departure-summary-semantics",
+      "queueStatus": "[x]",
+      "remainingCanonicalOwner": "phase6-departure-runtime-caveat-oracle",
+      "boundary": "Four-metric primary DERIVED copy/category import is completed; own original normal run failed external catalog startup with zero discovery. Coupled oracle subsequently reported 17 discovered/passed, zero failed/skipped and preserved all 15 original templates. Neither closes N01 per-metric semantic approval nor N09 native acceptance."
+    },
+    {
+      "id": "repair-benchmark-count",
+      "queueStatus": "[x]",
+      "boundary": "Completed replace.count interpolation. Preserve normal catalog startup failure and unverified browser; no duplicate count repair."
+    },
+    {
+      "id": "phase3-usage-card",
+      "queueStatus": "[x]",
+      "boundary": "Existing semantic bar/surface capability, not PB04 invalid-epsilon-denominator correction."
+    },
+    {
+      "id": "phase6-automation-condition-access",
+      "queueStatus": "[x]",
+      "boundary": "Completed ConditionBuilder accessibility correction, not AB-QA-003 whole-form contract validation."
+    },
+    {
+      "id": "phase6-automation-trigger-touch",
+      "queueStatus": "[x]",
+      "boundary": "Completed TriggerConfigurator target correction, not AB-QA-002 multi-trigger array retention."
+    },
+    {
+      "id": "phase3-chart-legend",
+      "queueStatus": "[x]",
+      "boundary": "Shared primitive delivered; charge-interruption findings do not reopen it."
+    },
+    {
+      "id": "phase3-page-container",
+      "queueStatus": "[x]",
+      "boundary": "Existing announcer supports loading/error; interruption F4 is a caller omission, not a primitive remigration."
+    }
+  ],
+  "fixItems": [
+    {
+      "id": "phase6-fix-03-year-calendar-boundary",
+      "task": "Correct only docs\\frontend-audits\\phase6-qa-analytics-year-review.json confirmedFindings F01: YearReviewPage uses Number(yearParam)||currentYear and accepts fractional, negative and infinite years. Validate against the reported integer 2010..2100 handler contract and render truthful invalid-scope recovery while preserving independent calendar-year navigation and effective vehicle. No workspace-date picker, broad recap migration or compatibility adapter. This is a missing correction proposal, not permission to edit. Parent must grant an exact covering-test file (none reported) and exclusive source claim first; preserve all original sections/actions, raw SI, state distinctions and original failure/NOTRUN records. Execute only granted covering checks, record real discovery/results and do not claim native/application approval.",
+      "files": ["web\\src\\features\\analytics\\pages\\YearReviewPage.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_TEST_GRANT"
+    },
+    {
+      "id": "phase6-fix-03-year-wire-evidence",
+      "task": "Coordinate the exact year-review response/consumer correction from docs\\frontend-audits\\phase6-qa-analytics-year-review.json confirmedFindings F02,F03,F04,F07,F11 and the comparison-response portion of F08. Align highlight serialization and physical duration unit with YearReviewDriveHighlight/YearDriveRecord; preserve missing extreme readings versus genuine zero/negative Celsius, valid plug-in SOC0 and its observation denominator; expose secondary aggregate failures without turning them into recorded zeros or discarding successful neighbors. F11 requires a parent decision between supported efficient-record production and explicit unavailable provenance; never fabricate records or remove either record section. F08 English/preformatted comparison operands require an exact representation decision before altering the wire. Scope below is reported, not a grant; exact handler/DTO/consumer tests are unreported and must be explicitly claimed, with backend/SI methodology and representation authorization before work. Preserve original pins, failed checks and native NOTRUN.",
+      "files": ["internal\\api\\yearreview\\handler.go", "web\\src\\api\\types.ts", "web\\src\\features\\analytics\\components\\year-review-modernization\\YearDriveRecord.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_CAPABILITY_REPRESENTATION_AND_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-year-denominator-signed-policy",
+      "task": "Adjudicate and then narrowly correct docs\\frontend-audits\\phase6-qa-analytics-year-review.json confirmedFindings F05,F06 in the existing year handler: fixed52 versus elapsed UTC-week denominator and zero-clamped savings/nonpositive credits. Parent must first approve exact full-year/elapsed-year denominator metadata and signed savings/credit meaning; no automatic statistical-policy change, abs/clamp or fabricated currency. Serialize the same handler after phase6-fix-03-year-wire-evidence. Any changed recap/pattern/monthly consumer and exact covering tests require additional explicitly named grants; they are not silently included here. Preserve original failures, calendar scope and all actual valid zeros/signs; no native/runtime acceptance follows from a policy receipt.",
+      "files": ["internal\\api\\yearreview\\handler.go"],
+      "dependsOn": ["phase6-fix-03-year-wire-evidence"],
+      "status": "BLOCKED_DOMAIN_POLICY_CONSUMER_AND_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-year-display-preferences",
+      "task": "Correct the caller portion of docs\\frontend-audits\\phase6-qa-analytics-year-review.json confirmedFindings F08,F09 only. Use existing locale/date/time/duration boundaries for pattern hour/weekday, record calendar labels and compact duration; use semantic response operands after their owner establishes them instead of recasing arbitrary English or guessing ISO currency from a dollar symbol. Adopt existing saved palette/semantic colors in monthly series, charging connector colors and savings bars while preserving all identities, legend state and raw values. The record file is shared with the wire correction, so serialize that exact claim; do not rewrite shared formatters or chart engines. Exact tests and canonical-copy leaves require parent grants; no filenames are invented. Preserve raw export/calendars, independent sections and all original candidate/NOTRUN records.",
+      "files": ["web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearPatternsBrief.tsx", "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\YearSavingsBrief.tsx", "web\\src\\features\\analytics\\components\\year-review-modernization\\YearDriveRecord.tsx", "web\\src\\features\\analytics\\components\\year-review-modernization\\yearReviewPresentation.ts", "web\\src\\features\\analytics\\components\\year-review-modernization\\YearMonthlyActivity.tsx", "web\\src\\features\\analytics\\components\\year-review-modernization\\YearChargingMix.tsx"],
+      "dependsOn": ["phase6-fix-03-year-wire-evidence"],
+      "status": "BLOCKED_EXACT_TEST_AND_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-year-narration-scope-copy",
+      "task": "Correct only docs\\frontend-audits\\phase6-qa-analytics-year-review.json confirmedFindings F10: AIYearReviewNarration independently posts the previous browser-local calendar year but describes the route-year slides above. Make the localized description truthful about that independent scope, preserving the already-present actual-year helper label, request body/default year, positive-ID guard and cancellation. Do not add a route-year API or change AI policy. Canonical English exact leaves and a covering-test path are not established and require parent serialized grants. Preserve all original scope/pin/failure evidence and native NOTRUN; no real AI request or identity use is part of this proposal.",
+      "files": ["web\\src\\components\\ai\\AIYearReviewNarration.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_TEST_AND_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-automation-builder-graph-retention",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-automations-automation-builder.json sourceConfirmedFindings AB-QA-001,AB-QA-002,AB-QA-003 at AutomationBuilderPage only: successful conflicting save must not reset the retained graph to initial defaults; editing trigger0 must preserve unedited sibling triggers; readiness and imperative validation must enforce the actual supported condition contracts rather than only geofence presence. Preserve draft storage semantics, graph ordering, saved identity, every condition/trigger/action and accepted ConditionBuilder/TriggerConfigurator accessibility/target work. Do not modify the shared draft hook, AI policy or backend without a new exact grant. No test path is reported: parent must name and grant covering tests and settle unsupported condition representation before writes. Candidates AB-CAND-001..005 remain unpromoted, all original failures and native NOTRUN remain open.",
+      "files": ["web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_CONDITION_CONTRACT_AND_TEST_GRANT"
+    },
+    {
+      "id": "phase6-fix-03-automation-inventory-wire-and-outcomes",
+      "task": "One shared corrective root, not two list migrations: docs\\frontend-audits\\phase6-qa-automations-automation-list.json sourceFindings AL-S01,AL-S05,AL-S07,AL-S08 and docs\\frontend-audits\\phase6-qa-automations-automations-list.json deterministicFindings F01,F03,F05. Reconcile the actual list DTO/Automation type and directly consuming hook: absent counters/auto-disabled/last-triggered must be unavailable, not zero/false/Never run; do not invent historical aggregates. Validate scoped inventory/template/pin envelopes and rows without globally changing safeArray. Opt routine install into existing dispatch-time live-only policy. Interpret bulk updated/deleted/failed and imported/errors arrays truthfully, preserving partial failures, invalidation, live guards and file reset. Backend source paths/types below are reported; exact hook/producer tests and metadata availability decision need new grants. Both consumer owners below depend on this changed contract. Preserve distinct original IDs and all original native/guard failures.",
+      "files": ["internal\\api\\automation\\crud.go", "internal\\api\\automation\\dtos.go", "web\\src\\api\\hooks\\useAutomations.ts"],
+      "dependsOn": [],
+      "status": "BLOCKED_METADATA_POLICY_AND_EXACT_HOOK_TYPE_TEST_GRANTS",
+      "unknownClaims": ["The exact Automation type file is unestablished here and deliberately omitted from files; parent must identify and explicitly grant it before export is runnable."]
+    },
+    {
+      "id": "phase6-fix-03-automation-singular-list-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-automations-automation-list.json sourceFindings AL-S01 consumer mapping,AL-S02,AL-S03,AL-S04,AL-S06, preserving AL-S05/07/08 shared-root corrections. Use the registered /automations/${id}/edit destination and retain its original assertion. Reconcile bulk eligibility with all actual table filters or honestly review hidden retained selections; do not remove filtering, multi-selection or accepted failed-ID retention. RoutineWizard must keep independent geofence/template initial/paused/fatal/retained/empty states and source retry, including a mounted successful-empty shell. Retain all seven mobile rule values using existing detail presentation. Reuse the approved inventory wire rather than fabricating counters. Only the reported source/test files below may be granted; no shared DataTable/catalog/backend edits. Preserve original test assertions and historical failures; run only newly granted covering selectors, not native/application acceptance.",
+      "files": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx", "web\\src\\features\\automations\\pages\\AutomationStatusPanel.tsx", "web\\src\\features\\automations\\components\\RoutineWizard.tsx", "web\\src\\features\\automations\\pages\\AutomationListPage.test.tsx", "web\\src\\features\\automations\\pages\\AutomationListTable.test.tsx", "web\\src\\features\\automations\\pages\\AutomationStatusPanel.test.tsx", "web\\src\\features\\automations\\components\\RoutineWizard.test.tsx"],
+      "dependsOn": ["phase6-fix-03-automation-inventory-wire-and-outcomes"],
+      "status": "PROPOSED_PARENT_EXCLUSIVE_GRANT_REQUIRED"
+    },
+    {
+      "id": "phase6-fix-03-automation-plural-list-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-automations-automations-list.json deterministicFindings F01,F03,F04,F05 consumer portions and F08,F09,F10. Adopt the shared approved inventory/import contracts; distinguish cold paused/unknown counts from successful empty; surface partial imports. Duplicate/Export must use explicitly approved existing behavior rather than visible no-ops; required duplicate/export representation is currently unapproved, so that part is blocked, not a guessed endpoint. Rule switches/actions/pins need localized rule-specific accessible names; local pins/template controls must adopt existing44px mobile support without resizing shared primitives. Preserve fleet inventory, independent gallery/comfort, selection, confirmations and CTI/file-reset/live guards. Reported page test is named below; any card/gallery/helper covering-test grants and copy are missing and must be named by parent. Candidates C01..C05 remain candidates.",
+      "files": ["web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "web\\src\\features\\automations\\pages\\AutomationCard.tsx", "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardActions.tsx", "web\\src\\features\\automations\\pages\\PresetGallery.tsx", "web\\src\\features\\automations\\pages\\AutomationsListPage.test.tsx"],
+      "dependsOn": ["phase6-fix-03-automation-inventory-wire-and-outcomes"],
+      "status": "BLOCKED_ACTION_CONTRACT_AND_HELPER_TEST_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-comfort-scope-write-and-trust",
+      "task": "Correct only docs\\frontend-audits\\phase6-qa-automations-automations-list.json deterministicFindings F02,F06,F07. Comfort is vehicle-specific inside a fleet route whose header selectors are intentionally hidden: preserve fleet-rule semantics and provide real explicit comfort-local target identity/selection using existing owners. Align editor/Save/Now states with existing operational mode and explicitly approve config-write policy at the request boundary; preserve existing guarded immediate actuation. Thread independent next/config/recent-runs trust, retained retry, mounted empty/error/pending shells and honest five-of-ten context. Do not remove comfort or turn the whole fleet route into a vehicle filter. Exact useComfort and covering tests are reported only as an owner, not an established writable filename; parent must grant them before backend/hook policy edits. No real precondition/config/vehicle request.",
+      "files": ["web\\src\\features\\automations\\components\\ComfortPanel.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_CONFIG_WRITE_POLICY_EXACT_HOOK_AND_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-automation-history-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-automations-automation-history.json findings AHQA-01,AHQA-02 consumer,AHQA-04,AHQA-05,AHQA-06,AHQA-07. Cold paused data is unknown, not No executions match; retain neutral action/FSM subsection shells and use producer availability/truncation metadata before asserting complete/empty transitions. Disclose actual UTC trend bucket/resolution and use existing locale/palette owners. Preserve an execution-specific accessible/mobile identity and every detail field; locale-format known succeeded/total counts without changing ratios. Backend availability is an actual changed-contract dependency, not an audit gate. Exact feature test paths are unreported and must be separately granted. Preserve actions, selection, retained source retry and all original AHQC candidates/NOTRUN.",
+      "files": ["web\\src\\features\\automations\\pages\\AutomationHistoryPage.tsx", "web\\src\\features\\automations\\components\\AutomationExecutionDetail.tsx", "web\\src\\features\\automations\\components\\AutomationHistoryTrend.tsx", "web\\src\\features\\automations\\components\\AutomationHistoryTable.tsx"],
+      "dependsOn": ["phase6-fix-03-automation-history-producer"],
+      "status": "BLOCKED_EXACT_CONSUMER_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-automation-history-producer",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-automations-automation-history.json findings AHQA-02,AHQA-03,AHQA-09 at the reported history handler/repository seams. Distinguish unavailable/no-vehicle/failed/successfully-empty/truncated FSM history and retain the100-row total rather than discarding count; establish exact DTO/type availability fields before consumer work. Agree the completed versus skipped/cancelled/running duration-average population and disclose or align it, never recompute it from loaded page rows. Add the existing handler-local span and trace-aware error/warning context to GetHistoryDetail. Exact DTO/type/test paths and denominator policy are not established, so this is blocked pending explicit grants, not a blanket backend rewrite. Preserve existing successful record data, timestamps, failures and native NOTRUN.",
+      "files": ["internal\\api\\automation\\history.go", "internal\\database\\automation\\history_repo.go"],
+      "dependsOn": [],
+      "status": "BLOCKED_DENOMINATOR_DTO_TYPE_AND_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-negative-elapsed-duration",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-automations-automation-history.json findings AHQA-08 only: formatDurationMs currently displays negative finite elapsed duration as negative milliseconds. Reject negative elapsed values while preserving valid0, positive durations and signs on unrelated physical/net metrics. The completed phase6-fix-relative-future-dates owns a different relative-date objective; preserve its API,23 reported passing cases and chronology, do not repeat or rewrite it. Shared dateFormat.ts/test claims must be parent-deduplicated across chunks and exclusively granted. dateFormat.contract.test.ts is named by the current canonical owner, not freshly read or run. Add only narrowly approved covering duration cases; no native/application pass claim.",
+      "files": ["web\\src\\lib\\dateFormat.ts", "web\\src\\lib\\dateFormat.contract.test.ts"],
+      "dependsOn": [],
+      "status": "PROPOSED_SHARED_ROOT_PARENT_DEDUP_AND_GRANT"
+    },
+    {
+      "id": "phase6-fix-03-battery-care-evidence-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-battery-care.json confirmedFindings BCARE-QA-001..009 in the exact reported feature callers. Use existing MetricBar fill=solid for CSS light-dark tokens, not a shared gradient rewrite. Distinguish active initial pending from paused/unavailable; use neutral paused copy rather than asserting offline; surface each initial source error even if its sibling has not resolved. Methodology must preserve unavailable counts versus real0 and use saved date context; ranked success requires calibrated evidence, not opportunities.length0. Replace only the three reported deep category imports and decorative multi-hue methodology icons with existing categories/neutral roles. Preserve scores/thresholds/bins, shells, static guidance and valid data. No exact covering test path is reported, and shared canonical paused copy must be serialized by parent; both are explicit blockers. BCARE-CAND-001..006 and historical zero-discovery failures remain unpromoted/unaccepted.",
+      "files": ["web\\src\\features\\battery\\pages\\BatteryCarePage.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\EvidenceBar.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSection.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\state.ts", "web\\src\\features\\battery\\components\\battery-care-modernization\\CareMonthlyTrend.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSourceNotices.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\CareSummary.tsx", "web\\src\\features\\battery\\components\\battery-care-modernization\\SpecialistSlot.tsx", "web\\src\\features\\battery\\components\\battery-care\\BatteryCareMethodology.tsx", "web\\src\\features\\battery\\components\\battery-care\\RankedCareHabits.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_TEST_AND_PAUSED_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-degradation-health-contract",
+      "task": "Coordinate only docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json findings BD-01..BD-17. Preserve unavailable capacity/SOH, habit/DoD/thermal denominators and unknown risk rather than measured0, perfect habits or invented25C; correct only temperature high-risk badge direction. Prediction fit validity must distinguish nonnegative/degenerate/no-future-crossing/already-below cases. Disclose nominal capacity assumption, observation-window age, rounded cycles/per-drive DoD and first-retained range baseline. Keep projected join coordinates out of Actual observation/export data; make interval terminology honest without claiming calibrated95% confidence. Forward existing retained trust, preserve calendar-day dates, validate only consumed nested collections and map producer message codes/operands through a parent-approved localized contract. BD-17 one-field SI correction and BD-12 lifetime-versus-workspace scope require explicit methodology/domain decisions and shared hook/range grants; backend/DTO tests are unreported. This same-handler/page scope must be split only along real exclusive seams by parent before runnable20-minute grants. No recalibration, fabricated observations or native acceptance.",
+      "files": ["internal\\api\\batterydegradation\\handler.go", "internal\\api\\batterydegradation\\dtos.go", "internal\\api\\batterydegradation\\calculations.go", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationPage.test.tsx"],
+      "dependsOn": ["phase6-fix-03-energy-history-shared-contract"],
+      "status": "BLOCKED_DOMAIN_SI_INTERVAL_MESSAGE_AND_PRODUCER_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-battery-evidence-brief-truth-and-date",
+      "task": "One shared adapter correction for docs\\frontend-audits\\phase6-qa-battery-sleep-efficiency.json findings Q06 and docs\\frontend-audits\\phase6-qa-battery-battery-passport.json findings F06. BatteryEvidenceBrief must not infer available source readings solely from selected-window text metadata; preserve independent numeric unknown/zero and existing retained support. Provide existing preference-aware observedAt rendering with an explicit caller context instead of browser-default date display; do not redefine source observation versus receipt time. Caller context adoption belongs to each exact page owner. No formatter/global state framework rewrite. Exact adapter test path and supported prop representation need parent grants, and this shared file must be cross-chunk deduplicated. Original other-page behavior, physical signs, sections and pins remain preserved; no runtime/native claim.",
+      "files": ["web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_SHARED_PROP_REPRESENTATION_AND_TEST_GRANT"
+    },
+    {
+      "id": "phase6-fix-03-battery-passport-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-battery-passport.json findings F01..F07. Retain mobile provenance source/meaning; pass null for zero-denominator trend shares while retaining true measured0; derive unavailable capacity from the documented no-estimate sentinel without altering raw signed/hash/export certificate evidence. Attach the existing certificate retry to retained failures; carry verification refetch through the reported verification state/type and diagnostics independently. Adopt shared explicit timestamp context at KPI, and remove decorative masthead stripe/use current semantic/palette colors in timeline/distribution/thermal rendering. Preserve fourteen sections, verification limitations and all raw certificate values. The three reported test files below are not proof of coverage/execution; component-specific test claims absent from the report need explicit grants. No backend capability/hash changes, shared MetricBar/DataTable remigration or real certificate action. Candidates C01..C03 and native NOTRUN remain open.",
+      "files": ["web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx", "web\\src\\features\\battery\\lib\\batteryPassportAnalysis.ts", "web\\src\\features\\battery\\components\\battery-passport\\types.ts", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportProvenanceMatrix.tsx", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendDistribution.tsx", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportCapacityContext.tsx", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportKpiBand.tsx", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportVerificationDiagnostics.tsx", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendTimeline.tsx", "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportThermalProfile.tsx", "web\\src\\features\\battery\\pages\\BatteryPassportPage.test.tsx", "web\\src\\features\\battery\\pages\\BatteryPassportClosure.test.tsx", "web\\src\\api\\hooks\\useBatteryPassport.test.tsx"],
+      "dependsOn": ["phase6-fix-03-battery-evidence-brief-truth-and-date"],
+      "status": "BLOCKED_COMPONENT_TEST_AND_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-battery-cells-response-and-callers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-cells.json confirmedIssues BC-QA-001..006,BC-QA-008. Retain actual signal presence through typed pack/temperature availability; an absent brick extreme must not manufacture a synthetic pack or balance; recompute existing5/15mV status after extrema overwrite without changing signed deltas/thresholds/identity. Preserve nullable historical aggregates and history-read failure separately from successful current snapshot. Page must explain cold paused query rather than eternal loading and locale/scientific-format its accessible numeric chart columns while retaining raw series. The completed battery-cells rescue fixed mocks/ticks and reported20 passes; do not repeat it or spend a renewed rescue budget. Exact DTO/hook and handler covering-test claims are missing, requiring parent grants before coordinated response edits. BC-QA-007 has one separate shared annotation owner. Preserve all nine panels, original failures/pins/candidates and native NOTRUN.",
+      "files": ["internal\\api\\batterycells\\handler.go", "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "web\\src\\features\\battery\\components\\battery-cells-modernization\\BatteryCellsStats.tsx", "web\\src\\features\\battery\\pages\\BatteryCellsPage.test.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_DTO_HOOK_AND_PRODUCER_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-chart-annotation-read-trust",
+      "task": "Correct only docs\\frontend-audits\\phase6-qa-battery-cells.json confirmedIssues BC-QA-007 at shared ChartContainer annotation consumption: its adapter exposes loading/error but the container destructures only annotations and can silently project a failed read to none saved. Surface independent initial/fatal/retained-error/paused trust and source-specific recovery without erasing the successful battery series or creating another annotation implementation. Reuse existing useAnnotations read contract; do not alter annotation write/privacy authority, global chart states or source data. Exact covering shared-chart tests are not reported, so parent must identify/grant them and deduplicate this shared root across chunks before runnable export. No actual annotation read/write or browser validation here; preserve original native NOTRUN and candidate BC-CANDIDATE-002.",
+      "files": ["web\\src\\components\\charts\\ChartContainer.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_SHARED_CHART_TEST_AND_EXCLUSIVE_GRANT"
+    },
+    {
+      "id": "phase6-fix-03-live-field-presence-and-freshness",
+      "task": "Correct the shared hook mechanism in docs\\frontend-audits\\phase6-qa-battery-charge-advisor.json findings CA-S02,CA-S03: aggregate signalCount does not prove batteryLevel/isCharging/chargeLimit presence, and HTTP receipt/partial SSE merge time does not establish each retained field's observed freshness. Preserve reported per-field wire timestamp/source/age evidence and expose field presence/freshness explicitly through the existing hook; do not reset stale fields to invented0/false or claim ingestion observation from browser receipt. Preserve all136 public fields and completed phase6-live-vehicle-identity-reset27-case identity/reset behavior. Exact new representation must be parent-approved and shared across chunks. useVehicleLive.test.ts is an existing canonical grant, not freshly inspected/executed. Caller adaptation belongs to advisor's separate owner after this capability. No Redis/FSM/telemetry rewrite or new source read; all historical failures and native NOTRUN remain.",
+      "files": ["web\\src\\hooks\\useVehicleLive.ts", "web\\src\\hooks\\useVehicleLive.test.ts"],
+      "dependsOn": [],
+      "status": "BLOCKED_FIELD_PROVENANCE_REPRESENTATION_AND_SHARED_GRANT"
+    },
+    {
+      "id": "phase6-fix-03-charge-advisor-model",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-charge-advisor.json findings CA-S01,CA-S06 only: meanPath.p75EndSocPct must carry p75Soc rather than meanSoc; do not turn every absent/unqualified/pre-observation calendar day into measured zero burn. Preserve independent mean/p75 paths, valid zero-burn observations, source counts, reconstructed bins and raw physical units. Coverage representation for unobserved days must be approved explicitly; never infer complete history from capped loaded records. Reported model/page tests are below; preserve their original cases and add only granted regressions. Parent must authorize any additional model/display type/weekday/frequency files if the chosen representation requires them. No altered statistical model/cap, fake fixtures, source remigration or native acceptance; all CA-R candidates and original guard failures persist.",
+      "files": ["web\\src\\features\\battery\\lib\\chargeAdvisor.ts", "web\\src\\features\\battery\\lib\\chargeAdvisor.test.ts", "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.test.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorWeekdayProfile.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorFrequencySupport.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_OBSERVATION_COVERAGE_REPRESENTATION"
+    },
+    {
+      "id": "phase6-fix-03-charge-advisor-callers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-charge-advisor.json findings CA-S02,CA-S03 consumer adoption,CA-S04,CA-S05 caller,CA-S07,CA-S09,CA-S10. Use approved independent live-field presence/freshness, not signalCount or browser receipt. Keep each successful history source's accounting/current/static methodology when its sibling is missing instead of hiding entire multi-source sections. Pass workspace exact bounds through available typed hooks and preserve rolling/custom/timezone state; the shared range/history boundary is separately owned. Describe/guard historical as_of guidance under the approved supported scope policy without real actuation. Adopt existing locale/time and accessible numeric formatting; replace only reported Text size/fixed informational ink violations. Preserve all guidance/sections/source counts, raw model values and actual zeros. Page test overlaps the model proposal, so serialize that exact file; component-specific tests/copy require parent grants. No added picker, fake observation, candidate promotion or native approval.",
+      "files": ["web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx", "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.test.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorSection.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorAccounting.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorMethodology.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorCurrentState.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorKpiBand.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorChargingTiming.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorScenarioChart.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorDailyTrend.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorBurnDistribution.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorChargingProfile.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorFrequencySupport.tsx", "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorWeekdayProfile.tsx"],
+      "dependsOn": ["phase6-fix-03-live-field-presence-and-freshness", "phase6-fix-03-charge-advisor-model", "phase6-fix-03-energy-history-shared-contract"],
+      "status": "BLOCKED_AS_OF_POLICY_COMPONENT_TEST_AND_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-energy-history-shared-contract",
+      "task": "Parent-deduplicate and explicitly split exact shared integration grants for existing reported mechanisms: docs\\frontend-audits\\phase6-qa-battery-charge-advisor.json findings CA-S05/CA-S08; phase6-qa-battery-energy-flow.json findings F01; phase6-qa-battery-power-flow-dashboard.json findings F01; phase6-qa-battery-sleep-efficiency.json findings Q01; phase6-qa-battery-battery-degradation.json findings BD-12; phase6-qa-battery-vampire-drain.json findings VD08. Preserve existing drivetrain useDriving bound correction rather than repeat it. Exact lower-inclusive/upper-exclusive workspace instants must reach keys/request operands and full-result server filtering, not date-count/date-only/loaded-page proxies. Reject scoped malformed history envelopes rather than coercing success to empty; move vampire page-local query ownership through existing domain hook without changing URLs/cancellation/cache/scope. Known shared paths below are reported; sleep/power producer paths, exact existing history tests and any new DTO fields are unknown, and degradation lifetime-versus-range policy is undecided. workspaceScope.ts already has a separate remaining canonical audit owner; parent must serialize after actual claim release, not assume done means free. NOT RUNNABLE: require exact producer/hook/type/test grants and supported policy, no guessed backend existence. Feature callers own their separate propagation corrections.",
+      "files": ["web\\src\\lib\\workspaceScope.ts", "web\\src\\api\\hooks\\useEnergy.ts", "web\\src\\api\\hooks\\useDriving.ts", "web\\src\\api\\hooks\\useCharging.ts", "internal\\api\\energy\\handler.go", "internal\\api\\charging\\handler.go", "internal\\api\\drives\\listing.go"],
+      "dependsOn": ["phase6-fix-admin-audit-workspace-range-registration"],
+      "status": "BLOCKED_UNKNOWN_PRODUCERS_POLICY_EXACT_TEST_GRANTS_AND_PARENT_CROSS_CHUNK_DEDUP",
+      "partialWorkRule": "Unknown producer/range policy must block only its coupled seam; approved independent hook/caller corrections may be separately exported by parent, not held behind a fabricated whole-feature gate."
+    },
+    {
+      "id": "phase6-fix-03-cycle-stress-consumers-and-copy",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-cycle-stress.json findings CSQA-01..07 in its reported callers. Accounting retained state must include cached paused data and unknown unreceived counts; chart alternatives must share actual evidence admission rather than exporting generated zero bins before either source/vehicle resolves. Diagnostic MetricCards must retain full date/cap/support captions via existing compact/wrap APIs and use neutral decorative ink. Correct continuity subtitle to describe exclusion of rejected overlaps, not a guarantee no accepted segment crosses them; adding an overlap fence changes model policy and is NOT authorized. Root cap/qualification caveat must include available evidence with pending neighbors without duplicate ordinary notices. Preserve reconstructed-cycle values, all chart shells/raw exports, thresholds and category conservation. Reported covering tests below are not rerun here; exact copy leaves and component grants must be approved by parent. CSC-01..04 remain candidates and all historic zero-discovery/native NOTRUN remain.",
+      "files": ["web\\src\\features\\battery\\pages\\CycleStressPage.tsx", "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressAccounting.tsx", "web\\src\\features\\battery\\components\\cycle-stress-modernization\\queryState.ts", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressDepthDistribution.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressDurationProfile.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressExponentSensitivity.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressMeanSocProfile.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressThresholdSensitivity.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressSourceCoverage.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressContinuity.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressComposition.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressEvidenceSupport.tsx", "web\\src\\features\\battery\\pages\\CycleStressPage.test.tsx", "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressModernization.test.tsx", "web\\src\\features\\battery\\components\\cycle-stress-modernization\\queryState.test.ts"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_COPY_AND_SOURCE_PATH_RECONCILIATION",
+      "unknownClaims": ["Original report names five chart adapters; exact fifth must be taken from that report, not inferred from a chart naming pattern."]
+    },
+    {
+      "id": "phase6-fix-03-energy-flow-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-energy-flow.json findings F01 caller,F02,F04,F05. Forward exact workspace instants after the shared energy range contract; preserve rolling24h/custom/timezone semantics. Explain that Total energy and Total charged share the same reported producer operand rather than implying independent consumption measurement; producer meaning remains unverified. Keep missing history sort values distinct from real0 and preserve raw rows. Use existing locale/plural day formatting rather than String(raw/86400) and literal days. Preserve every section/action, raw exports and unknown/retained/fatal states. F03 SI wire owner is separate and requires actual contract change before a W display consumer edit. Tests below are explicitly reported35 authored bodies, all NOTRUN here; exact canonical day-copy grant remains missing. No client-only full-window proxy, shared safeArray rewrite, fresh API/audit or native pass.",
+      "files": ["web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx", "web\\src\\features\\battery\\pages\\EnergyFlowPage.test.tsx", "web\\src\\features\\battery\\components\\energy-flow-modernization\\EnergyFlowModernization.test.tsx"],
+      "dependsOn": ["phase6-fix-03-energy-history-shared-contract", "phase6-fix-03-energy-flow-si-wire"],
+      "status": "BLOCKED_EXACT_COPY_AND_APPROVED_WIRE_CONTRACT",
+      "partialWorkRule": "F02/F04/F05 do not require a new backend range capability; parent may separate these exact same-file independent corrections after serializing the page claim."
+    },
+    {
+      "id": "phase6-fix-03-energy-flow-si-wire",
+      "task": "Correct only docs\\frontend-audits\\phase6-qa-battery-energy-flow.json findings F03: the reported live handler divides canonical W by1000 to retain unsuffixed legacy kW wire, and the hook/page return/apply kW directly. Establish one approved SI response/type/display contract under the current SI methodology with exact consumer/producer tests; no dual adapter, upstream proto rename or telemetry rewrite. Known handler below is not an edit grant. useEnergy.ts shares the separate range contract claim and must be parent-serialized; exact DTO/type/consumer test files are unreported and must be named before work. Preserve valid signs/magnitudes/unknown0 distinctions and original native/API NOTRUN. Do not infer endpoint prevalence or claim the wire already corrected from the report.",
+      "files": ["internal\\api\\energyflow\\handler.go"],
+      "dependsOn": [],
+      "status": "BLOCKED_SI_RESPONSE_TYPE_CONSUMER_AND_TEST_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-energy-products-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-energy-products.json deterministicFindings EP-F01..07 in the reported feature only. Failed cached GET Retry must call source refetch, not the rate-limited Tesla refresh POST; retain the separate explicit refresh control. Cap/config chips need non-color visible available/unavailable meaning. Physical metrics must carry raw numeric percent/Wh/W contracts with existing specialist display, not formatted text rawValue. Correct only four deep category imports, map known configuration presentation keys through approved translations while preserving unknown technical keys verbatim, replace preview fixed-white chrome with existing surface/border tokens, and adopt wrap/mobile44 at the two TOU modal controls. Do not alter preset prices, JSON, payload keys, producer units or shared Button. Existing reported page test is below; component tests and canonical leaves require explicit grants. EP-C01..05 remain candidates; producer SI authenticity and every native matrix are NOTRUN.",
+      "files": ["web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx", "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx", "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx", "web\\src\\features\\battery\\components\\energy-products-modernization\\InfoTile.tsx", "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx", "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx", "web\\src\\features\\battery\\pages\\EnergyProductsPage.test.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_COMPONENT_TEST_AND_CANONICAL_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-pack-capacity-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-pack-capacity.json findings PC-01..07. Soc/sensitivity/innovation chart alternatives must not project model-generated zero bins as observations before actual evidence exists. Preserve Wh/sqrt(day) dimension on process-noise X axis; absent recency and zero-denominator shares remain unknown, not0/30 or0%. Forward actual last-success identity on retained failures, disclose omittedTrendMonths24 cap and include display energy units on fit alternatives while retaining raw export/model values. Use existing state/formatter/ChartContainer APIs, not shared redesign. Only reported paths below are proposed; no exact test filenames are reported, and exact callback/timestamp representation/copy must be granted by parent. Preserve qualification thresholds, model assumptions, timeline/directory omissions, valid zero bins and all PC-C01..04/native NOTRUN. No fresh model recalibration or producer scope.",
+      "files": ["web\\src\\features\\battery\\lib\\packCapacity.ts", "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacitySocWindowProfile.tsx", "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityProcessSensitivity.tsx", "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityInnovationProfile.tsx", "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityEvidenceSupport.tsx", "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityMonthTrend.tsx", "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityCoverage.tsx", "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityFitDiagnostics.tsx", "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityRowAccounting.tsx", "web\\src\\features\\battery\\components\\pack-capacity-modernization\\packCapacitySourceState.ts", "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacitySourceNotice.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_TEST_COPY_AND_FRESHNESS_PROP_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-power-flow-callers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-power-flow-dashboard.json findings F01 caller,F02,F03,F04,F05,F06. Consume exact startInstant/endInstantExclusive after shared hook/server scope is established; date-pair transmission is not rolling24h evidence. Advice requires independent query trust/retry, observed model age/reason and exact existing advice invalidation owner, not live/history trust by substitution. Format power tooltip complete timestamps/units and SOC ticks with existing preferences. Distinguish cold paused/initial from resolved-empty while preserving shared notice, live/historical data and all physical signs. The precise advice hook/invalidation/test files are not established and must be granted explicitly; no guessed hook filename or producer policy. No tests are reported. Preserve C01..C05 unpromoted, cap/completeness/freshness uncertainty and all native NOTRUN; no fake routing or energy conservation claim.",
+      "files": ["web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx", "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx", "web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx", "web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx"],
+      "dependsOn": ["phase6-fix-03-energy-history-shared-contract"],
+      "status": "BLOCKED_ADVICE_HOOK_INVALIDATION_AND_TEST_GRANTS",
+      "partialWorkRule": "Independent F02/F04/F05/F06 caller work may be split and explicitly granted without an artificial wait for every range producer."
+    },
+    {
+      "id": "phase6-fix-03-projected-range-callers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-projected-range.json findings PRANGE-QA-001..005 and preserve PRANGE-QA-006 as separately serialized canonical plural work. Calculator must label learned versus heuristic170Wh/km fallback with real provenance/reason/support, not fabricate learning. Source slot/summary must distinguish initial paused/idle from resolved empty and avoid asserting offline from paused alone. Format the110km/h recommendation through existing SI speed display/interpolation; correct only reported deep category imports at the eight actual feature callers. The exact eight-file set must be reconciled from original evidence before runnable grant, not guessed from naming. SourceTrustNotice is also referenced by battery-care/energy-product consumers; parent must consolidate shared paused-copy ownership. Exact tests and copy keys are missing. Preserve technical/user values, whole page, candidates and source pins; do not promote PRANGE-CAND-001 legacy wire question to a confirmed SI defect.",
+      "files": ["web\\src\\features\\battery\\components\\projected-range-modernization\\helpers.tsx", "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeCalculator.tsx", "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeSourceSlot.tsx", "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeSummary.tsx", "web\\src\\features\\battery\\components\\projected-range-modernization\\SourceTrustNotice.tsx", "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeTips.tsx", "web\\src\\features\\battery\\components\\projected-range-modernization\\RangeScenarios.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_EIGHT_CALLER_SET_TEST_AND_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-sleep-efficiency-confirmed",
+      "task": "Correct only confirmed-source docs\\frontend-audits\\phase6-qa-battery-sleep-efficiency.json findings Q01..Q12. Preserve signed on-minus-off drain difference rather than Math.max0; keep independently valid destination counts when duration is unavailable. Overview must retain paused/stale classification, unknown collections/counts and settings currency-source fallback warning; a scope text label is not evidence. Retain reason/count fields on both mobile tables and use saved timestamp context in event directory. Three existing charts must adopt palette preferences and matching frame loading/error/empty trust so export cannot bypass visible source gates. Q01 exact-range caller needs the shared integration, and Q06 the existing shared brief capability owner; neither authorizes unknown sleep producer/SI edits. Exact chart names in original filesRead must be reconciled where report prose differs from paths. No test paths are reported; parent must grant direct model/component/page tests and copy. Q13..Q17 remain explicit candidates, not runnable corrections or inferred physical/FSM facts. Preserve fourteen regions, all actual zeros/signs, six historical unexecuted regressions and native NOTRUN.",
+      "files": ["web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx", "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts", "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx", "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\DrainEventDirectory.tsx", "web\\src\\features\\battery\\components\\sleep-efficiency\\DataAvailabilityMatrix.tsx", "web\\src\\features\\battery\\components\\sleep-efficiency\\RangeSourceCoverage.tsx", "web\\src\\features\\battery\\components\\sleep-efficiency\\DwellDurationChart.tsx", "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryComparisonChart.tsx"],
+      "dependsOn": ["phase6-fix-03-energy-history-shared-contract", "phase6-fix-03-battery-evidence-brief-truth-and-date"],
+      "status": "BLOCKED_EXACT_THIRD_CHART_TEST_COPY_AND_PROP_GRANTS",
+      "unknownClaims": ["findings Q10 names TransitionDestinationChart while filesRead names TransitionCompositionPanel/TransitionDiversityDiagnostics; exact writable destination chart path must not be guessed."]
+    },
+    {
+      "id": "phase6-fix-03-vampire-drain-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-battery-vampire-drain.json findings VD01..VD09, with VD08 hook integration separately parent-owned. Daily display must not allocate a cross-day window dose wholly to start-day without truthful scope; accurate segmentation requires an explicit producer/domain decision, not invented daily readings. Align saved timestamp/scope disclosure, preserve unknown Park/sentry states rather than Off/live from mere object presence, remove unsupported causal residual/culprit claims, and localize only the fixed frontend-owned sentence. Recovery must refresh both rate and split sources, guard missing vehicle identity at dispatch and explain cold paused state while keeping every successful neighbor. No exact test paths are reported; additional existing hook file is separately shared and must be explicitly granted. Preserve timezone grouping, raw historical SOC signs, static caveats and VC01..VC03 unpromoted; do not infer causal energy or current FSM operation. Parent deduplicates shared range/hook root.",
+      "files": ["web\\src\\features\\battery\\pages\\VampireDrainPage.tsx", "web\\src\\features\\battery\\lib\\vampireCulprits.ts", "web\\src\\features\\battery\\components\\vampire-drain-modernization\\VampireCulpritPanel.tsx", "web\\src\\features\\battery\\components\\vampire-drain-modernization\\SourceRecovery.tsx", "web\\src\\features\\battery\\components\\vampire-drain-modernization\\sessionPresentation.ts"],
+      "dependsOn": ["phase6-fix-03-energy-history-shared-contract"],
+      "status": "BLOCKED_DAILY_DOSE_POLICY_EXACT_TEST_AND_COPY_GRANTS",
+      "partialWorkRule": "Independent trust/date/copy/retry corrections do not require inventing a whole producer gate; parent may export them after exclusive file serialization."
+    },
+    {
+      "id": "phase6-fix-03-privacy-benchmarks-consumers",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-benchmarks-privacy-benchmarks.json confirmedIssues PB01..PB13. Make the actual consent/action vehicle visible and parent-adjudicate route-local versus managed selector policy without misleading fleet-global filtering. Preserve unknown participation and independent release read versus create errors, retained data and initial-create pending/dispatch guard. Capture acknowledgement/typed-confirmation target, invalidate stale scope authority and await revoke success before closing; retain failure recovery without retargeting confirmed actions. Validate epsilon positive denominator/nonnegative spent while preserving measured0 and true over-budget; adopt saved timestamp/numeric percentile display, existing Bar motion props and three local44px mobile calls without shared UI changes. Reuse completed benchmark count/UsageCard capability. No exact test paths are reported; parent must grant targeted synthetic component tests, scope policy and copy. Never access real contributions/releases/identities, change privacy budgets or run mutations. PBC01..PBC07 remain candidates; native permission/matrix remains unassigned and no actual wrong-target action is claimed.",
+      "files": ["web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx", "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx", "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx", "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx", "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx", "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_SELECTOR_POLICY_EXACT_TEST_COPY_AND_PRIVACY_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-departure-display-callers",
+      "task": "Correct only sourceBehavior docs\\frontend-audits\\phase6-qa-charging-charge-departure-alignment.json needs N02,N03,N07. Preserve complete identifiable charge timestamps/year/time in chart alternatives/tooltips and adopt existing saved date/time display with explicit scope; do not silently change model eligibility or browser-zone disclosure. Accessible readiness scalar columns need existing locale/precision formatting while CSV retains raw values. Palette adoption must follow supported saved semantics without inventing a new palette or reviving obsolete saturated-hex allegations. Exact page test/copy grants are unreported. Preserve completed phase6-departure-summary-semantics and17-pass runtime-caveat oracle without rerun; N01 domain KPI approval remains separate, N04 integration unknown, N05/N06/N08/N10 unpromoted and N09 native NOTRUN. No charging/device/departure requests.",
+      "files": ["web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_EXACT_DATE_PALETTE_POLICY_AND_TEST_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-blocked-03-departure-kpi-semantics",
+      "task": "Retain docs\\frontend-audits\\phase6-qa-charging-charge-departure-alignment.json needs N01 as an inherited unapproved domain representation need, not a duplicate DERIVED-copy correction. phase6-departure-summary-semantics already owns/completed truthful primary description/category import; its normal zero-discovery failure and later coupled17-case oracle remain historical evidence. Parent-designated semantic owner must approve four individual dwell/pair-count/flag-rate/drive-end-margin source-type definitions and exact accepted metric representation before any edit. Candidate glossary/occurrenceId is not approval. Only reported AlignmentStats path below is known; required semantic registry/type/covering-test/copy grants are unknown. This item is a nonrunnable blocker, not authorization for another metric framework, statistical change or native acceptance.",
+      "files": ["web\\src\\features\\charging\\components\\charge-departure-alignment-modernization\\AlignmentStats.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_UNAPPROVED_METRIC_REPRESENTATION_AND_EXACT_GRANTS"
+    },
+    {
+      "id": "phase6-fix-03-charge-interruption-model-and-evidence",
+      "task": "Correct docs\\frontend-audits\\phase6-qa-charging-charge-interruption.json findings F1,F2,F3,F4 from retained audit-page-078 mechanisms. Preserve missing/nonfinite energy as unknown rather than ??0 early-abort evidence; preserve actual0 and signed raw SI. Baseline must implement the declared minimum and exclude the scored session from OTHER clean-session comparison under explicitly approved domain semantics, not silently change ranking/statistics. ChargingSummaryBrief interruption adapter must explicitly describe modeled inference, preserving accurate caveats and lifetime limits; pass actual loading/error to the existing page announcer without rewriting PageContainer. Exact model/adapter tests are unreported and must be granted; page and reported runtime test paths below are not a fresh pass. Shared summary file is referenced by other charging routes, requiring parent cross-chunk dedup and preserved adapters. Preserve original outcomes, all thresholds/metrics/chart/actions and C1..C5 unpromoted; no real session/browser/native acceptance.",
+      "files": ["web\\src\\features\\charging\\lib\\chargeInterruption.ts", "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx", "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx", "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.test.tsx", "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionPage.runtime.test.tsx"],
+      "dependsOn": [],
+      "status": "BLOCKED_BASELINE_POLICY_EXACT_MODEL_ADAPTER_TEST_AND_COPY_GRANTS"
+    },
+    {
+      "id": "phase6-blocked-03-parent-canonical-copy",
+      "task": "Parent-only serialized copy disposition for confirmed report provenance, not a new catalog campaign: year-review confirmedFindings F08/F10; battery-care BCARE-QA-003; cycle-stress CSQA-05; energy-flow F05; energy-products EP-F02/EP-F05; projected-range PRANGE-QA-003/004/006; vampire VD07 and exact new recovery/provenance messages required by approved source owners. Known projected plural leaf is range.drivesCount_one/other, current caller range.drivesCount; shared paused leaf is battery.modernization.pausedInitial and cannot infer offline solely from paused. Preserve authored interpolation/count operands, unknown raw technical/user values and existing source grants. Exact remaining keys/fallbacks and generated projection ownership must be derived from these original report fields and approved source contracts; they are currently blockers, not guessed files. Do not reopen completed status/copy/catalog/translation campaigns from first-next12 accepted maps. en.json is parent-only and not granted here; parent merges all nine chunks/queue before deciding one canonical owner. Preserve all original raw counts/failures/native NOTRUN.",
+      "files": ["web\\src\\i18n\\en.json"],
+      "dependsOn": [],
+      "status": "BLOCKED_PARENT_SERIALIZED_KEYS_AND_PROJECTION_GRANTS",
+      "crossChunkDedupRequired": true
+    },
+    {
+      "id": "phase6-blocked-03-original-acceptance-and-candidates",
+      "task": "Retain original acceptance needs from all21 exact reports in reportDisposition, not a new audit or runnable source task. Read their complete originalRecord, candidateFields, nativeNotRunFields, verificationFields, original pins/safety/privacy/limitations and commands before parent merges root export. Preserve every original runtime, mounted-state, keyboard/focus/assistive, ten-width320..2560 plus allocated-container, long-label/RTL/200%-text, dark/light/custom/forced-colors, reduced-motion, export/detail/action and producer/coverage/SI/model need exactly where originally required. Source presence, completed migrations, historical passes, zero discovery, external catalog startup and report completion never close these. Sleep Q13..Q17 and departure N04/N05/N06/N08/N09/N10 remain policy/integration/candidate/runtime needs; selection root stays with existing phase6-fix-selection-prerequisite-trust and phase6-proof-selection-prerequisite-trust, not duplicate shared fixes. No new application tests/browser/API/fixtures/source approved by this report. Exact permissible synthetic fixture pin, native actor, resource locks, privacy/read-only permission and output/test scope must be explicitly granted by parent; until then this item is BLOCKED, files empty, no inferred fixture substitution or real-vehicle access.",
+      "files": [],
+      "dependsOn": [],
+      "status": "BLOCKED_NATIVE_APPLICATION_PRODUCER_SAFETY_PRIVACY_AND_EXACT_OUTPUT_GRANTS"
+    }
+  ],
+  "reportDisposition": [
+    {
+      "filename": "phase6-qa-analytics-year-review.json",
+      "originalRecord": "docs\\frontend-audits\\phase6-qa-analytics-year-review.json#/",
+      "sha256": "368E2DA0B483325D5A7B5A13121D40AF0791A3F8393FB62DF5FDEB829DAB4D5A",
+      "confirmedField": "confirmedFindings",
+      "originalFindingIds": ["F01","F02","F03","F04","F05","F06","F07","F08","F09","F10","F11"],
+      "mapping": [
+        {"ids":["F01"],"fixItems":["phase6-fix-03-year-calendar-boundary"]},
+        {"ids":["F02","F03","F04","F07","F11"],"fixItems":["phase6-fix-03-year-wire-evidence"]},
+        {"ids":["F05","F06"],"fixItems":["phase6-fix-03-year-denominator-signed-policy"],"blocked":"Explicit denominator/sign policy; not a QA-authorized model change."},
+        {"ids":["F08"],"fixItems":["phase6-fix-03-year-wire-evidence","phase6-fix-03-year-display-preferences","phase6-blocked-03-parent-canonical-copy"]},
+        {"ids":["F09"],"fixItems":["phase6-fix-03-year-display-preferences"]},
+        {"ids":["F10"],"fixItems":["phase6-fix-03-year-narration-scope-copy","phase6-blocked-03-parent-canonical-copy"]}
+      ],
+      "candidateFields":["runtimeCandidates"],
+      "candidateIds":["C01","C02","C03","C04","C05"],
+      "nativeNotRunFields":["notRun","acceptance","limitsAndRelease"],
+      "verificationFields":["executedSourceChecks","commands","documentValidation","exactQaAlreadyDoneCheck"],
+      "preserveFields":["scope","authority","countsAndDenominators","preservation","literalApiBoundaries","apiBoundaryLimits","workspaceAndCalendarScope"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-automations-automation-builder.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-automations-automation-builder.json#/",
+      "sha256":"09C370996EAE8503DF68B49B2767AF87C05E533A00AADB98C22502B72E722891",
+      "confirmedField":"sourceConfirmedFindings",
+      "originalFindingIds":["AB-QA-001","AB-QA-002","AB-QA-003"],
+      "mapping":[{"ids":["AB-QA-001","AB-QA-002","AB-QA-003"],"fixItems":["phase6-fix-03-automation-builder-graph-retention"]}],
+      "candidateFields":["conditionalRuntimeCandidates"],
+      "candidateIds":["AB-CAND-001","AB-CAND-002","AB-CAND-003","AB-CAND-004","AB-CAND-005"],
+      "nativeNotRunFields":["verification","acceptance"],
+      "verificationFields":["verification"],
+      "preserveFields":["sourceIdentity","guardAndActionContracts","trustUnitsAndPreferences","scope","authority","apiAgreementLimits","timebox","needs","release"],
+      "existingCompletedDifferentObjectives":["phase6-automation-condition-access","phase6-automation-trigger-touch"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-automations-automation-history.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-automations-automation-history.json#/",
+      "sha256":"B67043144D5029D9EC9C06FF2F5F620B0FAC73E87CE8CC48754D546002AD99E4",
+      "confirmedField":"findings",
+      "originalFindingIds":["AHQA-01","AHQA-02","AHQA-03","AHQA-04","AHQA-05","AHQA-06","AHQA-07","AHQA-08","AHQA-09"],
+      "mapping":[
+        {"ids":["AHQA-01","AHQA-04","AHQA-05","AHQA-06","AHQA-07"],"fixItems":["phase6-fix-03-automation-history-consumers"]},
+        {"ids":["AHQA-02"],"fixItems":["phase6-fix-03-automation-history-producer","phase6-fix-03-automation-history-consumers"]},
+        {"ids":["AHQA-03","AHQA-09"],"fixItems":["phase6-fix-03-automation-history-producer"]},
+        {"ids":["AHQA-08"],"fixItems":["phase6-fix-03-negative-elapsed-duration"],"existingDifferentObjective":"phase6-fix-relative-future-dates"}
+      ],
+      "candidateFields":["candidatesNotExecuted"],
+      "candidateIds":["AHQC-01","AHQC-02","AHQC-03"],
+      "nativeNotRunFields":["notRun","acceptance"],
+      "verificationFields":["commands","scopedScan","finalPersistenceValidation","toolReadsAndSearches"],
+      "preserveFields":["counts","preservation","sourceContracts","authorityResolution","ignoredLogEvidence","timebox","needs","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-automations-automation-list.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-automations-automation-list.json#/",
+      "sha256":"05287CD12B20E21D4DCDC490E51F287F5409E5A52872B5ED11BB7618B9270669",
+      "confirmedField":"sourceFindings",
+      "originalFindingIds":["AL-S01","AL-S02","AL-S03","AL-S04","AL-S05","AL-S06","AL-S07","AL-S08"],
+      "mapping":[
+        {"ids":["AL-S01"],"fixItems":["phase6-fix-03-automation-inventory-wire-and-outcomes","phase6-fix-03-automation-singular-list-consumers"],"dedup":"Same metadata mechanism as plural F01."},
+        {"ids":["AL-S05","AL-S07","AL-S08"],"fixItems":["phase6-fix-03-automation-inventory-wire-and-outcomes"],"dedup":"AL-S05 inventory envelope/row portion overlaps plural F05; template portion remains distinct in same exact hook owner."},
+        {"ids":["AL-S02","AL-S03","AL-S04","AL-S06"],"fixItems":["phase6-fix-03-automation-singular-list-consumers"]}
+      ],
+      "candidateFields":["runtimeNativeCandidates"],
+      "candidateIds":["AL-C01","AL-C02","AL-C03","AL-C04"],
+      "nativeNotRunFields":["notRun","acceptance","limitations"],
+      "verificationFields":["checksActuallyRun","historicalEvidence"],
+      "preserveFields":["identity","retainedSections","stateAndTrust","scopeFiltersPaginationDenominators","apiContract","ownership"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-automations-automations-list.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-automations-automations-list.json#/",
+      "sha256":"F67F1B3012B9449974E2FD3851C714D15B242D1F335FD2107504D8FCA177198D",
+      "confirmedField":"deterministicFindings",
+      "originalFindingIds":["F01","F02","F03","F04","F05","F06","F07","F08","F09","F10"],
+      "mapping":[
+        {"ids":["F01","F03","F05"],"fixItems":["phase6-fix-03-automation-inventory-wire-and-outcomes","phase6-fix-03-automation-plural-list-consumers"],"dedup":"One shared inventory metadata/envelope root with singular AL-S01/AL-S05; plural pins/import outcome are distinct retained mechanisms."},
+        {"ids":["F02","F06","F07"],"fixItems":["phase6-fix-03-comfort-scope-write-and-trust"]},
+        {"ids":["F04","F08","F09","F10"],"fixItems":["phase6-fix-03-automation-plural-list-consumers"]}
+      ],
+      "candidateFields":["unconfirmedCandidates"],
+      "candidateIds":["C01","C02","C03","C04","C05"],
+      "nativeNotRunFields":["notRun","acceptance"],
+      "verificationFields":["checksActuallyDone","historicalProofs","finalPersistenceValidation","toolLimitsAndCorrections"],
+      "preserveFields":["counts","identity","sourceContracts","apiAgreementLimits","retainedSectionsAndLines","authority","needs","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-battery-care.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-battery-care.json#/",
+      "sha256":"72FDCEC4C59B3543BA3ECD8549D8E5A856B38B496F3759BDAC63C3C797656FFC",
+      "confirmedField":"confirmedFindings",
+      "originalFindingIds":["BCARE-QA-001","BCARE-QA-002","BCARE-QA-003","BCARE-QA-004","BCARE-QA-005","BCARE-QA-006","BCARE-QA-007","BCARE-QA-008","BCARE-QA-009"],
+      "mapping":[{"ids":["BCARE-QA-001","BCARE-QA-002","BCARE-QA-003","BCARE-QA-004","BCARE-QA-005","BCARE-QA-006","BCARE-QA-007","BCARE-QA-008","BCARE-QA-009"],"fixItems":["phase6-fix-03-battery-care-evidence-consumers"]},{"ids":["BCARE-QA-003"],"fixItems":["phase6-blocked-03-parent-canonical-copy"],"dedup":"Shared paused-copy leaf/root with projected PRANGE-QA-003; parent merges before one canonical grant."}],
+      "candidateFields":["runtimeConditionalCandidates"],
+      "candidateIds":["BCARE-CAND-001","BCARE-CAND-002","BCARE-CAND-003","BCARE-CAND-004","BCARE-CAND-005","BCARE-CAND-006"],
+      "nativeNotRunFields":["notRun","limits"],
+      "verificationFields":["freshCommandReceipts","historicalEvidence"],
+      "preserveFields":["preservation","sourceStateReview","domainAndDisplayReview","scope","authorityRead","needs","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-battery-degradation.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json#/",
+      "sha256":"2A50A4EC46715E02DAEEF66BC79410D9E7EE0DB2555156FEF2569FE526195524",
+      "confirmedField":"findings",
+      "originalFindingIds":["BD-01","BD-02","BD-03","BD-04","BD-05","BD-06","BD-07","BD-08","BD-09","BD-10","BD-11","BD-12","BD-13","BD-14","BD-15","BD-16","BD-17"],
+      "mapping":[{"ids":["BD-01","BD-02","BD-03","BD-04","BD-05","BD-06","BD-07","BD-08","BD-09","BD-10","BD-11","BD-12","BD-13","BD-14","BD-15","BD-16","BD-17"],"fixItems":["phase6-fix-03-degradation-health-contract"]},{"ids":["BD-12"],"fixItems":["phase6-fix-03-energy-history-shared-contract"],"blocked":"Lifetime versus range policy is not approved."}],
+      "candidateFields":["runtime_or_measurement_candidates"],
+      "candidateIds":["BD-C01","BD-C02","BD-C03","BD-C04","BD-C05","BD-C06"],
+      "nativeNotRunFields":["NOTRUN","acceptance"],
+      "verificationFields":["actual_checks","inspection_errors_and_recovery","historical_receipts"],
+      "preserveFields":["summary","sections_and_preservation","contracts_and_positive_mechanisms","inspected_scope","claims_and_release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-battery-passport.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-battery-passport.json#/",
+      "sha256":"E58F7319F4C40B369C920D1BF0ED23A592217CFBB8257218CE566D0C43EB6AD2",
+      "confirmedField":"findings",
+      "originalFindingIds":["F01","F02","F03","F04","F05","F06","F07"],
+      "mapping":[{"ids":["F01","F02","F03","F04","F05","F06","F07"],"fixItems":["phase6-fix-03-battery-passport-consumers"]},{"ids":["F06"],"fixItems":["phase6-fix-03-battery-evidence-brief-truth-and-date"],"dedup":"Shared BatteryEvidenceBrief date omission, not another dateFormat rewrite."}],
+      "candidateFields":["unconfirmed_candidates"],
+      "candidateIds":["C01","C02","C03"],
+      "nativeNotRunFields":["notrun","acceptance"],
+      "verificationFields":["source_checks","historical_receipts","report_validation"],
+      "preserveFields":["counts","ownership","budget","preservation","hook_and_wire_contracts","evidence_and_state_review"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-cells.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-cells.json#/",
+      "sha256":"7EEEE7FB677D387723B246B2F6F80638D6F533C71F0F30E129664A0883E40D06",
+      "confirmedField":"confirmedIssues",
+      "originalFindingIds":["BC-QA-001","BC-QA-002","BC-QA-003","BC-QA-004","BC-QA-005","BC-QA-006","BC-QA-007","BC-QA-008"],
+      "mapping":[{"ids":["BC-QA-001","BC-QA-002","BC-QA-003","BC-QA-004","BC-QA-005","BC-QA-006","BC-QA-008"],"fixItems":["phase6-fix-03-battery-cells-response-and-callers"]},{"ids":["BC-QA-007"],"fixItems":["phase6-fix-03-chart-annotation-read-trust"]}],
+      "existingCompletedDifferentObjectives":["phase6-rescue-battery-battery-cells"],
+      "candidateFields":["candidates"],
+      "candidateIds":["BC-CANDIDATE-001","BC-CANDIDATE-002","BC-CANDIDATE-003"],
+      "nativeNotRunFields":["verification","handoff"],
+      "verificationFields":["checks","verification","historicalProof"],
+      "preserveFields":["preservation","scope","authorityRead","exactRoutes","handoff"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-charge-advisor.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-charge-advisor.json#/",
+      "sha256":"145D3EB205EF8E98C74574AC3BA91E892798D5AF466D67F0EA11AC9213D5DF4A",
+      "confirmedField":"findings",
+      "originalFindingIds":["CA-S01","CA-S02","CA-S03","CA-S04","CA-S05","CA-S06","CA-S07","CA-S08","CA-S09","CA-S10"],
+      "mapping":[
+        {"ids":["CA-S01","CA-S06"],"fixItems":["phase6-fix-03-charge-advisor-model"]},
+        {"ids":["CA-S02","CA-S03"],"fixItems":["phase6-fix-03-live-field-presence-and-freshness","phase6-fix-03-charge-advisor-callers"],"existingDifferentObjective":"phase6-live-vehicle-identity-reset"},
+        {"ids":["CA-S04","CA-S07","CA-S09","CA-S10"],"fixItems":["phase6-fix-03-charge-advisor-callers"]},
+        {"ids":["CA-S05"],"fixItems":["phase6-fix-03-energy-history-shared-contract","phase6-fix-03-charge-advisor-callers"]},
+        {"ids":["CA-S08"],"fixItems":["phase6-fix-03-energy-history-shared-contract"]}
+      ],
+      "candidateFields":["runtimeNativeCandidates"],
+      "candidateIds":["CA-R01","CA-R02","CA-R03","CA-R04","CA-R05","CA-R06"],
+      "nativeNotRunFields":["verification","handoff"],
+      "verificationFields":["verification","immutableHistoricalReceipts"],
+      "preserveFields":["sourceIdentity","preservation","routeScopeAndWire","sourceReview","writeContract","handoff"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-cycle-stress.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-cycle-stress.json#/",
+      "sha256":"AED839B8689128C4304C7746C89ED07D0A4AAB31861424B1D62E47FB8D004A5C",
+      "confirmedField":"findings",
+      "originalFindingIds":["CSQA-01","CSQA-02","CSQA-03","CSQA-04","CSQA-05","CSQA-06","CSQA-07"],
+      "mapping":[{"ids":["CSQA-01","CSQA-02","CSQA-03","CSQA-04","CSQA-05","CSQA-06","CSQA-07"],"fixItems":["phase6-fix-03-cycle-stress-consumers-and-copy"]},{"ids":["CSQA-05"],"fixItems":["phase6-blocked-03-parent-canonical-copy"],"blocked":"Only truthful subtitle; overlap-fence model change not granted."}],
+      "candidateFields":["unconfirmedCandidates"],
+      "candidateIds":["CSC-01","CSC-02","CSC-03","CSC-04"],
+      "nativeNotRunFields":["notRun","acceptance","fullPageAccepted","nativeAccepted"],
+      "verificationFields":["actualSourceChecks","inspectionLimits"],
+      "preserveFields":["summary","preservation","sections","identity","scope","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-energy-flow.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-energy-flow.json#/",
+      "sha256":"A2F7CB6745F6D3FA353CDEB5CD727A499E7D80116B666418F0DF52BA77EC733F",
+      "confirmedField":"findings",
+      "originalFindingIds":["F01","F02","F03","F04","F05"],
+      "mapping":[{"ids":["F01"],"fixItems":["phase6-fix-03-energy-history-shared-contract","phase6-fix-03-energy-flow-consumers"]},{"ids":["F02","F04","F05"],"fixItems":["phase6-fix-03-energy-flow-consumers"]},{"ids":["F03"],"fixItems":["phase6-fix-03-energy-flow-si-wire"]},{"ids":["F05"],"fixItems":["phase6-blocked-03-parent-canonical-copy"]}],
+      "candidateFields":["candidates"],
+      "candidateIds":["C01","C02","C03","C04","C05","C06","C07"],
+      "nativeNotRunFields":["NOTRUN","sourceVerdict","inspectionLimits"],
+      "verificationFields":["checks","sourcePatternEvidence","historicalProofs"],
+      "preserveFields":["counts","scope","identity","preservation","stateContracts","actions","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-energy-products.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-energy-products.json#/",
+      "sha256":"F18D5246B62FBFFD98133704ABCF9CED1D2BE1F65DE58CA0ADE2BA9994A67E45",
+      "confirmedField":"deterministicFindings",
+      "originalFindingIds":["EP-F01","EP-F02","EP-F03","EP-F04","EP-F05","EP-F06","EP-F07"],
+      "mapping":[{"ids":["EP-F01","EP-F02","EP-F03","EP-F04","EP-F05","EP-F06","EP-F07"],"fixItems":["phase6-fix-03-energy-products-consumers"]},{"ids":["EP-F02","EP-F05"],"fixItems":["phase6-blocked-03-parent-canonical-copy"]}],
+      "candidateFields":["unconfirmedCandidates"],
+      "candidateIds":["EP-C01","EP-C02","EP-C03","EP-C04","EP-C05"],
+      "nativeNotRunFields":["NOTRUN","acceptance"],
+      "verificationFields":["actualChecks","historicalProof"],
+      "preserveFields":["lineCounts","sectionCounts","sections","contractChecks","authority","identity","delivery"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-pack-capacity.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-pack-capacity.json#/",
+      "sha256":"BAB736A0F5DC3DEC2A5DC391DEBB2250208B9551BA6799135B5881DA47247888",
+      "confirmedField":"findings",
+      "originalFindingIds":["PC-01","PC-02","PC-03","PC-04","PC-05","PC-06","PC-07"],
+      "mapping":[{"ids":["PC-01","PC-02","PC-03","PC-04","PC-05","PC-06","PC-07"],"fixItems":["phase6-fix-03-pack-capacity-consumers"]}],
+      "candidateFields":["runtimeNativeCandidates"],
+      "candidateIds":["PC-C01","PC-C02","PC-C03","PC-C04"],
+      "nativeNotRunFields":["verification","handoff"],
+      "verificationFields":["verification","immutableHistoricalReceipts"],
+      "preserveFields":["sourceIdentity","preservation","sourceReview","routeScopeAndWire","writeContract","handoff"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-power-flow-dashboard.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-power-flow-dashboard.json#/",
+      "sha256":"0CEB0796E24C85026EFBFFE2253D45BB565C2BB970DA39D508EE2B95D16566B9",
+      "confirmedField":"findings",
+      "originalFindingIds":["F01","F02","F03","F04","F05","F06"],
+      "mapping":[{"ids":["F01","F02","F03","F04","F05","F06"],"fixItems":["phase6-fix-03-power-flow-callers"]},{"ids":["F01"],"fixItems":["phase6-fix-03-energy-history-shared-contract"]}],
+      "candidateFields":["candidates"],
+      "candidateIds":["C01","C02","C03","C04","C05"],
+      "nativeNotRunFields":["evidenceLimits","sourceVerdict"],
+      "verificationFields":["validation","staticScans"],
+      "preserveFields":["counts","preservation","producerDrift","dataSources","workspaceScope","requiredSharedChanges","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-projected-range.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-projected-range.json#/",
+      "sha256":"756D3F1333129B6EF55E39A7B92A6968ACA8DE209D5F01589847C5BE9C6CB8D1",
+      "confirmedField":"findings",
+      "originalFindingIds":["PRANGE-QA-001","PRANGE-QA-002","PRANGE-QA-003","PRANGE-QA-004","PRANGE-QA-005","PRANGE-QA-006"],
+      "mapping":[{"ids":["PRANGE-QA-001","PRANGE-QA-002","PRANGE-QA-003","PRANGE-QA-004","PRANGE-QA-005"],"fixItems":["phase6-fix-03-projected-range-callers"]},{"ids":["PRANGE-QA-003","PRANGE-QA-004","PRANGE-QA-006"],"fixItems":["phase6-blocked-03-parent-canonical-copy"]}],
+      "candidateFields":["candidates"],
+      "candidateIds":["PRANGE-CAND-001","PRANGE-CAND-002","PRANGE-CAND-003","PRANGE-CAND-004","PRANGE-CAND-005"],
+      "candidateExistingOwners":{"PRANGE-CAND-004":["phase6-fix-selection-prerequisite-trust","phase6-proof-selection-prerequisite-trust"]},
+      "nativeNotRunFields":["freshExecution","remainingNeeds"],
+      "verificationFields":["commandReceipts","scans","freshExecution"],
+      "preserveFields":["counts","pins","pinMeaning","unownedConcurrentChanges","sourcePreservation","historicalEvidence","technicalAndHistoricalExemptions","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-sleep-efficiency.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-sleep-efficiency.json#/",
+      "sha256":"D0626CC6F28D6F37695A0F725E2BC987AE0E79B89A5E784FF7609C13DE3B3A95",
+      "confirmedField":"findings[classification=confirmed-source]",
+      "originalFindingIds":["Q01","Q02","Q03","Q04","Q05","Q06","Q07","Q08","Q09","Q10","Q11","Q12"],
+      "originalRawFindingsArrayLength":17,
+      "originalRawSummary":{"regions":14,"charts":3,"findings":17,"confirmedSourceFindings":12,"candidatesRequiringOwnerEvidence":5},
+      "mapping":[{"ids":["Q01","Q02","Q03","Q04","Q05","Q06","Q07","Q08","Q09","Q10","Q11","Q12"],"fixItems":["phase6-fix-03-sleep-efficiency-confirmed"]},{"ids":["Q01"],"fixItems":["phase6-fix-03-energy-history-shared-contract"]},{"ids":["Q06"],"fixItems":["phase6-fix-03-battery-evidence-brief-truth-and-date"]}],
+      "candidateFields":["findings[classification!=confirmed-source]"],
+      "candidateIds":["Q13","Q14","Q15","Q16","Q17"],
+      "candidateDisposition":"Producer/clock/metric/dimensional/authorized-SI-drift evidence required; do not promote merely because records are inside findings.",
+      "nativeNotRunFields":["notRun","evidenceLimits","pageQaAccepted"],
+      "verificationFields":["scans","documentValidation"],
+      "preserveFields":["summary","sourcePins","ownership","budget","duplicateFirst","dataSources","preservation","requiredSharedChanges"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-battery-vampire-drain.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-battery-vampire-drain.json#/",
+      "sha256":"36277A67BE403E303FE5979F4C58DAA99FCBDB37FFA1F60255C8099660C41ED4",
+      "confirmedField":"findings",
+      "originalFindingIds":["VD01","VD02","VD03","VD04","VD05","VD06","VD07","VD08","VD09"],
+      "mapping":[{"ids":["VD01","VD02","VD03","VD04","VD05","VD06","VD07","VD08","VD09"],"fixItems":["phase6-fix-03-vampire-drain-consumers"]},{"ids":["VD08"],"fixItems":["phase6-fix-03-energy-history-shared-contract"]},{"ids":["VD07"],"fixItems":["phase6-blocked-03-parent-canonical-copy"]}],
+      "candidateFields":["conditionalCandidates"],
+      "candidateIds":["VC01","VC02","VC03"],
+      "nativeNotRunFields":["evidenceLimits","acceptance"],
+      "verificationFields":["checks"],
+      "preserveFields":["summary","pins","gate","ownership","preservation","integrationGaps","requiredSharedChanges","dataSources"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-benchmarks-privacy-benchmarks.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-benchmarks-privacy-benchmarks.json#/",
+      "sha256":"C52A213266405802BE26C207FA1ABC80E4A3571678F7D31E701F16FAF387E64C",
+      "confirmedField":"confirmedIssues",
+      "originalFindingIds":["PB01","PB02","PB03","PB04","PB05","PB06","PB07","PB08","PB09","PB10","PB11","PB12","PB13"],
+      "mapping":[{"ids":["PB01","PB02","PB03","PB04","PB05","PB06","PB07","PB08","PB09","PB10","PB11","PB12","PB13"],"fixItems":["phase6-fix-03-privacy-benchmarks-consumers"]}],
+      "candidateFields":["candidates"],
+      "candidateIds":["PBC01","PBC02","PBC03","PBC04","PBC05","PBC06","PBC07"],
+      "nativeNotRunFields":["evidenceLimits","result"],
+      "verificationFields":["checks","validation"],
+      "preserveFields":["confirmedIssueCount","candidateCount","fixNeedCount","currentPins","lineCounts","sections","sectionCounts","actionCount","deadlines","preflight","deduplication","preservation","release","fixNeeds"],
+      "existingCompletedDifferentObjectives":["repair-benchmark-count","phase3-usage-card"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-charging-charge-departure-alignment.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-charging-charge-departure-alignment.json#/",
+      "sha256":"ACC1498ACCD9BFF5731F1C403AF034BED545909B50F22932F6086469B1AC2520",
+      "confirmedField":"needs[classification=sourceBehavior]",
+      "originalFindingIds":["N02","N03","N07"],
+      "originalRawNeedsArrayLength":10,
+      "mapping":[{"ids":["N02","N03","N07"],"fixItems":["phase6-fix-03-departure-display-callers"]}],
+      "otherOriginalNeeds":[
+        {"id":"N01","classification":"inherited","status":"OPEN","fixItems":["phase6-blocked-03-departure-kpi-semantics"],"existingCompletedDifferentObjective":"phase6-departure-summary-semantics"},
+        {"id":"N04","classification":"integrationUnknown","status":"OPEN","fixItems":["phase6-blocked-03-original-acceptance-and-candidates"],"boundary":"Actual DTO/cap/order/filter contract unproven; do not convert into confirmed server fault."},
+        {"id":"N09","classification":"runtimeAcceptance","status":"OPEN_UNOWNED_NATIVE","fixItems":["phase6-blocked-03-original-acceptance-and-candidates"],"existingCompletedDifferentObjective":"phase6-departure-runtime-caveat-oracle"}
+      ],
+      "candidateFields":["needs[classification=unpromotedCandidate]"],
+      "candidateIds":["N05","N06","N08","N10"],
+      "candidateExistingOwners":{"N10":["phase6-fix-selection-prerequisite-trust","phase6-proof-selection-prerequisite-trust"]},
+      "nativeNotRunFields":["evidenceLimits","runtimeAcceptance","needs[id=N09]"],
+      "verificationFields":["boundedChecks","commandEvidence","historicalContext"],
+      "preserveFields":["counts","sourcePins","preservation","scope","modelEvidence","workspaceAndTime","release"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    },
+    {
+      "filename":"phase6-qa-charging-charge-interruption.json",
+      "originalRecord":"docs\\frontend-audits\\phase6-qa-charging-charge-interruption.json#/",
+      "sha256":"F81029CD3ECBCA7C715A6E65D6B6FB1AC8D85ACAD0A1983DC66B9744ECD39B4E",
+      "confirmedField":"findings",
+      "originalFindingIds":["F1","F2","F3","F4"],
+      "mapping":[{"ids":["F1","F2","F3","F4"],"fixItems":["phase6-fix-03-charge-interruption-model-and-evidence"]}],
+      "candidateFields":["candidates"],
+      "candidateIds":["C1","C2","C3","C4","C5"],
+      "nativeNotRunFields":["limitations","acceptance"],
+      "verificationFields":["commandReceipts","validation","scanResults"],
+      "preserveFields":["summary","pins","preservation","engineeringAdjudication","dedup","existingQueueScopes","originalReleaseUtc","releaseDeclaration"],
+      "existingCompletedDifferentObjectives":["phase3-chart-legend","phase3-page-container","phase5-page-charging-charge-interruption"],
+      "remainingOwner":"phase6-blocked-03-original-acceptance-and-candidates"
+    }
+  ],
+  "crossChunkParentDedup": [
+    {"file":"web\\src\\lib\\workspaceScope.ts","existingRemainingOwner":"phase6-fix-admin-audit-workspace-range-registration","needs":"Distinct battery route scope policies/registration, serialize exact file after actual release; do not repeat accepted inbox/dashboard route correction."},
+    {"file":"web\\src\\api\\hooks\\useEnergy.ts","needs":"One shared parent plan for exact range/input trust, sleep/health/vampire boundaries and power-flow/SI consumers; unknown producers/tests remain explicit blockers."},
+    {"file":"web\\src\\api\\hooks\\useDriving.ts","existingCompletedOwner":"phase6-drivetrain-exact-range-integration","needs":"Reuse accepted bounds; distinct scoped malformed-history validators/new consumers, no repeated drivetrain repair."},
+    {"file":"web\\src\\hooks\\useVehicleLive.ts","existingCompletedOwner":"phase6-live-vehicle-identity-reset","needs":"Field presence/observation freshness remains distinct; preserve all reset/public fields and deduplicate root against other chunks."},
+    {"file":"web\\src\\lib\\dateFormat.ts","existingCompletedOwner":"phase6-fix-relative-future-dates","needs":"Negative elapsed-duration validity only; caller date omissions use existing APIs."},
+    {"file":"web\\src\\components\\charts\\ChartContainer.tsx","needs":"Annotation read trust root only; caller formatting/gating uses existing APIs and does not expand shared scope."},
+    {"file":"web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx","needs":"Metadata-only evidence predicate plus explicit date context; retain all other adapters/retained semantics."},
+    {"file":"web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx","needs":"Interruption modeled-inference adapter only, preserve all other routes."},
+    {"file":"web\\src\\i18n\\en.json","needs":"Parent-only exact copy merger, especially shared pausedInitial and range.drivesCount plural operands; no generated-catalog ownership inferred."}
+  ],
+  "notReadRemainder": {
+    "assignedReportFilenames": [],
+    "assignedUnreadCount": 0,
+    "otherEightChunksReportCount": 168,
+    "otherEightChunksQaBodiesRead": false,
+    "meaning": "189 dispatch remainder minus assigned21. This is a filename count, not168 required repairs or approval of any other chunk."
+  },
+  "verification": {
+    "allowed": "JSON parse, exact21 selection, original IDs/classifications/candidates, field-reference existence, artifact hashes, mapping coverage, fixItem shape/reference/dependency/path checks only.",
+    "applicationOrSourceCorrectness": "NOT_ESTABLISHED",
+    "typeScript": "NOTRUN prohibited",
+    "violationsAudit": "NOTRUN prohibited; no fresh audit",
+    "sourceLineSectionsRoutesExistence": "NOTRUN prohibited",
+    "nativeBrowserApi": "NOTRUN prohibited",
+    "artifactValidation": "PASS artifact-only at 2026-10-14T12:47Z; no application/source approval",
+    "actualRawOutput": [
+      "reportDisposition 21 fixItems 38",
+      "CONFIRMED_REPORT_IDS 171 CANDIDATE_REPORT_IDS 100 ORIGINAL_NEEDS_OTHER 3",
+      "ERRORS 0",
+      "Dependency cycle errors: 0",
+      "All21 original report hashes matched",
+      "Proposed filename provenance found one unestablished Automation type filename; removed before release. Canonical en.json is explicitly reported, excluded only by the path-check regex's ts/tsx/go suffix filter."
+    ],
+    "counts": {
+      "assignedReports": 21,
+      "processedReports": 21,
+      "originalRawFindingRecordsExcludingDepartureNeeds": 173,
+      "confirmedOriginalReportIdPairs": 171,
+      "preservedCandidateReportIdPairs": 100,
+      "departureOtherNeedRecords": 3,
+      "fixItemProposalsIncludingExplicitBlockers": 38,
+      "unreadAssignedReports": 0,
+      "outsideAssignedFilenameRemainder": 168
+    },
+    "countMeaning": "171 original confirmed report/id pairs are not171 independent defects: singular/plural inventory metadata and malformed-envelope mechanisms are explicitly consolidated. 38 proposals include held policy/copy/acceptance scopes, not38 runnable grants. All original raw count fields remain in unmodified complete records referenced by originalRecord/preserveFields.",
+    "noBlanketApproval": true
+  },
+  "release": {
+    "claims": ["docs\\frontend-audits\\phase6-dispose-remaining-reports-03.json", "web\\logs\\phase6-dispose-remaining-reports-03.log"],
+    "sourceClaimsHeld": [],
+    "allClaimsReleased": true,
+    "claimsReleaseUTC": "2026-10-14T12:47:15Z",
+    "rootWorkItemsQueueCatalogConfigEdited": false
+  }
+}
