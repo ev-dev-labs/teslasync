@@ -947,7 +947,7 @@ export default function TariffLabPage() {
                             ...current,
                             rates: current.rates.filter((_, itemIndex) => itemIndex !== index),
                           }))
-                        } disabled={draft.rates.length <= 1} />
+                        } disabled={draft.rates.length <= 1} confirm={{ title: t('confirm.removeDraftRate.title', 'Remove this rate?'), message: t('confirm.removeDraftRate.message', 'The rate row is removed from the draft rate plan.') }} />
                     </div>
                   </div>
                 ))}

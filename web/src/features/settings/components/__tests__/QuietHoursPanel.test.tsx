@@ -179,7 +179,7 @@ describe('QuietHoursPanel', () => {
     await waitFor(() => {
       expect(screen.getByTestId('quiet-hours-row-1')).toBeInTheDocument()
     })
-    fireEvent.click(screen.getByText('Delete'))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     const confirm = await screen.findByRole('dialog', { name: 'Delete this quiet-hours window?' })
     fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }))
     await waitFor(() => {

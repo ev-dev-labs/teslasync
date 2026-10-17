@@ -354,7 +354,7 @@ export default function GrafanaPanelPage() {
                     disabled={!canCopy}
                     label={t('powerGrafana.editor.copy', 'Copy to clipboard')}
                   />
-                  <IconButton icon={<Icon icon={Trash2} />} label={t('powerGrafana.editor.clear', 'Clear')} variant="secondary" onClick={handleClear} disabled={!canCopy} confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
+                  <IconButton icon={<Icon icon={Trash2} />} label={t('powerGrafana.editor.clear', 'Clear')} onClick={handleClear} disabled={!canCopy} className="min-h-11 md:min-h-10" confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
                 </div>
                 {status && (
                   <InlineCallout variant={status.variant}>{status.message}</InlineCallout>

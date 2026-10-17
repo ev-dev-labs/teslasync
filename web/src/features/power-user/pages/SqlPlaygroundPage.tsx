@@ -222,7 +222,7 @@ export default function SqlPlaygroundPage() {
                 >
                   {t('powerSql.editor.run', 'Run')}
                 </Button>
-                <IconButton icon={<Icon icon={Trash2} size="md" />} label={t('powerSql.editor.clear', 'Clear')} variant="secondary" onClick={handleClear} disabled={!canClear} confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
+                <IconButton icon={<Icon icon={Trash2} size="md" />} label={t('powerSql.editor.clear', 'Clear')} onClick={handleClear} disabled={!canClear} className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
                 <CopyButton
                   text={sql}
                   variant="outline"

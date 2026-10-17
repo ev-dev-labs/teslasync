@@ -496,9 +496,9 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <IconButton icon={<Pencil className="h-3.5 w-3.5" />} label={t('quietHours.edit', 'Edit')} variant="secondary" onClick={() => void startEdit(w)} disabled={saveInFlight || save.isPending} />
+                      <IconButton icon={<Pencil className="h-3.5 w-3.5" />} label={t('quietHours.edit', 'Edit')} onClick={() => void startEdit(w)} disabled={saveInFlight || save.isPending} className="min-h-11 min-w-11 md:min-h-9 md:min-w-0" />
                       {/* confirm-step: removeWindow asks in the shared ConfirmDialog before deleting */}
-                      <IconButton icon={<Trash2 className="h-3.5 w-3.5" />} label={t('quietHours.delete', 'Delete')} onClick={() => void removeWindow(w)} busy={remove.isPending && remove.variables === w.id} />
+                      <IconButton icon={<Trash2 className="h-3.5 w-3.5" />} label={t('quietHours.delete', 'Delete')} onClick={() => void removeWindow(w)} busy={remove.isPending && remove.variables === w.id} className="min-h-11 min-w-11 md:min-h-9 md:min-w-0" />
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">

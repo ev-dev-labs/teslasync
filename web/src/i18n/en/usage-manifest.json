@@ -62087,6 +62087,8 @@
       "common.yesterday",
       "compat.banner.body",
       "compat.banner.title",
+      "confirm.removeDraftRate.message",
+      "confirm.removeDraftRate.title",
       "confirm.silence.checkbox",
       "consent.banner.accept",
       "consent.banner.body",

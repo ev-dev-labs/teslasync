@@ -158,7 +158,14 @@ describe('DashboardsPage', () => {
     typeInEditor('{"title":"old"}');
     fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
     if (change === 'edit') typeInEditor('{"title":"new"}');
-    if (change === 'clear') fireEvent.click(screen.getByRole('button', { name: /^Clear$/i }));
+    if (change === 'clear') {
+      fireEvent.click(screen.getByRole('button', { name: /^Clear$/i }));
+      const clearDialog = screen.getByRole('dialog');
+      expect(within(clearDialog).getByText('Clear the editor?')).toBeInTheDocument();
+      fireEvent.click(within(clearDialog).getByRole('button', { name: 'Confirm' }));
+      // The clear must land before the pending copy resolves, as before.
+      await waitFor(() => expect(editor().value).toBe(''));
+    }
     if (change === 'apply') fireEvent.click(screen.getByTestId('stub-apply-draft'));
     await act(async () => { resolveCopy?.(); });
     expect(screen.queryByText(/Copied\. Paste the JSON/)).toBeNull();
@@ -326,7 +333,7 @@ describe('DashboardsPage', () => {
     expect(copy).toBeEnabled();
   });
 
-  it('keeps Clear enabled for whitespace-only content and wipes editor + persisted draft', () => {
+  it('keeps Clear enabled for whitespace-only content and wipes editor + persisted draft', async () => {
     renderPage();
     const clear = screen.getByRole('button', { name: /^Clear$/i });
 
@@ -339,7 +346,10 @@ describe('DashboardsPage', () => {
     expect(window.localStorage.getItem(DRAFT_KEY)).toBe('   \n  ');
 
     fireEvent.click(clear);
-    expect(editor().value).toBe('');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(editor().value).toBe(''));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 

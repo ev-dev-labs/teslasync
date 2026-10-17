@@ -233,7 +233,9 @@ describe('GrafanaPanelPage', () => {
     const copy = screen.getByRole('button', { name: 'Copy to clipboard' });
     const clear = screen.getByRole('button', { name: 'Clear' });
     expect(copy).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'max-w-full', 'whitespace-normal');
-    expect(clear).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'max-w-full', 'whitespace-normal');
+    // The icon-only Clear keeps the old text button's own responsive target
+    // sizes; the wrap classes belonged to its removed text label.
+    expect(clear).toHaveClass('min-h-11', 'md:min-h-10');
     expect(copy).toBeDisabled();
     expect(clear).toBeDisabled();
     fireEvent.change(getEditor(), { target: { value: '{"title":"Editable reference"}' } });
@@ -280,7 +282,14 @@ describe('GrafanaPanelPage', () => {
     fireEvent.change(getEditor(), { target: { value: '{"title":"old"}' } });
     fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
     if (change === 'edit') fireEvent.change(getEditor(), { target: { value: '{"title":"new"}' } });
-    if (change === 'clear') fireEvent.click(screen.getByRole('button', { name: /Clear/i }));
+    if (change === 'clear') {
+      fireEvent.click(screen.getByRole('button', { name: /Clear/i }));
+      const clearDialog = screen.getByRole('dialog');
+      expect(within(clearDialog).getByText('Clear the editor?')).toBeInTheDocument();
+      fireEvent.click(within(clearDialog).getByRole('button', { name: 'Confirm' }));
+      // The clear must land before the pending copy resolves, as before.
+      await waitFor(() => expect(getEditor().value).toBe(''));
+    }
     if (change === 'apply') fireEvent.click(screen.getByTestId('mock-ai-apply'));
     await act(async () => { resolveCopy?.(); });
     expect(screen.queryByText(/Copied\. Paste the JSON/)).toBeNull();
@@ -469,8 +478,11 @@ describe('GrafanaPanelPage', () => {
     expect(await screen.findByText(/Copied\. Paste the JSON/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Clear/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
-    expect(editor.value).toBe('');
+    await waitFor(() => expect(editor.value).toBe(''));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
     expect(screen.queryByText(/Copied\. Paste the JSON/i)).not.toBeInTheDocument();
     // Back to the disabled baseline.

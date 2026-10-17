@@ -325,8 +325,11 @@ describe('SqlPlaygroundPage', () => {
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
-    expect(editor.value).toBe('');
+    await waitFor(() => expect(editor.value).toBe(''));
     expect(
       screen.queryByTestId('power-sql-run-message'),
     ).not.toBeInTheDocument();
@@ -409,7 +412,7 @@ describe('SqlPlaygroundPage', () => {
 });
 
 describe('SqlPlaygroundPage page-owned modernization', () => {
-  it('clears a restored whitespace-only draft while Run and Copy remain disabled', () => {
+  it('clears a restored whitespace-only draft while Run and Copy remain disabled', async () => {
     const whitespace = '   \n\t  ';
     window.localStorage.setItem(DRAFT_KEY, whitespace);
     renderPage();
@@ -421,8 +424,11 @@ describe('SqlPlaygroundPage page-owned modernization', () => {
     expect(clear).toBeEnabled();
 
     fireEvent.click(clear);
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
-    expect(getEditor()).toHaveValue('');
+    await waitFor(() => expect(getEditor()).toHaveValue(''));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
     expect(clear).toBeDisabled();
     expect(writeText).not.toHaveBeenCalled();
@@ -431,7 +437,7 @@ describe('SqlPlaygroundPage page-owned modernization', () => {
     expect(screen.getByRole('region', { name: 'Curated schema catalog' })).toBeInTheDocument();
   });
 
-  it('keeps Clear available after editing to whitespace without enabling execution or clipboard', () => {
+  it('keeps Clear available after editing to whitespace without enabling execution or clipboard', async () => {
     renderPage();
     fireEvent.change(getEditor(), { target: { value: 'SELECT distance_m FROM drives;' } });
     fireEvent.click(screen.getByRole('button', { name: 'Run' }));
@@ -448,7 +454,10 @@ describe('SqlPlaygroundPage page-owned modernization', () => {
     expect(screen.queryByTestId('power-sql-run-message')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
-    expect(getEditor()).toHaveValue('');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Clear the editor?')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(getEditor()).toHaveValue(''));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
     expect(writeText).not.toHaveBeenCalled();
   });

@@ -111,7 +111,8 @@
       "wiredBy": "web/vite.config.ts",
       "asserts": "No new dotted/dotless i18n namespace misses versus the committed baseline.",
       "note": "Invoked with --strict from the verify-english-catalog-split buildStart plugin rather than from an npm script, so it runs on every build in every CI job that compiles the SPA."
-    }
+    },
+    { "script": "audit-freshness-actions.mjs", "npmScript": "audit:freshness-actions", "status": "active", "enforcement": "zero-violations", "asserts": "Freshness renders only through FreshnessDot (no Wi-Fi/dot-plus-text indicator); repeated tool actions are icon-only ghost IconButtons with the label in the tooltip; destructive icon-only actions confirm first." }
   ],
   "reports": [
     {

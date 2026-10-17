@@ -23315,6 +23315,10 @@
   "confirm": {
     "silence": {
       "checkbox": "Don't ask again for this action"
+    },
+    "removeDraftRate": {
+      "title": "Remove this rate?",
+      "message": "The rate row is removed from the draft rate plan."
     }
   },
   "region": {

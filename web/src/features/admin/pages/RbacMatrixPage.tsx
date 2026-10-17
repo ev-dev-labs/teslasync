@@ -6,7 +6,6 @@ import { Badge, Button, Card, Heading, HelperText, PanelTitle, IconButton } from
 import { AlertBanner, EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { cn } from '@/lib/cn';
 import { diffMatrices, isRbacOpenMode, useRbacMatrix, useUpsertRbacCells } from '@/api/hooks/useRbacMatrix';
 import { isApiError } from '@/api/client';
 import { deriveDataState } from '@/api/dataState';
@@ -167,11 +166,8 @@ export default function RbacMatrixPage() {
     </div>
   ) : (
     <div className="flex flex-wrap items-center gap-2">
-      <Button variant="ghost" onClick={() => matrixQuery.refetch()} disabled={matrixQuery.isFetching}
-        aria-label={t('rbac.actions.refresh', 'Refresh')} title={t('rbac.actions.refresh', 'Refresh')}>
-        <RefreshCw className={cn('h-4 w-4', matrixQuery.isFetching && 'animate-spin')} aria-hidden />
-      </Button>
-      <IconButton icon={<Unlock className="h-4 w-4" aria-hidden />} label={t('rbac.actions.edit', 'Edit')} variant="secondary" onClick={handleEnterEdit} data-testid="rbac-edit-button" />
+      <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('rbac.actions.refresh', 'Refresh')} busy={matrixQuery.isFetching} onClick={() => matrixQuery.refetch()} disabled={matrixQuery.isFetching} />
+      <IconButton icon={<Unlock className="h-4 w-4" aria-hidden />} label={t('rbac.actions.edit', 'Edit')} onClick={handleEnterEdit} data-testid="rbac-edit-button" />
     </div>
   );
 

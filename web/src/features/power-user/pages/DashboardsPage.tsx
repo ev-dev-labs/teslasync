@@ -322,7 +322,7 @@ export default function DashboardsPage() {
                   disabled={!canCopy}
                   label={t('powerDashboards.editor.copy', 'Copy to clipboard')}
                 />
-                <IconButton icon={<Icon icon={Eraser} />} label={t('powerDashboards.editor.clear', 'Clear')} variant="secondary" onClick={handleClear} disabled={!canClear} confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
+                <IconButton icon={<Icon icon={Eraser} />} label={t('powerDashboards.editor.clear', 'Clear')} onClick={handleClear} disabled={!canClear} confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
               </div>
               {status && (
                 <div className="mt-3">
