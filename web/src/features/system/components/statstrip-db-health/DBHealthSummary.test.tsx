@@ -1,6 +1,6 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -15,8 +15,16 @@ vi.unmock('@/lib/timezone');
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, vars?: Record<string, unknown>) =>
-      fallback.replace(/{{(\w+)}}/g, (match, name: string) => vars && name in vars ? String(vars[name]) : match),
+    t: (_key: string, fallback: string, vars?: Record<string, unknown>) => {
+      // Honor i18next plural defaults like the shared global mock does, so
+      // counted drawer explanations render their real singular/plural forms.
+      let template = fallback;
+      if (vars && typeof vars.count === 'number') {
+        if (vars.count === 1 && typeof vars.defaultValue_one === 'string') template = vars.defaultValue_one;
+        else if (typeof vars.defaultValue_other === 'string') template = vars.defaultValue_other;
+      }
+      return template.replace(/{{(\w+)}}/g, (match, name: string) => vars && name in vars ? String(vars[name]) : match);
+    },
   }),
 }));
 const settings: AppSettings = {
@@ -47,6 +55,20 @@ function renderSummary(overrides: Partial<Parameters<typeof DBHealthSummary>[0]>
     <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>;
   return { ...render(<DBHealthSummary {...props} {...overrides} />, { wrapper }), client };
 }
+
+// Open one brief's real Review-details dialog, run group/detail assertions
+// against it, then close it again.
+function withDrawer(strip: HTMLElement, assert: (dialog: HTMLElement) => void): void {
+  expect(screen.queryByRole('dialog'), 'Finish any open interaction before inspecting evidence').not.toBeInTheDocument();
+  fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    assert(dialog);
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach(client => client.clear());
@@ -61,14 +83,18 @@ describe('DB health canonical summary preservation', () => {
     expect(tiles).toHaveLength(6);
     expect(tiles.map(tile => tile.querySelector('[data-operational-value]')?.textContent))
       .toEqual(['512.25 B', '0', '0', '0', '185', '20.00%']);
-    expect(tiles[3]).toHaveTextContent('> 100 MB');
-    expect(tiles[4]).toHaveTextContent('Clean');
     expect(tiles[5].querySelector('[data-operational-value]')).toHaveTextContent('%');
     expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(3);
+    // Metric context lives in the drawer groups, not on the value-only face.
+    withDrawer(screen.getByTestId('db-health-summary-0'), (dialog) => {
+      expect(within(dialog).getByRole('group', { name: 'Large tables' })).toHaveTextContent('> 100 MB');
+    });
+    withDrawer(screen.getByTestId('db-health-summary-1'), (dialog) => {
+      expect(within(dialog).getByRole('group', { name: 'Migration' })).toHaveTextContent('Clean');
+    });
     [1000, 2000, 3000].forEach((timestamp, index) => {
-      expect(screen.getByTestId(`db-health-summary-${index}`)).toHaveTextContent(
-        formatDateTime(new Date(timestamp), { locale: 'en-US', tz: 'UTC' }),
-      );
+      assertOperationalBriefDisclosure(screen.getByTestId(`db-health-summary-${index}`),
+        formatDateTime(new Date(timestamp), { locale: 'en-US', tz: 'UTC' }), { contains: true });
     });
   });
 
@@ -82,7 +108,7 @@ describe('DB health canonical summary preservation', () => {
     expect(screen.getByTestId('db-health-summary-0')).toHaveAttribute('aria-busy', 'true');
     assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Retained source', { contains: true });
     expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('185');
-    expect(screen.getByTestId('db-health-summary-2')).toHaveTextContent('Source loaded');
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-2'), 'Source loaded', { contains: true });
     expect(screen.getByTestId('db-health-summary-2').querySelector('[data-operational-value]')).toHaveTextContent('20.00%');
   });
 
@@ -100,9 +126,26 @@ describe('DB health canonical summary preservation', () => {
       stats={deriveDataState<DBStats>({})} sizeBytes={null} totalRows={null} largeTables={null}
       migration={deriveDataState<MigrationStatus>({})} migrationVersion="—" migrationDirty={null}
       pool={deriveDataState<ConnectionPool>({})} poolUsage={null} />);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    // Every tile is omitted; each brief shows the empty state and counts its
+    // hidden fields in the drawer (4 + 1 + 1 = 6 withheld readings).
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    [0, 1, 2].forEach((index) => {
+      expect(screen.getByTestId(`db-health-summary-${index}`)).toHaveTextContent('No metric values are available yet.');
+      assertOperationalBriefDisclosure(screen.getByTestId(`db-health-summary-${index}`), 'Last successful fetch time unknown', { contains: true });
+    });
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-0'), 'Total DB size');
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-1'), 'Migration');
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-2'), 'Pool usage');
+    withDrawer(screen.getByTestId('db-health-summary-0'), (dialog) => {
+      expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    });
+    withDrawer(screen.getByTestId('db-health-summary-1'), (dialog) => {
+      expect(within(dialog).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    });
+    withDrawer(screen.getByTestId('db-health-summary-2'), (dialog) => {
+      expect(within(dialog).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    });
     expect(screen.queryByText('Clean')).not.toBeInTheDocument();
-    expect(screen.getAllByText(/Last successful fetch time unknown/)).toHaveLength(3);
   });
   it('opens a real source review drawer while leaving the other independent briefs mounted', () => {
     renderSummary();
@@ -125,25 +168,49 @@ describe('DB health canonical summary preservation', () => {
     };
     const iso = vi.spyOn(Date.prototype, 'toISOString');
     const { container, client } = renderSummary(sources);
-    const before = timestamps.map((_, index) => screen.getByTestId(`db-health-summary-${index}`).textContent);
+    // Source dates live in the drawer headers now; snapshot them there so the
+    // settings-change reaction below compares the surface that shows them.
+    const headerText = (index: number): string | null => {
+      const brief = screen.getByTestId(`db-health-summary-${index}`);
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog');
+      const text = dialog.querySelector('[data-drawer-header]')?.textContent ?? null;
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      return text;
+    };
+    const before = [0, 1, 2].map(headerText);
     await act(async () => {
       client.setQueryData<AppSettings>(['settings'], { ...settings, locale, timezone_user: tz });
     });
     expect(client.getQueryData<AppSettings>(['settings'])).toMatchObject({ locale, timezone_user: tz });
     expect(client.getQueryCache().find({ queryKey: ['settings'] })?.getObserversCount()).toBeGreaterThan(0);
-    await waitFor(() => {
-      timestamps.forEach((timestamp, index) => {
-        const brief = screen.getByTestId(`db-health-summary-${index}`);
-        expect(brief).toHaveTextContent(`Last successful fetch: ${formatDateTime(timestamp, { locale, tz })}.`);
-        expect(brief).not.toHaveTextContent(timestamp);
-        expect(brief).toHaveTextContent('This source is independent of the other database sources.');
-        expect(brief).toHaveTextContent('Source loaded');
-        expect(brief.textContent).not.toBe(before[index]);
-      });
+    // Open each drawer once and wait for its live header to adopt the new
+    // locale; polling drawer open/close cycles never settles.
+    for (const [index, timestamp] of timestamps.entries()) {
+      const brief = screen.getByTestId(`db-health-summary-${index}`);
+      expect(brief).not.toHaveTextContent(timestamp);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog');
+      try {
+        const header = () => dialog.querySelector('[data-drawer-header]') as HTMLElement;
+        await waitFor(() => {
+          expect(header()).toHaveTextContent(`Last successful fetch: ${formatDateTime(timestamp, { locale, tz })}.`);
+        });
+        expect(header()).not.toHaveTextContent(timestamp);
+        expect(header()).toHaveTextContent('This source is independent of the other database sources.');
+        expect(header()).toHaveTextContent('Source loaded');
+        expect(header().textContent).not.toBe(before[index]);
+      } finally {
+        fireEvent.keyDown(dialog, { key: 'Escape' });
+      }
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    }
+    withDrawer(screen.getByTestId('db-health-summary-1'), (dialog) => {
+      expect((dialog.querySelector('[data-drawer-header]') as HTMLElement).textContent).toMatch(
+        locale === 'en-US' ? /AM|PM/ : /14:20|16:20/,
+      );
     });
-    expect(screen.getByTestId('db-health-summary-1').textContent).toMatch(
-      locale === 'en-US' ? /AM|PM/ : /14:20|16:20/,
-    );
     expect(iso.mock.results.filter(result => result.type === 'return').map(result => result.value))
       .toEqual(expect.arrayContaining(timestamps));
     expect([sources.stats.updatedAt, sources.migration.updatedAt, sources.pool.updatedAt])
@@ -162,8 +229,8 @@ describe('DB health canonical summary preservation', () => {
     });
     timestamps.forEach((timestamp, index) => {
       const brief = screen.getByTestId(`db-health-summary-${index}`);
-      expect(brief).toHaveTextContent(formatDateTime(timestamp, { locale: 'en-US', tz: 'UTC' }));
-      expect(brief).toHaveTextContent(index === 1 ? 'Refreshing source' : 'Retained source');
+      assertOperationalBriefDisclosure(brief, formatDateTime(timestamp, { locale: 'en-US', tz: 'UTC' }), { contains: true });
+      assertOperationalBriefDisclosure(brief, index === 1 ? 'Refreshing source' : 'Retained source', { contains: true });
     });
     expect(screen.getAllByText('Showing retained measurements')).toHaveLength(3);
     expect(screen.getByRole('alert')).toHaveTextContent('stats refresh failed');
@@ -176,33 +243,34 @@ describe('DB health canonical summary preservation', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2030-05-04T12:00:00.000Z'));
     const timestamp = '2026-10-13T01:05:00.000Z';
-    const { container } = renderSummary({
+    renderSummary({
       stats: deriveDataState({ data: stats, dataUpdatedAt: Date.parse(timestamp) }),
       migration: deriveDataState({ data: migration, error: new Error('migration refresh failed') }),
       pool: deriveDataState<ConnectionPool>({ error: new Error('pool unavailable'), dataUpdatedAt: Date.parse(timestamp) }),
       poolUsage: null,
     });
-    expect(screen.getByTestId('db-health-summary-0')).toHaveTextContent(formatDateTime(timestamp, { locale: 'en-US', tz: 'UTC' }));
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-0'), formatDateTime(timestamp, { locale: 'en-US', tz: 'UTC' }), { contains: true });
     [1, 2].forEach(index => {
       const brief = screen.getByTestId(`db-health-summary-${index}`);
-      expect(brief).toHaveTextContent('Last successful fetch time unknown; this source is independent');
+      assertOperationalBriefDisclosure(brief, 'Last successful fetch time unknown; this source is independent', { contains: true });
+      assertOperationalBriefDisclosure(brief, formatDateTime(timestamp, { locale: 'en-US', tz: 'UTC' }), { contains: true, absent: true });
+      assertOperationalBriefDisclosure(brief, '2030', { contains: true, absent: true });
       expect(brief).not.toHaveTextContent(formatDateTime(timestamp, { locale: 'en-US', tz: 'UTC' }));
       expect(brief).not.toHaveTextContent('2030');
     });
     assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Retained source', { contains: true });
     expect(screen.getByTestId('db-health-summary-1').querySelector('[data-operational-value]')).toHaveTextContent('185');
     assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-2'), 'Source unavailable', { contains: true });
-    expect(container.querySelector('[data-operational-metric="db-pool-usage"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-2'), 'Pool usage');
   });
 
   it('preserves query zero-as-unknown but formats an explicitly supplied epoch observation instead of treating it as missing', () => {
     const { rerender } = renderSummary({ stats: deriveDataState({ data: stats, dataUpdatedAt: 0 }) });
-    expect(screen.getByTestId('db-health-summary-0')).toHaveTextContent('Last successful fetch time unknown');
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-0'), 'Last successful fetch time unknown', { contains: true });
     rerender(<DBHealthSummary {...props} stats={{ ...props.stats, updatedAt: 0 }} />);
-    expect(screen.getByTestId('db-health-summary-0')).toHaveTextContent(
-      `Last successful fetch: ${formatDateTime(new Date(0), { locale: 'en-US', tz: 'UTC' })}.`,
-    );
-    expect(screen.getByTestId('db-health-summary-0')).not.toHaveTextContent('Last successful fetch time unknown');
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-0'),
+      `Last successful fetch: ${formatDateTime(new Date(0), { locale: 'en-US', tz: 'UTC' })}.`, { contains: true });
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-0'), 'Last successful fetch time unknown', { contains: true, absent: true });
   });
 
   it.each([NaN, Infinity, -Infinity, 8.64e15 + 1])(
@@ -212,13 +280,12 @@ describe('DB health canonical summary preservation', () => {
         stats: { ...props.stats, updatedAt },
       });
       const brief = screen.getByTestId('db-health-summary-0');
-      expect(brief).toHaveTextContent('Last successful fetch time unknown; this source is independent');
-      expect(brief).not.toHaveTextContent('Last successful fetch:');
+      assertOperationalBriefDisclosure(brief, 'Last successful fetch time unknown; this source is independent', { contains: true });
+      assertOperationalBriefDisclosure(brief, 'Last successful fetch:', { contains: true, absent: true });
       expect(brief.querySelector('[data-operational-value]')).toHaveTextContent('512.25 B');
       [2000, 3000].forEach((timestamp, index) => {
-        expect(screen.getByTestId(`db-health-summary-${index + 1}`)).toHaveTextContent(
-          formatDateTime(new Date(timestamp), { locale: 'en-US', tz: 'UTC' }),
-        );
+        assertOperationalBriefDisclosure(screen.getByTestId(`db-health-summary-${index + 1}`),
+          formatDateTime(new Date(timestamp), { locale: 'en-US', tz: 'UTC' }), { contains: true });
       });
       expect(screen.getAllByRole('button', { name: 'Review details' })).toHaveLength(3);
     },

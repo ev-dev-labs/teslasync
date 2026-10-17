@@ -35,7 +35,7 @@
  * computed via the SAME `@/lib/dateFormat` helpers the page uses, so the
  * suite is immune to the runner's locale / timezone.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, within, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -249,6 +249,20 @@ function refreshButtons(): HTMLElement[] {
   return screen.getAllByRole('button', { name: 'Refresh from Tesla' });
 }
 
+// Open the summary drawer's real Review-details dialog, run group/detail
+// assertions against it, then close it again.
+function withDrawer(strip: HTMLElement, assert: (dialog: HTMLElement) => void): void {
+  expect(screen.queryByRole('dialog'), 'Finish any open interaction before inspecting evidence').not.toBeInTheDocument();
+  fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    assert(dialog);
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-07-04T06:11:43Z'));
@@ -271,9 +285,18 @@ describe('TeslaAccountPage — shell', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Tesla account' }),
     ).toBeInTheDocument();
+    // The subtitle renders once in the page header; the summary brief keeps
+    // the same sentence as its drawer description, not a second face copy.
     expect(
       screen.getAllByText('Your Tesla account profile synced from the Fleet API'),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    withDrawer(screen.getByTestId('tesla-account-summary'), (dialog) => {
+      // The header description keeps the sentence (the narrative section
+      // repeats it as "what changed", so scope to the header).
+      const header = dialog.querySelector('[data-drawer-header]');
+      expect(header).not.toBeNull();
+      expect(within(header as HTMLElement).getByText('Your Tesla account profile synced from the Fleet API')).toBeInTheDocument();
+    });
     expect(mockUsePageTitle).toHaveBeenCalledWith('Tesla account');
   });
 });
@@ -284,15 +307,18 @@ describe('TeslaAccountPage — populated', () => {
     const strip = screen.getByTestId('tesla-account-summary');
     expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-stat-strip]')).toHaveLength(0);
-    expect(strip).toHaveTextContent('Fleet API profile snapshot');
-    expect(strip).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+    assertOperationalBriefDisclosure(strip, 'Fleet API profile snapshot');
+    assertOperationalBriefDisclosure(strip, `Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`, { contains: true });
     const tiles = [...strip.querySelectorAll('[data-operational-metric]')];
     expect(tiles.map(tile => tile.getAttribute('data-operational-metric'))).toEqual(['sync-status', 'account-id', 'member-since', 'last-updated']);
     expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent('#42');
-    expect(tiles[1]).toHaveTextContent('Fleet API identity');
-    expect(tiles[0]).toHaveTextContent(formatDateTime(FETCHED_AT, datePreferences));
-    expect(tiles[2]).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
-    expect(tiles[3]).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
+    // Metric context lives in the drawer groups, not on the value-only face.
+    withDrawer(strip, (dialog) => {
+      expect(within(dialog).getByRole('group', { name: 'Account ID' })).toHaveTextContent('Fleet API identity');
+      expect(within(dialog).getByRole('group', { name: 'Sync status' })).toHaveTextContent(formatDateTime(FETCHED_AT, datePreferences));
+      expect(within(dialog).getByRole('group', { name: 'Member since' })).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+      expect(within(dialog).getByRole('group', { name: 'Last updated' })).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
+    });
     for (const heading of ['Profile', 'Sync', 'Account details', 'Activity']) {
       expect(panel(heading)).toBeInTheDocument();
     }
@@ -320,7 +346,7 @@ describe('TeslaAccountPage — populated', () => {
     expect(refreshButtons()).toHaveLength(2);
     expect(refreshButtons().every((button) => !button.hasAttribute('disabled'))).toBe(true);
     assertOperationalBriefDisclosure(screen.getByTestId('tesla-account-summary'), 'Retained source data', { contains: true });
-    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(screen.getByTestId('tesla-account-summary'), 'Showing retained measurements', { contains: true });
     expect([...screen.getByTestId('tesla-account-summary').querySelectorAll('[data-operational-metric]')]
       .every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
   });
@@ -332,9 +358,12 @@ describe('TeslaAccountPage — populated', () => {
     // Sync status + account id.
     expect(within(band.querySelector('[data-operational-metric="sync-status"]') as HTMLElement).getByText('Synced')).toBeInTheDocument();
     expect(within(band).getByText('#42')).toBeInTheDocument();
-    // Sync-status subtitle = relative fetched_at; last-updated value = relative
-    // updated_at. Distinct, deterministic strings under the pinned clock.
-    expect(within(band).getByText(formatRelative(FETCHED_AT))).toBeInTheDocument();
+    // Sync-status context = relative fetched_at (drawer group); last-updated
+    // value = relative updated_at (face). Distinct, deterministic strings
+    // under the pinned clock.
+    withDrawer(band, (dialog) => {
+      expect(within(dialog).getByRole('group', { name: 'Sync status' })).toHaveTextContent(formatRelative(FETCHED_AT));
+    });
     expect(
       within(band).getByText(formatRelative(PROFILE.updated_at)),
     ).toBeInTheDocument();
@@ -457,12 +486,16 @@ describe('TeslaAccountPage — refresh + retry interactions', () => {
         asOf ? `/tesla-account?as_of=${encodeURIComponent(asOf)}` : '/tesla-account');
       const buttons = refreshButtons();
       expect(buttons).toHaveLength(3);
+      // Header + sync-centre refreshes are icon-only; the empty-profile CTA
+      // keeps its labelled touch target and the write-block reason tooltip.
+      const labelled = within(panel('Profile')).getByRole('button', { name: 'Refresh from Tesla' });
+      expect(labelled).toHaveClass('min-h-11');
+      expect(buttons.filter((button) => button !== labelled)).toHaveLength(2);
       for (const button of buttons) {
-        expect(button).toHaveClass('min-h-11');
+        if (button !== labelled) expect(button).toHaveClass('h-9', 'w-9');
         if (reason) {
           expect(button).toBeDisabled();
           expect(button).not.toHaveAttribute('aria-busy');
-          expect(button).toHaveAttribute('title', reason);
         } else {
           expect(button).toBeEnabled();
         }
@@ -470,6 +503,7 @@ describe('TeslaAccountPage — refresh + retry interactions', () => {
       }
       expect(mutation.mutate).toHaveBeenCalledTimes(reason ? 0 : 3);
       if (reason) {
+        expect(labelled).toHaveAttribute('title', reason);
         expect(screen.getByText('Operational changes are read-only')).toBeInTheDocument();
         expect(screen.getByText(reason)).toBeInTheDocument();
       } else {
@@ -547,7 +581,7 @@ describe('TeslaAccountPage — refresh + retry interactions', () => {
       expect(panel('Profile')).toHaveTextContent(PROFILE.full_name);
       expect(panel('Account details')).toHaveTextContent(PROFILE.email);
       expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
-      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      assertOperationalBriefDisclosure(kpiBand(), `Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`, { contains: true });
       expect(refreshButtons()).toHaveLength(2);
       expect(refreshButtons().every(button => button.hasAttribute('disabled'))).toBe(true);
       const recover = within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' });
@@ -676,7 +710,7 @@ describe('TeslaAccountPage — loading + empty branches', () => {
     // Canonical summary retains four loading tiles, not measured zeroes.
     const loadingStrip = kpiBand();
     expect(loadingStrip).toHaveAttribute('aria-busy', 'true');
-    expect(loadingStrip).toHaveTextContent('Loading sources');
+    assertOperationalBriefDisclosure(loadingStrip, 'Loading sources', { contains: true });
     expect(loadingStrip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect([...loadingStrip.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true);
     expect(loadingStrip.querySelectorAll('[data-operational-value]')).toHaveLength(0);
@@ -693,9 +727,12 @@ describe('TeslaAccountPage — loading + empty branches', () => {
     setup(makeQuery({ data: envelope(null, null) }));
     const band = kpiBand();
 
-    // KPI band shows the "never synced" copy and em-dash placeholders — never blank.
+    // KPI band shows the "never synced" value; unknown readings are omitted
+    // tiles with a counted drawer explanation — never blank, never invented.
     expect(within(band.querySelector('[data-operational-metric="sync-status"]') as HTMLElement).getByText('Never synced')).toBeInTheDocument();
-    expect(within(band).getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    assertOperationalMetricUnavailable(band, 'Account ID');
+    assertOperationalMetricUnavailable(band, 'Member since');
+    assertOperationalMetricUnavailable(band, 'Last updated');
 
     // Every section keeps a visible empty state.
     expect(within(panel('Profile')).getByText('No profile synced yet')).toBeInTheDocument();
@@ -716,8 +753,8 @@ describe('TeslaAccountPage — null-safety + a11y', () => {
       }),
     );
 
-    // Account id collapses to the placeholder rather than "#null" or a crash.
-    expect(within(kpiBand()).getByText('—')).toBeInTheDocument();
+    // Account id collapses to an omitted tile rather than "#null" or a crash.
+    assertOperationalMetricUnavailable(kpiBand(), 'Account ID');
     expect(within(panel('Account details')).getByText('—')).toBeInTheDocument();
     // The rest of the page still renders.
     expect(within(panel('Profile')).getByText('driver@example.com')).toBeInTheDocument();
@@ -766,8 +803,8 @@ describe('TeslaAccountPage — restrained adoption', () => {
       expect(screen.queryByText('Never synced')).not.toBeInTheDocument();
       expect(screen.queryByText('No account activity to show yet.')).not.toBeInTheDocument();
       expect(within(panel('Sync')).getByText('Unknown')).toBeInTheDocument();
-      expect(kpiBand()).toHaveTextContent('Source values unknown');
-      expect(kpiBand().querySelector('[data-operational-metric="sync-status"]')).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalBriefDisclosure(kpiBand(), 'Source values unknown', { contains: true });
+      assertOperationalMetricUnavailable(kpiBand(), 'Sync status');
       expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
     });
 
@@ -778,9 +815,9 @@ describe('TeslaAccountPage — restrained adoption', () => {
       expect(hero.getByText('Unknown').querySelector('span')).toHaveClass('bg-[var(--text-secondary)]');
       expect(hero.getByText(PROFILE.email)).toBeInTheDocument();
       expect(within(panel('Sync')).getByText('Unknown')).toBeInTheDocument();
-      expect(kpiBand()).toHaveTextContent('Unknown');
-      expect(kpiBand()).toHaveTextContent('freshness is unknown');
-      expect(kpiBand().querySelector('[data-operational-metric="sync-status"]')).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalBriefDisclosure(kpiBand(), 'Unknown');
+      assertOperationalBriefDisclosure(kpiBand(), 'freshness is unknown', { contains: true });
+      assertOperationalMetricUnavailable(kpiBand(), 'Sync status');
       expect(screen.queryByText('Never synced')).not.toBeInTheDocument();
       expect(screen.queryByText('Synced')).not.toBeInTheDocument();
       expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
@@ -798,7 +835,7 @@ describe('TeslaAccountPage — restrained adoption', () => {
       setup(makeQuery({ data: envelope({ ...PROFILE, fetched_at: null as unknown as string }, FETCHED_AT) }));
       expect(within(panel('Profile')).getByText('Synced')).toBeInTheDocument();
       expect(within(panel('Sync')).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
-      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      assertOperationalBriefDisclosure(kpiBand(), `Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`, { contains: true });
       expect(within(panel('Account details')).getByText('—')).toBeInTheDocument();
       expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
     });
@@ -812,7 +849,7 @@ describe('TeslaAccountPage — restrained adoption', () => {
       expect(within(panel('Account details')).getByText(PROFILE.email)).toBeInTheDocument();
       expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
       assertOperationalBriefDisclosure(kpiBand(), 'Retained source data', { contains: true });
-      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      assertOperationalBriefDisclosure(kpiBand(), `Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`, { contains: true });
       fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
       expect(query.refetch).toHaveBeenCalledOnce();
       expect(mutation.mutate).not.toHaveBeenCalled();
@@ -831,10 +868,12 @@ describe('TeslaAccountPage — restrained adoption', () => {
       expect(rows[2]).toHaveTextContent(formatDateTime(FETCHED_AT, datePreferences));
       expect(panel('Activity')).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
       expect(kpiBand()).toHaveTextContent(formatDate(PROFILE.created_at, datePreferences));
-      expect(kpiBand()).toHaveTextContent(formatRelative(PROFILE.created_at, datePreferences));
-      expect(kpiBand()).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
-      expect(kpiBand()).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
-      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      withDrawer(kpiBand(), (dialog) => {
+        expect(within(dialog).getByRole('group', { name: 'Member since' })).toHaveTextContent(formatRelative(PROFILE.created_at, datePreferences));
+        expect(within(dialog).getByRole('group', { name: 'Member since' })).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+        expect(within(dialog).getByRole('group', { name: 'Last updated' })).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
+      });
+      assertOperationalBriefDisclosure(kpiBand(), `Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`, { contains: true });
       expect(PROFILE.fetched_at).toBe(FETCHED_AT);
       expect(PROFILE.id).toBe(42);
     });
@@ -843,11 +882,12 @@ describe('TeslaAccountPage — restrained adoption', () => {
       setup(makeQuery({ data: envelope(null, null) }));
       const buttons = refreshButtons();
       expect(buttons).toHaveLength(3);
-      for (const button of [buttons[0], within(panel('Profile')).getByRole('button', { name: 'Refresh from Tesla' })]) {
-        expect(button).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0', 'whitespace-normal');
-      }
-      expect(within(panel('Sync')).getByRole('button', { name: 'Refresh from Tesla' })).toHaveClass('w-full', 'min-h-11');
-      expect(within(panel('Sync')).getByRole('button', { name: 'Refresh from Tesla' })).not.toHaveClass('md:min-h-10');
+      // Header + sync-centre refreshes are icon-only; only the empty-profile
+      // CTA keeps the labelled-button minimums.
+      expect(buttons[0]).toHaveClass('h-9', 'w-9');
+      expect(within(panel('Profile')).getByRole('button', { name: 'Refresh from Tesla' }))
+        .toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0', 'whitespace-normal');
+      expect(within(panel('Sync')).getByRole('button', { name: 'Refresh from Tesla' })).toHaveClass('h-9', 'w-9');
     });
   });
 

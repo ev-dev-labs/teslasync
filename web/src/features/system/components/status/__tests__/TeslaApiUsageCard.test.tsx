@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +17,18 @@ vi.mock('@/hooks/useSettings', async importOriginal => ({
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicle: { timezone: 'Asia/Tokyo' } }),
 }))
+
+// The global timezone double drops the vehicle tz (it resolves with a bare
+// render's undefined vehicle); restore the faithful vehicle-tz resolution
+// this card's vehicle-mode dates require.
+vi.mock('@/lib/timezone', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return {
+    ...actual,
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') =>
+      actual.resolveTimezone(mode, 'Asia/Tokyo', settings.timezone_user),
+  };
+})
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ formatCurrency: (value: number) => `${settings.currency_symbol}${value.toFixed(2)}` }),
@@ -51,8 +64,8 @@ describe('Tesla Fleet usage estimate', () => {
     const original = structuredClone(usage)
     render(<MemoryRouter><TeslaApiUsageCard apiUsage={usage} now={0} compact={compact} /></MemoryRouter>)
 
-    expect(within(screen.getByRole('region', { name: 'Cycle usage evidence' }))
-      .getByText('31. Aug. 2026 – 30. Sept. 2026 America/Los_Angeles')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Cycle usage evidence' }),
+      '31. Aug. 2026 – 30. Sept. 2026 America/Los_Angeles')
     if (!compact) {
       expect(screen.getByText('30. Sept. 2026 (America/Los_Angeles)')).toBeInTheDocument()
       expect(screen.getByText(/1\. Aug\. 2026 – 31\. Aug\. 2026/)).toBeInTheDocument()
@@ -85,8 +98,7 @@ describe('Tesla Fleet usage estimate', () => {
     Object.assign(brokenUsage.current, { start: value, end: value })
     Object.assign(brokenUsage.history[0], { start: value, end: value })
     renderCard(brokenUsage)
-    expect(within(screen.getByRole('region', { name: 'Cycle usage evidence' }))
-      .getByText('— – — UTC')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Cycle usage evidence' }), '— – — UTC')
     expect(screen.getByText('— (UTC)')).toBeInTheDocument()
     expect(screen.getByText('— – — · 0 events')).toBeInTheDocument()
     expect(screen.queryByText(/Invalid Date|1970/)).not.toBeInTheDocument()
@@ -127,14 +139,14 @@ describe('Tesla Fleet usage estimate', () => {
     expect(screen.getByText('Data requests · 500 / $1')).toBeInTheDocument()
     expect(screen.getByText('Wakes · 50 / $1')).toBeInTheDocument()
     expect(screen.getByText('$0.00')).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Cycle usage evidence' })).getAllByText(/not a Tesla invoice/).length).toBeGreaterThan(0)
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Cycle usage evidence' }), 'not a Tesla invoice', { contains: true })
     expect(screen.queryByText(/monthly credit/)).not.toBeInTheDocument()
   })
   it('keeps status concise and links to the dedicated page, including when usage is unavailable', () => {
     const { rerender } = render(<MemoryRouter><TeslaApiUsageCard apiUsage={usage} now={0} compact /></MemoryRouter>)
     expect(screen.getByRole('link', { name: 'Explore Tesla API usage' })).toHaveAttribute('href', '/tesla-api-usage')
     expect(screen.queryByText('Prior 30-day cycles')).not.toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Cycle usage evidence' })).getAllByText(/not a Tesla invoice/).length).toBeGreaterThan(0)
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Cycle usage evidence' }), 'not a Tesla invoice', { contains: true })
     rerender(<MemoryRouter><TeslaApiUsageCard apiUsage={undefined} now={0} compact error={new Error('offline')} /></MemoryRouter>)
     expect(screen.getByRole('link', { name: 'Explore Tesla API usage' })).toHaveAttribute('href', '/tesla-api-usage')
     expect(screen.getByText(/could not be loaded/)).toBeInTheDocument()

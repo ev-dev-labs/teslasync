@@ -23,6 +23,7 @@
  * internals.
  */
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -197,6 +198,15 @@ function renderPage() {
   );
 }
 
+// The overview region hosts two untagged briefs (range/page counts first,
+// event-type mix second); scope disclosure assertions to each in order.
+function overviewBriefs(): HTMLElement[] {
+  const overview = screen.getByRole('region', { name: 'Activity overview' });
+  const briefs = [...overview.querySelectorAll<HTMLElement>('[data-operational-brief]')];
+  expect(briefs).toHaveLength(2);
+  return briefs;
+}
+
 function SharedRangeProbe() {
   const range = useRangeState({ enableCompare: true });
   return (
@@ -278,8 +288,8 @@ describe('ActivityTimelinePage preferences', () => {
       end: '2026-03-09T04:00:00.000Z',
     }));
     // Both events are Sunday in the shared zone, but straddle Saturday/Sunday in the vehicle zone.
-    expect(screen.getByRole('heading', { level: 3, name: /March 8, 2026/ })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 3, name: /March 7, 2026/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /Mar 8, 2026/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: /Mar 7, 2026/ })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Days on this page1');
     fireEvent.click(screen.getByTestId('activity-export-json'));
     expect(h.downloadJson).toHaveBeenCalledWith(
@@ -300,13 +310,13 @@ describe('ActivityTimelinePage preferences', () => {
       data: { items, total: 75, limit: 50, offset: 0, generated_at: '' },
     }));
     const view = renderPage();
-    expect(screen.getByRole('heading', { level: 3, name: /January 15, 2026/ })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: /January 16, 2026/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /Jan 15, 2026/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /Jan 16, 2026/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^older$/i }));
     h.range.timezone = 'America/Los_Angeles';
     view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
-    expect(screen.getByRole('heading', { level: 3, name: /January 15, 2026/ })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 3, name: /January 16, 2026/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /Jan 15, 2026/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: /Jan 16, 2026/ })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Days on this page1');
     expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
       start: '2026-01-15T12:34:00.000Z',
@@ -564,7 +574,9 @@ describe('ActivityTimelinePage fleet prerequisites', () => {
     renderPage();
     expect(screen.queryByTestId('no-vehicle-selected')).not.toBeInTheDocument();
     expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }));
-    expect(within(screen.getByRole('region', { name: 'Activity overview' })).getAllByText('Loading source')).toHaveLength(2);
+    const fleetBriefs = overviewBriefs();
+    assertOperationalBriefDisclosure(fleetBriefs[0], 'Loading source');
+    assertOperationalBriefDisclosure(fleetBriefs[1], 'Loading source');
     expect(screen.queryByText(/no activity in this window/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/showing 0–0 of 0 events/i)).not.toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Filter by activity kind' })).toBeInTheDocument();
@@ -580,7 +592,7 @@ describe('ActivityTimelinePage fleet prerequisites', () => {
     h.useActivityMock.mockReturnValue(mockQueryResult({ data: undefined, isPending: true }));
     const view = renderPage();
     expect(screen.queryByTestId('no-vehicle-selected')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range—');
+    assertOperationalMetricUnavailable(overviewBriefs()[0], 'Events in selected range');
     expect(screen.getByRole('group', { name: 'Filter by activity kind' })).toBeInTheDocument();
     expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
@@ -612,7 +624,10 @@ describe('ActivityTimelinePage fleet prerequisites', () => {
     expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: true, vehicle_id: 7 }));
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Vehicle registry may be out of date');
     expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range75');
-    expect(screen.getByRole('link', { name: /0\.0 h · 2\.5 kWh · 12 min/ })).toHaveAttribute('href', '/drives/1');
+    // TimelineItem links the title only (keeping metadata outside the link);
+    // the measurements stay visible as the row subtitle.
+    expect(screen.getByRole('link', { name: 'Drive' })).toHaveAttribute('href', '/drives/1');
+    expect(screen.getByText('0.0 h · 2.5 kWh · 12 min')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^older$/i })).toBeEnabled();
     expect(screen.getByTestId('activity-export-trigger')).toBeEnabled();
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: /^refresh$/i }));
@@ -786,7 +801,7 @@ describe('ActivityTimelinePage', () => {
   it('does not present unknown totals or an available export when the initial request fails', () => {
     h.useActivityMock.mockReturnValue(mockQueryResult({ isError: true, error: new Error('failed'), data: undefined }));
     renderPage();
-    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range—');
+    assertOperationalMetricUnavailable(overviewBriefs()[0], 'Events in selected range');
     expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
   });
 
@@ -801,7 +816,7 @@ describe('ActivityTimelinePage', () => {
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range75');
     expect(screen.getByText('0.0 h · 2.5 kWh · 12 min')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /0\.0 h · 2\.5 kWh · 12 min/ })).toHaveAttribute('href', '/drives/1');
+    expect(screen.getByRole('link', { name: 'Drive' })).toHaveAttribute('href', '/drives/1');
     expect(screen.getByText('Completed')).toBeInTheDocument();
     expect(screen.getByText('Source: Driving history')).toBeInTheDocument();
     expect(screen.getByTestId('activity-export-trigger')).toBeEnabled();
@@ -830,8 +845,9 @@ describe('ActivityTimelinePage', () => {
       fetchStatus: 'fetching',
     }));
     const view = renderPage();
-    expect(within(screen.getByRole('region', { name: 'Activity overview' }))
-      .getAllByText('Loading source')).toHaveLength(2);
+    const loadingBriefs = overviewBriefs();
+    assertOperationalBriefDisclosure(loadingBriefs[0], 'Loading source');
+    assertOperationalBriefDisclosure(loadingBriefs[1], 'Loading source');
     expect(screen.queryByText(/no activity in this window/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/showing 0–0 of 0 events/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
@@ -843,8 +859,9 @@ describe('ActivityTimelinePage', () => {
       fetchStatus: 'paused',
     }));
     view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
-    expect(within(screen.getByRole('region', { name: 'Activity overview' }))
-      .getAllByText('Loading source')).toHaveLength(2);
+    const pausedBriefs = overviewBriefs();
+    assertOperationalBriefDisclosure(pausedBriefs[0], 'Loading source');
+    assertOperationalBriefDisclosure(pausedBriefs[1], 'Loading source');
     expect(screen.queryByText(/no activity in this window/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/showing 0–0 of 0 events/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
@@ -859,11 +876,14 @@ describe('ActivityTimelinePage', () => {
     }));
     const view = renderPage();
     const overview = screen.getByRole('region', { name: 'Activity overview' });
-    expect(within(overview).getAllByText('Retained source')).toHaveLength(2);
+    const retainedBriefs = overviewBriefs();
+    assertOperationalBriefDisclosure(retainedBriefs[0], 'Retained source');
+    assertOperationalBriefDisclosure(retainedBriefs[1], 'Retained source');
     expect(within(overview).queryByText('Source available')).not.toBeInTheDocument();
     expect(overview).toHaveTextContent('Events in selected range75');
-    expect(screen.getByRole('link', { name: /0\.0 h · 2\.5 kWh · 12 min/ }))
+    expect(screen.getByRole('link', { name: 'Drive' }))
       .toHaveAttribute('href', '/drives/1');
+    expect(screen.getByText('0.0 h · 2.5 kWh · 12 min')).toBeInTheDocument();
     expect(screen.getByTestId('activity-export-trigger')).toBeEnabled();
     expect(screen.getByRole('button', { name: /older/i })).toBeEnabled();
     fireEvent.click(screen.getByTestId('activity-export-json'));
@@ -875,7 +895,9 @@ describe('ActivityTimelinePage', () => {
       data: { items: [item], total: 75, limit: 50, offset: 0, generated_at: '' },
     }));
     view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
-    expect(within(overview).getAllByText('Source available')).toHaveLength(2);
+    const recoveredBriefs = overviewBriefs();
+    assertOperationalBriefDisclosure(recoveredBriefs[0], 'Source available');
+    assertOperationalBriefDisclosure(recoveredBriefs[1], 'Source available');
     expect(within(overview).queryByText('Retained source')).not.toBeInTheDocument();
   });
 

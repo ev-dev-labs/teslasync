@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -21,6 +21,20 @@ vi.mock('@/hooks/useSettings', async importOriginal => ({
 }));
 
 afterEach(cleanup);
+
+// Open the brief's real Review-details dialog, run assertions against it,
+// then close it again.
+function withDrawer(strip: HTMLElement, assert: (dialog: HTMLElement) => void): void {
+  expect(screen.queryByRole('dialog'), 'Finish any open interaction before inspecting evidence').not.toBeInTheDocument();
+  fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    assert(dialog);
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
 const measurements: readonly StatMetric[] = [
   { metricId: 'count', occurrenceId: 'count', rawValue: 0, label: 'Count', context: 'Loaded rows only' },
   { metricId: 'bytes', occurrenceId: 'bytes', rawValue: 2048, label: 'Recorded bytes' },
@@ -44,7 +58,7 @@ describe('system source summaries use the real raw bridge and review drawer', ()
     expect(result.current.map(metric => metric.valueState)).toEqual(['value', 'value', 'missing']);
     const { container } = render(<MemoryRouter><SystemSummaryBrief {...props} /></MemoryRouter>);
     expect(container.querySelector('[data-operational-metric="count"]')).toHaveAttribute('data-value-state', 'value');
-    expect(container.querySelector('[data-operational-metric="gap"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(container.querySelector('[data-operational-brief]'), 'Gap');
     expect(container.querySelector('[data-operational-metric="bytes"] [data-operational-value]')).toHaveTextContent('2.00 KB');
   });
 
@@ -53,7 +67,10 @@ describe('system source summaries use the real raw bridge and review drawer', ()
       textMetrics={[{ key: 'type', label: 'Most exported', value: 'drives', detail: 'By count' }]} /></MemoryRouter>);
     assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(container.querySelector('[data-operational-metric="count"] [data-operational-value]')).toHaveTextContent('0');
-    expect(screen.getByText('By count')).toBeInTheDocument();
+    // The text metric's label/value stay on the face; its detail moved into
+    // the drawer group (asserted below).
+    expect(container.querySelector('[data-operational-metric="type"] [data-operational-value]')).toHaveTextContent('drives');
+    expect(within(container.querySelector('[data-operational-metric="type"]') as HTMLElement).getByText('Most exported')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(within(drawer).getByRole('region', { name: 'How this was calculated' }))
@@ -69,7 +86,16 @@ describe('system source summaries use the real raw bridge and review drawer', ()
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     rerender(<MemoryRouter><SystemSummaryBrief {...props} available={false}
       metrics={measurements.map(metric => ({ ...metric, rawValue: null }))} /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    // Unknown readings are omitted tiles with a counted drawer explanation.
+    const brief = container.querySelector('[data-operational-brief]') as HTMLElement;
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+    assertOperationalMetricUnavailable(brief, 'Count');
+    assertOperationalMetricUnavailable(brief, 'Recorded bytes');
+    assertOperationalMetricUnavailable(brief, 'Gap');
+    withDrawer(brief, (dialog) => {
+      expect(within(dialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    });
     assertOperationalBriefDisclosure(document.body, 'Source unavailable');
   });
 });

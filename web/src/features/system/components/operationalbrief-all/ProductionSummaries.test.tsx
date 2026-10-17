@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -14,8 +15,27 @@ import type { ActivityItem } from '@/types/activity';
 vi.mock('react-i18next', async importOriginal => ({
   ...await importOriginal<typeof import('react-i18next')>(),
   useTranslation: () => ({
-    t: (key: string, fallback: string, vars?: Record<string, unknown>) =>
-      (fallback ?? key).replace(/{{(\w+)}}/g, (match, name: string) => vars && name in vars ? String(vars[name]) : match),
+    // Support every call form the subjects use: (key, fallback, vars),
+    // (key, vars with defaultValue), and counted plurals.
+    t: (key: string, fallback?: unknown, opts?: unknown) => {
+      const template = typeof fallback === 'string' ? fallback : key;
+      const vars = (
+        opts && typeof opts === 'object'
+          ? opts
+          : fallback && typeof fallback === 'object'
+            ? fallback
+            : undefined
+      ) as Record<string, unknown> | undefined;
+      let resolved = template;
+      if (vars && typeof vars.defaultValue === 'string') resolved = vars.defaultValue;
+      if (vars && typeof vars.count === 'number') {
+        if (vars.count === 1 && typeof vars.defaultValue_one === 'string') resolved = vars.defaultValue_one;
+        else if (typeof vars.defaultValue_other === 'string') resolved = vars.defaultValue_other;
+      }
+      if (!vars) return resolved;
+      return resolved.replace(/{{(\w+)}}/g, (match, name: string) =>
+        name in vars ? String(vars[name]) : match);
+    },
   }),
 }));
 vi.mock('@/hooks/useSettings', async importOriginal => ({
@@ -26,6 +46,20 @@ vi.mock('@/hooks/useSettings', async importOriginal => ({
   }, settingsUnavailable: false }),
 }));
 afterEach(cleanup);
+
+// Open one brief's real Review-details dialog, run assertions against it,
+// then close it again.
+function withDrawer(strip: HTMLElement, assert: (dialog: HTMLElement) => void): void {
+  expect(screen.queryByRole('dialog'), 'Finish any open interaction before inspecting evidence').not.toBeInTheDocument();
+  fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    assert(dialog);
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
 
 const item: ActivityItem = {
   id: 'alerts:1', kind: 'alert', severity: 'critical', occurred_at: '2026-01-15T12:00:00Z',
@@ -45,33 +79,58 @@ describe('retained production summary contracts', () => {
     expect(container.querySelector('[data-operational-metric="range-total"] [data-operational-value]')).toHaveTextContent('75');
     expect(container.querySelector('[data-operational-metric="page-events"] [data-operational-value]')).toHaveTextContent('1');
     expect(container.querySelector('[data-operational-metric="alert"] [data-operational-value]')).toHaveTextContent('1');
-    expect(screen.getAllByText('Retained source')).toHaveLength(2);
+    const briefs = [...container.querySelectorAll('[data-operational-brief]')];
+    assertOperationalBriefDisclosure(briefs[0], 'Retained source');
+    assertOperationalBriefDisclosure(briefs[1], 'Retained source');
     fireEvent.click(within(screen.getByRole('region', { name: 'Range and page counts' })).getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog', { name: 'Range and page counts details' })).getByText('2026-01-01 – 2026-02-01', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
   });
 
   it('distinguishes unavailable personal activity from successful empty activity without hiding labels', () => {
     const { container, rerender } = render(<MemoryRouter><MyActivityKpiBand isLoading={false} available={false} /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    // All five readings are omitted tiles with a counted drawer explanation.
+    const brief = container.querySelector('[data-operational-brief]') as HTMLElement;
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+    assertOperationalMetricUnavailable(brief, 'Total actions');
+    assertOperationalMetricUnavailable(brief, 'Active days');
+    assertOperationalMetricUnavailable(brief, 'Action types');
+    assertOperationalMetricUnavailable(brief, 'Entities touched');
+    assertOperationalMetricUnavailable(brief, 'Last active');
+    withDrawer(brief, (dialog) => {
+      expect(within(dialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    });
     rerender(<MemoryRouter><MyActivityKpiBand isLoading={false}
       kpis={{ total: 0, activeDays: 0, actionTypes: 0, entitiesTouched: 0, lastActivityTs: null }} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
     expect(container.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('0');
-    expect(container.querySelector('[data-operational-metric="last-active"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(container.querySelector('[data-operational-brief]'), 'Last active');
   });
 
   it('preserves repair hints, scan-limit warning, and the source-specific blocked meaning', () => {
-    const { container } = render(<MemoryRouter>
+    const { container, rerender } = render(<MemoryRouter>
       <RepairCaseStats />
       <RepairDiagnosisOverview totalSuggestions={0} driveSuggestions={0} chargingSuggestions={0} blocked={null} truncated />
     </MemoryRouter>);
-    expect(container.querySelector('[data-operational-metric="case-3"]')).toHaveAttribute('data-value-state', 'missing');
+    const repairBriefs = [...container.querySelectorAll('[data-operational-brief]')];
+    assertOperationalMetricUnavailable(repairBriefs[0], 'Active cases');
     expect(container.querySelector('[data-operational-metric="suggestions"] [data-operational-value]')).toHaveTextContent('0');
-    expect(container.querySelector('[data-operational-metric="blocked"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('Active review workload')).toBeInTheDocument();
-    expect(screen.getAllByText(/scan hit its per-request limit/)).toHaveLength(2);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Review details' })[0]);
-    expect(within(screen.getByRole('dialog')).getByText('Active review workload')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(repairBriefs[1], 'Blocked');
+    // The hint lives in the case-stats drawer group; the truncated scope
+    // lives in the diagnosis drawer header while the callout keeps one face
+    // copy.
+    expect(screen.getAllByText(/scan hit its per-request limit/)).toHaveLength(1);
+    assertOperationalBriefDisclosure(repairBriefs[1], 'scan hit its per-request limit', { contains: true });
+    // The unknown tile's hint has no drawer group under the visible-metrics
+    // contract; pin the measured tile's hint with a populated render.
+    rerender(<MemoryRouter>
+      <RepairCaseStats statistics={{ total: 3, open: 2, in_review: 1, quarantined: 0 }} />
+      <RepairDiagnosisOverview totalSuggestions={0} driveSuggestions={0} chargingSuggestions={0} blocked={null} truncated />
+    </MemoryRouter>);
+    expect(container.querySelector('[data-operational-metric="case-3"] [data-operational-value]')).toHaveTextContent('3');
+    withDrawer(container.querySelectorAll('[data-operational-brief]')[0] as HTMLElement, (dialog) => {
+      expect(within(dialog).getByRole('group', { name: 'Active cases' })).toHaveTextContent('Active review workload');
+    });
   });
 
   it('keeps SI range and temperature display and distinguishes false access state from missing readings', () => {
@@ -90,14 +149,22 @@ describe('retained production summary contracts', () => {
     expect(container.querySelector('[data-operational-metric="cabin"] [data-operational-value]')).toHaveTextContent('21°C');
     expect(container.querySelector('[data-operational-metric="access"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-operational-metric="access"] [data-operational-value]')).toHaveTextContent('Unlocked');
-    expect(screen.getByText(/Retained source/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(container.querySelector('[data-operational-brief]'), 'Retained source', { contains: true });
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getByText('400 km')).toBeInTheDocument();
   });
 
   it('keeps genuine empty worker denominators at zero while unavailable health is missing', () => {
     const { container, rerender } = render(<MemoryRouter><BackgroundWorkersCard health={undefined} /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    const workerBrief = container.querySelector('[data-operational-brief]') as HTMLElement;
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(workerBrief).toHaveTextContent('No metric values are available yet.');
+    assertOperationalMetricUnavailable(workerBrief, 'Worker types');
+    assertOperationalMetricUnavailable(workerBrief, 'Instances');
+    assertOperationalMetricUnavailable(workerBrief, 'Replicated');
+    withDrawer(workerBrief, (dialog) => {
+      expect(within(dialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    });
     rerender(<MemoryRouter><BackgroundWorkersCard health={{ workers: [], total: 0, healthy_count: 0 }} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
     expect(container.querySelector('[data-operational-metric="instances"] [data-operational-value]')).toHaveTextContent('0/0');
@@ -110,7 +177,7 @@ describe('retained production summary contracts', () => {
     expect(screen.getByText('Commands · 1,000 / $1')).toBeInTheDocument();
     expect(screen.getByText('Data requests · 500 / $1')).toBeInTheDocument();
     expect(screen.getByText('Wakes · 50 / $1')).toBeInTheDocument();
-    expect(screen.getByText(/Retained source/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(container.querySelector('[data-operational-brief]'), 'Retained source', { contains: true });
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getByText('1,550')).toBeInTheDocument();
     expect(within(screen.getByRole('dialog')).getAllByText(/not a Tesla invoice/).length).toBeGreaterThan(0);
