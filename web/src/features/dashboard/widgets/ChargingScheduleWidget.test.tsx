@@ -38,7 +38,7 @@
  * widget is rendered inside a MemoryRouter because the shared feedback
  * components it composes may reach for router context.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -420,7 +420,8 @@ describe('ChargingScheduleWidget — states', () => {
     );
     renderWidget();
     expect(screen.getByRole('button', { name: 'Refresh data · Error' }).querySelector('[class*="--semantic-danger"]')).not.toBeNull();
-    expect(screen.getAllByRole('button', { name: /refresh/i })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /refresh/i })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(screen.getByText('Charging schedule unavailable')).toBeInTheDocument();
     expect(screen.getByText('64%')).toBeInTheDocument();
   });
@@ -455,7 +456,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     expect(within(brief).getByText('0%')).toBeInTheDocument();
     expect(within(brief).getByText('Status')).toBeInTheDocument();
     expect(within(brief).getByText('Not charging')).toBeInTheDocument();
-    expect(brief).toHaveTextContent('Vehicle 42 · returned state snapshot');
+    assertOperationalBriefDisclosure(brief, 'Vehicle 42 · returned state snapshot', { contains: true });
     expect(screen.getByText('Depart by')).toBeInTheDocument();
     expect(screen.getByText('Pending')).toBeInTheDocument();
 
@@ -466,7 +467,8 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     rerender(<MemoryRouter><ChargingScheduleWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
     expect(capturedBrief.metrics.map(metric => metric.rawValue)).toEqual([null, null]);
     expect(capturedBrief.metrics.map(metric => metric.valueState)).toEqual(['missing', 'missing']);
-    expect(within(brief).getAllByText('—')).toHaveLength(2);
+    assertOperationalMetricUnavailable(brief, 'Current level');
+    assertOperationalMetricUnavailable(brief, 'Status');
     expect(within(brief).getByText('Status')).toBeInTheDocument();
     expect(within(brief).queryByText('Not charging')).toBeNull();
     expect(within(brief).queryByText('0%')).toBeNull();
@@ -487,7 +489,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     }));
     const { container, rerender } = renderWidget({ cols: 2, rows: 2 });
     const brief = screen.getByTestId('dashboard-charging-schedule-context-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained readings');
     expect(within(brief).getByText('0%')).toBeInTheDocument();
     expect(within(brief).getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText('Start at')).toBeInTheDocument();
@@ -619,7 +621,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Not charging')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(screen.getByTestId('dashboard-charging-schedule-context-brief'), 'Current level');
     expect(screen.queryByText('0%')).not.toBeInTheDocument();
     expect(screen.queryByText('NaN%')).toBeNull();
   });
@@ -633,7 +635,9 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     // Primary content still renders; the supplementary detail row does not.
     expect(screen.getByText('Start at')).toBeInTheDocument();
     expect(screen.getByText('Current level')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    const snapshotBrief = screen.getByTestId('dashboard-charging-schedule-context-brief');
+    assertOperationalMetricUnavailable(snapshotBrief, 'Current level');
+    assertOperationalMetricUnavailable(snapshotBrief, 'Status');
   });
 });
 

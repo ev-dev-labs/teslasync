@@ -375,7 +375,7 @@ describe('DigitalTwinWidget — independent source failures', () => {
       expect(warning).toHaveAttribute('role', 'status');
       expect(warning).toHaveAttribute('aria-live', 'polite');
       expect(warning).toHaveAttribute('data-data-state', 'partial');
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
       for (const query of Object.values(queries)) expect(query.refetch).toHaveBeenCalledOnce();
     },
   );
@@ -399,7 +399,7 @@ describe('DigitalTwinWidget — independent source failures', () => {
       expect(warning).toHaveAttribute('role', 'status');
       expect(warning).toHaveAttribute('aria-live', 'polite');
       expect(warning).toHaveTextContent('Previously loaded data remains visible');
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
       for (const query of Object.values(queries)) expect(query.refetch).toHaveBeenCalledOnce();
 
       queries[source].isError = false;
@@ -462,7 +462,7 @@ describe('DigitalTwinWidget — independent source failures', () => {
     expect(warning).toHaveAttribute('aria-live', 'polite');
     expect(warning).toHaveAttribute('data-data-state', 'stale');
     expect(warning).toHaveTextContent('Previously loaded data remains visible');
-    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(queries.vehicles.refetch).toHaveBeenCalledOnce();
 
     queries.vehicles.isError = false;

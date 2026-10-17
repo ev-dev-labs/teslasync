@@ -14,10 +14,10 @@
  *        - standard (cols >= 2): a titled "Watch Summary" shell with a battery
  *          big-number + state badge (variant derived from the state), and a 2×2
  *          detail grid (range, lock/unlock, cabin temp, last seen).
- *   3. Unit conversion at the display boundary: `range_km` is kilometres — the
- *        widget lifts it to SI metres (`× 1000`) before `convertDistanceFromSI`,
- *        so 300 km → "186" mi / "300" km; `inside_temp_c` is Celsius, so
- *        20 °C → "68" °F. Both converters run for real.
+ *   3. Unit conversion at the display boundary: `range_m` arrives in SI
+ *        metres, so 300000 m → "186" mi / "300" km via `convertDistanceFromSI`;
+ *        `inside_temp_c` is Celsius, so 20 °C → "68" °F. Both converters run
+ *        for real.
  *   4. The four query states each source must handle: loading (skeleton),
  *        comp-loading (OR-aggregation still shows the skeleton), empty
  *        (EmptyState — never a blank panel), and data.
@@ -41,7 +41,7 @@
  * `convertDistanceFromSI` / `convertTempFromSI` all run for real, so assertions
  * exercise the true rendered DOM.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -108,8 +108,12 @@ vi.mock('@/components/data-display', async (importOriginal) => {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const fallback = typeof defaultValue === 'string' ? defaultValue : key;
+      const vars = (typeof defaultValue === 'object' && defaultValue !== null ? defaultValue : options) ?? {};
+      return fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+        String((vars as Record<string, unknown>)[name] ?? `{{${name}}}`));
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -141,7 +145,7 @@ function makeSummary(overrides: Partial<WatchSummary> = {}): WatchSummary {
     vehicle_name: 'Model Y',
     state: 'online',
     battery_level: 72,
-    range_km: 300,
+    range_m: 300000,
     is_charging: false,
     charge_rate: 0,
     time_to_full: 0,
@@ -218,6 +222,22 @@ function renderWidget(
       <WatchSummaryWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
+}
+
+function watchBrief(): HTMLElement {
+  return screen.getByTestId('dashboard-watch-measurements-brief');
+}
+
+function openWatchDrawer(): HTMLElement {
+  const brief = watchBrief();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+
+function closeWatchDrawer(dialog: HTMLElement) {
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -298,7 +318,12 @@ describe('WatchSummaryWidget — failed local prerequisite', () => {
     expect(screen.getByText('Inactive')).toBeInTheDocument();
     expect(screen.getByText('2h ago')).toBeInTheDocument();
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([300000, 21]);
-    expect(screen.getByTestId('dashboard-watch-measurements-brief').querySelector('[data-data-status="stale"]')).toBeTruthy();
+    const staleDialog = openWatchDrawer();
+    try {
+      expect(staleDialog.querySelector('[data-data-status="stale"]')).toBeTruthy();
+    } finally {
+      closeWatchDrawer(staleDialog);
+    }
     useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary(), dataUpdatedAt: summaryUpdatedAt }));
     useWatchComplicationMock.mockReturnValue(makeComplicationQuery({ data: makeComplication() }));
     rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
@@ -343,7 +368,7 @@ describe('WatchSummaryWidget — standard layout', () => {
       makeSummaryQuery({
         data: makeSummary({
           battery_level: 72,
-          range_km: 300,
+          range_m: 300000,
           state: 'online',
           is_locked: true,
           inside_temp_c: 21,
@@ -375,7 +400,7 @@ describe('WatchSummaryWidget — standard layout', () => {
     useUnitsMock.mockReturnValue(makeUnits('km', '°F'));
     useWatchSummaryMock.mockReturnValue(
       makeSummaryQuery({
-        data: makeSummary({ range_km: 300, inside_temp_c: 20 }),
+        data: makeSummary({ range_m: 300000, inside_temp_c: 20 }),
       }),
     );
 
@@ -392,7 +417,7 @@ describe('WatchSummaryWidget — standard layout', () => {
     it('retains numeric metres and Celsius, real zero and negative temperature, and missing measurements without parsing complication strings', () => {
       useUnitsMock.mockReturnValue(makeUnits('km', '°C'));
       useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
-        data: makeSummary({ range_km: 0, inside_temp_c: -10 }),
+        data: makeSummary({ range_m: 0, inside_temp_c: -10 }),
       }));
       useWatchComplicationMock.mockReturnValue(makeComplicationQuery({
         data: makeComplication({ range: '999 mi', battery: '99%' }),
@@ -408,7 +433,7 @@ describe('WatchSummaryWidget — standard layout', () => {
 
       useUnitsMock.mockReturnValue(makeUnits('mi', '°F'));
       useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
-        data: makeSummary({ range_km: 300, inside_temp_c: 0 }),
+        data: makeSummary({ range_m: 300000, inside_temp_c: 0 }),
       }));
       rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
       brief = screen.getByTestId('dashboard-watch-measurements-brief');
@@ -418,13 +443,14 @@ describe('WatchSummaryWidget — standard layout', () => {
 
       useWatchSummaryMock.mockReturnValue({
         ...makeSummaryQuery(),
-        data: { ...makeSummary(), range_km: null, inside_temp_c: null },
+        data: { ...makeSummary(), range_m: null, inside_temp_c: null },
       });
       rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
       brief = screen.getByTestId('dashboard-watch-measurements-brief');
       expect(captured.metrics.map(metric => metric.rawValue)).toEqual([null, null]);
       expect(captured.metrics.map(metric => metric.valueState)).toEqual(['missing', 'missing']);
-      expect(within(brief).getAllByText('—')).toHaveLength(2);
+      assertOperationalMetricUnavailable(brief, 'Range');
+      assertOperationalMetricUnavailable(brief, 'Cabin');
       expect(within(brief).queryByText(/999|186\.41|32\.00/)).not.toBeInTheDocument();
       expect(screen.getByText('72.00')).toBeInTheDocument();
       expect(screen.getByText('Locked')).toBeInTheDocument();
@@ -447,14 +473,19 @@ describe('WatchSummaryWidget — standard layout', () => {
       const { container, rerender } = renderWidget({ cols: 2, rows: 2 }, 7);
       let brief = screen.getByTestId('dashboard-watch-measurements-brief');
       assertOperationalBriefDisclosure(brief, 'Source available');
-      expect(brief.querySelector('[data-data-status="ok"]')).toBeTruthy();
+      const okDialog = openWatchDrawer();
+      try {
+        expect(okDialog.querySelector('[data-data-status="ok"]')).toBeTruthy();
+      } finally {
+        closeWatchDrawer(okDialog);
+      }
       expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
       expect(screen.getByText('Offline')).toBeInTheDocument();
       expect(screen.getByText('Unlocked')).toBeInTheDocument();
       expect(screen.getAllByText('Charging')).toHaveLength(2);
       expect(screen.getByText('72.00')).toBeInTheDocument();
       expect(screen.getByText('2h ago')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Refresh', exact: true }));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
       expect(refetchSummary).toHaveBeenCalledTimes(1);
       expect(refetchComplication).toHaveBeenCalledTimes(1);
 
@@ -470,8 +501,13 @@ describe('WatchSummaryWidget — standard layout', () => {
       });
       rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} vehicleId={7} /></MemoryRouter>);
       brief = screen.getByTestId('dashboard-watch-measurements-brief');
-      expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
-      expect(brief.querySelector('[data-data-status="stale"]')).toBeTruthy();
+      assertOperationalBriefDisclosure(brief, 'Retained readings');
+      const retainedDialog = openWatchDrawer();
+      try {
+        expect(retainedDialog.querySelector('[data-data-status="stale"]')).toBeTruthy();
+      } finally {
+        closeWatchDrawer(retainedDialog);
+      }
       expect(within(brief).getByText('186.41 mi')).toBeInTheDocument();
       expect(within(brief).getByText('21.00°C')).toBeInTheDocument();
       expect(screen.getByText('Asleep')).toBeInTheDocument();
@@ -515,7 +551,7 @@ describe('WatchSummaryWidget — compact layout', () => {
   it('renders the compact heading, gauge, status badge and converted range', () => {
     useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
     useWatchSummaryMock.mockReturnValue(
-      makeSummaryQuery({ data: makeSummary({ battery_level: 72, range_km: 300, state: 'online' }) }),
+      makeSummaryQuery({ data: makeSummary({ battery_level: 72, range_m: 300000, state: 'online' }) }),
     );
 
     renderWidget({ cols: 1, rows: 2 });
@@ -665,8 +701,12 @@ describe('WatchSummaryWidget — null-safety', () => {
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
 
     expect(screen.getByText('50.00')).toBeInTheDocument();
-    // range, lock, cabin temp and last-seen all collapse to the "—" placeholder.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    // Unknown range/cabin readings are omitted with a counted explanation;
+    // lock and last-seen keep their em-dash placeholders.
+    const partialBrief = screen.getByTestId('dashboard-watch-measurements-brief');
+    assertOperationalMetricUnavailable(partialBrief, 'Range');
+    assertOperationalMetricUnavailable(partialBrief, 'Cabin');
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
     // No state → no badge chip.
     expect(screen.queryByText('online')).not.toBeInTheDocument();
   });

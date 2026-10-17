@@ -405,33 +405,38 @@ describe('TirePressureVisualWidget — null safety', () => {
 });
 
 describe('TirePressureVisualWidget — reading-time footer', () => {
+  // The footer caption shows the unit; the reading age lives in its tooltip.
+  function footerCaption(): HTMLElement {
+    return screen.getByText('bar');
+  }
+
   it('shows "No reading" when no per-corner last-seen timestamp is present', () => {
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('bar · No reading');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', 'No reading');
   });
 
   it('renders "Just now" for a sub-minute reading', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(20_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('Just now');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', 'Just now');
   });
 
   it('renders a minutes-ago label', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(5 * 60_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('5m ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '5m ago');
   });
 
   it('renders an hours-ago label', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(3 * 3_600_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('3h ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '3h ago');
   });
 
   it('renders a days-ago label', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: agoIso(2 * 86_400_000) }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('2d ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '2d ago');
   });
 
   it('surfaces the most-recent timestamp across the four corners', () => {
@@ -443,15 +448,15 @@ describe('TirePressureVisualWidget — reading-time footer', () => {
         }),
       }),
     );
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('Just now');
-    expect(container.textContent).not.toContain('3d ago');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', 'Just now');
+    expect(footerCaption().getAttribute('title')).not.toContain('3d ago');
   });
 
   it('degrades an unparseable timestamp to a "—" placeholder', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap({ last_seen_time_fl: 'not-a-date' }) }));
-    const { container } = renderWidget(STANDARD);
-    expect(container.textContent).toContain('bar · —');
+    renderWidget(STANDARD);
+    expect(footerCaption()).toHaveAttribute('title', '—');
   });
 });
 

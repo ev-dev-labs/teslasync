@@ -49,6 +49,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { inputPreferences } from '@/test/inputPreferences';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 
@@ -252,7 +253,7 @@ describe('ChargingOptimizerWidget', () => {
     expect(brief).toHaveTextContent('12 AM');
     expect(brief).toHaveTextContent('0.00%');
     expect(brief).toHaveTextContent('$0.00');
-    expect(brief).toHaveTextContent('exact source recording bounds and completeness are not supplied');
+    assertOperationalBriefDisclosure(brief, 'exact source recording bounds and completeness are not supplied', { contains: true });
     expect(screen.getByRole('img', { name: '24h rate timeline' }).children).toHaveLength(24);
     expect(screen.getByText('Shift to off-peak')).toBeInTheDocument();
   });
@@ -277,7 +278,7 @@ describe('ChargingOptimizerWidget', () => {
       expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
       expect(screen.getByText('2 AM')).toBeInTheDocument();
       expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
       expect(refetch).toHaveBeenCalledOnce();
     },
   );
@@ -446,8 +447,8 @@ describe('ChargingOptimizerWidget', () => {
   });
 
   it('normalizes malformed start hours to a valid clock label (formatHour hardening)', () => {
-    const cases: Array<[number, string]> = [
-      [Number.NaN, '—'],
+    const cases: Array<[number, string | null]> = [
+      [Number.NaN, null],
       [25, '1 AM'],
       [-1, '11 PM'],
       [24, '12 AM'],
@@ -457,7 +458,11 @@ describe('ChargingOptimizerWidget', () => {
         makeQuery({ data: makeData({ current_schedule: { ...SCHED, most_common_start_hour: hour } }) }),
       );
       const { unmount } = renderWidget();
-      expect(screen.getByText(label)).toBeInTheDocument();
+      if (label == null) {
+        assertOperationalMetricUnavailable(screen.getByTestId('dashboard-charging-optimizer-brief'), 'Optimal start');
+      } else {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      }
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
       unmount();
     }
@@ -530,11 +535,16 @@ describe('ChargingOptimizerWidget', () => {
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('Optimized')).not.toBeInTheDocument();
 
-    // The valid recommendation survives; the null entry collapses to two
-    // em-dash placeholders (title + description) without a badge.
+    // The valid recommendation survives; the null entry collapses to
+    // em-dash placeholders (title + description) without a badge, while the
+    // three brief operands are omitted with a counted explanation.
     expect(screen.getByText('Valid tip')).toBeInTheDocument();
     expect(screen.getByText('Still shown')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(6);
+    const partialBrief = screen.getByTestId('dashboard-charging-optimizer-brief');
+    for (const label of ['Optimal start', 'Target SOC', 'Savings/mo']) {
+      assertOperationalMetricUnavailable(partialBrief, label);
+    }
+    expect(screen.getAllByText('—')).toHaveLength(3);
   });
 
   it('is null-safe: non-array cost hours + recommendations do not crash the wide timeline', () => {

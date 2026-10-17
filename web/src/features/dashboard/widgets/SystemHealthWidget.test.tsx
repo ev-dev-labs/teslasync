@@ -29,7 +29,7 @@
  *     QueryError role="alert").
  *   - refresh wiring: the accessible freshness control refetches system health.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -63,11 +63,15 @@ vi.mock('@/components/data-display', async (importOriginal) => {
   };
 });
 
-// ── i18n stub: return the English fallback (2nd arg) or the key. ──
+// ── i18n stub: return the English fallback (2nd arg) or the key, interpolating {{vars}}. ──
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, def?: string | Record<string, unknown>) =>
-      typeof def === 'string' ? def : _key,
+    t: (_key: string, def?: string | Record<string, unknown>, opts?: Record<string, unknown>) => {
+      const fallback = typeof def === 'string' ? def : _key;
+      const vars = (typeof def === 'object' && def !== null ? def : opts) ?? {};
+      return fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+        String((vars as Record<string, unknown>)[name] ?? `{{${name}}}`));
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -188,7 +192,7 @@ describe('SystemHealthWidget — actual pool source Brief', () => {
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([0, null]);
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'missing']);
     expect(within(brief).getByText('0/25')).toBeInTheDocument();
-    expect(within(brief).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Goroutines');
     expect(within(brief).queryByText('Memory')).not.toBeInTheDocument();
     expect(screen.getByText('0 MB')).toBeInTheDocument();
     expect(screen.getByText('2.4 GB')).toBeInTheDocument();
@@ -198,7 +202,7 @@ describe('SystemHealthWidget — actual pool source Brief', () => {
     brief = screen.getByTestId('system-health-pool-operational-brief');
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([null, 0]);
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['missing', 'value']);
-    expect(within(brief).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Active conns');
     expect(within(brief).getByText('0')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
@@ -233,10 +237,17 @@ describe('SystemHealthWidget — actual pool source Brief', () => {
       setup({ health, db, pool: makeQuery({ data: makePool({ inUse: 3, maxOpen, goroutines: 0 }) }) });
       view.rerender(<MemoryRouter><SystemHealthWidget size={{ cols: 3, rows: 4 }} /></MemoryRouter>);
       brief = screen.getByTestId('system-health-pool-operational-brief');
-      expect(within(brief).getByText('—')).toBeInTheDocument();
+      assertOperationalMetricUnavailable(brief, 'Active conns');
       expect(captured.metrics[0].rawValue).toBe(3);
       expect(captured.metrics[0].valueState).toBe('invalid');
-      expect(within(brief).getByText('Expected a non-negative safe integer total')).toBeInTheDocument();
+      // Invalid metrics are omitted + counted, so the validator reason has no
+      // tile surface; pin the exact message the formatter still produces.
+      const { unmount: unmountDetail } = render(<>{captured.metrics[0].detail}</>);
+      try {
+        expect(screen.getByText('Expected a non-negative safe integer total')).toBeInTheDocument();
+      } finally {
+        unmountDetail();
+      }
     }
 
     setup({
@@ -248,10 +259,11 @@ describe('SystemHealthWidget — actual pool source Brief', () => {
     });
     view.rerender(<MemoryRouter><SystemHealthWidget size={{ cols: 3, rows: 4 }} /></MemoryRouter>);
     brief = screen.getByTestId('system-health-pool-operational-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained readings');
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([Number.MAX_SAFE_INTEGER + 1, 1.5]);
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['invalid', 'invalid']);
-    expect(within(brief).getAllByText('—')).toHaveLength(2);
+    assertOperationalMetricUnavailable(brief, 'Active conns');
+    assertOperationalMetricUnavailable(brief, 'Goroutines');
     expect(screen.getByText('512 MB')).toBeInTheDocument();
     expect(healthRetry).not.toHaveBeenCalled();
     expect(dbRetry).not.toHaveBeenCalled();
@@ -346,8 +358,15 @@ describe('SystemHealthWidget — standard layout (2×4)', () => {
     });
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Database').parentElement?.parentElement?.className).toContain('bg-[var(--semantic-success-bg)]');
-    // The whole point: `warning` is amber, not red.
+    const dotClass = (label: string) => {
+      const cell = screen.getByText(label).closest('div.relative');
+      expect(cell).not.toBeNull();
+      return cell?.querySelector('span[aria-hidden="true"]')?.className ?? '';
+    };
+    expect(dotClass('Database')).toContain('bg-[var(--semantic-success)]');
+    // The whole point: `warning` is amber, not red; unknown is grey.
+    expect(dotClass('MQTT')).toContain('bg-[var(--semantic-warning)]');
+    expect(dotClass('Tesla API')).toContain('bg-[var(--text-muted)]');
     expect(screen.getByText('Degraded')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.getByText('Down')).toBeInTheDocument();
@@ -393,9 +412,10 @@ describe('SystemHealthWidget — standard layout (2×4)', () => {
     setup({ pool: makeQuery({ data: makePool({ goroutines: undefined, memoryMB: undefined }) }) });
     renderWidget(STANDARD);
 
-    // Both memory and goroutines fall back to the placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    // DB size is still real, proving the em-dashes are the runtime stats.
+    // Memory keeps its placeholder; the goroutines tile is omitted + counted.
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    assertOperationalMetricUnavailable(screen.getByTestId('system-health-pool-operational-brief'), 'Goroutines');
+    // DB size is still real, proving the em-dash is the runtime stat.
     expect(screen.getByText('2.4 GB')).toBeInTheDocument();
   });
 
@@ -468,7 +488,10 @@ describe('SystemHealthWidget — states & interaction', () => {
     it('does not turn a missing connection reading into zero', () => {
       setup({ pool: makeQuery({ data: undefined }) });
       renderWidget(STANDARD);
-      expect(screen.getAllByText('—')).toHaveLength(3);
+      const missingBrief = screen.getByTestId('system-health-pool-operational-brief');
+      assertOperationalMetricUnavailable(missingBrief, 'Active conns');
+      assertOperationalMetricUnavailable(missingBrief, 'Goroutines');
+      expect(screen.getAllByText('—')).toHaveLength(1);
       expect(screen.queryByText('0')).not.toBeInTheDocument();
     });
 

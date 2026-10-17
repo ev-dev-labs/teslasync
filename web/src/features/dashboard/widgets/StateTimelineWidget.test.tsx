@@ -90,10 +90,12 @@ function makeQuery(over: Record<string, unknown> = {}) {
 }
 
 // driving 180 min (75%) + idle 60 min (25%) — clean, unique percentages.
+// Uses the current VehicleStateSummaryRow wire shape (total_seconds /
+// percentage / transition_count) that the widget maps.
 function summaryRows() {
   return [
-    { state: 'driving', totalMin: 180, count: 3 },
-    { state: 'idle', totalMin: 60, count: 1 },
+    { state: 'driving', total_seconds: 180 * 60, percentage: 75, transition_count: 3 },
+    { state: 'idle', total_seconds: 60 * 60, percentage: 25, transition_count: 1 },
   ];
 }
 
@@ -160,7 +162,10 @@ describe.each([1, 2, 3])('StateTimelineWidget — identifying heading at cols=%i
 
 describe('buildSegments (utility)', () => {
   it('computes per-state percentages from the minute totals', () => {
-    expect(buildSegments(summaryRows())).toEqual([
+    expect(buildSegments([
+      { state: 'driving', totalMin: 180, count: 3 },
+      { state: 'idle', totalMin: 60, count: 1 },
+    ])).toEqual([
       { state: 'driving', pct: 75, totalMin: 180, count: 3 },
       { state: 'idle', pct: 25, totalMin: 60, count: 1 },
     ]);

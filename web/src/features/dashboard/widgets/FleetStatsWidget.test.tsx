@@ -98,6 +98,7 @@ window.matchMedia = ((query: string) => ({
   dispatchEvent: () => false,
 })) as unknown as typeof window.matchMedia;
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import FleetStatsWidget from './FleetStatsWidget';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
@@ -177,11 +178,34 @@ it.each([1, 2, 3])('identifies fleet statistics at %i columns', (cols) => {
   expect(screen.getByRole('heading', { name: 'Fleet stats' })).toBeInTheDocument();
 });
 
-/** Let the real drive/charge queries resolve so both sparklines paint. */
+function briefEl(): HTMLElement {
+  return screen.getByTestId('fleet-stats-operational-brief');
+}
+
+function openDrawer(): HTMLElement {
+  const brief = briefEl();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+
+function closeDrawer(dialog: HTMLElement) {
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+/**
+ * Let the real drive/charge queries resolve so both sparklines paint in the
+ * drawer (trend context moved off the face). The drawer closes again so later
+ * face queries keep their original scope.
+ */
 async function settleSparklines() {
-  await waitFor(() =>
-    expect(document.querySelectorAll('[data-operational-metric] polyline')).toHaveLength(2),
-  );
+  const dialog = openDrawer();
+  try {
+    await waitFor(() => expect(dialog.querySelectorAll('polyline')).toHaveLength(2));
+  } finally {
+    closeDrawer(dialog);
+  }
 }
 
 function group(name: string): HTMLElement {
@@ -218,13 +242,19 @@ describe('FleetStatsWidget — fleet counts & delegation', () => {
     const { container } = renderWidget();
     await settleSparklines();
 
-    // Five labelled KPI tiles — never a blank panel.
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    // Four measured KPI tiles on the face (Alerts has no source and is omitted).
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    assertOperationalMetricUnavailable(briefEl(), 'Alerts');
 
     // Fleet size = data.length (3); online = state === 'online' filter (2 of 3).
     const size = group('Fleet size');
     expect(within(size).getByText('3')).toBeInTheDocument();
-    expect(size).toHaveTextContent('2 online');
+    const dialog = openDrawer();
+    try {
+      expect(within(within(dialog).getByRole('group', { name: 'Fleet size' })).getByText('2 online')).toBeInTheDocument();
+    } finally {
+      closeDrawer(dialog);
+    }
 
     // total_energy_kwh is already kWh → shown verbatim at one decimal.
     expect(within(group('Energy (30d)')).getByText('250.00 kWh')).toBeInTheDocument();
@@ -280,15 +310,19 @@ describe('FleetStatsWidget — efficiency conversion', () => {
 
 describe('FleetStatsWidget — recent drive & charge queries', () => {
   it('fetches the primary vehicle drives & charges with snake_case, prefix-free, capped URLs', async () => {
-    const { container } = renderWidget();
-    await settleSparklines();
+    renderWidget();
+
+    // Both trend sparklines paint in the drawer once their series arrive.
+    const dialog = openDrawer();
+    try {
+      await waitFor(() => expect(dialog.querySelectorAll('polyline')).toHaveLength(2));
+    } finally {
+      closeDrawer(dialog);
+    }
 
     // Raw SI query strings: vehicle_id (snake_case), limit=5, and NO /api/v1 prefix.
     expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=1&limit=5');
     expect(mockRequest).toHaveBeenCalledWith('/charging?vehicle_id=1&limit=5');
-
-    // Both trend sparklines paint once their series arrive.
-    expect(container.querySelectorAll('polyline')).toHaveLength(2);
   });
 
   it('never issues the drive/charge queries when there is no primary vehicle', async () => {
@@ -296,7 +330,7 @@ describe('FleetStatsWidget — recent drive & charge queries', () => {
     renderWidget();
 
     // `enabled: primaryId > 0` keeps both queries idle — request is untouched.
-    await waitFor(() => expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(5));
+    await waitFor(() => expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4));
     expect(mockRequest).not.toHaveBeenCalled();
     expect(within(group('Fleet size')).getByText('0')).toBeInTheDocument();
   });
@@ -309,31 +343,41 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
       : Promise.reject(new Error('recent drives unavailable'))) as unknown as typeof request);
     renderWidget();
 
-    await waitFor(() => expect(within(group('Distance (30d)')).getByRole('alert')).toBeInTheDocument());
-    expect(within(group('Distance (30d)')).getByText('1,000.00 km')).toBeInTheDocument();
-    expect(within(group('Energy (30d)')).getByText('250.00 kWh')).toBeInTheDocument();
-    await waitFor(() => expect(group('Energy (30d)').querySelector('polyline')).not.toBeNull());
-    expect(group('Distance (30d)').querySelector('polyline')).toBeNull();
-    const priorDriveReads = mockRequest.mock.calls.filter(([path]) => path.startsWith('/drives')).length;
-    const priorChargingReads = mockRequest.mock.calls.filter(([path]) => path.startsWith('/charging')).length;
-    fireEvent.click(within(group('Distance (30d)')).getByRole('button', { name: 'Retry' }));
-    await waitFor(() => expect(mockRequest.mock.calls.filter(([path]) => path.startsWith('/drives')).length).toBe(priorDriveReads + 1));
-    expect(mockRequest.mock.calls.filter(([path]) => path.startsWith('/charging')).length).toBe(priorChargingReads);
+    const dialog = openDrawer();
+    try {
+      const distance = within(dialog).getByRole('group', { name: 'Distance (30d)' });
+      await waitFor(() => expect(within(distance).getByRole('alert')).toBeInTheDocument());
+      expect(within(distance).getByText('1,000.00 km')).toBeInTheDocument();
+      const energy = within(dialog).getByRole('group', { name: 'Energy (30d)' });
+      expect(within(energy).getByText('250.00 kWh')).toBeInTheDocument();
+      await waitFor(() => expect(energy.querySelector('polyline')).not.toBeNull());
+      expect(distance.querySelector('polyline')).toBeNull();
+      const priorDriveReads = mockRequest.mock.calls.filter(([path]) => path.startsWith('/drives')).length;
+      const priorChargingReads = mockRequest.mock.calls.filter(([path]) => path.startsWith('/charging')).length;
+      fireEvent.click(within(distance).getByRole('button', { name: 'Retry' }));
+      await waitFor(() => expect(mockRequest.mock.calls.filter(([path]) => path.startsWith('/drives')).length).toBe(priorDriveReads + 1));
+      expect(mockRequest.mock.calls.filter(([path]) => path.startsWith('/charging')).length).toBe(priorChargingReads);
+    } finally {
+      closeDrawer(dialog);
+    }
   });
 
   it('shows independent analytics failure beside the measured fleet count and still loads both recent series', async () => {
     const refetch = vi.fn();
     mockAnalytics.mockReturnValue(qr({ error: new Error('fleet aggregate failed'), isError: true, refetch }));
     renderWidget();
-    await settleSparklines();
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=1&limit=5'));
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith('/charging?vehicle_id=1&limit=5'));
     expect(within(group('Fleet size')).getByText('3')).toBeInTheDocument();
-    const distance = group('Distance (30d)');
-    expect(within(distance).getByRole('alert')).toBeInTheDocument();
-    expect(within(distance).queryByText('0.00')).not.toBeInTheDocument();
-    fireEvent.click(within(distance).getByRole('button', { name: 'Retry' }));
+    const brief = briefEl();
+    assertOperationalMetricUnavailable(brief, 'Distance (30d)');
+    assertOperationalMetricUnavailable(brief, 'Energy (30d)');
+    assertOperationalMetricUnavailable(brief, 'Efficiency');
+    assertOperationalMetricUnavailable(brief, 'Alerts');
+    assertOperationalBriefDisclosure(brief, 'Partial evidence');
+    expect(within(brief).queryByText('0.00')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledOnce();
-    expect(mockRequest).toHaveBeenCalledWith('/drives?vehicle_id=1&limit=5');
-    expect(mockRequest).toHaveBeenCalledWith('/charging?vehicle_id=1&limit=5');
   });
 
   it('retains measured zero aggregates through refresh failure without blanking their individual tiles', () => {
@@ -367,7 +411,8 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
     renderWidget();
     expect(within(group('Distance (30d)')).getByText('0.00 km')).toBeInTheDocument();
     expect(within(group('Energy (30d)')).getByText('0.00 kWh')).toBeInTheDocument();
-    expect(within(group('Alerts')).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(briefEl(), 'Alerts');
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
   });
   it('retains all five sections without presenting unknown measurements as zero', () => {
     mockVehicles.mockReturnValue({ data: undefined } as never);
@@ -375,11 +420,13 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
 
     const { container } = renderWidget();
 
-    // No section is hidden — the strip degrades to zeros, never a blank panel.
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
-    expect(within(group('Distance (30d)')).getByText('—')).toBeInTheDocument();
-    expect(within(group('Energy (30d)')).getByText('—')).toBeInTheDocument();
-    expect(within(group('Alerts')).getByText('—')).toBeInTheDocument();
+    // Unknown readings are omitted with an explanatory state — never zero-filled.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    const brief = briefEl();
+    for (const label of ['Fleet size', 'Distance (30d)', 'Energy (30d)', 'Efficiency', 'Alerts']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     // No primary vehicle → the recent queries stay idle.
     expect(mockRequest).not.toHaveBeenCalled();
@@ -395,8 +442,13 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
 
     // The error is communicated by the freshness chip…
     expect(container.querySelector('button[aria-label*="Error"] [class~="bg-[var(--semantic-danger)]"]')).not.toBeNull();
-    // …while all five tiles still render (never a blank panel).
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    // …while the measured zero fleet count still renders (unknown tiles omitted).
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(within(group('Fleet size')).getByText('0')).toBeInTheDocument();
+    const brief = briefEl();
+    for (const label of ['Distance (30d)', 'Energy (30d)', 'Efficiency', 'Alerts']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
   });
 
   it('retries the analytics query when the freshness control is activated', () => {
@@ -417,14 +469,14 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
     renderWidget();
     await settleSparklines();
     const brief = screen.getByTestId('fleet-stats-operational-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
-    expect(group('Alerts')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalBriefDisclosure(brief, 'Retained readings');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    assertOperationalMetricUnavailable(brief, 'Alerts');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('1,000.00 km')).toBeInTheDocument();
     expect(within(drawer).getByText('250.00 kWh')).toBeInTheDocument();
     expect(within(drawer).getAllByText(/sparklines are not the fleet-wide analysis window/).length).toBeGreaterThan(0);
-    expect(within(drawer).getByText(/Unread alert count has no connected source/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/unread alerts have no source here/).length).toBeGreaterThan(0);
   });
 });

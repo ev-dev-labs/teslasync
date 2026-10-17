@@ -133,6 +133,7 @@ vi.mock('@/components/data-display', async () => {
   };
 });
 
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import WeeklyDigestWidget from './WeeklyDigestWidget';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────────
@@ -211,9 +212,22 @@ function renderWidget(size: WidgetSize = FULL, vehicleId?: number) {
   );
 }
 
-/** Ordered [Distance, Drives, Energy, Efficiency] (clamped to 2 when compact). */
+/**
+ * Ordered [Distance, Drives, Energy, Efficiency] (clamped to 2 when compact).
+ * Deltas render inside the Review-details drawer (comparison content moved off
+ * the face); open the real drawer, capture them, then close it so later face
+ * assertions keep their original scope. Attribute reads stay valid on the
+ * captured elements after the drawer closes.
+ */
 function deltas(): HTMLElement[] {
-  return screen.getAllByTestId('delta');
+  const brief = screen.getByTestId('weekly-digest-operational-brief');
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  const found = within(dialog).getAllByTestId('delta');
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  return found;
 }
 function num(el: HTMLElement, attr: 'data-current' | 'data-previous'): number {
   return parseFloat(el.getAttribute(attr) ?? 'NaN');
@@ -514,9 +528,12 @@ describe('WeeklyDigestWidget — null safety', () => {
 
     expect(() => renderWidget(FULL)).not.toThrow();
     expect(deltas()).toHaveLength(2);
-    expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    const brief = screen.getByTestId('weekly-digest-operational-brief');
+    assertOperationalMetricUnavailable(brief, 'Distance');
+    assertOperationalMetricUnavailable(brief, 'Efficiency');
+    expect(screen.getByText('Drives')).toBeInTheDocument();
+    expect(screen.getByText('Energy')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
   });
 });
 

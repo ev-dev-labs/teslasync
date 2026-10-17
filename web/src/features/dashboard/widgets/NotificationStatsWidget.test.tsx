@@ -81,6 +81,7 @@ vi.mock('@/hooks/useDateFormat', async () => {
   return { ...actual, useDateFormat: vi.fn() };
 });
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import NotificationStatsWidget from './NotificationStatsWidget';
 
 it.each([1, 2, 3])('identifies notification statistics at %i columns', (cols) => {
@@ -287,16 +288,24 @@ describe('NotificationStatsWidget — standard layout', () => {
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Active channels')).toBeInTheDocument();
 
-    // Values: total sent (also echoed as its "up" trend), delivery rate,
-    // failed, active channels.
-    expect(screen.getAllByText('120')).toHaveLength(2);
+    // Values on the face: total sent, delivery rate, failed, active channels.
+    expect(screen.getAllByText('120')).toHaveLength(1);
     expect(screen.getByText('98.33%')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
 
-    // 98.3% ≥ 95 → "Healthy"; failed 2 > 0 → "Needs attention".
-    expect(screen.getByText('Healthy')).toBeInTheDocument();
-    expect(screen.getByText('Needs attention')).toBeInTheDocument();
+    // The "up" trend echo plus 98.3% ≥ 95 → "Healthy" and failed 2 > 0 →
+    // "Needs attention" render in the review drawer.
+    const brief = screen.getByTestId('notification-stats-operational-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getAllByText('120')).toHaveLength(2);
+      expect(within(drawer).getByText('Healthy')).toBeInTheDocument();
+      expect(within(drawer).getByText('Needs attention')).toBeInTheDocument();
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
   it('keeps ready statistics visible when the unused logs query is loading', () => {
@@ -311,7 +320,10 @@ describe('NotificationStatsWidget — standard layout', () => {
     it('shows missing counts and an unobserved delivery rate as unknown, not zero', () => {
       mockUseStats.mockReturnValue(qr({ data: {} }));
       renderWidget(STANDARD);
-      expect(screen.getAllByText('—')).toHaveLength(4);
+      const unknownBrief = screen.getByTestId('notification-stats-operational-brief');
+      for (const label of ['Total sent (7d)', 'Delivery rate', 'Failed', 'Active channels']) {
+        assertOperationalMetricUnavailable(unknownBrief, label);
+      }
       expect(screen.queryByText('0')).toBeNull();
       expect(screen.queryByText('%')).toBeNull();
     });
@@ -320,7 +332,7 @@ describe('NotificationStatsWidget — standard layout', () => {
       mockUseStats.mockReturnValue(qr({ data: { ...STATS, total_sent: 0, sent: 0, failed: 0, enabled_channels: 0 } }));
       renderWidget(STANDARD);
       expect(screen.getAllByText('0')).toHaveLength(3);
-      expect(screen.getByText('—')).toBeInTheDocument();
+      assertOperationalMetricUnavailable(screen.getByTestId('notification-stats-operational-brief'), 'Delivery rate');
       expect(screen.queryByText('%')).toBeNull();
     });
 
@@ -332,7 +344,7 @@ describe('NotificationStatsWidget — standard layout', () => {
       renderWidget(WIDE);
       expect(screen.getByText('Retained log')).toBeInTheDocument();
       expect(screen.getByText('Active channels')).toBeInTheDocument();
-      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
       expect(statsRefetch).toHaveBeenCalledTimes(1);
       expect(logsRefetch).toHaveBeenCalledTimes(1);
     });
@@ -377,7 +389,11 @@ describe('NotificationStatsWidget — standard layout', () => {
     expect(within(screen.getByRole('region', { name: 'Notification stats' })).getByRole('heading', { name: 'Notification stats' })).toBeInTheDocument();
     expect(screen.getByText('No notification data')).toBeInTheDocument();
     expect(screen.getByText('Active channels')).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    const absentBrief = screen.getByTestId('notification-stats-operational-brief');
+    for (const label of ['Total sent (7d)', 'Delivery rate', 'Failed', 'Active channels']) {
+      assertOperationalMetricUnavailable(absentBrief, label);
+    }
   });
 
   it('reviews retained notification counters without replacing independent log history', () => {
@@ -386,7 +402,7 @@ describe('NotificationStatsWidget — standard layout', () => {
     renderWidget(WIDE);
     expect(screen.getByText('Independent history')).toBeInTheDocument();
     const brief = screen.getByTestId('notification-stats-operational-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained readings');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('98.33%')).toBeInTheDocument();

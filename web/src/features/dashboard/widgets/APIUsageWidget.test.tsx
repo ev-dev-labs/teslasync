@@ -35,6 +35,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { APICallLogStats } from '@/types/admin';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import APIUsageWidget from './APIUsageWidget';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
@@ -67,8 +68,12 @@ vi.mock('@/api/hooks/useAdmin', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const fallback = typeof defaultValue === 'string' ? defaultValue : key;
+      const vars = (typeof defaultValue === 'object' && defaultValue !== null ? defaultValue : options) ?? {};
+      return fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+        String((vars as Record<string, unknown>)[name] ?? `{{${name}}}`));
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -163,9 +168,16 @@ describe('APIUsageWidget — standard / wide layout', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('12.00%')).toBeInTheDocument();
-    expect(screen.getByText('High')).toBeInTheDocument();
-    // StatCard renders a down arrow for the negative trend.
-    expect(screen.getByText('↓')).toBeInTheDocument();
+    // The High badge + down arrow render in the review drawer (comparison content).
+    const brief = screen.getByTestId('api-usage-operational-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByText('High')).toBeInTheDocument();
+      expect(within(drawer).getByText('↓')).toBeInTheDocument();
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
   it('shows no "High" chip or trend arrow for a moderate (0 < rate <= 5) error rate', () => {
@@ -296,7 +308,10 @@ describe('APIUsageWidget — query states', () => {
     })).toBeInTheDocument();
     const brief = screen.getByRole('region', { name: 'API usage' });
     expect(within(brief).getByRole('heading', { name: 'API usage' })).toBeInTheDocument();
-    expect(within(brief).getAllByText('—')).toHaveLength(4);
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Total calls (24h)', 'Avg response', 'Error rate', 'Errors']) {
+      assertOperationalMetricUnavailable(screen.getByTestId('api-usage-operational-brief'), label);
+    }
     expect(screen.getByText('No API usage data')).toBeInTheDocument();
     expect(screen.getByText('Total calls (24h)')).toBeInTheDocument();
     expect(within(brief).getByText('Avg response')).toBeInTheDocument();
@@ -311,7 +326,9 @@ describe('APIUsageWidget — query states', () => {
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
     expect(screen.getByText('Total calls (24h)')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    for (const label of ['Total calls (24h)', 'Avg response', 'Error rate', 'Errors']) {
+      assertOperationalMetricUnavailable(screen.getByTestId('api-usage-operational-brief'), label);
+    }
     expect(screen.queryByText('0')).not.toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
   });
@@ -381,14 +398,12 @@ describe('APIUsageWidget — graceful degradation on transient error', () => {
     expect(warning).toHaveAttribute('aria-live', 'polite');
     expect(within(warning).getByText('Data may be stale')).toBeInTheDocument();
     expect(within(warning).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
-    expect(within(screen.getByTestId('api-usage-operational-brief'))
-      .getByText('Retained readings')).toBeInTheDocument();
-    // The unchanged i18n stub leaves interpolation tokens literal; the source
-    // control's semantic error state and retained-data notice carry trust here.
-    const freshness = screen.getByRole('button', { name: 'Refresh data · {{state}}' });
-    expect(freshness).toHaveClass('text-[var(--semantic-danger)]');
-    expect(freshness).toHaveAttribute('aria-live', 'polite');
-    expect(freshness).toHaveAttribute('aria-atomic', 'true');
+    assertOperationalBriefDisclosure(screen.getByTestId('api-usage-operational-brief'), 'Retained readings');
+    // The interpolated freshness control names its semantic error state; the
+    // retained-data notice carries trust here.
+    const freshness = screen.getByRole('button', { name: 'Refresh data · Error · just now' });
+    expect(freshness.querySelector('[class*="bg-[var(--semantic-danger)]"]')).toBeTruthy();
+    expect(freshness).toHaveAccessibleDescription(expect.stringContaining('Refresh data · Error'));
     expect(freshness).toBeEnabled();
   });
 
@@ -400,7 +415,7 @@ describe('APIUsageWidget — graceful degradation on transient error', () => {
       renderWidget({ cols: 3, rows: 2 });
       expect(screen.getAllByText('0')).toHaveLength(2);
       expect(screen.getByText('0.00%')).toBeInTheDocument();
-      expect(screen.getByText('—')).toBeInTheDocument();
+      assertOperationalMetricUnavailable(screen.getByTestId('api-usage-operational-brief'), 'Avg response');
       expect(screen.queryByText('High')).not.toBeInTheDocument();
     });
 
@@ -411,7 +426,7 @@ describe('APIUsageWidget — graceful degradation on transient error', () => {
       }));
       renderWidget();
       const brief = screen.getByTestId('api-usage-operational-brief');
-      expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Retained readings');
       fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog');
       expect(within(drawer).getByText('123.40 ms')).toBeInTheDocument();

@@ -242,7 +242,7 @@ describe('ChargePlansWidget shared data trust', () => {
     const view = render(<MemoryRouter><ChargePlansWidget vehicleId={42} size={size} /></MemoryRouter>);
     expect(view.container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
     expect(screen.getByText('85.00%')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetchPlans).toHaveBeenCalledOnce();
     expect(refetchRates).toHaveBeenCalledOnce();
   });
@@ -256,7 +256,7 @@ describe('ChargePlansWidget shared data trust', () => {
     render(<MemoryRouter><ChargePlansWidget size={STANDARD} /></MemoryRouter>);
     expect(screen.getByText('EV2-A')).toBeInTheDocument();
     expect(screen.getByText('No charge plans')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledOnce();
     expect(mockPlans).toHaveBeenCalledWith(undefined);
   });

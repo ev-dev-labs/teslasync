@@ -166,9 +166,21 @@ vi.mock('@/features/dashboard/components/FleetComparisonPanel', async () => {
   };
 });
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import QuickStatsPage from './QuickStatsPage';
 import type { Vehicle } from '@/types/vehicle';
 import type { AnalyticsSummary } from '@/types/analytics';
+
+const QUICK_STATS_LABELS = [
+  'Distance driven',
+  'Drives',
+  'Charging sessions',
+  'Energy used',
+  'Total cost',
+  'Avg efficiency',
+  'CO₂ saved',
+  'Fleet vehicles',
+];
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
@@ -370,7 +382,11 @@ describe('QuickStatsPage', () => {
     expect(q.refetch).toHaveBeenCalledTimes(1);
     // The summary remains visible with unknown readings, alongside recovery.
     expect(screen.getByText('Distance driven')).toBeInTheDocument();
-    expect(screen.getByTestId('quick-stats-operational-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(8);
+    const errorBrief = screen.getByTestId('quick-stats-operational-brief');
+    expect(errorBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of QUICK_STATS_LABELS) {
+      assertOperationalMetricUnavailable(errorBrief, label);
+    }
   });
 
   it('shows the empty state when the rollup resolves to no data', () => {
@@ -386,7 +402,10 @@ describe('QuickStatsPage', () => {
     renderPage();
 
     expect(screen.getByText('Distance driven')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Fleet metrics' })).getAllByText('—')).toHaveLength(8);
+    const partialBrief = screen.getByTestId('quick-stats-operational-brief');
+    for (const label of QUICK_STATS_LABELS) {
+      assertOperationalMetricUnavailable(partialBrief, label);
+    }
     expect(screen.queryByText('0.00 km')).toBeNull();
     expect(screen.queryByText('0 kWh')).toBeNull();
     expect((captured.fleet.entries as unknown[]).length).toBe(0);
@@ -406,7 +425,10 @@ describe('QuickStatsPage', () => {
     } }));
     renderPage();
     const metrics = screen.getByRole('region', { name: 'Fleet metrics' });
-    expect(within(metrics).getAllByText('—')).toHaveLength(6);
+    const zeroBrief = screen.getByTestId('quick-stats-operational-brief');
+    for (const label of ['Distance driven', 'Charging sessions', 'Energy used', 'Total cost', 'Avg efficiency', 'Fleet vehicles']) {
+      assertOperationalMetricUnavailable(zeroBrief, label);
+    }
     expect(within(metrics).getByText('0')).toBeInTheDocument();
     expect(within(metrics).getByText('0.00 kg')).toBeInTheDocument();
   });
@@ -671,7 +693,7 @@ describe('QuickStatsPage', () => {
     expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Fleet metrics' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open dashboard' })).toBeInTheDocument();
-    expect(within(screen.getByTestId('quick-stats-operational-brief')).getByText('Retained readings')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('quick-stats-operational-brief'), 'Retained readings');
   });
 
   it('opens the real review drawer with fleet scope, source units and all eight measurements', () => {
@@ -679,7 +701,7 @@ describe('QuickStatsPage', () => {
     const brief = screen.getByTestId('quick-stats-operational-brief');
     expect(brief).toHaveAttribute('data-operational-brief');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(8);
-    expect(within(brief).getByText('All fleet vehicles · last 30 days')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'All fleet vehicles · last 30 days');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByRole('heading', { name: 'Fleet operating summary details' })).toBeInTheDocument();
