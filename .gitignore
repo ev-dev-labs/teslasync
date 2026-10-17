@@ -63,6 +63,7 @@ docs/.vitepress/dist/
 test-results/
 web/test-results/
 web/test-results-pwa-assets/
+web/test-results-guard/
 web/playwright-report/
 web/blob-report/
 web/e2e/.auth-state.json

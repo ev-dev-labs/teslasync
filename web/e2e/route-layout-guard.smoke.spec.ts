@@ -1,4 +1,6 @@
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from '@playwright/test'
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
 
@@ -11,8 +13,13 @@ import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockAp
  *   its character count);
  * - the page overflows horizontally (document/body scrollWidth).
  *
- * Screenshots (viewport, 1280px + 375px) land in the test output dir; the
- * committed `docs/ui-simplification/route-gallery/` is a curated copy.
+ * Screenshots (viewport, 1280px + 375px) and per-chunk records land in
+ * `web/test-results-guard/<runId>/` — OUTSIDE Playwright's outputDir, which
+ * is cleaned at the start of every run (a filtered re-run once wiped a full
+ * sweep's artifacts). `GUARD_RUN_ID` pins the directory; otherwise one stamp
+ * per minute keeps parallel workers together while consecutive runs never
+ * collide. The committed `docs/ui-simplification/route-gallery/` is a
+ * curated copy of the JPEGs.
  *
  * `GALLERY_ONLY=/a,/b` restricts the run to those routes (attribution and
  * iteration). Routes are split into 3 chunks x 4 widths = 12 tests so
@@ -336,6 +343,21 @@ function slug(route: string): string {
   return s === '' ? 'home' : s
 }
 
+// Run-stamped artifact root: Playwright cleans its own outputDir at the
+// start of every run, so records + screenshots live in a sibling tree that
+// survives consecutive runs (full sweep followed by a filtered re-run).
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+function resolveGuardRunId(): string {
+  const pinned = process.env.GUARD_RUN_ID?.trim()
+  if (pinned) return pinned.replace(/[^a-zA-Z0-9_-]/g, '-')
+  return `run-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}`
+}
+const GUARD_ARTIFACT_DIR = path.resolve(HERE, '../test-results-guard', resolveGuardRunId())
+async function guardArtifactPath(name: string): Promise<string> {
+  await mkdir(GUARD_ARTIFACT_DIR, { recursive: true })
+  return path.join(GUARD_ARTIFACT_DIR, name)
+}
+
 type MockApi = Awaited<ReturnType<typeof installApiMocks>>
 
 async function settle(page: Page, mockApi: MockApi): Promise<void> {
@@ -439,7 +461,7 @@ async function measure(page: Page, width: number): Promise<Pick<RouteRecord, 'ca
 
 for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
   for (const { width, height } of WIDTHS) {
-    test(`route layout guard chunk ${chunk} at ${width}px`, async ({ page }, testInfo) => {
+    test(`route layout guard chunk ${chunk} at ${width}px`, async ({ page }) => {
       test.setTimeout(600_000)
       const routes = ACTIVE_ROUTES.filter((_, index) => index % CHUNKS === chunk)
       if (routes.length === 0) test.skip()
@@ -485,7 +507,7 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           }
           if (width === 1280 || width === 375) {
             await page.screenshot({
-              path: testInfo.outputPath(`${slug(route)}-${width}.jpg`),
+              path: await guardArtifactPath(`${slug(route)}-${width}.jpg`),
               type: 'jpeg',
               quality: 70,
               animations: 'disabled',
@@ -499,7 +521,7 @@ for (let chunk = 0; chunk < CHUNKS; chunk += 1) {
           violations.push(`${route} @${width}: LOAD ERROR ${record.error}`)
         }
         records.push(record)
-        await writeFile(testInfo.outputPath(`records-chunk${chunk}-${width}.json`), JSON.stringify(records, null, 1))
+        await writeFile(await guardArtifactPath(`records-chunk${chunk}-${width}.json`), JSON.stringify(records, null, 1))
         console.log(
           `[route-guard] ${route} @${width}: ${record.status} `
           + `cards=${record.cards} narrow=${record.narrow.length} perchar=${record.perchar.length}`
