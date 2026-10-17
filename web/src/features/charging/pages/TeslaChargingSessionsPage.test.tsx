@@ -100,6 +100,7 @@ import type {
   TeslaChargingSessionSummary,
 } from '@/api/hooks/useCharging'
 import type { Vehicle } from '@/types/vehicle'
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 const never = () => new Promise<never>(() => {})
@@ -410,7 +411,7 @@ describe('TeslaChargingSessionsPage', () => {
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/vehicles', expect.anything()))
     expect(mockedRequest.mock.calls.some(([path]) => String(path).startsWith('/tesla/charging/sessions'))).toBe(false)
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
-    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Updating')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Updating')
     expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
     expect(screen.queryByText('123.00 kWh')).toBeNull()
   })
@@ -460,7 +461,8 @@ describe('TeslaChargingSessionsPage', () => {
     onlineManager.setOnline(false)
     renderPage()
     await screen.findByRole('button', { name: 'Retry' })
-    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data unavailable')).toBeInTheDocument()
+    // Both the status badge and the unresolved-vehicle scope badge disclose it.
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data unavailable', { allMatches: true })
     expect(within(screen.getByTestId('charging-operational-brief')).queryByText('Updating')).toBeNull()
     expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
@@ -476,11 +478,13 @@ describe('TeslaChargingSessionsPage', () => {
     install({ vehiclesError: true })
     await act(async () => { await client.refetchQueries({ queryKey: ['vehicles'] }) })
     const source = screen.getByTestId('vehicle-source-state')
-    expect(within(source).getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    // The failed refetch lands in the cache before React flushes it to
+    // observers; wait for the retained-data warning like the sessions test does.
+    expect(await within(source).findByTestId('stale-refresh-warning')).toBeInTheDocument()
     expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
     expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled()
-    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data may be stale')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data may be stale')
     install()
     fireEvent.click(within(source).getByRole('button', { name: 'Refresh' }))
     await waitFor(() => expect(within(source).queryByTestId('stale-refresh-warning')).toBeNull())
@@ -501,7 +505,9 @@ describe('TeslaChargingSessionsPage', () => {
     await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce())
     const csv = vi.mocked(downloadCSV).mock.calls[0][1]
     expect(csv).toContain('Energy (kWh)')
-    expect(csv).toContain(',20,120,30m,-€5.00,')
+    // The shared exporter prefixes formula-leading cells (the negative cost)
+    // with a single-quote CSV-injection guard; values are unchanged.
+    expect(csv).toContain(",20,120,30m,'-€5.00,")
     expect(csv).toContain('0.00 · Unknown currency')
     expect(csv).not.toContain('20000')
     fireEvent.click(table.getByRole('button', { name: 'Export list' }))
@@ -520,6 +526,9 @@ describe('TeslaChargingSessionsPage', () => {
   })
 
   it('preserves the separate raw selected CSV with Wh, seconds and source currency', async () => {
+    // jsdom has no layout; expose a viewport so the real virtualizer renders rows.
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(1024)
     install({ sessions: [makeSession({ currency_code: 'EUR', total_cost: -5, charge_duration_s: 1800.5 })] })
     const createUrl = vi.fn<(blob: Blob) => string>().mockReturnValue('blob:selected-sessions')
     vi.stubGlobal('URL', class extends URL {
@@ -577,8 +586,7 @@ describe('TeslaChargingSessionsPage', () => {
     const { container } = renderPage()
     await screen.findByTestId('sessions-map')
     const brief = screen.getByTestId('charging-operational-brief')
-    const cost = within(brief).getByText('Total cost').closest('[data-operational-metric]')
-    expect(cost).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalMetricUnavailable(brief, 'Total cost')
     expect(screen.getAllByText(/Mixed or unknown currency; monetary totals/).length).toBeGreaterThan(0)
     for (const site of ['Alpha EUR', 'Beta other']) {
       expect(screen.getByRole('progressbar', { name: site })).not.toHaveAttribute('aria-valuenow')
@@ -621,7 +629,7 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByText('250.00 kW')).toBeInTheDocument()
     expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
     expect(screen.getByTestId('charging-operational-brief')).toBeInTheDocument()
-    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data may be stale')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data may be stale')
     expect(within(screen.getByTestId('charging-operational-brief')).queryByText('Source measurements available')).toBeNull()
     expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
     expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
@@ -645,10 +653,7 @@ describe('TeslaChargingSessionsPage', () => {
     expect(await screen.findByTestId('sessions-map')).toHaveTextContent('map:1')
     const brief = screen.getByTestId('charging-operational-brief')
     for (const label of ['Total energy', 'Total cost']) {
-      const metric = within(brief).getByText(label).closest('[data-operational-metric]')
-      if (!metric) throw new Error(`Missing operational metric: ${label}`)
-      expect(metric).toHaveAttribute('data-value-state', 'missing')
-      expect(within(metric).getByText('—')).toBeInTheDocument()
+      assertOperationalMetricUnavailable(brief, label)
     }
     expect(screen.getByRole('progressbar', { name: 'SUPERCHARGER' })).not.toHaveAttribute('aria-valuenow')
     expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).not.toHaveAttribute('aria-valuenow')
@@ -663,10 +668,7 @@ describe('TeslaChargingSessionsPage', () => {
     const brief = screen.getByTestId('charging-operational-brief')
     expect(within(brief).getByText('0.00 kWh')).toBeInTheDocument()
     expect(within(brief).getByText('$0.00')).toBeInTheDocument()
-    const duration = within(brief).getByText('Average duration').closest('[data-operational-metric]')
-    if (!duration) throw new Error('Missing average duration metric')
-    expect(duration).toHaveAttribute('data-value-state', 'missing')
-    expect(within(duration).getByText('—')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(brief, 'Average duration')
     expect(screen.getByRole('progressbar', { name: 'SUPERCHARGER' })).toHaveAttribute('aria-valuenow', '0')
     expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).toHaveAttribute('aria-valuenow', '0')
   })
@@ -679,7 +681,7 @@ describe('TeslaChargingSessionsPage', () => {
       void client.invalidateQueries({ queryKey: ['tesla-charging-sessions'] })
     })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled())
-    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data may be stale')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(screen.getByTestId('charging-operational-brief'), 'Data may be stale')
     expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
     expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
     expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
@@ -811,8 +813,19 @@ describe('TeslaChargingSessionsPage', () => {
 
     expect((await screen.findAllByText("Can't reach server")).length).toBeGreaterThan(0)
 
-    // No stale/fabricated KPI values leak through the error branch.
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    // No stale/fabricated KPI values leak through the error branch: every
+    // metric is omitted with a counted drawer explanation, never a placeholder.
+    const brief = screen.getByTestId('charging-operational-brief')
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of ['Total sessions', 'Total energy', 'Total cost', 'Average duration']) {
+      assertOperationalMetricUnavailable(brief, label)
+    }
+    const lifetime = document.getElementById('tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of ['Total sessions', 'Total energy', 'Total cost', 'Avg cost/kWh', 'Peak power']) {
+      assertOperationalMetricUnavailable(lifetime, label)
+    }
     expect(screen.queryByText('123.00 kWh')).toBeNull()
   })
 
@@ -828,9 +841,13 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByText('No location data available yet.')).toBeInTheDocument()
     expect(screen.getByText('No location breakdown yet.')).toBeInTheDocument()
 
-    // KPI band still renders, folded to honest zero / em-dash placeholders.
+    // KPI band still renders: measured zero stays numeric, unknown readings
+    // are omitted with a counted drawer explanation.
     expect(screen.getAllByText('0').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    const brief = screen.getByTestId('charging-operational-brief')
+    for (const label of ['Total energy', 'Total cost', 'Average duration']) {
+      assertOperationalMetricUnavailable(brief, label)
+    }
     expect(screen.getByText('No sessions in this analysis window')).toBeInTheDocument()
     expect(screen.queryByText('123.00 kWh')).toBeNull()
     expect(screen.queryByText('No fleet charging sessions match this analysis window.')).toBeNull()
@@ -856,7 +873,10 @@ describe('TeslaChargingSessionsPage', () => {
     renderPage(['/tesla-charging-sessions?from=2024-01-01&to=2024-01-31'])
 
     const history = screen.getByRole('region', { name: 'Charging sessions table' })
-    expect(await within(history).findByText('Fleet charging sessions have not loaded. Retry this source or reconnect to continue.')).toBeInTheDocument()
+    // The table section now surfaces the shared query-error card (not the
+    // empty-state copy) when the scoped source fails with nothing retained.
+    expect(await within(history).findByText(/Can't reach server/)).toBeInTheDocument()
+    expect(within(history).getByRole('button', { name: /retry/i })).toBeInTheDocument()
     expect(within(history).queryByText(/Scope:/)).toBeNull()
     expect(screen.queryByText('No fleet charging sessions match this analysis window.')).toBeNull()
     expect(screen.queryByText(/No fleet charging sessions yet/)).toBeNull()

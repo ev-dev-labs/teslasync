@@ -179,6 +179,7 @@ import {
 } from '@/api/hooks/useCharging';
 import { useOcppChargePoints, useOcppSessions } from '@/api/hooks/useOcpp';
 import SmartChargePage, { planStatusVariant, defaultDepartBy } from './SmartChargePage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 describe('smart charge component import boundaries', () => {
   it.each(['AutopilotCard', 'ChargePointsCard'])('%s uses existing category barrels', component => {
@@ -312,6 +313,30 @@ function renderPage() {
 
 const optimizeButton = () => screen.getByRole('button', { name: /Find Cheapest Window/i });
 
+const COST_COMPARISON_LABELS = ['Charge now', 'Optimized cost', 'Savings', 'Energy needed'];
+
+/** Metric context moved off the brief face into the drawer's per-metric groups. */
+function expectDrawerGroupText(briefScope: Element, groupName: string, expected: string | RegExp) {
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(briefScope as HTMLElement).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByRole('group', { name: groupName })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+/** The face keeps the measured value; the "$X across N runs" context lives in the drawer group. */
+function expectSavingsValue(savingsShell: Element, value: string, context: string) {
+  expect(within(savingsShell as HTMLElement).getByText(value)).toBeInTheDocument();
+  expectDrawerGroupText(savingsShell, 'Realized savings', context);
+}
+
+const autopilotCard = () =>
+  screen.getByRole('heading', { name: 'Charging Autopilot' }).closest('[data-card]') as HTMLElement;
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockSelected.mockReturnValue(selected(7));
@@ -433,12 +458,14 @@ describe('SmartChargePage — before an optimization runs', () => {
       name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
     });
     const kpi = within(costComparison).getByRole('region', { name: 'Cost comparison' });
-    expect(within(kpi).getByText('Charge now')).toBeInTheDocument();
-    expect(within(kpi).getByText('Optimized cost')).toBeInTheDocument();
-    expect(within(kpi).getByText('Savings')).toBeInTheDocument();
-    expect(within(kpi).getByText('Energy needed')).toBeInTheDocument();
-    // All four metric values render the placeholder, never a blank tile.
-    expect(within(kpi).getAllByText('—')).toHaveLength(4);
+    // Unknown readings are omitted from the face (never em-dash tiles) with a
+    // counted explanation in Review details; the labels survive as chips.
+    expect(within(kpi).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of COST_COMPARISON_LABELS) {
+      expect(within(kpi).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(kpi, label);
+    }
+    expect(within(kpi).queryByText('—')).not.toBeInTheDocument();
   });
 
   it('renders per-panel empty states for timeline, schedule, and alternatives', () => {
@@ -461,13 +488,11 @@ describe('SmartChargePage — before an optimization runs', () => {
 
   it('labels the comparison as optimizer estimates rather than recorded measurements', () => {
     renderPage();
-    const comparison = within(document.getElementById('smart-charge-cost-comparison') as HTMLElement);
-    expect(comparison.getAllByText(
-      'Optimizer estimates for the selected departure and rate plan; not measured charging costs.',
-    ).length).toBeGreaterThan(0);
-    expect(comparison.queryByText(
-      'Recorded measurements from the stated charging source and scope.',
-    )).not.toBeInTheDocument();
+    const comparison = document.getElementById('smart-charge-cost-comparison') as HTMLElement;
+    assertOperationalBriefDisclosure(comparison,
+      'Optimizer estimates for the selected departure and rate plan; not measured charging costs.');
+    assertOperationalBriefDisclosure(comparison,
+      'Recorded measurements from the stated charging source and scope.', { absent: true });
   });
 });
 
@@ -591,7 +616,9 @@ describe('SmartChargePage — optimize interaction', () => {
     const timeline = container.querySelector('[data-chart-state="loading"]');
     expect(timeline).not.toBeNull();
     expect(timeline).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('[data-chart-state="ready"]')).toBeNull();
+    // The pending planner timeline never reports ready; the independent
+    // autopilot timeline keeps its own chart state in its own card.
+    expect(timeline?.closest('[data-card]')?.querySelector('[data-chart-state="ready"]')).toBeNull();
     for (const title of ['Recommended schedule', 'Alternative windows']) {
       const panel = screen.getByRole('heading', { name: title }).closest('[data-card]');
       const skeleton = panel?.querySelector('[aria-hidden="true"][style="height: 120px;"]');
@@ -733,7 +760,8 @@ describe('SmartChargePage — after a successful optimization', () => {
     expect(within(kpi).getByText('$3.25')).toBeInTheDocument(); // optimized
     expect(within(kpi).getByText('$5.25')).toBeInTheDocument(); // savings
     expect(within(kpi).getByText('42.00 kWh')).toBeInTheDocument(); // energy
-    expect(within(kpi).getByText(/61\.80%/)).toBeInTheDocument(); // savings_percent delta
+    // The savings_percent delta moved off the face into the drawer's Savings group.
+    expectDrawerGroupText(kpi, 'Savings', /61\.80%/);
     // Scoped to the KPI band: sibling sections (Autopilot preview placeholders)
     // legitimately render '—' until they have their own data.
     expect(within(kpi).queryAllByText('—')).toHaveLength(0);
@@ -804,11 +832,16 @@ describe('SmartChargePage — after a successful optimization', () => {
     const costComparison = screen.getByRole('region', {
       name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
     });
-    const kpi = within(within(costComparison).getByRole('region', { name: 'Cost comparison' }));
-    expect(kpi.getAllByText('—')).toHaveLength(2);
+    const brief = within(costComparison).getByRole('region', { name: 'Cost comparison' });
+    const kpi = within(brief);
+    // Invalid readings are omitted (never em-dash tiles, never zeroed) with a
+    // counted drawer explanation; the valid siblings stay on the face.
+    assertOperationalMetricUnavailable(brief, 'Charge now');
+    assertOperationalMetricUnavailable(brief, 'Energy needed');
     expect(kpi.queryByText('$0.00')).not.toBeInTheDocument();
     expect(kpi.queryByText('0.00 kWh')).not.toBeInTheDocument();
     expect(kpi.getByText('$3.25')).toBeInTheDocument();
+    expect(kpi.getByText('$5.25')).toBeInTheDocument();
   });
 
   it('does not display or apply a result that finishes after the selected vehicle changes', () => {
@@ -828,8 +861,10 @@ describe('SmartChargePage — after a successful optimization', () => {
     const costComparison = screen.getByRole('region', {
       name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
     });
-    const kpi = within(within(costComparison).getByRole('region', { name: 'Cost comparison' }));
-    expect(kpi.getAllByText('—')).toHaveLength(4);
+    const brief = within(costComparison).getByRole('region', { name: 'Cost comparison' });
+    for (const label of COST_COMPARISON_LABELS) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
   });
 
   it('rejects a stale result even when vehicle selection changes away and back', () => {
@@ -847,8 +882,11 @@ describe('SmartChargePage — after a successful optimization', () => {
     fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-18T07:30' } });
     act(() => finish?.(RESULT));
     expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
-    const comparison = within(document.getElementById('smart-charge-cost-comparison') as HTMLElement);
-    expect(comparison.getAllByText('—')).toHaveLength(4);
+    const shell = document.getElementById('smart-charge-cost-comparison') as HTMLElement;
+    const comparison = within(shell);
+    for (const label of COST_COMPARISON_LABELS) {
+      assertOperationalMetricUnavailable(shell, label);
+    }
     expect(comparison.queryByText('$3.25')).not.toBeInTheDocument();
   });
 
@@ -903,7 +941,9 @@ describe('SmartChargePage — plan history', () => {
       makeQuery({ data: undefined, isError: true, error: new Error('history down'), refetch }),
     );
     renderPage();
-    const retry = screen.getByRole('button', { name: /Retry/i });
+    // The independent autopilot profile renders its own Retry; scope to history.
+    const history = screen.getByRole('heading', { name: 'Plan history' }).closest('[data-card]') as HTMLElement;
+    const retry = within(history).getByRole('button', { name: /Retry/i });
     fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -1096,7 +1136,9 @@ describe('SmartChargePage — plan history', () => {
     expect(save.mutate).not.toHaveBeenCalled();
     expect(preview.mutate).not.toHaveBeenCalled();
     expect(run.mutate).not.toHaveBeenCalled();
-    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    expectSavingsValue(
+      document.getElementById('smart-charge-autopilot-savings') as HTMLElement,
+      '$0.00', '$0.00 across 0 runs');
     expect(optimizeButton()).toBeEnabled();
     expect(screen.getByText('No charge plans yet. Optimize a schedule above to get started.')).toBeInTheDocument();
     if (!('isFetching' in query && query.isFetching)) {
@@ -1119,7 +1161,9 @@ describe('SmartChargePage — plan history', () => {
     mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
     rerenderPage();
     expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('00:00');
-    expect(screen.getByLabelText('Max amps')).toHaveValue(0);
+    // Both the planner rail and the autopilot profile expose Max amps; the
+    // hydrated zero belongs to the autopilot profile.
+    expect(within(autopilotCard()).getByLabelText('Max amps')).toHaveValue(0);
     expect(screen.getByRole('switch', { name: 'Precondition before departure' })).not.toBeChecked();
     expect(screen.getByText('Autopilot off')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
@@ -1258,12 +1302,12 @@ describe('SmartChargePage — plan history', () => {
     const historicalDescription = 'Recorded measurements from the stated charging source and scope.';
 
     expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
-    expect(within(previewShell).getAllByText(estimateDescription).length).toBeGreaterThan(0);
-    expect(within(previewShell).queryByText(historicalDescription)).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(previewShell, estimateDescription);
+    assertOperationalBriefDisclosure(previewShell, historicalDescription, { absent: true });
     expect(savingsShell).toHaveAttribute('data-period-kind', 'unknown');
-    expect(within(savingsShell).getAllByText(historicalDescription).length).toBeGreaterThan(0);
-    expect(within(savingsShell).queryByText(estimateDescription)).not.toBeInTheDocument();
-    expect(within(savingsShell).getByText('$12.50 across 3 runs')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(savingsShell, historicalDescription);
+    assertOperationalBriefDisclosure(savingsShell, estimateDescription, { absent: true });
+    expectSavingsValue(savingsShell, '$12.50', '$12.50 across 3 runs');
     expect(within(previewShell).queryByText('$5.25') != null).toBe(populated);
   });
 
@@ -1284,7 +1328,9 @@ describe('SmartChargePage — plan history', () => {
     expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Preview next run' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Run now' })).toBeEnabled();
-    expect(screen.getByText('$12.50 across 3 runs')).toBeInTheDocument();
+    expectSavingsValue(
+      document.getElementById('smart-charge-autopilot-savings') as HTMLElement,
+      '$12.50', '$12.50 across 3 runs');
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
   });
 
@@ -1306,9 +1352,10 @@ describe('SmartChargePage — plan history', () => {
     expect(previewShell).not.toHaveAttribute('aria-busy');
     expect(savingsShell).toHaveAttribute('data-period-kind', 'unknown');
     expect(savingsShell.getAttribute('aria-busy')).toBe(busy ? 'true' : null);
-    expect(within(previewShell as HTMLElement).getByText('No source measurements')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(previewShell, 'No source measurements');
     expect(screen.queryByLabelText('Ready by (daily)')).not.toBeInTheDocument();
-    expect(screen.getByText('24-hour rate timeline')).toBeInTheDocument();
+    // Both independent timelines (planner hero + autopilot preview) stay mounted.
+    expect(screen.getAllByText('24-hour rate timeline', { selector: '[data-card-title]' })).toHaveLength(2);
     if (!busy) {
       fireEvent.click(screen.getByRole('button', { name: /retry/i }));
       expect(refetch).toHaveBeenCalledOnce();
@@ -1335,7 +1382,7 @@ describe('SmartChargePage — plan history', () => {
     const { container, rerenderPage } = renderPage();
     const shell = (id: string) => container.querySelector(`#smart-charge-autopilot-${id}`)!;
     expect(within(shell('preview') as HTMLElement).getByText('$0.00')).toBeInTheDocument();
-    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    expectSavingsValue(shell('savings') as HTMLElement, '$0.00', '$0.00 across 0 runs');
     mockAutopilotPreview.mockReturnValue(optimizeState({ isPending: true, mutate }));
     rerenderPage();
     expect(screen.getByText(preview.explanation)).toBeInTheDocument();
@@ -1346,7 +1393,7 @@ describe('SmartChargePage — plan history', () => {
     }));
     rerenderPage();
     expect(screen.getByText(preview.explanation)).toBeInTheDocument();
-    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    expectSavingsValue(shell('savings') as HTMLElement, '$0.00', '$0.00 across 0 runs');
     const warnings = screen.getAllByTestId('stale-refresh-warning');
     expect(warnings).toHaveLength(2);
     fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
@@ -1362,7 +1409,7 @@ describe('SmartChargePage — plan history', () => {
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
     mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 8, runs: 2 }, refetch }));
     rerenderPage();
-    expect(screen.getByText('$8.00 across 2 runs')).toBeInTheDocument();
+    expectSavingsValue(shell('savings') as HTMLElement, '$8.00', '$8.00 across 2 runs');
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(shell('savings')).not.toHaveAttribute('data-retained');
   });
@@ -1387,7 +1434,9 @@ describe('SmartChargePage — plan history', () => {
     expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
     expect(previewShell.getAttribute('aria-busy')).toBe(busy ? 'true' : null);
     expect(within(previewShell as HTMLElement).queryByText('$0.00')).not.toBeInTheDocument();
-    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    expectSavingsValue(
+      document.getElementById('smart-charge-autopilot-savings') as HTMLElement,
+      '$0.00', '$0.00 across 0 runs');
     if ('isError' in state) {
       fireEvent.click(screen.getByRole('button', { name: /retry/i }));
       expect(mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
