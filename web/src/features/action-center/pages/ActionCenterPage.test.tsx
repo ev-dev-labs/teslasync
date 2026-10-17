@@ -381,7 +381,7 @@ describe('ActionCenterPage URL scope roundtrip', () => {
 });
 
 describe('ActionCenterPage', () => {
-  it('preserves recommendation actions and provider evidence on a failed background refresh', () => {
+  it('preserves recommendation actions and provider evidence on a failed background refresh', async () => {
     useActionCenterMock.mockReturnValue(queryResult({
       isError: true, error: new Error('Refresh offline'),
     }));
@@ -390,8 +390,12 @@ describe('ActionCenterPage', () => {
     expect(screen.getByText('Review active alert')).toBeInTheDocument();
     expect(screen.getByText(/^available$/i)).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('Retained summary')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Decision queue overview details' });
+    expect(within(details).getByText('Retained summary')).toBeInTheDocument();
+    fireEvent.click(within(details).getByText('Close'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /acknowledge/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(mutateAsyncMock).not.toHaveBeenCalled();
@@ -401,9 +405,13 @@ describe('ActionCenterPage', () => {
     useActionCenterMock.mockReturnValue(queryResult({ data: undefined }));
     renderPage();
     const summary = screen.getByLabelText('Action center summary');
-    expect(within(summary).getAllByText('—')).toHaveLength(6);
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(within(summary).queryByText('0')).not.toBeInTheDocument();
-    expect(summary.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Decision queue overview details' });
+    expect(within(details).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    expect(within(details).queryByText('0')).not.toBeInTheDocument();
   });
 
   it('renders prioritized evidence, confidence, impact transparency, and provider status', () => {
@@ -434,8 +442,11 @@ describe('ActionCenterPage', () => {
     expect(container.querySelector('[data-operational-metric="dismissed"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-operational-metric="dismissed"] [data-operational-value]')).toHaveTextContent('0');
     const bridge = within(screen.getByLabelText('Action center summary')).getByRole('region', { name: 'Decision queue overview' });
-    expect(bridge).toHaveTextContent('Orion · Before priority, source, state, and pagination filters');
-    expect(within(bridge).getByText(/^Generated (?!recommendations)/)).toBeInTheDocument();
+    expect(bridge).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Decision queue overview details' });
+    expect(details).toHaveTextContent('Orion · Before priority, source, state, and pagination filters');
+    expect(within(details).getAllByText(/^Generated (?!recommendations)/).length).toBeGreaterThan(0);
   });
 
   it('opens and closes the actual Review details drawer with count semantics and bounded source context', async () => {
@@ -477,11 +488,12 @@ describe('ActionCenterPage', () => {
       },
     }));
     const { container } = renderPage();
-    expect(screen.getByText('Partial source coverage')).toBeInTheDocument();
     expect(screen.getByText('Persisted alert source unavailable.')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    const narrative = within(screen.getByRole('dialog')).getByRole('region', { name: 'Decision narrative' });
+    const details = screen.getByRole('dialog', { name: 'Decision queue overview details' });
+    expect(within(details).getByText('Partial source coverage')).toBeInTheDocument();
+    const narrative = within(details).getByRole('region', { name: 'Decision narrative' });
     expect(within(narrative).getByText('Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.', { selector: 'p' })).toBeInTheDocument();
   });
 
@@ -490,11 +502,17 @@ describe('ActionCenterPage', () => {
       data: { ...data, summary: { ...data.summary, open: Number.NaN, high: -1 } },
     }));
     const { container } = renderPage();
+    expect(operationalMetricsInput).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'open', rawValue: Number.NaN }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'high', rawValue: -1 }),
+    ]));
     for (const key of ['open', 'high']) {
-      const metric = container.querySelector(`[data-operational-metric="${key}"]`);
-      expect(metric).toHaveAttribute('data-value-state', 'invalid');
-      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+      expect(container.querySelector(`[data-operational-metric="${key}"]`)).toBeNull();
     }
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Decision queue overview details' });
+    expect(within(details).getByText('2 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('updates snake_case filters', async () => {
@@ -701,7 +719,8 @@ describe('ActionCenterPage result-count trust', () => {
     renderPage();
 
     const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
-    expect(refresh).toHaveClass('min-h-11', 'md:min-h-10', 'whitespace-normal');
+    expect(refresh).toHaveClass('h-9', 'w-9');
+    expect(refresh).not.toHaveTextContent('Refresh evidence');
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(mutateAsyncMock).not.toHaveBeenCalled();
