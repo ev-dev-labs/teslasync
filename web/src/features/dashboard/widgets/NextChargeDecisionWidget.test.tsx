@@ -160,7 +160,7 @@ describe('NextChargeDecisionWidget', () => {
     renderWidget();
     expect(screen.getByText('Retained verdict')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     expect(stateRetry).toHaveBeenCalledOnce();
     expect(decisionRetry).not.toHaveBeenCalled();
   });

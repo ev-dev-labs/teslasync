@@ -238,7 +238,9 @@ describe('MediaHistoryWidget', () => {
       renderWidget();
       expect(screen.getByText(`${MUSIC} Bohemian Rhapsody ${EM} Queen`)).toBeInTheDocument();
       expect(screen.getByText('usb')).toBeInTheDocument();
-      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+            expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(q.refetch).toHaveBeenCalledTimes(1);
     });
 

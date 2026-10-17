@@ -439,7 +439,9 @@ describe('FSMDistributionWidget', () => {
     }));
     renderWidget();
     expect(screen.getByTestId('pie')).toBeVisible();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetchStats).toHaveBeenCalledTimes(1);
     expect(refetchTransitions).toHaveBeenCalledTimes(1);
   });

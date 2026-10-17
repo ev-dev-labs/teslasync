@@ -175,7 +175,9 @@ describe('fmtDuration', () => {
       });
       render(<BackupHistoryWidget size={STANDARD} />);
       expect(within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem')).toHaveLength(1);
-      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+            expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(refetchEvents).toHaveBeenCalledOnce();
       expect(refetchSites).toHaveBeenCalledOnce();
     });

@@ -222,7 +222,7 @@ describe('TripSummaryWidget', () => {
     expect(screen.getByText('Big Sur Loop')).toBeInTheDocument();
     expect(screen.getByText('City Hop')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

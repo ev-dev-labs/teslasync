@@ -31,7 +31,7 @@
  *   - refresh: activating the freshness control invokes the query refetch.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -325,7 +325,11 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
     renderWidget();
 
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    // The missing battery stays off the value-only face and is counted as hidden in the drawer.
+    assertOperationalMetricUnavailable(
+      screen.getByTestId('dashboard-charge-status-charging-brief'),
+      'Battery',
+    );
   });
 
   it('keeps missing idle battery and range unknown', () => {
@@ -344,7 +348,12 @@ describe('ChargeStatusWidget — null-safety hardening', () => {
     // Without the `?? 0` hardening this line would read "% · 0 km".
     expect(container.textContent).not.toContain('0.00%');
     expect(container.textContent).not.toContain('0.00 km');
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    // Both operands are unknown, so the face shows the shared empty-metrics
+    // state and the drawer counts the two hidden fields.
+    const brief = screen.getByTestId('dashboard-charge-status-idle-brief');
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Battery');
+    assertOperationalMetricUnavailable(brief, 'Range');
   });
 });
 
@@ -380,15 +389,18 @@ describe('ChargeStatusWidget — refresh wiring', () => {
       renderWidget({ vehicleId: 42 });
 
       const brief = screen.getByTestId('dashboard-charge-status-charging-brief');
-      expect(within(brief).getAllByRole('listitem')).toHaveLength(4);
+      // The missing battery stays off the value-only face; power, rate and the
+      // negative time-to-full estimate (rendered '—') remain visible.
+      expect(within(brief).getAllByRole('listitem')).toHaveLength(3);
       expect(within(brief).getByText('0.00 kW')).toBeInTheDocument();
       expect(within(brief).getByText('-1.00 km/h')).toBeInTheDocument();
       expect(within(brief).queryByText('0.00%')).not.toBeInTheDocument();
-      expect(within(brief).getAllByText('—')).toHaveLength(2);
+      expect(within(brief).getAllByText('—')).toHaveLength(1);
       expect(brief.querySelector('[data-operational-metric="charge-status-power"]')).toHaveAttribute('data-value-state', 'value');
-      expect(brief.querySelector('[data-operational-metric="charge-status-battery"]')).toHaveAttribute('data-value-state', 'missing');
-      expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
-      expect(within(brief).getByText('Vehicle 42 · returned state snapshot; not a completed charging session or continuous recording.')).toBeInTheDocument();
+      expect(brief.querySelector('[data-operational-metric="charge-status-battery"]')).toBeNull();
+      assertOperationalMetricUnavailable(brief, 'Battery');
+      assertOperationalBriefDisclosure(brief, 'Retained readings', { contains: true });
+      assertOperationalBriefDisclosure(brief, 'Vehicle 42 · returned state snapshot; not a completed charging session or continuous recording.', { contains: true });
       expect(screen.getByText('Charging')).toBeInTheDocument();
       expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: /^Refresh data ·/i }));
@@ -408,11 +420,13 @@ describe('ChargeStatusWidget — refresh wiring', () => {
       renderWidget();
 
       const brief = screen.getByTestId('dashboard-charge-status-idle-brief');
-      expect(within(brief).getAllByRole('listitem')).toHaveLength(2);
+      // The missing range stays off the value-only face; the measured battery zero remains.
+      expect(within(brief).getAllByRole('listitem')).toHaveLength(1);
       expect(within(brief).getByText('0.00%')).toBeInTheDocument();
-      expect(within(brief).getByText('—')).toBeInTheDocument();
+      expect(within(brief).queryByText('—')).not.toBeInTheDocument();
       expect(brief.querySelector('[data-operational-metric="charge-status-battery"]')).toHaveAttribute('data-value-state', 'value');
-      expect(brief.querySelector('[data-operational-metric="charge-status-range"]')).toHaveAttribute('data-value-state', 'missing');
+      expect(brief.querySelector('[data-operational-metric="charge-status-range"]')).toBeNull();
+      assertOperationalMetricUnavailable(brief, 'Range');
       assertOperationalBriefDisclosure(brief, 'Source available');
       expect(screen.getByText('Unknown')).toBeInTheDocument();
       expect(screen.queryByText('Not charging')).not.toBeInTheDocument();

@@ -227,7 +227,8 @@ describe('AnalyticsSummaryWidget', () => {
     expect(warning).toHaveAttribute('role', 'status');
     expect(warning).toHaveAttribute('aria-live', 'polite');
     expect(warning).not.toHaveTextContent(/offline/i);
-    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(analyticsMock.mock.results[0].value.refetch).toHaveBeenCalledTimes(1);
   });
 

@@ -211,7 +211,7 @@ describe('OnboardingChecklistWidget — prerequisite trust and reactive hierarch
     }));
     renderWidget();
     expect(screen.getByTestId('onboarding-checklist')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     refetches.forEach((refetch) => expect(refetch).toHaveBeenCalledOnce());
   });
 

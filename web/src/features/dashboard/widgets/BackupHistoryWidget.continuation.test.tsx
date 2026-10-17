@@ -51,7 +51,9 @@ describe('backup history canonical feed preservation', () => {
     renderWidget(<BackupHistoryWidget size={{ cols: 2, rows: 4 }} />);
     const feed = screen.getByRole('list', { name: 'Event feed' });
     expect(within(feed).getAllByRole('listitem')).toHaveLength(10);
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(historyRetry).toHaveBeenCalledOnce();
     expect(sitesRetry).toHaveBeenCalledOnce();
   });

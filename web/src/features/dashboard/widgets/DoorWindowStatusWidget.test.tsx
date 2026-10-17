@@ -238,6 +238,7 @@ describe('parseDoorStates', () => {
     it.each([COMPACT, FULL, { cols: 4, rows: 4 }])('retains real false readings and retry after failed refresh in %o', (size) => {
       const refetch = vi.fn();
       renderWidget(size, {
+        vehicles: fleet(7),
         query: makeQuery({
           data: makeSecurity({ door_state: false, fd_window: false, fp_window: false, rd_window: false, rp_window: false } as unknown as Partial<SecurityEvent>),
           error: new Error('refresh failed'), isError: true, refetch,
@@ -247,7 +248,8 @@ describe('parseDoorStates', () => {
       expect(warning).toHaveTextContent('Previously loaded data remains visible');
       if (size.cols === 1) expect(screen.getByText('Windows ✓')).toBeInTheDocument();
       else expect(screen.getAllByText('Closed')).toHaveLength(8);
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(refetch).toHaveBeenCalledTimes(1);
     });
 

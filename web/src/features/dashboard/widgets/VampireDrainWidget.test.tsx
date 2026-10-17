@@ -401,7 +401,7 @@ describe('VampireDrainWidget — refresh + vehicle resolution', () => {
     expect(screen.getByText(`8.00% ${DOT} 40.00h`)).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     expect(statsRetry).toHaveBeenCalledOnce();
     expect(eventsRetry).toHaveBeenCalledOnce();
     expect(watchRetry).toHaveBeenCalledOnce();
