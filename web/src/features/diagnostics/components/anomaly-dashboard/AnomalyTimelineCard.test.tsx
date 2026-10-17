@@ -97,14 +97,14 @@ describe('AnomalyTimelineCard', () => {
   });
 
   it.each([
-    ['m', -1250, 500, '-1.25 km', '0.5 km'],
-    ['m/s', -1.25, 0.5, '-4.5 km/h', '1.8 km/h'],
-    ['°C', -12.25, 0, '-12.25°C', '0°C'],
-    ['Pa', 312500, 250000, '3.13 bar', '2.5 bar'],
-    ['kPa', -125.5, 0, '-1.26 bar', '0 bar'],
-    ['Wh', -1250, 500, '-1.25 kWh', '0.5 kWh'],
-    ['W', -1250, 500, '-1.25 kW', '0.5 kW'],
-    ['s', -4500, 1800, '-1.25 h', '0.5 h'],
+    ['m', -1250, 500, '-1.25 km', '0.50 km'],
+    ['m/s', -1.25, 0.5, '-4.50 km/h', '1.80 km/h'],
+    ['°C', -12.25, 0, '-12.25°C', '0.00°C'],
+    ['Pa', 312500, 250000, '3.13 bar', '2.50 bar'],
+    ['kPa', -125.5, 0, '-1.26 bar', '0.00 bar'],
+    ['Wh', -1250, 500, '-1.25 kWh', '0.50 kWh'],
+    ['W', -1250, 500, '-1.25 kW', '0.50 kW'],
+    ['s', -4500, 1800, '-1.25 h', '0.50 h'],
   ])('displays authoritative %s readings without changing raw evidence', (unit, value, baseline, reading, reference) => {
     const anomaly = Object.freeze({ ...makeAnomaly({ value, baseline, z_score: 4.27 }), unit });
     const { container } = renderCard(anomaly);
@@ -118,11 +118,11 @@ describe('AnomalyTimelineCard', () => {
   it('updates display preferences without altering SI readings or dimensionless z-score', () => {
     const anomaly = Object.freeze({ ...makeAnomaly({ value: -12.5, baseline: 0, z_score: 3.125 }), unit: '°C' });
     const { container, rerender } = renderCard(anomaly);
-    expect(container.textContent).toContain('-12.5°C');
+    expect(container.textContent).toContain('-12.50°C');
     display.prefs.temperature = '°F';
     rerender(<ul><AnomalyTimelineCard anomaly={{ ...anomaly }} /></ul>);
-    expect(container.textContent).toContain('9.5°F');
-    expect(container.textContent).toContain('32°F');
+    expect(container.textContent).toContain('9.50°F');
+    expect(container.textContent).toContain('32.00°F');
     expect(container.textContent).toContain('3.13σ');
     expect(anomaly.value).toBe(-12.5);
   });
@@ -130,13 +130,13 @@ describe('AnomalyTimelineCard', () => {
   it.each([null, undefined, NaN, Infinity, -Infinity])('keeps missing/invalid %s distinct from measured zero', value => {
     const { container } = renderCard({ ...makeAnomaly(), unit: '°C', value, baseline: 0, z_score: value });
     expect(container.textContent).toContain('Value: —');
-    expect(container.textContent).toContain('Baseline: 0°C');
+    expect(container.textContent).toContain('Baseline: 0.00°C');
     expect(container.textContent).not.toContain('σ');
   });
 
   it.each([null, undefined, NaN, Infinity, -Infinity])('keeps a missing/invalid baseline (%s) distinct from a measured zero value', baseline => {
     const { container } = renderCard({ ...makeAnomaly(), unit: 'Pa', value: 0, baseline });
-    expect(container.textContent).toContain('Value: 0 bar');
+    expect(container.textContent).toContain('Value: 0.00 bar');
     expect(container.textContent).toContain('Baseline: —');
   });
 

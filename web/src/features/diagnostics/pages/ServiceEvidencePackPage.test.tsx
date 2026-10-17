@@ -15,6 +15,7 @@ import {
   type ServiceEvidencePackDocument,
 } from '../lib/serviceEvidencePack';
 import ServiceEvidencePackPage from './ServiceEvidencePackPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { RootCauseEvidenceGraph } from '../components/RootCauseEvidenceGraph';
 import { RootCauseSignalTimelineChart } from '../components/RootCauseSignalTimelineChart';
 import { ServiceEvidenceIntegrityPanel } from '../components/ServiceEvidenceIntegrityPanel';
@@ -243,7 +244,7 @@ describe('root-cause chart preference adoption', () => {
     const content = <RootCauseEvidenceGraph graph={graph} hasChosenSignal isLoading={false} isError={false} />;
     const view = render(content);
     const assertGraph = () => {
-      const diagram = view.container.querySelector('svg[viewBox]')!;
+      const diagram = view.container.querySelector('svg[viewBox="0 0 320 320"]')!;
       const circles = diagram.querySelectorAll('circle');
       const edges = diagram.querySelectorAll('line');
       const legend = screen.getAllByRole('listitem');
@@ -406,7 +407,7 @@ describe('ServiceEvidencePackPage snapshot integrity', () => {
       view.refresh();
       expect(screen.getByText(`Schema ${doc.schemaVersion} · generated ${formatDateTime(doc.generatedAt, preferences)}`))
         .toBeInTheDocument();
-      expect(screen.getByText(`Last updated: ${formatDateTime(new Date(updatedAt), preferences)}`))
+      expect(screen.getByText(`Fetched ${formatDateTime(new Date(updatedAt), preferences)}`))
         .toBeInTheDocument();
       expect(screen.getByText(digest)).toBeInTheDocument();
       expect(screen.getByRole('group', { name: 'Pack preview' }).querySelector('code')?.textContent).toBe(rawJson);
@@ -541,7 +542,7 @@ describe('ServiceEvidencePackPage missing versus measured evidence', () => {
       });
       const { container } = renderPage();
       const brief = screen.getByTestId('service-evidence-summary');
-      expect(brief).toHaveTextContent(outcome === 'paused' ? 'Showing retained measurements'
+      assertOperationalBriefDisclosure(brief, outcome === 'paused' ? 'Showing retained measurements'
         : outcome === 'refreshing' ? 'Refreshing signal evidence' : 'Partial signal evidence');
       expect(brief.querySelector('[data-operational-metric="service-evidence-hypotheses"]'))
         .toHaveAttribute('data-value-state', 'value');
@@ -571,11 +572,11 @@ describe('ServiceEvidencePackPage missing versus measured evidence', () => {
     });
     const { container } = renderPage();
     const brief = screen.getByTestId('service-evidence-summary');
-    for (const id of ['quality', 'signals', 'hypotheses']) {
-      expect(brief.querySelector(`[data-operational-metric="service-evidence-${id}"]`))
-        .toHaveAttribute('data-value-state', 'missing');
+    for (const label of ['Evidence quality', 'Signals in pack', 'Ranked hypotheses']) {
+      assertOperationalMetricUnavailable(brief, label);
     }
-    expect(brief).toHaveTextContent('— corroborating');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).not.toHaveTextContent(/\d+ corroborating/);
     expect(brief).not.toHaveTextContent('Insufficient evidence');
     expect(container.querySelector('[data-signal-source="Soc"]')).not.toBeNull();
     for (const title of ['Choose a signal to investigate', 'Evidence inventory', 'Privacy manifest', 'Integrity & export', 'Pack preview']) {
@@ -599,7 +600,7 @@ describe('ServiceEvidencePackPage missing versus measured evidence', () => {
     });
     renderPage();
     const brief = screen.getByTestId('service-evidence-summary');
-    expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Showing retained measurements');
     expect(brief.querySelector('[data-operational-metric="service-evidence-hypotheses"]'))
       .toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="service-evidence-hypotheses"] [data-operational-value]'))

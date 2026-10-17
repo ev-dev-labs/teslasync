@@ -6,6 +6,7 @@ import { Children, isValidElement, type ComponentProps, type ReactNode } from 'r
 import type { ComponentRUL, ComponentDetailResponse } from '@/api/hooks/useRUL';
 import type { FormatOptions } from '@/hooks/useUnits';
 import { formatDistance, type DistanceUnitPref } from '@/lib/unitConversion';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import RemainingUsefulLifePage from './RemainingUsefulLifePage';
 
 const sources = vi.hoisted(() => ({ board: vi.fn(), detail: vi.fn() }));
@@ -214,9 +215,11 @@ describe('RemainingUsefulLifePage independent sources', () => {
     const view = renderPage();
     const brief = screen.getByTestId('rul-next-service-summary');
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+    assertOperationalMetricUnavailable(brief, 'Service component');
+    assertOperationalMetricUnavailable(brief, 'Replace by');
     expect(within(brief).queryByText('Loading')).toBeNull();
-    expect(within(brief).getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Refresh paused');
     expect(within(brief).queryByText('Showing retained measurements')).toBeNull();
     const section = screen.getByRole('region', { name: 'Component health' });
     expect(section).toHaveAttribute('aria-busy', 'false');
@@ -230,7 +233,9 @@ describe('RemainingUsefulLifePage independent sources', () => {
     expect(sources.detail().refetch).not.toHaveBeenCalled();
     sources.board.mockReturnValue(query({ vehicle_id: 7, components: [], next_service: null }));
     view.rerender(<RemainingUsefulLifePage />);
-    expect(screen.getByText('No upcoming service projected.')).toBeInTheDocument();
+    const recovered = screen.getByTestId('rul-next-service-summary');
+    fireEvent.click(within(recovered).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('No upcoming service projected.');
     expect(screen.getByText('Component health will appear once telemetry is available.')).toBeInTheDocument();
     expect(screen.queryByText('Refresh paused')).toBeNull();
   });
@@ -282,11 +287,11 @@ describe('RemainingUsefulLifePage independent sources', () => {
     fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
     expect(forecast.refetch).toHaveBeenCalledOnce();
     expect(screen.getByRole('table')).toHaveTextContent('20.00%');
-    expect(screen.getByTestId('rul-next-service-summary')).toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(screen.getByTestId('rul-next-service-summary'), 'Showing retained measurements');
     sources.board.mockReturnValue({ ...board, error: null, isError: false });
     view.rerender(<RemainingUsefulLifePage />);
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
-    expect(screen.getByTestId('rul-next-service-summary')).toHaveTextContent('Component board available');
+    assertOperationalBriefDisclosure(screen.getByTestId('rul-next-service-summary'), 'Component board available');
     sources.detail.mockReturnValue(query({ ...detail, notes: 'Recovered forecast' }));
     view.rerender(<RemainingUsefulLifePage />);
     expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
@@ -305,7 +310,7 @@ describe('RemainingUsefulLifePage independent sources', () => {
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('Service component')).toBeInTheDocument();
     expect(drawer).toHaveTextContent('Tires');
-    expect(drawer).toHaveTextContent('2026-08-01');
+    expect(drawer).toHaveTextContent('Aug 1, 2026');
     expect(drawer).toHaveTextContent('not a guaranteed failure date');
     expect(drawer).toHaveTextContent('component forecasts retain their own confidence and basis below');
     expect(drawer).toHaveTextContent('Existing next-service projection from the component health board.');
@@ -316,7 +321,7 @@ describe('RemainingUsefulLifePage independent sources', () => {
     sources.detail.mockReturnValue({ ...sources.detail(), fetchStatus: 'paused' });
     renderPage();
     const brief = screen.getByTestId('rul-next-service-summary');
-    expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Showing retained measurements');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.queryByText(/offline|network is unavailable/i)).toBeNull();
@@ -340,9 +345,12 @@ describe('RemainingUsefulLifePage independent sources', () => {
     sources.board.mockReturnValue(query({ vehicle_id: 7, components: [], next_service: null }));
     renderPage();
     const empty = screen.getByTestId('rul-next-service-summary');
-    expect(within(empty).getByText('No upcoming service projected.')).toBeInTheDocument();
-    expect(empty.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    expect(empty).toHaveTextContent('No metric values are available yet.');
+    assertOperationalMetricUnavailable(empty, 'Service component');
+    assertOperationalMetricUnavailable(empty, 'Replace by');
     expect(empty).not.toHaveAttribute('aria-busy');
+    fireEvent.click(within(empty).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('No upcoming service projected.');
   });
 
   it.each([
@@ -384,7 +392,9 @@ describe('RemainingUsefulLifePage independent sources', () => {
   it('keeps a recoverable forecast prerequisite panel when the board source has a fatal initial failure', () => {
     sources.board.mockReturnValue(query(undefined, new Error('board unavailable')));
     renderPage();
-    expect(screen.getByText('Unable to load service projection.')).toBeInTheDocument();
+    const failed = screen.getByTestId('rul-next-service-summary');
+    fireEvent.click(within(failed).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Unable to load service projection.');
     // No component can be selected from an absent board, so forecast remains a
     // labelled, recoverable prerequisite panel rather than disappearing.
     expect(screen.getByRole('heading', { name: /^Health forecast\s*·\s*Tires$/ })).toBeInTheDocument();
@@ -404,8 +414,8 @@ describe('RemainingUsefulLifePage independent sources', () => {
     expect(within(table).getAllByRole('row').slice(1).map((row) =>
       within(row).getAllByRole('cell').map((cell) => cell.textContent),
     )).toEqual([
-      ['2026-08-01', '20.00%', '15.00%', '25.00%'],
-      ['2026-09-01', '10.00%', '5.00%', '16.00%'],
+      ['Aug 1, 2026', '20.00%', '15.00%', '25.00%'],
+      ['Sep 1, 2026', '10.00%', '5.00%', '16.00%'],
     ]);
     expect(screen.getByText('Observed trend only')).toBeInTheDocument();
     expect(detail.projection[0]).toEqual({
@@ -450,7 +460,7 @@ describe('RemainingUsefulLifePage independent sources', () => {
     expect(chart.area).toHaveBeenLastCalledWith(expect.objectContaining({
       dataKey: 'band', fillOpacity: 0.08, isAnimationActive: false,
     }));
-    expect(screen.getByRole('table')).toHaveTextContent('2026-08-01');
+    expect(screen.getByRole('table')).toHaveTextContent('Aug 1, 2026');
   });
 
   it('retains all section shells when workspace vehicle selection is absent', () => {
@@ -458,10 +468,13 @@ describe('RemainingUsefulLifePage independent sources', () => {
     sources.board.mockReturnValue(query(undefined));
     sources.detail.mockReturnValue(query(undefined));
     renderPage();
-    expect(screen.getByTestId('rul-next-service-summary')).toBeInTheDocument();
+    const brief = screen.getByTestId('rul-next-service-summary');
+    expect(brief).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Component health' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Health forecast' })).toBeInTheDocument();
-    expect(screen.getAllByText('Select a vehicle to view its component prognostics.')).toHaveLength(3);
+    expect(screen.getAllByText('Select a vehicle to view its component prognostics.')).toHaveLength(2);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Select a vehicle to view its component prognostics.');
     expect(sources.board).toHaveBeenLastCalledWith(null);
     expect(sources.detail).toHaveBeenLastCalledWith(null, null);
   });

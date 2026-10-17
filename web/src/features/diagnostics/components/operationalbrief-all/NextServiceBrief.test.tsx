@@ -3,11 +3,18 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { deriveDataState } from '@/api/dataState';
 import english from '@/i18n/en.json';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { NextServiceBrief } from './NextServiceBrief';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
+    t: (key: string, fallback?: string | Record<string, unknown>, values?: Record<string, unknown>) => {
+      const options = typeof fallback === 'object' ? fallback : values;
+      const text = typeof fallback === 'string'
+        ? fallback
+        : typeof options?.defaultValue === 'string' ? options.defaultValue : key;
+      return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options?.[name] ?? `{{${name}}}`));
+    },
     i18n: { language: 'en' },
   }),
 }));
@@ -31,6 +38,7 @@ function renderBrief(overrides: Partial<ComponentProps<typeof NextServiceBrief>>
       noVehicle={false}
       componentLabel={null}
       projectedDate={null}
+      formatProjectedDate={(value: unknown) => (typeof value === 'string' && value !== '' ? value : '—')}
       {...overrides}
     />,
   );
@@ -40,12 +48,15 @@ describe('NextServiceBrief', () => {
   it('reports no projection without inferring that the components are healthy', () => {
     renderBrief();
     const brief = screen.getByTestId('rul-next-service-summary');
-    expect(within(brief).getByText('No upcoming service projected.')).toBeInTheDocument();
+    expect(brief).toHaveTextContent('No metric values are available yet.');
     expect(brief).not.toHaveTextContent(/healthy/i);
     expect(english.rul.nextService.none).toBe('No upcoming service projected.');
-    expect(brief).toHaveTextContent('Component board available');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    assertOperationalBriefDisclosure(brief, 'Component board available');
+    assertOperationalMetricUnavailable(brief, 'Service component');
+    assertOperationalMetricUnavailable(brief, 'Replace by');
     expect(brief).not.toHaveAttribute('aria-busy');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('No upcoming service projected.');
   });
 
   it.each(['available', 'refresh failed', 'refresh paused'] as const)(
@@ -62,15 +73,15 @@ describe('NextServiceBrief', () => {
       });
       const brief = screen.getByTestId('rul-next-service-summary');
       expect(brief).toHaveTextContent('Tires');
-      expect(brief).toHaveTextContent('projected by');
       expect(brief).toHaveTextContent('2026-08-01');
       expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
-      expect(brief).toHaveTextContent(condition === 'available'
+      assertOperationalBriefDisclosure(brief, condition === 'available'
         ? 'Component board available' : 'Showing retained measurements');
       fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog');
       expect(drawer).toHaveTextContent('Service component');
       expect(drawer).toHaveTextContent('Tires');
+      expect(drawer).toHaveTextContent('projected by');
       expect(drawer).toHaveTextContent('2026-08-01');
       expect(drawer).toHaveTextContent('not a guaranteed failure date');
       expect(drawer).toHaveTextContent('component forecasts retain their own confidence and basis below');
@@ -91,17 +102,19 @@ describe('NextServiceBrief', () => {
   ])('preserves the $name state', ({ noVehicle, state, description, status }) => {
     renderBrief({ noVehicle, state });
     const brief = screen.getByTestId('rul-next-service-summary');
-    expect(brief).toHaveTextContent(description);
-    expect(brief).toHaveTextContent(status);
     expect(brief).not.toHaveTextContent('No upcoming service projected.');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    assertOperationalBriefDisclosure(brief, status, { contains: true });
+    assertOperationalMetricUnavailable(brief, 'Service component');
+    assertOperationalMetricUnavailable(brief, 'Replace by');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(description);
   });
 
   it('preserves initial loading without presenting an empty-board conclusion', () => {
     renderBrief({ state: deriveDataState({ isLoading: true }), loading: true });
     const brief = screen.getByTestId('rul-next-service-summary');
     expect(brief).toHaveAttribute('aria-busy', 'true');
-    expect(brief).toHaveTextContent('Loading');
+    assertOperationalBriefDisclosure(brief, 'Loading');
     expect(brief).not.toHaveTextContent('No upcoming service projected.');
   });
 });

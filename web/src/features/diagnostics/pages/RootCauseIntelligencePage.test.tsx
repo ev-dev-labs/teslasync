@@ -7,6 +7,7 @@ import { deriveDataState, type DataStateSource } from '@/api/dataState';
 import type { SignalEvidenceBundleResult } from '@/api/hooks/useTelemetry';
 import type { SignalHistoryResponse } from '@/types/telemetry';
 import { analyzeRootCause, presentRootCause } from '../lib/rootCauseIntelligence';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import RootCauseIntelligencePage from './RootCauseIntelligencePage';
 import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
 import { useSignalEvidenceBundle, telemetryKeys } from '@/api/hooks/useTelemetry';
@@ -190,8 +191,9 @@ describe('root-cause deferred catalog and evidence sources', () => {
     expect(screen.getByText('Refresh paused')).toBeInTheDocument();
     const brief = screen.getByTestId('root-cause-summary');
     expect(brief).not.toHaveTextContent('Signal evidence available');
-    for (const id of ['root-cause-quality', 'root-cause-overall-score', 'root-cause-effect', 'root-cause-hypotheses', 'root-cause-focal-samples']) {
-      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+    for (const label of ['Evidence quality', 'Overall evidence score', 'Focal shift effect size', 'Ranked hypotheses', 'Focal samples']) {
+      assertOperationalMetricUnavailable(brief, label);
     }
     expect(mocks.announcement).toHaveBeenCalledWith(expect.objectContaining({ isLoading: false, isError: false }));
     const source = document.querySelector<HTMLElement>('[data-signal-source="Soc"]')!;
@@ -427,15 +429,15 @@ describe('root-cause page evidence eligibility and progressive presentation', ()
     expect(panel).toHaveTextContent('before and after medians retain their source scale');
     const item = within(panel as HTMLElement).getByRole('listitem');
     expect(item).toHaveTextContent('PackVoltage');
-    expect(item).toHaveTextContent(`${before} → ${after}`);
+    expect(item).toHaveTextContent(`${before.toFixed(2)} → ${after.toFixed(2)}`);
     expect(item).toHaveTextContent(input.analysis.hypotheses[0]!.rationale);
     const icon = item.querySelector(`.lucide-arrow-${direction}`)!;
     expect(icon).toHaveClass('text-[var(--text-muted)]');
     expect(item.querySelector('[class*="emerald"], [class*="rose"], [class*="neon"]')).toBeNull();
     expect(item).not.toHaveTextContent(/kWh|kW|mph|km\/h|°C|bar|%/);
     const brief = screen.getByTestId('root-cause-summary');
-    expect(brief.querySelector('[data-operational-metric="root-cause-effect"]'))
-      .toHaveTextContent(`${before} → ${after}`);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(`${before.toFixed(2)} → ${after.toFixed(2)}`);
     expect(focal.data[0]!.value).toBe(before);
     expect(neighbor.data[47]!.value).toBe(after);
   });
@@ -447,7 +449,9 @@ describe('root-cause page evidence eligibility and progressive presentation', ()
     const input = workspace(focal);
     mocks.workspace.mockReturnValue(input);
     renderPage();
-    expect(interpretation()).toHaveTextContent('Focal history unavailable; no shift conclusion can be drawn.');
+    expect(interpretation()).toHaveTextContent(outcome === 'empty'
+      ? 'Not enough history yet for this signal and window.'
+      : 'Focal history unavailable; no shift conclusion can be drawn.');
     expect(interpretation()).not.toHaveTextContent(input.analysis.summary);
     expect(interpretation()).not.toHaveTextContent('The focal signal did not show a robust');
     expect(interpretation()).not.toHaveTextContent('Evidence quality is low');
@@ -471,8 +475,9 @@ describe('root-cause page evidence eligibility and progressive presentation', ()
     expect(interpretation()).toHaveTextContent('Not enough history yet for this signal and window.');
     expect(interpretation()).not.toHaveTextContent(input.analysis.summary);
     const brief = screen.getByTestId('root-cause-summary');
-    for (const id of ['root-cause-quality', 'root-cause-overall-score', 'root-cause-effect', 'root-cause-hypotheses', 'root-cause-focal-samples']) {
-      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+    for (const label of ['Evidence quality', 'Overall evidence score', 'Focal shift effect size', 'Ranked hypotheses', 'Focal samples']) {
+      assertOperationalMetricUnavailable(brief, label);
     }
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
@@ -492,7 +497,8 @@ describe('root-cause page evidence eligibility and progressive presentation', ()
     expect(brief.querySelector('[data-operational-metric="root-cause-hypotheses"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="root-cause-hypotheses"] [data-operational-value]')).toHaveTextContent(/^0$/);
     expect(brief.querySelector('[data-operational-metric="root-cause-focal-samples"] [data-operational-value]')).toHaveTextContent(/^48$/);
-    expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Showing retained measurements');
+    assertOperationalMetricUnavailable(brief, 'Overall evidence score');
     const source = document.querySelector<HTMLElement>('[data-signal-source="Soc"]')!;
     fireEvent.click(within(source).getByRole('button', { name: 'Retry' }));
     expect(input.retryFocal).toHaveBeenCalledTimes(1);
@@ -501,7 +507,7 @@ describe('root-cause page evidence eligibility and progressive presentation', ()
     const drawer = screen.getByRole('dialog');
     expect(drawer).toHaveTextContent(input.analysis.summary);
     expect(drawer).not.toHaveTextContent('Evidence quality is low');
-    expect(brief.querySelector('[data-operational-metric="root-cause-overall-score"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(drawer).toHaveTextContent(/empty fields? (?:is|are) hidden\./);
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     expect(raw.data.map(point => point.value)).toEqual(Array(48).fill(0));
     expect(input.evidenceBundle.data[1]!.response.data[0]!.value).toBe(400);
@@ -548,9 +554,7 @@ describe('root-cause page evidence eligibility and progressive presentation', ()
     expect(interpretation()).toHaveTextContent(presentation.summary);
     expect(interpretation()).toHaveTextContent('0 of 1 selected related histories resolved');
     expect(interpretation()).not.toHaveTextContent('isolated change');
-    expect(screen.getByTestId('root-cause-summary').querySelector(
-      '[data-operational-metric="root-cause-hypotheses"]',
-    )).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('root-cause-summary'), 'Ranked hypotheses');
     expect(screen.getByRole('heading', { name: 'Ranked hypotheses' }).closest('[data-print-card]'))
       .not.toHaveTextContent('no other analyzed signal showed');
   });

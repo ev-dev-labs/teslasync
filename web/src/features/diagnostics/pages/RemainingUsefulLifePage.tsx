@@ -375,7 +375,7 @@ export default function RemainingUsefulLifePage() {
         <GlassPanel className="p-4 sm:p-5" aria-busy={detailLoading && !detail && !noVehicle && !!activeComponent}>
           <PanelTitle className="mb-1 flex flex-wrap items-center gap-2">
             <Icon icon={TrendingDown} className={neonColorMap.neutral.text} />
-            {t('rul.forecast.title', 'Health forecast')}
+            {t('rul.forecast.title', 'Health forecast')}{' '}
             {detail ? <Text as="span" variant="bodySm" className="break-words">· {componentLabel(detail.component, detail.label)}</Text> : null}
           </PanelTitle>
           <StaleRefreshWarning state={detailState} label={t('rul.forecast.title', 'Health forecast')} />
