@@ -62,7 +62,8 @@ function show(intensity: unknown, overrides: Partial<CarbonQueryLike> = {},
   expect(within(band).getByRole('heading', { name: 'Curve source accounting and completeness' })).toBeInTheDocument();
   assertOperationalBriefDisclosure(band, 'Built-in, admin-editable static 24-hour model', { allMatches: true, region: 'drawer' });
   expect(within(band).getByRole('button', { name: 'Review details' })).toBeEnabled();
-  expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+  // Face metric count is asserted per-case in expectCounts: unknown counts are
+  // omitted from the face and counted as hidden in the Review-details drawer.
   return { ...view, band, state, analysis, originalAnalysis, onRetry };
 }
 
@@ -71,12 +72,18 @@ function expectCounts(band: HTMLElement, expected: readonly (number | null)[], l
   const metrics = calls[calls.length - 1]?.[0];
   expect(metrics?.map(metric => ({ id: metric.metricId, occurrence: metric.occurrenceId, raw: metric.rawValue })))
     .toEqual(expected.map((raw, index) => ({ id: 'count', occurrence: `carbon-coverage-${index}`, raw })));
+  const visibleCount = loading ? expected.length : expected.filter(raw => raw != null).length;
+  expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(visibleCount);
   expected.forEach((raw, index) => {
     const cell = band.querySelector(`[data-operational-metric="carbon-coverage-${index}"]`);
+    if (raw == null && !loading) {
+      // Face-value disclosure: unknown counts are omitted from the face.
+      expect(cell).toBeNull();
+      return;
+    }
     expect(cell).toHaveAttribute('data-value-state', raw == null ? 'missing' : 'value');
     if (!(cell instanceof HTMLElement)) throw new Error(`Missing coverage cell ${index}`);
     expect(within(cell).getByText(labels[index])).toBeInTheDocument();
-    expect(within(cell).getByText(contexts[index])).toBeInTheDocument();
     if (loading) {
       expect(cell.querySelector('[data-operational-value]')).toBeNull();
       expect(cell.querySelector('[aria-busy="true"]')).toBeInTheDocument();
@@ -84,6 +91,32 @@ function expectCounts(band: HTMLElement, expected: readonly (number | null)[], l
       expect(cell.querySelector('[data-operational-value]')).toHaveTextContent(number(raw));
     }
   });
+  // Metric context moved to the Review-details drawer; hidden metrics are counted there.
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    const allHidden = !loading && expected.every(raw => raw == null);
+    expected.forEach((raw, index) => {
+      if (raw == null && !loading) {
+        expect(within(dialog).queryByRole('group', { name: labels[index] })).not.toBeInTheDocument();
+        if (allHidden) expect(within(dialog).getByText(labels[index])).toBeInTheDocument();
+      } else {
+        const group = within(dialog).getByRole('group', { name: labels[index] });
+        expect(within(group).getByText(contexts[index])).toBeInTheDocument();
+        if (!loading) expect(group).toHaveTextContent(number(raw));
+      }
+    });
+    const hidden = loading ? 0 : expected.filter(raw => raw == null).length;
+    if (hidden > 0) {
+      expect(within(dialog).getByText(hidden === 1 ? '1 empty field is hidden.' : `${hidden} empty fields are hidden.`)).toBeInTheDocument();
+    } else {
+      expect(within(dialog).queryByText(/empty fields? (is|are) hidden\./)).not.toBeInTheDocument();
+    }
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 function expectUnchanged(view: ReturnType<typeof show>) {
@@ -153,7 +186,7 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
       isPending: true, isSuccess: false, isFetching: true, fetchStatus: 'fetching' });
     expectCounts(view.band, unknownCounts, true);
     expect(view.band.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
-    expect(within(view.band).getByText('Loading evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(view.band, 'Loading evidence');
     expect(within(view.band).getByRole('status', { name: 'Loading carbon evidence' })).toBeInTheDocument();
     expectUnchanged(view);
   });
@@ -161,7 +194,7 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
   it('preserves fatal-source recovery and unknown counts without retained data', () => {
     const view = show(undefined, { isSuccess: false, isError: true, error: new Error('synthetic fatal source') });
     expectCounts(view.band, unknownCounts);
-    expect(within(view.band).getByText('Evidence unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(view.band, 'Evidence unavailable');
     expect(within(view.band).getByText('This source is unavailable. Retry it from the source and scope ledger.')).toBeInTheDocument();
     fireEvent.click(within(view.band).getByRole('button', { name: /Retry/ }));
     expect(view.onRetry).toHaveBeenCalledTimes(1);
@@ -178,7 +211,7 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
   ])('preserves the $caseId shell and explanation without measured zeros', ({ overrides, enabled, message }) => {
     const view = show(undefined, overrides, enabled);
     expectCounts(view.band, unknownCounts);
-    expect(within(view.band).getByText('Evidence unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(view.band, 'Evidence unavailable');
     expect(within(view.band).getByText(message)).toBeInTheDocument();
     expectUnchanged(view);
   });
@@ -234,8 +267,13 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
     const view = show({ curve: null }, overrides, true, formatting);
     expectCounts(view.band, unknownCounts);
     expect(within(view.band).getByText('Unknown')).toBeInTheDocument();
-    expect(within(view.band).getByText('24 expected clock-hours')).toBeInTheDocument();
-    expect(within(view.band).getByText(status)).toBeInTheDocument();
+    // Hidden metrics disclose only their count; status moved to the drawer badge.
+    fireEvent.click(within(view.band).getByRole('button', { name: 'Review details' }));
+    const counts = screen.getByRole('dialog');
+    expect(within(counts).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(counts, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(view.band, status);
     expect(within(view.band).queryByText(/Missing backend\/model clock-hours:/)).not.toBeInTheDocument();
     expect(within(view.band).queryByText(/^Coverage is complete:/)).not.toBeInTheDocument();
     expect(within(view.band).queryByText(/^Coverage is incomplete/)).not.toBeInTheDocument();
@@ -248,8 +286,8 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
     fireEvent.click(within(view.band).getByRole('button', { name: 'Review details' }));
     const dialog = screen.getByRole('dialog');
     labels.forEach(label => expect(within(dialog).getByText(label)).toBeInTheDocument());
-    expect(within(dialog).getByText('24 expected clock-hours')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('—')).toHaveLength(5);
+    expect(within(dialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    expect(within(dialog).queryByText('24 expected clock-hours')).not.toBeInTheDocument();
     expectUnchanged(view);
   });
 });

@@ -51,11 +51,16 @@ describe('regime operational evidence', () => {
     source.error = new Error('history unavailable');
     render(page());
     const brief = screen.getByTestId('regime-summary');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
     expect(screen.queryByText('over 0 weeks')).not.toBeInTheDocument();
     expect(screen.queryByText('none detected')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Weekly consumption & detected regimes' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Shift log' })).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const fatalDialog = screen.getByRole('dialog');
+    expect(within(fatalDialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(fatalDialog, { key: 'Escape' });
   });
 
   it('shows returned-empty count zero and reviews source coverage without a new query', () => {
@@ -70,7 +75,9 @@ describe('regime operational evidence', () => {
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('over 0 weeks')).toBeInTheDocument();
-    expect(within(drawer).getByText('none detected')).toBeInTheDocument();
+    expect(within(drawer).queryByRole('group', { name: 'Last shift' })).not.toBeInTheDocument();
+    expect(within(drawer).queryByText('none detected')).not.toBeInTheDocument();
+    expect(within(drawer).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(source.retry).not.toHaveBeenCalled();
   });
 

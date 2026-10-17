@@ -54,7 +54,8 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (_key: string, def?: string) => def ?? _key,
+      t: (_key: string, def?: string, opts?: Record<string, unknown>) =>
+        (def ?? _key).replace(/{{(\w+)}}/g, (_m, name: string) => String(opts?.[name] ?? `{{${name}}}`)),
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -121,6 +122,22 @@ function readTile(label: string): { value: string; subtitle: string } {
   };
 }
 
+/** Hidden tiles have no drawer group; the drawer counts them instead. */
+function expectTilesHidden(labels: readonly string[], hiddenText: string) {
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    labels.forEach(label => {
+      expect(within(dialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    });
+    expect(within(dialog).getByText(hiddenText)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   mockUseSettings.mockReturnValue(settingsFor('km'));
 });
@@ -138,8 +155,12 @@ describe('DrivingPerformanceCards', () => {
       render(<DrivingPerformanceCards query={queryWith({
         speed_stats: stats, power_stats: stats, regen_stats: stats, distance_stats: stats,
       })} />);
-      expect(screen.getAllByText(EM_DASH)).toHaveLength(6);
-      expect(document.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+      expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+      expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+      Object.values(LABELS).forEach(label => {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      });
+      expectTilesHidden(Object.values(LABELS), '6 empty fields are hidden.');
     },
   );
 
@@ -149,21 +170,22 @@ describe('DrivingPerformanceCards', () => {
       distance_stats: stat({ avg: 0.25, max: 0.5 }),
       regen_stats: stat({ max: -0.25 }),
     })} />);
-    expect(readTile(LABELS.topSpeed).value).toBe(EM_DASH);
-    expect(readTile(LABELS.avgSpeed).value).toBe(EM_DASH);
+    expect(screen.queryByText(LABELS.topSpeed)).not.toBeInTheDocument();
+    expect(screen.queryByText(LABELS.avgSpeed)).not.toBeInTheDocument();
+    expect(screen.queryByText(LABELS.peakPower)).not.toBeInTheDocument();
     expect(readTile(LABELS.avgDriveDist).value).toBe('0.25');
     expect(readTile(LABELS.longestDrive).value).toBe('0.50');
     expect(readTile(LABELS.peakRegen).value).toBe('-0.25');
+    expectTilesHidden([LABELS.topSpeed, LABELS.avgSpeed, LABELS.peakPower], '3 empty fields are hidden.');
   });
 
   it('keeps absent and infinite fields unknown despite a valid sample population', () => {
     render(<DrivingPerformanceCards query={queryWith({
       speed_stats: { count: 2, max: Infinity } as StatsSummary,
     })} />);
-    expect(readTile(LABELS.topSpeed).value).toBe(EM_DASH);
-    expect(readTile(LABELS.avgSpeed).value).toBe(EM_DASH);
-    expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(screen.getByText(LABELS.avgSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expectTilesHidden(Object.values(LABELS), '6 empty fields are hidden.');
   });
 
   it('keeps the six-metric group while loading without publishing values', () => {
@@ -209,14 +231,13 @@ describe('DrivingPerformanceCards', () => {
   it('degrades every tile to a placeholder (never a blank band) when the payload carries no stats', () => {
     render(<DrivingPerformanceCards query={queryWith({})} />);
 
-    // Six tiles, six placeholders — but every label + unit subtitle stays.
-    expect(screen.getAllByText(EM_DASH)).toHaveLength(6);
+    // Six tiles, six omissions — but every label stays as a face chip and the drawer counts them.
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     Object.values(LABELS).forEach((label) => {
       expect(screen.getByText(label)).toBeInTheDocument();
     });
-    // The subtitles still describe the (metric) units under the placeholders.
-    expect(readTile(LABELS.topSpeed)).toEqual({ value: EM_DASH, subtitle: '' });
-    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: EM_DASH, subtitle: '' });
+    expectTilesHidden(Object.values(LABELS), '6 empty fields are hidden.');
   });
 
   it('degrades gracefully on an errored query with no data', () => {
@@ -228,10 +249,11 @@ describe('DrivingPerformanceCards', () => {
     } as unknown as FleetAnalyticsQuery;
     render(<DrivingPerformanceCards query={query} />);
 
-    // Error path resolves to the same six-placeholder band, still labelled.
-    expect(screen.getAllByText(EM_DASH)).toHaveLength(6);
+    // Error path resolves to the same six-omission band, still labelled.
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(screen.getByRole('group')).toBeInTheDocument();
     expect(screen.getByText(LABELS.longestDrive)).toBeInTheDocument();
+    expectTilesHidden(Object.values(LABELS), '6 empty fields are hidden.');
   });
 
   it('resolves each tile independently — present stats render, absent ones fall back', () => {
@@ -240,12 +262,12 @@ describe('DrivingPerformanceCards', () => {
     // Speed tiles have data…
     expect(readTile(LABELS.topSpeed).value).toBe('200.00');
     expect(readTile(LABELS.avgSpeed).value).toBe('65.00');
-    // …while the four tiles without a backing stat fall back.
-    expect(readTile(LABELS.peakPower).value).toBe(EM_DASH);
-    expect(readTile(LABELS.peakRegen).value).toBe(EM_DASH);
-    expect(readTile(LABELS.avgDriveDist).value).toBe(EM_DASH);
-    expect(readTile(LABELS.longestDrive).value).toBe(EM_DASH);
-    expect(screen.getAllByText(EM_DASH)).toHaveLength(4);
+    // …while the four tiles without a backing stat are omitted from the face.
+    const hiddenTiles = [LABELS.peakPower, LABELS.peakRegen, LABELS.avgDriveDist, LABELS.longestDrive];
+    hiddenTiles.forEach(label => {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    });
+    expectTilesHidden(hiddenTiles, '4 empty fields are hidden.');
   });
 
   it('distinguishes a non-finite stat from measured zero without rendering NaN', () => {
@@ -255,10 +277,11 @@ describe('DrivingPerformanceCards', () => {
       />,
     );
 
-    expect(readTile(LABELS.topSpeed).value).toBe(EM_DASH);
-    expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(readTile(LABELS.topSpeed).value).not.toContain('NaN');
+    expect(screen.queryByText(LABELS.topSpeed)).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('NaN');
     expect(readTile(LABELS.avgSpeed).value).toBe('50.00');
+    expectTilesHidden([LABELS.topSpeed, LABELS.peakPower, LABELS.peakRegen, LABELS.avgDriveDist, LABELS.longestDrive],
+      '5 empty fields are hidden.');
   });
 
   it('retains measured zero and signed regeneration independently of unknown fields', () => {
@@ -268,8 +291,9 @@ describe('DrivingPerformanceCards', () => {
     })} />);
     expect(readTile(LABELS.topSpeed)).toEqual({ value: '0.00', subtitle: 'km/h' });
     expect(readTile(LABELS.peakRegen)).toEqual({ value: '-12.50', subtitle: 'kW' });
-    expect(readTile(LABELS.peakPower).value).toBe(EM_DASH);
+    expect(screen.queryByText(LABELS.peakPower)).not.toBeInTheDocument();
     expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
+    expectTilesHidden([LABELS.peakPower, LABELS.avgDriveDist, LABELS.longestDrive], '3 empty fields are hidden.');
   });
 
   it('exposes all six source metrics in a labelled group with working detail review', () => {

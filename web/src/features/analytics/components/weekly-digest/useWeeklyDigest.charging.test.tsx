@@ -165,13 +165,13 @@ describe('weekly digest charging evidence', () => {
     const { result, rerender } = renderHook(useWeeklyDigest);
     const view = render(<ChargingPanel metrics={result.current.metrics} period={period}
       dailyEnergyData={result.current.dailyEnergyData} />);
-    expect(screen.getByText('Total energy added: —')).toBeInTheDocument();
-    expect(screen.getByText('Sessions: 1')).toBeInTheDocument();
+    expect(screen.getByText('Total energy added').closest('[data-stat]')).toHaveTextContent('—');
+    expect(screen.getByText('Sessions').closest('[data-stat]')).toHaveTextContent('1');
     state.charging.data = [charge({ total_energy_added_wh: 0 })];
     rerender();
     view.rerender(<ChargingPanel metrics={result.current.metrics} period={period}
       dailyEnergyData={result.current.dailyEnergyData} />);
-    expect(screen.getByText('Total energy added: 0 Wh')).toBeInTheDocument();
+    expect(screen.getByText('Total energy added').closest('[data-stat]')).toHaveTextContent('0 Wh');
   });
 
   it('does not infer a SOC gain from unpaired start and end measurements', () => {

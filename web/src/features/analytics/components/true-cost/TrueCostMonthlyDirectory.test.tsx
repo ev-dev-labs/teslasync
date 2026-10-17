@@ -102,7 +102,10 @@ describe('TrueCostMonthlyDirectory monthly availability', () => {
       expect(within(table).getByText(disposition)).toBeInTheDocument();
     }
     expect(within(table).getByText('$40')).toBeInTheDocument();
-    expect(within(table).getByText('$120')).toBeInTheDocument();
+    const eligibleRow = within(table).getAllByRole('row')
+      .find(row => within(row).queryByText('Eligible') && within(row).queryByText('2025-01'));
+    if (!eligibleRow) throw new Error('eligible 2025-01 row must render');
+    expect(within(eligibleRow).getByText('$120')).toBeInTheDocument();
     expect(within(table).getByText('40000')).toBeInTheDocument();
     expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
   });

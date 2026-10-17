@@ -94,13 +94,15 @@ describe('real carbon and archetype raw bridge and retained drawers', () => {
     assertOperationalBriefDisclosure(document.body, 'Retained evidence');
     expect(screen.getByText('2.50 kWh')).toBeInTheDocument();
     expect(screen.getByText('-0.10 kg CO₂')).toBeInTheDocument();
-    expect(screen.getByText(/2026-01-01T00:00:00Z – 2026-07-01T00:00:00Z · UTC/)).toBeInTheDocument();
     expect(vi.mocked(useOperationalMetrics).mock.calls[0]?.[0]).toEqual(expect.arrayContaining([
       expect.objectContaining({ occurrenceId: 'carbon-period-energy', metricId: 'energy', rawValue: 2500 }),
       expect.objectContaining({ occurrenceId: 'carbon-period-net', metricId: 'mass', rawValue: analysis.period.netAvoidedCo2Kg }),
     ]));
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('Gas baseline minus attributed charging CO₂')).toBeInTheDocument();
+    const evidenceDialog = screen.getByRole('dialog');
+    expect(within(evidenceDialog).getByText('Gas baseline minus attributed charging CO₂')).toBeInTheDocument();
+    expect(within(evidenceDialog).getByText(/2026-01-01T00:00:00Z – 2026-07-01T00:00:00Z · UTC/)).toBeInTheDocument();
+    fireEvent.keyDown(evidenceDialog, { key: 'Escape' });
     expect(JSON.stringify(analysis)).toBe(original);
   });
   it.each([
@@ -124,7 +126,14 @@ describe('real carbon and archetype raw bridge and retained drawers', () => {
       <ArchetypeCoverageBrief summary={summary} state={state} display={archetypeDisplay} />
     </MemoryRouter>);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(19);
-    expect(screen.getAllByText('Retained evidence')).toHaveLength(2);
+    const retainedBadges = screen.getAllByRole('button', { name: 'Review details' });
+    expect(retainedBadges).toHaveLength(2);
+    for (const button of retainedBadges) {
+      fireEvent.click(button);
+      const retainedDialog = screen.getByRole('dialog');
+      expect(within(retainedDialog).getByText('Retained evidence')).toBeInTheDocument();
+      fireEvent.keyDown(retainedDialog, { key: 'Escape' });
+    }
     expect(vi.mocked(useOperationalMetrics).mock.calls[0]?.[0].every(metric => typeof metric.rawValue === 'number')).toBe(true);
     const sourceDrawerButton = screen.getAllByRole('button', { name: 'Review details' })[0];
     if (!sourceDrawerButton) throw new Error('Missing source disposition Review details action');

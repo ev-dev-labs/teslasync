@@ -53,8 +53,9 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown, opts?: Record<string, unknown>) =>
+        (typeof fallback === 'string' ? fallback : key).replace(/{{(\w+)}}/g,
+          (_m, name: string) => String(opts?.[name] ?? `{{${name}}}`)),
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -336,8 +337,11 @@ describe('ChargingTab — error', () => {
     expect(screen.queryByText('$0.00')).toBeNull();
     expect(screen.queryByText('0.00')).toBeNull();
 
-    // Every KPI collapses to the unknown placeholder when there is no data.
-    expect(within(region).getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    // Every KPI is omitted from the face and counted in the drawer when there is no data.
+    expect(within(region).getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   });
 });
 
@@ -371,7 +375,14 @@ describe('ChargingTab — null-safety', () => {
         }),
       }) }));
       expect(container.querySelector('[data-operational-metric="charging-sessions"] [data-operational-value]')).toHaveTextContent('128');
-      expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(5);
+      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const sessionsDialog = screen.getByRole('dialog');
+      for (const label of ['Total energy', 'Total cost', 'Avg power', 'Avg duration', 'Charge efficiency']) {
+        expect(within(sessionsDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+      }
+      expect(within(sessionsDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+      fireEvent.keyDown(sessionsDialog, { key: 'Escape' });
     },
   );
 
@@ -385,8 +396,14 @@ describe('ChargingTab — null-safety', () => {
         efficiency_stats: makeStats({ avg: 0.5 }),
       }),
     }) }));
-    expect(container.querySelector('[data-operational-metric="charging-total-energy"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(container.querySelector('[data-operational-metric="charging-average-power"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="charging-total-energy"]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="charging-average-power"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const splitDialog = screen.getByRole('dialog');
+    expect(within(splitDialog).queryByRole('group', { name: 'Total energy' })).not.toBeInTheDocument();
+    expect(within(splitDialog).queryByRole('group', { name: 'Avg power' })).not.toBeInTheDocument();
+    expect(within(splitDialog).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(splitDialog, { key: 'Escape' });
     expect(container.querySelector('[data-operational-metric="charging-total-cost"] [data-operational-value]')).toHaveTextContent('$-0.25');
     expect(container.querySelector('[data-operational-metric="charging-average-duration"] [data-operational-value]')).toHaveTextContent('0.00 min');
     expect(container.querySelector('[data-operational-metric="charging-efficiency"] [data-operational-value]')).toHaveTextContent('0.50%');
@@ -402,12 +419,17 @@ describe('ChargingTab — null-safety', () => {
         efficiency_stats: makeStats({ avg: Number.NaN }),
       }),
     }) }));
-    for (const id of ['charging-total-energy', 'charging-average-power', 'charging-efficiency']) {
-      expect(container.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'invalid');
+    for (const id of ['charging-total-energy', 'charging-average-power', 'charging-efficiency', 'charging-total-cost', 'charging-average-duration']) {
+      expect(container.querySelector(`[data-operational-metric="${id}"]`)).toBeNull();
     }
-    for (const id of ['charging-total-cost', 'charging-average-duration']) {
-      expect(container.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const unknownDialog = screen.getByRole('dialog');
+    for (const label of ['Total energy', 'Avg power', 'Charge efficiency', 'Total cost', 'Avg duration']) {
+      expect(within(unknownDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
     }
+    expect(within(unknownDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(unknownDialog, { key: 'Escape' });
   });
 
   it('preserves real zero totals and exposes source limitations through the real drawer', () => {
@@ -434,10 +456,16 @@ describe('ChargingTab — null-safety', () => {
     expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(screen.getByText('No charger type data')).toBeInTheDocument();
 
-    // Stat KPIs (power / duration / efficiency) fall back to "—" when the
+    // Stat KPIs (power / duration / efficiency) are omitted from the face when the
     // stat objects are absent, while the top-level totals still render.
     const region = screen.getByRole('region', { name: SUMMARY_REGION });
     expect(within(region).getByText('128')).toBeInTheDocument();
-    expect(within(region).getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }));
+    const absentDialog = screen.getByRole('dialog');
+    for (const label of ['Total energy', 'Total cost', 'Avg power', 'Avg duration', 'Charge efficiency']) {
+      expect(within(absentDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    }
+    expect(within(absentDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(absentDialog, { key: 'Escape' });
   });
 });

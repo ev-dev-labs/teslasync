@@ -349,6 +349,35 @@ beforeEach(() => {
   install()
 })
 
+/** Paired "A vs B" captions moved from highlight faces to the Review-details drawer. */
+function highlightCaption(label: string, caption: string) {
+  const highlights = document.getElementById('fleet-compare-highlights')
+  if (!highlights) throw new Error('fleet highlights must render')
+  fireEvent.click(within(highlights).getByRole('button', { name: 'Review details' }))
+  const dialog = screen.getByRole('dialog')
+  try {
+    const group = within(dialog).getByRole('group', { name: label })
+    expect(within(group).getByText(caption)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
+function highlightHidden(label: string) {
+  expect(screen.queryByText(label)).not.toBeInTheDocument()
+  const highlights = document.getElementById('fleet-compare-highlights')
+  if (!highlights) throw new Error('fleet highlights must render')
+  fireEvent.click(within(highlights).getByRole('button', { name: 'Review details' }))
+  const dialog = screen.getByRole('dialog')
+  try {
+    expect(within(dialog).queryByRole('group', { name: label })).not.toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
 describe('FleetComparePage evidence preservation', () => {
   it.each([
     { total_charging_cost: 500, total_wh: 45000, total_sessions: 80 },
@@ -380,7 +409,8 @@ describe('FleetComparePage evidence preservation', () => {
     expect(client.getQueryData(analyticsKeys.cost('1'))).toEqual(response)
     const highlight = screen.getByText('Recorded-cost spend · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
     if (!highlight) throw new Error('Recorded-cost spend must have a highlight')
-    expect(within(highlight).getByText(`$${totals.total_charging_cost.toFixed(2)} vs $650.00`)).toBeInTheDocument()
+    expect(within(highlight).getByText(`$${totals.total_charging_cost.toFixed(2)}`)).toBeInTheDocument()
+    highlightCaption('Recorded-cost spend · Model 3 LR', `$${totals.total_charging_cost.toFixed(2)} vs $650.00`)
   })
 
   it('shows active state loading without invented readings', async () => {
@@ -660,9 +690,14 @@ describe('FleetComparePage', () => {
     if (!row) throw new Error('CO₂ estimate must have a lifetime table row')
     await waitFor(() => expect(within(row).getAllByRole('cell')[1]).toHaveTextContent(display))
     expect(within(row).getAllByRole('cell')[2]).toHaveTextContent('300.00 kg')
-    const highlight = screen.getByText('Estimated CO₂ saved · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
-    if (!highlight) throw new Error('CO₂ estimate must have a highlight list item')
-    await waitFor(() => expect(within(highlight).getByText(pair)).toBeInTheDocument())
+    if (display === '—') {
+      highlightHidden('Estimated CO₂ saved · Model 3 LR')
+    } else {
+      const highlight = screen.getByText('Estimated CO₂ saved · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
+      if (!highlight) throw new Error('CO₂ estimate must have a highlight list item')
+      await waitFor(() => expect(within(highlight).getByText(display)).toBeInTheDocument())
+      highlightCaption('Estimated CO₂ saved · Model 3 LR', pair)
+    }
     expect(screen.getAllByText('CO₂ savings are a distance-based estimate using 0.07 kg per kilometre of recorded driving, not measured emissions. Values cover lifetime tracked drives; exact observation bounds and recording completeness are not supplied.')).toHaveLength(2)
     expect(within(row).queryByText('Winner')).not.toBeInTheDocument()
     const stats = client.getQueryData<DrivingStats>(drivingKeys.stats('1'))
@@ -701,10 +736,12 @@ describe('FleetComparePage', () => {
     expect(screen.getAllByText('5,000.00 km').length).toBe(2)
     // KPI band interpolates the i18n "A vs B" connector with live/lifetime data.
     const batteryReading = screen.getByText('Battery level · Model 3 LR').closest('[role="listitem"]') as HTMLElement
-    expect(await within(batteryReading).findByText('72% vs 65%')).toBeInTheDocument()
+    expect(await within(batteryReading).findByText('72%')).toBeInTheDocument()
+    highlightCaption('Battery level · Model 3 LR', '72% vs 65%')
     const chargingCostReading = screen.getByText('Recorded-cost spend · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
     if (!chargingCostReading) throw new Error('Recorded-cost spend · Model 3 LR must belong to a semantic listitem')
-    expect(await within(chargingCostReading).findByText('$500.00 vs $650.00')).toBeInTheDocument()
+    expect(await within(chargingCostReading).findByText('$500.00')).toBeInTheDocument()
+    highlightCaption('Recorded-cost spend · Model 3 LR', '$500.00 vs $650.00')
 
     // Vehicle names surface as the table's value-column headers.
     expect(screen.getAllByText('Model 3 LR').length).toBeGreaterThan(0)

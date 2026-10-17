@@ -68,7 +68,7 @@ describe('specialist source behavior preserved inside shared card shells', () =>
     expect(state.metrics.record.map(metric => metric.rawValue)).toEqual([distance, '2h 0m', efficiency]);
     expect(screen.getByText(drive.start_address)).toBeInTheDocument();
     expect(screen.getByText(drive.end_address, { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(drive.date)).toBeInTheDocument();
+    expect(screen.getByText('Aug 18, 2024')).toBeInTheDocument();
   });
   it('null records keep a recoverable empty state rather than invented zero records', () => {
     render(<YearDriveRecord drive={null} id="record" period={period} />);

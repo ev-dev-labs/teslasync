@@ -28,7 +28,7 @@
  * `useNavigate`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -214,8 +214,14 @@ describe('DrivingTemperatureStats — partial data', () => {
     renderPanel(makeQuery({ data: analytics(INSIDE, ZEROED) }));
 
     expect(screen.getByText('18.40°C')).toBeInTheDocument();
-    // The three outside cards fall back to "—" (count 0 → no data).
-    expect(screen.getAllByText(DASH)).toHaveLength(3);
+    // The three outside cards are omitted from the face (count 0 → no data).
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const outsideDialog = screen.getByRole('dialog');
+    for (const label of ['Outside min', 'Outside avg', 'Outside max']) {
+      expect(within(outsideDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    }
+    expect(within(outsideDialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(outsideDialog, { key: 'Escape' });
     // Panel stays mounted, not gated to the empty state.
     expect(
       screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
@@ -228,7 +234,13 @@ describe('DrivingTemperatureStats — partial data', () => {
 
     expect(screen.getByText('30.10°C')).toBeInTheDocument();
     expect(screen.getByText('-5.30°C')).toBeInTheDocument();
-    expect(screen.getAllByText(DASH)).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const insideDialog = screen.getByRole('dialog');
+    for (const label of ['Inside min', 'Inside avg', 'Inside max']) {
+      expect(within(insideDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    }
+    expect(within(insideDialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(insideDialog, { key: 'Escape' });
     expect(screen.queryByText('No temperature stats')).toBeNull();
   });
 });
@@ -311,9 +323,11 @@ describe('DrivingTemperatureStats — null safety', () => {
     expect(screen.getByText('0.00°C')).toBeInTheDocument();
     expect(screen.getByText('-5.00°C')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const zeroDialog = screen.getByRole('dialog');
+    expect(within(zeroDialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(zeroDialog, { key: 'Escape' });
   });
 
   it('keeps missing readings unknown even when the side has recorded samples', () => {
@@ -322,8 +336,12 @@ describe('DrivingTemperatureStats — null safety', () => {
     renderPanel(makeQuery({ data: analytics(malformedInside, undefined) }));
 
     expect(screen.queryByText('0.00°C')).toBeNull();
-    // Outside is entirely absent → three "—" fallbacks.
-    expect(screen.getAllByText(DASH)).toHaveLength(6);
+    // All six readings unknown → omitted face plus a drawer count.
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const malformedDialog = screen.getByRole('dialog');
+    expect(within(malformedDialog).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(malformedDialog, { key: 'Escape' });
     expect(
       screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
     ).toBeInTheDocument();

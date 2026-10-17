@@ -135,7 +135,7 @@ export default function YearReviewPage() {
     return (
       <PageLayout title={t('yearReview.title', 'Year in review')}>
         <EmptyState message={t('playground.validation.schemaMismatch', 'Does not match the API specification ({{constraint}}).',
-          { constraint: '2010-2100' })}
+          { constraint: '2010–2100' })}
           action={{ label: t('yearReview.pageTitle', { year: currentYear, defaultValue: '{{year}} Year in review' }),
             onClick: () => goYear(currentYear) }} />
       </PageLayout>

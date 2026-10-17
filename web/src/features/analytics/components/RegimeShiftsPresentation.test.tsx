@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -90,25 +91,34 @@ describe('regime source frames preserve unknown versus returned-empty evidence',
     const { container } = show();
     expect(screen.getByRole('heading', { name: 'Weekly consumption & detected regimes' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Shift log' })).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(0);
     expect(state.metrics.current.map(metric => metric.rawValue)).toEqual([null, null, null, null]);
     expect(screen.queryByText('over 0 weeks')).not.toBeInTheDocument();
     expect(screen.queryByText('none detected')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('regime-summary')).getByRole('button', { name: 'Review details' }));
+    const fatalDialog = screen.getByRole('dialog');
+    expect(within(fatalDialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(fatalDialog, { key: 'Escape' });
   });
   it('returned-empty source evidence survives a failed refresh and keeps its original no-shift interpretation', () => {
     state.data = [];
     state.error = new Error('refresh failed');
     const { container } = show();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('over 0 weeks')).toBeInTheDocument();
-    expect(screen.getByText('none detected')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(1);
     expect(state.metrics.current.map(metric => metric.rawValue)).toEqual([0, null, null, undefined]);
     expect(container.querySelector('[data-operational-metric="regimes-count"]')).toHaveAttribute('data-value-state', 'value');
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(3);
-    expect(screen.getByText('Returned drive-history window')).toBeInTheDocument();
-    expect(screen.getByText('Continuous observation coverage is unknown.')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(0);
+    expect(screen.queryByText('none detected')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('regime-summary'), 'Returned drive-history window');
+    assertOperationalBriefDisclosure(screen.getByTestId('regime-summary'), 'Continuous observation coverage is unknown.');
+    fireEvent.click(within(screen.getByTestId('regime-summary')).getByRole('button', { name: 'Review details' }));
+    const retainedDialog = screen.getByRole('dialog');
+    expect(within(within(retainedDialog).getByRole('group', { name: 'Regimes detected' })).getByText('over 0 weeks')).toBeInTheDocument();
+    expect(within(retainedDialog).queryByRole('group', { name: 'Last shift' })).not.toBeInTheDocument();
+    expect(within(retainedDialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(retainedDialog, { key: 'Escape' });
   });
 
   it('keeps metric labels and source frames busy without displaying fabricated loading values', () => {
@@ -117,7 +127,7 @@ describe('regime source frames preserve unknown versus returned-empty evidence',
     expect(screen.getByTestId('regime-summary')).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
-    expect(screen.getByText('Loading drive history')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('regime-summary'), 'Loading drive history');
     expect(screen.getByRole('heading', { name: 'Weekly consumption & detected regimes' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Shift log' })).toBeInTheDocument();
   });
@@ -130,7 +140,10 @@ describe('regime source frames preserve unknown versus returned-empty evidence',
     expect(container.querySelector('[data-operational-metric="regimes-current"] [data-operational-value]')).toHaveTextContent('300 Wh/km');
     expect(container.querySelector('[data-operational-metric="regimes-last-shift"] [data-operational-value]')).toHaveTextContent('+100%');
     expect(container.querySelector('[data-operational-metric="regimes-temperature"] [data-operational-value]')).toHaveTextContent('0.0°C');
-    expect(screen.getByText('over 12 weeks')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('regime-summary')).getByRole('button', { name: 'Review details' }));
+    const measuredDialog = screen.getByRole('dialog');
+    expect(within(within(measuredDialog).getByRole('group', { name: 'Regimes detected' })).getByText('over 12 weeks')).toBeInTheDocument();
+    fireEvent.keyDown(measuredDialog, { key: 'Escape' });
   });
 
   it('opens the real review drawer with retained no-shift context and closes it without dropping source frames', () => {
@@ -141,9 +154,11 @@ describe('regime source frames preserve unknown versus returned-empty evidence',
     const drawer = screen.getByRole('dialog', { name: 'Regime summary metrics details' });
     expect(within(drawer).getByText('Retained drive history')).toBeInTheDocument();
     expect(within(drawer).getByText('Drive history')).toBeInTheDocument();
-    expect(within(drawer).getByText('over 0 weeks')).toBeInTheDocument();
-    expect(within(drawer).getByText('none detected')).toBeInTheDocument();
-    expect(within(drawer).getByText('avg temp change at last shift')).toBeInTheDocument();
+    expect(within(within(drawer).getByRole('group', { name: 'Regimes detected' })).getByText('over 0 weeks')).toBeInTheDocument();
+    expect(within(drawer).queryByRole('group', { name: 'Last shift' })).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole('group', { name: 'Temp link' })).not.toBeInTheDocument();
+    expect(within(drawer).queryByText('none detected')).not.toBeInTheDocument();
+    expect(within(drawer).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

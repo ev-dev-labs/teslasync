@@ -551,7 +551,12 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getByText(/valid zero envelope/i)).toBeInTheDocument();
     expect(screen.queryByText('$50.00')).not.toBeInTheDocument();
     expect(screen.queryByText(/^\+?\$50\.\d+$/)).not.toBeInTheDocument();
-    expect(screen.getByText('Withheld')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('tco-savings-envelope')).getByRole('button', { name: 'Review details' }));
+    const withheldDialog = screen.getByRole('dialog');
+    expect(within(withheldDialog).queryByRole('group', { name: 'Maintenance heuristic' })).not.toBeInTheDocument();
+    expect(within(withheldDialog).queryByText('Withheld')).not.toBeInTheDocument();
+    expect(within(withheldDialog).getByText(/empty fields? (is|are) hidden\./)).toBeInTheDocument();
+    fireEvent.keyDown(withheldDialog, { key: 'Escape' });
   });
 
   it('renders partial monthly rows with field-specific support and no fabricated chart rows', () => {
@@ -588,13 +593,16 @@ describe('TrueCostPage evidence rendering', () => {
     });
     renderPage();
 
-    expect(screen.getAllByText('Loss').length).toBeGreaterThan(0);
-    const lossValue = screen.getAllByText('-$50.00')
-      .find((element) => element.classList.contains('text-rose-300'));
+    fireEvent.click(within(screen.getByTestId('tco-savings-envelope')).getByRole('button', { name: 'Review details' }));
+    const lossDialog = screen.getByRole('dialog');
+    expect(within(lossDialog).getAllByText('Loss').length).toBeGreaterThan(0);
+    const lossValue = within(lossDialog).getAllByText('-$50.00')
+      .find((element) => element.classList.contains('text-[var(--semantic-danger)]'));
     expect(lossValue).toBeDefined();
     if (!lossValue) throw new Error('sign-aware loss value was not rendered');
-    expect(lossValue).toHaveClass('text-rose-300');
-    expect(lossValue).not.toHaveClass('text-emerald-300');
+    expect(lossValue).toHaveClass('text-[var(--semantic-danger)]');
+    expect(lossValue).not.toHaveClass('text-[var(--semantic-success)]');
+    fireEvent.keyDown(lossDialog, { key: 'Escape' });
   });
 
   it('converts canonical distance and cost/km to metric display units', () => {

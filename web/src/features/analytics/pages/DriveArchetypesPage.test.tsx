@@ -343,8 +343,7 @@ describe('DriveArchetypesPage', () => {
     renderPage();
 
     const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
-    expect(refresh).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9');
-    expect(refresh).not.toHaveClass('min-h-9');
+    expect(refresh).toHaveClass('h-9', 'w-9');
     const icon = refresh.querySelector('svg');
     expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
     expect(icon).toHaveAttribute('aria-hidden', 'true');
@@ -364,7 +363,7 @@ describe('DriveArchetypesPage', () => {
     const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
     expect(refresh).toBeDisabled();
     expect(refresh).toHaveAttribute('aria-busy', 'true');
-    expect(refresh).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(refresh).toHaveClass('h-9', 'w-9');
     expect(within(screen.getByTestId('drive-archetypes-candidates'))
       .getAllByText('Selected')).toHaveLength(1);
     fireEvent.click(refresh);
@@ -439,8 +438,16 @@ describe('DriveArchetypesPage', () => {
       name: 'Loading drive-archetype evidence',
     })).toBeInTheDocument();
     for (const id of ['drive-archetypes-source', 'drive-archetypes-feature-ranges', 'drive-archetypes-directory']) {
-      const section = within(screen.getByTestId(id));
-      expect(section.getByText('Awaiting drive evidence')).toBeInTheDocument();
+      const sectionEl = screen.getByTestId(id);
+      const section = within(sectionEl);
+      if (id === 'drive-archetypes-source') {
+        fireEvent.click(section.getByRole('button', { name: 'Review details' }));
+        const awaitingDialog = screen.getByRole('dialog');
+        expect(within(awaitingDialog).getByText('Awaiting drive evidence')).toBeInTheDocument();
+        fireEvent.keyDown(awaitingDialog, { key: 'Escape' });
+      } else {
+        expect(section.getByText('Awaiting drive evidence')).toBeInTheDocument();
+      }
       expect(section.queryByText(/^0 (returned|of 6 active|of 0 shown)$/)).not.toBeInTheDocument();
     }
   });
@@ -517,8 +524,10 @@ describe('DriveArchetypesPage', () => {
     expect(within(screen.getByTestId('drive-archetypes-kpis')).getByText(
       '12 eligible drives are available; 20 are required for clustering.',
     )).toBeInTheDocument();
-    expect(within(screen.getByTestId('drive-archetypes-source'))
-      .getAllByText('Eligible').length).toBeGreaterThan(0);
+    fireEvent.click(within(screen.getByTestId('drive-archetypes-source')).getByRole('button', { name: 'Review details' }));
+    const eligibleDialog = screen.getByRole('dialog');
+    expect(within(eligibleDialog).getAllByText('Eligible').length).toBeGreaterThan(0);
+    fireEvent.keyDown(eligibleDialog, { key: 'Escape' });
   });
 
   it('withholds clustering when eligible features have no variation', () => {

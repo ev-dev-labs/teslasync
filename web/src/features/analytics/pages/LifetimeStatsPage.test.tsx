@@ -348,8 +348,14 @@ describe('LifetimeStatsPage', () => {
   it('passes paused initial query state to every context brief without declaring empty', () => {
     h.query = makeQuery({ fetchStatus: 'paused', dataUpdatedAt: 0 });
     const { container } = renderPage();
-    expect(screen.getAllByText('Request paused')).toHaveLength(3);
     const briefs = container.querySelectorAll('[data-operational-brief]');
+    expect(briefs).toHaveLength(3);
+    for (const brief of Array.from(briefs)) {
+      fireEvent.click(within(brief as HTMLElement).getByRole('button', { name: 'Review details' }));
+      const pausedDialog = screen.getByRole('dialog');
+      expect(within(pausedDialog).getByText('Request paused')).toBeInTheDocument();
+      fireEvent.keyDown(pausedDialog, { key: 'Escape' });
+    }
     for (const brief of Array.from(briefs).slice(1)) {
       expect(brief).not.toHaveAttribute('aria-busy', 'true');
       expect(brief.parentElement?.querySelector('[data-empty-state]')).toBeNull();

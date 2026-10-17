@@ -103,7 +103,7 @@ describe('real analytics summary OperationalBrief contracts', () => {
     expect(screen.getByText('200.00 Wh/km')).toBeInTheDocument();
     expect(screen.getByText('$7.75')).toBeInTheDocument();
     expect(screen.getByText('12.00 kg')).toBeInTheDocument();
-    expect(screen.getByText('2026-01-01 – 2026-01-30')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(container, '2026-01-01 – 2026-01-30');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(JSON.stringify(fleet)).toBe(original);
@@ -117,8 +117,8 @@ describe('real analytics summary OperationalBrief contracts', () => {
     expect(screen.getByText('31.00 km')).toBeInTheDocument();
     expect(screen.getByText('11,315 km')).toBeInTheDocument();
     assertOperationalBriefDisclosure(document.body, 'Retained evidence');
-    expect(screen.getByText('Recorded lifetime · trailing 30-day average · annual projection · trailing 7 / 365 days'))
-      .toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body,
+      'Recorded lifetime · trailing 30-day average · annual projection · trailing 7 / 365 days');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getByText('The last-30-day daily average multiplied by 365. This is a projection, not measured annual distance.'))
       .toBeInTheDocument();
@@ -133,8 +133,12 @@ describe('real analytics summary OperationalBrief contracts', () => {
     const retry = vi.fn();
     const { container } = render(<MemoryRouter><LifetimeBrief stats={undefined} loading={false}
       fatalError error={new Error('failed')} onRetry={retry} /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     expect(container.querySelector('[data-value-state="value"]')).toBeNull();
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
   });
@@ -149,8 +153,12 @@ describe('real analytics summary OperationalBrief contracts', () => {
     const { container } = render(<MemoryRouter><MileageBudgetBrief budget={{ ...budget, historyCapReached: true }}
       source={source} period={period} formatDistance={distance} formatCurrency={currency} /></MemoryRouter>);
     expect(container.querySelector('[data-operational-metric="budget-used"]')).toHaveAttribute('data-value-state', 'value');
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
     expect(screen.getByText('0.00 km')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     assertOperationalBriefDisclosure(document.body, 'Retained evidence');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getByText('At least this much is present; older term drives may be absent')).toBeInTheDocument();
@@ -160,11 +168,14 @@ describe('real analytics summary OperationalBrief contracts', () => {
     const state = firmwareImpactState({ data: [] }, { data: [] });
     const { container } = render(<MemoryRouter><FirmwareBrief summary={summary} best={null} worst={null}
       state={state} onRetry={vi.fn()} /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('p < 0.05 with a non-trivial effect')).toBeInTheDocument();
+    const firmwareDialog = screen.getByRole('dialog');
+    expect(within(firmwareDialog).getByText('p < 0.05 with a non-trivial effect')).toBeInTheDocument();
+    expect(within(firmwareDialog).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(firmwareDialog, { key: 'Escape' });
   });
   it('retains each numeric A/B operand and the original paired caption', () => {
     const { container } = render(<MemoryRouter><FleetComparisonBrief nameA="Vehicle A" nameB="Vehicle B" items={[
@@ -172,29 +183,39 @@ describe('real analytics summary OperationalBrief contracts', () => {
         value: '0% vs —', loading: false, format: raw => `${raw}%` },
     ]} /></MemoryRouter>);
     expect(container.querySelector('[data-operational-metric="battery-a"]')).toHaveAttribute('data-value-state', 'value');
-    expect(container.querySelector('[data-operational-metric="battery-b"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getAllByText('0% vs —')).toHaveLength(2);
+    expect(container.querySelector('[data-operational-metric="battery-b"]')).toBeNull();
+    expect(screen.getByText('0%')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('Battery · Vehicle A')).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog')).getByText('Battery · Vehicle B')).toBeInTheDocument();
+    const compareDialog = screen.getByRole('dialog');
+    expect(within(compareDialog).getByRole('group', { name: 'Battery · Vehicle A' })).toBeInTheDocument();
+    expect(within(compareDialog).getByText('0% vs —')).toBeInTheDocument();
+    expect(within(compareDialog).queryByRole('group', { name: 'Battery · Vehicle B' })).not.toBeInTheDocument();
+    expect(within(compareDialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
+    fireEvent.keyDown(compareDialog, { key: 'Escape' });
   });
   it('keeps calibration, supported pace, ETA reasons, and browse action', () => {
     const summary = buildOdometerMilestones([], { baseOdometerKm: 1000, nowMs: Date.now(), milestoneUnitKm: 1, historyLimit: 1000 });
     const { container } = render(<MemoryRouter><MilestoneBrief summary={summary} isLoading={false}
       error={null} onRetry={vi.fn()} retained /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(container.querySelector('[data-operational-metric="milestone-pace"]')).toBeNull();
     expect(screen.getByRole('link', { name: 'Browse drives' })).toHaveAttribute('href', '/drives');
-    expect(screen.getByText('Bounded observations and calibration; lifetime completeness is unknown.')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(container, 'Bounded observations and calibration; lifetime completeness is unknown.');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('Unavailable without supported 90-day evidence')).toBeInTheDocument();
+    const milestoneDialog = screen.getByRole('dialog');
+    expect(within(milestoneDialog).getByText('Unavailable without supported 90-day evidence')).toBeInTheDocument();
+    expect(within(milestoneDialog).queryByRole('group', { name: 'Supported 90-day pace' })).not.toBeInTheDocument();
+    expect(within(milestoneDialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
+    fireEvent.keyDown(milestoneDialog, { key: 'Escape' });
   });
   it.each([
     ['funfacts', 4], ['environment', 3], ['activity', 4],
   ] as const)('keeps the complete %s lifetime band and rich details', (mode, count) => {
+    const source = deriveDataState({ data: lifetime, isError: true, error: new Error('refresh failed') });
     const { container } = render(<MemoryRouter><LifetimeContextBrief mode={mode} stats={lifetime}
-      loading={false} error={new Error('refresh failed')} onRetry={vi.fn()} /></MemoryRouter>);
+      source={source} onRetry={vi.fn()} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(count);
-    assertOperationalBriefDisclosure(document.body, 'Retained evidence');
+    assertOperationalBriefDisclosure(document.body, 'Refresh failed; retained evidence');
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(count);
     if (mode === 'funfacts') expect(screen.getByText('250.00%')).toBeInTheDocument();
     if (mode === 'activity') {
@@ -216,8 +237,9 @@ describe('real analytics summary OperationalBrief contracts', () => {
       .toBeInTheDocument();
   });
   it('keeps fractional tree-equivalent source values valid with the original integer display', () => {
+    const treeStats = { ...lifetime, trees_equivalent: 2.5 };
     const { container } = render(<MemoryRouter><LifetimeContextBrief mode="funfacts"
-      stats={{ ...lifetime, trees_equivalent: 2.5 }} loading={false} error={null} onRetry={vi.fn()} /></MemoryRouter>);
+      stats={treeStats} source={deriveDataState({ data: treeStats })} onRetry={vi.fn()} /></MemoryRouter>);
     const trees = container.querySelector('[data-operational-metric="lifetime-fun-trees"]');
     expect(trees).toHaveAttribute('data-value-state', 'value');
     expect(trees?.querySelector('[data-operational-value]')).toHaveTextContent('3');

@@ -358,10 +358,17 @@ describe('ChargingDetailSection — null safety', () => {
       ...FULL,
       charging_analytics: { ...CA, cost_stats: { ...STATS, count: 2, min: undefined, avg: Number.NaN, median: Infinity, max: 0.25 } },
     } as unknown as FleetAnalytics }));
-    expect(container.querySelector('[data-operational-metric="charging-min-cost"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(container.querySelector('[data-operational-metric="charging-average-cost"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(container.querySelector('[data-operational-metric="charging-median-cost"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(container.querySelector('[data-operational-metric="charging-min-cost"]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="charging-average-cost"]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="charging-median-cost"]')).toBeNull();
     expect(container.querySelector('[data-operational-metric="charging-max-cost"] [data-operational-value]')).toHaveTextContent('$0.25');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const costDialog = screen.getByRole('dialog');
+    for (const label of ['Min cost', 'Avg cost', 'Median cost']) {
+      expect(within(costDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    }
+    expect(within(costDialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(costDialog, { key: 'Escape' });
   });
 
   it('renders placeholder labels and zeroed counts without crashing on missing fields', () => {

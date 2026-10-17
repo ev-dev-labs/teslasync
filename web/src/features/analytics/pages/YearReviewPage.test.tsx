@@ -35,6 +35,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import * as settingsHook from '@/hooks/useSettings';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 // jsdom lacks matchMedia; framer-motion (reached via <FadeIn>) reads it at
 // module load. Install before any import evaluates.
@@ -463,7 +464,7 @@ describe('YearReviewPage — happy path', () => {
     expect(within(impact).getByText("That's 375 cups of coffee!")).toBeInTheDocument();
     expect(within(impact).getAllByText('Like planting 30 trees').length).toBeGreaterThan(0);
     expect(within(impact).getByText('Saturday')).toBeInTheDocument();
-    expect(within(impact).getByText('5 PM')).toBeInTheDocument();
+    expect(within(impact).getByText('05:00 PM')).toBeInTheDocument();
     expect(within(impact).getAllByRole('button', { name: 'Review details' })).toHaveLength(3);
   });
 });
@@ -509,7 +510,7 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     expect(within(highlights()).getByText('42')).toBeInTheDocument();
     expect(within(highlights()).getByText('$1,875.00')).toBeInTheDocument();
     expect(screen.getByTestId('year-review-highlights-stats')).toHaveAttribute('data-operational-brief');
-    expect(within(screen.getByTestId('year-review-highlights-stats')).getByText('Retained year evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('year-review-highlights-stats'), 'Retained year evidence');
     expect(document.getElementById('year-review-longest')).toHaveTextContent('320');
     const chart = screen.getByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' }).closest('figure')!;
     expect(within(chart).getByRole('table')).toHaveTextContent('800');
@@ -560,9 +561,11 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     for (const name of ['Year highlights', 'Activity', 'Impact', 'Drives of the year', 'Fun facts about your year', 'Recap']) {
       expect(screen.getByRole('region', { name })).toBeInTheDocument();
     }
-    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
+    // One fleet-level recovery plus one actionable retry per gated section shell.
+    const fleetRetries = screen.getAllByRole('button', { name: 'Retry' });
+    expect(fleetRetries).toHaveLength(12);
     installRequest();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(fleetRetries[0]);
     await waitForReview();
     expect(screen.queryByText('Server error')).toBeNull();
     expect(yearReviewCalls()).toEqual(expect.arrayContaining(['/analytics/year-review?year=2023&vehicle_id=10']));
@@ -626,12 +629,12 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
     expect(warning).not.toHaveTextContent('offline');
     expect(screen.queryByText('Server error')).toBeNull();
-    expect(within(screen.getByTestId('year-review-highlights-stats')).getByText('Retained year evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('year-review-highlights-stats'), 'Retained year evidence');
     expect(within(highlights()).getByText('128')).toBeInTheDocument();
     const chart = screen.getByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' }).closest('figure')!;
     expect(within(chart).getByRole('table')).toHaveTextContent('1100');
     expect(within(chart).getByRole('table')).toHaveTextContent('160');
-    expect(document.getElementById('year-review-recap')).toHaveTextContent('Model 3');
+    expect(screen.getByRole('region', { name: 'Recap' })).toHaveTextContent('Model 3');
     client.clear();
   });
 });
@@ -666,7 +669,14 @@ describe('YearReviewPage — zero-activity banner', () => {
     await waitFor(() => expect(within(highlights()).getByText('$1,875.00')).toBeInTheDocument());
     expect(screen.queryByText(/No drives or charges were recorded/)).toBeNull();
     const brief = screen.getByTestId('year-review-highlights-stats');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('group', { name: 'Drives' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('group', { name: 'Charges' })).not.toBeInTheDocument();
+    expect(within(dialog).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
   });
 });
 

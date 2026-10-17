@@ -342,7 +342,7 @@ describe('modernized fixed-cost ledger retained-source behavior', () => {
     view.rerender(<TrueCostFixedLedger vehicleId={3} aggregateState={aggregateState}
       totalKm={10000} totalChargingCost={700} chargingCurrency="USD" />);
     expect(screen.getByText('All-in: USD $1500.00 (USD $0.24/mi)')).toBeInTheDocument();
-    expect(screen.getByText('1 entries · USD $800.00 fixed · 6213.7119223733395 mi lifetime')).toBeInTheDocument();
+    expect(screen.getByText('1 entries · USD $800.00 fixed · 6213.71192237334 mi lifetime')).toBeInTheDocument();
     expect(screen.getByText('winter set')).toBeInTheDocument();
     expect(h.data).toEqual(retained);
     expect(h.add).not.toHaveBeenCalled();

@@ -63,11 +63,15 @@ describe('analytics shared layout composition', () => {
       expect(grid?.children).toHaveLength(3);
       const span = width < 640 ? 1 : width < 1024 ? 6 : 12;
       Array.from(grid?.children ?? []).forEach(item => {
-        expect(item).toHaveAttribute('data-card-size', 'full');
-        expect(item).toHaveAttribute('data-card-resolved-span', String(span));
         expect(item).toHaveClass(`col-span-${span}`);
         expect(item.className).not.toMatch(/\bmax-w-|\bmx-auto\b/);
       });
+      // Size/span flow through the placement context to the placed content.
+      for (const testId of ['specialist-summary', 'specialist-domain']) {
+        const placed = screen.getByTestId(testId).closest('[data-analytics-content]');
+        expect(placed).toHaveAttribute('data-card-size', 'full');
+        expect(placed).toHaveAttribute('data-card-resolved-span', String(span));
+      }
       expect(grid?.children[0]).toContainElement(screen.getByTestId('specialist-summary'));
       expect(grid?.children[1]).toContainElement(screen.getByRole('navigation', { name: 'Analytics sections' }));
       expect(grid?.children[2]).toContainElement(screen.getByTestId('specialist-domain'));

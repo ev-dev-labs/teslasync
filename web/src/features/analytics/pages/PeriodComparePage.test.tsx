@@ -26,6 +26,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -227,10 +228,10 @@ describe('PeriodComparePage — happy path', () => {
     expect(brief).toHaveAttribute('data-operational-brief');
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
-    expect(within(brief).getByText('Period A: Last 30 days · Period B: Last 90 days')).toBeInTheDocument();
     const calls = periodStatsCalls();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Period A: Last 30 days · Period B: Last 90 days')).toBeInTheDocument();
     expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
     expect(within(drawer).getByText(/Period B: 2,000\.00 km/)).toBeInTheDocument();
     expect(within(drawer).getAllByText(/-50\.00%/).length).toBeGreaterThan(0);
@@ -551,7 +552,7 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
       renderPage();
 
       await screen.findByText(/Costs were -54\.55% lower/);
-      expect(screen.getByText('Comparison incomplete')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByTestId('period-compare-summary'), 'Comparison incomplete');
       for (const metric of ['Total distance', 'Avg efficiency']) {
         const row = within(screen.getByRole('row', { name: new RegExp(metric) }));
         expect(row.getAllByText('—')).toHaveLength(3);
@@ -581,7 +582,12 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
       const refresh = screen.getAllByRole('button', { name: 'Refresh' });
       fireEvent.click(refresh[refresh.length - 1]);
 
-      expect(await screen.findByText('Retained comparison sources')).toBeInTheDocument();
+      fireEvent.click(within(screen.getByTestId('period-compare-summary')).getByRole('button', { name: 'Review details' }));
+      const retainedDialog = await screen.findByRole('dialog');
+      await waitFor(() => {
+        expect(within(retainedDialog).getByText('Retained comparison sources')).toBeInTheDocument();
+      });
+      fireEvent.keyDown(retainedDialog, { key: 'Escape' });
       const distance = within(screen.getByRole('row', { name: /Total distance/ }));
       expect(distance.getByText('1,000.00')).toBeInTheDocument();
       expect(distance.getByText('2,000.00')).toBeInTheDocument();
@@ -599,7 +605,12 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
       const refresh = screen.getAllByRole('button', { name: 'Refresh' });
       fireEvent.click(refresh[refresh.length - 1]);
 
-      expect(await screen.findByText('Comparison refresh paused')).toBeInTheDocument();
+      fireEvent.click(within(screen.getByTestId('period-compare-summary')).getByRole('button', { name: 'Review details' }));
+      const pausedDialog = await screen.findByRole('dialog');
+      await waitFor(() => {
+        expect(within(pausedDialog).getByText('Comparison refresh paused')).toBeInTheDocument();
+      });
+      fireEvent.keyDown(pausedDialog, { key: 'Escape' });
       expect(within(screen.getByRole('row', { name: /Total drives/ })).getByText('50')).toBeInTheDocument();
       expect(screen.getByText(/Distance traveled was -50\.00% less/)).toBeInTheDocument();
       expect(screen.queryByText('Server error')).toBeNull();

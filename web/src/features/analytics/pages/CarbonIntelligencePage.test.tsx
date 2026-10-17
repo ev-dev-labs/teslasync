@@ -610,8 +610,12 @@ describe('CarbonIntelligencePage', () => {
     renderPage();
 
     const evidence = screen.getByTestId('carbon-evidence-ledger');
-    expect(within(evidence).getByText('Baseline comparison unavailable'))
-      .toBeInTheDocument();
+    expect(within(evidence).queryByText('Baseline comparison unavailable')).not.toBeInTheDocument();
+    fireEvent.click(within(evidence).getByRole('button', { name: 'Review details' }));
+    const baselineDialog = screen.getByRole('dialog');
+    expect(within(baselineDialog).queryByRole('group', { name: 'Baseline comparison unavailable' })).not.toBeInTheDocument();
+    expect(within(baselineDialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(baselineDialog, { key: 'Escape' });
     expect(within(screen.getByTestId('carbon-period-footprint')).getByText(
       'The gas-baseline comparison is unavailable because one or more required values failed validation.',
     )).toBeInTheDocument();

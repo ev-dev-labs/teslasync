@@ -74,8 +74,12 @@ describe('analytics operational raw operands', () => {
     expect(metrics?.find(metric => metric.occurrenceId === 'weekly-cost')?.rawValue).toBeNull();
     const brief = screen.getByTestId('weekly-digest-summary');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
-    expect(within(brief).getByText('Retained or partial weekly records')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const digestDialog = screen.getByRole('dialog');
+    expect(within(digestDialog).getByText('Retained or partial weekly records')).toBeInTheDocument();
+    expect(within(digestDialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
+    fireEvent.keyDown(digestDialog, { key: 'Escape' });
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
@@ -106,8 +110,15 @@ describe('analytics operational raw operands', () => {
     show(<StatisticsPeriodBrief loading={false} error={new Error('Unavailable')} onRetry={vi.fn()}
       fromKm={value => value} whPerKmToDisplay={value => value} distanceUnit="km" efficiencyUnit="Wh/km" />);
     for (const metric of bridgeCapture.mock.calls.flatMap(call => call[0])) expect(metric.rawValue).toBeNull();
-    expect(screen.getByTestId('statistics-totals-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
-    expect(screen.getByTestId('statistics-averages-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(screen.getByTestId('statistics-totals-brief').querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByTestId('statistics-averages-brief').querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const [id, hidden] of [['statistics-totals-brief', '5 empty fields are hidden.'],
+      ['statistics-averages-brief', '3 empty fields are hidden.']] as const) {
+      fireEvent.click(within(screen.getByTestId(id)).getByRole('button', { name: 'Review details' }));
+      const statsDialog = screen.getByRole('dialog');
+      expect(within(statsDialog).getByText(hidden)).toBeInTheDocument();
+      fireEvent.keyDown(statsDialog, { key: 'Escape' });
+    }
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 

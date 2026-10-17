@@ -179,7 +179,7 @@ describe('DriveCalendarPage', () => {
   });
 
   it.each([
-    ['/drive-calendar?from=2024-07-01&to=2024-09-30', '2xl:grid-cols-[max-content_minmax(0,3fr)_minmax(0,2fr)]', false],
+    ['/drive-calendar?from=2024-07-01&to=2024-09-30', '2xl:grid-cols-[minmax(min(100%,15rem),max-content)_minmax(0,3fr)_minmax(0,2fr)]', false],
     ['/drive-calendar?from=2024-01-01&to=2024-12-31', 'xl:grid-cols-5', true],
   ])('sizes the selected-period panel for %s without hiding activity sections', (path, columns, fullWidth) => {
     renderCalendar(path);

@@ -50,7 +50,8 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/api/hooks/useAnalytics', () => ({
   useYearReview: (...args: unknown[]) => {
     state.query(...args);
-    return { data: state.data, isLoading: state.loading, isError: state.isError, error: state.error, refetch: state.refetch };
+    return { data: state.data, isLoading: state.loading, isError: state.isError,
+      error: state.isError ? state.error : null, refetch: state.refetch };
   },
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: () => ({ isLoading: state.vehiclesLoading }) }));
@@ -94,7 +95,8 @@ vi.mock('@/hooks/useOperationalMetrics', async (importOriginal) => {
     },
   };
 });
-vi.mock('@/components/feedback', () => ({
+vi.mock('@/components/feedback', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/feedback')>()),
   Skeleton: () => <div data-testid="skeleton" />,
   EmptyState: ({ message }: { message: string }) => <p>{message}</p>,
   AlertBanner: ({ children }: { children: ReactNode }) => <aside>{children}</aside>,
@@ -269,8 +271,16 @@ describe('annual orchestration preservation', () => {
     expect(state.panels.monthly.error).toBe(state.error);
     expect(state.panels.charging.error).toBe(state.error);
     expect(screen.getByTestId('ai')).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(9);
+    expect(document.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(0);
     expect(document.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(0);
+    for (const [id, hidden] of [['year-review-highlights-stats', '6 empty fields are hidden.'],
+      ['year-review-extremes', '3 empty fields are hidden.']] as const) {
+      fireEvent.click(within(screen.getByTestId(id)).getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText(hidden)).toBeInTheDocument();
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    }
     for (const id of ['year-review-highlights-stats', 'year-review-extremes']) {
       expect(state.metrics[id].statusLabel).toBe('Year evidence unavailable');
       expect(state.metrics[id].metrics.every(metric => metric.rawValue == null)).toBe(true);
@@ -320,10 +330,16 @@ describe('annual orchestration preservation', () => {
     show();
     const highlights = screen.getByTestId('year-review-highlights-stats');
     const extremes = screen.getByTestId('year-review-extremes');
-    expect(highlights.querySelector('[data-operational-metric="distance:0"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(highlights.querySelector('[data-operational-metric="distance:0"] [data-operational-value]')).toHaveTextContent('—');
-    expect(extremes.querySelector('[data-operational-metric="speed:0"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(extremes.querySelector('[data-operational-metric="speed:0"] [data-operational-value]')).toHaveTextContent('—');
+    expect(highlights.querySelector('[data-operational-metric="distance:0"]')).toBeNull();
+    expect(extremes.querySelector('[data-operational-metric="speed:0"]')).toBeNull();
+    for (const brief of [highlights, extremes]) {
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog');
+      // The file-local i18n double does not pluralize; match the count either way.
+      expect(within(dialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    }
     expect(state.metrics['year-review-highlights-stats'].metrics[0].rawValue).toBeNaN();
     expect(state.metrics['year-review-extremes'].metrics[0].rawValue).toBe(Number.POSITIVE_INFINITY);
     expect(state.panels.monthly.data).toBe(state.data);
@@ -343,7 +359,10 @@ describe('annual orchestration preservation', () => {
     fireEvent.click(trigger);
     const drawer = screen.getByRole('dialog', { name: `${title} details` });
     expect(within(drawer).getByText('Retained year evidence')).toBeInTheDocument();
-    expect(within(drawer).getByText('Year in review')).toBeInTheDocument();
+    const drawerHeader = drawer.querySelector('[data-drawer-header]');
+    expect(drawerHeader).not.toBeNull();
+    expect(within(drawerHeader as HTMLElement).getByText('Year in review')).toBeInTheDocument();
+    expect(within(within(drawer).getByTestId('calculation-details')).getByText('Year in review')).toBeInTheDocument();
     expect(within(drawer).getByText(detail)).toBeInTheDocument();
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     expect(within(drawer).getByText('No confidence basis was supplied.')).toBeInTheDocument();

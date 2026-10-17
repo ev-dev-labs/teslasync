@@ -40,6 +40,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { FleetContentQuery } from '../components/overview-modernization/retainFleetContent';
 import { FleetSectionBrief } from '../components/operationalbrief-a-m/FleetSectionBrief';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 // i18n stub: return the fallback string, interpolating {{var}} tokens from the
 // options object so assertions can target the rendered English copy.
@@ -219,7 +220,7 @@ describe('AnalyticsPage', () => {
     const notice = await screen.findByTestId('analytics-fleet-partial');
     expect(notice).toHaveTextContent('not treated as complete');
     for (const reason of reasons) expect(notice).toHaveTextContent(reason);
-    expect(within(screen.getByRole('region', { name: 'Fleet summary metrics' })).getByText('Partial data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Fleet summary metrics' }), 'Partial data');
     expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:42');
     mockedRequest.mockRejectedValue(new Error('Fleet refresh failed'));
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
@@ -283,7 +284,7 @@ describe('AnalyticsPage', () => {
 
     expect(screen.getByTestId('hero-gauges')).toHaveTextContent('hero:loading');
     expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:loading');
-    expect(within(screen.getByTestId('tab-overview')).getByText('Loading evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('tab-overview'), 'Loading evidence');
   });
 
   it('shows unavailable rather than loading or returned evidence when paused without data', () => {
@@ -291,7 +292,7 @@ describe('AnalyticsPage', () => {
     mockedRequest.mockReturnValue(new Promise(() => {}));
     renderPage();
     const tab = screen.getByTestId('tab-overview');
-    expect(within(tab).getByText('Evidence unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(tab, 'Evidence unavailable');
     expect(within(tab).queryByText('Loading evidence')).not.toBeInTheDocument();
     expect(within(tab).queryByText('Returned evidence')).not.toBeInTheDocument();
     expect(fleetPaths()).toEqual([]);
@@ -302,7 +303,7 @@ describe('AnalyticsPage', () => {
       vehicle_comparison: [], battery_trend: [] }));
     renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-overview')).toHaveTextContent('overview:ready:0'));
-    expect(within(screen.getByTestId('tab-overview')).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('tab-overview'), 'Returned evidence');
   });
 
   it('hands retained failure state to every domain brief without replacing content, then recovers', async () => {
@@ -319,12 +320,12 @@ describe('AnalyticsPage', () => {
       fireEvent.click(within(nav).getByRole('button', { name }));
       const tab = screen.getByTestId(`tab-${id}`);
       expect(tab).toHaveTextContent(`${id}:ready:42`);
-      expect(within(tab).getByText('Retained evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(tab, 'Retained evidence');
     }
     installFleet(makeFleet({ total_drives: 43 }));
     await client.refetchQueries({ queryKey: ['analytics'] });
     await waitFor(() => expect(screen.getByTestId('tab-battery')).toHaveTextContent('battery:ready:43'));
-    expect(within(screen.getByTestId('tab-battery')).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('tab-battery'), 'Returned evidence');
     expect(screen.getByTestId('overview-source-status')).toHaveTextContent('current');
   });
 
@@ -491,7 +492,7 @@ describe('AnalyticsPage', () => {
     const end = '2025-03-10T07:00:00.000Z';
     await waitFor(() => expect(fleetPaths()).toContain(fleetPath(start, end)));
     await waitFor(() => expect(client.getQueryData(analyticsKeys.fleet(undefined, start, end))).toBeDefined());
-    expect(screen.getByText('2025-03-08 – 2025-03-09')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Fleet summary metrics' }), '2025-03-08 – 2025-03-09');
     expect(Date.parse(end) - Date.parse(start)).toBe(47 * 60 * 60_000);
   });
 

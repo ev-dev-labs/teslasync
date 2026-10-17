@@ -354,11 +354,10 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
   it('renders_retained_failure_age_and_actual_last_update_without_hiding_warning_or_retry', () => {
     const retry = vi.fn();
     render(row(carbonQueryState(query({ isError: true, error: REFRESH_ERROR }), true, retry)));
-    const freshness = screen.getByRole('status', {
+    const freshness = screen.getByRole('button', {
       name: 'Data freshness: Error · 5m ago · Source: Selected-period summary',
     });
-    expect(freshness).toHaveTextContent('5m ago');
-    expect(freshness).toHaveAttribute('title', 'Last updated: 10:08 PM · Source: Selected-period summary');
+    expect(freshness).toHaveAccessibleName('Data freshness: Error · 5m ago · Source: Selected-period summary');
     expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
     expect(screen.getByText('Refresh failed; the most recently loaded evidence remains visible.'))
       .toBeInTheDocument();
@@ -371,9 +370,9 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
 
   it('renders_paused_age_without_claiming_refresh_failure', () => {
     render(row(carbonQueryState(query({ fetchStatus: 'paused' }), true, vi.fn())));
-    expect(screen.getByRole('status', {
+    expect(screen.getByRole('button', {
       name: 'Data freshness: Stale · 5m ago · Source: Selected-period summary',
-    })).toHaveTextContent('Stale · 5m ago');
+    })).toHaveAccessibleName('Data freshness: Stale · 5m ago · Source: Selected-period summary');
     expect(screen.getByText('Cached · refresh paused')).toBeInTheDocument();
     expect(screen.getByText('The network is unavailable; cached evidence remains visible while refresh is paused.'))
       .toBeInTheDocument();
@@ -385,9 +384,9 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     expect(state.isStale).toBe(true);
     expect(state.dataUpdatedAt).toBe(ORIGINAL_SUCCESS);
     render(row(state));
-    expect(screen.getByRole('status', {
+    expect(screen.getByRole('button', {
       name: 'Data freshness: Stale · 5m ago · Source: Selected-period summary',
-    })).toHaveTextContent('Stale · 5m ago');
+    })).toHaveAccessibleName('Data freshness: Stale · 5m ago · Source: Selected-period summary');
     expect(screen.getByText('Ready')).toBeInTheDocument();
     expect(screen.queryByText(/refresh failed|refresh paused/i)).not.toBeInTheDocument();
   });
@@ -395,19 +394,19 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
   it('advances_rendered_age_and_last_update_only_on_actual_successful_refresh', () => {
     const retry = vi.fn();
     const view = render(row(carbonQueryState(query(), true, retry)));
-    expect(screen.getByRole('status')).toHaveTextContent('5m ago');
+    expect(screen.getByRole('button', {
+      name: 'Data freshness: Up to date · 5m ago · Source: Selected-period summary',
+    })).toBeInTheDocument();
     view.rerender(row(carbonQueryState(query({
       isFetching: true, fetchStatus: 'fetching',
     }), true, retry)));
-    expect(screen.getByRole('status')).toHaveAccessibleName(
+    expect(screen.getByRole('button')).toHaveAccessibleName(
       'Data freshness: Updating… · 5m ago · Source: Selected-period summary',
     );
-    expect(screen.getByRole('status')).toHaveTextContent('updating…');
     expect(screen.getByText('Refreshing cached data')).toBeInTheDocument();
     view.rerender(row(carbonQueryState(query({ dataUpdatedAt: NOW - 60_000 }), true, retry)));
-    expect(screen.getByRole('status')).toHaveTextContent('1m ago');
-    expect(screen.getByRole('status')).toHaveAttribute(
-      'title', 'Last updated: 10:12 PM · Source: Selected-period summary',
+    expect(screen.getByRole('button')).toHaveAccessibleName(
+      'Data freshness: Up to date · 1m ago · Source: Selected-period summary',
     );
     expect(screen.getByText('Ready')).toBeInTheDocument();
     expect(retry).not.toHaveBeenCalled();
@@ -431,10 +430,9 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     for (const [index, { id, state }] of states.entries()) {
       expect(state.dataUpdatedAt).toBe(timestamps[index]);
       const source = within(screen.getByRole('region', { name: `${id} synthetic source` }));
-      expect(source.getByRole('status')).toHaveAccessibleName(
-        `Data freshness: Error · ${index + 1}m ago · Source: ${id}`,
-      );
-      expect(source.getByRole('status')).toHaveTextContent(`${index + 1}m ago`);
+      expect(source.getByRole('button', {
+        name: `Data freshness: Error · ${index + 1}m ago · Source: ${id}`,
+      })).toBeInTheDocument();
       expect(source.getByText(`Synthetic ${id} scope`)).toBeInTheDocument();
       fireEvent.click(source.getByRole('button', { name: 'Retry refresh' }));
       for (const [retryIndex, retry] of retries.entries()) {

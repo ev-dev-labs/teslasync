@@ -88,15 +88,21 @@ describe('LifetimeContextBrief efficiency preferences', () => {
     const { container } = render(<MemoryRouter><LifetimeContextBrief mode="activity"
       stats={{ ...stats, avg_efficiency_wh_km: efficiency }} source={deriveDataState({ data: stats })}
       onRetry={vi.fn()} /></MemoryRouter>);
-    expect(container.querySelector('[data-operational-metric="lifetime-activity-efficiency"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="lifetime-activity-efficiency"]')).toBeNull();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const efficiencyDialog = screen.getByRole('dialog');
+    expect(within(efficiencyDialog).queryByRole('group', { name: 'Avg efficiency' })).not.toBeInTheDocument();
+    expect(within(efficiencyDialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
+    fireEvent.keyDown(efficiencyDialog, { key: 'Escape' });
   });
 
   it.each([['funfacts', 4], ['environment', 3]] as const)('preserves the populated %s band', (mode, count) => {
     const { container } = render(<MemoryRouter><LifetimeContextBrief mode={mode} stats={stats}
       source={deriveDataState({ data: stats, error: new Error('refresh failed') })} onRetry={vi.fn()} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(count);
-    expect(screen.getAllByText('Refresh failed; retained evidence')).toHaveLength(2);
+    expect(screen.getAllByText('Refresh failed; retained evidence')).toHaveLength(1);
+    assertOperationalBriefDisclosure(document.body, 'Refresh failed; retained evidence');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -114,7 +120,7 @@ describe('LifetimeContextBrief efficiency preferences', () => {
   describe('LifetimeContextBrief source trust', () => {
     it('shows active loading without authoritative empty or fabricated zero', () => {
       const { container } = render(brief({ isPending: true, isLoading: true, fetchStatus: 'fetching' }));
-      expect(screen.getByText('Loading evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Loading evidence');
       expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
       expect(container.querySelector('[data-empty-state]')).toBeNull();
       expect(container.querySelector('[data-value-state="value"]')).toBeNull();
@@ -122,7 +128,7 @@ describe('LifetimeContextBrief efficiency preferences', () => {
 
     it('does not call a paused initial request empty or busy', () => {
       const { container } = render(brief({ isPending: true, fetchStatus: 'paused' }));
-      expect(screen.getByText('Request paused')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Request paused');
       expect(container.querySelector('[data-empty-state]')).toBeNull();
       expect(container.querySelector('[aria-busy="true"]')).toBeNull();
       expect(screen.queryByText('No driving data yet')).not.toBeInTheDocument();
@@ -146,17 +152,18 @@ describe('LifetimeContextBrief efficiency preferences', () => {
 
     it('retains values, localized individual retry, and recovers without losing the brief', () => {
       const { rerender } = render(brief({ data: stats, error: new Error('offline'), dataUpdatedAt: 6600000 }));
-      expect(screen.getAllByText('Refresh failed; retained evidence')).toHaveLength(2);
+      expect(screen.getAllByText('Refresh failed; retained evidence')).toHaveLength(1);
+      assertOperationalBriefDisclosure(document.body, 'Refresh failed; retained evidence');
       expect(screen.getByText('250.00%')).toBeInTheDocument();
-      expect(screen.getByText('Loaded 10 minutes ago')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Loaded 10 minutes ago');
       fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
       expect(retry).toHaveBeenCalledTimes(1);
       rerender(brief({ data: stats, isFetching: true, fetchStatus: 'fetching', dataUpdatedAt: 6600000 }));
-      expect(screen.getByText('Refreshing retained evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Refreshing retained evidence');
       expect(screen.getByText('250.00%')).toBeInTheDocument();
       rerender(brief({ data: stats, isSuccess: true, dataUpdatedAt: 7200000 }));
       assertOperationalBriefDisclosure(document.body, 'Returned evidence');
-      expect(screen.getByText('Loaded 0 minutes ago')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Loaded 0 minutes ago');
       expect(screen.queryByRole('button', { name: 'Erneut versuchen' })).not.toBeInTheDocument();
     });
 
@@ -165,7 +172,7 @@ describe('LifetimeContextBrief efficiency preferences', () => {
       [{ dataUpdatedAt: 1 }, 'Evidence may be outdated'],
     ])('retains blocked and aged values without inventing a failure', (query, label) => {
       render(brief({ ...query, data: stats }));
-      expect(screen.getByText(label)).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, label);
       expect(screen.getByText('250.00%')).toBeInTheDocument();
       expect(screen.queryByText('Refresh failed; retained evidence')).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }));
@@ -174,7 +181,7 @@ describe('LifetimeContextBrief efficiency preferences', () => {
 
     it('provides local recovery for a fatal initial failure', () => {
       render(brief({ error: new Error('offline'), isError: true }));
-      expect(screen.getByText('Evidence unavailable')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Evidence unavailable');
       fireEvent.click(screen.getByRole('button', { name: /Erneut versuchen/ }));
       expect(retry).toHaveBeenCalledTimes(1);
       expect(screen.queryByText('No driving data yet')).not.toBeInTheDocument();

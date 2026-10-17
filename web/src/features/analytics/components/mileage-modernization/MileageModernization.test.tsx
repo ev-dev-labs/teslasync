@@ -171,7 +171,15 @@ describe('live mileage modernization preservation', () => {
     expect(metricValue('Annual projection')).toBe('11,315 km');
     expect(metricValue('Last 7 days')).toBe('210.00 km');
     expect(metricValue('Last 365 days')).toBe('9,500 km');
-    expect(screen.getByText(/Recording completeness is not reported/)).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Mileage summary metrics' });
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const completenessDialog = screen.getByRole('dialog');
+    const completenessHeader = completenessDialog.querySelector('[data-drawer-header]');
+    expect(completenessHeader).not.toBeNull();
+    expect(within(completenessHeader as HTMLElement).getByText(/Recording completeness is not reported/)).toBeInTheDocument();
+    expect(within(within(completenessDialog).getByTestId('calculation-details'))
+      .getByText(/Recording completeness is not reported/)).toBeInTheDocument();
+    fireEvent.keyDown(completenessDialog, { key: 'Escape' });
   });
 
   it('converts exactly once using the current distance preference and preserves reactive numeric locale', () => {
@@ -222,16 +230,17 @@ describe('live mileage modernization preservation', () => {
       .getByText('Mileage summary has not been supplied.')).toBeInTheDocument();
     expect(within(panel('Distance by window').getByRole('status'))
       .getByText('Mileage summary has not been supplied.')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Mileage summary metrics' }))
-      .getAllByRole('listitem')).toHaveLength(6);
+    const missingSummary = screen.getByRole('region', { name: 'Mileage summary metrics' });
+    expect(within(missingSummary).getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(missingSummary).getByRole('button', { name: 'Review details' }));
+    const missingDialog = screen.getByRole('dialog');
     for (const label of ['Total distance', 'Total drives', 'Daily avg (30d)',
       'Annual projection', 'Last 7 days', 'Last 365 days']) {
-      expect(tile(label)).toHaveAttribute('data-value-state', 'missing');
-      expect(metricValue(label)).toBe('—');
-      await waitFor(() => {
-        expect(within(tile(label)).getByText(label)).toBeVisible();
-      });
+      expect(within(missingSummary).getByText(label)).toBeInTheDocument();
+      expect(within(missingDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
     }
+    expect(within(missingDialog).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(missingDialog, { key: 'Escape' });
     expect(within(panel('Mileage summary metrics').getByRole('status'))
       .getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
     await waitFor(() => {

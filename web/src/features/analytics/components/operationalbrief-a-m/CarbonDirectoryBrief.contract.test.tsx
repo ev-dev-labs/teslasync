@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { getGlobalPrecision, setGlobalPrecision } from '@/lib/numberFormat';
 import { buildCarbonIntelligence } from '../../lib/carbonIntelligence';
 import type { CarbonQueryState } from '../carbon-intelligence/types';
@@ -52,6 +53,23 @@ function metricValues(section: HTMLElement) {
   }));
 }
 
+// Face-value disclosure: unknown metrics are omitted from the face and counted
+// in the Review-details drawer, where their groups are absent.
+function expectDrawerHidden(section: HTMLElement, hiddenLabels: readonly string[], hiddenCount: number) {
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(section).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    hiddenLabels.forEach(label => {
+      expect(within(dialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    });
+    expect(within(dialog).getByText(hiddenCount === 1 ? '1 empty field is hidden.' : `${hiddenCount} empty fields are hidden.`)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 afterEach(() => {
   cleanup();
   setGlobalPrecision(originalPrecision);
@@ -61,16 +79,20 @@ describe('CarbonDirectoryBrief local directory contract', () => {
   it('explains a resolved empty curve locally while retaining the shell and five unknown metrics', () => {
     const section = show({ curve: [] });
     expect(within(section).getByRole('heading', { name: 'Ranked hourly directory and bands' })).toBeVisible();
-    expect(within(section).getByText('Built-in, admin-editable static 24-hour model')).toBeVisible();
+    assertOperationalBriefDisclosure(section, 'Built-in, admin-editable static 24-hour model');
     expect(within(section).getByText(emptyMessage)).toBeVisible();
     expect(within(section).getByText('Rows returned').nextElementSibling).toHaveTextContent('0.00');
     expect(within(section).getByText('24 expected clock-hours')).toBeVisible();
     expect(within(section).queryByText(invalidMessage)).not.toBeInTheDocument();
     expect(within(section).queryByText('Valid unique hours')).not.toBeInTheDocument();
     expect(within(section).queryByRole('table')).not.toBeInTheDocument();
-    expect(metricValues(section)).toEqual(['Minimum', 'Maximum', 'Mean', 'Median', 'Observed span']
-      .map(label => ({ label, value: '—', state: 'missing' })));
-    expect(within(section).getAllByRole('button').map(button => button.textContent)).toEqual(['Review details']);
+    expect(within(section).getByText('No metric values are available yet.')).toBeVisible();
+    ['Minimum', 'Maximum', 'Mean', 'Median', 'Observed span'].forEach(label => {
+      expect(within(section).getByText(label)).toBeVisible();
+    });
+    expectDrawerHidden(section, ['Minimum', 'Maximum', 'Mean', 'Median', 'Observed span'], 5);
+    expect(within(section).getAllByRole('button')).toHaveLength(1);
+    expect(within(section).getByRole('button', { name: 'Review details' })).toBeVisible();
   });
 
   it.each([
@@ -88,8 +110,10 @@ describe('CarbonDirectoryBrief local directory contract', () => {
     expect(Boolean(within(section).queryByText('Required finite non-negative value'))).toBe(intensityRule);
     expect(within(section).queryByText('24 expected clock-hours')).not.toBeInTheDocument();
     expect(within(section).queryByRole('table')).not.toBeInTheDocument();
-    expect(metricValues(section).map(metric => [metric.value, metric.state])).toEqual(Array(5).fill(['—', 'missing']));
-    expect(within(section).getAllByRole('button').map(button => button.textContent)).toEqual(['Review details']);
+    expect(within(section).getByText('No metric values are available yet.')).toBeVisible();
+    expectDrawerHidden(section, ['Minimum', 'Maximum', 'Mean', 'Median', 'Observed span'], 5);
+    expect(within(section).getAllByRole('button')).toHaveLength(1);
+    expect(within(section).getByRole('button', { name: 'Review details' })).toBeVisible();
   });
 
   it('keeps a real zero-intensity row and flat-band statistics rather than treating zero as empty', () => {
@@ -99,7 +123,7 @@ describe('CarbonDirectoryBrief local directory contract', () => {
     expect(within(table).getByRole('rowheader')).toHaveTextContent('Rank 1 · 07:00');
     expect(within(table).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['0.00 g CO₂/kWh', 'Flat curve']);
     expect(metricValues(section).map(metric => [metric.value, metric.state])).toEqual(Array(5).fill(['0.00 g CO₂/kWh', 'value']));
-    expect(within(section).getByText('The curve is flat, so clean and dirty labels are withheld.')).toBeVisible();
+    assertOperationalBriefDisclosure(section, 'The curve is flat, so clean and dirty labels are withheld.');
     expect(within(section).queryByText(emptyMessage)).not.toBeInTheDocument();
   });
 
@@ -199,8 +223,10 @@ describe('CarbonDirectoryBrief local directory contract', () => {
     expect(within(section).queryByText('24 expected clock-hours')).not.toBeInTheDocument();
     expect(within(section).queryByText(invalidMessage)).not.toBeInTheDocument();
     expect(within(section).queryByRole('table')).not.toBeInTheDocument();
-    expect(metricValues(section).map(metric => [metric.value, metric.state])).toEqual(Array(5).fill(['—', 'missing']));
-    expect(within(section).getAllByRole('button').map(button => button.textContent)).toEqual(['Review details']);
+    expect(within(section).getByText('No metric values are available yet.')).toBeVisible();
+    expectDrawerHidden(section, ['Minimum', 'Maximum', 'Mean', 'Median', 'Observed span'], 5);
+    expect(within(section).getAllByRole('button')).toHaveLength(1);
+    expect(within(section).getByRole('button', { name: 'Review details' })).toBeVisible();
   });
 
   it.each([
@@ -221,10 +247,9 @@ describe('CarbonDirectoryBrief local directory contract', () => {
     expect(within(section).getByText('Valid unique hours').nextElementSibling).toHaveTextContent('0.00');
     expect(within(section).queryByText('24 expected clock-hours')).not.toBeInTheDocument();
     expect(within(neighbor).getByRole('heading', { name: 'Lifetime context and period share' })).toBeVisible();
-    expect(within(neighbor).getByText('Full vehicle history')).toBeVisible();
-    expect(metricValues(neighbor)).toHaveLength(4);
-    expect(metricValues(neighbor).slice(0, 3).map(metric => [metric.value, metric.state]))
-      .toEqual(Array(3).fill(['—', 'missing']));
+    assertOperationalBriefDisclosure(neighbor, 'Full vehicle history');
+    expect(metricValues(neighbor)).toEqual([{ label: 'Lifetime monthly rows', value: '0', state: 'value' }]);
+    expectDrawerHidden(neighbor, ['Lifetime energy', 'Lifetime charging CO₂', 'Lifetime sessions scored'], 3);
     expect(within(neighbor).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     if (refreshError || refreshPaused) {
       expect(within(section).getByText(refreshError

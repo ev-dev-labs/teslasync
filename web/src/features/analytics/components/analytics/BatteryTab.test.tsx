@@ -279,7 +279,11 @@ describe('BatteryTab — empty', () => {
     data.avg_efficiency_wh_km = 150;
     renderTab(makeQuery({ data }));
     expect(screen.getAllByText('No battery trend data available')).toHaveLength(4);
-    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const totalsDialog = screen.getByRole('dialog');
+    expect(within(totalsDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(totalsDialog, { key: 'Escape' });
     expect(screen.queryByTestId('chart-area')).toBeNull();
     expect(screen.queryByText('500.00 kWh')).toBeNull();
   });
@@ -291,8 +295,12 @@ describe('BatteryTab — empty', () => {
     expect(screen.getByText('Health score')).toBeInTheDocument();
     expect(screen.getByText('Capacity')).toBeInTheDocument();
     expect(screen.getByText('Est. range')).toBeInTheDocument();
-    // …and each of the five values collapses to the em-dash placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(5);
+    // …and each of the five values is omitted from the face and counted in the drawer.
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const cardsDialog = screen.getByRole('dialog');
+    expect(within(cardsDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(cardsDialog, { key: 'Escape' });
 
     // All four panels surface the shared empty state rather than a blank panel.
     expect(screen.getAllByText('No battery trend data available')).toHaveLength(4);
@@ -406,7 +414,10 @@ describe('BatteryTab — null safety', () => {
     })]) }));
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(5);
     expect(container.querySelector('[data-operational-metric="battery-capacity"] [data-operational-value]')).toHaveTextContent('0.00 kWh');
-    expect(screen.getByText(/Returned battery-trend date:/)).toHaveTextContent('2026-03-02');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const dateDialog = screen.getByRole('dialog');
+    expect(within(dateDialog).getByText(/Returned battery-trend date:/)).toHaveTextContent('2026-03-02');
+    fireEvent.keyDown(dateDialog, { key: 'Escape' });
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
@@ -423,10 +434,15 @@ describe('BatteryTab — null safety', () => {
     renderTab(makeQuery({ data: analytics([nulled]) }));
 
     const brief = screen.getByRole('region', { name: 'Latest returned battery measurements' });
-    expect(within(brief).getAllByText('—')).toHaveLength(5);
-    expect(brief.querySelectorAll(
-      '[data-operational-metric][data-value-state="missing"] [data-operational-value]',
-    )).toHaveLength(5);
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const nullsDialog = screen.getByRole('dialog');
+    for (const label of ['Health score', 'Capacity', 'Degradation', 'Est. range', 'Cycles']) {
+      expect(within(nullsDialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+    }
+    expect(within(nullsDialog).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(nullsDialog, { key: 'Escape' });
     expect(screen.queryByText('0.00 kWh')).toBeNull();
 
     expect(screen.queryByTestId('chart-area')).toBeNull();

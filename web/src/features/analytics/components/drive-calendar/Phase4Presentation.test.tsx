@@ -105,11 +105,15 @@ describe('canonical calendar frames preserve independent source bodies', () => {
           rangeEnd="2026-06-30" isLoading={false} error={null} onRetry={vi.fn()} />
       </MemoryRouter>);
       const streakMetric = container.querySelector('[data-operational-metric="calendar-streak"]');
-      const distanceMetric = container.querySelector('[data-operational-metric="calendar-distance"]');
       expect(streakMetric).toHaveTextContent(daysLabel);
-      expect(distanceMetric).toHaveTextContent(drivesLabel);
-      expect(streakMetric).toHaveTextContent('longest: 0');
-      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const pluralDialog = screen.getByRole('dialog');
+      expect(within(pluralDialog).getByText(drivesLabel)).toBeInTheDocument();
+      expect(within(pluralDialog).getByText('longest: 0')).toBeInTheDocument();
+      expect(within(pluralDialog).queryByRole('group', { name: 'Busiest day' })).not.toBeInTheDocument();
+      expect(within(pluralDialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
+      fireEvent.keyDown(pluralDialog, { key: 'Escape' });
       unmount();
     }
   });
@@ -254,18 +258,24 @@ describe('canonical calendar frames preserve independent source bodies', () => {
           timezone: 'UTC', completeness: 'unknown',
           provenance: 'Returned drives in the selected workspace range; continuous coverage is unknown.' }} />
     </MemoryRouter>);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
     expect(container.querySelector('[data-operational-metric="calendar-active-days"]'))
       .toHaveAttribute('data-value-state', 'value');
-    expect(container.querySelector('[data-operational-metric="calendar-busiest-day"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('Retained drive history')).toBeInTheDocument();
-    expect(screen.getByText('Returned drives in the selected workspace range; continuous coverage is unknown.'))
-      .toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="calendar-busiest-day"]')).toBeNull();
     expect(screen.getByRole('link', { name: 'Browse drives' })).toHaveAttribute('href', '/drives');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog')).getByText('Drive calendar summary metrics details')).toBeInTheDocument();
+    const coverageDialog = screen.getByRole('dialog');
+    expect(within(coverageDialog).getByText('Retained drive history')).toBeInTheDocument();
+    const coverageHeader = coverageDialog.querySelector('[data-drawer-header]');
+    expect(coverageHeader).not.toBeNull();
+    expect(within(coverageHeader as HTMLElement).getByText('Returned drives in the selected workspace range; continuous coverage is unknown.'))
+      .toBeInTheDocument();
+    expect(within(within(coverageDialog).getByTestId('calculation-details'))
+      .getByText('Returned drives in the selected workspace range; continuous coverage is unknown.')).toBeInTheDocument();
+    expect(within(coverageDialog).getByText('Drive calendar summary metrics details')).toBeInTheDocument();
+    expect(within(coverageDialog).queryByRole('group', { name: 'Busiest day' })).not.toBeInTheDocument();
+    expect(within(coverageDialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
+    fireEvent.keyDown(coverageDialog, { key: 'Escape' });
   });
 
   it('exposes busy state without presenting loading values as measured zero', () => {
