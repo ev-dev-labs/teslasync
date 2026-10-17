@@ -92,11 +92,12 @@ export function WidgetShell({
           onRefresh={retry}
           refreshIntervalMs={refreshIntervalMs}
           manual={refreshIntervalMs == null}
+          compact={!title}
         />
       );
     } else if (query) {
         freshnessEl = (
-        <FreshnessDotAuto query={query} refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} />
+        <FreshnessDotAuto query={query} refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} compact={!title} />
       );
     }
   }
@@ -154,7 +155,7 @@ export function WidgetShell({
             </div>
           )}
           {(actions || status || description) && (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-4 pr-[var(--dashboard-widget-chrome-inset,1rem)] pb-2 pt-3">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-4 pr-4 pb-2 pt-3">
               {description && <p className={cn(dashboardTokens.description, 'mr-auto')}>{description}</p>}
               {status}
               {actions}
@@ -163,6 +164,7 @@ export function WidgetShell({
         </>
       )}
       <div
+        data-testid="widget-body"
         className={cn(
           dashboardTokens.body,
           !noPadding ? 'px-4 pb-3' : 'flex flex-col',

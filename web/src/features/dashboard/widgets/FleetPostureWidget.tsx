@@ -55,18 +55,15 @@ export default function FleetPostureWidget({ vehicleId }: WidgetProps) {
         defaultValue: 'Verified live-state coverage and evidence age across your fleet.',
       }}
       title={t('dashboard.fleetPosture.title', 'Fleet posture')}
-      noPadding
     >
-      <div className="px-4 pb-4">
-        <FleetOperationsBrief
-          vehicles={vehicles}
-          selectedVehicle={selectedVehicle}
-          fleetStates={fleetStates.data}
-          summary={fleetStates.summary}
-          isPending={fleetStates.isPending}
-          isError={fleetStates.isError}
-        />
-      </div>
+      <FleetOperationsBrief
+        vehicles={vehicles}
+        selectedVehicle={selectedVehicle}
+        fleetStates={fleetStates.data}
+        summary={fleetStates.summary}
+        isPending={fleetStates.isPending}
+        isError={fleetStates.isError}
+      />
     </WidgetShell>
   );
 }

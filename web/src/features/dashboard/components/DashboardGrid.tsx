@@ -660,7 +660,7 @@ export function DashboardGrid({
             // `widget-panel`: stable inner target for the edit-mode wobble.
             // (RGL v2 merges `react-grid-item` onto the container root, so
             // transform animations must live here, not on the item.)
-            'widget-panel w-full overflow-y-auto rounded-xl',
+            'widget-panel w-full overflow-clip rounded-xl',
             mobile ? 'flex flex-1 min-h-0 flex-col' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
             panelStyle && 'kiosk-panel',

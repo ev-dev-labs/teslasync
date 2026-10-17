@@ -46,6 +46,7 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 | 13 | app-wide sweep, extended vocabulary: Undo, Redo, Auto arrange, Reset, Columns, Density, Share, Print, Copy, Expand/Collapse, Edit, Delete/Remove/Clear | page headers, edit modes, toolbars, tables, widgets, drawers, dialogs, menus | icon-only ghost IconButton; destructive ones confirm | n/a | done | done | done | none | 2 | done |
 | 14 | Map overview page (`/live`) restructure on the trip-replay model | `/live` | map + info panel hero in one surface | done | done | done | done | none; UI only | 1 | done |
 | 15 | Trip replay page layout fixes (map height, sources drawer, timestamps, style switcher) | trip replay route | replay hero | done | done | done | done | none; UI only; negative Age logged report-only | 1 | done |
+| 16 | Dashboard widget shell: horizontal overflow, padding tokens, container-query resize, vertical scroll, Playwright guard | all dashboard widgets | WidgetShell + panel | done | done | done | done | none; UI only; per-widget guard records below | 1 | done |
 
 Exit-check inventory (run from `web/`):
 
@@ -58,6 +59,133 @@ rg -n 'maxPerRow|data-max-per-row|data-operational-metric-bank|data-columns=' sr
 Trace each result through composed parents and verify no block has more than one bordered/raised surface. Every nested brief must use `variant="embedded"` (including wrapper forwarding) or the outer surface must be removed. Review similar evidence-card wrappers beyond this named list as part of the `*Brief` usage inventory. Validate every metric grid's `maxPerRow` cap and balanced rows; six-tile groups render 3 + 3 and short rows have no orphan tile.
 
 ## Progress checkpoints
+
+- Row 16 complete (dashboard widget shell). Body token owns the scroll boundary: `overflow-x-clip overflow-y-auto break-words [&>*]:min-w-0` (+ `data-testid="widget-body"`); header/actions-row use one `pr-4` inset (dead `--dashboard-widget-chrome-inset` var removed); grid panel `overflow-y-auto` → `overflow-clip` (the old value forced x-auto: phantom horizontal scrollbars); FleetPosture drops `noPadding` + own `px-4` wrapper for shell padding; Sparkline gains `viewBox` + `h-auto max-w-full` so charts shrink instead of overflowing. Guard-found root causes, both fixed once in shared components: (1) opacity-0 Tooltip bubbles sticking past bodies inflated scrollWidth by exactly 15px (the blank-space scrollbar) — Tooltip now clamps its bubble inside clipping ancestors and observes them for post-mount shrinks (fsd-weekly scrollbar-appears-after-mount case); (2) TimelineItem `-mx-1` row bleed (+4px) — WidgetEventFeed root gains `overflow-x-clip`. Pre-existing shell-suite freshness failures repaired: the documented-but-unimplemented `compact` prop now exists on FreshnessDot/FreshnessDotAuto (20px/8px dot) and the shell passes `compact={!title}`. Guard `e2e/dashboard-widget-overflow.smoke.spec.ts`: 121 registry widgets × min/default/large × view/edit, worst-of-3-samples per config, text = own direct text only, `.sr-only`/`svg`/`.leaflet-container` subtrees excluded (all visually verified), no `assertMockApiComplete` (documented: error states are valid geometry subjects). Tests: WidgetShell 31/31 (2 padding + 3 freshness repaired), Sparkline 17/17 (+1 fluid), Tooltip 29/29 (+1 clipping-ancestor), WidgetEventFeed 22/22, FleetPostureWidget 10/10. Edge + dev server: 121/121 on all 6 configs, twice green; screenshots `row16-{fleet-posture,battery-gauge,location-map,vehicle-hero,vehicle-twin,recent-drives}-{min,large}.png`. Gates: tsc, touched-file lint, audit 0, production build. Per-widget records follow.
+Row 16 guard records (121 widgets × min/default/large × view/edit; Edge, dev server, worst of 3 samples per config):
+
+| widget | min view | min edit | default view | default edit | large view | large edit |
+|---|---|---|---|---|---|---|
+| alert-feed | pass | pass | pass | pass | pass | pass |
+| analytics-summary | pass | pass | pass | pass | pass | pass |
+| anomaly-detector | pass | pass | pass | pass | pass | pass |
+| api-usage | pass | pass | pass | pass | pass | pass |
+| audit-log | pass | pass | pass | pass | pass | pass |
+| automation-history | pass | pass | pass | pass | pass | pass |
+| automation-status | pass | pass | pass | pass | pass | pass |
+| backup-history | pass | pass | pass | pass | pass | pass |
+| backup-monitor | pass | pass | pass | pass | pass | pass |
+| battery-cells | pass | pass | pass | pass | pass | pass |
+| battery-degradation-forecast | pass | pass | pass | pass | pass | pass |
+| battery-degradation-trend | pass | pass | pass | pass | pass | pass |
+| battery-gauge | pass | pass | pass | pass | pass | pass |
+| battery-health-analytics | pass | pass | pass | pass | pass | pass |
+| battery-radial-gauge | pass | pass | pass | pass | pass | pass |
+| charge-cost-tracker | pass | pass | pass | pass | pass | pass |
+| charge-history | pass | pass | pass | pass | pass | pass |
+| charge-plans | pass | pass | pass | pass | pass | pass |
+| charge-session-chart | pass | pass | pass | pass | pass | pass |
+| charge-status | pass | pass | pass | pass | pass | pass |
+| charge-status-live | pass | pass | pass | pass | pass | pass |
+| charging-optimizer | pass | pass | pass | pass | pass | pass |
+| charging-schedule | pass | pass | pass | pass | pass | pass |
+| charging-session-detail | pass | pass | pass | pass | pass | pass |
+| charging-telemetry | pass | pass | pass | pass | pass | pass |
+| climate-control-panel | pass | pass | pass | pass | pass | pass |
+| climate-history | pass | pass | pass | pass | pass | pass |
+| climate-status | pass | pass | pass | pass | pass | pass |
+| command-history | pass | pass | pass | pass | pass | pass |
+| command-quick-actions | pass | pass | pass | pass | pass | pass |
+| cost-breakdown | pass | pass | pass | pass | pass | pass |
+| cost-forecast | pass | pass | pass | pass | pass | pass |
+| dashboard-stats | pass | pass | pass | pass | pass | pass |
+| destination-eta | pass | pass | pass | pass | pass | pass |
+| digital-twin-mini | pass | pass | pass | pass | pass | pass |
+| door-window-status | pass | pass | pass | pass | pass | pass |
+| drive-efficiency-chart | pass | pass | pass | pass | pass | pass |
+| drive-score | pass | pass | pass | pass | pass | pass |
+| drive-score-gauge | pass | pass | pass | pass | pass | pass |
+| drive-telemetry | pass | pass | pass | pass | pass | pass |
+| drivetrain-health | pass | pass | pass | pass | pass | pass |
+| driving-coach | pass | pass | pass | pass | pass | pass |
+| driving-dynamics | pass | pass | pass | pass | pass | pass |
+| energy-flow | pass | pass | pass | pass | pass | pass |
+| energy-flow-animated | pass | pass | pass | pass | pass | pass |
+| energy-site-info | pass | pass | pass | pass | pass | pass |
+| energy-stats | pass | pass | pass | pass | pass | pass |
+| export-status | pass | pass | pass | pass | pass | pass |
+| fleet-posture | pass | pass | pass | pass | pass | pass |
+| fleet-stats | pass | pass | pass | pass | pass | pass |
+| fleet-stats-bar | pass | pass | pass | pass | pass | pass |
+| fsd-weekly | pass | pass | pass | pass | pass | pass |
+| fsm-distribution | pass | pass | pass | pass | pass | pass |
+| geofence-status | pass | pass | pass | pass | pass | pass |
+| guard-mode | pass | pass | pass | pass | pass | pass |
+| lifetime-stats | pass | pass | pass | pass | pass | pass |
+| live-power-flow | pass | pass | pass | pass | pass | pass |
+| live-signal-sparklines | pass | pass | pass | pass | pass | pass |
+| live-signals | pass | pass | pass | pass | pass | pass |
+| location-favorites | pass | pass | pass | pass | pass | pass |
+| location-map | pass | pass | pass | pass | pass | pass |
+| maintenance-tracker | pass | pass | pass | pass | pass | pass |
+| media-history | pass | pass | pass | pass | pass | pass |
+| media-now-playing | pass | pass | pass | pass | pass | pass |
+| mileage-stats | pass | pass | pass | pass | pass | pass |
+| monthly-mileage | pass | pass | pass | pass | pass | pass |
+| motor-history | pass | pass | pass | pass | pass | pass |
+| motor-performance | pass | pass | pass | pass | pass | pass |
+| mqtt-status | pass | pass | pass | pass | pass | pass |
+| next-charge-decision | pass | pass | pass | pass | pass | pass |
+| notification-stats | pass | pass | pass | pass | pass | pass |
+| odometer-counter | pass | pass | pass | pass | pass | pass |
+| onboarding-checklist | pass | pass | pass | pass | pass | pass |
+| position-heatmap | pass | pass | pass | pass | pass | pass |
+| power-flow-history | pass | pass | pass | pass | pass | pass |
+| projected-range | pass | pass | pass | pass | pass | pass |
+| quick-nav | pass | pass | pass | pass | pass | pass |
+| range-bar | pass | pass | pass | pass | pass | pass |
+| range-estimate | pass | pass | pass | pass | pass | pass |
+| recent-drives | pass | pass | pass | pass | pass | pass |
+| recent-drives-list | pass | pass | pass | pass | pass | pass |
+| recently-unlocked-achievements | pass | pass | pass | pass | pass | pass |
+| regen-efficiency | pass | pass | pass | pass | pass | pass |
+| route-efficiency | pass | pass | pass | pass | pass | pass |
+| safety-features | pass | pass | pass | pass | pass | pass |
+| safety-history | pass | pass | pass | pass | pass | pass |
+| security-status | pass | pass | pass | pass | pass | pass |
+| sentry-event-log | pass | pass | pass | pass | pass | pass |
+| signal-catalog | pass | pass | pass | pass | pass | pass |
+| signal-health | pass | pass | pass | pass | pass | pass |
+| signal-log | pass | pass | pass | pass | pass | pass |
+| sleep-efficiency | pass | pass | pass | pass | pass | pass |
+| software-update-history | pass | pass | pass | pass | pass | pass |
+| software-update-status | pass | pass | pass | pass | pass | pass |
+| solar-production | pass | pass | pass | pass | pass | pass |
+| speed-heatmap | pass | pass | pass | pass | pass | pass |
+| speed-profile | pass | pass | pass | pass | pass | pass |
+| state-timeline | pass | pass | pass | pass | pass | pass |
+| subscriptions | pass | pass | pass | pass | pass | pass |
+| supercharger-history | pass | pass | pass | pass | pass | pass |
+| system-health | pass | pass | pass | pass | pass | pass |
+| telemetry-errors | pass | pass | pass | pass | pass | pass |
+| tire-pressure-history | pass | pass | pass | pass | pass | pass |
+| tire-pressure-visual | pass | pass | pass | pass | pass | pass |
+| trip-summary | pass | pass | pass | pass | pass | pass |
+| uptime-monitor | pass | pass | pass | pass | pass | pass |
+| vampire-drain | pass | pass | pass | pass | pass | pass |
+| vehicle-access | pass | pass | pass | pass | pass | pass |
+| vehicle-hero | pass | pass | pass | pass | pass | pass |
+| vehicle-hero-card | pass | pass | pass | pass | pass | pass |
+| vehicle-specs | pass | pass | pass | pass | pass | pass |
+| vehicle-twin | pass | pass | pass | pass | pass | pass |
+| vehicle-upgrades | pass | pass | pass | pass | pass | pass |
+| version-info | pass | pass | pass | pass | pass | pass |
+| wall-connector | pass | pass | pass | pass | pass | pass |
+| warranty-status | pass | pass | pass | pass | pass | pass |
+| watch-summary | pass | pass | pass | pass | pass | pass |
+| weather-at-car | pass | pass | pass | pass | pass | pass |
+| weekly-digest | pass | pass | pass | pass | pass | pass |
+| weekly-summary-card | pass | pass | pass | pass | pass | pass |
+| year-review | pass | pass | pass | pass | pass | pass |
 
 - Row 15 complete (trip replay layout fixes). Map cell is now `h-[55vh]` whenever stacked and `lg:h-auto lg:min-h-[440px]` side-by-side, so it fills the row and the transport attaches with no gap; the mounted `MapInvalidator` already re-runs `invalidateSize` on every container resize via ResizeObserver (verified: full tile coverage at all widths). Per-field Source/Timestamp/Age list moved off the panel face into a Sources drawer (icon-only Info trigger in the panel header). Both raw ISO instants (panel caption + drawer rows) now render through `useDateFormat` with the ISO kept on `<time dateTime>`. Style-switcher mismatch fixed at the root: react-leaflet updates only url/opacity/zIndex on a mounted TileLayer, so the free-tiles dark CSS filter (construction-only) desynced from the selection; the layer is now keyed on provider + effective style and remounts on every switch. i18n: +1 key (`replay.sources`). Tests: TripReplayPage 24/24 (4 drawer/timestamp migrations incl. the negative-age case, +1 face-timestamp test, motion partial-mock for the drawer); TripReplayMap + MapTileLayer suites green. Browser (Edge, mocked drive): 375 + 768 stacked at exactly 55vh, 1440 side-by-side with equal heights, 0px map-to-transport gap, no ISO in visible text, Dark↔Streets round-trip keeps filter and selection in sync, drawer opens with sources; screenshots `row15-replay-{375,768,1440}.png`. Gates: tsc, touched-file + full lint, audit 0, production build. Negative `Age` values logged under Report-only findings (calculation-owned, untouched).
 - Row 14 complete (Map overview `/live` on the trip-replay model). Merged the Vehicle status brief, live map, Location details and Quick links into one `GlassPanel` hero: `lg:grid-cols-[minmax(0,13fr)_minmax(300px,7fr)]` (65/35) on desktop, map-above-panel stacked below `lg`. Panel: observed speed, heading as compass + rounded degrees (`NE (42°)`), last observed date + relative time, at home / at work / HomeLink, odometer, one-line coordinates with copy button. Header: title + Navigation route / Geofences / Locations icon buttons (guarded navigate preserved) + Details + `FreshnessDotAuto(latest)` last; `StaleRefreshWarning` covers retained refresh failures. The brief's scope/methodology/source text moved to a Details drawer ("Sources and method") instead of being deleted. Compass helper extracted from NavigationRoutePage to shared `lib/heading` (13 unit tests). i18n: +5 keys, −4 unused keys, split regen + check. Tests: MapOverviewPage 37/37 (was 32/36; +1 copy test; 8 brief-dependent tests migrated, Quick-view double-Close disambiguated); NavigationRoute 39/48 identical to HEAD baseline (9 pre-existing); MapsOperationalBrief 27/32 pre-existing (file untouched). Browser (Edge, mocked API): 375 + 768 stacked, 1440 side-by-side at exactly 65.0/35.0, no horizontal overflow, dot last in header, 0 nested surfaces; screenshots `row14-live-{375,768,1440}.png`. Gates: tsc, touched-file + full lint, audit 0, production build.

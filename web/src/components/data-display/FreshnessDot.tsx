@@ -42,6 +42,8 @@ export interface FreshnessDotProps {
   refreshIntervalMs?: number;
   /** Use the 15-minute fallback when the source has no polling cadence. */
   manual?: boolean;
+  /** Smaller dot and touch target for title-less widget overlays. */
+  compact?: boolean;
 }
 
 export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
@@ -137,6 +139,7 @@ export function FreshnessDot({
   forceStaleAfterMs,
   refreshIntervalMs,
   manual = false,
+  compact = false,
 }: FreshnessDotProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
@@ -214,7 +217,8 @@ export function FreshnessDot({
       icon={(
         <span
           className={cn(
-            'relative h-2.5 w-2.5 shrink-0 rounded-full',
+            'relative shrink-0 rounded-full',
+            compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
             status === 'stale'
               ? 'border border-[var(--semantic-warning)] bg-transparent'
               : cfg.dotColor,
@@ -234,7 +238,7 @@ export function FreshnessDot({
       onClick={onRefresh ? handleClick : undefined}
       busy={isFetching}
       disabled={!onRefresh || isFetching}
-      className="!h-7 !w-7 !min-h-0 !min-w-0 !p-0"
+      className={compact ? '!h-5 !w-5 !min-h-0 !min-w-0 !p-0' : '!h-7 !w-7 !min-h-0 !min-w-0 !p-0'}
     />
   );
 }
@@ -272,6 +276,8 @@ export interface FreshnessDotAutoProps {
   refreshIntervalMs?: number;
   /** Use the 15-minute fallback when the source has no polling cadence. */
   manual?: boolean;
+  /** Smaller dot and touch target for title-less widget overlays. */
+  compact?: boolean;
 }
 
 /**
@@ -294,6 +300,7 @@ export function FreshnessDotAuto({
   source,
   refreshIntervalMs,
   manual,
+  compact,
 }: FreshnessDotAutoProps) {
   return (
     <FreshnessDot
@@ -306,6 +313,7 @@ export function FreshnessDotAuto({
       forceStaleAfterMs={forceStaleAfterMs}
       refreshIntervalMs={refreshIntervalMs}
       manual={manual}
+      compact={compact}
     />
   );
 }

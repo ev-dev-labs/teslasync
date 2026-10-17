@@ -101,11 +101,13 @@ export function WidgetEventFeed({
     );
   }
 
+  // Rows intentionally bleed ±4px (-mx-1) for their hover background;
+  // overflow-x-clip keeps the feed from scrolling horizontally.
   return (
     <div
       role="list"
       aria-label={t('widget.eventFeed.label', 'Event feed')}
-      className="space-y-0 overflow-y-auto h-full"
+      className="space-y-0 overflow-x-clip overflow-y-auto h-full"
     >
       {sorted.map((item, i) => (
         <div role="listitem" key={item.id}>

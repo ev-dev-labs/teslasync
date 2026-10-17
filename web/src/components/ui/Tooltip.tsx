@@ -106,6 +106,22 @@ const sideClasses = {
   right: 'left-full top-1/2 -translate-y-1/2 ml-2',
 } as const;
 
+/** Ancestors whose horizontal overflow is clipped — the bubble must stay inside them. */
+function findClippingAncestors(trigger: HTMLElement): HTMLElement[] {
+  const clippers: HTMLElement[] = [];
+  let ancestor: HTMLElement | null = trigger.parentElement;
+  while (ancestor) {
+    const ancestorStyle = getComputedStyle(ancestor);
+    if ((ancestorStyle.overflowX === 'hidden' || ancestorStyle.overflowX === 'clip'
+      || ancestorStyle.overflowX === 'scroll' || ancestorStyle.overflowX === 'auto')
+      && ancestor.clientWidth > 0) {
+      clippers.push(ancestor);
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return clippers;
+}
+
 /**
  * Hover/focus tooltip.
  *
@@ -170,9 +186,21 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
     const viewportWidth = document.documentElement.clientWidth;
     if (!tooltip.offsetWidth || !viewportWidth) return;
     const boundary = boundaryRef?.current?.getBoundingClientRect();
-    const leftBound = Math.max(12, boundary && boundary.width > 0 ? boundary.left : 12);
-    const rightBound = Math.min(viewportWidth - 12,
+    let leftBound = Math.max(12, boundary && boundary.width > 0 ? boundary.left : 12);
+    let rightBound = Math.min(viewportWidth - 12,
       boundary && boundary.width > 0 ? boundary.right : viewportWidth - 12);
+    // Keep the bubble inside clipping ancestors (e.g. widget bodies with
+    // horizontal overflow clipped). The bubble is opacity-0 — not
+    // display:none — at rest, so any part sticking past a clipping ancestor
+    // inflates that ancestor's scrollWidth (phantom horizontal scrollbars)
+    // and gets cut off on hover. Only horizontal: vertical placement stays
+    // glued to the trigger side.
+    for (const clipper of findClippingAncestors(trigger)) {
+      const rect = clipper.getBoundingClientRect();
+      const borderLeft = Number.parseFloat(getComputedStyle(clipper).borderLeftWidth) || 0;
+      leftBound = Math.max(leftBound, rect.left + borderLeft);
+      rightBound = Math.min(rightBound, rect.left + borderLeft + clipper.clientWidth);
+    }
     const availableWidth = rightBound - leftBound;
     if (availableWidth <= 0) return;
     if (multiline || boundaryRef) setMaxWidth(availableWidth);
@@ -195,6 +223,12 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
     if (triggerRef.current) observer?.observe(triggerRef.current);
     if (tooltipRef.current) observer?.observe(tooltipRef.current);
     if (boundaryRef?.current) observer?.observe(boundaryRef.current);
+    // A clipping ancestor can shrink after mount (e.g. a vertical scrollbar
+    // appears once content loads), stranding a previously-correct bubble
+    // outside its bounds. Re-clamp when any clipper resizes.
+    if (triggerRef.current) {
+      for (const clipper of findClippingAncestors(triggerRef.current)) observer?.observe(clipper);
+    }
     window.addEventListener('resize', updatePosition);
     return () => {
       observer?.disconnect();

@@ -273,6 +273,58 @@ describe('Tooltip — multiline', () => {
   });
 });
 
+describe('Tooltip — clipping ancestors', () => {
+  it('shifts the bubble inside a clipping ancestor instead of inflating its scroll bounds', () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get')
+      .mockImplementation(function (this: Element) {
+        return this.getAttribute?.('role') === 'tooltip' ? 100 : 0;
+      });
+    const client = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockImplementation(function (this: Element) {
+        if (this === document.documentElement) return 1280;
+        return this.hasAttribute?.('data-clipper') ? 344 : 0;
+      });
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: Element) {
+        if (this.hasAttribute?.('data-clipper')) return new DOMRect(8, 40, 344, 400);
+        if (this.getAttribute?.('role') === 'tooltip') return new DOMRect(0, 0, 100, 30);
+        return new DOMRect(300, 40, 36, 36);
+      });
+    const styles = vi.spyOn(window, 'getComputedStyle')
+      .mockImplementation(((element: Element) => (element.hasAttribute?.('data-clipper')
+        ? { overflowX: 'hidden', borderLeftWidth: '0px' }
+        : { overflowX: '', borderLeftWidth: '' })) as unknown as typeof window.getComputedStyle);
+    const observed: Element[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      observe = (target: Element) => { observed.push(target); };
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+    });
+    try {
+      render(
+        <div data-clipper>
+          <Tooltip content="Review details">
+            <button>Info</button>
+          </Tooltip>
+        </div>,
+      );
+      // Trigger centre (318) minus half the bubble (50) wants x=268, which
+      // would end at 368 — 16px past the clipper's padding box (352). The
+      // bubble shifts left to 252 instead of overflowing the ancestor.
+      expect(screen.getByRole('tooltip').style.translate).toBe('-16px 0');
+      // The clipper itself is observed so a post-mount shrink (e.g. a
+      // vertical scrollbar appearing) re-clamps the bubble.
+      expect(observed.some((target) => (target as HTMLElement).hasAttribute('data-clipper'))).toBe(true);
+    } finally {
+      width.mockRestore();
+      client.mockRestore();
+      bounds.mockRestore();
+      styles.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe('Tooltip — dev-time forbidden-text-colour sentry', () => {
   it('warns once when content hardcodes a colliding body-text colour', () => {
     render(

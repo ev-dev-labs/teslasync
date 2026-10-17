@@ -112,6 +112,15 @@ describe('Sparkline — styling props', () => {
     expect(line?.getAttribute('stroke')).toBe('#ff0066')
   })
 
+  it('scales down fluidly instead of overflowing narrow containers', () => {
+    const { container } = render(
+      <Sparkline data={[1, 2, 3]} width={260} height={30} />,
+    )
+    const svg = container.querySelector('svg')
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 260 30')
+    expect(svg).toHaveClass('h-auto', 'max-w-full', 'overflow-hidden')
+  })
+
   it('uses the default cyan accent when no colour is supplied', () => {
     const { container } = render(<Sparkline data={[1, 2]} />)
     const line = container.querySelectorAll('polyline')[0]
