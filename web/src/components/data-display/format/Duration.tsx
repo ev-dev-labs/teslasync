@@ -24,10 +24,10 @@ interface DurationProps {
  *
  * The shared helpers are the single source of truth for empty handling: they
  * already return the em-dash placeholder for null/undefined/NaN/±Infinity and
- * for variant-specific out-of-range values (e.g. `long`/`clock` reject
- * non-positive durations). When the chosen helper yields that placeholder we
- * render it exactly like the empty state — crucially WITHOUT the `title`, so a
- * "no data" em-dash never carries a misleading "0 ms"/"-100 ms" hover tooltip.
+ * for negative durations, while a measured zero renders numerically. When the
+ * chosen helper yields that placeholder we render it exactly like the empty
+ * state — crucially WITHOUT the `title`, so a "no data" em-dash never carries
+ * a misleading hover tooltip.
  */
 export function Duration({ ms, variant = 'short', className }: DurationProps) {
   const { fmtWithUnit, formatDurationMs, formatDurationMsLong, formatDurationMsCompact } = useNumberFormatting();

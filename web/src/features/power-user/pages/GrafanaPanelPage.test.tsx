@@ -331,10 +331,13 @@ describe('GrafanaPanelPage', () => {
     fireEvent.change(getEditor(), { target: { value: json } });
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(4);
     expect(container.querySelector('[data-operational-metric="columns"] [data-operational-value]')).toHaveTextContent('33');
-    expect(screen.getByText('Bundled builder catalog · all entries')).toBeInTheDocument();
-    expect(screen.getByText('Reference data · no live measurement')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Curated catalog summary details' });
+    // Scope/freshness moved off the face into the drawer header.
+    const drawerHeader = drawer.querySelector('[data-drawer-header]');
+    if (!(drawerHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+    expect(within(drawerHeader).getByText(/Bundled builder catalog/)).toBeInTheDocument();
+    expect(within(drawerHeader).getByText(/Reference data/)).toBeInTheDocument();
     expect(within(drawer).getByText(/not a live connectivity check/)).toBeInTheDocument();
     expect(within(drawer).getByText(/Curated tables allowed in postgres-target SQL/)).toBeInTheDocument();
     expect(within(drawer).getByText(/The browser never pushes panels to Grafana/)).toBeInTheDocument();

@@ -101,7 +101,8 @@ describe('phase6 feature flag full values and mobile disclosure (source/class pr
     for (const key of ['flag_key', 'old_value', 'new_value', 'reason']) {
       expect(row.querySelector(`[data-column-key="${key}"]`)).toHaveClass('hidden', 'md:table-cell');
     }
-    const trigger = within(row).getByRole('button', { name: 'Expand row' });
+    // The trigger name appends the derived row label ('Expand row: …').
+    const trigger = within(row).getByRole('button', { name: /^Expand row/ });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(trigger).toHaveClass('h-11', 'w-11');
     expect(trigger.closest('td')).not.toHaveClass('hidden');
@@ -175,7 +176,7 @@ describe('phase6 feature flag full values and mobile disclosure (source/class pr
     const { container, update } = mount(
       <ChangesPanel rows={[{ ...change, old_value: false, new_value: 0 }]} loading={false} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Expand row/ }));
     let detail = container.querySelector('[data-expanded-content="true"]') as HTMLElement;
     expect(within(detail).getByText('false')).toBeInTheDocument();
     expect(within(detail).getByText('0')).toBeInTheDocument();

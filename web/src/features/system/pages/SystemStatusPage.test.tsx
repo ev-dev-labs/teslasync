@@ -996,7 +996,9 @@ describe('SystemStatusPage — continuation source preservation', () => {
     // The page source notice and both retained resource rows expose recovery.
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3)
     const refresh = screen.getByRole('button', { name: 'Refresh (r)' })
-    expect(refresh).toHaveAttribute('title', 'Press r to refresh')
+    // Icon-only Refresh exposes its label via tooltip (describedby), not a
+    // title attribute; the "(r)" shortcut hint survives in the name above.
+    expect(refresh).toHaveAccessibleDescription('Refresh')
     expect(within(refresh).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
     expect(within(refresh).queryByRole('button')).not.toBeInTheDocument()
   })
