@@ -79,6 +79,10 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback'
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions'
 import TeslaRegionPage from './TeslaRegionPage'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
@@ -166,7 +170,7 @@ describe('TeslaRegionPage retained endpoint', () => {
     expect(within(aboutRegion()).getByText(NA_ZONE)).toBeInTheDocument()
     expect(within(aboutRegion()).getByText(EU_ZONE)).toBeInTheDocument()
     expect(within(aboutRegion()).getByText(CN_ZONE)).toBeInTheDocument()
-    expect(within(overviewRegion()).getByText('Retained account snapshot')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(overviewRegion(), 'Retained account snapshot')
   })
 })
 
@@ -229,13 +233,11 @@ describe('TeslaRegionPage', () => {
     const strip = overviewRegion().querySelector('[data-operational-brief][data-testid="tesla-region-summary"]')!
     const tiles = strip.querySelectorAll('[data-operational-metric]')
     expect(tiles).toHaveLength(4)
-    expect(within(strip as HTMLElement).getByText(/Last synced:/)).toBeInTheDocument()
+    expect(within(strip as HTMLElement).getByText('Last synced')).toBeInTheDocument()
     expect(tiles[0].querySelector('[data-operational-value]')).toHaveTextContent('NA')
-    expect(tiles[0]).toHaveTextContent(NA_ZONE)
     expect(tiles[1].querySelector('[data-operational-value]')).toHaveTextContent('Configured')
     expect(tiles[2].querySelector('[data-operational-value]')).toHaveTextContent('HTTPS')
     expect(tiles[3]).toHaveAttribute('data-value-state', 'value')
-    expect(tiles[3]).toHaveTextContent('From Tesla account')
 
     // No empty/error surfaces while configured.
     expect(screen.queryByText('No region on record')).toBeNull()
@@ -243,6 +245,9 @@ describe('TeslaRegionPage', () => {
     const drawer = await screen.findByRole('dialog')
     expect(drawer).toHaveTextContent(NA_ZONE)
     expect(drawer).toHaveTextContent('Secure transport')
+    // Metric context moved off the face into the drawer's per-metric groups.
+    expect(within(drawer).getByRole('group', { name: 'Region' })).toHaveTextContent(NA_ZONE)
+    expect(within(drawer).getByRole('group', { name: 'Last synced' })).toHaveTextContent('From Tesla account')
   })
 
   it('renders the EU zone label and badge, and keeps the NA label out of the hero', async () => {
@@ -277,11 +282,13 @@ describe('TeslaRegionPage', () => {
       return el
     })
 
-    // KPI status flips to "Not configured" with em-dash placeholders.
+    // KPI status flips to "Not configured"; unknown readings are omitted
+    // (never em-dash tiles) and the drawer carries the counted explanation.
     const overview = overviewRegion()
     expect(within(overview).getByText('Not configured')).toBeInTheDocument()
-    expect(within(overview).getAllByText('—').length).toBeGreaterThan(0)
-    expect(overview.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(3)
+    assertOperationalMetricUnavailable(overview, 'Region')
+    assertOperationalMetricUnavailable(overview, 'Protocol')
+    assertOperationalMetricUnavailable(overview, 'Last synced')
     expect(overview.querySelector('[data-operational-metric="region-endpoint"]')).toHaveAttribute('data-value-state', 'value')
 
     // The empty state exposes its own refresh CTA (distinct from the header).
@@ -302,8 +309,12 @@ describe('TeslaRegionPage', () => {
     })
 
     const callsBefore = mockedRequest.mock.calls.length
-    const strip = overviewRegion().querySelector('[data-operational-brief][data-testid="tesla-region-summary"]')!
-    expect(strip.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4)
+    // All four readings are unknown with no retained data; each tile is
+    // omitted and the drawer carries the counted explanation.
+    assertOperationalMetricUnavailable(overviewRegion(), 'Region')
+    assertOperationalMetricUnavailable(overviewRegion(), 'Endpoint')
+    assertOperationalMetricUnavailable(overviewRegion(), 'Protocol')
+    assertOperationalMetricUnavailable(overviewRegion(), 'Last synced')
     expect(within(overviewRegion()).queryByText('Not configured')).toBeNull()
     fireEvent.click(within(endpoint).getByRole('button', { name: 'Retry' }))
 
@@ -394,7 +405,10 @@ describe('TeslaRegionPage', () => {
       const empty = within(endpointRegion()).getByRole('button', { name: 'Refresh' })
       expect(empty).toBeDisabled()
       expect(headerRefreshButton()).toBeDisabled()
-      expect(headerRefreshButton()).toHaveAttribute('title', reason)
+      // The icon-only header action exposes its label via the tooltip
+      // description instead of a title attribute; the mode reason stays
+      // visible in the endpoint detail below.
+      expect(headerRefreshButton()).toHaveAccessibleDescription('Refresh')
       expect(within(endpointRegion()).getByText(reason)).toBeInTheDocument()
       fireEvent.click(empty)
       fireEvent.click(headerRefreshButton())
@@ -515,8 +529,7 @@ describe('TeslaRegionPage source and action presentation', () => {
     await screen.findByText(NA_URL)
 
     const refresh = headerRefreshButton()
-    expect(refresh).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0')
-    expect(refresh).not.toHaveClass('h-9')
+    expect(refresh).toHaveClass('h-9', 'w-9')
     expect(refresh.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
     expect(refresh.querySelector('svg')).toHaveAttribute('focusable', 'false')
   })
@@ -526,7 +539,7 @@ describe('TeslaRegionPage source and action presentation', () => {
     renderPage()
     await within(endpointRegion()).findByText('No region on record')
 
-    expect(within(overviewRegion()).getByText('No account data returned')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(overviewRegion(), 'No account data returned')
     expect(within(overviewRegion()).queryByText('Account snapshot available')).toBeNull()
     expect(within(overviewRegion()).getByText('Not configured')).toBeInTheDocument()
     expect(within(endpointRegion()).getByRole('button', { name: 'Refresh' })).toBeEnabled()
@@ -542,7 +555,7 @@ describe('TeslaRegionPage source and action presentation', () => {
     renderPage()
     await waitFor(() => expect(within(endpointRegion()).getAllByText(value).length).toBeGreaterThan(0))
 
-    expect(within(overviewRegion()).getByText('Partial account snapshot')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(overviewRegion(), 'Partial account snapshot')
     expect(within(overviewRegion()).queryByText('Account snapshot available')).toBeNull()
     expect(within(overviewRegion()).getByText('Configured')).toBeInTheDocument()
     expect(within(endpointRegion()).getAllByText(value).length).toBeGreaterThan(0)
@@ -555,11 +568,13 @@ describe('TeslaRegionPage source and action presentation', () => {
   it('keeps partial endpoint data as a retained snapshot after a refresh failure', async () => {
     mockedRequest.mockResolvedValue(envelope('North America', ''))
     const { qc } = renderPage()
-    await within(overviewRegion()).findByText('Partial account snapshot')
+    await waitFor(() => expect(within(endpointRegion()).getAllByText('North America')).toHaveLength(2))
+    assertOperationalBriefDisclosure(overviewRegion(), 'Partial account snapshot')
     mockedRequest.mockRejectedValue(new Error('refresh unavailable'))
     await qc.invalidateQueries()
 
-    await within(overviewRegion()).findByText('Retained account snapshot')
+    await waitFor(() => expect(qc.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
+    assertOperationalBriefDisclosure(overviewRegion(), 'Retained account snapshot')
     expect(within(endpointRegion()).getAllByText('North America')).toHaveLength(2)
     expect(within(endpointRegion()).queryByText("Can't reach server")).toBeNull()
     expect(within(aboutRegion()).getByText(NA_ZONE)).toBeInTheDocument()

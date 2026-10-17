@@ -40,6 +40,63 @@ vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => operational,
 }))
 
+// GasPriceBrief reads useSettings().settingsState for its freshness line;
+// the global mock omits it, so provide a loaded-settings double mirroring
+// the global defaults.
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings')
+  const { deriveDataState } = await import('@/api/dataState')
+  const settings = {
+    unit_of_length: 'km' as const,
+    unit_of_temp: 'C' as const,
+    unit_of_pressure: 'bar' as const,
+    preferred_range: 'rated' as const,
+    language: 'en',
+    base_cost_per_kwh: 0.12,
+    api_suspended: false,
+    theme: 'neon-cyan',
+    mode: 'dark' as const,
+    custom_primary: '#00b4d8',
+    custom_accent: '#e63946',
+    gas_price_per_unit: 0,
+    gas_unit: 'gallon' as const,
+    gas_efficiency_mpg: 25,
+    decimal_precision: 2,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '07:00',
+    alert_digest_mode: 'instant' as const,
+    currency_symbol: '$',
+    locale: 'en-US',
+    tz_display_default: 'vehicle' as const,
+    timezone_user: '',
+    tab_badge_enabled: true,
+    critical_flash_enabled: true,
+    ui_density: 'comfortable' as const,
+    time_format_default: 'relative' as const,
+    chart_palette: 'cb_safe' as const,
+    ai_mode: 'off' as const,
+    ai_features: {},
+    ai_provider_config: {},
+    ai_cost_cap_cents: 0,
+  }
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings,
+      settingsState: deriveDataState({ data: settings }),
+      settingsUnavailable: false,
+      isMiles: false,
+      isFahrenheit: false,
+      isPSI: false,
+      decimals: 2,
+      locale: 'en-US',
+      density: 'comfortable' as const,
+      rangeType: 'rated' as const,
+    }),
+  }
+})
+
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
   return {
@@ -79,6 +136,7 @@ vi.mock('react-i18next', async () => {
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import GasPriceAutoPollPage from './GasPriceAutoPollPage'
 import type { GasPriceStatus, GasPriceHistory } from '@/api/types'
 
@@ -93,6 +151,7 @@ function makeStatus(overrides: Partial<GasPriceStatus> = {}): GasPriceStatus {
     last_poll_time: '2026-01-15T12:00:00Z',
     current_price: 3.45,
     current_price_kwh_eq: 0.12,
+    current_price_unit: 'gallon',
     ...overrides,
   }
 }
@@ -230,11 +289,15 @@ describe('GasPriceAutoPollPage — full render', () => {
     await within(summary).findByText('Running')
     expect(summary).toHaveAttribute('data-operational-brief')
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
-    expect(summary).toHaveTextContent('per gal')
-    expect(summary).toHaveTextContent('per kWh')
-    expect(summary).toHaveTextContent('Gasoline cost expressed as an equivalent price')
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
-    expect(screen.getByRole('dialog')).toHaveTextContent('history chart is a separate source')
+    const drawer = screen.getByRole('dialog')
+    expect(drawer).toHaveTextContent('history chart is a separate source')
+    // Metric context and help moved off the face into the drawer's per-metric groups.
+    expect(within(drawer).getByRole('group', { name: 'Current price' })).toHaveTextContent('per gal')
+    expect(within(drawer).getByRole('group', { name: 'kWh equivalent' })).toHaveTextContent('per kWh')
+    expect(within(drawer).getByRole('group', { name: 'kWh equivalent' })).toHaveTextContent('Gasoline cost expressed as an equivalent price')
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
   })
 
@@ -253,8 +316,8 @@ describe('GasPriceAutoPollPage — full render', () => {
 
     // KPI band resolves.
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
-    expect(within(kpiRegion()).getByText('$3.45')).toBeInTheDocument()
-    expect(within(kpiRegion()).getByText('$0.12')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('$3.45 USD')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('$0.12 USD')).toBeInTheDocument()
 
     // Every section panel is present.
     expect(screen.getByText('Configuration')).toBeInTheDocument()
@@ -300,8 +363,10 @@ describe('GasPriceAutoPollPage — KPI band states', () => {
     renderPage()
 
     await waitFor(() => expect(within(kpiRegion()).getByText('Stopped')).toBeInTheDocument())
-    // Zero prices collapse to an em-dash placeholder (current price + kWh eq).
-    expect(within(kpiRegion()).getAllByText('—').length).toBeGreaterThanOrEqual(2)
+    // Unknown quotes are omitted from the face (never invented as zero);
+    // the drawer carries the counted explanation.
+    assertOperationalMetricUnavailable(kpiRegion(), 'Current price')
+    assertOperationalMetricUnavailable(kpiRegion(), 'kWh equivalent')
     // Never-polled sentinel is rendered, not a broken date.
     expect(within(kpiRegion()).getByText('Never')).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Auto-poll' })).toHaveAttribute(
@@ -446,7 +511,7 @@ describe('GasPriceAutoPollPage polling lifecycle', () => {
     await waitFor(() => expect(statusCallCount()).toBe(2))
     expect(historyCalls()).toBe(before)
     expect(screen.queryByText('Gas prices updated')).not.toBeInTheDocument()
-    expect(within(kpiRegion()).getByText('$3.45')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('$3.45 USD')).toBeInTheDocument()
   })
 
   it('refreshes mounted history only when the successful-poll timestamp advances', async () => {

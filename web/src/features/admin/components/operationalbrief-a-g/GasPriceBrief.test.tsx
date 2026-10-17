@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState } from '@/api/dataState';
 import type { GasPriceStatus } from '@/api/types';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import { GasPriceBrief } from './GasPriceBrief';
 
 const preferences = vi.hoisted(() => ({
@@ -16,14 +20,22 @@ vi.mock('react-i18next', () => ({
       fallback.replace(/{{(\w+)}}/g, (match, name: string) => vars && name in vars ? String(vars[name]) : match),
   }),
 }));
-vi.mock('@/hooks/useSettings', async importOriginal => ({
-  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: preferences, settingsUnavailable: false }),
-}));
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const original = await importOriginal<typeof import('@/hooks/useSettings')>();
+  const { deriveDataState } = await import('@/api/dataState');
+  return {
+    ...original,
+    useSettings: () => ({
+      settings: preferences,
+      settingsUnavailable: false,
+      settingsState: deriveDataState({ data: preferences }),
+    }),
+  };
+});
 
 const populated: GasPriceStatus = {
   enabled: true, poll_interval: '24h', last_poll_time: '2026-10-14T12:00:00Z',
-  current_price: 3.5, current_price_kwh_eq: 0.125,
+  current_price: 3.5, current_price_kwh_eq: 0.125, current_price_unit: 'gallon',
 };
 
 afterEach(() => {
@@ -46,17 +58,29 @@ describe('GasPriceBrief source currency', () => {
     expect(value(container, 'price')).toHaveTextContent('$3.50 USD');
     expect(value(container, 'equivalent')).toHaveTextContent('$0.13 USD');
     expect(value(container, 'status')).toHaveTextContent('Running');
-    expect(screen.getByText('per gal')).toBeInTheDocument();
-    expect(screen.getByText('per kWh')).toBeInTheDocument();
+    // Metric context (denominations) moved off the brief face into the
+    // drawer's per-metric groups.
+    const summary = screen.getByTestId('gas-price-summary');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Current price' })).toHaveTextContent('per gal');
+    expect(within(drawer).getByRole('group', { name: 'kWh equivalent' })).toHaveTextContent('per kWh');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(value(container, 'polled')).not.toHaveTextContent('Never');
   });
 
   it('preserves locale, precision and volume preferences without converting or relabeling currency', () => {
     Object.assign(preferences, { locale: 'de-DE', decimal_precision: 3, currency_symbol: '€', gas_unit: 'liter' });
-    const { container } = renderBrief();
+    const { container } = renderBrief({ ...populated, current_price_unit: 'liter' });
     expect(value(container, 'price')).toHaveTextContent('3,500 $ USD');
     expect(value(container, 'equivalent')).toHaveTextContent('0,125 $ USD');
-    expect(screen.getByText('per L')).toBeInTheDocument();
+    const summary = screen.getByTestId('gas-price-summary');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Current price' })).toHaveTextContent('per L');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('retains populated quotes during a failed refresh', () => {
@@ -64,7 +88,7 @@ describe('GasPriceBrief source currency', () => {
     const { container } = renderBrief(populated, new Error('Refresh failed'));
     expect(value(container, 'price')).toHaveTextContent('$3.50 USD');
     expect(value(container, 'equivalent')).toHaveTextContent('$0.13 USD');
-    expect(screen.getByTestId('gas-price-summary')).toHaveTextContent('Retained measurements');
+    assertOperationalBriefDisclosure(container, 'Retained measurements');
   });
 
   it('preserves stopped and never-polled populated states without inventing prices', () => {
@@ -74,8 +98,10 @@ describe('GasPriceBrief source currency', () => {
     });
     expect(value(container, 'status')).toHaveTextContent('Stopped');
     expect(value(container, 'polled')).toHaveTextContent('Never');
-    expect(container.querySelector('[data-operational-metric="price"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(container.querySelector('[data-operational-metric="equivalent"]')).toHaveAttribute('data-value-state', 'missing');
+    // Unknown quotes are omitted from the face (never invented as zero);
+    // the drawer carries the counted explanation.
+    assertOperationalMetricUnavailable(container, 'Current price');
+    assertOperationalMetricUnavailable(container, 'kWh equivalent');
   });
 
   it('keeps all metric shells during initial loading', () => {

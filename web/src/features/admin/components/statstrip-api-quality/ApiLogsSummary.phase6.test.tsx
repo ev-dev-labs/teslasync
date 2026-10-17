@@ -6,6 +6,10 @@ import type { APICallLogStats } from '@/api/types';
 import {
   getFormatterPreferences, setGlobalLocale, setGlobalPrecision,
 } from '@/lib/numberFormat';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import { ApiLogsSummary } from './ApiLogsSummary';
 
 const settings = vi.hoisted(() => ({
@@ -57,7 +61,17 @@ function errorMetric(container: HTMLElement) {
 }
 
 function emphasizedCount(container: HTMLElement) {
-  return errorMetric(container).querySelector('.text-rose-700');
+  // The comparison count moved off the face into the drawer's per-metric
+  // group; open it for the read, then close it again. Callers only inspect
+  // the returned element's own text/classes, which survive unmount.
+  const summary = within(container).getByTestId('api-logs-range-summary');
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  const group = within(drawer).queryByRole('group', { name: 'Error rate' });
+  const found = group?.querySelector('.text-rose-700') ?? null;
+  fireEvent.keyDown(drawer, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  return found;
 }
 
 describe('API log summary supported severity and measured count', () => {
@@ -126,20 +140,20 @@ describe('API log summary supported severity and measured count', () => {
     expect(container.querySelector('[data-operational-metric="api-average-duration"] [data-operational-value]'))
       .toHaveTextContent('146 ms');
     const selected = screen.getByTestId('api-logs-range-summary');
-    expect(selected).toHaveTextContent(range.start);
-    expect(selected).toHaveTextContent(range.endExclusive);
-    expect(selected).toHaveTextContent('UTC, exclusive end');
-    expect(selected).toHaveTextContent('request-list filters do not change these metrics');
+    assertOperationalBriefDisclosure(selected, range.start, { contains: true });
+    assertOperationalBriefDisclosure(selected, range.endExclusive, { contains: true });
+    assertOperationalBriefDisclosure(selected, 'UTC, exclusive end', { contains: true });
+    assertOperationalBriefDisclosure(selected, 'request-list filters do not change these metrics', { contains: true });
     const rolling = screen.getByTestId('api-logs-24h-summary');
     expect(rolling).toHaveTextContent('56');
-    expect(rolling).toHaveTextContent('not the View settings range');
-    expect(rolling).toHaveTextContent('does not record its exact bounds');
+    assertOperationalBriefDisclosure(rolling, 'not the View settings range', { contains: true });
+    assertOperationalBriefDisclosure(rolling, 'does not record its exact bounds', { contains: true });
     expect(snapshot.avg_duration_ms).toBe(145.9);
   });
 
   it('preserves all-time scope and fixed milliseconds above one second', () => {
     const { container } = renderStats({ ...snapshot, avg_duration_ms: 1499.9 }, true);
-    expect(screen.getByTestId('api-logs-range-summary')).toHaveTextContent('All time');
+    assertOperationalBriefDisclosure(screen.getByTestId('api-logs-range-summary'), 'All time', { contains: true });
     expect(screen.getByTestId('api-logs-range-summary')).not.toHaveTextContent(range.start);
     expect(container.querySelector('[data-operational-metric="api-average-duration"] [data-operational-value]'))
       .toHaveTextContent('1,500 ms');
@@ -153,8 +167,8 @@ describe('API log summary supported severity and measured count', () => {
     expect(emphasizedCount(container)).toHaveTextContent('1,234');
     expect(screen.getByRole('alert')).toHaveTextContent('stats refresh failed');
     expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
-    expect(screen.getByTestId('api-logs-range-summary')).toHaveTextContent('Refreshing source');
-    expect(screen.getByTestId('api-logs-24h-summary')).toHaveTextContent('Refreshing source');
+    assertOperationalBriefDisclosure(screen.getByTestId('api-logs-range-summary'), 'Refreshing source');
+    assertOperationalBriefDisclosure(screen.getByTestId('api-logs-24h-summary'), 'Refreshing source');
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(state.data).toBe(snapshot);
   });
@@ -169,7 +183,12 @@ describe('API log summary supported severity and measured count', () => {
     rerender(<MemoryRouter><ApiLogsSummary {...range}
       state={deriveDataState<APICallLogStats>({ error: new Error('stats unavailable') })}
       loading={false} allTime={false} /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    // All four readings are unknown with no retained data; each tile is
+    // omitted and each drawer carries its counted explanation.
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-range-summary'), 'Total calls');
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-range-summary'), 'Error rate');
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-range-summary'), 'Avg duration');
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-24h-summary'), 'Last 24h');
     expect(screen.getByRole('alert')).toHaveTextContent('stats unavailable');
     expect(emphasizedCount(container)).toBeNull();
   });

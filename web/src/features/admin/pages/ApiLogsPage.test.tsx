@@ -85,6 +85,10 @@ import ApiLogsPage from './ApiLogsPage';
 import type { APICallLog, APICallLogResponse, APICallLogStats } from '@/api/types';
 import * as exportHelpers from '@/lib/export';
 import { BADGE_VARIANTS } from '@/components/ui';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 const mockedLogs = vi.mocked(getAPICallLogs);
 const mockedStats = vi.mocked(getAPICallLogStats);
@@ -186,7 +190,7 @@ async function requestRow(endpoint: string) {
 }
 
 function expansionButton(row: HTMLElement) {
-  return within(row).getByRole('button', { name: /^(Expand|Collapse) row$/ });
+  return within(row).getByRole('button', { name: /^(Expand|Collapse) row/ });
 }
 
 function filterControl(label: string) {
@@ -342,13 +346,20 @@ describe('ApiLogsPage', () => {
     const range = screen.getByTestId('api-logs-range-summary');
     const rolling = screen.getByTestId('api-logs-24h-summary');
     expect(range).toHaveAttribute('data-operational-brief');
-    expect(range).toHaveTextContent('exclusive end');
+    // Scope and comparison context moved off the face into the drawer.
+    assertOperationalBriefDisclosure(range, 'exclusive end', { contains: true });
     expect(range.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
     expect(rolling.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
-    expect(rolling).toHaveTextContent('Independent rolling 24-hour count');
-    const trend = range.querySelector('[data-operational-metric="api-error-rate"]');
-    expect(trend).toHaveTextContent('increased');
-    expect(trend).toHaveTextContent('80');
+    assertOperationalBriefDisclosure(rolling, 'Independent rolling 24-hour count', { contains: true });
+    fireEvent.click(within(range).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const group = within(drawer).getByRole('group', { name: 'Error rate' });
+    expect(group).toHaveTextContent('80');
+    // The unsupported "increased" claim was deliberately removed (8221bf1646);
+    // the comparison keeps only the measured count.
+    expect(group).not.toHaveTextContent(/increased|decreased|↑|↓/i);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('distinguishes real zero stats from absent fields without manufacturing measurements', async () => {
@@ -364,8 +375,9 @@ describe('ApiLogsPage', () => {
     expect(range.querySelector('[data-operational-metric="api-error-rate"] [data-operational-value]')).toHaveTextContent('0.00%');
     expect(range.querySelector('[data-operational-metric="api-average-duration"] [data-operational-value]')).toHaveTextContent('0 ms');
     expect(range).not.toHaveTextContent('increased');
-    expect(screen.getByTestId('api-logs-24h-summary').querySelector('[data-operational-metric]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    // The absent rolling count is omitted (never invented); the drawer
+    // carries the counted explanation while measured zeros stay numeric.
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-24h-summary'), 'Last 24h');
   });
 
   it('shows verified app key and installation separately and filters full server results', async () => {
@@ -658,7 +670,9 @@ describe('ApiLogsPage', () => {
     expect(header('Latency (ms)')).toHaveClass('text-right');
     expect(within(row).getAllByText('GET')).toHaveLength(2); // dedicated desktop cell + phone summary
     expect(expansionButton(row)).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('button', { name: /GET.*\/vehicles/ })).not.toBeInTheDocument();
+    // Anchored: the expansion button's derived label ('Expand row: GET …')
+    // must not satisfy this no-card-button guard.
+    expect(screen.queryByRole('button', { name: /^GET .*\/vehicles$/ })).not.toBeInTheDocument();
     expect(screen.getByText(/exports include only this loaded page/)).toBeInTheDocument();
     const resizer = within(table).getByRole('separator', { name: 'Resize column Latency (ms)' });
     const width = Number(resizer.getAttribute('aria-valuenow'));
@@ -976,6 +990,6 @@ describe('ApiLogsPage restrained source adoption', () => {
     fireEvent.click(geocoder);
     await waitFor(() => expect(geocoder).toHaveAttribute('aria-pressed', 'false'));
     expect(mockedLogs.mock.lastCall?.[0].service).toBeUndefined();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9');
+    expect(screen.getByRole('button', { name: 'Refresh' })).toHaveClass('h-9', 'w-9');
   });
 });
