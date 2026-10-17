@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -40,11 +40,16 @@ describe('ScenarioControls mobile action targets', () => {
 
     const button = screen.getByRole('button', { name });
     // jsdom has no layout: these are real shared Button merge contracts, not native pixel measurements.
-    expect(button).toHaveClass('min-h-11', 'md:min-h-9', 'h-auto', 'px-3', 'py-1.5');
-    expect(button).not.toHaveClass('min-h-9');
-    expect(button).not.toHaveClass('h-9');
-    expect(button).toHaveClass('min-w-0', 'max-w-full', 'whitespace-normal', 'focus-visible:outline-2');
-    expect(button.querySelector('span.min-w-0')).toHaveClass('break-words');
+    if (name === 'Reset to defaults') {
+      expect(button).toHaveClass('h-9', 'w-9');
+      expect(button).toHaveAccessibleDescription('Reset to defaults');
+    } else {
+      expect(button).toHaveClass('min-h-11', 'md:min-h-9', 'h-auto', 'px-3', 'py-1.5');
+      expect(button).not.toHaveClass('min-h-9');
+      expect(button).not.toHaveClass('h-9');
+      expect(button).toHaveClass('min-w-0', 'max-w-full', 'whitespace-normal', 'focus-visible:outline-2');
+      expect(button.querySelector('span.min-w-0')).toHaveClass('break-words');
+    }
     expect(button).toBeEnabled();
     expect(button).not.toHaveAttribute('aria-busy');
   });
@@ -76,13 +81,15 @@ describe('ScenarioControls mobile action targets', () => {
     await user.tab();
     expect(screen.getByRole('button', { name: actionNames[2] })).toHaveFocus();
     await user.keyboard('{Enter}');
-    expect(resetScenario).toHaveBeenCalledExactlyOnceWith();
+    expect(screen.getByText('Reset all inputs?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(resetScenario).toHaveBeenCalledExactlyOnceWith());
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(commit).toHaveBeenCalledTimes(1);
     expect(updateScenario).not.toHaveBeenCalled();
   });
 
-  it('preserves current callbacks and scenario values on rerender without automatically resetting preferences', () => {
+  it('preserves current callbacks and scenario values on rerender without automatically resetting preferences', async () => {
     const oldRefresh = vi.fn();
     const oldCommit = vi.fn();
     const refresh = vi.fn();
@@ -100,9 +107,11 @@ describe('ScenarioControls mobile action targets', () => {
     fireEvent.click(screen.getByRole('button', { name: actionNames[0] }));
     fireEvent.click(screen.getByRole('button', { name: actionNames[1] }));
     fireEvent.click(screen.getByRole('button', { name: actionNames[2] }));
+    expect(screen.getByText('Reset all inputs?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(commit).toHaveBeenCalledTimes(1);
-    expect(resetScenario).toHaveBeenCalledExactlyOnceWith();
+    await waitFor(() => expect(resetScenario).toHaveBeenCalledExactlyOnceWith());
     expect(oldRefresh).not.toHaveBeenCalled();
     expect(oldCommit).not.toHaveBeenCalled();
     expect(updateScenario).not.toHaveBeenCalled();
@@ -134,7 +143,7 @@ describe('ScenarioControls mobile action targets', () => {
     expect(resetScenario).not.toHaveBeenCalled();
   });
 
-  it('retains complete localized long action names and growing labels without altering dispatch', () => {
+  it('retains complete localized long action names and growing labels without altering dispatch', async () => {
     translations['homeEnergy.scenario.refreshNow'] = 'Recalculer maintenant avec toutes les hypothèses actuellement enregistrées';
     translations['homeEnergy.scenario.commitBaseline'] = 'Enregistrer ce scénario complet comme référence de stabilité du planning';
     translations['homeEnergy.scenario.reset'] = 'Restaurer toutes les hypothèses et préférences de scénario par défaut';
@@ -144,10 +153,19 @@ describe('ScenarioControls mobile action targets', () => {
 
     for (const key of Object.keys(translations)) {
       const button = screen.getByRole('button', { name: translations[key] });
-      expect(button).toHaveTextContent(translations[key]);
-      expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-9', 'whitespace-normal', 'max-w-full');
-      expect(button.querySelector('span.min-w-0')).toHaveClass('break-words');
-      fireEvent.click(button);
+      if (key === 'homeEnergy.scenario.reset') {
+        expect(button).toHaveClass('h-9', 'w-9');
+        expect(button).toHaveAccessibleDescription(translations[key]);
+        fireEvent.click(button);
+        expect(screen.getByText('Reset all inputs?')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+        await waitFor(() => expect(resetScenario).toHaveBeenCalledExactlyOnceWith());
+      } else {
+        expect(button).toHaveTextContent(translations[key]);
+        expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-9', 'whitespace-normal', 'max-w-full');
+        expect(button.querySelector('span.min-w-0')).toHaveClass('break-words');
+        fireEvent.click(button);
+      }
     }
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(commit).toHaveBeenCalledTimes(1);

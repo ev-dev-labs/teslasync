@@ -42,16 +42,20 @@ export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
     return number === null ? '—' : fmtPercent(number);
   };
 
-  const rows = slots.map((s) => ({
-    time: s.startIso,
-    solarW: asFiniteNumber(s.solarW),
-    loadW: asFiniteNumber(s.loadW),
-    vehicleChargeW: asFiniteNumber(s.vehicleChargeW),
-    batteryPowerW: asFiniteNumber(s.batteryPowerW),
-    gridImportW: asFiniteNumber(s.gridImportW),
-    gridExportW: asFiniteNumber(s.gridExportW) === null ? null : -s.gridExportW,
-    batterySocPct: asFiniteNumber(s.batterySocPct),
-  }));
+  const rows = slots.map((s) => {
+    // Exports render negative, but a genuine zero export must not gain a sign.
+    const gridExportW = asFiniteNumber(s.gridExportW);
+    return {
+      time: s.startIso,
+      solarW: asFiniteNumber(s.solarW),
+      loadW: asFiniteNumber(s.loadW),
+      vehicleChargeW: asFiniteNumber(s.vehicleChargeW),
+      batteryPowerW: asFiniteNumber(s.batteryPowerW),
+      gridImportW: asFiniteNumber(s.gridImportW),
+      gridExportW: gridExportW === null || gridExportW === 0 ? gridExportW : -gridExportW,
+      batterySocPct: asFiniteNumber(s.batterySocPct),
+    };
+  });
 
   return (
     <ChartCard

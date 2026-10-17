@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationalBrief } from '@/components/data-display';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { KpiSummary } from './KpiSummary';
 import type { OrchestrationResult } from '../lib/types';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
@@ -89,8 +90,10 @@ describe('KpiSummary planning horizon dates', () => {
     render(<KpiSummary {...props} />);
     const scope = 'Planning horizon: 8 Mar 2026, 00:30 — 9 Mar 2026, 00:30 (end exclusive)';
     expect(briefProps().scope).toBe(scope);
-    expect(screen.getByTestId('home-energy-outcomes')).toHaveTextContent(scope);
-    expect(screen.getByText('15.00-minute modeled slots · UTC · source coverage not established')).toBeVisible();
+    const brief = screen.getByTestId('home-energy-outcomes');
+    assertOperationalBriefDisclosure(brief, scope, { contains: true });
+    assertOperationalBriefDisclosure(brief,
+      '15.00-minute modeled slots · UTC · source coverage not established', { contains: true });
     expect(screen.queryByText(/2026-03-08T00:30:00Z/)).not.toBeInTheDocument();
   });
 
@@ -148,7 +151,7 @@ describe('KpiSummary planning horizon dates', () => {
     expect(briefProps().metrics.map(metric => metric.rawValue))
       .toEqual([73, 3.25, 75, 7200, 1, 2500]);
     expect(screen.getByText('Planning outcomes')).toBeVisible();
-    expect(screen.getByText('Modeled recommendation')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('home-energy-outcomes'), 'Modeled recommendation');
     expect(screen.getByText('73')).toBeVisible();
     expect(screen.getByText('2.50 kWh')).toBeVisible();
 
@@ -167,11 +170,11 @@ describe('KpiSummary planning horizon dates', () => {
 
   it('retains formatted scope and unknown metrics while essential sources are unavailable or loading', () => {
     const { rerender } = render(<KpiSummary {...props} unavailable />);
-    expect(screen.getByText('Essential source unavailable')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('home-energy-outcomes'), 'Essential source unavailable');
     expect(briefProps().metrics.every(metric => metric.rawValue === null)).toBe(true);
     expect(briefProps().scope).toContain('8 Mar 2026, 00:30');
     rerender(<KpiSummary {...props} loading />);
-    expect(screen.getByText('Loading source inputs')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('home-energy-outcomes'), 'Loading source inputs');
     expect(briefProps().metrics.every(metric => metric.rawValue === null)).toBe(true);
     expect(briefProps().scope).toContain('9 Mar 2026, 00:30 (end exclusive)');
   });

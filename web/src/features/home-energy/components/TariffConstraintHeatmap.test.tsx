@@ -57,7 +57,12 @@ function time(value: SlotResult, end = false, slotMinutes = 15): string {
 }
 
 function color(bucket: number): string {
-  return `color-mix(in srgb, ${chartTokens.series[0]} ${[4, 15, 40, 55, 75][bucket]}%, transparent)`;
+  // Read the expectation back through the CSS parser so serializer
+  // normalization (hex to rgb) matches the received inline style exactly.
+  const probe = document.createElement('span');
+  probe.style.backgroundColor =
+    `color-mix(in srgb, ${chartTokens.series[0]} ${[4, 15, 40, 55, 75][bucket]}%, transparent)`;
+  return probe.style.backgroundColor;
 }
 
 function expectBucket(button: HTMLElement, bucket: number) {
@@ -120,8 +125,8 @@ describe('TariffConstraintHeatmap', () => {
     expect(buttons).toHaveLength(ratios.length);
     buttons.forEach((button, index) => expectBucket(button, expected[index]));
     expect(buttons[0]).toHaveAccessibleName(`Grid import %: ${time(slots[0])} — —`);
-    expect(buttons[4]).toHaveAccessibleName(`Grid import %: ${time(slots[4])} — 0 kW`);
-    expect(buttons[13]).toHaveAccessibleName(`Grid import %: ${time(slots[13])} — 4 kW`);
+    expect(buttons[4]).toHaveAccessibleName(`Grid import %: ${time(slots[4])} — 0.00 kW`);
+    expect(buttons[13]).toHaveAccessibleName(`Grid import %: ${time(slots[13])} — 4.00 kW`);
   });
 
   it('preserves tariff vehicle grid and SoC normalization independently', () => {
@@ -146,9 +151,9 @@ describe('TariffConstraintHeatmap', () => {
     labels.slice(0, 4).forEach((label) => {
       expectBucket(within(screen.getByRole('group', { name: label })).getByRole('button'), 0);
     });
-    expect(screen.getByRole('button', { name: `Grid import %: ${time(value)} — 1.5 kW` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Grid import %: ${time(value)} — 1.50 kW` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Grid export %: ${time(value)} — 0.25 kW` })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: `Vehicle charging: ${time(value)} — 0 kW` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Vehicle charging: ${time(value)} — 0.00 kW` })).toBeInTheDocument();
   });
 
   it('exposes exact time and values through keyboard focus activation and persistent details', async () => {
@@ -196,10 +201,10 @@ describe('TariffConstraintHeatmap', () => {
   it('updates accessible values using existing display preferences without mutating raw watts', () => {
     const value = slot(0);
     const { rerender } = render(<TariffConstraintHeatmap slots={[value]} grid={grid} hasPowerwall />);
-    expect(screen.getByRole('button', { name: `Grid import %: ${time(value)} — 1.5 kW` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Grid import %: ${time(value)} — 1.50 kW` })).toBeInTheDocument();
     preferences.currency = '€';
     rerender(<TariffConstraintHeatmap slots={[value]} grid={grid} hasPowerwall />);
-    expect(screen.getByRole('button', { name: `Grid import %: ${time(value)} — 1.5 kW` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Grid import %: ${time(value)} — 1.50 kW` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Import tariff: ${time(value)} — €0.13/kWh` })).toBeInTheDocument();
     expect(value.gridImportW).toBe(1500);
     expect(value.batteryDischargeW).toBe(750);

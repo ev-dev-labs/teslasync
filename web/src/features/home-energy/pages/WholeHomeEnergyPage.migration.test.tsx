@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ChartCardProps } from '@/components/layout';
@@ -21,6 +21,7 @@ import type { OrchestrationInput } from '../lib/types';
 import WholeHomeEnergyPage from './WholeHomeEnergyPage';
 import { EnergyFlowChart } from '../components/EnergyFlowChart';
 import { PowerwallTrajectoryChart } from '../components/PowerwallTrajectoryChart';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const h = vi.hoisted(() => ({
   model: null as HomeEnergyOrchestration | null,
@@ -128,12 +129,22 @@ describe('whole-home presentation preservation', () => {
     expect(screen.getAllByText(vehicleName).length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText(/never an autonomous command/).length).toBeGreaterThan(0);
     expect(screen.getByText(/50% model assumption, not a measurement/)).toBeInTheDocument();
-    expect(screen.getAllByText('75% confidence from 123 history sample(s)')).toHaveLength(2);
     const brief = screen.getByTestId('home-energy-outcomes');
-    expect(brief).toHaveTextContent(`${start} — 2026-01-01T06:00:00.000Z (end exclusive)`);
-    expect(brief).toHaveTextContent('30-minute modeled slots · UTC · source coverage not established');
+    assertOperationalBriefDisclosure(brief,
+      'Planning horizon: Jan 1, 2026, 12:00 AM — Jan 1, 2026, 06:00 AM (end exclusive)', { contains: true });
+    assertOperationalBriefDisclosure(brief,
+      '30.00-minute modeled slots · UTC · source coverage not established', { contains: true });
+    const quality = screen.getByTestId('home-energy-forecast-quality');
+    fireEvent.click(within(quality).getByRole('button', { name: 'Review details' }));
+    const qualityDrawer = screen.getByRole('dialog', { name: 'Assumptions & forecast quality details' });
+    for (const group of ['Solar forecast', 'Household load forecast']) {
+      expect(within(qualityDrawer).getByRole('group', { name: group }))
+        .toHaveTextContent('75% confidence from 123 history sample(s)');
+    }
+    fireEvent.keyDown(qualityDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
-  it('passes every slot and all six energy series to chart tables and CSV without a sample cap', () => {
+  it('passes every slot and all seven energy series to chart tables and CSV without a sample cap', () => {
     mountPage();
     const flow = h.charts.find(chart => chart.title === 'Energy flow schedule')!;
     const battery = h.charts.find(chart => chart.title === 'Powerwall trajectory')!;
@@ -144,15 +155,17 @@ describe('whole-home presentation preservation', () => {
     expect(flow.exportData).toHaveLength(h.model!.result.slots.length);
     expect(flow.dataColumns?.map(column => column.key)).toEqual([
       'time', 'solarW', 'loadW', 'vehicleChargeW', 'batteryPowerW', 'gridImportW', 'gridExportW',
+      'batterySocPct',
     ]);
     const last = h.model!.result.slots.at(-1)!;
     expect(flow.exportData?.at(-1)).toEqual({
       time: last.startIso, solarW: Math.round(last.solarW), loadW: Math.round(last.loadW),
       vehicleChargeW: Math.round(last.vehicleChargeW), batteryPowerW: Math.round(last.batteryPowerW),
       gridImportW: Math.round(last.gridImportW), gridExportW: Math.round(-last.gridExportW),
+      batterySocPct: last.batterySocPct,
     });
     expect(battery.exportData).toBe(battery.data);
-    expect(battery.exportData).toHaveLength(h.model!.result.slots.length);
+    expect(battery.exportData).toHaveLength(h.model!.result.slots.length + 1);
     expect(battery.exportable).toBe(true);
     expect(battery.fullscreen).toBe(true);
   });
@@ -165,12 +178,17 @@ describe('whole-home presentation preservation', () => {
       <EnergyFlowChart slots={slots} slotMinutes={30} />
       <PowerwallTrajectoryChart slots={slots} powerwall={h.model!.input.powerwall} />
     </>);
-    for (const chart of h.charts) {
-      expect(chart.data).toHaveLength(2401);
-      expect(chart.exportData).toHaveLength(2401);
-      expect(chart.exportData?.at(-1)?.time).toBe(slots.at(-1)?.startIso);
-    }
     expect(h.charts).toHaveLength(2);
+    const flow = h.charts.find(chart => chart.title === 'Energy flow schedule')!;
+    expect(flow.data).toHaveLength(2401);
+    expect(flow.exportData).toHaveLength(2401);
+    expect(flow.exportData?.at(-1)?.time).toBe(slots.at(-1)?.startIso);
+    const battery = h.charts.find(chart => chart.title === 'Powerwall trajectory')!;
+    expect(battery.data).toHaveLength(2402);
+    expect(battery.exportData).toHaveLength(2402);
+    expect(battery.exportData?.at(0)).toEqual({ time: slots[0]!.startIso, socPct: 70 });
+    expect(battery.exportData?.at(-1)?.time).toBe(
+      new Date(Date.parse(slots.at(-1)!.startIso) + 15 * 60_000).toISOString());
   });
   it.each(['stale', 'partial', 'paused'] as const)('keeps the full plan and actions during %s source degradation', mode => {
     const state = deriveDataState(
@@ -186,7 +204,7 @@ describe('whole-home presentation preservation', () => {
     expect(h.retry).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: 'Download canonical JSON plan' })).toBeEnabled();
     const brief = screen.getByTestId('home-energy-outcomes');
-    expect(brief).toHaveTextContent(mode === 'stale' ? 'Retained source inputs'
+    assertOperationalBriefDisclosure(brief, mode === 'stale' ? 'Retained source inputs'
       : mode === 'paused' ? 'Source refresh paused' : 'Incomplete source inputs');
     for (const metric of brief.querySelectorAll('[data-operational-metric]')) {
       expect(metric).toHaveAttribute('data-value-state', 'value');
@@ -200,13 +218,22 @@ describe('whole-home presentation preservation', () => {
     h.model!.sourceStates = [{ id: 'vehicles', state }];
     h.model!.error = state.fatalError;
     const { container } = mountPage();
-    assertSections(container);
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(2);
+    const brief = screen.getByTestId('home-energy-outcomes');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+    expect(brief).toHaveTextContent('Values will appear when the source provides measurements.');
+    expect(screen.getByTestId('home-energy-forecast-quality').querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    for (const title of [
+      'Scenario & assumptions', 'Vehicle assumptions', 'Energy flow schedule',
+      'Per-vehicle readiness', 'Powerwall trajectory', 'Tariff & constraint heatmap',
+      'Constraint violations', 'Assumptions & forecast quality', 'Export plan',
+    ]) expect(screen.getByText(title)).toBeInTheDocument();
     if (mode === 'initial-failure') {
-      const values = screen.getByTestId('home-energy-outcomes').querySelectorAll('[data-operational-value]');
-      expect(values).toHaveLength(6);
-      for (const value of values) expect(value).toHaveTextContent('—');
-      for (const metric of screen.getByTestId('home-energy-outcomes').querySelectorAll('[data-operational-metric]')) {
-        expect(metric).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalBriefDisclosure(brief, 'Essential source unavailable');
+      for (const label of ['Overall score', 'Projected cost', 'Self-consumption',
+        'Peak grid import', 'Vehicles ready', 'Unmet energy']) {
+        assertOperationalMetricUnavailable(brief, label);
       }
       fireEvent.click(screen.getByRole('button', { name: /retry/i }));
       expect(h.retry).toHaveBeenCalledTimes(1);
@@ -214,14 +241,16 @@ describe('whole-home presentation preservation', () => {
       expect(screen.getByText(/This source is waiting for a connection/)).toBeInTheDocument();
     }
   });
-  it('preserves explicit scenario commands, full SI patches and the exact vehicle member ID', () => {
+  it('preserves explicit scenario commands, full SI patches and the exact vehicle member ID', async () => {
     mountPage();
     fireEvent.click(screen.getByRole('button', { name: 'Recompute from now' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save as stability baseline' }));
     fireEvent.click(screen.getByRole('button', { name: 'Reset to defaults' }));
     expect(h.refresh).toHaveBeenCalledTimes(1);
     expect(h.commit).toHaveBeenCalledTimes(1);
-    expect(resetScenario).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Reset all inputs?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(resetScenario).toHaveBeenCalledTimes(1));
     fireEvent.change(screen.getByRole('combobox', { name: 'Optimization priority' }), { target: { value: 'costFirst' } });
     expect(updateScenario).toHaveBeenLastCalledWith({
       weights: { readiness: 2, cost: 4, selfConsumption: 1.5, peakShaving: 1, reserve: 1, stability: 0.5 },
@@ -274,14 +303,14 @@ describe('whole-home presentation preservation', () => {
     h.model!.result.vehicles = [];
     mountPage();
     const brief = screen.getByTestId('home-energy-outcomes');
-    for (const id of ['overall', 'peak-grid-import']) {
-      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'invalid');
-      expect(brief.querySelector(`[data-operational-metric="${id}"] [data-operational-value]`)).toHaveTextContent('—');
-    }
-    for (const id of ['projected-cost', 'vehicles-ready', 'unmet-energy']) {
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    for (const id of ['projected-cost', 'self-consumption', 'vehicles-ready', 'unmet-energy']) {
       expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'value');
     }
-    expect(brief.querySelector('[data-operational-metric="vehicles-ready"] [data-operational-value]')).toHaveTextContent('0/0');
+    assertOperationalMetricUnavailable(brief, 'Overall score');
+    assertOperationalMetricUnavailable(brief, 'Peak grid import');
+    expect(brief.querySelector('[data-operational-metric="projected-cost"] [data-operational-value]')).toHaveTextContent('$0.00');
+    expect(brief.querySelector('[data-operational-metric="vehicles-ready"] [data-operational-value]')).toHaveTextContent('0 / 0');
   });
   it('keeps loading brief shells and all scenario controls without presenting skeletons as values', () => {
     h.model!.isLoading = true;
@@ -300,7 +329,7 @@ describe('whole-home presentation preservation', () => {
     expect(drawer).toHaveTextContent('Modeled recommendation score, not source confidence');
     expect(drawer).toHaveTextContent('Projected net cost using editable tariff assumptions');
     expect(drawer).toHaveTextContent('never fabricated as delivered');
-    expect(drawer).toHaveTextContent(`${start} — 2026-01-01T06:00:00.000Z (end exclusive)`);
+    expect(drawer).toHaveTextContent('Planning horizon: Jan 1, 2026, 12:00 AM — Jan 1, 2026, 06:00 AM (end exclusive)');
     expect(drawer).toHaveTextContent('Assumed (user-editable): tariff rates');
     expect(drawer).toHaveTextContent('never an autonomous command');
     fireEvent.keyDown(drawer, { key: 'Escape' });
@@ -314,10 +343,9 @@ describe('whole-home presentation preservation', () => {
     }) }];
     mountPage();
     const brief = screen.getByTestId('home-energy-forecast-quality');
-    expect(brief).toHaveTextContent('Retained source inputs');
-    expect(brief).toHaveTextContent('75% confidence from 123 history sample(s)');
-    expect(brief).toHaveTextContent('50% confidence from 12 history sample(s)');
-    expect(brief).toHaveTextContent('Latest source history sample: 2025-12-31T23:00:00Z');
+    expect(brief).toHaveTextContent('Solar forecast75%');
+    expect(brief).toHaveTextContent('Household load forecast50%');
+    assertOperationalBriefDisclosure(brief, 'Retained source inputs');
     const band = h.metricBands.find(metrics => metrics.some(metric => metric.occurrenceId === 'solar-confidence'))!;
     expect(band.map(metric => metric.rawValue)).toEqual([75, 50]);
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
@@ -326,6 +354,12 @@ describe('whole-home presentation preservation', () => {
     expect(drawer).toHaveTextContent('50% confidence from 12 history sample(s)');
     expect(drawer).toHaveTextContent('Forecast-adapter confidence is derived from available energy history');
     expect(drawer).toHaveTextContent('not confidence in measured vehicle or battery state');
+    expect(within(drawer).getByRole('group', { name: 'Solar forecast' }))
+      .toHaveTextContent('Latest source history sample: 2026-01-01T00:00:00Z');
+    expect(within(drawer).getByRole('group', { name: 'Household load forecast' }))
+      .toHaveTextContent('Latest source history sample: 2025-12-31T23:00:00Z');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it('discloses absent forecast history without inventing positive confidence or a source timestamp', () => {
     for (const forecast of [h.model!.solarForecast, h.model!.loadForecast]) {
@@ -336,10 +370,21 @@ describe('whole-home presentation preservation', () => {
     }
     mountPage();
     const brief = screen.getByTestId('home-energy-forecast-quality');
-    expect(within(brief).getAllByText('0% confidence from 0 history sample(s)')).toHaveLength(2);
-    expect(within(brief).getAllByText('No source history sample timestamp is available.')).toHaveLength(2);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
     for (const metric of brief.querySelectorAll('[data-operational-metric]')) {
       expect(metric).toHaveAttribute('data-value-state', 'value');
     }
+    const values = brief.querySelectorAll('[data-operational-value]');
+    expect(values).toHaveLength(2);
+    for (const value of values) expect(value).toHaveTextContent('0%');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Assumptions & forecast quality details' });
+    for (const group of ['Solar forecast', 'Household load forecast']) {
+      const section = within(drawer).getByRole('group', { name: group });
+      expect(section).toHaveTextContent('0% confidence from 0 history sample(s)');
+      expect(section).toHaveTextContent('No source history sample timestamp is available.');
+    }
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
