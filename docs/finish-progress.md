@@ -347,6 +347,31 @@ Shared-change disposition: admin recommended adding a loaded `settingsState` to 
 
 Gates per pick: touched-file suites re-run green in the main checkout + child-attested ESLint; full `tsc`/build/catalog follow with the post-integration full suite below.
 
+### Workflow Stage 2 wave 2: 16 folders, integrated (2026-10-17)
+
+Fresh baseline before wave 2 (full suite alone): 53,783 passed / 3,163 failed (reconciles exactly: 3,473 − 311 fixed − 1 flake). 16 subagents on manual sibling worktrees (node_modules junctions, `--maxWorkers=2`, 4 staggered batches, 45-min timeboxes), one folder each. Every commit verified folder-scoped + test-weakening scan (zero skips; all `it` churn is sync↔async or contract-following renames with strengthened bodies, spot-checked) and cherry-picked one at a time with per-pick suite verification + push. 13 folders went 100% green; 3 partial (documented blocks below).
+
+- driving `5d1cc5a36` (219 resolved, 39 files; folder 3,350 passed, only the 3 known TripReplay blocks fail). 1-line prod fix: DriveDetailPage Share IconButton regained `min-h-11 min-w-11 md:min-h-9` touch sizing. Blocked: driving TripReplayPage 3 fails need a trips-folder calc fix (`Number(NaN.toFixed(3))` on unparseable first ts).
+- battery `a1961e3a` (171 resolved, 30 files; folder 1,214 passed, only the 14 known ChargeAdvisor fails fail). ChargeAdvisorPage reverted untouched: page overwrites lib-sanitized `chargeLimitPct` with raw NaN (since `5fb15a0609`) + scenario gate coverage drift (since `d2cb6396ac`) — needs owner call.
+- telemetry `f342a4e0` (146/151, 22 files, 418/418). Deliberately untouched pre-existing: SignalDeadbandPage stale algorithm pins (3), SignalGapDetectorPage `isStale` vs shared `deriveDataState` (1), signalCorrelation `-0` vs `toBe(0)` lib calc (1).
+- vehicles `7388ab73` (222/222, 23 files; folder 1,523 passed + 4 pre-existing skips in untouched DayLogTimeline).
+- notifications `ab807e73` (134/134, 17 files + 1 prod; folder 1,268/1,268). Prod fix: AlertFatiguePanel `replace` objects gained missing `n` (numbers rendered blank). Catalog follow-up queued (see below).
+- advintel `52749c69` (111/111, 17 files; folder 671/671; ChargingForensics green unmodified, presumed flake).
+- settings `791a2119` (103/103, 14 files + 1 prod; folder 1,060/1,060). Prod fix: AISettings InlineCallout `data-testid=` → `testId=` (2 lines; component drops unknown props).
+- ownership `ba8d530a` (88/88, 9 files + 1 prod; folder 583/583). Prod fix: InsuranceTelematicsPage focus restore moved to post-close effect (sync focus on disabled trigger was a no-op).
+- system `8225a7e5` (76 resolved, 7 files, 138/138; 112 fails in 34 files remain for a later wave).
+- diagnostics `be9f0400` (37 resolved, 6 files + comment-only prod doc, 208/208; 71 fails in 6 files remain).
+- home-energy `d5bc7127` (32/32, 4 files + 1 prod; folder 149/149). Prod fix: EnergyFlowChart normalizes `-0` grid export to unsigned (sign/null/CSV unchanged).
+- automations `d6a050f0` (29/29, 9 files; folder 574/574).
+- resale-vault `2f81cb3b` (26/26, 6 files, 58/58). Root cause was fixture drift (`/charging?vehicle_id=` unstubbed), one line fixed 18.
+- fleet-ops `3ba5b443` (24/24, 5 files, 118/118).
+- service-intelligence `5b21a8b0` (23/23, 6 files, 59/59).
+- trips `cc76c790` (23/23, 4 files, 104/104).
+
+Wave-2 shared/catalog follow-ups (all DEFERRED with tests pinning observed behavior; no shared edits made): notifications en.json `_one` keys (alertFatigue.ofTotal/overDays, notificationLatency.cohorts.samples) + `overDays` decimal format; telemetry en.json resampledPairs/sourceRecords + signalDiff `Copy CSV`-vs-download wording + FreshnessDot null-state name/description contradiction + `168,00000h` precision wart; battery missingReason silent-drop + face-level omission-hint UX + global `pricingState`/`settingsState` mocks; driving global motion/`t`/useRangeState mock gaps + `regen.kpis.coverageValue` spacing drift; ownership mobile-detail double render + ` required` accessible-name gains + junction dual-module-instance note; system `formatDayKey` long-style months; automations inventory-negative acceptance + duplicate stale-vehicle warnings + import/refetch observer-snapshot gaps; diagnostics stale-narrative/tie-break/empty-combine notes. Cumulative original failures resolved: **2,276** (812 + 1,464); added Vitest cases total stays 44. Worktrees, junctions and side branches removed after integration. No Phase 6 status changes.
+
+Gates per pick: touched-file or whole-folder suites re-run green in the main checkout + child-attested ESLint/tsc; full `tsc`/build/catalog follow with the post-integration full suite below.
+
 ## Current UI simplification checkpoint
 
 Working on `ui/simplification`. Rows 0-4 are complete and pushed; row 5 (charging) is in progress; row 6 (remaining features) is in progress. Shared dashboard headers cluster controls at the right, the freshness dot is the per-widget refresh action, hover-only expand controls sit to its left without reserving header width, and widget content avoids nested summary scroll areas. Climate no longer repeats an inner title; title-equal metric captions are hidden. Both StatStrip and OperationalBrief distribute metric rows evenly with `maxPerRow`. Captured Edge screenshots at 375px, 768px, and 1440px are committed under `docs/ui-simplification/`; the Battery widget freshness control measures the same 16px inset as its title at all three sizes. Focused shared/dashboard suites pass 111/111; focused vehicle suites pass 239/239 across seven files. Split catalog check, full lint, typecheck, and build pass on the last shared checkpoint (CSS parser and startup bundle warnings remain). Rows 5-7 and the full Vitest suite remain outstanding.
