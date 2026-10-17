@@ -98,8 +98,9 @@ describe('private benchmark OperationalBrief source authoring', () => {
     expect(container.querySelector('[data-operational-brief]')).toBeInTheDocument();
     expect(metricElement(container, 'degradation_pct')).toHaveAttribute('data-value-state', 'value');
     expect(metricElement(container, 'degradation_pct')).toHaveTextContent('0%');
-    expect(metricElement(container, 'operation_reliability_pct')).toHaveAttribute('data-value-state', 'missing');
-    expect(metricElement(container, 'operation_reliability_pct')).toHaveTextContent('Suppressed below privacy threshold');
+    expect(container.querySelector('[data-operational-metric="operation_reliability_pct"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 empty fields are hidden.');
     expect(metricElement(container, 'efficiency_wh_per_km')).toHaveTextContent('186 Wh/km');
     const raw = vi.mocked(useOperationalMetrics).mock.calls[0][0];
     expect(raw.find((item) => item.occurrenceId === 'efficiency_wh_per_km')).toMatchObject({
@@ -117,10 +118,8 @@ describe('private benchmark OperationalBrief source authoring', () => {
     expect(drawer).toHaveTextContent('Private IQR 180 Wh/km–210 Wh/km');
     expect(drawer).toHaveTextContent('100th performance percentile');
     expect(drawer).toHaveTextContent('moderate');
-    expect(drawer).toHaveTextContent('Suppressed below privacy threshold');
-    expect(drawer).toHaveTextContent('Percentile unavailable');
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
     expect(drawer).toHaveTextContent('Lower source values mean better performance.');
-    expect(drawer).toHaveTextContent('Higher source values mean better performance.');
     expect(drawer).toHaveTextContent('Noisy cohort size: 8; noise scale: 1.');
     expect(drawer).toHaveTextContent('not confidence scores');
     expect(drawer).toHaveTextContent('2026-04-01–2026-07-01');
@@ -165,15 +164,18 @@ describe('private benchmark OperationalBrief source authoring', () => {
     const page: BenchmarkReleasePage = { items: [release], limit: 12, offset: 0 };
     const failed = deriveDataState({ data: page, error: new Error('refresh failed'), refetch: retry });
     const { container, rerender } = show(<MetricComparisonGrid release={release} source={failed} />);
-    expect(screen.getByText('Retained release')).toBeInTheDocument();
     expect(metricElement(container, 'degradation_pct')).toHaveTextContent('0%');
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(retry).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Retained release');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     const offline = deriveDataState({ data: page, fetchStatus: 'paused' });
     rerender(<MemoryRouter><MetricComparisonGrid release={release} source={offline} /></MemoryRouter>);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('Retained release')).toBeInTheDocument();
     expect(metricElement(container, 'degradation_pct')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Retained release');
   });
 
   it('renders loading and absent release metrics as unknown rather than measured zero', () => {
@@ -182,17 +184,23 @@ describe('private benchmark OperationalBrief source authoring', () => {
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
     rerender(<MemoryRouter><MetricComparisonGrid release={null} optedIn={false} /></MemoryRouter>);
-    expect(screen.getByText('Consent required')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Consent required');
     expect(screen.getByText('No comparison released')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(container.querySelector('[data-operational-brief]')).toHaveTextContent('No metric values are available yet.');
+    expect(screen.getByRole('dialog')).toHaveTextContent('4 empty fields are hidden.');
     expect(screen.queryByText('0%')).not.toBeInTheDocument();
   });
 
   it('does not classify non-finite targets as a real measurement', () => {
     const invalid = { ...release, metrics: [{ ...metric, target_value: Number.NaN }] };
     const { container } = show(<MetricComparisonGrid release={invalid} />);
-    expect(metricElement(container, 'degradation_pct')).toHaveAttribute('data-value-state', 'invalid');
-    expect(metricElement(container, 'degradation_pct')).toHaveTextContent('Expected a finite numeric measurement');
+    expect(container.querySelector('[data-operational-metric="degradation_pct"]')).toBeNull();
+    expect(container.querySelector('[data-operational-brief]')).toHaveTextContent('No metric values are available yet.');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 empty fields are hidden.');
+    expect(screen.queryByText('NaN')).not.toBeInTheDocument();
   });
 
   it('retains actual zero epsilon spend, cumulative scope, gauge and privacy accounting in its drawer', () => {
@@ -202,9 +210,9 @@ describe('private benchmark OperationalBrief source authoring', () => {
     expect(metricElement(container, 'epsilon-spent')).toHaveTextContent('ε 0');
     expect(screen.getByRole('progressbar', { name: 'Differential privacy budget used' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByText('ε 4 remaining')).toBeInTheDocument();
-    expect(screen.getByText(/not the comparison release window/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('not the comparison release window');
     expect(drawer).toHaveTextContent('Privacy budget spent');
     expect(drawer).toHaveTextContent('ε 0');
     expect(drawer).toHaveTextContent('Reading or refreshing an existing release costs nothing.');
@@ -216,7 +224,10 @@ describe('private benchmark OperationalBrief source authoring', () => {
   it('does not enable participation or fabricate zero epsilon when privacy accounting fails initially', () => {
     const source = deriveDataState<BenchmarkPrivacyStatus>({ error: new Error('status unavailable') });
     const { container } = show(<PrivacyBudgetPanel status={null} source={source} />);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    expect(container.querySelector('[data-operational-brief]')).toHaveTextContent('No metric values are available yet.');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('3 empty fields are hidden.');
     expect(screen.queryByText('ε 0')).not.toBeInTheDocument();
     expect(screen.queryByText('Participation inactive')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();

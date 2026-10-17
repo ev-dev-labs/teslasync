@@ -65,12 +65,14 @@ describe('phase 4 private benchmark presentation preservation', () => {
       <MetricComparisonGrid release={release} />
       <BenchmarkPercentileChart release={release} />
     </>);
-    expect(screen.getByText(/Private IQR/)).toBeInTheDocument();
-    expect(screen.getByText('Suppressed below privacy threshold')).toBeInTheDocument();
-    expect(screen.getByText('Percentile unavailable')).toBeInTheDocument();
-    expect(screen.getByText('100th performance percentile')).toBeInTheDocument();
     expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="operation_reliability_pct"]')).toBeNull();
+    expect(screen.queryByText('Suppressed below privacy threshold')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Private IQR');
+    expect(drawer).toHaveTextContent('100th performance percentile');
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
     expect(screen.getByText((text, element) =>
       text === 'Higher bars mean better relative performance'
       && element?.getAttribute('data-card-desc') === 'true',
