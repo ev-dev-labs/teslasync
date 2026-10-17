@@ -128,6 +128,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import PhysicsLedgerPage from './PhysicsLedgerPage';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { PhysicsLedger, PhysicsTerm } from '@/api/types';
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
 import { columnLayoutStorageKey, resetColumnLayout, setColumnLayout } from '@/lib/columnOrderStore';
@@ -325,7 +326,7 @@ describe('PhysicsLedgerPage', () => {
     const assertWindow = (locale: string, tz: string) => {
       const label = `${formatDateTime(start, { locale, tz })} → ${formatDateTime(end, { locale, tz })}`;
       expect(within(screen.getByRole('group', { name: 'Window' })).getByText(label)).toBeInTheDocument();
-      expect(screen.getByTestId('ledger-summary')).toHaveTextContent(label);
+      assertOperationalBriefDisclosure(screen.getByTestId('ledger-summary'), label, { contains: true });
       expect(usePhysicsLedgerMock).toHaveBeenLastCalledWith({ vehicleId: '1', start, end });
     };
     assertWindow('en-US', 'America/Los_Angeles');
@@ -522,8 +523,13 @@ describe('PhysicsLedgerPage', () => {
       queryState({ data: ledgerResponse({ truncated: true, contradictions: ['gear_P_with_speed'] }) }),
     );
     renderPage();
-    expect(screen.getByTestId('ledger-summary').textContent).toMatch(/Sample cap hit/);
-    expect(screen.getByTestId('ledger-summary').textContent).toMatch(/gear_P_with_speed/);
+    fireEvent.click(within(screen.getByTestId('ledger-summary')).getByRole('button', { name: 'Review details' }));
+    const badgeDrawer = screen.getByRole('dialog');
+    const windowGroup = within(badgeDrawer).getByRole('group', { name: 'Window' });
+    expect(windowGroup.textContent).toMatch(/Sample cap hit/);
+    expect(windowGroup.textContent).toMatch(/gear_P_with_speed/);
+    fireEvent.keyDown(badgeDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders skeletons while loading', () => {
@@ -750,7 +756,12 @@ describe('PhysicsLedgerPage', () => {
     const ledger = ledgerResponse({ truncated: true });
     usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
     const { container } = renderPage();
-    expect(container.querySelectorAll('[data-provenance="historical"][data-data-status="partial"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-provenance="historical"][data-data-status="partial"]')).toHaveLength(1);
+    fireEvent.click(within(screen.getByTestId('ledger-summary')).getByRole('button', { name: 'Review details' }));
+    const provenanceDrawer = screen.getByRole('dialog');
+    expect(provenanceDrawer.querySelector('[data-provenance="historical"][data-data-status="partial"]')).not.toBeNull();
+    fireEvent.keyDown(provenanceDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Partial data');
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Sample cap hit — oldest prefix solved');
     // Twelve domain panels plus their nested summary briefs.

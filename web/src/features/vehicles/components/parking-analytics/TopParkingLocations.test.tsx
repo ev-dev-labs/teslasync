@@ -12,6 +12,8 @@ import { DurationDistributionChart } from './DurationDistributionChart';
 import { resolveChartPalette, type ChartPaletteId } from '@/hooks/useChartPalette';
 import { downloadCSV } from '@/lib/csvExport';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 const durationPreferences = vi.hoisted(() => ({ duration: 'h' as 'h' | 'min' | 's' }));
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
@@ -92,6 +94,18 @@ vi.mock('react-i18next', async () => {
     }),
   };
 });
+
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics');
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
+});
+
+/** Omitted tiles carry no value-state attribute, so the classification is pinned on the mapped hook output. */
+function mappedValueState(occurrenceId: string) {
+  const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+    readonly { key: string; valueState?: string }[] | undefined;
+  return mapped?.find(metric => metric.key === occurrenceId)?.valueState;
+}
 
 function summary(possiblyCapped = false) {
   const value = summarizeParking([], {
@@ -419,8 +433,9 @@ describe('TopParkingLocations value filters', () => {
         expect(section).not.toHaveTextContent('No drive records were returned');
         expect(section).not.toHaveTextContent('0 located');
         expect(section).not.toHaveTextContent('This workspace uses');
-        expect(section.querySelector('[data-operational-metric="returned"]'))
-          .toHaveAttribute('data-value-state', 'missing');
+        expect(section.querySelector('[data-operational-metric="returned"]')).toBeNull();
+        assertOperationalMetricUnavailable(screen.getByTestId('parking-coverage-summary'), 'Records returned');
+        expect(mappedValueState('returned')).toBe('missing');
         fireEvent.click(within(section).getByRole('button', { name: 'Review details' }));
         expect(screen.getByRole('dialog')).not.toHaveTextContent('0 located');
       },
@@ -430,7 +445,7 @@ describe('TopParkingLocations value filters', () => {
       render(<ParkingCoverageMethodology summary={summary()} state={state} {...range} />,
         { wrapper: MemoryRouter });
       expect(screen.getByTestId('parking-coverage')).not.toHaveTextContent('Within request cap');
-      expect(screen.getByTestId('parking-coverage-summary')).toHaveTextContent('Pending');
+      assertOperationalBriefDisclosure(screen.getByTestId('parking-coverage-summary'), 'Pending');
     });
 
     it.each<DataStatus>(['initial', 'initialFailure'])(
@@ -440,8 +455,9 @@ describe('TopParkingLocations value filters', () => {
         const section = screen.getByTestId('parking-coverage');
         expect(section).not.toHaveTextContent('Potentially capped');
         expect(section).not.toHaveTextContent('No drive records were returned');
-        expect(section.querySelector('[data-operational-metric="returned"]'))
-          .toHaveAttribute('data-value-state', 'missing');
+        expect(section.querySelector('[data-operational-metric="returned"]')).toBeNull();
+        assertOperationalMetricUnavailable(screen.getByTestId('parking-coverage-summary'), 'Records returned');
+        expect(mappedValueState('returned')).toBe('missing');
       },
     );
 
@@ -451,8 +467,9 @@ describe('TopParkingLocations value filters', () => {
       render(<ParkingCoverageMethodology summary={value} state={state}
         hasSource sourceStatus="ok" {...range} />, { wrapper: MemoryRouter });
       const section = screen.getByTestId('parking-coverage');
-      expect(section.querySelector('[data-operational-metric="returned"]'))
-        .toHaveAttribute('data-value-state', 'missing');
+      expect(section.querySelector('[data-operational-metric="returned"]')).toBeNull();
+      assertOperationalMetricUnavailable(screen.getByTestId('parking-coverage-summary'), 'Records returned');
+      expect(mappedValueState('returned')).toBe('missing');
       expect(section).not.toHaveTextContent('Within request cap');
       expect(section).not.toHaveTextContent('No drive records were returned');
       expect(section).not.toHaveTextContent('This workspace uses');
@@ -465,8 +482,9 @@ describe('TopParkingLocations value filters', () => {
         render(<ParkingCoverageMethodology summary={value} state={state}
           hasSource sourceStatus="ok" {...range} />, { wrapper: MemoryRouter });
         const section = screen.getByTestId('parking-coverage');
-        expect(section.querySelector('[data-operational-metric="located"]'))
-          .toHaveAttribute('data-value-state', 'missing');
+        expect(section.querySelector('[data-operational-metric="located"]')).toBeNull();
+        assertOperationalMetricUnavailable(screen.getByTestId('parking-coverage-summary'), 'Location coverage');
+        expect(mappedValueState('located')).toBe('missing');
         expect(section).not.toHaveTextContent(/located ·/);
         expect(section).not.toHaveTextContent('stints lack a destination address');
         fireEvent.click(within(section).getByRole('button', { name: 'Review details' }));
@@ -498,8 +516,9 @@ describe('TopParkingLocations value filters', () => {
       const returned = section.querySelector('[data-operational-metric="returned"]');
       expect(returned).not.toHaveAttribute('data-value-state', 'missing');
       expect(returned).toHaveTextContent('0');
-      expect(section.querySelector('[data-operational-metric="located"]'))
-        .toHaveAttribute('data-value-state', 'missing');
+      expect(section.querySelector('[data-operational-metric="located"]')).toBeNull();
+      assertOperationalMetricUnavailable(screen.getByTestId('parking-coverage-summary'), 'Location coverage');
+      expect(mappedValueState('located')).toBe('missing');
     });
 
     it('retains cap evidence and fractional location coverage from a returned sample', () => {
@@ -515,7 +534,7 @@ describe('TopParkingLocations value filters', () => {
         hasSource sourceStatus="ok" {...range} />, { wrapper: MemoryRouter });
       const section = screen.getByTestId('parking-coverage');
       expect(section).toHaveTextContent('Potentially capped');
-      expect(section).toHaveTextContent('Partial source coverage');
+      assertOperationalBriefDisclosure(screen.getByTestId('parking-coverage-summary'), 'Partial source coverage');
       expect(section.querySelector('[data-operational-metric="located"]')).toHaveTextContent(/33/);
       fireEvent.click(within(section).getByRole('button', { name: 'Review details' }));
       expect(screen.getByRole('dialog')).toHaveTextContent('1 located · 2 missing');
@@ -529,8 +548,9 @@ describe('TopParkingLocations value filters', () => {
           hasSource sourceStatus="ok" {...range} />, { wrapper: MemoryRouter });
         const returned = screen.getByTestId('parking-coverage')
           .querySelector('[data-operational-metric="returned"]');
-        expect(returned).toHaveAttribute('data-value-state', 'invalid');
-        expect(returned?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+        expect(returned).toBeNull();
+        assertOperationalMetricUnavailable(screen.getByTestId('parking-coverage-summary'), 'Records returned');
+        expect(mappedValueState('returned')).toBe('invalid');
         expect(screen.getByTestId('parking-coverage')).not.toHaveTextContent('Within request cap');
       },
     );

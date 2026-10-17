@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 import type { DayLogResponse } from '@/api/types';
 import { createEnglishI18n } from '@/test/createEnglishI18n';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { DayLogOperationalSummary } from './DayLogOperationalSummary';
 
 vi.unmock('react-i18next');
@@ -67,13 +68,28 @@ function metric(label: string) {
   return within(screen.getByTestId('day-log-summary')).getByText(label).closest('[role="listitem"]')!;
 }
 
+/** Status badge assertions moved into the drawer header; tone class is pinned on the badge itself. */
+function expectDrawerStatus(brief: HTMLElement, label: string, toneClass: string) {
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    const header = drawer.querySelector('[data-drawer-header]');
+    if (!header) throw new Error('Missing drawer header');
+    expect(within(header).getByText(label)).toHaveClass(toneClass);
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 const capNotice = 'Some records may be missing — the day exceeded the signal read cap. What loaded is shown in full.';
 
 describe('DayLogOperationalSummary', () => {
   it('honors explicit partial status without inventing unavailable sources or cap loss', () => {
     renderSummary({ status: 'partial' });
 
-    expect(screen.getByText('Partial data')).toHaveClass('text-[var(--semantic-warning)]');
+    expectDrawerStatus(screen.getByTestId('day-log-summary'), 'Partial data', 'text-[var(--semantic-warning)]');
     expect(screen.queryByText('Recorded day summary')).not.toBeInTheDocument();
     expect(screen.queryByText('Some sources unavailable')).not.toBeInTheDocument();
     expect(screen.queryByText(capNotice)).not.toBeInTheDocument();
@@ -100,7 +116,7 @@ describe('DayLogOperationalSummary', () => {
       { source: 'signal_log', status: 'unavailable', count: 0, reason: 'History read failed' },
     ] }) });
 
-    expect(screen.getByText('Some sources unavailable')).toHaveClass('text-[var(--semantic-warning)]');
+    expectDrawerStatus(screen.getByTestId('day-log-summary'), 'Some sources unavailable', 'text-[var(--semantic-warning)]');
     expect(screen.queryByText(capNotice)).not.toBeInTheDocument();
     expect(screen.queryByText('Recorded day summary')).not.toBeInTheDocument();
     expect(metric('Distance')).toHaveTextContent('25.00 km');
@@ -111,7 +127,7 @@ describe('DayLogOperationalSummary', () => {
       { source: 'signal_log', status: 'unavailable', count: 0 },
     ] }) });
 
-    expect(screen.getByText('Some sources unavailable')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Some sources unavailable');
     expect(screen.getByText(capNotice)).toBeVisible();
     expect(metric('Energy used')).toHaveTextContent('5.00 kWh');
   });
@@ -119,7 +135,7 @@ describe('DayLogOperationalSummary', () => {
   it('keeps retained stale history and its cap limitation distinct', () => {
     renderSummary({ data: response({ truncated: true }), status: 'stale' });
 
-    expect(screen.getByText('Retained recorded history')).toHaveClass('text-[var(--semantic-warning)]');
+    expectDrawerStatus(screen.getByTestId('day-log-summary'), 'Retained recorded history', 'text-[var(--semantic-warning)]');
     expect(screen.getByText(capNotice)).toBeVisible();
     expect(metric('Distance')).toHaveTextContent('25.00 km');
     expect(screen.queryByText('History request failed')).not.toBeInTheDocument();
@@ -140,8 +156,7 @@ describe('DayLogOperationalSummary', () => {
     expect(metric('Energy added')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Energy added')).toHaveTextContent('0.00 kWh');
     for (const label of ['Distance', 'Energy used']) {
-      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
-      expect(metric(label)).toHaveTextContent('—');
+      assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), label);
     }
     expect(screen.getByText(capNotice)).toBeVisible();
   });
@@ -166,7 +181,10 @@ describe('DayLogOperationalSummary', () => {
     expect(screen.getByRole('link', { name: 'Open drives' })).toHaveAttribute('href', '/drives');
     expect(metric('Drives')).toHaveTextContent('0');
     expect(metric('Charges')).toHaveTextContent('0');
-    expect(within(screen.getByTestId('day-log-summary')).getAllByRole('listitem')).toHaveLength(6);
+    expect(within(screen.getByTestId('day-log-summary')).getAllByRole('listitem')).toHaveLength(2);
+    for (const label of ['Drive time', 'Distance', 'Energy added', 'Energy used']) {
+      assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), label);
+    }
   });
 
   it('preserves authoritative empty session messaging and its original destination', () => {
@@ -176,10 +194,10 @@ describe('DayLogOperationalSummary', () => {
       energy_added_wh: null, energy_used_wh: null,
     }, sources: [{ source: 'drives', status: 'empty', count: 0 }] }) });
 
-    expect(screen.getByText('Recorded day summary')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Recorded day summary');
     expect(screen.getByText('No drives or charging sessions this day.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open drives' })).toHaveAttribute('href', '/drives');
-    expect(metric('Drive time')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), 'Drive time');
   });
 
   it('preserves server scope and exclusive day bounds in the details provenance', () => {
@@ -197,7 +215,7 @@ describe('DayLogOperationalSummary', () => {
   it('preserves loading suppression without fabricating complete or measured zero history', () => {
     renderSummary({ data: null, isLoading: true, status: 'initial' });
 
-    expect(screen.getByText('Loading recorded history')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Loading recorded history');
     expect(screen.getByTestId('day-log-summary')).toHaveAttribute('aria-busy', 'true');
     expect(within(screen.getByTestId('day-log-summary')).getAllByRole('listitem')).toHaveLength(6);
     expect(screen.queryByText('Recorded day summary')).not.toBeInTheDocument();
@@ -208,11 +226,11 @@ describe('DayLogOperationalSummary', () => {
   it('preserves unknown summary values and unknown bounds without claiming cap loss', () => {
     renderSummary({ data: null, status: 'unavailable' });
 
-    expect(screen.getByText('Day summary unavailable')).toBeVisible();
-    expect(screen.getByText('Recorded day bounds unavailable')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Day summary unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Recorded day bounds unavailable');
     expect(screen.queryByText(capNotice)).not.toBeInTheDocument();
     for (const label of ['Drives', 'Charges', 'Drive time', 'Distance', 'Energy added', 'Energy used']) {
-      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalMetricUnavailable(screen.getByTestId('day-log-summary'), label);
     }
     expect(screen.queryByText('No drives or charging sessions this day.')).not.toBeInTheDocument();
   });
@@ -221,7 +239,7 @@ describe('DayLogOperationalSummary', () => {
     const onRetry = vi.fn();
     renderSummary({ data: response({ truncated: true }), error: new Error('History request failed'), status: 'stale', onRetry });
 
-    expect(within(screen.getByTestId('day-log-summary')).getByText('History request failed')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'History request failed');
     expect(metric('Distance')).toHaveTextContent('25.00 km');
     expect(screen.getByText(capNotice)).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));

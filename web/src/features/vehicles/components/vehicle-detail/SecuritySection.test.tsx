@@ -21,7 +21,8 @@
 //      heading name is the copy alone.
 
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import { fireEvent, render, screen, cleanup, within } from '@testing-library/react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import type { ReactNode } from 'react'
 import type { SecurityEvent, VehicleState } from '@/api/types'
 
@@ -124,20 +125,21 @@ describe('SecuritySection — empty state', () => {
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('No security data available')).toBeInTheDocument()
-    for (const label of ['Locked', 'Sentry', 'Doors', 'Windows']) {
+    for (const label of ['Locked', 'Sentry']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
     expect(document.querySelector('[data-testid="vehicle-security-summary"][data-operational-brief]')).not.toBeNull()
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
-    expect(card('Doors')).toHaveAttribute('data-value-state', 'missing')
-    expect(card('Windows')).toHaveAttribute('data-value-state', 'missing')
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(2)
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Doors')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Windows')
   })
 
   it('renders the same placeholder when data is undefined', () => {
     render(<SecuritySection securityData={undefined} state={makeState()} />)
 
     expect(screen.getByText('No security data available')).toBeInTheDocument()
-    expect(screen.getByText('Windows')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Doors')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Windows')
   })
 })
 
@@ -148,9 +150,15 @@ describe('SecuritySection — locked card', () => {
     )
 
     expect(within(card('Locked')).getByText('Yes')).toBeInTheDocument()
-    // lucide `Lock` → .lucide-lock; `Unlock` → .lucide-lock-open.
-    expect(container.querySelector('.lucide-lock')).not.toBeNull()
-    expect(container.querySelector('.lucide-lock-open')).toBeNull()
+    // lucide `Lock` → .lucide-lock; `Unlock` → .lucide-lock-open (in the drawer group now).
+    fireEvent.click(within(screen.getByTestId('vehicle-security-summary')).getByRole('button', { name: 'Review details' }))
+    const lockedDrawer = screen.getByRole('dialog')
+    const lockedGroup = within(lockedDrawer).getByRole('group', { name: 'Locked' })
+    expect(lockedGroup.querySelector('.lucide-lock')).not.toBeNull()
+    expect(lockedGroup.querySelector('.lucide-lock-open')).toBeNull()
+    fireEvent.keyDown(lockedDrawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(container.querySelector('.lucide-lock')).toBeNull()
   })
 
   it('shows No with an open-padlock glyph when the live state is unlocked', () => {
@@ -159,8 +167,14 @@ describe('SecuritySection — locked card', () => {
     )
 
     expect(within(card('Locked')).getByText('No')).toBeInTheDocument()
-    expect(container.querySelector('.lucide-lock-open')).not.toBeNull()
-    expect(container.querySelector('.lucide-lock')).toBeNull()
+    fireEvent.click(within(screen.getByTestId('vehicle-security-summary')).getByRole('button', { name: 'Review details' }))
+    const unlockedDrawer = screen.getByRole('dialog')
+    const unlockedGroup = within(unlockedDrawer).getByRole('group', { name: 'Locked' })
+    expect(unlockedGroup.querySelector('.lucide-lock-open')).not.toBeNull()
+    expect(unlockedGroup.querySelector('.lucide-lock')).toBeNull()
+    fireEvent.keyDown(unlockedDrawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(container.querySelector('.lucide-lock-open')).toBeNull()
   })
 })
 
@@ -186,20 +200,19 @@ describe('SecuritySection — doors card (normalizeDoorState)', () => {
 
   it('keeps door_state unknown when null rather than inventing Closed', () => {
     render(<SecuritySection securityData={makeSecurity({ door_state: null })} state={makeState()} />)
-    expect(within(card('Doors')).getByText('—')).toBeInTheDocument()
-    expect(card('Doors')).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Doors')
   })
 
   it('keeps empty and whitespace-only strings unknown', () => {
     const { rerender } = render(
       <SecuritySection securityData={makeSecurity({ door_state: '' })} state={makeState()} />,
     )
-    expect(within(card('Doors')).getByText('—')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Doors')
 
     rerender(
       <SecuritySection securityData={makeSecurity({ door_state: '   ' })} state={makeState()} />,
     )
-    expect(within(card('Doors')).getByText('—')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Doors')
   })
 
   it('maps a native boolean-true door_state to Open (never the literal "true")', () => {
@@ -220,8 +233,7 @@ describe('SecuritySection — doors card (normalizeDoorState)', () => {
 describe('SecuritySection — windows card (windowOpenCount)', () => {
   it('keeps windows unknown when every window reads null', () => {
     render(<SecuritySection securityData={makeSecurity()} state={makeState()} />)
-    expect(within(card('Windows')).getByText('—')).toBeInTheDocument()
-    expect(card('Windows')).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Windows')
   })
 
   it('shows Closed when every window reads a 0-percent string', () => {
@@ -288,10 +300,18 @@ describe('SecuritySection — accessibility', () => {
       <SecuritySection securityData={makeSecurity()} state={makeState()} />,
     )
 
-    const svgs = container.querySelectorAll('svg')
-    // Five preserved security glyphs plus the independent live-source badge.
-    expect(svgs.length).toBe(6)
-    svgs.forEach((svg) => expect(svg).toHaveAttribute('aria-hidden', 'true'))
+    // The face keeps only the Review-details action glyph; metric glyphs moved into drawer groups.
+    const faceSvgs = container.querySelectorAll('svg')
+    expect(faceSvgs.length).toBe(1)
+    faceSvgs.forEach((svg) => expect(svg).toHaveAttribute('aria-hidden', 'true'))
+    const brief = screen.getByTestId('vehicle-security-summary')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    const drawerSvgs = drawer.querySelectorAll('[role="group"] svg')
+    expect(drawerSvgs.length).toBe(2)
+    drawerSvgs.forEach((svg) => expect(svg).toHaveAttribute('aria-hidden', 'true'))
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('exposes a Security heading whose accessible name is not polluted by the icon', () => {

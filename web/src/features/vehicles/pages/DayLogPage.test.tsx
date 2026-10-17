@@ -115,6 +115,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import DayLogPage from './DayLogPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { DayLogEvent, DayLogResponse } from '@/api/types';
 
 function queryState(over: Record<string, unknown> = {}) {
@@ -321,7 +322,7 @@ describe('DayLogPage', () => {
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getByTestId('daylog-search')).toHaveValue('locked');
     expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
-    expect(screen.getByText('Recorded day summary')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('day-log-summary'), 'Recorded day summary');
   });
 
   it('renders an honest empty day with a live-telemetry CTA', () => {
@@ -583,7 +584,8 @@ describe('DayLogPage', () => {
     renderPage();
     const brief = screen.getByTestId('day-log-summary');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    assertOperationalMetricUnavailable(brief, 'Energy added');
     expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ metricId: 'count', occurrenceId: 'drives', rawValue: 1 }),
       expect.objectContaining({ metricId: 'count', occurrenceId: 'charges', rawValue: 0 }),
@@ -595,8 +597,8 @@ describe('DayLogPage', () => {
     expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
     expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveTextContent('1.0 h');
     expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('5.2 kWh');
-    expect(brief.querySelector('[data-operational-metric="energy-added"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(within(brief).getByText('[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z) · end exclusive')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-metric="energy-added"]')).toBeNull();
+    assertOperationalBriefDisclosure(brief, '[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z) · end exclusive', { contains: true });
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Day summary details' });
     expect(within(drawer).getByText('25.0 km')).toBeInTheDocument();
@@ -620,7 +622,11 @@ describe('DayLogPage', () => {
     fireEvent.change(screen.getByTestId('daylog-search'), { target: { value: 'locked' } });
     expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
     expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
-    expect(within(brief).getByText(/independent of timeline search and category filters/)).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const filterDrawer = screen.getByRole('dialog');
+    expect(within(filterDrawer).getAllByText(/independent of timeline search and category filters/).length).toBeGreaterThan(0);
+    fireEvent.keyDown(filterDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps measured zero, missing aggregates and partial source coverage distinct', () => {
@@ -632,11 +638,12 @@ describe('DayLogPage', () => {
     }) }));
     renderPage();
     const brief = screen.getByTestId('day-log-summary');
-    expect(within(brief).getByText('Some sources unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Some sources unavailable');
     expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('0.0 km');
     expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveTextContent('0.0 kWh');
-    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Drive time');
     expect(screen.getByRole('link', { name: 'Open drives' })).toHaveAttribute('href', '/drives');
     expect(screen.getByText('no signal')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Sources' })).toBeInTheDocument();
@@ -654,7 +661,7 @@ describe('DayLogPage', () => {
       error: new Error('refresh failed'), isError: true, status: 'error' }));
     renderPage();
     const brief = screen.getByTestId('day-log-summary');
-    expect(within(brief).getByText('Retained recorded history')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained recorded history');
     expect(screen.getByText('Day log may be out of date')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog', { name: 'Day summary details' })).toBeInTheDocument();
@@ -667,9 +674,13 @@ describe('DayLogPage', () => {
     }) }));
     renderPage();
     const brief = screen.getByTestId('day-log-summary');
-    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveTextContent('—');
-    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveAttribute('data-value-state', 'invalid');
+    const mapped = operationalMetricsSpy.mock.results.at(-1)?.value;
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toBeNull();
+    expect(mapped?.find((metric) => metric.key === 'distance')?.valueState).toBe('invalid');
+    assertOperationalMetricUnavailable(brief, 'Distance');
+    expect(brief.querySelector('[data-operational-metric="drive-time"]')).toBeNull();
+    expect(mapped?.find((metric) => metric.key === 'drive-time')?.valueState).toBe('invalid');
+    assertOperationalMetricUnavailable(brief, 'Drive time');
     expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveAttribute('data-value-state', 'value');
   });
 

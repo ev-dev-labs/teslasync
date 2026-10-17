@@ -22,10 +22,17 @@
 
 import type { ReactNode } from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import { fireEvent, render, screen, cleanup, within } from '@testing-library/react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 const { mockT, formatDistance, formatSpeed, formatTemperature } = vi.hoisted(() => ({
-  mockT: vi.fn((_key: string, fallback?: string) => fallback ?? _key),
+  mockT: vi.fn((_key: string, fallback?: unknown, values?: Record<string, unknown>) => {
+    let out = typeof fallback === 'string' ? fallback : _key
+    if (values) {
+      for (const [k, v] of Object.entries(values)) out = out.replace(`{{${k}}}`, String(v))
+    }
+    return out
+  }),
   formatDistance: vi.fn(),
   formatSpeed: vi.fn(),
   formatTemperature: vi.fn(),
@@ -100,9 +107,26 @@ function metricCard(label: string): HTMLElement {
 }
 
 function metricColor(label: string): string | null {
-  return metricCard(label)
-    .querySelector('[data-battery-color]')
-    ?.getAttribute('data-battery-color') ?? null
+  const brief = screen.getByTestId('vehicle-quick-stats-summary')
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  const group = within(drawer).getByRole('group', { name: label })
+  const color = group.querySelector('[data-battery-color]')?.getAttribute('data-battery-color') ?? null
+  fireEvent.keyDown(drawer, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  return color
+}
+
+function speedGroup(): HTMLElement {
+  const brief = screen.getByTestId('vehicle-quick-stats-summary')
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  return within(screen.getByRole('dialog')).getByRole('group', { name: 'Speed' })
+}
+
+function closeDrawer() {
+  const drawer = screen.getByRole('dialog')
+  fireEvent.keyDown(drawer, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 }
 
 beforeEach(() => {
@@ -248,16 +272,20 @@ describe('QuickStatsGrid', () => {
 
   it('shows the Driving subtitle when moving and Parked when stopped', () => {
     renderGrid({ speed: 42 })
-    expect(screen.getByText('Driving')).toBeInTheDocument()
-    expect(screen.queryByText('Parked')).toBeNull()
+    const drivingGroup = speedGroup()
+    expect(drivingGroup).toHaveTextContent('Driving')
+    expect(drivingGroup).not.toHaveTextContent('Parked')
+    closeDrawer()
     expect(mockT).toHaveBeenCalledWith('common.driving', 'Driving')
 
     cleanup()
     mockT.mockClear()
 
     renderGrid({ speed: 0 })
-    expect(screen.getByText('Parked')).toBeInTheDocument()
-    expect(screen.queryByText('Driving')).toBeNull()
+    const parkedGroup = speedGroup()
+    expect(parkedGroup).toHaveTextContent('Parked')
+    expect(parkedGroup).not.toHaveTextContent('Driving')
+    closeDrawer()
     expect(mockT).toHaveBeenCalledWith('common.parked', 'Parked')
   })
 
@@ -277,13 +305,14 @@ describe('QuickStatsGrid', () => {
       renderGrid({ battery_level: null, power: null }),
     ).not.toThrow()
 
-    // Battery + power both collapse to the em-dash placeholder…
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2)
+    // Battery + power are both omitted with a counted explanation…
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-quick-stats-summary'), 'Battery')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-quick-stats-summary'), 'Power')
     // …never the literal broken strings.
     expect(screen.queryByText('null%')).toBeNull()
     expect(screen.queryByText(statText('0.00 kW'))).toBeNull()
-    // The battery tile with an unknown level uses the neutral cyan accent.
-    expect(metricColor('Battery')).toBe('cyan')
+    // The omitted battery tile carries no accent in the UI; unknown levels stay neutral cyan.
+    expect(batteryColor(null)).toBe('cyan')
   })
 
   it('renders a 0% battery verbatim with the red critical accent (not an em-dash)', () => {
@@ -294,9 +323,8 @@ describe('QuickStatsGrid', () => {
 
   it('falls back to an em-dash when the status is blank (never a blank State tile)', () => {
     renderGrid({}, '' as VehicleStatus)
-    // The State label is still present with an em-dash value.
-    expect(screen.getByText('State')).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
+    // The State tile is omitted with a counted explanation, never blank.
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-quick-stats-summary'), 'State')
   })
 
   it('wires every tile label to its i18n key (no raw English labels)', () => {
@@ -320,11 +348,21 @@ describe('QuickStatsGrid', () => {
   it('marks every decorative glyph aria-hidden', () => {
     const { container } = renderGrid()
 
-    const svgs = Array.from(container.querySelectorAll('svg'))
-    // One glyph per tile = eight decorative icons.
-    expect(svgs.length).toBeGreaterThanOrEqual(8)
-    for (const svg of svgs) {
+    // The face keeps only the Review-details action glyph; metric glyphs moved into drawer groups.
+    const faceSvgs = Array.from(container.querySelectorAll('svg'))
+    expect(faceSvgs.length).toBe(1)
+    for (const svg of faceSvgs) {
       expect(svg).toHaveAttribute('aria-hidden', 'true')
     }
+    const brief = screen.getByTestId('vehicle-quick-stats-summary')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    const drawerSvgs = Array.from(drawer.querySelectorAll('[role="group"] svg'))
+    expect(drawerSvgs.length).toBe(8)
+    for (const svg of drawerSvgs) {
+      expect(svg).toHaveAttribute('aria-hidden', 'true')
+    }
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

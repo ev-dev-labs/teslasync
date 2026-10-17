@@ -10,6 +10,17 @@ import * as apiClient from '@/api/client'
 import { useRefreshVehicleSpecs, useVehiclePricing } from '@/api/hooks/useVehicles'
 import { parseVehicleOptions, parseWarrantyDetails } from './managementData'
 import { WarrantyDataView } from './WarrantyDataView'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
+
+/** Pin a face tile's label and exact numeric value (tiles render label first, then value). */
+function expectTileValue(brief: HTMLElement, id: string, label: string, value: string) {
+  const tile = brief.querySelector(`[data-operational-metric="${id}"]`)
+  if (!(tile instanceof HTMLElement)) throw new Error(`Missing tile ${id}`)
+  expect(tile).toHaveTextContent(label)
+  const face = tile.querySelector('[data-operational-value]')
+  if (!(face instanceof HTMLElement)) throw new Error(`Missing face value ${id}`)
+  expect(face).toHaveTextContent(value)
+}
 
 const preferences = vi.hoisted(() => ({
   locale: 'en-US',
@@ -269,9 +280,10 @@ describe('ManagementEndpointCard preservation', () => {
   ])('keeps missing warranty groups unknown alongside populated coverage: %j', (data) => {
     render(<WarrantyDataView data={data} />)
     const brief = screen.getByTestId('vehicle-warranty-counts')
-    expect(brief).toHaveTextContent('1 active')
+    expectTileValue(brief, 'active', 'Active', '1')
     expect(brief).not.toHaveTextContent(/0 (upcoming|expired)/)
-    expect(within(brief).getAllByText('Unknown').length).toBeGreaterThanOrEqual(2)
+    assertOperationalMetricUnavailable(brief, 'Upcoming')
+    assertOperationalMetricUnavailable(brief, 'Expired')
     expect(screen.getByText('Reported coverage')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Technical response details' }))
     expect(screen.getAllByText('Reported coverage')).toHaveLength(2)
@@ -283,12 +295,13 @@ describe('ManagementEndpointCard preservation', () => {
       upcomingWarranty: [],
     }} />)
     const brief = screen.getByTestId('vehicle-warranty-counts')
-    expect(brief).toHaveTextContent('1 active')
-    expect(brief).toHaveTextContent('0 upcoming')
+    expectTileValue(brief, 'active', 'Active', '1')
+    expectTileValue(brief, 'upcoming', 'Upcoming', '0')
     expect(brief).not.toHaveTextContent('0 expired')
     expect(brief.querySelector('[data-operational-metric="active"]')).toHaveAttribute('data-value-state', 'value')
     expect(brief.querySelector('[data-operational-metric="upcoming"]')).toHaveAttribute('data-value-state', 'value')
-    expect(brief.querySelector('[data-operational-metric="expired"]')).toHaveAttribute('data-value-state', 'missing')
+    expect(brief.querySelector('[data-operational-metric="expired"]')).toBeNull()
+    assertOperationalMetricUnavailable(brief, 'Expired')
   })
 
   it.each([null, {}, { activeWarranty: null }, { activeWarranty: 'unsupported' }, { activeWarranty: [{}] }])(
@@ -297,7 +310,9 @@ describe('ManagementEndpointCard preservation', () => {
       render(<WarrantyDataView data={data} />)
       const brief = screen.getByTestId('vehicle-warranty-counts')
       expect(brief).not.toHaveTextContent(/0 (active|upcoming|expired)/)
-      expect(within(brief).getAllByText('Unknown').length).toBeGreaterThanOrEqual(3)
+      assertOperationalMetricUnavailable(brief, 'Active')
+      assertOperationalMetricUnavailable(brief, 'Upcoming')
+      assertOperationalMetricUnavailable(brief, 'Expired')
     },
   )
 
@@ -307,9 +322,9 @@ describe('ManagementEndpointCard preservation', () => {
   ])('shows genuine zero counts for explicit successful empty groups: %j', (data) => {
     render(<WarrantyDataView data={data} />)
     const brief = screen.getByTestId('vehicle-warranty-counts')
-    expect(brief).toHaveTextContent('0 active')
-    expect(brief).toHaveTextContent('0 upcoming')
-    expect(brief).toHaveTextContent('0 expired')
+    expectTileValue(brief, 'active', 'Active', '0')
+    expectTileValue(brief, 'upcoming', 'Upcoming', '0')
+    expectTileValue(brief, 'expired', 'Expired', '0')
     expect(screen.getByText('No warranty coverage returned')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Technical response details' })).toBeInTheDocument()
   })
@@ -321,8 +336,8 @@ describe('ManagementEndpointCard preservation', () => {
       expiredWarranty: [{ displayName: 'Expired coverage' }],
     }} />)
     const brief = screen.getByTestId('vehicle-warranty-counts')
-    for (const state of ['active', 'upcoming', 'expired']) {
-      expect(brief).toHaveTextContent(`1 ${state}`)
+    for (const [id, label] of [['active', 'Active'], ['upcoming', 'Upcoming'], ['expired', 'Expired']]) {
+      expectTileValue(brief, id, label, '1')
     }
     for (const name of ['Active coverage', 'Upcoming coverage', 'Expired coverage']) {
       expect(screen.getByText(name)).toBeInTheDocument()

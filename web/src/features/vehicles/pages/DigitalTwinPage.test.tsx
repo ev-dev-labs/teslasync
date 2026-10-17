@@ -37,6 +37,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SecurityEvent, ChargingTelemetry } from '@/api/types';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import * as operationalBridge from '@/hooks/useOperationalMetrics';
 
 const operationalMetricsSpy = vi.spyOn(operationalBridge, 'useOperationalMetrics');
@@ -295,11 +296,16 @@ function expectKv(label: string, value: string) {
   expect(dt.parentElement).toHaveTextContent(value);
 }
 
-/** Assert the canonical metric identified by its unique context shows `value`. */
+/** Assert the canonical metric identified by its unique context shows `value` in its drawer group. */
 function expectKpi(subtitle: string, value: string) {
-  const card = screen.getByText(subtitle).closest('[data-operational-metric]');
-  if (!(card instanceof HTMLElement)) throw new Error(`Missing operational metric ${subtitle}`);
-  expect(within(card).getByText(value)).toBeInTheDocument();
+  const brief = screen.getByTestId('digital-twin-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  const group = within(drawer).getByText(subtitle).closest('[role="group"]');
+  if (!(group instanceof HTMLElement)) throw new Error(`Missing drawer group ${subtitle}`);
+  expect(within(group).getByText(value)).toBeInTheDocument();
+  fireEvent.keyDown(drawer, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -439,7 +445,7 @@ describe('DigitalTwinPage', () => {
     expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
     expect(screen.queryByText('charging')).not.toBeInTheDocument();
     expect(screen.queryByText('Real-time vehicle physical state')).not.toBeInTheDocument();
-    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Reconstructed signal state: Viewing data as of');
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'Reconstructed signal state: Viewing data as of', { contains: true });
     expect(screen.queryByRole('slider')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /pick a date|date range|view settings/i })).not.toBeInTheDocument();
     expectKpi('of 6 openings', '2');
@@ -559,7 +565,7 @@ describe('DigitalTwinPage', () => {
     expectKv('Driving', 'No');
 
     // Last-updated caption (deterministic via the stubbed formatter).
-    expect(screen.getByText(/Last updated/).textContent).toContain('MOCK_TIME');
+    expect(screen.getByText(/Last updated/, { selector: 'p' }).textContent).toContain('MOCK_TIME');
   });
 
   it('shows a skeleton in every component panel while the security stream loads and leaks no values', () => {
@@ -598,7 +604,7 @@ describe('DigitalTwinPage', () => {
     renderPage();
 
     expect(screen.getAllByText(/Can't reach server/i).length).toBeGreaterThan(0);
-    expect(within(screen.getByTestId('digital-twin-summary')).getByText('Source request failed')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'Source request failed');
 
     const retry = screen.getAllByRole('button', { name: /^Retry$/i });
     expect(retry.length).toBeGreaterThanOrEqual(3);
@@ -618,10 +624,13 @@ describe('DigitalTwinPage', () => {
     expect(screen.getByText('No window data available')).toBeInTheDocument();
     expect(screen.getByText('No live status available')).toBeInTheDocument();
     expect(screen.getByText('No lights data available')).toBeInTheDocument();
-    expect(within(screen.getByTestId('digital-twin-summary')).getByText('No source snapshots')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'No source snapshots');
 
-    // KPIs degrade to an em dash rather than crashing.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    // Unknown KPIs are omitted with a counted explanation rather than crashing.
+    const emptyBrief = screen.getByTestId('digital-twin-summary');
+    expect(emptyBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(emptyBrief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(emptyBrief, 'Doors open');
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
     expect(screen.queryByText('Parked')).not.toBeInTheDocument();
     expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
@@ -718,7 +727,7 @@ describe('DigitalTwinPage', () => {
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveTextContent('Fleet may be out of date');
     expect(screen.getByText('Live overview')).toBeInTheDocument();
-    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Model 3');
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'Model 3', { contains: true });
     expectKv('Driver front', 'Open');
     fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     expect(fleet.refetch).toHaveBeenCalledTimes(1);
@@ -732,13 +741,13 @@ describe('DigitalTwinPage', () => {
     h.fleet = { ...fleet, fetchStatus: 'paused' };
     rerenderPage();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
-    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Model 3');
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'Model 3', { contains: true });
     expect(screen.queryByTestId('page-load-skeleton')).not.toBeInTheDocument();
 
     h.fleet = { ...fleet, dataUpdatedAt: Date.now() };
     rerenderPage();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Model 3');
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'Model 3', { contains: true });
     expectKv('Driver front', 'Open');
   });
 
@@ -766,7 +775,7 @@ describe('DigitalTwinPage', () => {
     renderPage();
 
     expect(screen.getAllByText('Driving').length).toBeGreaterThanOrEqual(1);
-    expectKpi('of 6 openings', '—'); // no security data → openings unknown
+    assertOperationalMetricUnavailable(screen.getByTestId('digital-twin-summary'), 'Doors open'); // no security data → openings unknown
   });
 
   it('does not infer "online" or inactive activity from a security snapshot', () => {
@@ -941,12 +950,16 @@ describe('DigitalTwinPage', () => {
     const windows = brief.querySelector('[data-operational-metric="twin-windows"]');
     expect(doors).toHaveAttribute('data-value-state', 'value');
     expect(doors).toHaveTextContent('0');
-    expect(doors).toHaveTextContent('1 of 6 states known');
-    expect(windows).toHaveAttribute('data-value-state', 'missing');
-    expect(windows).toHaveTextContent('—');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const doorsDrawer = screen.getByRole('dialog', { name: 'Physical-state summary details' });
+    expect(within(doorsDrawer).getByRole('group', { name: 'Doors open' })).toHaveTextContent('1 of 6 states known');
+    fireEvent.keyDown(doorsDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(windows).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Windows open');
     expect(brief.querySelector('[data-operational-metric="twin-lock"]')).toHaveTextContent('Unlocked');
     expect(brief.querySelector('[data-operational-metric="twin-sentry"]')).toHaveTextContent('Inactive');
-    expect(within(brief).getByText('Mixed source availability')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Mixed source availability');
     expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ occurrenceId: 'twin-doors', rawValue: 0 }),
       expect.objectContaining({ occurrenceId: 'twin-windows', rawValue: null }),
@@ -961,7 +974,7 @@ describe('DigitalTwinPage', () => {
     const brief = screen.getByTestId('digital-twin-summary');
     expect(brief).toHaveAttribute('aria-busy', 'true');
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
-    expect(within(brief).getByText('Loading source snapshots')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Loading source snapshots');
     expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
   });
 
@@ -969,7 +982,7 @@ describe('DigitalTwinPage', () => {
     h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
     renderPage();
     const brief = screen.getByTestId('digital-twin-summary');
-    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained source snapshots');
     expectKpi('of 6 openings', '2');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Physical-state summary details' });
@@ -983,7 +996,7 @@ describe('DigitalTwinPage', () => {
     h.state = makeQuery({ isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
     h.charging = makeQuery({ isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
     renderPage();
-    expect(within(screen.getByTestId('digital-twin-summary')).getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'Refresh paused');
     expect(screen.queryByRole('status', { name: 'Loading Doors & openings' })).not.toBeInTheDocument();
     expect(screen.queryByText('Source request failed')).not.toBeInTheDocument();
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
@@ -993,7 +1006,7 @@ describe('DigitalTwinPage', () => {
   it('qualifies missing observation evidence despite a recent successful fetch', () => {
     h.state = makeQuery({ data: { ...makeState(), observedAt: null, freshness: 'unknown', verifiedFields: [] } });
     renderPage();
-    expect(within(screen.getByTestId('digital-twin-summary')).getByText('Unverified')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('digital-twin-summary'), 'Unverified');
     expect(screen.queryByText('charging')).not.toBeInTheDocument();
     expect(screen.getByText(/No verified observation time for this vehicle/)).toBeInTheDocument();
     expectKv('Charging', 'Yes');

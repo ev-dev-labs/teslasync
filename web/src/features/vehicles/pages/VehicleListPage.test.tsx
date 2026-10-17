@@ -502,7 +502,7 @@ describe('VehicleListPage — happy path', () => {
     // Freshness lives in the page header (single surface); the brief keeps
     // provenance badges only, so per-source freshness chips must be absent here.
     const header = document.querySelector('header') as HTMLElement;
-    expect(within(header).getByText('just now')).toBeInTheDocument();
+    expect(within(header).getByRole('button', { name: /just now/ })).toBeInTheDocument();
     expect(within(posture).queryByRole('button', { name: /Source: / })).toBeNull();
     expect(fleetBriefDetails().getByText('Historical')).toBeInTheDocument();
 

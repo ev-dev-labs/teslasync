@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -268,7 +268,7 @@ describe('ParkingAnalyticsPage', () => {
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
     const brief = screen.getByTestId('parking-summary');
-    expect(brief).toHaveTextContent(status);
+    assertOperationalBriefDisclosure(brief, status);
     if (count === 1_000) {
       expect(brief).not.toHaveTextContent('Source returned');
     }
@@ -325,7 +325,7 @@ describe('ParkingAnalyticsPage', () => {
       screen.getByRole('heading', { name: 'Parking analytics' }),
     ).toBeInTheDocument();
     for (const id of SECTION_IDS) {
-      if (id === 'parking-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Source returned');
+      if (id === 'parking-kpis') assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), 'Source returned');
       else expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(useDrivesMock).toHaveBeenCalledWith('42', {
@@ -359,7 +359,7 @@ describe('ParkingAnalyticsPage', () => {
     for (const id of SECTION_IDS) {
       if (id === 'parking-kpis') {
         if (expected === 'loading') expect(screen.getByTestId('parking-summary')).toHaveAttribute('aria-busy', 'true');
-        else expect(screen.getByTestId(id)).toHaveTextContent('Source unavailable');
+        else assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), 'Source unavailable');
       } else expect(screen.getByTestId(id)).toHaveTextContent(expected);
     }
   });
@@ -381,7 +381,7 @@ describe('ParkingAnalyticsPage', () => {
     // aria-busy is only present while busy.
     if (busy) expect(brief).toHaveAttribute('aria-busy', 'true');
     else expect(brief).not.toHaveAttribute('aria-busy');
-    expect(brief).toHaveTextContent(busy ? 'Loading source' : 'Pending');
+    assertOperationalBriefDisclosure(brief, busy ? 'Loading source' : 'Pending');
     expect(screen.queryByText('Not enough drives in this period to reconstruct parking.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -395,12 +395,18 @@ describe('ParkingAnalyticsPage', () => {
       if (id !== 'parking-kpis') expect(screen.getByTestId(id)).toHaveTextContent('loading');
     }
     const locations = brief.querySelector('[data-operational-metric="locations"]');
-    expect(locations).toHaveAttribute('data-value-state', 'missing');
+    if (busy) {
+      expect(locations).not.toBeNull();
+      expect(locations?.querySelector('[data-operational-value]')).toBeNull();
+    } else {
+      expect(locations).toBeNull();
+      assertOperationalMetricUnavailable(brief, 'Locations');
+    }
 
     useDrivesMock.mockReturnValue(query({ isSuccess: true }));
     rerender(<ParkingAnalyticsPage />);
     expect(screen.getByText('Not enough drives in this period to reconstruct parking.')).toBeInTheDocument();
-    expect(screen.getByTestId('parking-summary')).toHaveTextContent('Source returned');
+    assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), 'Source returned');
     expect(screen.getByTestId('parking-coverage')).toHaveAttribute('data-has-source', 'true');
     expect(screen.getByTestId('parking-coverage')).toHaveAttribute('data-source-status', 'ok');
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
@@ -414,7 +420,7 @@ describe('ParkingAnalyticsPage', () => {
     useDrivesMock.mockReturnValue(query({ data: drives, fetchStatus: 'paused' }));
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
-    expect(screen.getByTestId('parking-summary')).toHaveTextContent('Refresh paused');
+    assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), 'Refresh paused');
     expect(screen.getByTestId('parking-summary')).not.toHaveAttribute('aria-busy');
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
@@ -582,7 +588,7 @@ describe('ParkingAnalyticsPage', () => {
     useDrivesMock.mockReturnValue(query({ data: [], isError: true, error: new Error('refresh failed') }));
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
     for (const id of SECTION_IDS) {
-      if (id === 'parking-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Retained source');
+      if (id === 'parking-kpis') assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), 'Retained source', { contains: true });
       else expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -591,16 +597,20 @@ describe('ParkingAnalyticsPage', () => {
 
   it('preserves observed sample context in the actual review drawer and distinguishes unavailable counts from zero', () => {
     useDrivesMock.mockReturnValue(query({ data: undefined, isError: true, error: new Error('unavailable') }));
-    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
+    const { rerender } = render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
     const brief = screen.getByTestId('parking-summary');
     const locations = brief.querySelector('[data-operational-metric="locations"]');
-    if (!(locations instanceof HTMLElement)) throw new Error('Locations evidence missing');
-    expect(locations).toHaveAttribute('data-value-state', 'missing');
-    expect(within(locations).queryByText('0')).not.toBeInTheDocument();
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(locations).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Locations');
+    useDrivesMock.mockReturnValue(query({ data: sampleDrives(999) }));
+    rerender(<ParkingAnalyticsPage />);
+    const populated = screen.getByTestId('parking-summary');
+    fireEvent.click(within(populated).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText(/22:00–06:00/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/0 located · 0 missing/)).toBeInTheDocument();
+    expect(within(drawer).getByRole('group', { name: 'Overnight share' })).toHaveTextContent(/22:00–06:00 · \d+ stints/);
+    expect(within(drawer).getByRole('group', { name: 'Locations' })).toHaveTextContent(/\d+ located · \d+ missing/);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -630,7 +640,7 @@ describe('ParkingAnalyticsPage', () => {
     expect(result.totalParkedMs).toBe(hours * 3_600_000);
     expect(result.stints.at(-1).endMs).toBe(endMs);
     expect(result.hourly[0].stints).toBe(1);
-    expect(screen.getByTestId('parking-summary')).toHaveTextContent(timezone);
+    assertOperationalBriefDisclosure(screen.getByTestId('parking-summary'), timezone, { contains: true });
   });
 
   it.each([

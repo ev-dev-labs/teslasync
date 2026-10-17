@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { formatDateTime } from '@/lib/dateFormat';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { PhysicsPageShell, usePhysicsPage, type PhysicsPage, type PhysicsSlug } from '../tesla-physics/PhysicsPageShell';
@@ -93,6 +94,23 @@ function metric(briefId: string, metricId: string) {
   return found;
 }
 
+function faceValue(briefId: string, metricId: string) {
+  const value = metric(briefId, metricId).querySelector('[data-operational-value]');
+  if (!value) throw new Error(`Missing face value ${briefId}/${metricId}`);
+  return value;
+}
+
+function drawerGroup(briefId: string, label: string) {
+  fireEvent.click(within(screen.getByTestId(briefId)).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  return { drawer, group: within(drawer).getByRole('group', { name: label }) };
+}
+
+function closeDrawer(drawer: HTMLElement) {
+  fireEvent.keyDown(drawer, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC', distance: 'km' });
   setGlobalLocale('en-US');
@@ -169,7 +187,10 @@ describe('Tesla physics shell source lifecycle', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     expect(metric('physics-evidence-boundaries', 'history')).toHaveAttribute('data-value-state', 'value');
     expect(metric('physics-evidence-boundaries', 'history')).toHaveTextContent('0');
-    expect(metric('physics-life-summary', 'segments')).toHaveTextContent('0 classified intervals');
+    expect(faceValue('physics-life-summary', 'segments')).toHaveTextContent('0');
+    const recovered = drawerGroup('physics-life-summary', 'Classified intervals');
+    expect(recovered.group).toHaveTextContent('0 classified intervals');
+    closeDrawer(recovered.drawer);
     expect(screen.queryByRole('status', { name: 'Loading…' })).toBeNull();
   });
 
@@ -180,18 +201,18 @@ describe('Tesla physics shell source lifecycle', () => {
     const view = render(<MemoryRouter><ShellHarness /></MemoryRouter>);
     source.error = new Error('Refresh report failed');
     view.rerender(<MemoryRouter><ShellHarness /></MemoryRouter>);
-    expect(screen.getAllByText('Retained after refresh failure').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(screen.getByTestId('physics-life-summary'), 'Retained after refresh failure');
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(source.refetch).toHaveBeenCalledTimes(1);
     source.loading = true;
     view.rerender(<MemoryRouter><ShellHarness /></MemoryRouter>);
-    expect(metric('physics-life-summary', 'segments')).toHaveTextContent('0 classified intervals');
+    expect(faceValue('physics-life-summary', 'segments')).toHaveTextContent('0');
     expect(screen.queryByRole('status', { name: 'Loading…' })).toBeNull();
     source.error = null;
     source.loading = false;
     view.rerender(<MemoryRouter><ShellHarness /></MemoryRouter>);
-    expect(screen.queryByText('Retained after refresh failure')).toBeNull();
-    expect(metric('physics-life-summary', 'segments')).toHaveTextContent('0 classified intervals');
+    assertOperationalBriefDisclosure(screen.getByTestId('physics-life-summary'), 'Retained after refresh failure', { absent: true });
+    expect(faceValue('physics-life-summary', 'segments')).toHaveTextContent('0');
   });
 });
 
@@ -291,14 +312,15 @@ describe('Tesla physics nested summary adoption', () => {
       true_range_m: null, honesty: 'Never pick a true range.',
     } };
     renderSection(PhysicsRangeSection);
-    expect(metric('physics-range-summary', 'recent-efficiency')).toHaveAttribute('data-value-state', recent == null ? 'missing' : 'value');
+    if (recent == null) assertOperationalMetricUnavailable(screen.getByTestId('physics-range-summary'), 'Recent Wh/mi');
+    else expect(metric('physics-range-summary', 'recent-efficiency')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByText(`No true range. Recent Wh/mi: ${recent == null ? 'unknown' : '0.00'}`)).toBeInTheDocument();
   });
 
   it.each([
     [null, 'missing'], [undefined, 'missing'], [NaN, 'invalid'],
     [Infinity, 'invalid'], [-Infinity, 'invalid'],
-  ] as const)('excludes unavailable range estimates (%s) without inventing equality', (rated, state) => {
+  ] as const)('excludes unavailable range estimates (%s) without inventing equality', (rated, _state) => {
     const range = {
       vehicle_id: 7, rated_range_m: rated ?? null, est_range_m: 0, ideal_range_m: null,
       energy_remaining_wh: null, recent_wh_per_km: null, disagree: false,
@@ -307,11 +329,11 @@ describe('Tesla physics nested summary adoption', () => {
     Object.assign(range, { rated_range_m: rated });
     source.report = { ...boundedReport, range };
     renderSection(PhysicsRangeSection);
-    expect(metric('physics-range-summary', 'rated')).toHaveAttribute('data-value-state', state);
+    assertOperationalMetricUnavailable(screen.getByTestId('physics-range-summary'), 'Rated');
     expect(metric('physics-range-summary', 'typical')).toHaveAttribute('data-value-state', 'value');
     expect(metric('physics-range-summary', 'known')).toHaveTextContent('1');
-    expect(screen.getByText('Estimate spread: unknown')).toBeInTheDocument();
-    expect(screen.getByText('Spread versus rated: unknown')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(screen.getByTestId('physics-range-summary'), 'Estimate spread');
+    assertOperationalMetricUnavailable(screen.getByTestId('physics-range-summary'), 'Spread versus rated');
     expect(screen.getByText(/At least two estimates are needed/)).toBeInTheDocument();
     expect(screen.queryByText(/are equal in the returned estimates|is higher in the returned estimates/)).toBeNull();
   });
@@ -385,9 +407,10 @@ describe('Tesla physics nested summary adoption', () => {
 
   it.each(sections)('%s mounts the actual compact brief without inferring a missing slice as measured zero', (_name, Component) => {
     const { container } = renderSection(Component);
-    expect(container.querySelector('[data-operational-brief]')).not.toBeNull();
-    expect(container.querySelector('[data-value-state="missing"]')).not.toBeNull();
-    expect(screen.getAllByText('Partial source coverage').length).toBeGreaterThan(0);
+    const brief = container.querySelector('[data-operational-brief]');
+    if (!brief) throw new Error('Missing physics evidence brief');
+    expect(brief.querySelector('[data-value-state="missing"]')).toBeNull();
+    assertOperationalBriefDisclosure(brief, 'Partial source coverage');
     expect(screen.getAllByRole('button', { name: 'Review details' }).length).toBeGreaterThan(0);
   });
 
@@ -421,10 +444,10 @@ describe('Tesla physics nested summary adoption', () => {
     }, meters: { vehicle_id: 7, odometer_m: 0, driving_distance_m: null, fsd_distance_m: null, resets: [], honesty: 'Counters only.' } };
     renderSection(PhysicsModesSection);
     expect(metric('physics-modes-summary', 'valet')).toHaveTextContent('No');
-    expect(metric('physics-modes-summary', 'service')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('physics-modes-summary'), 'Service');
     expect(metric('physics-modes-summary', 'transport')).toHaveTextContent('Yes');
     expect(metric('physics-modes-summary', 'drops')).toHaveAttribute('data-value-state', 'value');
-    expect(metric('physics-modes-crosscheck', 'epochs')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('physics-modes-crosscheck'), 'Observed firmware epochs');
     expect(screen.getByText('Observed only.')).toBeInTheDocument();
     expect(screen.getByText('No historical assignment.')).toBeInTheDocument();
   });
@@ -471,9 +494,8 @@ describe('Tesla physics nested summary adoption', () => {
     } };
     renderSection(PhysicsLifeTapeSection);
     expect(metric('physics-life-summary', 'segments')).toHaveAttribute('data-value-state', 'value');
-    expect(metric('physics-life-summary', 'segments')).toHaveTextContent('0 classified intervals');
-    expect(metric('physics-life-summary', 'unknown')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('physics-life-summary', 'unknown')).toHaveTextContent('Unclassified: unknown');
+    expect(faceValue('physics-life-summary', 'segments')).toHaveTextContent('0');
+    assertOperationalMetricUnavailable(screen.getByTestId('physics-life-summary'), 'Unclassified time');
     expect(screen.getByLabelText('Filter by state')).toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId('physics-life-summary')).getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getByText('0 classified intervals')).toBeInTheDocument();
@@ -486,7 +508,7 @@ describe('Tesla physics nested summary adoption', () => {
     } };
     source.error = new Error('refresh failed');
     renderSection(PhysicsChargePortSection);
-    expect(screen.getAllByText('Retained after refresh failure').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(screen.getByTestId('physics-port-summary'), 'Retained after refresh failure');
     expect(metric('physics-port-summary', 'current')).toHaveTextContent('-1.25 A');
     expect(metric('physics-port-transitions', 'disconnected')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByLabelText('Filter charge-port samples by state')).toBeInTheDocument();

@@ -14,6 +14,7 @@ import {
 import type { Drive } from '@/types/driving';
 import type { UtilizationSummary } from '../lib/utilization';
 import { calendarRangeToInstants } from '@/lib/dateRange';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const {
   drivesMock,
@@ -353,7 +354,7 @@ describe('UtilizationPage', () => {
       returnedRows: 4, eligibleRows: 2, beforeRangeRows: 1, afterRangeRows: 1,
       truncatedDurationRows: 1,
     });
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent(`Requested ${day} → ${day}`);
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), `Requested ${day} → ${day}`, { contains: true });
     expect(screen.queryByTestId('utilization-range')).not.toBeInTheDocument();
   });
 
@@ -426,7 +427,7 @@ describe('UtilizationPage', () => {
       screen.getByRole('heading', { name: 'Utilization' }),
     ).toBeInTheDocument();
     for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Source returned');
+      if (id === 'utilization-kpis') assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
       else expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(drivesMock).toHaveBeenCalledWith('42', {
@@ -463,7 +464,7 @@ describe('UtilizationPage', () => {
     );
     view.rerender(<UtilizationPage />);
     for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Source unavailable');
+      if (id === 'utilization-kpis') assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source unavailable');
       else expect(screen.getByTestId(id)).toHaveTextContent('error');
     }
 
@@ -540,7 +541,7 @@ describe('UtilizationPage', () => {
     drivesMock.mockReturnValue(query({ data: [eligibleDrive()], isError: true, error: new Error('refresh failed') }));
     render(<UtilizationPage />, { wrapper: MemoryRouter });
     for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Retained source snapshots');
+      if (id === 'utilization-kpis') assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Retained source snapshots');
       else expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -575,10 +576,13 @@ describe('UtilizationPage source coverage', () => {
     const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
     const brief = screen.getByTestId('utilization-summary');
     for (const id of ['driving-share', 'distance-per-day', 'cost-per-distance']) {
-      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toBeNull();
     }
+    assertOperationalMetricUnavailable(brief, 'Time driving');
+    assertOperationalMetricUnavailable(brief, 'Distance per day');
+    assertOperationalMetricUnavailable(brief, 'Cost per distance');
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
-    expect(brief).toHaveTextContent('Pending');
+    assertOperationalBriefDisclosure(brief, 'Pending');
     expect(brief).not.toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText('No drives in this period yet.')).not.toBeInTheDocument();
     expect(screen.queryByText('Source unavailable')).not.toBeInTheDocument();
@@ -608,13 +612,13 @@ describe('UtilizationPage source coverage', () => {
       data: undefined, isPending: true, isSuccess: false, status: 'pending',
     }));
     const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Pending');
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Pending');
     expect(screen.queryByText('No drives in this period yet.')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('utilization-trend')).getByRole('status')).toHaveTextContent('This source has not resolved yet');
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
     drivesMock.mockReturnValue(query());
     view.rerender(<UtilizationPage />);
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
     expect(screen.getByText('No drives in this period yet.')).toBeInTheDocument();
     for (const id of SECTION_IDS.slice(1)) expect(screen.getByTestId(id)).toHaveTextContent('empty');
   });
@@ -640,10 +644,13 @@ describe('UtilizationPage source coverage', () => {
     drivesMock.mockReturnValue(query({ data: [{ ...eligibleDrive(), durationS: null, distanceM: null, energyUsedWh: null }] }));
     render(<UtilizationPage />, { wrapper: MemoryRouter });
     const brief = screen.getByTestId('utilization-summary');
-    expect(brief).toHaveTextContent('Partial source coverage');
+    assertOperationalBriefDisclosure(brief, 'Partial source coverage');
     for (const id of ['driving-share', 'distance-per-day', 'cost-per-distance']) {
-      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toBeNull();
     }
+    assertOperationalMetricUnavailable(brief, 'Time driving');
+    assertOperationalMetricUnavailable(brief, 'Distance per day');
+    assertOperationalMetricUnavailable(brief, 'Cost per distance');
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
   });
 
@@ -693,7 +700,8 @@ describe('UtilizationPage source coverage', () => {
       await act(async () => finishPage([
         { ...eligibleDrive(), id: 1001, startTs: '2026-07-02T12:00:00.000Z', endTs: '2026-07-02T12:30:00.000Z' },
       ]));
-      await waitFor(() => expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned'));
+      await waitFor(() => expect(summaryMock.mock.calls.at(-1)![0].drives).toBe(1001));
+      assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
       const summary = summaryMock.mock.calls.at(-1)![0] as UtilizationSummary;
       expect(summary.drives).toBe(1001);
       expect(summary.accounting.returnedRows).toBe(1001);
@@ -710,12 +718,14 @@ describe('UtilizationPage source coverage', () => {
         .mockResolvedValueOnce(firstPage())
         .mockRejectedValueOnce(new Error('second page unavailable'));
       const view = renderHistory();
-      await waitFor(() => expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source unavailable'));
+      await waitFor(() => expect(screen.getByTestId('utilization-summary')).toHaveTextContent('No metric values are available yet.'));
+      assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source unavailable');
       expect(summaryMock.mock.calls.at(-1)![0].drives).toBe(0);
       expect(screen.getByTestId('utilization-summary')).not.toHaveTextContent('Source returned');
       requestMock.mockResolvedValueOnce(firstPage()).mockResolvedValueOnce([]);
       fireEvent.click(within(screen.getByTestId('utilization-kpis')).getByRole('button', { name: /retry/i }));
-      await waitFor(() => expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned'));
+      await waitFor(() => expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="driving-share"]')).not.toBeNull());
+      assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
       expect(requestMock).toHaveBeenCalledTimes(4);
       expect(summaryMock.mock.calls.at(-1)![0].drives).toBe(1000);
       expect(summaryMock.mock.calls.at(-1)![0].accounting.historyCapReached).toBe(false);
@@ -738,16 +748,18 @@ describe('UtilizationPage source coverage', () => {
       let failPage!: (error: Error) => void;
       requestMock.mockResolvedValueOnce([eligibleDrive()]);
       const view = renderHistory();
-      await waitFor(() => expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned'));
+      await waitFor(() => expect(summaryMock.mock.calls.at(-1)![0].drives).toBe(1));
+      assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
       requestMock
         .mockResolvedValueOnce(firstPage())
         .mockReturnValueOnce(new Promise<Drive[]>((_resolve, reject) => { failPage = reject; }));
       act(() => { void view.client.refetchQueries(); });
       await waitFor(() => expect(requestMock).toHaveBeenCalledTimes(3));
-      expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Partial source coverage');
+      assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Partial source coverage');
       expect(summaryMock.mock.calls.at(-1)![0].drives).toBe(1);
       await act(async () => failPage(new Error('refresh second page unavailable')));
-      await waitFor(() => expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Retained source snapshots'));
+      await waitFor(() => expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument());
+      assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Retained source snapshots');
       expect(summaryMock.mock.calls.at(-1)![0].drives).toBe(1);
       expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
       view.unmount();
@@ -758,7 +770,7 @@ describe('UtilizationPage source coverage', () => {
   it('does not mistake a completed 1000-row history for a capped response', () => {
     drivesMock.mockReturnValue(query({ data: Array.from({ length: 1000 }, (_, index) => ({ ...eligibleDrive(), id: index + 1 })) }));
     render(<UtilizationPage />, { wrapper: MemoryRouter });
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
     expect(summaryMock.mock.calls.at(-1)![0].accounting.historyCapReached).toBe(false);
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
     expect(drivesMock).toHaveBeenCalledWith('42', { start: '2026-07-01T00:00:00.000Z', end: '2026-08-01T00:00:00.000Z', limit: 1000 });
@@ -768,7 +780,7 @@ describe('UtilizationPage source coverage', () => {
     const refetch = vi.fn();
     drivesMock.mockReturnValue(query({ data: Array.from({ length: 1000 }, (_, index) => ({ ...eligibleDrive(), id: index + 1 })), isError: true, error: new Error('refresh failed'), refetch }));
     render(<UtilizationPage />, { wrapper: MemoryRouter });
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Retained source snapshots');
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Retained source snapshots');
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
@@ -778,7 +790,8 @@ describe('UtilizationPage source coverage', () => {
     formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ isPending: true }) });
     render(<UtilizationPage />, { wrapper: MemoryRouter });
     expect(within(screen.getByTestId('utilization-pricing')).getByRole('status')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toBeNull();
+    assertOperationalMetricUnavailable(screen.getByTestId('utilization-summary'), 'Cost per distance');
     expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="distance-per-day"]')).toHaveAttribute('data-value-state', 'value');
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
   });
@@ -792,7 +805,7 @@ describe('UtilizationPage source coverage', () => {
     fireEvent.click(within(screen.getByTestId('utilization-pricing')).getByRole('button', { name: /retry/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(driveRefetch).not.toHaveBeenCalled();
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
     for (const id of SECTION_IDS) {
       if (id !== 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
@@ -830,8 +843,9 @@ describe('UtilizationPage source coverage', () => {
     const pricing = within(screen.getByTestId('utilization-pricing'));
     expect(pricing.getByRole('status')).toHaveTextContent('Refresh paused');
     expect(pricing.getByRole('status')).not.toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
-    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toBeNull();
+    assertOperationalMetricUnavailable(screen.getByTestId('utilization-summary'), 'Cost per distance');
     fireEvent.click(pricing.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(driveRefetch).not.toHaveBeenCalled();
@@ -846,7 +860,7 @@ describe('UtilizationPage source coverage', () => {
     formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: { base_cost_per_kwh: 0.15 }, fetchStatus: 'paused', refetch: vi.fn() }) });
     render(<UtilizationPage />, { wrapper: MemoryRouter });
     expect(within(screen.getByTestId('utilization-pricing')).getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
-    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    assertOperationalBriefDisclosure(screen.getByTestId('utilization-summary'), 'Source returned');
     expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'value');
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
   });

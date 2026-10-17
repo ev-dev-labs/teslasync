@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { SecurityEvent } from '@/api/types';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { VehicleSecurityPanel } from './VehicleSecurityPanel';
 import { normalizeDoorState, windowOpenCount } from './vehicleSecurity';
 
@@ -16,10 +17,11 @@ describe('independent security without invented live state', () => {
   it('keeps doors/windows while lock and sentry remain unknown when live state is unavailable', () => {
     render(<VehicleSecurityPanel securityData={syntheticSecurity} state={undefined} />);
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
-    for (const label of ['Locked', 'Sentry', 'Doors', 'Windows']) expect(screen.getByText(label)).toBeInTheDocument();
+    for (const label of ['Doors', 'Windows']) expect(screen.getByText(label)).toBeInTheDocument();
     expect(document.querySelector('[data-testid="vehicle-security-summary"][data-operational-brief]')).not.toBeNull();
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Locked');
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Sentry');
     expect(screen.getByText('Open')).toBeInTheDocument();
     expect(screen.getByText('2 open')).toBeInTheDocument();
     expect(screen.queryByText('No')).not.toBeInTheDocument();
@@ -61,12 +63,16 @@ describe('independent security without invented live state', () => {
       fd_window: '0', fp_window: false, rd_window: '0', rp_window: false,
     }} state={undefined} />);
     expect(screen.getAllByText('Closed')).toHaveLength(2);
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Locked');
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), 'Sentry');
     rerender(<VehicleSecurityPanel securityData={{
       ...syntheticSecurity, door_state: null,
       fd_window: null, fp_window: null, rd_window: null, rp_window: null,
     }} state={undefined} />);
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Locked', 'Sentry', 'Doors', 'Windows']) {
+      assertOperationalMetricUnavailable(screen.getByTestId('vehicle-security-summary'), label);
+    }
     expect(screen.queryByText('Closed')).not.toBeInTheDocument();
     expect(screen.queryByText('Off')).not.toBeInTheDocument();
   });

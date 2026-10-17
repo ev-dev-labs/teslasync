@@ -10,6 +10,13 @@ import { ParkingCoverageMethodology } from '../parking-analytics/ParkingCoverage
 import { UtilizationMethodology } from '../utilization/UtilizationMethodology';
 import { summarizeParking } from '../../lib/parkingDwell';
 import { summarizeUtilization } from '../../lib/utilization';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics');
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -43,11 +50,12 @@ describe('Physical ledger summary source preservation', () => {
       <DynamicsPanel ledger={ledger} /><ThermalPanel ledger={ledger} />
       <RangePanel ledger={ledger} /><TiresPanel ledger={ledger} />
     </MemoryRouter>);
-    for (const id of ['dynamics', 'thermal', 'range', 'tires']) {
+    for (const [id, label] of [['dynamics', 'Regen'], ['thermal', 'Pack max'], ['range', 'Rated'], ['tires', 'Front left']] as const) {
       const brief = screen.getByTestId(`ledger-${id}-summary`);
       expect(brief).toHaveAttribute('data-operational-brief');
-      expect(brief.querySelectorAll('[data-value-state="missing"]').length).toBeGreaterThan(0);
-      expect(within(brief).getByText('Partial source coverage')).toBeInTheDocument();
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+      assertOperationalBriefDisclosure(brief, 'Partial source coverage');
+      assertOperationalMetricUnavailable(brief, label);
     }
   });
 
@@ -58,7 +66,7 @@ describe('Physical ledger summary source preservation', () => {
     } }} /></MemoryRouter>);
     const brief = screen.getByTestId('ledger-dynamics-summary');
     // A bare stale status is cause-neutral; failure wording needs an actual refresh error.
-    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained source snapshots');
     expect(brief.querySelector('[data-operational-metric="regen"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="friction"]')).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
@@ -82,10 +90,12 @@ describe('Physical ledger summary source preservation', () => {
     const thermal = screen.getByTestId('ledger-thermal-summary');
     const tires = screen.getByTestId('ledger-tires-summary');
     expect(thermal.querySelector('[data-operational-metric="min"]')).toHaveAttribute('data-value-state', 'value');
-    expect(thermal.querySelector('[data-operational-metric="max"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(thermal.querySelector('[data-operational-metric="max"]')).toBeNull();
+    assertOperationalMetricUnavailable(thermal, 'Pack max');
     expect(thermal.querySelector('[data-operational-metric="correlation"]')).toHaveTextContent('-0.50');
     expect(tires.querySelector('[data-operational-metric="fl"]')).toHaveAttribute('data-value-state', 'value');
-    expect(tires.querySelector('[data-operational-metric="fr"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(tires.querySelector('[data-operational-metric="fr"]')).toBeNull();
+    assertOperationalMetricUnavailable(tires, 'Front right');
   });
 
   it('never derives a true range or zero-fills missing estimators and implied efficiency', () => {
@@ -95,9 +105,11 @@ describe('Physical ledger summary source preservation', () => {
     } }} /></MemoryRouter>);
     const brief = screen.getByTestId('ledger-range-summary');
     expect(brief.querySelector('[data-operational-metric="rated"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="typical"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(brief.querySelector('[data-operational-metric="implied"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(within(brief).getByText('Partial source coverage')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-metric="typical"]')).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Typical');
+    expect(brief.querySelector('[data-operational-metric="implied"]')).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Implied');
+    assertOperationalBriefDisclosure(brief, 'Partial source coverage');
   });
 });
 
@@ -111,10 +123,12 @@ describe('Coverage accounting brief boundaries', () => {
       rangeStart={window.rangeStart} rangeEnd={window.rangeEnd} sourceStatus="ok" hasSource /></MemoryRouter>);
     const brief = screen.getByTestId('parking-coverage-summary');
     expect(brief.querySelector('[data-operational-metric="returned"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="located"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(brief.querySelector('[data-operational-metric="located"]')).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Location coverage');
     expect(screen.getByRole('link', { name: 'Browse drives' })).toHaveAttribute('href', '/drives');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('0 located · 0 missing')).toBeInTheDocument();
+    expect(vi.mocked(useOperationalMetrics)).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ occurrenceId: 'located', context: '0 located · 0 missing' }),
+    ]));
   });
 
   it('does not present empty model defaults as source counts during unresolved utilization loading', () => {
@@ -133,7 +147,7 @@ describe('Coverage accounting brief boundaries', () => {
       state={state} sourceStatus="stale" hasSource /></MemoryRouter>);
     const brief = screen.getByTestId('utilization-coverage-summary');
     // A bare stale status is cause-neutral; failure wording needs an actual refresh error.
-    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained source snapshots');
     expect(brief.querySelector('[data-operational-metric="returned"]')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByRole('list', { name: 'Methodology notes' })).toHaveTextContent('canonical meters and watt-hours');
   });

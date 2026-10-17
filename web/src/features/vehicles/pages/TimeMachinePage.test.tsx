@@ -61,6 +61,7 @@ vi.mock('@/api/hooks/useTimeMachine', () => ({
 vi.unmock('@/lib/timezone');
 
 import TimeMachinePage, { ageVariant, categorize, groupByCategory } from './TimeMachinePage';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const earliest = '2026-10-01T00:00:00.000Z';
 const latest = '2026-10-02T00:00:00.000Z';
@@ -143,10 +144,7 @@ describe('TimeMachinePage preservation', () => {
     h.error = new Error('initial failure');
     renderPage();
     await waitFor(() => expect(screen.getAllByText('Signal reconstruction could not be loaded.')).toHaveLength(6));
-    const count = screen.getByText('Signals reconstructed').closest('[data-operational-metric]');
-    if (!(count instanceof HTMLElement)) throw new Error('Reconstruction summary missing');
-    expect(within(count).getByText('—')).toBeInTheDocument();
-    expect(within(count).queryByText('0')).not.toBeInTheDocument();
+    assertOperationalMetricUnavailable(screen.getByTestId('time-machine-summary'), 'Signals reconstructed');
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(6);
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     expect(h.refetch).toHaveBeenCalledTimes(1);
@@ -217,10 +215,7 @@ describe('TimeMachinePage shared primitive adoption', () => {
     for (const name of ['−1h', '−1d', '−1w', 'Now']) {
       expect(screen.getByRole('button', { name })).toBeDisabled();
     }
-    const count = screen.getByText('Signals reconstructed').closest('[data-operational-metric]');
-    if (!(count instanceof HTMLElement)) throw new Error('Reconstruction summary missing');
-    expect(within(count).getByText('—')).toBeInTheDocument();
-    expect(within(count).queryByText('0')).not.toBeInTheDocument();
+    assertOperationalMetricUnavailable(screen.getByTestId('time-machine-summary'), 'Signals reconstructed');
   });
 
   it('reports initial fleet failure with recovery instead of claiming there are no vehicles', () => {
@@ -253,10 +248,9 @@ describe('TimeMachinePage shared primitive adoption', () => {
     expectSections();
     expect(screen.getAllByText(/History appears once telemetry starts flowing/)).toHaveLength(7);
     expect(screen.queryByText(/No battery signals at this instant/)).not.toBeInTheDocument();
-    const count = screen.getByText('Signals reconstructed').closest('[data-operational-metric]');
+    assertOperationalMetricUnavailable(screen.getByTestId('time-machine-summary'), 'Signals reconstructed');
     const tracked = screen.getByText('Fields tracked').closest('[data-operational-metric]');
-    if (!(count instanceof HTMLElement) || !(tracked instanceof HTMLElement)) throw new Error('Source metrics missing');
-    expect(within(count).getByText('—')).toBeInTheDocument();
+    if (!(tracked instanceof HTMLElement)) throw new Error('Source metrics missing');
     expect(within(tracked).getByText('0')).toBeInTheDocument();
   });
 
@@ -293,7 +287,11 @@ describe('TimeMachinePage shared primitive adoption', () => {
     expect(screen.getByText(/The selected instant is pending/)).toBeInTheDocument();
     expect(screen.getByText('raw value')).toBeInTheDocument();
     const summary = screen.getByTestId('time-machine-summary');
-    expect(summary.querySelector(`[title^="${latest}"]`)).toBeInTheDocument();
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const instantDrawer = screen.getByRole('dialog');
+    expect(instantDrawer.querySelector(`[title^="${latest}"]`)).toBeInTheDocument();
+    fireEvent.keyDown(instantDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, earliest));
     h.reconstruction = { at: earliest, count: 4, fields };
     view.rerender(<QueryClientProvider client={new QueryClient()}>
@@ -337,8 +335,13 @@ describe('TimeMachinePage shared primitive adoption', () => {
     ] };
     const view = renderPage();
     await waitFor(() => expect(h.readState).toHaveBeenLastCalledWith(7, latest));
-    expect(view.container.querySelectorAll(`[title="${latest} (Pacific/Honolulu)"]`).length).toBeGreaterThanOrEqual(4);
+    expect(view.container.querySelectorAll(`[title="${latest} (Pacific/Honolulu)"]`).length).toBeGreaterThanOrEqual(3);
     expect(view.container.querySelector(`[title="${earliest} (Pacific/Honolulu)"]`)).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('time-machine-summary')).getByRole('button', { name: 'Review details' }));
+    const tzDrawer = screen.getByRole('dialog');
+    expect(tzDrawer.querySelector(`[title="${latest} (Pacific/Honolulu)"]`)).toBeInTheDocument();
+    fireEvent.keyDown(tzDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('slider')).toHaveAttribute('aria-valuetext', formatDateTime(latest, { locale: 'en-US', tz: h.timezone }));
     expect(h.reconstruction.at).toBe(latest);
   });

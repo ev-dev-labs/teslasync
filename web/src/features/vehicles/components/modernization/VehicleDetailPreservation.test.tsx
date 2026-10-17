@@ -72,7 +72,12 @@ describe('actual detail stats and history source preservation', () => {
     const cards = Array.from(stats.querySelectorAll('[data-operational-metric]'));
     expect(cards).toHaveLength(8);
     const battery = within(stats).getByText('Battery').closest('[data-operational-metric]');
-    expect(battery?.querySelector('[data-battery-color]')).toHaveAttribute('data-battery-color', 'red');
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    const batteryDrawer = screen.getByRole('dialog');
+    const batteryGroup = within(batteryDrawer).getByRole('group', { name: 'Battery' });
+    expect(batteryGroup.querySelector('[data-battery-color]')).toHaveAttribute('data-battery-color', 'red');
+    fireEvent.keyDown(batteryDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(battery).toHaveTextContent('20.00%');
     const distance = screen.getByRole('button', { name: 'Distance' });
     fireEvent.click(distance);
@@ -114,7 +119,11 @@ describe('actual detail stats and history source preservation', () => {
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Distance' })).toBe(distance);
     expect(driveRows().map(row => row[1])).toEqual(['150.00 km', '100.00 km', '40.00 km', '9.00 km']);
-    expect(battery?.querySelector('[data-battery-color]')).toHaveAttribute('data-battery-color', 'green');
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    const greenDrawer = screen.getByRole('dialog');
+    expect(within(greenDrawer).getByRole('group', { name: 'Battery' }).querySelector('[data-battery-color]')).toHaveAttribute('data-battery-color', 'green');
+    fireEvent.keyDown(greenDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(battery).toHaveTextContent('51.00%');
     expect(JSON.stringify({ state, drives, emptyCharges })).toBe(original);
   });

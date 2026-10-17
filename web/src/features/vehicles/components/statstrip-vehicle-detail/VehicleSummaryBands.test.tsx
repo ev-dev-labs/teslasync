@@ -7,6 +7,7 @@ import { VehicleDetailOverview } from '../modernization/VehicleDetailOverview';
 import { VehicleDetailStats } from '../modernization/VehicleDetailStats';
 import { VehicleDetailSystems } from '../modernization/VehicleDetailSystems';
 import { NextChargeDecisionStrip } from '../NextChargeDecisionStrip';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QuickStatsGrid } from '../vehicle-detail/QuickStatsGrid';
 import { BatteryRangePanel } from '../vehicle-detail/BatteryRangePanel';
 import { SecuritySection } from '../vehicle-detail/SecuritySection';
@@ -129,23 +130,32 @@ describe('seven unique vehicle-detail production summary bands', () => {
     const counts = {
       'vehicle-next-charge-summary': 3, 'vehicle-live-overview-summary': 3,
       'vehicle-quick-stats-summary': 8, 'vehicle-powertrain-summary': 8,
-      'vehicle-climate-summary': 8, 'vehicle-tire-pressure-summary': 4,
+      'vehicle-climate-summary': 6, 'vehicle-tire-pressure-summary': 3,
       'vehicle-security-summary': 4,
     };
     expect(document.querySelectorAll('[data-operational-brief]')).toHaveLength(7);
     expect(document.querySelectorAll('[data-stat-strip]')).toHaveLength(0);
     for (const [id, count] of Object.entries(counts)) {
       expect(band(id).querySelectorAll('[data-operational-metric]')).toHaveLength(count);
-      expect(within(band(id) as HTMLElement).getByText('Source snapshot')).toBeInTheDocument();
-      expect(band(id)).toHaveTextContent(/2026/);
+      assertOperationalBriefDisclosure(band(id), 'snapshot', { contains: true });
+      assertOperationalBriefDisclosure(band(id), '2026', { contains: true });
       expect(within(band(id) as HTMLElement).getByRole('button', { name: 'Review details' })).toBeInTheDocument();
     }
     expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '50');
     expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
     expect(document.body).toHaveTextContent(/50(?:\.00)?%.*80(?:\.00)?%.*22\.50 kWh needed/);
-    expect(screen.getByText('Test site')).toBeInTheDocument();
+    fireEvent.click(within(band('vehicle-next-charge-summary') as HTMLElement).getByRole('button', { name: 'Review details' }));
+    const siteDialog = screen.getByRole('dialog', { name: 'Charging options details' });
+    expect(within(siteDialog).getByRole('group', { name: 'Supercharger' })).toHaveTextContent('Test site');
+    closeDrawer(siteDialog);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('No charging telemetry available')).toBeInTheDocument();
-    expect(tile('Speed', band('vehicle-quick-stats-summary'))).toHaveTextContent('Parked');
+    expect(tile('Speed', band('vehicle-quick-stats-summary'))).toHaveTextContent('0.00 km/h');
+    fireEvent.click(within(band('vehicle-quick-stats-summary') as HTMLElement).getByRole('button', { name: 'Review details' }));
+    const speedDialog = screen.getByRole('dialog', { name: 'Live vehicle readings details' });
+    expect(within(speedDialog).getByRole('group', { name: 'Speed' })).toHaveTextContent('Parked');
+    closeDrawer(speedDialog);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(tile('Power', band('vehicle-quick-stats-summary'))).toHaveTextContent('0.00 kW');
     expect(tile('Pack voltage', band('vehicle-powertrain-summary'))).toHaveTextContent('400.00 V');
     expect(tile('Motor current (F)', band('vehicle-powertrain-summary'))).toHaveTextContent('7.84 A');
@@ -154,13 +164,17 @@ describe('seven unique vehicle-detail production summary bands', () => {
     expect(tile('Front RPM', band('vehicle-powertrain-summary'))).toHaveTextContent('343 RPM');
     expect(tile('Rear RPM', band('vehicle-powertrain-summary'))).toHaveTextContent('-343 RPM');
     expect(tile('Motor temp (peak)', band('vehicle-powertrain-summary'))).toHaveTextContent('50.19°C');
-    expect(tile('Defrost', band('vehicle-climate-summary'))).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(band('vehicle-climate-summary'), 'Defrost');
     expect(tile('Climate on', band('vehicle-climate-summary'))).toHaveTextContent('Off');
     expect(tile('Seat heater left', band('vehicle-climate-summary'))).toHaveTextContent('0');
-    expect(tile('Seat heater right', band('vehicle-climate-summary'))).toHaveAttribute('data-value-state', 'missing');
-    expect(tile('Rear right', band('vehicle-tire-pressure-summary'))).toHaveTextContent('No data available');
-    expect(tile('Front right', band('vehicle-tire-pressure-summary'))).toHaveTextContent('Low');
-    expect(tile('Rear left', band('vehicle-tire-pressure-summary'))).toHaveTextContent('High');
+    assertOperationalMetricUnavailable(band('vehicle-climate-summary'), 'Seat heater right');
+    assertOperationalMetricUnavailable(band('vehicle-tire-pressure-summary'), 'Rear right');
+    fireEvent.click(within(band('vehicle-tire-pressure-summary') as HTMLElement).getByRole('button', { name: 'Review details' }));
+    const tireDialog = screen.getByRole('dialog', { name: 'Tire pressure details' });
+    expect(within(tireDialog).getByRole('group', { name: 'Front right' })).toHaveTextContent('Low');
+    expect(within(tireDialog).getByRole('group', { name: 'Rear left' })).toHaveTextContent('High');
+    closeDrawer(tireDialog);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(tile('Locked', band('vehicle-security-summary'))).toHaveTextContent('No');
     expect(tile('Sentry', band('vehicle-security-summary'))).toHaveTextContent('Off');
     expect(tile('Doors', band('vehicle-security-summary'))).toHaveTextContent('Closed');
@@ -194,9 +208,9 @@ describe('seven unique vehicle-detail production summary bands', () => {
       <QuickStatsGrid state={undefined} status="offline" />
       <BatteryRangePanel state={undefined} />
     </MemoryRouter>);
-    expect(band('vehicle-quick-stats-summary').querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(8);
-    expect(tile('Speed', band('vehicle-quick-stats-summary'))).not.toHaveTextContent('Parked');
-    expect(tile('Charging', band('vehicle-live-overview-summary'))).toHaveAttribute('data-value-state', 'missing');
+    expect(band('vehicle-quick-stats-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    assertOperationalMetricUnavailable(band('vehicle-quick-stats-summary'), 'Speed');
+    assertOperationalMetricUnavailable(band('vehicle-live-overview-summary'), 'Charging');
     expect(screen.queryByRole('meter', { name: 'Battery' })).not.toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Battery' })).toBeInTheDocument();
   });
@@ -225,30 +239,40 @@ describe('seven unique vehicle-detail production summary bands', () => {
     {
       id: 'vehicle-climate-summary', title: 'Climate', source: 'Climate',
       fields: ['Inside temp', 'Outside temp', 'Driver setpoint', 'Fan speed', 'Seat heater left', 'Seat heater right', 'Defrost', 'Climate on'],
-      values: ['0.00°C', '-7.00°C', '22.00°C', '0', 'Level', '—', 'Off'],
+      values: ['0.00°C', '-7.00°C', '22.00°C', '0', 'Level', 'Off'],
+      omitted: ['Seat heater right', 'Defrost'], absent: ['—'],
     },
     {
       id: 'vehicle-tire-pressure-summary', title: 'Tire pressure', source: 'Tire pressure',
       fields: ['Front left', 'Front right', 'Rear left', 'Rear right'],
-      values: ['3.00 bar', '2.20 bar', '3.20 bar', '—', 'Normal', 'Low', 'High', 'No data available'],
+      values: ['3.00 bar', '2.20 bar', '3.20 bar', 'Normal', 'Low', 'High'],
+      omitted: ['Rear right'], absent: ['—', 'No data available'],
     },
     {
       id: 'vehicle-security-summary', title: 'Security', source: 'Security',
       fields: ['Locked', 'Sentry', 'Doors', 'Windows'],
       values: ['No', 'Off', 'Closed'],
     },
-  ])('preserves all $title measurements and rich context in the real shared Review details drawer', ({ id, title, source, fields, values }) => {
+  ] as Array<{ id: string; title: string; source: string; fields: string[]; values: string[]; omitted?: string[]; absent?: string[] }>)('preserves all $title measurements and rich context in the real shared Review details drawer', ({ id, title, source, fields, values, omitted, absent }) => {
     const original = JSON.stringify({ live, motor, climate, security, tires });
     renderBands();
     const summary = band(id);
     const metricNodes = Array.from(summary.querySelectorAll('[data-operational-metric]'));
+    for (const label of omitted ?? []) assertOperationalMetricUnavailable(summary, label);
     const review = within(summary as HTMLElement).getByRole('button', { name: 'Review details' });
     fireEvent.click(review);
     const drawer = screen.getByRole('dialog', { name: `${title} details` });
     const detail = within(drawer);
     expect(detail.getByRole('heading', { name: 'Operational metrics' })).toBeInTheDocument();
-    for (const label of fields) expect(detail.getByText(label)).toBeInTheDocument();
+    for (const label of fields) {
+      if ((omitted ?? []).includes(label)) {
+        expect(detail.queryByRole('group', { name: label })).not.toBeInTheDocument();
+      } else {
+        expect(detail.getByText(label)).toBeInTheDocument();
+      }
+    }
     for (const value of values) expect(detail.getAllByText(value).length).toBeGreaterThan(0);
+    for (const value of absent ?? []) expect(detail.queryByText(value)).not.toBeInTheDocument();
     if (title === 'Charging options') {
       expect(drawer).toHaveTextContent(/50(?:\.00)?%.*80(?:\.00)?%.*22\.50 kWh needed/);
     }
@@ -259,7 +283,7 @@ describe('seven unique vehicle-detail production summary bands', () => {
     closeDrawer(drawer);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const retainedNodes = Array.from(band(id).querySelectorAll('[data-operational-metric]'));
-    expect(retainedNodes).toHaveLength(fields.length);
+    expect(retainedNodes).toHaveLength(fields.length - (omitted ?? []).length);
     retainedNodes.forEach((node, index) => expect(node).toBe(metricNodes[index]));
     expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '50');
@@ -278,7 +302,7 @@ describe('seven unique vehicle-detail production summary bands', () => {
         ...source({ state: live }, 0), isError: true, error: new Error('Live refresh failed'),
       }} />
     </MemoryRouter>);
-    expect(within(band('vehicle-quick-stats-summary') as HTMLElement).getByText('Retained source snapshot')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(band('vehicle-quick-stats-summary'), 'Retained source snapshot');
     expect(tile('Battery', band('vehicle-quick-stats-summary'))).toHaveTextContent('50.00%');
     expect(band('vehicle-quick-stats-summary').querySelectorAll('[data-operational-value]')).toHaveLength(8);
   });
@@ -305,8 +329,8 @@ describe('seven unique vehicle-detail production summary bands', () => {
       sourceQuery={source(mixedSecurity, 3000)}
       liveStateQuery={{ ...source({ state: mixedLive }, 0), isError: true, error: new Error('Live refresh failed') }} />
     </MemoryRouter>);
-    expect(tile('Locked', band('vehicle-security-summary'))).toHaveAttribute('data-value-state', 'missing');
-    expect(tile('Doors', band('vehicle-security-summary'))).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(band('vehicle-security-summary'), 'Locked');
+    assertOperationalMetricUnavailable(band('vehicle-security-summary'), 'Doors');
     expect(tile('Sentry', band('vehicle-security-summary'))).toHaveTextContent('Off');
     expect(tile('Windows', band('vehicle-security-summary'))).toHaveTextContent('1 open');
     fireEvent.click(within(band('vehicle-security-summary') as HTMLElement).getByRole('button', { name: 'Review details' }));
@@ -314,7 +338,8 @@ describe('seven unique vehicle-detail production summary bands', () => {
     expect(drawer.getByText('1 open')).toBeInTheDocument();
     expect(drawer.getByText('Other window states are unknown.')).toBeInTheDocument();
     expect(drawer.getByText('Off')).toBeInTheDocument();
-    expect(drawer.getAllByText(/Live vehicle state snapshot · .*Retained source snapshot/)).toHaveLength(2);
+    // The combined live scope renders once in the drawer (redesign deduped the header/body repeat).
+    expect(drawer.getAllByText(/Live vehicle state snapshot · .*Retained source snapshot/)).toHaveLength(1);
     expect(drawer.getByText(/^Security snapshot · .*2026/)).toBeInTheDocument();
     expect(drawer.queryByText('Closed')).not.toBeInTheDocument();
     expect(drawer.queryByText('No')).not.toBeInTheDocument();

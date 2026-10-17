@@ -54,6 +54,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import { NextChargeDecisionStrip } from './NextChargeDecisionStrip';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { useNextChargeDecision } from '@/api/hooks/useCharging';
 import type { NextChargeDecision } from '@/types/charging';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
@@ -231,10 +232,11 @@ describe('NextChargeDecisionStrip', () => {
     expect(screen.getByText(/50.00% → 80.00%/)).toBeInTheDocument();
     const band = document.querySelector('[data-testid="vehicle-next-charge-summary"][data-operational-brief]');
     expect(band).not.toBeNull();
-    expect(band?.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(band?.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
     expect(screen.getByText('Home now').closest('[data-operational-metric]')).toHaveTextContent('$8.20');
     expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
-    expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    expect(band?.querySelector('[data-operational-metric="supercharger"]')).toBeNull();
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-next-charge-summary'), 'Supercharger');
     expect(screen.getByText(/22.50 kWh needed/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open Autopilot' }));
     expect(screen.getByTestId('next-charge-location')).toHaveTextContent('/smart-charge');
@@ -262,14 +264,19 @@ describe('NextChargeDecisionStrip', () => {
       mockDecision.mockReturnValue(qr({ data: decision }));
       renderStrip(50);
       const summary = screen.getByTestId('vehicle-next-charge-summary');
-      expect(summary).toHaveTextContent(
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      const narrativeDrawer = screen.getByRole('dialog');
+      expect(within(narrativeDrawer).getAllByText(
         'Savings Unknown; home Unknown; Supercharger Unknown; site Unknown; time Unknown',
-      );
+      ).length).toBeGreaterThan(0);
+      fireEvent.keyDown(narrativeDrawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(summary).not.toHaveTextContent('$0.00');
-      expect(screen.getByText('Home now').closest('[data-operational-metric]'))
-        .not.toHaveAttribute('data-value-state', 'valid');
+      expect(summary.querySelector('[data-operational-metric="home-now"]')).toBeNull();
+      assertOperationalMetricUnavailable(summary, 'Home now');
+      assertOperationalMetricUnavailable(summary, 'Supercharger');
       expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
-      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
       expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeVisible();
     },
   );
@@ -284,8 +291,14 @@ describe('NextChargeDecisionStrip', () => {
     };
     mockDecision.mockReturnValue(qr({ data: decision }));
     renderStrip(50);
-    expect(screen.getByTestId('vehicle-next-charge-summary'))
-      .toHaveTextContent(`Save $${savings.toFixed(2)}; home $0.00; Supercharger $12.34`);
+    const savingsSummary = screen.getByTestId('vehicle-next-charge-summary');
+    fireEvent.click(within(savingsSummary).getByRole('button', { name: 'Review details' }));
+    const savingsDrawer = screen.getByRole('dialog');
+    expect(within(savingsDrawer).getAllByText(
+      `Save $${savings.toFixed(2)}; home $0.00; Supercharger $12.34`,
+    ).length).toBeGreaterThan(0);
+    fireEvent.keyDown(savingsDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('Home now').closest('[data-operational-metric]')).toHaveTextContent('$0.00');
     expect(screen.getByText('Wait window').closest('[data-operational-metric]')).toHaveTextContent('$6.10');
     expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveTextContent('$12.34');
@@ -299,8 +312,12 @@ describe('NextChargeDecisionStrip', () => {
     } }));
     renderStrip(50);
     expect(screen.getByText('Unknown% → Unknown% · Unknown kWh needed')).toBeVisible();
-    expect(screen.getByTestId('vehicle-next-charge-summary'))
-      .toHaveTextContent('Observed Unknown% toward Unknown%');
+    const socSummary = screen.getByTestId('vehicle-next-charge-summary');
+    fireEvent.click(within(socSummary).getByRole('button', { name: 'Review details' }));
+    const socDrawer = screen.getByRole('dialog');
+    expect(within(socDrawer).getAllByText('Observed Unknown% toward Unknown%').length).toBeGreaterThan(0);
+    fireEvent.keyDown(socDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
   });
 
@@ -308,9 +325,13 @@ describe('NextChargeDecisionStrip', () => {
     mockDecision.mockReturnValue(qr({ data: { ...WAIT, reason_key: 'unrecognized', reason } }));
     renderStrip(50);
     const summary = screen.getByTestId('vehicle-next-charge-summary');
-    expect(within(summary).getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const verdictDrawer = screen.getByRole('dialog');
+    expect(within(verdictDrawer).getAllByText('Wait for off-peak').length).toBeGreaterThan(0);
+    fireEvent.keyDown(verdictDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(summary).not.toHaveTextContent('nextCharge.reason.unrecognized');
-    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
   });
 
   it('updates SOC and energy narratives with numeric preferences without changing source operands', () => {
@@ -331,7 +352,12 @@ describe('NextChargeDecisionStrip', () => {
         setGlobalPrecision(3);
       });
       expect(screen.getByText('50,125% → 80,375% · -1.234,568 kWh needed')).toBeInTheDocument();
-      expect(screen.getByTestId('vehicle-next-charge-summary')).toHaveTextContent('Observed 50,125% toward 80,375%');
+      const localeSummary = screen.getByTestId('vehicle-next-charge-summary');
+      fireEvent.click(within(localeSummary).getByRole('button', { name: 'Review details' }));
+      const localeDrawer = screen.getByRole('dialog');
+      expect(within(localeDrawer).getAllByText('Observed 50,125% toward 80,375%').length).toBeGreaterThan(0);
+      fireEvent.keyDown(localeDrawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       act(() => {
         setGlobalLocale('en-US');
         setGlobalPrecision(1);
@@ -355,9 +381,14 @@ describe('NextChargeDecisionStrip', () => {
     renderStrip();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByText('Waiting for live battery level')).not.toBeInTheDocument();
-    expect(screen.getByText('Recorded site')).toBeInTheDocument();
+    const retainedSummary = screen.getByTestId('vehicle-next-charge-summary');
+    fireEvent.click(within(retainedSummary).getByRole('button', { name: 'Review details' }));
+    const retainedDrawer = screen.getByRole('dialog');
+    expect(within(retainedDrawer).getByRole('group', { name: 'Supercharger' })).toHaveTextContent('Recorded site');
+    fireEvent.keyDown(retainedDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('Supercharger').closest('[data-operational-metric]')).toHaveTextContent('$12.34');
-    expect(within(screen.getByTestId('vehicle-next-charge-summary')).getByText('Retained source snapshot')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(retainedSummary, 'Retained source snapshot');
     expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));

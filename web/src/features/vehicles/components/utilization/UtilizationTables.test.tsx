@@ -6,6 +6,7 @@ import { objectsToCSV } from '@/lib/csvExport';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { summarizeUtilization, type UtilizationSummary } from '../../lib/utilization';
 import { BusiestDays } from './BusiestDays';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { UtilizationMethodology } from './UtilizationMethodology';
 import { WeekdayProfile } from './WeekdayProfile';
 import { TimeCostOverview } from './TimeCostOverview';
@@ -417,7 +418,7 @@ describe('Shared utilization tables', () => {
     if (historyCapReached) {
       expect(badge).toHaveClass('text-[var(--semantic-warning)]');
       expect(callout).toHaveClass('border-[var(--semantic-warning-border)]', 'bg-[var(--semantic-warning-bg)]');
-      expect(panel).toHaveTextContent('Partial source coverage');
+      assertOperationalBriefDisclosure(screen.getByTestId('utilization-coverage-summary'), 'Partial source coverage');
     } else {
       expect(badge).toHaveClass('text-[var(--text-secondary)]');
       expect(callout).toHaveClass('border-[var(--border-default)]', 'bg-[var(--surface-2)]');

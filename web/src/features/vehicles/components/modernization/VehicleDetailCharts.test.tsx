@@ -4,6 +4,8 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive, VehicleState } from '@/api/types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 // Synthetic deterministic fixtures are test-only, never a production source.
 const fixtures = vi.hoisted(() => ({ distance: 'km' as 'km' | 'mi', hideDistance: false }));
@@ -48,6 +50,18 @@ vi.mock('@/components/charts', () => ({
 import { VehicleDetailCharts } from './VehicleDetailCharts';
 import { VehicleBatteryChart } from './VehicleBatteryChart';
 
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics');
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
+});
+
+/** Omitted tiles carry no value-state attribute, so the classification is pinned on the mapped hook output. */
+function mappedValueState(occurrenceId: string) {
+  const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+    readonly { key: string; valueState?: string }[] | undefined;
+  return mapped?.find(metric => metric.key === occurrenceId)?.valueState;
+}
+
 const syntheticState: VehicleState = {
   vehicle_id: 1, state: 'online', latitude: 0, longitude: 0, speed: 0, power: 0,
   battery_level: 42, rated_range: 400_000, ideal_range: 420_000, odometer: 1_000_000,
@@ -82,9 +96,10 @@ describe('production vehicle charts through shared layout', () => {
       expect(rows).toEqual([{ name: 'Current', value: null }, { name: 'Remaining', value: null }]);
       expect(screen.getByTestId('battery-gauge')).not.toHaveAttribute('data-value');
       const brief = screen.getByTestId('vehicle-battery-readouts');
-      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
-      expect(brief.querySelector('[data-operational-metric="battery"]'))
-        .toHaveAttribute('data-value-state', battery_level == null ? 'missing' : 'invalid');
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      expect(brief.querySelector('[data-operational-metric="battery"]')).toBeNull();
+      assertOperationalMetricUnavailable(brief, 'Battery');
+      expect(mappedValueState('battery')).toBe(battery_level == null ? 'missing' : 'invalid');
       expect(screen.getByLabelText('Battery current and remaining levels bar chart')).toBeInTheDocument();
     },
   );
@@ -106,9 +121,11 @@ describe('production vehicle charts through shared layout', () => {
 
   it.each([null, undefined, NaN, Infinity, -Infinity, '1250', ''])('keeps invalid or missing range %s distinct from zero', rated_range => {
     render(<VehicleBatteryChart state={Object.assign({}, syntheticState, { rated_range })} />);
-    const range = screen.getByTestId('vehicle-battery-readouts').querySelector('[data-operational-metric="range"]');
-    expect(range).toHaveAttribute('data-value-state', rated_range == null ? 'missing' : 'invalid');
-    expect(range).not.toHaveTextContent('0.00 km');
+    const brief = screen.getByTestId('vehicle-battery-readouts');
+    const range = brief.querySelector('[data-operational-metric="range"]');
+    expect(range).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Range');
+    expect(mappedValueState('range')).toBe(rated_range == null ? 'missing' : 'invalid');
     expect(screen.getByTestId('battery-bars')).toBeInTheDocument();
     expect(screen.getByTestId('battery-gauge')).toHaveAttribute('data-value', '42');
   });
@@ -186,10 +203,12 @@ describe('production vehicle charts through shared layout', () => {
     });
     render(<VehicleDetailCharts state={syntheticState} drives={syntheticDrives}
       stateQuery={{ data: { state: syntheticState } }} drivesQuery={{ data: syntheticDrives }} />);
-    expect(observers.size).toBe(1);
+    const gridBoundary = [...observers].filter(([target]) =>
+      target instanceof HTMLElement && target.dataset.cardGrid === 'true');
+    expect(gridBoundary).toHaveLength(1);
     for (const [width, height] of [[520, 200], [768, 240], [1280, 280]]) {
       act(() => {
-        for (const [target, callback] of observers) {
+        for (const [target, callback] of gridBoundary) {
           callback([{ target, contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver);
         }
       });

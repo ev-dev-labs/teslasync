@@ -25,7 +25,8 @@
 //      metric-card glyphs) is marked aria-hidden.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import { fireEvent, render, screen, cleanup, within } from '@testing-library/react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import type { ReactNode } from 'react'
 import type { MotorSnapshot } from '@/api/types'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
@@ -137,7 +138,8 @@ describe('MotorSection — empty state', () => {
     expect(screen.getByText('Shift state')).toBeInTheDocument()
     expect(screen.getByText('Pack voltage')).toBeInTheDocument()
     expect(document.querySelector('[data-testid="vehicle-powertrain-summary"][data-operational-brief]')).not.toBeNull()
-    expect(document.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(8)
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-powertrain-summary'), 'Shift state')
     // The peak-temp formatter is never reached with no data.
     expect(mockFormatTemperature).not.toHaveBeenCalled()
   })
@@ -161,7 +163,7 @@ describe('MotorSection — shift state', () => {
 
   it('falls back to an em dash when shift_state is null', () => {
     render(<MotorSection motorData={makeMotor({ shift_state: null })} />)
-    expect(card('Shift state')).toHaveTextContent('—')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-powertrain-summary'), 'Shift state')
   })
 })
 
@@ -188,7 +190,7 @@ describe('MotorSection — pack voltage', () => {
 
   it('shows an em dash when neither axle reports a voltage', () => {
     render(<MotorSection motorData={makeMotor({ vbat_rear: null, vbat_front: null })} />)
-    expect(card('Pack voltage')).toHaveTextContent('—')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-powertrain-summary'), 'Pack voltage')
   })
 })
 
@@ -205,7 +207,7 @@ describe('MotorSection — motor current', () => {
 
   it('renders an em dash when the current is null', () => {
     render(<MotorSection motorData={makeMotor({ motor_current_front: null })} />)
-    expect(card('Motor current (F)')).toHaveTextContent('—')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-powertrain-summary'), 'Motor current (F)')
   })
 })
 
@@ -222,7 +224,7 @@ describe('MotorSection — torque split', () => {
   it('renders an em dash independently for each null axle', () => {
     render(<MotorSection motorData={makeMotor({ torque_nm_front: null, torque_nm_rear: 280 })} />)
 
-    expect(card('Front torque')).toHaveTextContent('—')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-powertrain-summary'), 'Front torque')
     expect(within(card('Rear torque')).getByText(statText('280.00 Nm'))).toBeInTheDocument()
   })
 })
@@ -246,7 +248,7 @@ describe('MotorSection — motor RPM', () => {
 
   it('renders an em dash for a null RPM axle', () => {
     render(<MotorSection motorData={makeMotor({ motor_rpm_front: null, motor_rpm_rear: 1800 })} />)
-    expect(card('Front RPM')).toHaveTextContent('—')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-powertrain-summary'), 'Front RPM')
   })
 })
 
@@ -286,7 +288,7 @@ describe('MotorSection — peak motor temperature', () => {
       />,
     )
 
-    expect(card('Motor temp (peak)')).toHaveTextContent('—')
+    assertOperationalMetricUnavailable(screen.getByTestId('vehicle-powertrain-summary'), 'Motor temp (peak)')
     // The finite-guard short-circuits before any formatTemperature call —
     // crucially it never passes the -Infinity Math.max sentinel through.
     expect(mockFormatTemperature).not.toHaveBeenCalled()
@@ -297,10 +299,18 @@ describe('MotorSection — accessibility', () => {
   it('marks every decorative icon (title glyph + all eight card glyphs) aria-hidden', () => {
     const { container } = render(<MotorSection motorData={makeMotor()} />)
 
-    const svgs = container.querySelectorAll('svg')
-    // Cog title glyph + 8 metric-card glyphs.
-    expect(svgs.length).toBe(9)
-    svgs.forEach((svg) => expect(svg).toHaveAttribute('aria-hidden', 'true'))
+    // The face keeps only the Review-details action glyph; metric glyphs moved into drawer groups.
+    const faceSvgs = container.querySelectorAll('svg')
+    expect(faceSvgs.length).toBe(1)
+    faceSvgs.forEach((svg) => expect(svg).toHaveAttribute('aria-hidden', 'true'))
+    const brief = screen.getByTestId('vehicle-powertrain-summary')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    const drawerSvgs = drawer.querySelectorAll('[role="group"] svg')
+    expect(drawerSvgs.length).toBe(8)
+    drawerSvgs.forEach((svg) => expect(svg).toHaveAttribute('aria-hidden', 'true'))
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('gives the panel an accessible Powertrain heading not polluted by the icon', () => {
