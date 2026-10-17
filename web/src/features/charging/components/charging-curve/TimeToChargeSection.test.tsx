@@ -41,7 +41,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { ChargingSession } from '@/api/types';
 
@@ -191,9 +191,18 @@ function cards(): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>('[data-operational-metric]'));
 }
 function cardByLabel(label: string): HTMLElement {
-  const found = cards().find((c) => c.firstElementChild?.firstElementChild?.textContent === label);
+  const found = cards().find((c) => c.firstElementChild?.textContent === label);
   if (!found) throw new Error(`no metric card labelled "${label}"`);
   return found;
+}
+// The redesigned face shows live values only; subtitles/icons/hidden counts
+// live in the Review-details drawer.
+function openDetails(): HTMLElement {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+function groupByLabel(dialog: HTMLElement, label: string): HTMLElement {
+  return within(dialog).getByRole('group', { name: label });
 }
 interface TrendRow {
   year: string;
@@ -211,7 +220,8 @@ describe('TimeToChargeSection', () => {
     render(<TimeToChargeSection sessions={MAIN} />);
 
     expect(screen.getByRole('heading', { name: 'Time-to-Charge Analysis' })).toBeInTheDocument();
-    expect(screen.getAllByText(
+    const dialog = openDetails();
+    expect(within(dialog).getAllByText(
       'Average session duration',
     )[0]).toBeInTheDocument();
   });
@@ -221,7 +231,7 @@ describe('TimeToChargeSection', () => {
 
     expect(cards()).toHaveLength(4);
 
-    const labels = cards().map((c) => c.firstElementChild?.firstElementChild?.textContent);
+    const labels = cards().map((c) => c.firstElementChild?.textContent);
     expect(labels).toEqual([L10, L20, L_FAST, L_SLOW]);
 
     expect(cardByLabel(L10)).toHaveAttribute('data-value-state', 'value');
@@ -230,12 +240,14 @@ describe('TimeToChargeSection', () => {
     expect(cardByLabel(L_SLOW)).toHaveAttribute('data-value-state', 'value');
 
     // Every KPI icon is decorative — hidden from assistive tech, never an
-    // unlabelled icon-only control.
-    cards().forEach((c) => {
-      const svg = c.querySelector('svg');
+    // unlabelled icon-only control. Icons live with the subtitle context in
+    // the Review-details drawer on the redesigned face.
+    const dialog = openDetails();
+    for (const label of [L10, L20, L_FAST, L_SLOW]) {
+      const svg = groupByLabel(dialog, label).querySelector('svg');
       expect(svg).not.toBeNull();
       expect(svg).toHaveAttribute('aria-hidden', 'true');
-    });
+    }
   });
 
   it('computes the 10→80 and 20→80 average durations from completed DC sessions', () => {
@@ -245,8 +257,9 @@ describe('TimeToChargeSection', () => {
     expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
     // 20→80: s1 (30) + s2 (60) ⇒ avg 45 min.
     expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('45.00 min');
-    expect(cardByLabel(L10)).toHaveTextContent('Average session duration');
-    expect(cardByLabel(L20)).toHaveTextContent('Average session duration');
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, L10)).toHaveTextContent('Average session duration');
+    expect(groupByLabel(dialog, L20)).toHaveTextContent('Average session duration');
   });
 
   it('labels threshold-spanning cohorts as session durations without inventing crossing times', () => {
@@ -257,8 +270,9 @@ describe('TimeToChargeSection', () => {
     });
     render(<TimeToChargeSection sessions={[spanning]} />);
 
+    const dialog = openDetails();
     for (const label of [L10, L20]) {
-      expect(cardByLabel(label)).toHaveTextContent('Average session duration');
+      expect(groupByLabel(dialog, label)).toHaveTextContent('Average session duration');
       expect(cardByLabel(label).querySelector('[data-operational-value]')).toHaveTextContent('90.00 min');
     }
     expect(screen.queryByText('How long DC sessions take to reach key SOC thresholds')).not.toBeInTheDocument();
@@ -271,10 +285,11 @@ describe('TimeToChargeSection', () => {
     render(<TimeToChargeSection sessions={MAIN} />);
 
     expect(cardByLabel(L_FAST).querySelector('[data-operational-value]')).toHaveTextContent('90.00 kWh/h');
-    expect(cardByLabel(L_FAST)).toHaveTextContent('Session #1');
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, L_FAST)).toHaveTextContent('Session #1');
 
     expect(cardByLabel(L_SLOW).querySelector('[data-operational-value]')).toHaveTextContent('30.00 kWh/h');
-    expect(cardByLabel(L_SLOW)).toHaveTextContent('Session #2');
+    expect(groupByLabel(dialog, L_SLOW)).toHaveTextContent('Session #2');
   });
 
   it('excludes incomplete (zero-duration) sessions from the SOC-window averages', () => {
@@ -285,7 +300,8 @@ describe('TimeToChargeSection', () => {
     expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
     expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
     // The live session also never becomes the fastest — it has no charge rate.
-    expect(cardByLabel(L_FAST)).toHaveTextContent('Session #1');
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, L_FAST)).toHaveTextContent('Session #1');
   });
 
   it('shows — for the SOC-window averages but resolves fastest/slowest when no charge spans 10→80 / 20→80', () => {
@@ -300,8 +316,10 @@ describe('TimeToChargeSection', () => {
     });
     render(<TimeToChargeSection sessions={[midCharge]} />);
 
-    expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    // Unknown averages are omitted from the face and counted in the drawer.
+    expect(cards()).toHaveLength(2);
+    const dialog = openDetails();
+    expect(within(dialog).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     // 20 kWh over 30 min ⇒ 40 kWh/h, so both extreme cards resolve.
     expect(cardByLabel(L_FAST).querySelector('[data-operational-value]')).toHaveTextContent('40.00 kWh/h');
     expect(cardByLabel(L_SLOW).querySelector('[data-operational-value]')).toHaveTextContent('40.00 kWh/h');
@@ -310,10 +328,13 @@ describe('TimeToChargeSection', () => {
   it('renders placeholders for every KPI and no trend rows when the session list is empty', () => {
     render(<TimeToChargeSection sessions={[]} />);
 
-    cards().forEach((c) => expect(c.querySelector('[data-operational-value]')).toHaveTextContent('—'));
+    expect(cards()).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByTestId('yearly-trend')).toHaveAttribute('data-rows', '0');
     // Empty subtitles too — no dangling "Session #undefined".
-    expect(cardByLabel(L_FAST)).not.toHaveTextContent('Session #');
+    expect(document.body.textContent).not.toContain('Session #');
   });
 
   it('is null-safe: degrades to placeholders instead of throwing when sessions is undefined', () => {
@@ -323,14 +344,20 @@ describe('TimeToChargeSection', () => {
       ),
     ).not.toThrow();
 
-    cards().forEach((c) => expect(c.querySelector('[data-operational-value]')).toHaveTextContent('—'));
+    expect(cards()).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByTestId('yearly-trend')).toHaveAttribute('data-rows', '0');
   });
 
   it('excludes non-DC (home/AC) sessions from every metric', () => {
     render(<TimeToChargeSection sessions={[s4Ac]} />);
 
-    cards().forEach((c) => expect(c.querySelector('[data-operational-value]')).toHaveTextContent('—'));
+    expect(cards()).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(yearlyRows()).toHaveLength(0);
   });
 
@@ -350,11 +377,13 @@ describe('TimeToChargeSection', () => {
       expect(container.querySelector(`[data-operational-metric="${key}"] [data-operational-value]`))
         .toHaveTextContent('90.00 min');
     }
+    const dialog = openDetails();
     for (const key of ['fastest', 'slowest']) {
       const metric = container.querySelector(`[data-operational-metric="${key}"]`);
       expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('24.00 kWh/h');
-      expect(metric).toHaveTextContent('Session #202');
-      expect(metric).not.toHaveTextContent('Session #201');
+      const label = key === 'fastest' ? L_FAST : L_SLOW;
+      expect(groupByLabel(dialog, label)).toHaveTextContent('Session #202');
+      expect(groupByLabel(dialog, label)).not.toHaveTextContent('Session #201');
     }
     expect(yearlyRows()).toEqual([
       { year: '2026', avg10to80: 90, avg20to80: 90, count: 1 },
@@ -363,11 +392,10 @@ describe('TimeToChargeSection', () => {
 
   it('keeps unknown DC metrics rather than inventing zero for an explicitly AC-only returned history', () => {
     render(<TimeToChargeSection sessions={[makeSession({ charger_type: 'AC', peak_power_w: 44_000 })]} />);
-    expect(cards()).toHaveLength(4);
-    for (const metric of cards()) {
-      expect(metric).toHaveAttribute('data-value-state', 'missing');
-      expect(metric.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    }
+    expect(cards()).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(yearlyRows()).toEqual([]);
   });
 
@@ -446,8 +474,9 @@ describe('TimeToChargeSection', () => {
     render(<TimeToChargeSection sessions={[
       ...invalidEnergy, makeSession({ id: 42, total_energy_added_wh: 750.5 }),
     ]} />);
+    const dialog = openDetails();
     for (const label of [L_FAST, L_SLOW]) {
-      expect(cardByLabel(label)).toHaveTextContent('Session #42');
+      expect(groupByLabel(dialog, label)).toHaveTextContent('Session #42');
       expect(cardByLabel(label).querySelector('[data-operational-value]')).toHaveTextContent('1.50 kWh/h');
     }
   });
@@ -457,6 +486,8 @@ describe('TimeToChargeSection', () => {
       makeSession({ start_soc_pct: 30, end_soc_pct: 70, total_energy_added_wh: NaN }),
     ]} />);
     expect(yearlyRows()).toEqual([{ year: '2023', avg10to80: null, avg20to80: null, count: 0 }]);
-    cards().forEach(card => expect(card).toHaveAttribute('data-value-state', 'missing'));
+    expect(cards()).toHaveLength(0);
+    const dialog = openDetails();
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
   });
 });

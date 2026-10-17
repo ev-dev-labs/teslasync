@@ -98,12 +98,21 @@ afterEach(() => {
 });
 function tile(container: HTMLElement, label: string): Element {
   const found = Array.from(container.querySelectorAll('[data-stat], [data-operational-metric]'))
-    .find(item => item.querySelector('[data-stat-label], :scope > div:first-child > div:first-child')?.textContent === label);
+    .find(item => item.querySelector('[data-stat-label], :scope > div:first-child')?.textContent === label);
   expect(found, `preserved stat label: ${label}`).toBeDefined();
   return found!;
 }
 function value(container: HTMLElement, label: string): string | null | undefined {
   return tile(container, label).querySelector('[data-stat-value], [data-operational-value]')?.textContent;
+}
+// The redesigned face shows live values only; secondary facts live in the
+// Review-details drawer as labelled groups.
+function openDetails(): HTMLElement {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+function groupByLabel(dialog: HTMLElement, label: string): HTMLElement {
+  return within(dialog).getByRole('group', { name: label });
 }
 const summaryProps = { coreStats, gasPrice: 3.5, distanceUnit: 'mi', isMiles: true, period };
 const savingsProps = {
@@ -117,21 +126,22 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     const { container, rerender } = render(<CostSummaryCards {...summaryProps} />);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(value(container, 'Total Cost')).toBe(`$${fmtNumber(coreStats.totalCost)}`);
-    expect(tile(container, 'Total Cost')).toHaveTextContent('7 sessions');
     expect(value(container, 'Avg $/kWh')).toBe(`$${fmtNumber(coreStats.avgCostPerKwh)}`);
-    expect(tile(container, 'Avg $/kWh')).toHaveTextContent('blended rate');
     expect(value(container, 'Cost Per Mile')).toBe(`$${fmtNumber(coreStats.costPerDist)}`);
-    expect(tile(container, 'Cost Per Mile')).toHaveTextContent('per mi');
     expect(value(container, 'Total Energy')).toBe(`${fmtNumber(coreStats.totalEnergy)} kWh`);
     expect(tile(container, 'Total Energy')).toHaveTextContent('kWh');
-    expect(tile(container, 'Total Energy')).toHaveTextContent(`${fmtNumber(coreStats.gallonsEquiv)} gal equiv`);
-    expect(tile(container, 'Gas Savings $')).toHaveTextContent(`vs $${fmtNumber(3.5)}/gal`);
     expect(value(container, 'Savings %')).toBe(`${fmtNumber(coreStats.savingsPercent)}%`);
-    expect(tile(container, 'Savings %')).toHaveTextContent('vs gasoline');
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, 'Total Cost')).toHaveTextContent('7 sessions');
+    expect(groupByLabel(dialog, 'Avg $/kWh')).toHaveTextContent('blended rate');
+    expect(groupByLabel(dialog, 'Cost Per Mile')).toHaveTextContent('per mi');
+    expect(groupByLabel(dialog, 'Total Energy')).toHaveTextContent(`${fmtNumber(coreStats.gallonsEquiv)} gal equiv`);
+    expect(groupByLabel(dialog, 'Gas Savings $')).toHaveTextContent(`vs $${fmtNumber(3.5)}/gal`);
+    expect(groupByLabel(dialog, 'Savings %')).toHaveTextContent('vs gasoline');
     state.gasUnit = 'liter'; state.symbol = '€';
     rerender(<CostSummaryCards {...summaryProps} isMiles={false} distanceUnit="km" />);
     expect(value(container, 'Cost Per km')).toBe(`€${fmtNumber(coreStats.costPerDist)}`);
-    expect(tile(container, 'Gas Savings $')).toHaveTextContent(`vs €${fmtNumber(3.5)}/gal`);
+    expect(groupByLabel(screen.getByRole('dialog'), 'Gas Savings $')).toHaveTextContent(`vs €${fmtNumber(3.5)}/gal`);
     expect(JSON.stringify(coreStats)).toBe(before);
   });
   it('keeps summary skeleton count, real empty/reset action and cached readings on an actionable refresh error', () => {
@@ -141,18 +151,21 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     rerender(<CostSummaryCards {...summaryProps} coreStats={null} onResetRange={reset} />);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(within(openDetails()).getByText('6 empty fields are hidden.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Reset date range' }));
     expect(reset).toHaveBeenCalledOnce();
     rerender(<CostSummaryCards {...summaryProps} error={new Error('Synthetic refresh error')} onRetry={retry} />);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(value(container, 'Total Cost')).toBe(`$${fmtNumber(coreStats.totalCost)}`);
-    expect(screen.getByText('Retained source measurements')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Retained source measurements')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
     expect(retry).toHaveBeenCalledOnce();
     rerender(<CostSummaryCards {...summaryProps} coreStats={null} error={new Error('Synthetic initial error')} onRetry={retry} />);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(screen.getByRole('dialog')).getByText('6 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reset date range' })).not.toBeInTheDocument();
   });
@@ -160,25 +173,25 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     const malformed = Object.freeze({ ...coreStats, totalCost: NaN, totalEnergy: 0,
       savingsPercent: undefined as unknown as number });
     const { container } = render(<CostSummaryCards {...summaryProps} coreStats={malformed} />);
-    expect(tile(container, 'Total Cost')).toHaveAttribute('data-value-state', 'invalid');
-    expect(tile(container, 'Savings %')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(tile(container, 'Total Energy')).toHaveAttribute('data-value-state', 'value');
     expect(value(container, 'Total Energy')).toBe('0.00 kWh');
-    expect(screen.getByText('Expected a finite numeric measurement')).toBeInTheDocument();
-    expect(screen.getByText('No measurement supplied')).toBeInTheDocument();
+    expect(within(openDetails()).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(Number.isNaN(malformed.totalCost)).toBe(true);
   });
   it('keeps all seven lifetime metrics, free-energy fact, numeric minutes and unknown bounded lifetime scope', () => {
     const { container } = render(<LifetimeSummary lifetimeMetrics={lifetimeMetrics} coreStats={coreStats} period={period} />);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
-    expect(container.querySelector('[data-operational-brief] [role="list"]')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3');
+    const banks = container.querySelectorAll('[data-operational-metric-bank]');
+    expect(banks).toHaveLength(3);
+    expect(Array.from(banks).map(bank => bank.getAttribute('data-columns'))).toEqual(['3', '2', '2']);
     expect(value(container, 'Total Spent')).toBe(`$${fmtNumber(coreStats.totalCost)}`);
     expect(value(container, 'Total Sessions')).toBe('7');
     expect(value(container, 'Avg Session Cost')).toBe(`$${fmtNumber(lifetimeMetrics.avgSessionCost)}`);
     expect(value(container, 'Avg Energy / Session')).toBe(`${fmtNumber(lifetimeMetrics.avgSessionEnergy)} kWh`);
     expect(value(container, 'Avg Duration')).toBe(`${fmtNumber(lifetimeMetrics.avgDuration)} min`);
     expect(tile(container, 'Avg Duration')).toHaveTextContent('min');
-    expect(tile(container, 'Free Sessions')).toHaveTextContent(`(${fmtNumber(lifetimeMetrics.freeEnergy)} kWh)`);
+    expect(groupByLabel(openDetails(), 'Free Sessions')).toHaveTextContent(`(${fmtNumber(lifetimeMetrics.freeEnergy)} kWh)`);
     expect(screen.getAllByText(period.reason).length).toBeGreaterThan(0);
     expect(container.querySelector('[data-period-kind="alltime"]')).toBeNull();
   });
@@ -212,10 +225,11 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(value(container, 'EV Cost (actual)')).toBe(`$${fmtNumber(gasComparison.actualCost)}`);
     expect(value(container, 'Total Savings')).toBe(`$${fmtNumber(gasComparison.savings)}`);
     expect(value(container, 'Monthly Savings')).toBe(`$${fmtNumber(gasComparison.monthlySavings)}`);
-    expect(tile(container, 'Gas Cost (equivalent)')).toHaveTextContent(`$${fmtNumber(gasComparison.costPerMileGas)}/mi`);
-    expect(tile(container, 'EV Cost (actual)')).toHaveTextContent(`$${fmtNumber(gasComparison.costPerMileEV)}/mi`);
-    expect(tile(container, 'Monthly Savings')).toHaveTextContent(`~$${fmtNumber(gasComparison.yearlySavings)} / year`);
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Gas Price ($/gal)' }), { target: { value: '4.25' } });
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, 'Gas Cost (equivalent)')).toHaveTextContent(`$${fmtNumber(gasComparison.costPerMileGas)}/mi`);
+    expect(groupByLabel(dialog, 'EV Cost (actual)')).toHaveTextContent(`$${fmtNumber(gasComparison.costPerMileEV)}/mi`);
+    expect(groupByLabel(dialog, 'Monthly Savings')).toHaveTextContent(`~$${fmtNumber(gasComparison.yearlySavings)} / year`);
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Gas price (USD/US gal)' }), { target: { value: '4.25' } });
     expect(price).toHaveBeenLastCalledWith(4.25);
     fireEvent.click(screen.getByRole('button', { name: 'Reset Defaults' }));
     expect(price).toHaveBeenLastCalledWith(DEFAULT_GAS_PRICE);
@@ -223,20 +237,21 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     expect(rate).toHaveBeenLastCalledWith(DEFAULT_ELECTRICITY_RATE);
     rerender(<SavingsCalculator {...savingsProps} gasComparison={null}
       gasPrice={NaN} mpg={Infinity} electricityRate={-Infinity} isLoading />);
-    expect(screen.getByRole('spinbutton', { name: 'Gas Price ($/gal)' })).toHaveValue(DEFAULT_GAS_PRICE);
-    expect(screen.getByRole('spinbutton', { name: 'Gas Car MPG' })).toHaveValue(DEFAULT_MPG);
-    expect(screen.getByRole('spinbutton', { name: 'Electricity Rate ($/kWh)' })).toHaveValue(DEFAULT_ELECTRICITY_RATE);
+    expect(screen.getByRole('spinbutton', { name: 'Gas price (USD/US gal)' })).toHaveValue(DEFAULT_GAS_PRICE);
+    expect(screen.getByRole('spinbutton', { name: 'Gas car efficiency (mi/US gal)' })).toHaveValue(DEFAULT_MPG);
+    expect(screen.getByRole('spinbutton', { name: 'Electricity rate (USD/kWh)' })).toHaveValue(DEFAULT_ELECTRICITY_RATE);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
   });
   it('keeps ToU text hours, numeric per-session costs, busiest count, percentage and hourly chart rows', () => {
     const { container } = render(<TimeOfUseAnalysis hourlyData={hourlyData} touInsights={touInsights} period={period} />);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(value(container, 'Cheapest Hour')).toBe('02:00');
-    expect(tile(container, 'Cheapest Hour')).toHaveTextContent(`avg ${fmtNumber(touInsights.cheapest.avgCost)} / session`);
     expect(value(container, 'Priciest Hour')).toBe('16:00');
-    expect(tile(container, 'Busiest Hour')).toHaveTextContent('3 sessions');
     expect(value(container, 'Off-Peak Charging')).toBe('75.00%');
-    expect(screen.getByText('of sessions between 10 PM–6 AM')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, 'Cheapest Hour')).toHaveTextContent(`avg ${fmtNumber(touInsights.cheapest.avgCost)} / session`);
+    expect(groupByLabel(dialog, 'Busiest Hour')).toHaveTextContent('3 sessions');
+    expect(groupByLabel(dialog, 'Off-Peak Charging')).toHaveTextContent('of sessions between 10 PM–6 AM');
     expect(JSON.parse(container.querySelector('[data-chart-rows]')?.getAttribute('data-chart-rows') ?? '[]')).toEqual(hourlyData);
   });
   it('retries an empty savings comparison without resetting assumptions or inventing costs', () => {
@@ -285,17 +300,19 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     const { container } = render(<BillVarianceCard vehicleId={7} />);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(value(container, 'Energy Δ')).toBe('-2.00 kWh');
-    expect(tile(container, 'Energy Δ')).toHaveTextContent(`(${fmtNumber(bill.energy_delta_pct)}%)`);
     expect(value(container, 'Cost Δ')).toBe('$-1.25');
-    expect(tile(container, 'Cost Δ')).toHaveTextContent(`(${fmtNumber(bill.cost_delta_pct)}%)`);
     expect(value(container, 'Cabinet loss')).toBe(`${fmtNumber(bill.cabinet_loss_pct)}%`);
     expect(value(container, 'Invoiced total')).toBe(`$${fmtNumber(bill.invoiced_cost)}`);
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, 'Energy Δ')).toHaveTextContent(`(${fmtNumber(bill.energy_delta_pct)}%)`);
+    expect(groupByLabel(dialog, 'Cost Δ')).toHaveTextContent(`(${fmtNumber(bill.cost_delta_pct)}%)`);
     expect(screen.getAllByText('Needs review').length).toBeGreaterThan(0);
     expect(screen.getByText('3 measured · 2 invoiced DC sessions')).toBeInTheDocument();
     expect(screen.getByText(bill.explanation)).toBeInTheDocument();
     expect(screen.getAllByText(/Reconciliation is independent of the selected date range/).length).toBeGreaterThan(0);
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(state.query.refetch).toHaveBeenCalledOnce();
   });
   it('keeps eight forecast detail metrics, both shares/rates, annual/lifetime/modelled operands and all valid insights', () => {
@@ -318,9 +335,11 @@ describe('live cost stats preserve every original numeric/text/fact/action contr
     const partial = { ...forecastData, breakdown: undefined, insights: [],
       gas_comparison: { ...forecastData.gas_comparison, monthly_savings: undefined } } as unknown as typeof forecastData;
     const { container } = render(<ForecastDetails forecastData={partial} period={period} />);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(tile(container, 'Monthly Savings')).toHaveAttribute('data-value-state', 'missing');
-    expect(value(container, 'Monthly Savings')).toBe('—');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    const dialogs = screen.getAllByRole('button', { name: 'Review details' });
+    expect(dialogs).toHaveLength(1);
+    fireEvent.click(dialogs[0]!);
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText('Breakdown will appear once charging data is available.')).toBeInTheDocument();
     expect(screen.getByText('Insights will appear as more data is collected.')).toBeInTheDocument();
   });

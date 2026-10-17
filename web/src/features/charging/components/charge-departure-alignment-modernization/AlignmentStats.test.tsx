@@ -76,23 +76,22 @@ describe('AlignmentStats derived summary semantics', () => {
     const { container } = render(<AlignmentStats {...props({ summary: input })} />, { wrapper: Harness });
     const brief = container.querySelector<HTMLElement>('[data-operational-brief]');
     if (!brief) throw new Error('Missing alignment brief');
-    expect(within(brief).getByText('Derived', { exact: true })).toBeInTheDocument();
-    expect(within(brief).getByText(english.chargeDepartureAlignment.modernization.inference)).toBeInTheDocument();
     expect(screen.queryByText('Recorded measurements from the stated charging source and scope.')).not.toBeInTheDocument();
     expect(screen.queryByText('Source measurements available')).not.toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(metric(container, 'alignment-avg-dwell')).toHaveTextContent('1h 15m');
     expect(metric(container, 'alignment-avg-margin')).toHaveTextContent('45.10%');
     expect(metric(container, 'alignment-misaligned-rate')).toHaveTextContent('50.00%');
-    expect(metric(container, 'alignment-misaligned-rate')).toHaveTextContent('1 of 2 paired sessions');
-    expect(metric(container, 'alignment-paired')).toHaveTextContent('of 3 ended charges within 24h of a drive');
     expect(screen.getByText('3 charge source records; 2 drive source records')).toBeInTheDocument();
     expect(container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
+    assertOperationalBriefDisclosure(document.body, 'Derived');
     fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
     const details = screen.getByRole('dialog');
     expect(within(details).getByText('Derived', { exact: true })).toBeInTheDocument();
     expect(within(details).getAllByText(english.chargeDepartureAlignment.modernization.inference)).toHaveLength(2);
     expect(within(details).getAllByText(/not complete lifetime coverage/).length).toBeGreaterThan(0);
+    expect(within(details).getByRole('group', { name: 'Misaligned rate' })).toHaveTextContent('1 of 2 paired sessions');
+    expect(within(details).getByRole('group', { name: 'Paired sessions' })).toHaveTextContent('of 3 ended charges within 24h of a drive');
     expect(JSON.stringify(input)).toBe(original);
     expect(input.avgDwellS).toBe(4500);
   });
@@ -100,10 +99,10 @@ describe('AlignmentStats derived summary semantics', () => {
   it('keeps unavailable history unknown rather than inventing zero counts or measured values', () => {
     const { container } = render(<AlignmentStats {...props({ summary: undefined })} />, { wrapper: Harness });
     assertOperationalBriefDisclosure(document.body, 'Source unavailable');
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
-    expect(metric(container, 'alignment-paired')).toHaveTextContent('of — ended charges');
-    expect(metric(container, 'alignment-misaligned-rate')).toHaveTextContent('— of — paired sessions');
-    expect(screen.getAllByText('History has not loaded.')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('No source measurements')).not.toBeInTheDocument();
   });
 
@@ -115,27 +114,26 @@ describe('AlignmentStats derived summary semantics', () => {
     const { container } = render(<AlignmentStats {...props({ summary: empty })} />, { wrapper: Harness });
     expect(metric(container, 'alignment-paired')).toHaveAttribute('data-value-state', 'value');
     expect(metric(container, 'alignment-paired').querySelector('[data-operational-value]')).toHaveTextContent('0');
-    for (const key of ['alignment-avg-dwell', 'alignment-avg-margin', 'alignment-misaligned-rate']) {
-      expect(metric(container, key)).toHaveAttribute('data-value-state', 'missing');
-    }
-    expect(metric(container, 'alignment-misaligned-rate')).toHaveTextContent('0 of 0 paired sessions');
-    expect(screen.getAllByText('No paired sessions to show yet.').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    assertOperationalBriefDisclosure(document.body, 'No paired sessions to show yet.');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('Derived', { exact: true })).not.toBeInTheDocument();
   });
 
   it('preserves valid derived zero and partial margin without treating either as measured source availability', () => {
     const zero = summary({ avgDwellS: 0, avgReadinessMarginPct: 0, misalignedCount: 0, misalignedRatePct: 0 });
     const { container, rerender } = render(<AlignmentStats {...props({ summary: zero })} />, { wrapper: Harness });
-    expect(screen.getByText('Derived', { exact: true })).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Derived');
     expect(metric(container, 'alignment-avg-dwell')).toHaveTextContent('0m');
     expect(metric(container, 'alignment-avg-margin')).toHaveTextContent('0.00%');
     expect(metric(container, 'alignment-misaligned-rate')).toHaveTextContent('0.00%');
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
     rerender(<AlignmentStats {...props({ summary: { ...zero, avgReadinessMarginPct: null } })} />);
-    expect(screen.getByText('Partial source')).toBeInTheDocument();
-    expect(metric(container, 'alignment-avg-margin')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric(container, 'alignment-avg-margin')).toHaveTextContent('No paired drive has a recorded end SoC.');
+    assertOperationalBriefDisclosure(document.body, 'Partial source');
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty field is hidden.')).toBeInTheDocument();
   });
 
   it.each([
@@ -143,9 +141,11 @@ describe('AlignmentStats derived summary semantics', () => {
     { case: 'at', rate: 40, tone: 'warning' },
     { case: 'above', rate: 40.1, tone: 'warning' },
   ])('preserves the heuristic warning threshold $case forty percent', ({ rate, tone }) => {
-    const { container } = render(<AlignmentStats {...props({ summary: summary({ misalignedRatePct: rate }) })} />,
+    render(<AlignmentStats {...props({ summary: summary({ misalignedRatePct: rate }) })} />,
       { wrapper: Harness });
-    expect(within(metric(container, 'alignment-misaligned-rate')).getByText('Heuristic flags, not confirmed faults'))
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const group = within(screen.getByRole('dialog')).getByRole('group', { name: 'Misaligned rate' });
+    expect(within(group).getByText('Heuristic flags, not confirmed faults'))
       .toHaveClass(`text-[var(--semantic-${tone})]`);
   });
 

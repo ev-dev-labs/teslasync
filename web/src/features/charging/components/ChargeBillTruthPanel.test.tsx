@@ -69,10 +69,12 @@ describe('ChargeBillTruthPanel', () => {
     const { container } = render(<ChargeBillTruthPanel session={session({
       billed_energy_wh: null, billed_cost_decimal: null, billed_rate_per_kwh: null,
     })} />);
-    expect(container.querySelector('[data-operational-metric="billed"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="billed"]')).toBeNull();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     expect(container.querySelector('[data-operational-metric="pack"] [data-operational-value]'))
       .toHaveTextContent('42.62 kWh');
     expect(screen.getByText(/Pack energy is measured; the bill is missing/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
 });

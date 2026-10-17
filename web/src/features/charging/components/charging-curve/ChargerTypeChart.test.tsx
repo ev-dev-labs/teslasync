@@ -238,7 +238,7 @@ describe('ChargerTypeChart — motion-aware series', () => {
       'data-chart-key', 'charger-type-chart',
     );
     expect(chartSpies.composed).toHaveBeenCalledWith(expect.objectContaining({
-      data: [{ label: 'Supercharger', count: 1, avgKw: 120, avgKwh: 40, avgDuration: 30 }],
+      data: [{ label: 'Supercharger', categoryId: 'Supercharger', count: 1, avgKw: 120, avgKwh: 40, avgDuration: 30 }],
     }));
     expect(chartSpies.bar.mock.calls.map(([props]) => ({
       dataKey: props.dataKey,

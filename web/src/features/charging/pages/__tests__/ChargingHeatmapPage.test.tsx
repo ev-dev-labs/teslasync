@@ -795,10 +795,8 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
     renderPage();
     await screen.findByRole('img', { name: GRID_ARIA });
 
-    const text = kpiValue('Avg Duration');
-    expect(text).not.toContain('NaN');
-    expect(text).toBe('—');
-    expect(screen.getByText('Avg Duration').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Charging summary' }), 'Avg Duration');
+    expect(screen.getByRole('region', { name: 'Charging summary' }).textContent).not.toContain('NaN');
     expect(kpiValue('Total Sessions')).toBe('2');
   });
 });

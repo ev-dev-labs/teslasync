@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetricPreferences } from '@/lib/metric-reference';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
@@ -45,10 +45,12 @@ describe('SavingsCalculator USD assumptions', () => {
     expect(screen.getByLabelText('Electricity rate (USD/kWh)')).toHaveValue(0.13);
     expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent))
       .toEqual(['$350.00', '$88.75', '$261.25', '$21.77']);
-    expect(screen.getByText('$0.35/mi')).toBeInTheDocument();
-    expect(screen.getByText('$0.09/mi')).toBeInTheDocument();
-    expect(screen.getByText('~$261.25 / year')).toBeInTheDocument();
     expect(container.textContent).not.toContain('€');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Gas Cost (equivalent)' })).toHaveTextContent('$0.35/mi');
+    expect(within(dialog).getByRole('group', { name: 'EV Cost (actual)' })).toHaveTextContent('$0.09/mi');
+    expect(within(dialog).getByRole('group', { name: 'Monthly Savings' })).toHaveTextContent('~$261.25 / year');
     expect(state.currency).toBe(currency);
   });
 

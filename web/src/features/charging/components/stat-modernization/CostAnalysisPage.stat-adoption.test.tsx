@@ -30,7 +30,8 @@ vi.mock('@/hooks/useSettings', () => ({ useSettings: () => ({ isMiles: true }) }
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ unitPrefs: { distance: 'mi' } }) }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: mocks.vehicleId }) }));
 vi.mock('@/hooks/useSavedViewUrl', () => ({ useSavedViewUrl: () => ({ currentQuery: '?from=2026-01-01&to=2026-01-31', apply: mocks.apply }) }));
-vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => ({ start: '2026-01-01', end: '2026-01-31', reset: mocks.resetRange }) }));
+vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => ({ start: '2026-01-01', end: '2026-01-31',
+  startInstant: '2026-01-01T00:00:00Z', endInstantExclusive: '2026-02-01T00:00:00Z', reset: mocks.resetRange }) }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => undefined }));
 vi.mock('@/api/hooks/useCharging', () => ({
   useChargingSessionsPaginated: mocks.query, useCostForecast: mocks.forecast,
@@ -51,6 +52,8 @@ vi.mock('../cost-analysis', () => ({
 vi.mock('@/components/layout', () => ({
   PageLayout: ({ children }: { children: ReactNode }) => <main>{children}</main>,
   PageContainer: ({ children }: { children: ReactNode }) => <main>{children}</main>,
+  Stack: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('@/components/motion', () => ({ FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> }));
 vi.mock('@/components/data-display', () => ({ SavedViewMenu: () => null }));
@@ -71,7 +74,7 @@ describe('actual production cost page wiring, not browser acceptance', () => {
   it('uses the legal API limit while preserving bounds, forecast independence, model operands and all six period consumers', () => {
     mocks.vehicleId = 7; model();
     render(<CostAnalysisPage />);
-    expect(mocks.query).toHaveBeenCalledWith(7, { limit: 1000, start: '2026-01-01', end: '2026-01-31' });
+    expect(mocks.query).toHaveBeenCalledWith(7, { limit: 1000, start: '2026-01-01T00:00:00Z', end: '2026-02-01T00:00:00Z' });
     expect(mocks.forecast).toHaveBeenCalledWith('7');
     expect(mocks.derivations.mock.calls[0]?.[0]).toMatchObject({
       sessions: [], gasPrice: 3.5, mpg: 30, electricityRate: 0.13, isMiles: true,
@@ -95,7 +98,7 @@ describe('actual production cost page wiring, not browser acceptance', () => {
   it('keeps unselected vehicle null, forecast disabled input and the original reset/retry functions', () => {
     mocks.vehicleId = null; model();
     render(<CostAnalysisPage />);
-    expect(mocks.query).toHaveBeenCalledWith(null, { limit: 1000, start: '2026-01-01', end: '2026-01-31' });
+    expect(mocks.query).toHaveBeenCalledWith(null, { limit: 1000, start: '2026-01-01T00:00:00Z', end: '2026-02-01T00:00:00Z' });
     expect(mocks.forecast).toHaveBeenCalledWith(null);
     const props = mocks.CostSummaryCards.mock.calls[0]?.[0];
     expect(props?.onResetRange).toBe(mocks.resetRange);

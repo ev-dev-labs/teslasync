@@ -166,7 +166,7 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(source.chargeHook).toHaveBeenLastCalledWith('7');
     expect(source.driveHook).toHaveBeenLastCalledWith('7');
     const stats = tiles(result.container);
-    expect(stats.map(tile => tile.querySelector(':scope > div:first-child > div:first-child')?.textContent)).toEqual([
+    expect(stats.map(tile => tile.querySelector(':scope > div:first-child')?.textContent)).toEqual([
       'Avg. Dwell Time', 'Avg. Readiness Margin', 'Misaligned Rate', 'Paired Sessions',
     ]);
     expect(stats[0]?.querySelector('[data-operational-value]'))

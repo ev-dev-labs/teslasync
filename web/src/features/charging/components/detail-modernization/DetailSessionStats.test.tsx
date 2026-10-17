@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import type { ChargingSession } from '@/api/types';
@@ -44,7 +44,7 @@ afterEach(() => {
 
 function metric(container: HTMLElement, label: string): Element {
   const item = Array.from(container.querySelectorAll('[data-operational-metric]'))
-    .find(tile => tile.querySelector(':scope > div:first-child > div:first-child')?.textContent === label);
+    .find(tile => tile.querySelector(':scope > div:first-child')?.textContent === label);
   if (!item) throw new Error(`Missing retained metric: ${label}`);
   return item;
 }
@@ -52,25 +52,35 @@ function text(container: HTMLElement, label: string): string {
   const tile = metric(container, label);
   return tile.querySelector('[data-operational-value]')?.textContent ?? '';
 }
+// The redesigned face shows live values only; context, scope and hidden
+// counts live in the Review-details drawer.
+function openDetails(): HTMLElement {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+function groupByLabel(dialog: HTMLElement, label: string): HTMLElement {
+  return within(dialog).getByRole('group', { name: label });
+}
 
 describe('detail stats bind real canonical formatting without changing specialist semantics', () => {
   it('retains eight readings, cabinet/pack distinctions, cost/rate contracts and exact event period', () => {
     const before = JSON.stringify(props);
     const { container } = render(<DetailSessionStats {...props} />);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
     expect(text(container, 'Energy')).toBe('44.49 kWh');
     expect(text(container, 'Duration')).toBe('60.00 min');
     expect(text(container, 'Peak Power')).toBe('150.00 kW');
     expect(text(container, 'SoC Range')).toBe('20.00–80.00%');
     expect(text(container, 'Total Cost')).toBe('$21.80');
     expect(text(container, 'Per kWh')).toBe('$0.49/kWh');
-    expect(text(container, 'Miles Added')).toBe('—');
     expect(text(container, 'kWh/h Avg')).toBe('44.49 kWh/h');
-    expect(screen.getByText('Vehicle measured 42.62 kWh')).toBeInTheDocument();
-    expect(screen.getByText('Tesla invoice')).toBeInTheDocument();
-    expect(container.querySelector('[data-help-key]')).toHaveAttribute('data-help-key', 'charging.detail.billedEnergyHelp');
+    const dialog = openDetails();
+    expect(within(dialog).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    expect(groupByLabel(dialog, 'Energy')).toHaveTextContent('Vehicle measured 42.62 kWh');
+    expect(groupByLabel(dialog, 'Total Cost')).toHaveTextContent('Tesla invoice');
+    expect(dialog.querySelector('[data-help-key]')).toHaveAttribute('data-help-key', 'charging.detail.billedEnergyHelp');
     expect(container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'event');
-    expect(container.querySelector('[data-operational-brief]')).toHaveTextContent('Charge Session #42');
+    expect(within(dialog).getByText(/Charge Session #42/)).toBeInTheDocument();
     expect(JSON.stringify(props)).toBe(before);
   });
   it('retains settings estimates, meaningful zero, absent rate/distance and ongoing event without all-time claims', () => {
@@ -79,14 +89,12 @@ describe('detail stats bind real canonical formatting without changing specialis
       energy={50000} duration={0} billedEnergy={null} cost={null} billedCost={null}
       costText="$6.00" calculatedRate={null} rateText="$0.12/kWh" averageRate={null} />);
     expect(text(container, 'Est. Cost')).toBe('$6.00');
-    expect(text(container, 'Duration')).toBe('—');
-    expect(metric(container, 'Duration')).toHaveAttribute('data-value-state', 'missing');
-    expect(text(container, 'Peak Power')).toBe('—');
     expect(text(container, 'SoC Range')).toBe('20.00–—%');
-    expect(text(container, 'kWh/h Avg')).toBe('—');
-    expect(screen.getByText('at $0.12/kWh')).toBeInTheDocument();
-    expect(screen.getByText('from settings')).toBeInTheDocument();
-    expect(metric(container, 'Duration')).toHaveTextContent('now');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    const dialog = openDetails();
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    expect(groupByLabel(dialog, 'Est. Cost')).toHaveTextContent('at $0.12/kWh');
+    expect(groupByLabel(dialog, 'Per kWh')).toHaveTextContent('from settings');
     expect(container.textContent).not.toMatch(/all time|lifetime|complete window/i);
   });
   it.each([null, NaN, Infinity, -Infinity])('keeps missing/invalid measurements unavailable (%s)', value => {
@@ -97,12 +105,10 @@ describe('detail stats bind real canonical formatting without changing specialis
       cost={value} billedCost={null} configuredRate={null} calculatedRate={value}
       costText="$0.00" rateText="$0.00/kWh" distanceM={value} distanceText="0 km"
       averageRate={value} />);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
-    for (const label of ['Energy', 'Duration', 'Peak Power', 'SoC Range', 'Est. Cost',
-      'Per kWh', 'Miles Added', 'kWh/h Avg']) {
-      expect(text(container, label)).toBe('—');
-      expect(metric(container, label)).not.toHaveAttribute('data-value-state', 'value');
-    }
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(within(dialog).getByText('8 empty fields are hidden.')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/NaN|Infinity/);
   });
   it.each([
@@ -112,8 +118,11 @@ describe('detail stats bind real canonical formatting without changing specialis
   ])('does not present %s timestamps as a zero duration', (_name, started_at, ended_at) => {
     const { container } = render(<DetailSessionStats {...props}
       session={{ ...session, started_at, ended_at }} duration={0} />);
-    expect(text(container, 'Duration')).toBe('—');
-    expect(text(container, 'kWh/h Avg')).toBe('—');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(text(container, 'Energy')).toBe('44.49 kWh');
+    const dialog = openDetails();
+    expect(within(dialog).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    expect(container.textContent).not.toContain('0.00 min');
   });
   it('preserves measured zero including completed zero duration and both SoC endpoints', () => {
     const { container } = render(<DetailSessionStats {...props}
@@ -131,7 +140,8 @@ describe('detail stats bind real canonical formatting without changing specialis
     expect(text(container, 'Peak Power')).toBe('0.00 kW');
     expect(text(container, 'SoC Range')).toBe('0.00–0.00%');
     expect(text(container, 'Total Cost')).toBe('$0.00');
-    expect(screen.getByText('Vehicle measured 0.00 kWh')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, 'Energy')).toHaveTextContent('Vehicle measured 0.00 kWh');
   });
   it('retains signed and fractional measurements without positive-only filtering', () => {
     const { container } = render(<DetailSessionStats {...props}
@@ -147,7 +157,8 @@ describe('detail stats bind real canonical formatting without changing specialis
     expect(text(container, 'Per kWh')).toBe('-$0.50/kWh');
     expect(text(container, 'Miles Added')).toBe('-0.1255 km');
     expect(text(container, 'kWh/h Avg')).toBe('-0.13 kWh/h');
-    expect(screen.getByText('Vehicle measured -0.25 kWh')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, 'Energy')).toHaveTextContent('Vehicle measured -0.25 kWh');
   });
   it('keeps the known end SoC when the starting endpoint is unknown', () => {
     const { container } = render(<DetailSessionStats {...props}
@@ -159,17 +170,19 @@ describe('detail stats bind real canonical formatting without changing specialis
       session={{ ...session, total_energy_added_wh: null, cost_decimal: null }}
       energy={0} vehicleEnergy={0} billedEnergy={null} cost={null} billedCost={null}
       costText="$0.00" averageRate={0} />);
-    expect(text(container, 'Energy')).toBe('—');
-    expect(text(container, 'Est. Cost')).toBe('—');
-    expect(text(container, 'kWh/h Avg')).toBe('—');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(text(container, 'Per kWh')).toBe('$0.49/kWh');
+    const dialog = openDetails();
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
   });
   it('retains cabinet energy without inventing a zero pack reading', () => {
     const { container } = render(<DetailSessionStats {...props}
       session={{ ...session, total_energy_added_wh: null }} vehicleEnergy={0} />);
     expect(text(container, 'Energy')).toBe('44.49 kWh');
     expect(container.textContent).not.toContain('Vehicle measured');
-    expect(container.querySelector('[data-help-key]')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(groupByLabel(dialog, 'Energy')).not.toHaveTextContent('Vehicle measured');
+    expect(dialog.querySelector('[data-help-key]')).toBeInTheDocument();
   });
   it('updates chosen energy units and precision while fixed source power/duration and supplied currency text survive', () => {
     const { container, rerender } = render(<DetailSessionStats {...props} />);
@@ -182,6 +195,7 @@ describe('detail stats bind real canonical formatting without changing specialis
     expect(text(container, 'Peak Power')).toBe('150.000 kW');
     expect(text(container, 'Total Cost')).toBe('$21.80');
     expect(text(container, 'Miles Added')).toBe('source specialist range');
-    expect(screen.getByText('Retained source measurements')).toBeInTheDocument();
+    const dialog = openDetails();
+    expect(within(dialog).getByText('Retained source measurements')).toBeInTheDocument();
   });
 });

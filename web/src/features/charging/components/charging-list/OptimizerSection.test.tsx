@@ -45,7 +45,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 
 import { OptimizerSection } from './OptimizerSection';
 import { gaugeColor } from '@/test/gaugeTestUtils';
@@ -63,7 +63,12 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        const template = typeof fallback === 'string' ? fallback : key;
+        return options
+          ? template.replace(/{{(\w+)}}/g, (_m, name: string) => String(options[name] ?? ''))
+          : template;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -138,6 +143,14 @@ function makeOptimizer(o: OptimizerOverrides = {}): ChargingOptimizerData {
 const renderSection = (o?: OptimizerOverrides) =>
   render(<OptimizerSection optimizer={makeOptimizer(o)} />);
 
+// The redesigned face shows live values only; unknown readings are omitted
+// and counted in each brief's Review-details drawer (habits first, cost second).
+function openDetails(index: number): HTMLElement {
+  const buttons = screen.getAllByRole('button', { name: 'Review details' });
+  fireEvent.click(buttons[index]!);
+  return screen.getByRole('dialog');
+}
+
 /** The section renders a single LinearGauge; this is its fill colour. */
 const gaugeStroke = (container: HTMLElement) => gaugeColor(container);
 
@@ -196,8 +209,9 @@ describe('OptimizerSection — charging habits', () => {
     };
     const { container } = render(<OptimizerSection optimizer={dirty} />);
 
-    // Both nullish rows collapse to the em-dash placeholder — and nothing else does.
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    // Both nullish rows are omitted from the face and counted in the drawer.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(within(openDetails(0)).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(container.textContent).not.toContain('undefined:00');
     expect(container.textContent).not.toContain('undefined');
   });
@@ -209,9 +223,12 @@ describe('OptimizerSection — charging habits', () => {
   });
 
   it.each([0, -1, NaN, Infinity, 101])('shows unknown instead of a location share for %s', (value) => {
-    renderSection({ schedule: { home_charging_pct: value } });
-    expect(screen.getByText('Most-used recorded location').closest('[data-operational-metric]')).toHaveTextContent('—');
-    expect(screen.getByText('Location clusters do not confirm home charging. Missing location evidence is shown as unknown.')).toBeInTheDocument();
+    const { container } = renderSection({ schedule: { home_charging_pct: value } });
+    expect(screen.queryByText('Most-used recorded location')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(9);
+    const dialog = openDetails(0);
+    expect(within(dialog).getByText('1 empty fields are hidden.')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Location clusters do not confirm home charging. Missing location evidence is shown as unknown.').length).toBeGreaterThan(0);
   });
 
   it('preserves a fully recorded location share without claiming it is home', () => {
@@ -268,9 +285,9 @@ describe('OptimizerSection — cost analysis', () => {
     expect(screen.getByRole('heading', { name: 'Cost Analysis' })).toBeInTheDocument();
     expect(screen.getByText('0.42/kWh')).toBeInTheDocument();
     expect(screen.getByText('0.11/kWh')).toBeInTheDocument();
-    expect(screen.getByText('Hourly costs combine recorded charging locations, not a confirmed tariff. Savings are illustrative, not guaranteed.')).toBeInTheDocument();
     expect(screen.getByText('17:00, 18:00, 19:00')).toBeInTheDocument();
     expect(screen.getByText('1:00, 2:00, 3:00')).toBeInTheDocument();
+    expect(within(openDetails(1)).getAllByText('Hourly costs combine recorded charging locations, not a confirmed tariff. Savings are illustrative, not guaranteed.').length).toBeGreaterThan(0);
   });
 
   it('flags a high peak-session share red and a low share emerald', () => {
@@ -282,9 +299,10 @@ describe('OptimizerSection — cost analysis', () => {
   });
 
   it('shows "—" for empty peak / off-peak hour lists (never a blank cell)', () => {
-    renderSection({ cost: { peak_hours: [], offpeak_hours: [] } });
-    // Exactly the two hour rows fall back to the em-dash (habits day/hour are set).
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    const { container } = renderSection({ cost: { peak_hours: [], offpeak_hours: [] } });
+    // Exactly the two hour rows are omitted from the face (habits day/hour are set).
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(within(openDetails(1)).getByText('2 empty fields are hidden.')).toBeInTheDocument();
   });
 });
 

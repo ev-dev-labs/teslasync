@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
@@ -38,7 +39,11 @@ describe('charging curve category exports', () => {
   it.each(['CurveSourceSection.tsx', 'CurveSummary.tsx'])(
     '%s uses existing category boundaries without deep shared imports',
     file => {
-      const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+      // Filesystem paths rather than Vite's transformed import.meta.url (see
+      // ChargingDetailPage.source-contract.test.ts prior art).
+      const dir = resolve(process.cwd(), existsSync(resolve(process.cwd(), 'src')) ? 'src' : 'web/src',
+        'features/charging/components/charging-curve-modernization');
+      const source = readFileSync(resolve(dir, file), 'utf8');
       const imports = [...source.matchAll(/from ['"](@\/components\/[^'"]+)['"]/g)]
         .map(match => match[1]);
       expect(imports).toContain('@/components/layout');

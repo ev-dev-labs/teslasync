@@ -69,32 +69,41 @@ describe('live charging overview source preservation', () => {
     expect(tile(container, 'charge.avgDuration').querySelector('[data-operational-value]')).toHaveTextContent(formatDurationMinutes(chargingStats.avgDurationMin));
     expect(screen.getByText('Overall charging rate')).toBeInTheDocument();
     expect(screen.getByText('Mean session power')).toBeInTheDocument();
-    expect(screen.getByText('Avg rate (kW)')).toBeInTheDocument();
-    expect(screen.getByText('Avg power (kW)')).toBeInTheDocument();
     expect(screen.getByText(props.secondary)).toBeInTheDocument();
     expect(JSON.stringify(chargingStats)).toBe(before);
-    expect(container.querySelector('[data-testid="charging-overview"] [role="list"]')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3');
+    const banks = container.querySelectorAll('[data-operational-metric-bank]');
+    expect(banks).toHaveLength(2);
+    expect(Array.from(banks).map(bank => bank.getAttribute('data-columns'))).toEqual(['3', '3']);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const details = within(screen.getByRole('dialog', { name: 'Overview details' }));
+    expect(details.getByRole('group', { name: 'Overall charging rate' })).toHaveTextContent('Avg rate (kW)');
+    expect(details.getByRole('group', { name: 'Mean session power' })).toHaveTextContent('Avg power (kW)');
     const limitations = details.getByText('Limitations').parentElement!;
     expect(within(limitations).getByText(period.provenance)).toBeInTheDocument();
   });
   it('composes the original Delta operands/precision/direction and prior tooltip without computing a new delta', () => {
-    const { container } = render(<ChargingOverviewStats {...props} />);
-    expect(tile(container, 'charge.sessions').querySelector('[title]')).toHaveTextContent('50.00%');
-    expect(tile(container, 'charge.overallRate').querySelector('[title]')).toHaveTextContent('21.25%');
-    expect(tile(container, 'charge.overallRate')).toHaveTextContent('Aggregate');
-    expect(tile(container, 'charge.meanSessionPower').querySelector('[title]')).toHaveTextContent('8.13%');
-    expect(tile(container, 'charge.overallRate').querySelector('[title]'))
+    render(<ChargingOverviewStats {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = within(screen.getByRole('dialog', { name: 'Overview details' }));
+    const group = (label: string) => details.getByRole('group', { name: label });
+    expect(group('Sessions').querySelector('[title]')).toHaveTextContent('50.00%');
+    expect(group('Overall charging rate').querySelector('[title]')).toHaveTextContent('21.25%');
+    expect(group('Overall charging rate')).toHaveTextContent('Aggregate');
+    expect(group('Mean session power').querySelector('[title]')).toHaveTextContent('8.13%');
+    expect(group('Overall charging rate').querySelector('[title]'))
       .toHaveAttribute('title', `${fmtNumber(chargingStats.avgRateKw)} vs ${fmtNumber(priorChargingStats.avgRateKw)}`);
-    expect(tile(container, 'charge.overallRate').querySelector('[title]')?.className)
+    expect(group('Overall charging rate').querySelector('[title]')?.className)
       .toContain('text-[var(--text-secondary)]');
   });
   it('keeps the original previous-zero percent em dash rather than fabricating Infinity or absolute change', () => {
     const priorZero = { ...priorChargingStats, count: 0, totalEnergyWh: 0, totalCost: 0,
       avgRateKw: 0, avgDurationMin: 0, avgPowerW: 0 };
-    const { container } = render(<ChargingOverviewStats {...props} priorStats={priorZero} />);
-    for (const item of container.querySelectorAll('[data-operational-metric] [title]')) {
+    render(<ChargingOverviewStats {...props} priorStats={priorZero} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = within(screen.getByRole('dialog', { name: 'Overview details' }));
+    const deltas = details.getAllByRole('group').flatMap(group => Array.from(group.querySelectorAll('[title]')));
+    expect(deltas).toHaveLength(6);
+    for (const item of deltas) {
       expect(item).toHaveTextContent('—');
       expect(item).not.toHaveTextContent(/Infinity|NaN/);
     }
@@ -104,10 +113,10 @@ describe('live charging overview source preservation', () => {
       priorLabel="Prior range is outside the returned source"
       hasRecordedCosts={false} stats={{ ...chargingStats, avgRateKw: NaN, avgPowerW: null, avgDurationMin: null }} />);
     expect(container.querySelectorAll('[data-operational-metric] [title]')).toHaveLength(0);
-    expect(tile(container, 'charge.overallRate')).toHaveAttribute('data-value-state', 'invalid');
-    expect(tile(container, 'charge.meanSessionPower')).toHaveAttribute('data-value-state', 'missing');
-    expect(tile(container, 'charge.recordedCost')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('No recorded session costs in the selected returned sessions.')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = within(screen.getByRole('dialog', { name: 'Overview details' }));
+    expect(details.getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText('Prior range is outside the returned source')).toBeInTheDocument();
   });
   it('keeps meaningful zero cost, cached values on refresh, original ID and the anomaly action', () => {

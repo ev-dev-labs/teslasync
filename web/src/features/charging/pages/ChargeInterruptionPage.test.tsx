@@ -188,7 +188,7 @@ describe('ChargeInterruptionPage source adoption and preservation', () => {
     const summary = analyzeChargeInterruptions(history);
     expect(source.historyHook).toHaveBeenLastCalledWith('7');
     expect(tiles(result.container)).toHaveLength(6);
-    const labels = tiles(result.container).map(tile => tile.querySelector(':scope > div:first-child > div:first-child')?.textContent);
+    const labels = tiles(result.container).map(tile => tile.querySelector(':scope > div:first-child')?.textContent);
     expect(labels).toEqual([
       'Overall Risk', 'Suspected Sessions', 'Highest-Risk Site',
       'Sites Tracked', 'Loaded sessions', 'Evaluable sessions',

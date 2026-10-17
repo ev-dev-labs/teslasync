@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { ChargeRateStats } from './helpers';
 import { ChargeRatePanel } from './ChargeRatePanel';
@@ -46,6 +46,15 @@ function metricByLabel(label: string): HTMLElement {
   if (!panel) throw new Error(`No metric panel found for "${label}"`);
   return panel as HTMLElement;
 }
+// The redesigned face shows live values only; descriptions and per-metric
+// evidence live in the Review-details drawer.
+function openDetails(): HTMLElement {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+function groupByLabel(dialog: HTMLElement, label: string): HTMLElement {
+  return within(dialog).getByRole('group', { name: label });
+}
 
 describe('ChargeRatePanel', () => {
   it('labels throughput as delivery rate instead of claiming conversion efficiency', () => {
@@ -53,10 +62,10 @@ describe('ChargeRatePanel', () => {
 
     expect(screen.getByRole('heading', { name: 'Charging delivery rate' })).toBeInTheDocument();
     expect(
-      screen.getByText(
+      within(openDetails()).getAllByText(
         'Observed energy per elapsed hour; this is power delivery, not wall-to-battery efficiency.',
-      ),
-    ).toBeInTheDocument();
+      ).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText('Average Efficiency')).not.toBeInTheDocument();
     expect(screen.queryByText('Wall-to-Battery Loss')).not.toBeInTheDocument();
   });
@@ -66,11 +75,12 @@ describe('ChargeRatePanel', () => {
 
     expect(within(metricByLabel('Average delivery rate')).getByText('20.00 kW')).toBeInTheDocument();
     expect(within(metricByLabel('Highest-rate session')).getByText('30.00 kW')).toBeInTheDocument();
-    expect(
-      within(metricByLabel('Highest-rate session')).getByText('dt(2026-04-15T12:00:00Z)'),
-    ).toBeInTheDocument();
     expect(within(metricByLabel('Lowest-rate session')).getByText('10.00 kW')).toBeInTheDocument();
     expect(within(metricByLabel('Observed delivery')).getByText('40.00 kWh')).toBeInTheDocument();
-    expect(metricByLabel('Observed delivery')).toHaveTextContent('2.00 h across 2 sessions');
+    const dialog = openDetails();
+    expect(
+      within(groupByLabel(dialog, 'Highest-rate session')).getByText('dt(2026-04-15T12:00:00Z)'),
+    ).toBeInTheDocument();
+    expect(groupByLabel(dialog, 'Observed delivery')).toHaveTextContent('2.00 h across 2 sessions');
   });
 });

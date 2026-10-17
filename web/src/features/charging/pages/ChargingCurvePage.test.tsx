@@ -336,7 +336,7 @@ describe('ChargingCurvePage', () => {
     ];
     expected.forEach(([label, value], index) => {
       expect(tiles[index]).toHaveAttribute('data-value-state', 'value');
-      expect(tiles[index].querySelector(':scope > div:first-child > div:first-child')).toHaveTextContent(label);
+      expect(tiles[index].querySelector(':scope > div:first-child')).toHaveTextContent(label);
       expect(tiles[index].querySelector('[data-operational-value]')).toHaveTextContent(value);
     });
     expect(h.queryCall).toHaveBeenLastCalledWith(7, {
@@ -504,11 +504,12 @@ describe('ChargingCurvePage', () => {
     // Zero returned sessions is known; absent measurements are not zero.
     const stats = screen.getByTestId('charging-curve-summary');
     const sessionCount = stats.querySelector('[data-operational-metric="totalSessions"]');
-    expect(stats.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(stats.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     expect(sessionCount).toHaveAttribute('data-value-state', 'value');
     expect(sessionCount?.querySelector('[data-operational-value]'))
       .toHaveTextContent('0');
-    expect(stats.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('5 empty fields are hidden.')).toBeInTheDocument();
     expect(stats).not.toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('combobox', { name: /Inspect session/i })).toBeDisabled();
 
@@ -601,8 +602,10 @@ describe('ChargingCurvePage', () => {
     const stats = screen.getByTestId('charging-curve-summary');
     expect(stats.querySelector('[data-operational-metric="totalSessions"] [data-operational-value]'))
       .toHaveTextContent('1');
-    expect(stats.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    expect(stats.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     expect(screen.getByText('Some session measurements are incomplete')).toBeInTheDocument();
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('5 empty fields are hidden.')).toBeInTheDocument();
     for (const id of ['comparison-chart', 'charger-type-chart', 'speed-trend-chart', 'ttc-section']) {
       expect(screen.getByTestId(id)).toHaveAttribute('data-count', '1');
     }
