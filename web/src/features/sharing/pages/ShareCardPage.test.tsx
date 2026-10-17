@@ -453,10 +453,12 @@ describe('ShareCardPage query states', () => {
     h.query = query([drive()], { isError: true, error: new Error('refresh failed') });
     renderPage();
     const ledger = screen.getByTestId('share-card-evidence-ledger');
-    expect(within(ledger).getByText('Cached')).toBeInTheDocument();
+    expect(within(ledger).queryByText('Cached')).not.toBeInTheDocument();
     expect(ledger.querySelector('[data-operational-metric="energy"]')).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(within(ledger).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('2.0 kWh')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Cached')).toBeInTheDocument();
+    expect(within(dialog).getByText('2.0 kWh')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download safe SVG' })).toBeEnabled();
   });
 

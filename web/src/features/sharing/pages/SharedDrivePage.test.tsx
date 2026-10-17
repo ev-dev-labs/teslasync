@@ -279,8 +279,30 @@ vi.mock('@/components/charts', async () => ({
 
 vi.mock('@/components/layout', async () => {
   const actual = await vi.importActual<typeof import('@/components/layout')>('@/components/layout')
-  const charts = await vi.importMock<typeof import('@/components/charts')>('@/components/charts')
-  return { ...actual, ChartCard: charts.ChartContainer }
+  // NOTE: the ChartCard stub is defined inline (not via
+  // `vi.importMock('@/components/charts').ChartContainer`): the importMock
+  // round-trip resolves to the REAL forwardRef ChartContainer, so the real
+  // EmbeddedChart (figure/img/data-table) renders instead of this stub and
+  // `h.charts.frames` stays empty.
+  const ChartCardStub = ({
+    title,
+    ariaLabel,
+    children,
+    ...props
+  }: {
+    title?: string
+    ariaLabel?: string
+    children?: ReactNode
+  } & (typeof h.charts.frames)[number]) => {
+    h.charts.frames.push({ title, ...props })
+    return (
+    <section aria-label={ariaLabel}>
+      <h3>{title}</h3>
+      {children}
+    </section>
+    )
+  }
+  return { ...actual, ChartCard: ChartCardStub }
 })
 
 /* ── Motion barrel → inert passthrough (avoid framer timing/act churn) ────── */
@@ -637,6 +659,10 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
         h.unit.locale = 'de-DE'
         setGlobalPrecision(3)
         setGlobalLocale('de-DE')
+        // usePublicDisplayFormatting is an explicit-context useMemo with no
+        // formatter-global subscription (see its docstring), so the mounted
+        // tree re-reads the new prefs on its next render pass.
+        view.rerenderPage()
       })
       expect(screen.getByText('5,000 km')).toBeInTheDocument()
       expect(screen.getByText('108,000 km/h')).toBeInTheDocument()
@@ -788,7 +814,7 @@ describe('SharedDrivePage — imperial boundary', () => {
     expect(speedTick(0)).toBe('0')
     expect(speedTick(-0.4)).toBe('0')
     expect(elevationTick(h.charts.areaData[0].elevation))
-      .toBe(unit === 'mi' ? '4.050 ft' : '1.235 m')
+      .toBe(unit === 'mi' ? '4.051 ft' : '1.235 m')
     expect(speedTick(h.charts.lineData[0].speed))
       .toBe(unit === 'mi' ? '2.237' : '3.600')
     expect(h.charts.frames[0].exportData).toEqual(payload.elevation_profile)

@@ -291,7 +291,7 @@ describe('SharingTripsPage — ready', () => {
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'value');
     expect(within(brief).getByText('70000m')).toBeInTheDocument();
-    expect(within(brief).getByText(/at most 20 trips/, { selector: 'p' })).toBeInTheDocument();
+    expect(within(brief).queryByText(/at most 20 trips/)).not.toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('70000m')).toBeInTheDocument();
@@ -391,11 +391,13 @@ describe('SharingTripsPage — background error with cached data', () => {
     });
     renderPage();
     const brief = screen.getByTestId('sharing-trips-operational-brief');
-    expect(within(brief).getByText('Cached trips; refresh failed')).toBeInTheDocument();
+    expect(within(brief).queryByText('Cached trips; refresh failed')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('option', { name: 'Morning commute' }));
     expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '101');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('14000Wh')).toBeInTheDocument();
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Cached trips; refresh failed')).toBeInTheDocument();
+    expect(within(drawer).getByText('14000Wh')).toBeInTheDocument();
   });
 
   it('keeps rendering the cached totals + list instead of the destructive error banner', () => {
@@ -442,7 +444,9 @@ describe('SharingTripsPage — empty', () => {
     ])('keeps independent share and AI sections without inferring empty totals for $fetchStatus', ({ fetchStatus, message }) => {
       h.tripsQuery = makeQuery({ fetchStatus });
       renderPage();
-      expect(screen.getAllByText(message)).toHaveLength(2);
+      expect(screen.getAllByText(message)).toHaveLength(1);
+      fireEvent.click(within(screen.getByTestId('sharing-trips-operational-brief')).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText(message)).toBeInTheDocument();
       expect(screen.queryByText('No recent trips. Drive your vehicle to populate this list.')).not.toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Static share cards' })).toBeInTheDocument();
       expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');

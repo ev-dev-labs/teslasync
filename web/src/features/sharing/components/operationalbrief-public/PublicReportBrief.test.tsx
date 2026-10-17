@@ -53,10 +53,12 @@ describe('PublicReportBrief — real query-free renderer', () => {
       testId="public-test-brief" />);
     const brief = screen.getByTestId('public-test-brief');
     expect(within(brief).getByText('1.00 mi')).toBeInTheDocument();
-    expect(within(brief).getByText('Distance supplied in meters by the public source.')).toBeInTheDocument();
-    expect(within(brief).getByText('The report date describes the event, not data freshness.')).toBeInTheDocument();
+    expect(within(brief).queryByText('Distance supplied in meters by the public source.')).not.toBeInTheDocument();
+    expect(within(brief).queryByText('The report date describes the event, not data freshness.')).not.toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Public evidence details' });
+    expect(within(drawer).getByText('Distance supplied in meters by the public source.')).toBeInTheDocument();
+    expect(within(drawer).getByText('The report date describes the event, not data freshness.')).toBeInTheDocument();
     expect(within(drawer).getByText('distance_m: 1609.344 m')).toBeInTheDocument();
     expect(within(drawer).getAllByText('Owner-shared drive payload').length).toBeGreaterThan(0);
     expect(within(drawer).getAllByText(/Report event date: 2026-03-15/).length).toBeGreaterThan(0);
@@ -80,15 +82,17 @@ describe('PublicReportBrief — real query-free renderer', () => {
       source="Public payload" eventDate="" metrics={metrics} preferences={preferences}
       evidence={[{ field: 'energy_added_wh', value: 0, unit: 'Wh' }, { field: 'duration_s', value: null, unit: 's' }]}
       testId="public-states-brief" />);
-    const items = within(screen.getByTestId('public-states-brief')).getAllByRole('listitem');
-    expect(items).toHaveLength(3);
+    const face = screen.getByTestId('public-states-brief');
+    const items = within(face).getAllByRole('listitem');
+    expect(items).toHaveLength(1);
     expect(items[0]).toHaveAttribute('data-value-state', 'value');
     expect(within(items[0]).getByText('0.00 kWh')).toBeInTheDocument();
-    expect(items[1]).toHaveAttribute('data-value-state', 'missing');
-    expect(within(items[1]).getByText('—')).toBeInTheDocument();
-    expect(items[2]).toHaveAttribute('data-value-state', 'invalid');
+    expect(within(face).queryByText('—')).not.toBeInTheDocument();
+    expect(within(face).queryByText('Unknown duration')).not.toBeInTheDocument();
+    expect(within(face).queryByText('Invalid speed')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Source states details' });
+    expect(within(drawer).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(within(drawer).getByText('energy_added_wh: 0 Wh')).toBeInTheDocument();
     expect(within(drawer).queryByText('duration_s: 0 s')).not.toBeInTheDocument();
     expect(within(drawer).queryByText('duration_s: null s')).not.toBeInTheDocument();
