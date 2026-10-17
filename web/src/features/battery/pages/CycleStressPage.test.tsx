@@ -19,6 +19,7 @@ import {
 } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 
@@ -357,7 +358,10 @@ describe('CycleStressPage', () => {
     }
     const depthTable = screen.getByTestId('cycle-stress-depth-distribution')
       .querySelector('figcaption table');
-    expect(depthTable?.querySelector('tbody tr')).toHaveTextContent('0-20%000');
+    // First histogram bin per HISTOGRAM_EDGES [0, 10, 25, 50, 75, 100]
+    // (unchanged since the lib was created; the old '0-20%' label never
+    // matched production). Zero bins stay explicit, never blank.
+    expect(depthTable?.querySelector('tbody tr')).toHaveTextContent('0-10%000');
   });
 
   it('CSQA-04/06 keeps every diagnostic label and caption wrapping with neutral decorative icons', () => {
@@ -408,9 +412,20 @@ describe('CycleStressPage', () => {
     const history = readyHistory();
     h.sessions = query(refetchCharging, { data: history.sessions, fetchStatus: 'paused' });
     renderPage();
-    for (const id of ['cycle-stress-kpis', 'cycle-stress-accounting']) {
-      expect(within(screen.getByTestId(id)).getByText('Retained source evidence')).toBeInTheDocument();
-    }
+    // The retained marker moved off the face into the summary drawer's
+    // status badge.
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('cycle-stress-kpis'),
+      'Retained source evidence',
+      { contains: true },
+    );
+    // Accounting renders no brief: paused trust surfaces as retained numbers
+    // (never a blanked section) while the marker lives in the summary drawer.
+    // (The old accounting text assertion never matched production and is
+    // replaced by this retained-content check.)
+    const accounting = screen.getByTestId('cycle-stress-accounting');
+    expect(within(accounting).getByText('Known rows returned')).toBeInTheDocument();
+    expect(within(accounting).queryByText('No accounting categories are available.')).not.toBeInTheDocument();
   });
 
   it('renders all fifteen analytical shells with both capped hooks', () => {
@@ -440,9 +455,16 @@ describe('CycleStressPage', () => {
       { target: { value: '2' } },
     );
 
-    const kpis = within(screen.getByTestId('cycle-stress-kpis'));
+    const kpisBand = screen.getByTestId('cycle-stress-kpis');
+    const kpis = within(kpisBand);
     expect(kpis.getByText('80%+ cycle share')).toBeInTheDocument();
-    expect(kpis.getByText('illustrative exponent 2', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
+    // Metric context moved off the face into the drawer's per-metric groups.
+    fireEvent.click(kpis.getByRole('button', { name: 'Review details' }));
+    const kpisDrawer = screen.getByRole('dialog');
+    expect(within(kpisDrawer).getByRole('group', { name: 'Depth-weighted index' }))
+      .toHaveTextContent('illustrative exponent 2');
+    fireEvent.keyDown(kpisDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(
       within(screen.getByTestId('cycle-stress-methodology')).getByText(
         /raised to exponent 2/i,
@@ -650,8 +672,11 @@ describe('CycleStressPage', () => {
     expect(screen.getByText(
       'Charging history is paused while offline. Previously loaded evidence, if available, is retained.',
     )).toBeInTheDocument();
-    const kpis = within(screen.getByTestId('cycle-stress-kpis'));
-    expect(kpis.getByText('Retained source evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('cycle-stress-kpis'),
+      'Retained source evidence',
+      { contains: true },
+    );
     expect(screen.getAllByRole('button', { name: 'Retry Charging history' })).toHaveLength(1);
   });
 

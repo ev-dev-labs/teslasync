@@ -357,8 +357,10 @@ describe('PackCapacityPage', () => {
     renderPage();
 
     expectEverySection();
+    // The same copy also feeds a chart's visually-hidden ariaDescription;
+    // scope to the visible status banner.
     expect(
-      screen.getByText(
+      within(screen.getByTestId('pack-capacity-kpis')).getByText(
         'Charging history could not refresh. Showing the most recently loaded evidence.',
       ),
     ).toBeInTheDocument();

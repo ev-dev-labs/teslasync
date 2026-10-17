@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { analyzeCycleStress } from '../../lib/cycleStress';
 import type { ChargingSession } from '@/types/charging';
 import { CycleStressSummary } from './CycleStressSummary';
@@ -59,9 +60,20 @@ describe('cycle-stress source-preserving presentation', () => {
   it('renders six compact metrics with honest bounded period and specialist formatting', () => {
     const { container } = render(summary(ready), { wrapper: Provider });
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(container.querySelector('[data-battery-period]')).toHaveTextContent('Returned vehicle histories · bounded evidence');
-    expect(screen.getByText(/not a selected-date-window or full-history total/)).toBeInTheDocument();
-    expect(container.querySelector('[data-battery-detail-context]')).toHaveTextContent('1 total rows returned');
+    // Period scope, provenance and metric context moved off the face into
+    // the drawer; the tiles, comboboxes and brief stay on the face.
+    const kpis = screen.getByTestId('cycle-stress-kpis');
+    fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const drawerHeader = drawer.querySelector('[data-drawer-header]');
+    if (!(drawerHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+    expect(within(drawerHeader).getByText(/Returned vehicle histories/)).toBeVisible();
+    // Provenance reason echoes in three drawer surfaces: the header
+    // description plus the narrative methods and sources lines.
+    expect(within(drawer).getAllByText(/not a selected-date-window or full-history total/)).toHaveLength(3);
+    expect(within(drawer).getByRole('group', { name: 'Accepted intervals' })).toHaveTextContent('1 total rows returned');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Deep-cycle lens' })).toHaveAttribute('id', 'cycle-stress-threshold');
     expect(screen.getByRole('combobox', { name: 'Depth exponent' })).toHaveAttribute('id', 'cycle-stress-exponent');
     expect(container.querySelector('#cycle-stress-summary [data-operational-brief]')).not.toBeNull();
@@ -94,7 +106,15 @@ describe('cycle-stress source-preserving presentation', () => {
     fireEvent.click(charging.getByRole('button', { name: 'Retry Charging history' }));
     expect(chargingRetry).toHaveBeenCalledTimes(1);
     expect(driveRetry).not.toHaveBeenCalled();
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    // Fatal sources omit every tile: explanatory face state with label chips
+    // plus a counted drawer explanation per missing metric.
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    const fatalBand = screen.getByTestId('cycle-stress-kpis');
+    expect(within(fatalBand).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Accepted intervals', 'Equivalent full cycles', 'Depth-weighted index', 'Median depth', '60%+ cycle share', 'Evidence support']) {
+      expect(within(fatalBand).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(fatalBand, label);
+    }
     expect(screen.queryByText('private charging stack')).not.toBeInTheDocument();
     expect(screen.queryByText('private drive stack')).not.toBeInTheDocument();
   });
@@ -114,20 +134,36 @@ describe('cycle-stress source-preserving presentation', () => {
       { isPending: true });
     render(<CycleStressAccounting result={result} state={partial.state}
       retained={partial.retained} locale="en-US" />, { wrapper: Provider });
-    const accounting = within(screen.getByTestId('cycle-stress-accounting'));
-    expect(accounting.getByText('Retained source evidence')).toBeInTheDocument();
-    expect(accounting.getByText('available data: — drives + 1 charging')).toBeInTheDocument();
-    expect(accounting.getByText(/1 known returned = 1 included \+ 0 excluded/)).toBeInTheDocument();
+    const accountingSection = screen.getByTestId('cycle-stress-accounting');
+    const accounting = within(accountingSection);
+    // Retained status and metric context moved off the face into the drawer.
+    // Counts render via the locale number formatter ('1.00', '0.00').
+    assertOperationalBriefDisclosure(accountingSection, 'Retained source evidence', { contains: true });
+    expect(accounting.queryByText(/available data:/)).not.toBeInTheDocument();
     fireEvent.click(accounting.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('available data: — drives + 1 charging'))
+    const accountingDrawer = screen.getByRole('dialog');
+    expect(within(accountingDrawer).getByRole('group', { name: 'Known rows returned' }))
+      .toHaveTextContent('available data: — drives + 1.00 charging');
+    expect(within(accountingDrawer).getByText('available data: — drives + 1.00 charging'))
       .toBeVisible();
-    expect(screen.queryByText('available data: 0 drives + 1 charging')).not.toBeInTheDocument();
+    fireEvent.keyDown(accountingDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(accounting.getByText(/1 known returned = 1 included \+ 0 excluded/)).toBeInTheDocument();
+    expect(screen.queryByText('available data: 0.00 drives + 1.00 charging')).not.toBeInTheDocument();
   });
   it('CSQA-02 preserves successful empty source counts as known zero', () => {
     render(<CycleStressAccounting result={result} state={ready.state}
       retained={ready.retained} locale="en-US" />, { wrapper: Provider });
-    expect(within(screen.getByTestId('cycle-stress-accounting'))
-      .getByText('available data: 0 drives + 1 charging')).toBeInTheDocument();
+    // The known-zero drive count surfaces as '0.00 drives' in the drawer's
+    // 'Known rows returned' group (never '—', never zeroed away).
+    const zeroSection = screen.getByTestId('cycle-stress-accounting');
+    expect(within(zeroSection).queryByText(/available data:/)).not.toBeInTheDocument();
+    fireEvent.click(within(zeroSection).getByRole('button', { name: 'Review details' }));
+    const zeroDrawer = screen.getByRole('dialog');
+    expect(within(zeroDrawer).getByRole('group', { name: 'Known rows returned' }))
+      .toHaveTextContent('available data: 0.00 drives + 1.00 charging');
+    fireEvent.keyDown(zeroDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
   it('uses the real mobile table pipeline and exposes all nine directory fields in quick view', async () => {
     class NarrowObserver implements ResizeObserver {

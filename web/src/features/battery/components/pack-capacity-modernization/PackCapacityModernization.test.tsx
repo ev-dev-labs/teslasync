@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentProps, ReactNode } from 'react';
 
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { Text } from '@/components/ui';
 import { MockResizeObserver } from '@/test/setup';
 import type { ChargingSession } from '@/types/charging';
@@ -184,9 +185,13 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     expect(screen.getByRole('combobox', { name: 'Process uncertainty' })).toHaveAttribute('id', 'pack-capacity-process-noise');
     expect(within(kpis).getByText('Current estimate')).toBeInTheDocument();
     expect(within(kpis).getByText('Raw median')).toBeInTheDocument();
-    expect(within(kpis).getByText('descriptive ratio, not state of health', {
-      selector: '[data-battery-detail-context]',
-    })).toBeInTheDocument();
+    // Metric context moved off the face into the drawer's per-metric groups.
+    fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
+    const kpisDrawer = screen.getByRole('dialog');
+    expect(within(kpisDrawer).getByRole('group', { name: 'Current / filtered maximum' }))
+      .toHaveTextContent('descriptive ratio, not state of health');
+    fireEvent.keyDown(kpisDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('recomputes both model assumptions without replacing the persistent router', () => {
@@ -211,7 +216,16 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     view.rerenderPage();
     allShells();
     expect(h.hook).toHaveBeenLastCalledWith(undefined, 1_000);
-    expect(within(screen.getByTestId('pack-capacity-kpis')).getAllByText('—')).toHaveLength(6);
+    // No vehicle: every tile omitted (never zeroed, never em-dash tiles) --
+    // explanatory face state with label chips plus a counted drawer
+    // explanation per missing metric.
+    const unselected = screen.getByTestId('pack-capacity-kpis');
+    expect(unselected.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(within(unselected).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Current estimate', 'Filter uncertainty', 'Current / filtered maximum', 'Raw median', 'Annualized linear change', 'Evidence support']) {
+      expect(within(unselected).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(unselected, label);
+    }
     expect(screen.getByText('Select a vehicle to analyze its returned charging history.')).toBeInTheDocument();
   });
 
@@ -233,7 +247,9 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     view.rerenderPage();
     allShells();
     expect(screen.getByTestId('pack-capacity-kpis').querySelector('[data-operational-value]')?.textContent).toBe(before);
-    expect(screen.getByText('Charging history could not refresh. Showing the most recently loaded evidence.')).toBeInTheDocument();
+    // The same copy also feeds a chart's visually-hidden ariaDescription;
+    // scope to the visible status banner.
+    expect(within(screen.getByTestId('pack-capacity-kpis')).getByText('Charging history could not refresh. Showing the most recently loaded evidence.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(h.refetch).toHaveBeenCalledTimes(1);
     setQuery({ fetchStatus: 'paused' });
@@ -255,9 +271,12 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     allShells();
     expect(screen.getByText('No charging history was returned for this vehicle.')).toBeInTheDocument();
     expect(screen.getByText('0 returned = 0 included + 0 excluded. Missing completion times are never synthesized, and missing SoC or energy is never imputed.')).toBeInTheDocument();
-    const annual = within(screen.getByTestId('pack-capacity-kpis'))
-      .getByText('Annualized linear change').closest('[data-operational-metric]');
-    expect(annual).toHaveTextContent('Needs at least 12 measurements');
+    // The ineligible annual-change tile is omitted from the KPI face; the
+    // fit-eligibility reason surfaces in the fit-diagnostics section.
+    assertOperationalMetricUnavailable(screen.getByTestId('pack-capacity-kpis'), 'Annualized linear change');
+    const fit = within(screen.getByTestId('pack-capacity-fit-diagnostics'));
+    expect(fit.getByText('Fit status')).toBeInTheDocument();
+    expect(fit.getByText('Needs at least 12 measurements')).toBeInTheDocument();
   });
 
   it('retains the real figure and its CSV/image menu, without inventing omitted fullscreen or annotation controls', () => {
@@ -267,7 +286,10 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     fireEvent.click(figure.getByRole('button', { name: 'Export chart' }));
     expect(figure.getByRole('menuitem', { name: /CSV/i })).toBeInTheDocument();
     expect(figure.getByRole('menuitem', { name: /PNG/i })).toBeInTheDocument();
-    expect(figure.getByRole('menuitem', { name: /SVG/i })).toBeInTheDocument();
+    // No capture-eligible SVG renders at jsdom size, so the menu
+    // intentionally omits SVG per the capture-eligibility gate (pinned by
+    // the export menu's own suite) rather than inventing a snapshot.
+    expect(figure.queryByRole('menuitem', { name: /SVG/i })).not.toBeInTheDocument();
     expect(figure.queryByRole('button', { name: 'Enter fullscreen' })).not.toBeInTheDocument();
     expect(figure.queryByRole('button', { name: /Add annotation/i })).not.toBeInTheDocument();
   });
