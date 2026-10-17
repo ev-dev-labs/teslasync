@@ -508,7 +508,7 @@ describe('buildServiceEvidencePackCore', () => {
         const doc = await buildServiceEvidencePack(input);
         const snapshots = doc.snapshot!.sources;
         expect(snapshots.map((source) => source.signal)).toEqual([
-          null, 'PackVoltage', 'PackTemperature', 'BatteryLevel', 'NeverLoaded', null,
+          null, 'PackVoltage', 'BatteryLevel', 'PackTemperature', 'NeverLoaded', null,
         ]);
         expect(snapshots[1]).toMatchObject({
           kind: 'history', responseSignal: 'PackVoltage', vehicleId: 42,
@@ -520,8 +520,8 @@ describe('buildServiceEvidencePackCore', () => {
             updatedAt: BASE, ageMs: 500,
           },
         });
-        expect(snapshots[2]).toMatchObject({ loadedCount: 0, reportedCount: 0, trust: { status: 'unavailable' } });
-        expect(snapshots[3]).toMatchObject({ loadedCount: null, reportedCount: null, trust: { status: 'initialFailure' } });
+        expect(snapshots[2]).toMatchObject({ loadedCount: null, reportedCount: null, trust: { status: 'initialFailure' } });
+        expect(snapshots[3]).toMatchObject({ loadedCount: 0, reportedCount: 0, trust: { status: 'unavailable' } });
         expect(snapshots[4]).toMatchObject({ loadedCount: null, trust: { status: 'initial' } });
         expect(snapshots[0]?.trust).toMatchObject({ status: 'stale', isRefreshBlocked: true });
         expect(snapshots[5]).toMatchObject({ loadedCount: 0, trust: { isRefreshing: true } });

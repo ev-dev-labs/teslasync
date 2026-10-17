@@ -15,9 +15,10 @@ interface SystemHealthCardProps {
 /**
  * One row in the System Health side panel: a category icon, its localized name,
  * and a color-independent {@link SeverityBadge}. The status is derived through
- * `healthSeverity` so 'normal' reads as a green success state, while an
- * info-level or unrecognized status (and a missing/null value) surfaces as a
- * neutral `info` tone rather than a misleading green "all clear".
+ * `healthSeverity` so only explicit anomalies establish a severity; legacy
+ * seeded 'normal', info-level, and unrecognized statuses (and a missing/null
+ * value) surface as a neutral `info` tone rather than a misleading green
+ * "all clear".
  */
 export function SystemHealthCard({ category, status }: SystemHealthCardProps) {
   const { t } = useTranslation();

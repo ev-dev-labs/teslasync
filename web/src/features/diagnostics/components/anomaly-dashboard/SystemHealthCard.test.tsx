@@ -32,7 +32,9 @@ describe('SystemHealthCard', () => {
     expect(screen.getByText('battery')).toBeInTheDocument();
     expect(screen.getByText('normal')).toBeInTheDocument();
     expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
-    expect(screen.getByText('normal').parentElement?.className).toContain('bg-[var(--semantic-success-bg)]');
+    // Legacy seeded 'normal' stays neutral: only explicit anomalies establish a severity.
+    expect(screen.getByText('normal').parentElement?.className).toContain('bg-[var(--semantic-info-bg)]');
+    expect(screen.getByText('normal').parentElement?.className).not.toContain('bg-[var(--semantic-success-bg)]');
     // Known category → its own lucide glyph, not the fallback shield.
     expect(container.querySelector('svg.lucide-battery')).not.toBeNull();
     expect(container.querySelector('svg.lucide-shield')).toBeNull();
@@ -140,13 +142,12 @@ describe('SystemHealthCard', () => {
     it.each([
       ['critical', 'critical'],
       ['warning', 'warn'],
-      ['normal', 'success'],
     ] as const)('maps the known status %s → %s', (status, expected) => {
       expect(healthSeverity(status)).toBe(expected);
     });
 
-    it.each(['info', 'degraded', '', 'ok', 'unknown-future-state'])(
-      'maps the unrecognized status %p to neutral info (never success)',
+    it.each(['normal', 'info', 'degraded', '', 'ok', 'unknown-future-state'])(
+      'maps the non-anomaly status %p to neutral info (never success)',
       (status) => {
         expect(healthSeverity(status)).toBe('info');
       },

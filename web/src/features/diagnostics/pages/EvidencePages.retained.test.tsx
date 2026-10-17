@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { analyzeRootCause, type RootCauseAnalysisResult } from '../lib/rootCauseIntelligence';
+import { analyzeRootCause, presentRootCause, type RootCauseAnalysisResult } from '../lib/rootCauseIntelligence';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { deriveDataState } from '@/api/dataState';
 import { fmtNumber, getFormatterPreferences } from '@/lib/numberFormat';
 import type { UnitPref } from '@/lib/unitConversion';
@@ -82,7 +83,16 @@ function getByDirectText(container: HTMLElement, text: string) {
   );
 }
 
+function socHistory(): SignalHistoryResponse {
+  return {
+    vehicleId: 7, signal: 'Soc', from: points[0]!.ts, to: points[points.length - 1]!.ts,
+    count: points.length, data: points,
+  };
+}
+
 function workspace(evidenceError: Error | null = null, catalogError: Error | null = null) {
+  const response = socHistory();
+  const bundle = query([{ signal: 'Soc', response }], evidenceError);
   return {
     catalog: ['Soc'],
     signalsQuery: query(['Soc'], catalogError),
@@ -91,7 +101,16 @@ function workspace(evidenceError: Error | null = null, catalogError: Error | nul
     windowHours: 72,
     setWindowHours: vi.fn(),
     relatedCandidates: [],
-    evidenceBundle: query([{ signal: 'Soc', response: { data: points } }], evidenceError),
+    evidenceBundle: {
+      ...bundle,
+      sources: [{
+        signal: 'Soc',
+        state: deriveDataState(
+          { data: response, error: evidenceError, isError: evidenceError != null, refetch: bundle.refetch },
+          { provenance: 'historical' },
+        ),
+      }],
+    },
     analysis,
     isDefensible: false,
     hasChosenSignal: true,
@@ -123,13 +142,13 @@ describe('diagnostic evidence source preservation', () => {
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
     expect(brief).toHaveAttribute('data-operational-brief');
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(page === 'analysis' ? 5 : 4);
-    expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
-    expect(getByDirectText(brief, 'Soc · 72h requested history window')).toBeInTheDocument();
-    expect(getByDirectText(brief, 'Per-signal freshness unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Showing retained measurements');
+    assertOperationalBriefDisclosure(brief, 'Soc · 72h requested history window');
+    assertOperationalBriefDisclosure(brief, 'Per-signal source states shown above');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(getByDirectText(drawer, 'Soc · 72h requested history window')).toBeInTheDocument();
-    expect(getByDirectText(drawer, 'Per-signal freshness unavailable')).toBeInTheDocument();
+    expect(getByDirectText(drawer, 'Per-signal source states shown above')).toBeInTheDocument();
     expect(drawer).toHaveTextContent('not a diagnosis or proof of causation');
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     expect(drawer).toHaveTextContent('Evidence-ranked analysis of retrieved signal histories');
@@ -171,7 +190,7 @@ describe('diagnostic evidence source preservation', () => {
     });
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
-    expect(within(brief).getByText('Signal evidence available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Signal evidence available');
     const hypotheses = brief.querySelector(`[data-operational-metric="${page === 'analysis' ? 'root-cause-hypotheses' : 'service-evidence-hypotheses'}"]`);
     expect(hypotheses).toHaveAttribute('data-value-state', 'value');
     expect(hypotheses?.querySelector('[data-operational-value]')).toHaveTextContent(/^0$/);
@@ -182,7 +201,10 @@ describe('diagnostic evidence source preservation', () => {
     expect(narrative).toHaveTextContent(report.summary);
     expect(narrative).not.toHaveTextContent(analysis.summary);
     expect(report.limitations.length).toBeGreaterThan(0);
-    for (const limitation of report.limitations) expect(narrative).toHaveTextContent(limitation);
+    const expectedLimitations = page === 'analysis'
+      ? presentRootCause(report, [{ signal: history.signal, points: history.data }]).limitations
+      : report.limitations;
+    for (const limitation of expectedLimitations) expect(narrative).toHaveTextContent(limitation);
     expect(within(narrative).getByText('Not scored')).toBeInTheDocument();
     expect(within(narrative).queryByText('No additional limitations were supplied.')).toBeNull();
   });
@@ -216,17 +238,19 @@ describe('diagnostic evidence source preservation', () => {
       });
       renderPage(page);
       const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
-      expect(within(brief).getByText('Partial signal evidence')).toBeInTheDocument();
-      expect(brief.querySelector(`[data-operational-metric="${page === 'analysis' ? 'root-cause-hypotheses' : 'service-evidence-hypotheses'}"]`))
-        .toHaveAttribute('data-value-state', 'missing');
+      assertOperationalBriefDisclosure(brief, 'Partial signal evidence');
+      assertOperationalMetricUnavailable(brief, 'Ranked hypotheses');
       fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog');
       const narrative = within(drawer).getByTestId('operational-narrative');
       expect(narrative).not.toHaveTextContent(input.analysis.summary);
       expect(narrative).toHaveTextContent(page === 'analysis'
-        ? "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift"
+        ? 'Focal history unavailable; no shift conclusion can be drawn.'
         : 'A canonical, offline-verifiable JSON export of this evidence-ranked analysis');
-      for (const limitation of input.analysis.limitations) expect(narrative).toHaveTextContent(limitation);
+      const expectedLimitations = page === 'analysis'
+        ? presentRootCause(input.analysis, [{ signal: neighbor.signal, points: neighbor.data }]).limitations
+        : input.analysis.limitations;
+      for (const limitation of expectedLimitations) expect(narrative).toHaveTextContent(limitation);
       expect(within(narrative).getByText('Not scored')).toBeInTheDocument();
       expect(within(drawer).getByText('Partial signal evidence')).toBeInTheDocument();
     });
@@ -234,16 +258,31 @@ describe('diagnostic evidence source preservation', () => {
 
   it.each(['analysis', 'pack'] as const)('does not publish a stale report narrative before a focal signal is chosen on the %s page', (page) => {
     const input = workspace();
-    sources.workspace.mockReturnValue({ ...input, focalSignal: '', hasChosenSignal: false });
+    const emptyAnalysis = analyzeRootCause({ focalSignal: '', catalog: ['Soc'], focalPoints: [], relatedSeries: [] });
+    if (page === 'analysis') {
+      sources.workspace.mockReturnValue({
+        ...input, focalSignal: '', hasChosenSignal: false, analysis: emptyAnalysis,
+        evidenceBundle: { ...query([]), sources: [] },
+      });
+    } else {
+      sources.workspace.mockReturnValue({ ...input, focalSignal: '', hasChosenSignal: false });
+    }
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
-    expect(within(brief).getByText('Choose a focal signal')).toBeInTheDocument();
-    expect(getByDirectText(brief, 'No focal signal · 72h requested history window')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Choose a focal signal');
+    assertOperationalBriefDisclosure(brief, 'No focal signal · 72h requested history window');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     const narrative = within(drawer).getByTestId('operational-narrative');
-    expect(narrative).not.toHaveTextContent(input.analysis.summary);
-    for (const limitation of input.analysis.limitations) expect(narrative).toHaveTextContent(limitation);
+    if (page === 'analysis') {
+      const emptyPresentation = presentRootCause(emptyAnalysis, []);
+      expect(narrative).toHaveTextContent(emptyPresentation.summary);
+      expect(narrative).not.toHaveTextContent(input.analysis.summary);
+      for (const limitation of emptyPresentation.limitations) expect(narrative).toHaveTextContent(limitation);
+    } else {
+      expect(narrative).not.toHaveTextContent(input.analysis.summary);
+      for (const limitation of input.analysis.limitations) expect(narrative).toHaveTextContent(limitation);
+    }
     expect(within(drawer).getByText('Choose a focal signal')).toBeInTheDocument();
   });
 
@@ -285,7 +324,10 @@ describe('diagnostic evidence source preservation', () => {
     const narrative = within(drawer).getByTestId('operational-narrative');
     expect(narrative).toHaveTextContent(published.summary);
     expect(narrative).not.toHaveTextContent(retained.analysis.summary);
-    for (const limitation of published.limitations) expect(narrative).toHaveTextContent(limitation);
+    const expectedLimitations = page === 'analysis'
+      ? presentRootCause(published, [{ signal: history.signal, points: history.data }]).limitations
+      : published.limitations;
+    for (const limitation of expectedLimitations) expect(narrative).toHaveTextContent(limitation);
     expect(within(drawer).getByText('Signal evidence available')).toBeInTheDocument();
     expect(within(drawer).queryByText('Showing retained measurements')).toBeNull();
   });
@@ -294,7 +336,7 @@ describe('diagnostic evidence source preservation', () => {
     const input = workspace();
     sources.workspace.mockReturnValue({
       ...input,
-      evidenceBundle: { ...query([]), isLoading: true },
+      evidenceBundle: { ...query([]), isLoading: true, sources: [] },
     });
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
@@ -302,7 +344,11 @@ describe('diagnostic evidence source preservation', () => {
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(page === 'analysis' ? 5 : 3);
     expect(screen.getByLabelText('Focal signal')).toHaveValue('Soc');
-    expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
+    if (page === 'analysis') {
+      assertOperationalBriefDisclosure(brief, 'Soc · 72h requested history window');
+    } else {
+      expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
+    }
     if (page === 'pack') {
       expect(screen.getByRole('heading', { name: 'Privacy manifest' })).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Integrity & export' })).toBeInTheDocument();
@@ -314,15 +360,36 @@ describe('diagnostic evidence source preservation', () => {
     const input = workspace();
     sources.workspace.mockReturnValue({
       ...input,
-      evidenceBundle: query([], new Error('initial history failure')),
+      evidenceBundle: {
+        ...query([], new Error('initial history failure')),
+        sources: [{
+          signal: 'Soc',
+          state: deriveDataState(
+            { error: new Error('initial history failure'), isError: true, refetch: vi.fn() },
+            { provenance: 'historical' },
+          ),
+        }],
+      },
     });
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
-    expect(within(brief).getByText('Failed to load data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Failed to load data');
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(page === 'analysis' ? 5 : 3);
+    if (page === 'analysis') {
+      expect(brief).toHaveTextContent('No metric values are available yet.');
+      for (const label of ['Evidence quality', 'Overall evidence score', 'Focal shift effect size', 'Ranked hypotheses', 'Focal samples']) {
+        assertOperationalMetricUnavailable(brief, label);
+      }
+      assertOperationalBriefDisclosure(brief, 'Soc · 72h requested history window');
+    } else {
+      for (const label of ['Evidence quality', 'Signals in pack', 'Ranked hypotheses']) {
+        assertOperationalMetricUnavailable(brief, label);
+      }
+      expect(brief.querySelector('[data-operational-metric="service-evidence-pack-status"] [data-operational-value]'))
+        .toHaveTextContent('Not ready');
+      expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
+    }
     expect(screen.getByLabelText('Focal signal')).toHaveValue('Soc');
-    expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
     if (page === 'pack') {
       expect(screen.getByRole('heading', { name: 'Privacy manifest' })).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Integrity & export' })).toBeInTheDocument();
@@ -345,11 +412,15 @@ describe('diagnostic evidence source preservation', () => {
     });
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
-    expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
-    expect(getByDirectText(brief, 'Per-signal source states shown above')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Showing retained measurements');
+    assertOperationalBriefDisclosure(brief, 'Per-signal source states shown above');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(page === 'analysis' ? 5 : 4);
     expect(screen.getByLabelText('Focal signal')).toHaveValue('Soc');
-    expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
+    if (page === 'analysis') {
+      assertOperationalBriefDisclosure(brief, 'Soc · 72h requested history window');
+    } else {
+      expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
+    }
   });
 
   it('retains typed zero hypothesis counts while preserving the existing evidence score and shift operands', () => {
@@ -364,9 +435,14 @@ describe('diagnostic evidence source preservation', () => {
     expect(samples).toHaveAttribute('data-value-state', 'value');
     expect(samples?.querySelector('[data-operational-value]')).toHaveTextContent(/^48$/);
     expect(effect).toHaveAttribute('data-value-state', 'value');
-    expect(effect).toHaveTextContent(`${fmtNumber(20)} → ${fmtNumber(80)}`);
+    expect(effect?.querySelector('[data-operational-value]')).toHaveTextContent(fmtNumber(50));
     expect(score).toHaveAttribute('data-value-state', 'value');
-    expect(score).toHaveTextContent('not a probability or causal confidence');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const effectGroup = within(drawer).getByRole('group', { name: 'Focal shift effect size' });
+    expect(effectGroup).toHaveTextContent(`${fmtNumber(20)} → ${fmtNumber(80)}`);
+    const scoreGroup = within(drawer).getByRole('group', { name: 'Overall evidence score' });
+    expect(scoreGroup).toHaveTextContent('not a probability or causal confidence');
     expect(analysis.quality.focalSampleCount).toBe(48);
     expect(analysis.hypotheses).toHaveLength(0);
   });
@@ -404,12 +480,11 @@ describe('diagnostic evidence source preservation', () => {
     });
     renderPage('analysis');
     const brief = screen.getByTestId('root-cause-summary');
-    const samples = brief.querySelector('[data-operational-metric="root-cause-focal-samples"]');
-    const score = brief.querySelector('[data-operational-metric="root-cause-overall-score"]');
-    expect(samples).toHaveAttribute('data-value-state', 'invalid');
-    expect(score).toHaveAttribute('data-value-state', 'invalid');
-    expect(samples?.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
-    expect(score?.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
+    assertOperationalMetricUnavailable(brief, 'Focal samples');
+    assertOperationalMetricUnavailable(brief, 'Overall evidence score');
+    assertOperationalMetricUnavailable(brief, 'Evidence quality');
+    expect(brief).not.toHaveTextContent('NaN');
+    expect(brief).not.toHaveTextContent('Infinity');
   });
 
   it.each(['analysis', 'pack'] as const)('does not present a pending focal history as zero samples in the %s page', (page) => {
@@ -432,13 +507,16 @@ describe('diagnostic evidence source preservation', () => {
     });
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
-    expect(within(brief).getByText('Partial signal evidence')).toBeInTheDocument();
-    expect(brief.querySelector(`[data-operational-metric="${page === 'analysis' ? 'root-cause-hypotheses' : 'service-evidence-hypotheses'}"]`))
-      .toHaveAttribute('data-value-state', 'missing');
+    assertOperationalBriefDisclosure(brief, 'Partial signal evidence');
+    assertOperationalMetricUnavailable(brief, 'Ranked hypotheses');
     if (page === 'analysis') {
-      expect(brief.querySelector('[data-operational-metric="root-cause-focal-samples"]')).toHaveAttribute('data-value-state', 'missing');
-      expect(brief.querySelector('[data-operational-metric="root-cause-effect"]')).toHaveAttribute('data-value-state', 'missing');
-      expect(brief).toHaveTextContent('Focal history unavailable; no shift conclusion can be drawn.');
+      assertOperationalMetricUnavailable(brief, 'Focal samples');
+      assertOperationalMetricUnavailable(brief, 'Focal shift effect size');
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      expect(within(drawer).getByTestId('operational-narrative'))
+        .toHaveTextContent('Focal history unavailable; no shift conclusion can be drawn.');
+      fireEvent.keyDown(drawer, { key: 'Escape' });
       const hypothesesPanel = screen.getByRole('heading', { name: 'Ranked hypotheses' }).closest('[data-print-card]');
       const interpretationPanel = screen.getByRole('heading', { name: 'Interpretation & limits' }).closest('[data-print-card]');
       expect(hypothesesPanel).not.toBeNull();
@@ -501,7 +579,8 @@ describe('diagnostic evidence source preservation', () => {
     renderPage('analysis');
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.getByLabelText('Focal signal')).toHaveValue('Soc');
-    expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
+    const brief = screen.getByTestId('root-cause-summary');
+    assertOperationalBriefDisclosure(brief, 'Soc · 72h requested history window');
     expect(screen.getByRole('region', { name: 'Root-cause evidence metrics' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Normalized signal timeline' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Evidence graph' })).toBeInTheDocument();
@@ -511,8 +590,11 @@ describe('diagnostic evidence source preservation', () => {
     expect(screen.getByRole('heading', { name: 'Interpretation & limits' })).toBeInTheDocument();
     expect(screen.getByText('Focal samples')).toBeInTheDocument();
     expect(screen.getByText(String(analysis.quality.focalSampleCount))).toBeInTheDocument();
-    expect(screen.getByText('Some signal histories could not be refreshed. Available evidence remains visible.')).toBeInTheDocument();
-    expect(screen.getByText('Signal histories are combined for this analysis. This source does not provide per-signal freshness or individual failure details.')).toBeInTheDocument();
+    const socSource = document.querySelector('[data-signal-source="Soc"]') as HTMLElement;
+    expect(socSource).not.toBeNull();
+    expect(within(socSource).getByText('Cached · refresh failed')).toBeInTheDocument();
+    expect(within(socSource).getByText('48 sample(s)')).toBeInTheDocument();
+    expect(screen.queryByText('Signal histories are combined for this analysis. This source does not provide per-signal freshness or individual failure details.')).toBeNull();
     expect(screen.queryByText("Can't reach server")).toBeNull();
   });
 
@@ -536,12 +618,14 @@ describe('diagnostic evidence source preservation', () => {
     const retained = workspace(new Error('history refresh'), new Error('catalog refresh'));
     sources.workspace.mockReturnValue(retained);
     renderPage('analysis');
-    const notices = screen.getAllByTestId('stale-refresh-warning');
-    fireEvent.click(within(notices[1]).getByRole('button', { name: 'Refresh' }));
+    const socSource = document.querySelector('[data-signal-source="Soc"]') as HTMLElement;
+    expect(socSource).not.toBeNull();
+    fireEvent.click(within(socSource).getByRole('button', { name: 'Retry' }));
     expect(retained.evidenceBundle.refetch).toHaveBeenCalledTimes(1);
     expect(retained.signalsQuery.refetch).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Focal signal')).toHaveValue('Soc');
-    expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
+    const brief = screen.getByTestId('root-cause-summary');
+    assertOperationalBriefDisclosure(brief, 'Soc · 72h requested history window');
     expect(screen.getByRole('heading', { name: 'Interpretation & limits' })).toBeInTheDocument();
   });
 
@@ -552,6 +636,9 @@ describe('diagnostic evidence source preservation', () => {
     renderPage('pack');
     expect(screen.getByRole('button', { name: 'Generate pack' })).toBeEnabled();
     expect(screen.getByRole('heading', { name: 'Evidence inventory' })).toBeInTheDocument();
-    expect(screen.getByText('Signal histories are combined for this analysis. This source does not provide per-signal freshness or individual failure details.')).toBeInTheDocument();
+    const socSource = document.querySelector('[data-signal-source="Soc"]') as HTMLElement;
+    expect(socSource).not.toBeNull();
+    expect(within(socSource).getByText('Cached · refresh failed')).toBeInTheDocument();
+    expect(screen.queryByText('Signal histories are combined for this analysis. This source does not provide per-signal freshness or individual failure details.')).toBeNull();
   });
 });

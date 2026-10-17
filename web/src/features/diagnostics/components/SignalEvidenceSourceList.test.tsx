@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { deriveDataState } from '@/api/dataState';
 import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
-import type { SignalHistoryResponse, SignalPoint } from '@/types/telemetry';
+import type { SignalHistoryPoint } from '@/api/types';
+import type { SignalHistoryResponse } from '@/types/telemetry';
 import { SignalEvidenceSourceList } from './SignalEvidenceSourceList';
 import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -43,7 +44,15 @@ vi.mock('@/hooks/useDateFormat', () => ({
   }),
 }));
 
-function response(signal: string, data: SignalPoint[]): SignalHistoryResponse {
+function point(ts: string, value: SignalHistoryPoint['value'] = 0): SignalHistoryPoint {
+  return {
+    ts,
+    kind: typeof value === 'number' ? 'ValueKindDouble' : typeof value === 'string' ? 'ValueKindString' : 'ValueKindBoolean',
+    value, ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null,
+  };
+}
+
+function response(signal: string, data: SignalHistoryPoint[]): SignalHistoryResponse {
   return { vehicleId: 7, signal, from: '2026-10-06T00:00:00Z', to: '2026-10-06T01:00:00Z', count: data.length, data };
 }
 
@@ -56,7 +65,7 @@ describe('complete signal evidence source presentation', () => {
     const user = userEvent.setup();
     const retry = vi.fn();
     const retained = response('LongSignalIdentityWithoutAnySpaces', [
-      { timestamp: '2026-10-06T00:05:00Z', valueNum: 0 },
+      point('2026-10-06T00:05:00Z', 0),
     ]);
     const state = deriveDataState({
       data: retained, dataUpdatedAt: Date.UTC(2026, 9, 6, 0, 30),
@@ -121,7 +130,7 @@ describe('complete signal evidence source presentation', () => {
   });
 
   it('keeps paused retained evidence and its last-success timestamp visible without an offline claim', () => {
-    const retained = response('Speed', [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }]);
+    const retained = response('Speed', [point('2026-10-06T00:00:00Z', 0)]);
     const updatedAt = Date.UTC(2026, 9, 6, 0, 30);
     const state = deriveDataState({
       data: retained, dataUpdatedAt: updatedAt, fetchStatus: 'paused',
@@ -134,7 +143,7 @@ describe('complete signal evidence source presentation', () => {
     expect(within(row('Speed')).queryByText(/offline|connection|refresh failed/i)).toBeNull();
     expect(within(row('Speed')).queryByRole('alert')).toBeNull();
     expect(state.data).toBe(retained);
-    expect(state.data?.data[0].valueNum).toBe(0);
+    expect(state.data?.data[0].value).toBe(0);
   });
 
   it('resolves a paused initial request to successful empty history without leaving deferred feedback', () => {
@@ -156,7 +165,7 @@ describe('complete signal evidence source presentation', () => {
   });
 
   it('keeps a measured zero ready beside a pending identity without fabricating pending samples', () => {
-    const zero = response('Speed', [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }]);
+    const zero = response('Speed', [point('2026-10-06T00:00:00Z', 0)]);
     const sources: SignalEvidenceBundleSource[] = [
       { signal: 'Speed', state: deriveDataState({ data: zero }, { provenance: 'historical' }) },
       { signal: 'Heading', state: deriveDataState({ isPending: true, isLoading: true }) },
@@ -165,7 +174,7 @@ describe('complete signal evidence source presentation', () => {
     expect(within(row('Speed')).getByText('Ready')).toBeInTheDocument();
     expect(within(row('Speed')).getByText('1 sample(s)')).toBeInTheDocument();
     expect(sources[0].state.data).toBe(zero);
-    expect(sources[0].state.data?.data[0].valueNum).toBe(0);
+    expect(sources[0].state.data?.data[0].value).toBe(0);
     expect(hasSignalHistory(sources, 'Speed')).toBe(true);
     expect(hasSignalHistory(sources, 'Heading')).toBe(false);
     expect(hasSignalHistory(sources, 'MissingIdentity')).toBe(false);
@@ -179,7 +188,7 @@ describe('complete signal evidence source presentation', () => {
     const retryReady = vi.fn();
     const retryFailed = vi.fn();
     render(<SignalEvidenceSourceList label="History" sources={[
-      { signal: 'Soc', state: deriveDataState({ data: response('Soc', [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }]), refetch: retryReady }) },
+      { signal: 'Soc', state: deriveDataState({ data: response('Soc', [point('2026-10-06T00:00:00Z', 0)]), refetch: retryReady }) },
       { signal: 'Voltage', state: deriveDataState({ error: new Error('Voltage request failed'), refetch: retryFailed }) },
     ]} />);
     expect(within(row('Soc')).getByText('Ready')).toBeInTheDocument();
@@ -193,7 +202,7 @@ describe('complete signal evidence source presentation', () => {
   it('distinguishes resolved empty history from nonnumeric received history', () => {
     const sources: SignalEvidenceBundleSource[] = [
       { signal: 'Empty', state: deriveDataState({ data: response('Empty', []) }, { unavailable: true }) },
-      { signal: 'Gear', state: deriveDataState({ data: response('Gear', [{ timestamp: '2026-10-06T00:00:00Z', valueStr: 'Park' }]) }) },
+      { signal: 'Gear', state: deriveDataState({ data: response('Gear', [point('2026-10-06T00:00:00Z', 'Park')]) }) },
     ];
     render(<SignalEvidenceSourceList label="History" sources={sources} />);
     expect(hasSignalHistory(sources, 'Empty')).toBe(false);
@@ -210,12 +219,12 @@ describe('complete signal evidence source presentation', () => {
   it('preserves the original retained payload and last-success timestamp with source-specific recovery', () => {
     const retry = vi.fn();
     const neighborRetry = vi.fn();
-    const retained = response('Speed', [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }]);
+    const retained = response('Speed', [point('2026-10-06T00:00:00Z', 0)]);
     const updatedAt = Date.UTC(2026, 9, 6, 0, 30);
     const state = deriveDataState({ data: retained, dataUpdatedAt: updatedAt, error: new Error('Speed refresh failed'), refetch: retry }, { provenance: 'historical' });
     const { rerender } = render(<SignalEvidenceSourceList label="History" sources={[
       { signal: 'Speed', state },
-      { signal: 'Heading', state: deriveDataState({ data: response('Heading', [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 90 }]), refetch: neighborRetry }) },
+      { signal: 'Heading', state: deriveDataState({ data: response('Heading', [point('2026-10-06T00:00:00Z', 90)]), refetch: neighborRetry }) },
     ]} />);
     expect(state.data).toBe(retained);
     expect(state.updatedAt).toBe(updatedAt);
@@ -227,16 +236,16 @@ describe('complete signal evidence source presentation', () => {
     fireEvent.click(within(row('Speed')).getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledTimes(1);
     expect(neighborRetry).not.toHaveBeenCalled();
-    expect(state.data?.data[0].valueNum).toBe(0);
+    expect(state.data?.data[0].value).toBe(0);
 
-    const recovered = response('Speed', [{ timestamp: '2026-10-06T00:45:00Z', valueNum: 0 }]);
+    const recovered = response('Speed', [point('2026-10-06T00:45:00Z', 0)]);
     const recoveredAt = updatedAt + 60_000;
     rerender(<SignalEvidenceSourceList label="History" sources={[
       { signal: 'Speed', state: deriveDataState({
         data: recovered, dataUpdatedAt: recoveredAt, refetch: retry,
       }, { provenance: 'historical' }) },
       { signal: 'Heading', state: deriveDataState({
-        data: response('Heading', [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 90 }]), refetch: neighborRetry,
+        data: response('Heading', [point('2026-10-06T00:00:00Z', 90)]), refetch: neighborRetry,
       }) },
     ]} />);
     expect(within(row('Speed')).getByText('Ready')).toBeInTheDocument();
@@ -248,7 +257,7 @@ describe('complete signal evidence source presentation', () => {
   });
 
   it('uses display locale and timezone for last success without changing evidence or unknown timestamps', () => {
-    const retained = response('Speed', [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }]);
+    const retained = response('Speed', [point('2026-10-06T00:00:00Z', 0)]);
     const updatedAt = Date.UTC(2026, 9, 6, 0, 30);
     const state = deriveDataState({ data: retained, dataUpdatedAt: updatedAt }, { provenance: 'historical' });
     const unknownState = deriveDataState({ data: response('Heading', []) });
@@ -273,7 +282,7 @@ describe('complete signal evidence source presentation', () => {
       expect(invalidState.updatedAt).toBe(Infinity);
       expect(state.data).toBe(retained);
       expect(state.provenance).toBe('historical');
-      expect(retained.data[0]).toEqual({ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 });
+      expect(retained.data[0]).toEqual(point('2026-10-06T00:00:00Z', 0));
     } finally {
       Object.assign(datePreferences, originalPreferences);
     }
@@ -281,9 +290,9 @@ describe('complete signal evidence source presentation', () => {
 
   it('separates requested bounds, recorded instants and retrieval across saved timezone day boundaries', () => {
     const retained = response('Speed', [
-      { timestamp: '2026-10-06T00:45:12.345Z', valueNum: 1 },
-      { timestamp: 'invalid', valueNum: 2 },
-      { timestamp: '2026-10-06T00:05:01.123Z', valueNum: 0 },
+      point('2026-10-06T00:45:12.345Z', 1),
+      point('invalid', 2),
+      point('2026-10-06T00:05:01.123Z', 0),
     ]);
     const updatedAt = Date.UTC(2026, 9, 7, 2, 30);
     const original = JSON.stringify(retained);
@@ -291,7 +300,7 @@ describe('complete signal evidence source presentation', () => {
     const { rerender } = render(<SignalEvidenceSourceList label="History" sources={sources} />);
     const assertTimes = () => {
       expect(within(row('Speed')).getByText(`Requested window: ${formatDateTime(retained.from, datePreferences)} → ${formatDateTime(retained.to, datePreferences)}`)).toBeInTheDocument();
-      expect(within(row('Speed')).getByText(`Actually recorded: ${formatDateTime(retained.data[2].timestamp, datePreferences)} → ${formatDateTime(retained.data[0].timestamp, datePreferences)}`)).toHaveAttribute('title', `${retained.data[2].timestamp} → ${retained.data[0].timestamp}`);
+      expect(within(row('Speed')).getByText(`Actually recorded: ${formatDateTime(retained.data[2].ts, datePreferences)} → ${formatDateTime(retained.data[0].ts, datePreferences)}`)).toHaveAttribute('title', `${retained.data[2].ts} → ${retained.data[0].ts}`);
       expect(within(row('Speed')).getByText(`Fetched ${formatDateTime(new Date(updatedAt), datePreferences)}`)).toBeInTheDocument();
     };
     assertTimes();
@@ -310,7 +319,7 @@ describe('complete signal evidence source presentation', () => {
   });
 
   it('does not substitute requested or fetch dates for missing or invalid observations', () => {
-    const retained = { ...response('Speed', [{ timestamp: 'invalid', valueNum: 0 }]), from: '', to: 'invalid' };
+    const retained = { ...response('Speed', [point('invalid', 0)]), from: '', to: 'invalid' };
     render(<SignalEvidenceSourceList label="History" sources={[
       { signal: 'Speed', state: deriveDataState({ data: retained }) },
       { signal: 'Empty', state: deriveDataState({ data: response('Empty', []) }) },
@@ -319,7 +328,7 @@ describe('complete signal evidence source presentation', () => {
     expect(within(row('Speed')).getByText('Actually recorded: — → —')).toBeInTheDocument();
     expect(within(row('Empty')).getByText('Actually recorded: — → —')).toBeInTheDocument();
     expect(within(row('Speed')).queryByText(/^Fetched /)).toBeNull();
-    expect(retained.data[0].timestamp).toBe('invalid');
+    expect(retained.data[0].ts).toBe('invalid');
   });
 
   it('uses saved date preferences on timeline axes, data tables and exact-instant tooltips without changing rows', () => {
@@ -360,7 +369,7 @@ describe('complete signal evidence source presentation', () => {
     const sources = names.map((signal, index) => ({
       signal,
       state: index % 3 === 0
-        ? deriveDataState({ data: response(signal, [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }]) })
+        ? deriveDataState({ data: response(signal, [point('2026-10-06T00:00:00Z', 0)]) })
         : index % 3 === 1 ? deriveDataState<SignalHistoryResponse>({ isPending: true })
         : deriveDataState<SignalHistoryResponse>({ error: new Error(`${signal} failed`) }),
     }));

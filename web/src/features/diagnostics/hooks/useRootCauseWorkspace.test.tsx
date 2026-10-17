@@ -76,7 +76,7 @@ describe('root-cause workspace complete source preservation', () => {
     expect(result.current.evidenceBundle.sources[4].state.status).toBe('ok');
     expect(mocks.bundle).toHaveBeenLastCalledWith(7, [
       'Soc', ...result.current.relatedCandidates.map(candidate => candidate.signal),
-    ], 72);
+    ], 72, 10_000, undefined);
   });
 
   it('excludes booleans only from analysis while retaining raw values and ordering for evidence export', () => {
