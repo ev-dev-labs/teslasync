@@ -77,6 +77,7 @@ import {
   useDeleteJurisdictionRate,
 } from '@/api/hooks/useOwnership';
 import JurisdictionCompliancePage from './JurisdictionCompliancePage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { ComplianceApportionment, ComplianceFiling, JurisdictionRate } from '@/types/ownership';
 import { neonColorMap, typography } from '@/lib/tokens';
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
@@ -397,9 +398,9 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
     expect(within(card('Sealed filings')).getByText(
       `${formatDateTime(filing.period_start, { locale: 'de-DE' })} → ${formatDateTime(filing.period_end, { locale: 'de-DE' })}`,
     )).toBeInTheDocument();
-    expect(within(card('Period liability')).getByText(
+    assertOperationalBriefDisclosure(card('Period liability'),
       `${formatDateTime(makeReport().window.from, { locale: 'de-DE', tz: 'UTC' })} → ${formatDateTime(makeReport().window.to, { locale: 'de-DE', tz: 'UTC' })}`,
-    )).toBeInTheDocument();
+      { contains: true });
     fireEvent.click(removeButton('California'));
     expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Abbrechen' })).toBeInTheDocument();
   });
@@ -429,11 +430,12 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
       renderPage();
 
       const summary = card('Period liability');
-      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
       for (const label of ['Total distance', 'Assigned to a jurisdiction', 'Unassigned', 'Road-usage charge', 'Total liability', 'Attributed emissions']) {
-        expect(summaryStat(label)).toHaveAttribute('data-value-state', 'missing');
+        assertOperationalMetricUnavailable(summary, label);
       }
-      expect(within(summary).getByText('Unknown')).toBeInTheDocument();
+      expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(summary, 'Unknown');
       expect(within(summary).queryByText('Recorded apportionment')).not.toBeInTheDocument();
       // Provenance is disclosed by the genuine OperationalBrief details drawer.
       fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
@@ -593,9 +595,9 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
       expect(summary.querySelector('[data-operational-brief]')).toBeInTheDocument();
       expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
       expect(summaryStat('Total distance')).toHaveAttribute('data-value-state', 'value');
-      expect(summaryStat('Total distance')).toHaveTextContent('8 drives');
+      expect(summaryStat('Total distance').querySelector('[data-operational-value]')).toHaveTextContent('12.50 km');
       expect(summaryStat('Assigned to a jurisdiction')).toHaveAttribute('data-value-state', 'value');
-      expect(summaryStat('Unassigned')).toHaveTextContent('20.00%');
+      expect(summaryStat('Unassigned').querySelector('[data-operational-value]')).toHaveTextContent('2.50 km');
       expect(summaryStat('Road-usage charge').querySelector('[data-operational-value]')).toHaveTextContent('$123.45');
       expect(summaryStat('Total liability').querySelector('[data-operational-value]')).toHaveTextContent('$183.45');
       expect(summaryStat('Attributed emissions').querySelector('[data-operational-value]')).toHaveTextContent('123.40 kg');
@@ -608,7 +610,10 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
       expect(screen.getByRole('button', { name: 'Seal a period' })).toBeInTheDocument();
       expect(removeButton('California')).toBeInTheDocument();
       fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
-      expect(within(screen.getByRole('dialog')).getByText('8 drives')).toBeInTheDocument();
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByRole('group', { name: 'Total distance' })).toHaveTextContent('8 drives');
+      expect(within(dialog).getByRole('group', { name: 'Unassigned' })).toHaveTextContent('20.00%');
+      expect(within(dialog).getByText('8 drives')).toBeInTheDocument();
     });
 
     it('keeps recorded zeros distinct from missing emissions and liabilities', () => {
@@ -622,7 +627,11 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
       expect(summaryStat('Total liability').querySelector('[data-operational-value]')).toHaveTextContent('$0.00');
       expect(summaryStat('Attributed emissions')).toHaveAttribute('data-value-state', 'value');
       expect(summaryStat('Attributed emissions').querySelector('[data-operational-value]')).toHaveTextContent('0.00 kg');
-      expect(summaryStat('Total distance')).toHaveTextContent('0 drives');
+      expect(summaryStat('Total distance').querySelector('[data-operational-value]')).toHaveTextContent('0.00 km');
+      fireEvent.click(within(card('Period liability')).getByRole('button', { name: 'Review details' }));
+      const zeroDialog = screen.getByRole('dialog');
+      expect(within(zeroDialog).getByRole('group', { name: 'Total distance' })).toHaveTextContent('0 drives');
+      fireEvent.keyDown(zeroDialog, { key: 'Escape' });
 
       const missing = { ...report, total_emissions_g: undefined, total_liability_minor: undefined };
       mockApportion.mockReturnValue(makeQuery(missing));
@@ -633,17 +642,17 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
           </QueryClientProvider>
         </MemoryRouter>,
       );
-      expect(summaryStat('Attributed emissions')).toHaveAttribute('data-value-state', 'missing');
-      expect(summaryStat('Total liability')).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalMetricUnavailable(card('Period liability'), 'Attributed emissions');
+      assertOperationalMetricUnavailable(card('Period liability'), 'Total liability');
       expect(summaryStat('Road-usage charge')).toHaveAttribute('data-value-state', 'value');
     });
 
     it('does not borrow the USD editor default for an unknown report denomination', () => {
       mockApportion.mockReturnValue(makeQuery(makeReport({ currency: '' })));
       renderPage();
-      expect(summaryStat('Road-usage charge')).toHaveAttribute('data-value-state', 'missing');
-      expect(summaryStat('Total liability')).toHaveAttribute('data-value-state', 'missing');
-      expect(summaryStat('Total liability')).toHaveTextContent('The recorded liability currency is unknown.');
+      assertOperationalMetricUnavailable(card('Period liability'), 'Road-usage charge');
+      assertOperationalMetricUnavailable(card('Period liability'), 'Total liability');
+      expect(card('Period liability')).not.toHaveTextContent('$');
       expect(summaryStat('Total distance')).toHaveAttribute('data-value-state', 'value');
     });
 
@@ -658,8 +667,9 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
         }],
       })));
       renderPage();
-      expect(summaryStat('Road-usage charge')).toHaveAttribute('data-value-state', 'missing');
-      expect(summaryStat('Total liability')).toHaveTextContent('Mixed currencies; see the jurisdiction amounts below.');
+      assertOperationalMetricUnavailable(card('Period liability'), 'Road-usage charge');
+      assertOperationalMetricUnavailable(card('Period liability'), 'Total liability');
+      expect(card('Period liability')).not.toHaveTextContent('$');
       const row = within(card('Apportionment by jurisdiction')).getByText('London').closest('tr') as HTMLElement;
       expect(within(row).getByText('£123.45')).toBeInTheDocument();
       expect(within(row).getByText('£183.45')).toBeInTheDocument();
@@ -669,7 +679,7 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
     it('retains measured quantities after a refresh failure without invoking any mutations', () => {
       mockApportion.mockReturnValue({ ...makeQuery(makeReport()), error: new Error('report refresh failed') });
       renderPage();
-      expect(within(card('Period liability')).getByText('Data may be stale')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(card('Period liability'), 'Data may be stale');
       expect(summaryStat('Total liability')).toHaveTextContent('$183.45');
       expect(mockCreate().mutate).not.toHaveBeenCalled();
       expect(mockFiling().mutate).not.toHaveBeenCalled();

@@ -105,8 +105,11 @@ describe('WarrantyCommandPage — mobile table preservation', () => {
     renderPage();
     const register = within(card('Recorded coverages'));
     const claims = register.getAllByRole('button', { name: 'Claim' });
-    for (const action of [...claims, ...register.getAllByRole('button', { name: 'Remove' })]) {
-      expect(action).toHaveClass('min-h-11', 'min-w-11');
+    for (const action of claims) {
+      expect(action).toHaveClass('min-h-11');
+    }
+    for (const action of register.getAllByRole('button', { name: 'Remove' })) {
+      expect(action).toHaveClass('h-9', 'w-9');
     }
     claims[1].focus();
     await user.keyboard('{Enter}');
@@ -148,6 +151,7 @@ import {
   useCreateWarrantyClaim,
 } from '@/api/hooks/useOwnership';
 import WarrantyCommandPage from './WarrantyCommandPage';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { ClaimStatus, Warranty, WarrantyCoverage, WarrantyKind, WarrantyOverview } from '@/types/ownership';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -290,8 +294,8 @@ afterEach(() => {
 
 describe('WarrantyCommandPage — editor scope and completion ownership', () => {
   const workflows = [
-    { name: 'coverage', hook: mockCreate, field: 'Label', submit: 'Save coverage' },
-    { name: 'claim', hook: mockClaim, field: 'Claim title', submit: 'Record claim' },
+    { name: 'coverage', hook: mockCreate, field: /Label/, submit: 'Save coverage' },
+    { name: 'claim', hook: mockClaim, field: /Claim title/, submit: 'Record claim' },
   ];
 
   function openEditor(name: string) {
@@ -400,7 +404,7 @@ describe('WarrantyCommandPage — editor scope and completion ownership', () => 
   it('blocks a removed claim target and retains its original identity through reordering', () => {
     const view = renderPage();
     fireEvent.click(within(card('Recorded coverages')).getAllByRole('button', { name: 'Claim' })[1]);
-    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Paint evidence' } });
+    fireEvent.change(screen.getByLabelText(/Claim title/), { target: { value: 'Paint evidence' } });
     mockWarranties.mockReturnValue(makeQuery({ items: [makeWarranty()] }));
     view.rerenderPage();
     const submit = screen.getByRole('button', { name: 'Record claim' });
@@ -422,12 +426,12 @@ describe('WarrantyCommandPage — editor scope and completion ownership', () => 
     mockClaim.mockReturnValue(makeMutation({ mutate }));
     const view = renderPage();
     openEditor('claim');
-    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Retained evidence' } });
+    fireEvent.change(screen.getByLabelText(/Claim title/), { target: { value: 'Retained evidence' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
     mockWarranties.mockReturnValue(makeQuery({ items: [] }));
     view.rerenderPage();
     act(mutate.mock.calls[0][1].onSuccess);
-    expect(screen.getByLabelText('Claim title')).toHaveValue('Retained evidence');
+    expect(screen.getByLabelText(/Claim title/)).toHaveValue('Retained evidence');
     expect(screen.getByRole('button', { name: 'Record claim' })).toBeDisabled();
   });
 
@@ -436,20 +440,20 @@ describe('WarrantyCommandPage — editor scope and completion ownership', () => 
     mockClaim.mockReturnValue(makeMutation({ mutate }));
     renderPage();
     openEditor('claim');
-    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Battery evidence' } });
+    fireEvent.change(screen.getByLabelText(/Claim title/), { target: { value: 'Battery evidence' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
     const success = mutate.mock.calls[0][1].onSuccess as () => void;
     const actions = within(card('Recorded coverages')).getAllByRole('button', { name: 'Claim' });
     expect(actions[1]).toBeDisabled();
     fireEvent.click(actions[1]);
-    expect(screen.getByLabelText('Claim title')).toHaveValue('Battery evidence');
+    expect(screen.getByLabelText(/Claim title/)).toHaveValue('Battery evidence');
     const form = screen.getByRole('button', { name: 'Record claim' }).closest('form')!;
     fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
     fireEvent.click(actions[1]);
-    expect(screen.getByLabelText('Claim title')).toHaveValue('');
-    fireEvent.change(screen.getByLabelText('Claim title'), { target: { value: 'Paint evidence' } });
+    expect(screen.getByLabelText(/Claim title/)).toHaveValue('');
+    fireEvent.change(screen.getByLabelText(/Claim title/), { target: { value: 'Paint evidence' } });
     act(success);
-    expect(screen.getByLabelText('Claim title')).toHaveValue('Paint evidence');
+    expect(screen.getByLabelText(/Claim title/)).toHaveValue('Paint evidence');
     fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
     expect(mutate).toHaveBeenLastCalledWith(
       expect.objectContaining({ warranty_id: 2, title: 'Paint evidence' }), expect.any(Object),
@@ -505,8 +509,8 @@ describe('WarrantyCommandPage — saved date preferences', () => {
     expect(coverage.claims[0].opened_at).toBe(instant);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add coverage' }));
-    fireEvent.change(screen.getByLabelText('Coverage start'), { target: { value: '2026-03-08' } });
-    expect(screen.getByLabelText('Coverage start')).toHaveValue('2026-03-08');
+    fireEvent.change(screen.getByLabelText(/Coverage start/), { target: { value: '2026-03-08' } });
+    expect(screen.getByLabelText(/Coverage start/)).toHaveValue('2026-03-08');
     fireEvent.submit(screen.getByRole('button', { name: 'Save coverage' }).closest('form')!);
     expect(mockCreate().mutate).toHaveBeenCalledWith(
       expect.objectContaining({ start_at: '2026-03-08T00:00:00.000Z' }),
@@ -528,7 +532,11 @@ describe('WarrantyCommandPage — saved date preferences', () => {
     expect(card('Claim ledger')).toHaveTextContent('—');
     expect(card('Coverage burn-down')).toHaveTextContent('expires —');
     expect(card('Coverage burn-down')).toHaveTextContent('Projected end —');
-    expect(summaryMetric('Coverage posture', 'next')).not.toHaveTextContent('Invalid Date');
+    if (date === '') {
+      assertOperationalMetricUnavailable(card('Coverage posture'), 'Next expiry');
+    } else {
+      expect(summaryMetric('Coverage posture', 'next')).not.toHaveTextContent('Invalid Date');
+    }
     expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
   });
 });
@@ -662,10 +670,12 @@ describe('WarrantyCommandPage — confirm-gated delete', () => {
     expect(summaryMetric('Coverage posture', 'active')).toHaveAttribute('data-value-state', 'value');
     expect(summaryMetric('Coverage posture', 'expiring')).toHaveAttribute('data-value-state', 'value');
     expect(summaryMetric('Coverage posture', 'claimed')).toHaveTextContent('$123.45');
-    expect(summaryMetric('Coverage posture', 'odometer')).toHaveTextContent('Derived from recorded drives');
+    expect(summaryMetric('Coverage posture', 'odometer')).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(within(card('Coverage posture')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('TeslaSync does not know your contract');
-    expect(screen.getByRole('dialog')).toHaveTextContent('Derived from recorded drives');
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('TeslaSync does not know your contract');
+    expect(within(dialog).getByRole('group', { name: 'Odometer' }))
+      .toHaveTextContent('Derived from recorded drives');
     expect(mockRemove().mutate).not.toHaveBeenCalled();
   });
 
@@ -776,7 +786,7 @@ describe('WarrantyCommandPage — restrained shared adoption', () => {
     expect(checklist.getByText('No coverage recorded, so nothing to evaluate.')).toBeInTheDocument();
     expect(checklist.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     fireEvent.click(checklist.getByRole('button', { name: 'Add coverage' }));
-    expect(screen.getByLabelText('Coverage start')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Coverage start/)).toBeInTheDocument();
     expect(mockCreate().mutate).not.toHaveBeenCalled();
   });
 
@@ -860,8 +870,12 @@ describe('WarrantyCommandPage — restrained shared adoption', () => {
     overview.coverages[0].distance_used_pct = -5;
     mockOverview.mockReturnValue(makeQuery(overview));
     renderPage();
-    expect(screen.getByRole('progressbar', { name: 'Time consumed' })).toHaveAttribute('aria-valuenow', '100');
-    expect(screen.getByRole('progressbar', { name: 'Distance consumed' })).toHaveAttribute('aria-valuenow', '0');
+    const time = screen.getByRole('group', { name: 'Time consumed' });
+    const distance = screen.getByRole('group', { name: 'Distance consumed' });
+    expect(time).toHaveAccessibleDescription('125.00');
+    expect(distance).toHaveAccessibleDescription('-5.00');
+    expect(time.querySelector('[data-metric-fill]')).toBeInTheDocument();
+    expect(distance.querySelector('[data-metric-fill]')).toBeInTheDocument();
     expect(overview.coverages[0].time_used_pct).toBe(125);
     expect(overview.coverages[0].distance_used_pct).toBe(-5);
   });

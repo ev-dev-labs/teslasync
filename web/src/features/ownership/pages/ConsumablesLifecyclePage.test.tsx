@@ -78,6 +78,7 @@ import {
   useDeleteConsumable,
 } from '@/api/hooks/useOwnership';
 import ConsumablesLifecyclePage from './ConsumablesLifecyclePage';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { ConsumableItem, ConsumableLifecycle, ConsumablesReport } from '@/types/ownership';
 
@@ -234,17 +235,24 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
   it('uses both page briefs while retaining the specialist part card, wear basis and actual zero counts', () => {
     mockReport.mockReturnValue(makeQuery(makeReport()));
     renderPage();
-    expectOperationalBand('Fleet wear posture', ['due', 'overdue', 'next', 'twelve', 'lifetime', 'stress']);
+    expectOperationalBand('Fleet wear posture', ['due', 'overdue', 'twelve', 'lifetime', 'stress']);
     expectOperationalBand('Wear economics', ['blended', 'odometer', 'parts']);
     expect(summaryMetric('Fleet wear posture', 'due')).toHaveAttribute('data-value-state', 'value');
-    expect(summaryMetric('Fleet wear posture', 'next')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(card('Fleet wear posture'), 'Next replacement');
     expect(summaryMetric('Fleet wear posture', 'stress')).toHaveTextContent('×');
-    expect(summaryMetric('Fleet wear posture', 'stress')).toHaveTextContent('1.00 is the reference profile');
-    expect(summaryMetric('Wear economics', 'blended')).toHaveTextContent('per 1 000 metres driven');
+    fireEvent.click(within(card('Fleet wear posture')).getByRole('button', { name: 'Review details' }));
+    const postureDialog = screen.getByRole('dialog');
+    expect(within(postureDialog).getByRole('group', { name: 'Average duty stress' }))
+      .toHaveTextContent('1.00 is the reference profile');
+    fireEvent.keyDown(postureDialog, { key: 'Escape' });
+    expect(summaryMetric('Wear economics', 'blended')).toHaveTextContent('$0.18');
     expect(card('Part-by-part projection')).toHaveTextContent('Part wear cost');
     expect(card('Part-by-part projection').querySelector('[data-operational-brief]')).not.toBeInTheDocument();
     fireEvent.click(within(card('Wear economics')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('per 1 000 metres driven');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Blended wear cost' }))
+      .toHaveTextContent('per 1 000 metres driven');
+    expect(dialog).toHaveTextContent('per 1 000 metres driven');
     expect(mockEvent().mutate).not.toHaveBeenCalled();
   });
 
@@ -288,7 +296,11 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
     expect(projection).toHaveTextContent('$0.12');
     const economics = card('Wear economics');
     expect(economics).toHaveTextContent('$0.18');
-    expect(economics).toHaveTextContent('per 1 000 metres driven');
+    fireEvent.click(within(economics).getByRole('button', { name: 'Review details' }));
+    const economicsDialog = screen.getByRole('dialog');
+    expect(within(economicsDialog).getByRole('group', { name: 'Blended wear cost' }))
+      .toHaveTextContent('per 1 000 metres driven');
+    fireEvent.keyDown(economicsDialog, { key: 'Escape' });
     expect(within(economics).getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
     fireEvent.click(within(economics).getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledOnce();

@@ -75,6 +75,7 @@ import type { DatasetInventory, GovernanceOverview, GovernanceSimulationResponse
 import * as settingsHooks from '@/hooks/useSettings';
 import * as timezoneHooks from '@/lib/timezone';
 import { formatDateTime } from '@/lib/dateFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
@@ -157,7 +158,7 @@ function renderPage() {
 
 /** The Remove button in the table row showing the given dataset. */
 function removeButton(dataset: string): HTMLElement {
-  const row = screen.getByText(dataset).closest('tr') as HTMLElement;
+  const row = within(card('Retention policies')).getByText(dataset).closest('tr') as HTMLElement;
   return within(row).getByRole('button', { name: 'Remove' });
 }
 
@@ -189,18 +190,19 @@ describe('DataGovernancePage — confirm-gated delete', () => {
     expectOperationalBand('Storage posture', ['total', 'governed', 'ungoverned', 'holds', 'mode']);
     expect(summaryMetric('Storage posture', 'total')).toHaveTextContent('4.0 MiB');
     expect(summaryMetric('Storage posture', 'governed')).toHaveTextContent('3.0 MiB');
-    expect(summaryMetric('Storage posture', 'governed')).toHaveTextContent(/75(?:\.0+)?%/);
     expect(summaryMetric('Storage posture', 'ungoverned')).toHaveTextContent('1.0 MiB');
     expect(summaryMetric('Storage posture', 'holds')).toHaveAttribute('data-value-state', 'value');
     expect(summaryMetric('Storage posture', 'holds').querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(summaryMetric('Storage posture', 'holds')).toHaveTextContent('Exempt from every plan');
     expect(summaryMetric('Storage posture', 'mode')).toHaveTextContent('Plan only');
     expect(screen.getByRole('button', { name: 'Run dry-run plan' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Define policy' })).toBeEnabled();
     expect(removeButton('drives')).toBeEnabled();
     fireEvent.click(within(card('Storage posture')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Exempt from every plan');
-    expect(screen.getByRole('dialog')).toHaveTextContent('3.0 MiB');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Under a policy' })).toHaveTextContent(/75(?:\.0+)?%/);
+    expect(within(dialog).getByRole('group', { name: 'Legal holds' })).toHaveTextContent('Exempt from every plan');
+    expect(dialog).toHaveTextContent('Exempt from every plan');
+    expect(dialog).toHaveTextContent('3.0 MiB');
     expect(mockSimulate().mutate).not.toHaveBeenCalled();
     expect(mockRemove().mutate).not.toHaveBeenCalled();
   });
@@ -289,7 +291,7 @@ describe('DataGovernancePage — confirm-gated delete', () => {
       expect(dialog).toHaveTextContent('1.7');
       expect(dialog).toHaveTextContent('History span');
       expect(dialog).toHaveTextContent('hypertable');
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close' })[1]);
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
       const policies = card('Retention policies');
@@ -306,7 +308,7 @@ describe('DataGovernancePage — confirm-gated delete', () => {
       expect(dialog).toHaveTextContent('Downsample after');
       expect(dialog).toHaveTextContent('Bucket');
       expect(dialog).toHaveTextContent(/1(?:\.0+)? min/);
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close' })[1]);
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
       fireEvent.click(within(card('Dry-run impact')).getByRole('button', { name: 'Quick view' }));
@@ -315,7 +317,7 @@ describe('DataGovernancePage — confirm-gated delete', () => {
         expect(dialog).toHaveTextContent(detail);
       }
       expect(dialog).toHaveTextContent(/26(?:\.0+)?%/);
-      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close' })[1]);
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       fireEvent.click(within(card('Plan ledger')).getByRole('button', { name: 'Quick view' }));
       dialog = screen.getByRole('dialog');
@@ -345,11 +347,11 @@ describe('DataGovernancePage — confirm-gated delete', () => {
       const form = screen.getByRole('form', { name: 'Retention policies' });
       expect(form).toHaveAttribute('id', trigger.getAttribute('aria-controls'));
       expect(screen.getByRole('combobox', { name: 'Dataset' })).toHaveFocus();
-      fireEvent.change(screen.getByRole('spinbutton', { name: 'Retention (days)' }), { target: { value: '120' } });
+      fireEvent.change(screen.getByRole('spinbutton', { name: 'Retention (days) required' }), { target: { value: '120' } });
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
       expect(screen.getByRole('button', { name: 'Define policy' })).toHaveFocus();
       fireEvent.click(screen.getByRole('button', { name: 'Define policy' }));
-      expect(screen.getByRole('spinbutton', { name: 'Retention (days)' })).toHaveValue(120);
+      expect(screen.getByRole('spinbutton', { name: 'Retention (days) required' })).toHaveValue(120);
       for (const label of ['Downsample after (days)', 'Downsample bucket (seconds)', 'Legal hold', 'Enabled']) {
         expect(screen.getByLabelText(label)).toBeInTheDocument();
       }
@@ -539,12 +541,11 @@ describe('DataGovernancePage — confirm-gated delete', () => {
   it('does not turn missing storage measurements or an absent enforcement flag into zero or enforcing', () => {
     mockOverview.mockReturnValue(makeQuery({ inventory: [], policies: [] }));
     renderPage();
-    for (const key of ['total', 'governed', 'ungoverned', 'holds', 'mode']) {
-      expect(summaryMetric('Storage posture', key)).toHaveAttribute('data-value-state', 'missing');
-      expect(summaryMetric('Storage posture', key).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    for (const label of ['Total governed footprint', 'Under a policy', 'No policy', 'Legal holds', 'Enforcement mode']) {
+      assertOperationalMetricUnavailable(card('Storage posture'), label);
     }
-    expect(summaryMetric('Storage posture', 'mode')).toHaveTextContent('Enforcement mode unknown');
-    expect(summaryMetric('Storage posture', 'mode')).not.toHaveTextContent('Enforcing');
+    expect(card('Storage posture')).not.toHaveTextContent('0 B');
+    expect(card('Storage posture')).not.toHaveTextContent('Enforcing');
   });
 
   it('retains a loading brief and independent ledger, then keeps all dry-run totals non-destructive', () => {

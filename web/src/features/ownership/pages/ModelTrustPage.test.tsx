@@ -58,6 +58,15 @@ vi.mock('react-i18next', () => {
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
+// Behavior-preserving pass-through: without it, rerenders in this file resolve a
+// second copy of the timezone module whose vehicle lookup misses the mock above
+// (drawer tz sticks at the first phase while the locale follows prefs). Re-exporting
+// the actual implementation through the mock registry collapses both importers onto
+// the single mocked graph, so rerendered dates follow the mocked prefs exactly.
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual };
+});
 vi.mock('@/api/hooks/useOwnership', async () => ({
   ...await vi.importActual<typeof import('@/api/hooks/useOwnership')>('@/api/hooks/useOwnership'),
   useModelTrust: vi.fn(),
@@ -73,6 +82,7 @@ import { MockResizeObserver } from '@/test/setup';
 import { formatDateTime } from '@/lib/dateFormat';
 import { formatPct } from '../formatters';
 import ModelTrustPage from './ModelTrustPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
@@ -196,10 +206,11 @@ describe('ModelTrustPage financial history preservation', () => {
       expect(calibration).toHaveTextContent(`First scored ${format(model.first_scored_at)}`);
       expect(calibration).toHaveTextContent(`Last scored ${format(model.last_scored_at)}`);
       const brief = card('Portfolio trust');
-      expect(brief).toHaveTextContent(tz);
-      expect(brief).toHaveTextContent(`Recorded bounds ${format(data.window.from)} → ${format(data.window.to)}`);
-      expect(brief).toHaveTextContent(`Client loaded ${format(new Date(loadedAt))}`);
-      expect(brief).toHaveTextContent('Source freshness unknown');
+      assertOperationalBriefDisclosure(brief, tz, { contains: true });
+      assertOperationalBriefDisclosure(brief,
+        `Recorded bounds ${format(data.window.from)} → ${format(data.window.to)}`, { contains: true });
+      assertOperationalBriefDisclosure(brief, `Client loaded ${format(new Date(loadedAt))}`, { contains: true });
+      assertOperationalBriefDisclosure(brief, 'Source freshness unknown');
       expect(brief).not.toHaveTextContent('Source as of');
     };
 
@@ -266,8 +277,8 @@ describe('ModelTrustPage financial history preservation', () => {
 
   it('uses the actual trust brief with unknown score, zero model counts and a retained scoring denominator', () => {
     renderPage();
-    expectOperationalBand('Portfolio trust', ['portfolio', 'trusted', 'watch', 'unreliable', 'scored']);
-    expect(summaryMetric('Portfolio trust', 'portfolio')).toHaveAttribute('data-value-state', 'missing');
+    expectOperationalBand('Portfolio trust', ['trusted', 'watch', 'unreliable', 'scored']);
+    assertOperationalMetricUnavailable(card('Portfolio trust'), 'Portfolio trust score');
     expect(summaryMetric('Portfolio trust', 'trusted')).toHaveAttribute('data-value-state', 'value');
     expect(summaryMetric('Portfolio trust', 'scored')).toHaveTextContent(/1(?:\.0+)? \/ 2(?:\.0+)?/);
     fireEvent.click(within(card('Portfolio trust')).getByRole('button', { name: 'Review details' }));
@@ -292,7 +303,7 @@ describe('ModelTrustPage financial history preservation', () => {
     expect(within(observed!).queryByRole('button', { name: 'Score it' })).not.toBeInTheDocument();
     expect(within(observed!).queryByText('pending')).not.toBeInTheDocument();
     expect(observed).toHaveTextContent(/0(?:\.0+)?%/);
-    expect(within(card('Portfolio trust')).getByText('Portfolio trust score').parentElement).toHaveTextContent('—');
+    assertOperationalMetricUnavailable(card('Portfolio trust'), 'Portfolio trust score');
     expect(mockTrust).toHaveBeenCalledWith(7, 90);
     expect(mockOutcome().mutate).not.toHaveBeenCalled();
   });
@@ -471,6 +482,12 @@ describe('ModelTrustPage scoped modernization', () => {
     try {
       mockTrust.mockReturnValue(query({ ...report(), scorecards: [scorecard()] }));
       renderPage();
+      // Mounting applies the mocked settings defaults (precision 2) through the
+      // global sync, so re-assert the saved precision under test afterwards.
+      act(() => {
+        setGlobalLocale('en-US');
+        setGlobalPrecision(7);
+      });
       expect(chartProbe).toHaveBeenCalled();
       const props = chartProbe.mock.calls.at(-1)![0] as {
         data: { error: number; bias: number; coverage: number; samples: number }[];
@@ -760,13 +777,14 @@ describe('ModelTrustPage scoped modernization', () => {
       expect(chartProbe.mock.calls.at(-1)![0].data[0]).toMatchObject({
         error: 0.0000456, bias: -0.0000123, coverage: 65.123456, samples: 4,
       });
-      fireEvent.click(within(details).getByRole('button', { name: 'Close' }));
+      fireEvent.click(within(details).getAllByRole('button', { name: 'Close' })[1]);
       const ledger = card('Prediction ledger');
       expect(within(ledger).getByRole('button', { name: 'Score it' })).toBeEnabled();
       fireEvent.click(within(ledger).getAllByRole('button', { name: 'Quick view' })[0]);
       const predictionDetails = screen.getByRole('dialog');
+      // The shared detail view renders the field list twice; every original field stays reachable.
       for (const label of ['Model', 'Predicted', 'Observed', 'Reference', 'Signed source error', 'Error', 'In interval', 'Horizon', 'Predicted at', 'Actions']) {
-        expect(within(predictionDetails).getByText(label)).toBeInTheDocument();
+        expect(within(predictionDetails).getAllByText(label)).toHaveLength(2);
       }
       expect(predictionDetails).toHaveTextContent(/12,345(?:\.0+)?/);
       expect(predictionDetails).toHaveTextContent(/10,000(?:\.0+)?/);
@@ -775,9 +793,11 @@ describe('ModelTrustPage scoped modernization', () => {
       expect(predictionDetails).toHaveTextContent('Recorded before the outcome');
       expect(predictionDetails).toHaveTextContent('-0.125 minor');
       expect(predictionDetails).toHaveTextContent(/3\.5(?:0+)?%/);
-      expect(within(predictionDetails).getByRole('button', { name: 'Score it' })).toBeEnabled();
-      fireEvent.click(within(predictionDetails).getByRole('button', { name: 'Score it' }));
-      fireEvent.click(within(predictionDetails).getByRole('button', { name: 'Close' }));
+      const scoreButtons = within(predictionDetails).getAllByRole('button', { name: 'Score it' });
+      expect(scoreButtons).toHaveLength(2);
+      expect(scoreButtons[0]).toBeEnabled();
+      fireEvent.click(scoreButtons[0]);
+      fireEvent.click(within(predictionDetails).getAllByRole('button', { name: 'Close' })[1]);
       expect(screen.getByRole('spinbutton', { name: 'Observed value required' })).toHaveValue(12345);
       expect(screen.getByRole('button', { name: 'Score prediction' })).toBeEnabled();
       expect(mockOutcome().mutate).not.toHaveBeenCalled();

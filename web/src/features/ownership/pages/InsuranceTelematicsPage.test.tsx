@@ -80,6 +80,7 @@ import {
   useDeleteInsurancePolicy,
 } from '@/api/hooks/useOwnership';
 import InsuranceTelematicsPage from './InsuranceTelematicsPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { InsurancePolicy, InsuranceRiskProfile, RiskFactor, RiskLever, UpsertInsurancePolicyRequest } from '@/types/ownership';
 
@@ -152,6 +153,12 @@ function card(title: string): HTMLElement {
   return element;
 }
 
+function briefByTitle(cardTitle: string, briefTitle: string): HTMLElement {
+  const brief = within(card(cardTitle)).getByText(briefTitle).closest('[data-operational-brief]');
+  if (!(brief instanceof HTMLElement)) throw new Error(`Missing brief: ${briefTitle}`);
+  return brief;
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -218,7 +225,11 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     expect(trend).toHaveTextContent('Feb 28, 2026');
     expect(trend).toHaveTextContent('America/Los_Angeles');
     expect(premium).toHaveTextContent('Coverage Feb 28, 2026 → Mar 1, 2026 · America/Los_Angeles');
-    expect(card('Underwriting position')).toHaveTextContent('Recorded bounds Feb 28, 2026, 04:30 PM');
+    assertOperationalBriefDisclosure(
+      briefByTitle('Underwriting position', 'Recorded driving exposure'),
+      'Recorded bounds Feb 28, 2026, 04:30 PM',
+      { contains: true },
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Edit policy' }));
     expect(screen.getByLabelText('Coverage start', { exact: false })).toHaveValue('2026-03-01');
     expect(screen.getByLabelText('Coverage end (optional)')).toHaveValue('2026-03-02');
@@ -233,7 +244,11 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     view.rerender(<InsuranceTelematicsPage />);
     expect(trend).toHaveTextContent('1. März 2026');
     expect(premium).toHaveTextContent('Coverage 1. März 2026 → 2. März 2026 · UTC');
-    expect(card('Underwriting position')).toHaveTextContent('Recorded bounds 1. März 2026');
+    assertOperationalBriefDisclosure(
+      briefByTitle('Underwriting position', 'Recorded driving exposure'),
+      'Recorded bounds 1. März 2026',
+      { contains: true },
+    );
     expect(screen.getByLabelText('Coverage start', { exact: false })).toHaveValue('2026-03-01');
     const form = screen.getByRole('button', { name: 'Save policy baseline' }).closest('form');
     if (!form) throw new Error('Missing policy form');
@@ -307,16 +322,21 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     mockProfile.mockReturnValue(makeQuery(profile));
     renderPage();
 
-    const metric = summaryMetric('Underwriting position', 'percentile');
-    expect(metric).toHaveAttribute('data-value-state', 'missing');
-    expect(metric).toHaveTextContent('Not computed');
+    assertOperationalMetricUnavailable(
+      briefByTitle('Underwriting position', 'Recorded driving exposure'),
+      'Peer percentile',
+    );
     expect(card('Underwriting position')).not.toHaveTextContent('Against your own history distribution');
     expect(card('Underwriting position')).not.toHaveTextContent('peer percentile compares against your own history');
     expect(summaryMetric('Underwriting position', 'score')).toHaveTextContent('35');
     expect(summaryMetric('Underwriting position', 'frequency')).toHaveTextContent('1.1');
     expect(summaryMetric('Underwriting position', 'severity')).toHaveTextContent('0.9');
-    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('4 drives');
+    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('10.00 km');
     expect(summaryMetric('Premium simulation', 'modelled')).toHaveTextContent('$1,080.00');
+    const exposureBrief = briefByTitle('Underwriting position', 'Recorded driving exposure');
+    fireEvent.click(within(exposureBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByRole('group', { name: 'Exposure distance' }))
+      .toHaveTextContent('4 drives');
     expect(profile.peer_percentile).toBe(percentile);
   });
 
@@ -332,23 +352,33 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     mockProfile.mockReturnValue(makeQuery(profile));
     renderPage();
 
-    for (const key of ['score', 'frequency', 'severity', 'losscost', 'percentile']) {
-      const metric = summaryMetric('Underwriting position', key);
-      expect(metric).toHaveAttribute('data-value-state', 'missing');
-      expect(metric).toHaveTextContent('Not computed');
-      expect(metric).toHaveTextContent(reason);
-      expect(metric.querySelector('[data-operational-value]')).toHaveClass('text-[var(--text-primary)]');
+    const modelBrief = briefByTitle('Underwriting position', 'Modelled underwriting indices');
+    for (const label of ['Risk score', 'Frequency index', 'Severity index', 'Loss cost index']) {
+      assertOperationalMetricUnavailable(modelBrief, label);
     }
+    const exposureBrief = briefByTitle('Underwriting position', 'Recorded driving exposure');
+    assertOperationalMetricUnavailable(exposureBrief, 'Peer percentile');
     for (const key of ['exposure', 'duration', 'night']) {
       expect(summaryMetric('Underwriting position', key)).toHaveAttribute('data-value-state', 'value');
     }
-    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('0 drives');
-    for (const key of ['modelled', 'delta', 'discount', 'expected', 'perDistance']) {
-      expect(summaryMetric('Premium simulation', key)).toHaveAttribute('data-value-state', 'missing');
-      expect(summaryMetric('Premium simulation', key)).toHaveTextContent(reason);
+    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('0.00 km');
+    fireEvent.click(within(exposureBrief).getByRole('button', { name: 'Review details' }));
+    const exposureDrawer = screen.getByRole('dialog');
+    expect(within(exposureDrawer).getByRole('group', { name: 'Exposure distance' }))
+      .toHaveTextContent('0 drives');
+    fireEvent.keyDown(exposureDrawer, { key: 'Escape' });
+    const premiumBrief = briefByTitle('Premium simulation', 'Policy-based premium model');
+    for (const label of ['Modelled annual premium', 'Difference', 'Applied discount']) {
+      assertOperationalMetricUnavailable(premiumBrief, label);
+    }
+    const costBrief = briefByTitle('Premium simulation', 'Policy loss and distance costs');
+    for (const label of ['Expected annual loss', 'Cost per distance']) {
+      assertOperationalMetricUnavailable(costBrief, label);
     }
     expect(summaryMetric('Premium simulation', 'baseline')).toHaveTextContent('$1,200.00');
     expect(summaryMetric('Premium simulation', 'deductible')).toHaveTextContent('$500.00');
+    expect(card('Underwriting position')).toHaveTextContent('Not computed');
+    expect(card('Risk trajectory')).toHaveTextContent(reason);
     expect(card('Underwriting position')).not.toHaveTextContent('Standard');
     expect(profile.risk_score).toBe(0);
     expect(profile.frequency_index).toBe(1);
@@ -364,7 +394,14 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
   ])('keeps %s risk input distinct from a computed numeric value', (_label, riskScore, state) => {
     mockProfile.mockReturnValue(makeQuery({ ...makeProfile(), risk_score: riskScore }));
     renderPage();
-    expect(summaryMetric('Underwriting position', 'score')).toHaveAttribute('data-value-state', state);
+    if (state === 'value') {
+      expect(summaryMetric('Underwriting position', 'score')).toHaveAttribute('data-value-state', state);
+    } else {
+      assertOperationalMetricUnavailable(
+        briefByTitle('Underwriting position', 'Modelled underwriting indices'),
+        'Risk score',
+      );
+    }
   });
 
   it.each([
@@ -381,8 +418,18 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
         window_start: null, window_end: null, reasons: ['Insufficient driving evidence'] },
     }));
     renderPage();
-    expect(summaryMetric('Underwriting position', 'exposure')).toHaveAttribute('data-value-state', state);
-    expect(summaryMetric('Underwriting position', 'score')).toHaveAttribute('data-value-state', 'missing');
+    if (state === 'value') {
+      expect(summaryMetric('Underwriting position', 'exposure')).toHaveAttribute('data-value-state', state);
+    } else {
+      assertOperationalMetricUnavailable(
+        briefByTitle('Underwriting position', 'Recorded driving exposure'),
+        'Exposure distance',
+      );
+    }
+    assertOperationalMetricUnavailable(
+      briefByTitle('Underwriting position', 'Modelled underwriting indices'),
+      'Risk score',
+    );
   });
 
   it.each([-1250, 1250])('preserves signed premium difference %s and fractional model indices', (delta) => {
@@ -407,12 +454,17 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     const metric = summaryMetric('Underwriting position', 'night');
     expect(metric).toHaveAttribute('data-value-state', 'value');
     expect(metric).toHaveTextContent('Distance of trips starting overnight (UTC)');
-    expect(metric).toHaveTextContent('at or after 22:00 or before 05:00 UTC');
-    expect(metric).toHaveTextContent('Includes distance outside the band on qualifying trips');
-    expect(metric).toHaveTextContent('excludes distance inside the band on other trips');
-    expect(metric).toHaveTextContent('neither an upper nor a lower bound on actual night distance');
-    expect(metric).toHaveTextContent('Actual night-distance measurement requires owned model support');
-    expect(metric).toHaveTextContent(nightDistance ? /10(?:\.0+)?%/ : /0(?:\.0+)?%/);
+    expect(metric).toHaveTextContent(nightDistance ? '1.00 km' : '0.00 km');
+    const exposureBrief = briefByTitle('Underwriting position', 'Recorded driving exposure');
+    fireEvent.click(within(exposureBrief).getByRole('button', { name: 'Review details' }));
+    const group = within(screen.getByRole('dialog'))
+      .getByRole('group', { name: 'Distance of trips starting overnight (UTC)' });
+    expect(group).toHaveTextContent('at or after 22:00 or before 05:00 UTC');
+    expect(group).toHaveTextContent('Includes distance outside the band on qualifying trips');
+    expect(group).toHaveTextContent('excludes distance inside the band on other trips');
+    expect(group).toHaveTextContent('neither an upper nor a lower bound on actual night distance');
+    expect(group).toHaveTextContent('Actual night-distance measurement requires owned model support');
+    expect(group).toHaveTextContent(nightDistance ? /10(?:\.0+)?%/ : /0(?:\.0+)?%/);
     expect(JSON.stringify(profile)).toBe(source);
   });
 
@@ -420,29 +472,36 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     mockProfile.mockReturnValue(makeQuery(makeProfile()));
     renderPage();
     expectOperationalBand('Underwriting position', [
-      'score', 'frequency', 'severity', 'losscost', 'exposure', 'duration', 'night', 'percentile',
+      'score', 'frequency', 'severity', 'losscost', 'exposure', 'duration', 'night',
     ]);
+    const exposureBrief = briefByTitle('Underwriting position', 'Recorded driving exposure');
+    assertOperationalMetricUnavailable(exposureBrief, 'Peer percentile');
     expectOperationalBand('Premium simulation', [
       'baseline', 'modelled', 'delta', 'discount', 'expected', 'deductible', 'perDistance',
     ]);
-    expect(summaryMetric('Underwriting position', 'percentile')).toHaveAttribute('data-value-state', 'missing');
-    expect(summaryMetric('Underwriting position', 'night')).toHaveTextContent(/10(?:\.0+)?%/);
+    fireEvent.click(within(exposureBrief).getByRole('button', { name: 'Review details' }));
+    const exposureDrawer = screen.getByRole('dialog');
+    expect(within(exposureDrawer).getByRole('group', { name: 'Distance of trips starting overnight (UTC)' }))
+      .toHaveTextContent(/10(?:\.0+)?%/);
+    fireEvent.keyDown(exposureDrawer, { key: 'Escape' });
     expect(summaryMetric('Premium simulation', 'perDistance')).toHaveTextContent('$5.00 / 1000 m');
-    expect(summaryMetric('Premium simulation', 'discount')).toHaveTextContent(/Cap 20(?:\.0+)?%/);
+    expect(summaryMetric('Premium simulation', 'discount')).toHaveAttribute('data-value-state', 'value');
     const briefs = card('Premium simulation').querySelectorAll('[data-operational-brief]');
     expect(briefs).toHaveLength(2);
     const brief = briefs[0];
     if (!(brief instanceof HTMLElement)) throw new Error('Missing premium brief');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('never an insurer quote');
-    expect(screen.getByRole('dialog')).toHaveTextContent(/Cap 20(?:\.0+)?%/);
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('never an insurer quote');
+    expect(within(drawer).getByRole('group', { name: 'Applied discount' }))
+      .toHaveTextContent(/Cap 20(?:\.0+)?%/);
     expect(mockUpsert().mutate).not.toHaveBeenCalled();
   });
 
   it.each([
     [0, '0'],
     [0.45, '45'],
-    [0.545, '54.5'],
+    [0.545, '54.50'],
     [0.7, '70'],
     [0.95, '95'],
     [1, '100'],
@@ -646,10 +705,17 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     expect(screen.queryByText(/A stable content hash over the exposure/)).not.toBeInTheDocument();
     expect(card('Factor decomposition')).toHaveTextContent('Synthetic factor');
     expect(card('Premium simulation')).toHaveTextContent('$1,080.00');
-    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('4 drives');
+    expect(summaryMetric('Underwriting position', 'exposure')).toHaveAttribute('data-value-state', 'value');
     expect(summaryMetric('Underwriting position', 'duration')).toHaveAttribute('data-value-state', 'value');
-    expect(summaryMetric('Underwriting position', 'night')).toHaveTextContent(/10(?:\.0+)?%/);
-    expect(card('Underwriting position')).toHaveTextContent('Recorded bounds');
+    const exposureBrief = briefByTitle('Underwriting position', 'Recorded driving exposure');
+    fireEvent.click(within(exposureBrief).getByRole('button', { name: 'Review details' }));
+    const exposureDrawer = screen.getByRole('dialog');
+    expect(within(exposureDrawer).getByRole('group', { name: 'Exposure distance' }))
+      .toHaveTextContent('4 drives');
+    expect(within(exposureDrawer).getByRole('group', { name: 'Distance of trips starting overnight (UTC)' }))
+      .toHaveTextContent(/10(?:\.0+)?%/);
+    fireEvent.keyDown(exposureDrawer, { key: 'Escape' });
+    assertOperationalBriefDisclosure(exposureBrief, 'Recorded bounds', { contains: true });
     expect(card('Underwriting position')).not.toHaveTextContent('Recorded analysis bounds not supplied');
     expect(profile.exposure_distance_m).toBe(10000);
     expect(profile.window).toEqual({ from: '2026-01-01T00:00:00Z', to: '2026-03-01T00:00:00Z', days: 60 });
@@ -667,7 +733,12 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     expect(premium).toHaveTextContent('$1,080.00');
     expect(premium).toHaveTextContent('-$120.00');
     expect(within(premium).getByText('Applied discount').parentElement).toHaveTextContent(/10(?:\.0+)?%/);
-    expect(premium).toHaveTextContent(/Cap 20(?:\.0+)?%/);
+    const premiumBrief = briefByTitle('Premium simulation', 'Policy-based premium model');
+    fireEvent.click(within(premiumBrief).getByRole('button', { name: 'Review details' }));
+    const premiumDrawer = screen.getByRole('dialog');
+    expect(within(premiumDrawer).getByRole('group', { name: 'Applied discount' }))
+      .toHaveTextContent(/Cap 20(?:\.0+)?%/);
+    fireEvent.keyDown(premiumDrawer, { key: 'Escape' });
     expect(premium).toHaveTextContent('Expected annual loss');
     expect(premium).toHaveTextContent('$800.00');
     expect(premium).toHaveTextContent('Deductible');
@@ -704,14 +775,10 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     }));
     renderPage();
     const premium = card('Premium simulation');
-    const loss = within(premium).getByText('Expected annual loss').parentElement;
-    const distance = within(premium).getByText('Cost per distance').parentElement;
-    const deductible = within(premium).getByText('Deductible').parentElement;
-    expect(loss).toHaveTextContent('—');
-    expect(loss).not.toHaveTextContent('$0.00');
-    expect(distance).toHaveTextContent('—');
-    expect(distance).not.toHaveTextContent('$0.00');
-    expect(deductible).toHaveTextContent('$0.00');
+    const costBrief = briefByTitle('Premium simulation', 'Policy loss and distance costs');
+    assertOperationalMetricUnavailable(costBrief, 'Expected annual loss');
+    assertOperationalMetricUnavailable(costBrief, 'Cost per distance');
+    expect(within(premium).getByText('Deductible').parentElement).toHaveTextContent('$0.00');
   });
 
   it('opens a danger confirm naming the policy instead of deleting on click', () => {

@@ -66,6 +66,7 @@ import {
   useDeleteSubscription,
 } from '@/api/hooks/useOwnership';
 import SubscriptionROIPage from './SubscriptionROIPage';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { Subscription, SubscriptionROI, SubscriptionROIReport } from '@/types/ownership';
 import { neonColorMap, typography } from '@/lib/tokens';
@@ -215,9 +216,11 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     expect(summaryMetric('Portfolio economics', 'monthly')).toHaveTextContent('$12.34');
     expect(summaryMetric('Portfolio economics', 'roi')).toHaveTextContent('+102.6');
     expect(summaryMetric('Portfolio economics', 'saving')).toHaveTextContent('$0.00');
-    expect(summaryMetric('Portfolio economics', 'saving')).toHaveTextContent('per month, if all cancelled');
     fireEvent.click(within(card('Portfolio economics')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('per month, if all cancelled');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Cancel-candidate saving' }))
+      .toHaveTextContent('per month, if all cancelled');
+    expect(dialog).toHaveTextContent('per month, if all cancelled');
     expect(mockRemove().mutate).not.toHaveBeenCalled();
   });
 
@@ -279,9 +282,8 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     }));
     renderPage();
 
-    expect(metric('Portfolio economics', 'Realised value')).toHaveTextContent('—');
-    expect(metric('Portfolio economics', 'Realised value')).not.toHaveTextContent('$0.00');
-    expect(metric('Portfolio economics', 'Portfolio ROI')).toHaveTextContent('—');
+    assertOperationalMetricUnavailable(card('Portfolio economics'), 'Realised value');
+    assertOperationalMetricUnavailable(card('Portfolio economics'), 'Portfolio ROI');
     const row = within(card('Per-subscription verdict')).getByText('Measured Connectivity').closest('tr');
     expect(row).toHaveTextContent('Usage has not been observed.');
     if (!row) throw new Error('Missing verdict row');

@@ -84,6 +84,7 @@ export default function InsuranceTelematicsPage() {
   const [formSaved, setFormSaved] = useState(false);
   const editorInput = useRef<HTMLInputElement>(null);
   const editorTrigger = useRef<HTMLButtonElement | null>(null);
+  const restoreEditorTriggerFocus = useRef(false);
   const editorGeneration = useRef(0);
   const submitting = useRef(false);
   const factorSort = useSortToggle();
@@ -104,6 +105,12 @@ export default function InsuranceTelematicsPage() {
   const { confirm, dialogProps } = useConfirm();
   useEffect(() => {
     if (formOpen) editorInput.current?.focus();
+  }, [formOpen]);
+  useEffect(() => {
+    if (!formOpen && restoreEditorTriggerFocus.current) {
+      restoreEditorTriggerFocus.current = false;
+      if (editorTrigger.current?.isConnected) editorTrigger.current.focus();
+    }
   }, [formOpen]);
   useEffect(() => () => { editorGeneration.current += 1; }, []);
 
@@ -171,9 +178,9 @@ export default function InsuranceTelematicsPage() {
     setForm({ ...EMPTY_POLICY });
     setFormSaved(false);
     setFormVehicleId(null);
-    if (vehicleId === formVehicleId && !formSaved && editorTrigger.current?.isConnected) {
-      editorTrigger.current.focus();
-    }
+    // The trigger is disabled while the editor is open, so a synchronous
+    // focus() call is a no-op; restore focus after the close re-renders.
+    restoreEditorTriggerFocus.current = vehicleId === formVehicleId && !formSaved;
   };
 
   const submit = (event: FormEvent) => {

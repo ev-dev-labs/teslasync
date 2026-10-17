@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import type { StatMetric } from '@/components/data-display';
@@ -70,12 +70,14 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
     render(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Business minutes 00:00–24:00" metrics={metrics}
       source={source} window={window} observedAt={observedAt} />);
-    expect(screen.getByText(`Recorded bounds ${formatDateTime(window.from, opts)} → ${formatDateTime(window.to, opts)}`))
-      .toBeInTheDocument();
-    expect(screen.getByText(`Source as of ${formatDateTime(observedAt, opts)}`)).toBeInTheDocument();
-    expect(screen.getByText(`Client loaded ${formatDateTime(new Date(source.dataUpdatedAt), opts)}`))
-      .toBeInTheDocument();
-    expect(screen.getByText('Business minutes 00:00–24:00')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body,
+      `Recorded bounds ${formatDateTime(window.from, opts)} → ${formatDateTime(window.to, opts)}`,
+      { contains: true });
+    assertOperationalBriefDisclosure(document.body,
+      `Source as of ${formatDateTime(observedAt, opts)}`, { contains: true });
+    assertOperationalBriefDisclosure(document.body,
+      `Client loaded ${formatDateTime(new Date(source.dataUpdatedAt), opts)}`, { contains: true });
+    assertOperationalBriefDisclosure(document.body, 'Business minutes 00:00–24:00');
     expect(formatDateTime(window.from, opts)).toContain('31. Dez. 2025');
     expect(formatDateTime(window.to, opts)).toContain('1. Jan. 2026');
     expect(window).toEqual({ from: '2026-01-01T00:30:00Z', to: '2026-01-01T08:30:00Z' });
@@ -85,22 +87,22 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
   it('preserves unknown bounds and freshness and safely renders invalid dates', () => {
     const { rerender } = render(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Business minutes 00:00–24:00" metrics={metrics} source={{ data: {} }} />);
-    expect(screen.getByText('Recorded analysis bounds not supplied')).toBeInTheDocument();
-    expect(screen.getByText('Source freshness unknown')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Recorded analysis bounds not supplied');
+    assertOperationalBriefDisclosure(document.body, 'Source freshness unknown');
     expect(screen.queryByText(/Client loaded/)).not.toBeInTheDocument();
     rerender(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Business minutes 00:00–24:00" metrics={metrics}
       source={{ data: {}, dataUpdatedAt: Number.MAX_VALUE }}
       window={{ from: 'invalid', to: 'invalid' }} observedAt="invalid" />);
-    expect(screen.getByText('Recorded bounds — → —')).toBeInTheDocument();
-    expect(screen.getByText('Source as of —')).toBeInTheDocument();
-    expect(screen.getByText('Client loaded —')).toBeInTheDocument();
-    expect(screen.getByText('Business minutes 00:00–24:00')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Recorded bounds — → —', { contains: true });
+    assertOperationalBriefDisclosure(document.body, 'Source as of —', { contains: true });
+    assertOperationalBriefDisclosure(document.body, 'Client loaded —', { contains: true });
+    assertOperationalBriefDisclosure(document.body, 'Business minutes 00:00–24:00');
     rerender(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Business minutes 00:00–24:00" metrics={metrics} source={{ data: {} }}
       window={{ from: '2026-01-01T00:30:00Z', to: '' }} observedAt="" />);
-    expect(screen.getByText('Recorded analysis bounds not supplied')).toBeInTheDocument();
-    expect(screen.getByText('Source freshness unknown')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Recorded analysis bounds not supplied');
+    assertOperationalBriefDisclosure(document.body, 'Source freshness unknown');
   });
 
   it('retains numerical raw input and the original specialist byte display', () => {
@@ -188,7 +190,7 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
       }
       expect(sources).toHaveTextContent('0 samples');
       expect(screen.getByRole('region', { name: 'Limitations' })).toHaveTextContent('Only recorded observations');
-      expect(screen.getByText('Future failures')).toBeInTheDocument();
+      expect(screen.getByText(/Future failures/)).toBeInTheDocument();
     });
 
     it('does not infer empty evidence or zero quality while loading or paused without data', () => {
@@ -234,17 +236,18 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
   it('renders real markers, source state and rich captions in the built-in drawer', () => {
     const { container } = render(<OwnershipBrief title="Storage evidence" description="Policy coverage is not deletion"
       scope="Database catalog" source={{ data: {}, dataUpdatedAt: 1767225600000 }} metrics={metrics} />);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
     expect(container.querySelector('[data-operational-metric="size"]')).toHaveTextContent('2.0 MiB');
     expect(container.querySelector('[data-operational-metric="zero"]')).toHaveAttribute('data-value-state', 'value');
-    expect(container.querySelector('[data-operational-metric="unknown"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('Source returned')).toBeInTheDocument();
-    expect(screen.getByText('Source freshness unknown')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(document.body, 'Unknown count');
+    assertOperationalBriefDisclosure(document.body, 'Source returned');
+    assertOperationalBriefDisclosure(document.body, 'Source freshness unknown');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Policy scope only')).toBeInTheDocument();
     expect(dialog).toHaveTextContent('2.0 MiB');
-    expect(dialog).toHaveTextContent('No measurement supplied');
+    expect(within(dialog).queryByRole('group', { name: 'Unknown count' })).not.toBeInTheDocument();
+    expect(dialog).toHaveTextContent(/1 empty fields? (?:is|are) hidden\./);
   });
 
   it('exposes loading without zero values and downgrades retained/offline sources honestly', () => {
@@ -265,9 +268,13 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
   ])('distinguishes an initial paused source from loading, retained data, empty results and failure (%j)', (flags) => {
     const { container, rerender } = render(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Recorded tariff scope" source={{ ...flags, fetchStatus: 'paused' }} metrics={[]} />);
-    const paused = screen.getByText('Source paused');
+    assertOperationalBriefDisclosure(document.body, 'Source paused');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const pausedDialog = screen.getByRole('dialog');
+    const paused = within(pausedDialog).getByText('Source paused');
     expect(paused).toBeInTheDocument();
     for (const token of BADGE_VARIANTS.neutral.split(' ')) expect(paused).toHaveClass(token);
+    fireEvent.keyDown(pausedDialog, { key: 'Escape' });
     expect(container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
     for (const label of ['Loading source', 'Refreshing source', 'Retained source', 'Not computed', 'Source unavailable', 'Source returned']) {
       expect(screen.queryByText(label)).not.toBeInTheDocument();
@@ -280,7 +287,7 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     rerender(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Recorded tariff scope" source={{ data: {}, isSuccess: true, fetchStatus: 'idle' }} metrics={metrics} />);
-    expect(screen.getByText('Source returned')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source returned');
     expect(container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
     expect(container.querySelector('[data-operational-metric="zero"]')).toHaveTextContent('0 B');
   });
@@ -293,13 +300,16 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
   ] as const)('preserves populated source status for %j', (source, label, tone) => {
     const { container } = render(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Recorded tariff scope" source={source} metrics={metrics} />);
-    const status = screen.getByText(label);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    const status = within(dialog).getByText(label);
     for (const token of BADGE_VARIANTS[tone].split(' ')) expect(status).toHaveClass(token);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(screen.queryByText('Source paused')).not.toBeInTheDocument();
     expect(container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
     expect(container.querySelector('[data-operational-metric="size"]')).toHaveTextContent('2.0 MiB');
     expect(container.querySelector('[data-operational-metric="zero"]')).toHaveTextContent('0 B');
-    expect(container.querySelector('[data-operational-metric="unknown"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(document.body, 'Unknown count');
   });
 
   it('validates finite and count inputs before calling the specialist callback', () => {

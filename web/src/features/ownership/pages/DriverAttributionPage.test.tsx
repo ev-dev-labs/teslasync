@@ -72,6 +72,7 @@ import {
   useGhostDrives,
 } from '@/api/hooks/useOwnership';
 import DriverAttributionPage from './DriverAttributionPage';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { DriverAttributionReport, DriverProfile } from '@/types/ownership';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
@@ -189,15 +190,17 @@ describe('DriverAttributionPage — confirm-gated delete', () => {
   it('retains every attribution quantity and ambiguity caption in the real brief without labelling a drive', () => {
     mockReport.mockReturnValue(makeQuery(makeReport()));
     renderPage();
-    expectOperationalBand('Separation quality', ['clusters', 'separation', 'labelled', 'inferred', 'ambiguous']);
+    expectOperationalBand('Separation quality', ['clusters', 'labelled', 'inferred', 'ambiguous']);
     for (const key of ['clusters', 'labelled', 'inferred', 'ambiguous']) {
       expect(summaryMetric('Separation quality', key)).toHaveAttribute('data-value-state', 'value');
     }
-    expect(summaryMetric('Separation quality', 'separation')).toHaveAttribute('data-value-state', 'missing');
-    expect(summaryMetric('Separation quality', 'ambiguous')).toHaveTextContent('Two clusters fit almost equally well');
+    assertOperationalMetricUnavailable(card('Separation quality'), 'Separation score');
     expect(screen.getByRole('combobox', { name: 'Analysis window' })).toBeInTheDocument();
     fireEvent.click(within(card('Separation quality')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Two clusters fit almost equally well');
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Ambiguous drives' }))
+      .toHaveTextContent('Two clusters fit almost equally well');
+    expect(dialog).toHaveTextContent('Two clusters fit almost equally well');
   });
 
   it('keeps named driver records usable when inferred history has an initial failure', () => {
@@ -350,7 +353,7 @@ describe('DriverAttributionPage — preserved attribution presentation', () => {
       expect(within(select).getByRole('option', { name: `Translated ${accent}` })).toHaveValue(accent);
       expect(within(select).getAllByRole('option')).toHaveLength(6);
       fireEvent.change(select, { target: { value: accent } });
-      fireEvent.change(screen.getByRole('textbox', { name: 'Display name' }), { target: { value: 'Driver-entered name' } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Display name required' }), { target: { value: 'Driver-entered name' } });
       fireEvent.click(within(card('Named drivers')).getByRole('button', { name: 'Save' }));
       expect(mutate).toHaveBeenCalledWith(
         { vehicle_id: 7, name: 'Driver-entered name', accent, is_primary: false },
@@ -364,10 +367,13 @@ describe('DriverAttributionPage — preserved attribution presentation', () => {
     translations.set(`ownership.verdict.${verdict}`, `Translated ${verdict}`);
     mockReport.mockReturnValue(makeQuery({ ...makeReport(), separation_score: 0.5, separation_verdict: verdict }));
     renderPage();
-    expect(summaryMetric('Separation quality', 'separation')).toHaveTextContent(`Translated ${verdict}`);
+    expect(summaryMetric('Separation quality', 'separation')).toHaveTextContent('0.50');
     expect(card('Interpretation')).toHaveTextContent(`Translated ${verdict}`);
     fireEvent.click(within(card('Separation quality')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent(`Translated ${verdict}`);
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Separation score' }))
+      .toHaveTextContent(`Translated ${verdict}`);
+    expect(dialog).toHaveTextContent(`Translated ${verdict}`);
     expect(mockAssign().mutate).not.toHaveBeenCalled();
   });
 
@@ -376,7 +382,10 @@ describe('DriverAttributionPage — preserved attribution presentation', () => {
     translations.set(`ownership.verdict.${verdict}`, 'Must not translate arbitrary source prose');
     mockReport.mockReturnValue(makeQuery({ ...makeReport(), separation_score: 0.5, separation_verdict: verdict }));
     renderPage();
-    expect(summaryMetric('Separation quality', 'separation')).toHaveTextContent(verdict);
+    expect(summaryMetric('Separation quality', 'separation')).toHaveTextContent('0.50');
+    fireEvent.click(within(card('Separation quality')).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByRole('group', { name: 'Separation score' }))
+      .toHaveTextContent(verdict);
     expect(screen.queryByText('Must not translate arbitrary source prose')).not.toBeInTheDocument();
   });
 
@@ -461,7 +470,7 @@ describe('DriverAttributionPage — preserved attribution presentation', () => {
       expect(clusterDetails).toHaveTextContent('$123.45');
       expect(clusterDetails).toHaveTextContent('Cohesion');
       expect(clusterDetails).toHaveTextContent('Regen share');
-      fireEvent.click(within(clusterDetails).getByRole('button', { name: 'Close' }));
+      fireEvent.click(within(clusterDetails).getAllByRole('button', { name: 'Close' })[1]);
 
       const fingerprints = card('Drive fingerprints');
       expect(fingerprints).toHaveTextContent('Showing 1 of 101 drives');
@@ -470,9 +479,9 @@ describe('DriverAttributionPage — preserved attribution presentation', () => {
       for (const text of ['Drive', 'Attributed to', 'Confidence', 'Distance', 'Duration', 'Separation margin', 'Dominant traits', 'Actions', 'inferred', 'ambiguous', 'Regen trait']) {
         expect(fingerprintDetails).toHaveTextContent(text);
       }
-      fireEvent.click(within(fingerprintDetails).getByRole('button', { name: 'Close' }));
+      fireEvent.click(within(fingerprintDetails).getAllByRole('button', { name: 'Close' })[1]);
       fireEvent.click(within(fingerprints).getByRole('button', { name: 'Label' }));
-      expect(screen.getByRole('spinbutton', { name: 'Drive ID' })).toHaveValue(42);
+      expect(screen.getByRole('spinbutton', { name: 'Drive ID required' })).toHaveValue(42);
       expect(screen.getByRole('combobox', { name: 'Driver' })).toHaveValue('1');
       fireEvent.click(within(fingerprints).getByRole('button', { name: 'Cancel' }));
       expect(mockAssign().mutate).not.toHaveBeenCalled();
