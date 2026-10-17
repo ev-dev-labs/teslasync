@@ -6,11 +6,12 @@
  * render-boundary wiring is genuinely exercised.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { formatDateTime } from '@/lib/dateFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
@@ -130,23 +131,38 @@ describe('ReportPanel', () => {
     mockReport.mockReturnValue(idle({ data: { ...report, ...reportTimes } }));
     renderPanel();
     const scope = `Journey #1 · ${formatDateTime(reportTimes.started_at, datePreferences)} – ${formatDateTime(reportTimes.ended_at, datePreferences)}`;
-    expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
+    // The scope moved off the brief face into the drawer header.
+    expect(screen.queryByText(scope)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent(scope);
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent(scope);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('formats session fallback dates and preserves the in-progress label', () => {
     Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     mockReport.mockReturnValue(idle({ data: { ...report, started_at: null, ended_at: null } }));
     renderPanel({ ...session, started_at: null, ended_at: null, status: 'active' });
-    expect(screen.getAllByText(`Journey #1 · ${formatDateTime(session.created_at, datePreferences)} – In progress`).length).toBeGreaterThan(0);
+    const scope = `Journey #1 · ${formatDateTime(session.created_at, datePreferences)} – In progress`;
+    // The scope moved off the brief face into the drawer header.
+    expect(screen.queryByText(scope)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent(scope);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('uses the session start and end when the report has no timestamps', () => {
     Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
     mockReport.mockReturnValue(idle({ data: { ...report, started_at: null, ended_at: null } }));
     renderPanel();
-    expect(screen.getAllByText(`Journey #1 · ${formatDateTime(session.started_at, datePreferences)} – ${formatDateTime(session.ended_at, datePreferences)}`).length).toBeGreaterThan(0);
+    const scope = `Journey #1 · ${formatDateTime(session.started_at, datePreferences)} – ${formatDateTime(session.ended_at, datePreferences)}`;
+    // The scope moved off the brief face into the drawer header.
+    expect(screen.queryByText(scope)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent(scope);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('shows all seven busy brief placeholders without presenting them as measurements', () => {
@@ -174,8 +190,18 @@ describe('ReportPanel', () => {
         data: { ...report, distance_m: null, duration_s: null, detour: null, checklist: null },
       }),
     );
-    renderPanel();
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    const { container } = renderPanel();
+    // Unknown readings omit their tiles (no em-dash tiles, no invented
+    // measurements) and are counted in the drawer's hidden explanation.
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    for (const label of ['Distance', 'Trip time', 'Detour', 'Ready at check']) {
+      assertOperationalMetricUnavailable(container, label);
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.getByText(/1 of 2 plans/)).toBeInTheDocument();
   });
 

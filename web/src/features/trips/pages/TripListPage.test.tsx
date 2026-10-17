@@ -463,17 +463,21 @@ describe('TripListPage — populated (km) KPIs + wiring', () => {
     const rawMetrics = rawBridge.inputs[rawBridge.inputs.length - 1];
     expect(rawMetrics?.map(metric => metric.rawValue)).toEqual([400000, 70000, 20, 2, 200000, 32]);
     expect(rawMetrics?.map(metric => metric.metricId)).toEqual(['distance', 'energy', 'currency', 'count', 'distance', 'count']);
-    expect(within(kpi).getByText('2 trips')).toBeInTheDocument();
-    expect(within(kpi).getByText('60 drives')).toBeInTheDocument();
-    expect(within(kpi).getByText('60 total drives')).toBeInTheDocument();
-    expect(within(kpi).getByText('32 charge sessions')).toBeInTheDocument();
-    expect(within(kpi).getByText('$5.00/100km')).toBeInTheDocument();
-    expect(within(kpi).getAllByText(/Loaded page only/).length).toBeGreaterThan(0);
+    // Metric context moved off the brief face into the drawer's per-metric
+    // groups; scope moved into the drawer header.
+    for (const context of ['2 trips', '60 drives', '60 total drives', '32 charge sessions', '$5.00/100km']) {
+      expect(within(kpi).queryByText(context)).not.toBeInTheDocument();
+    }
+    assertOperationalBriefDisclosure(kpi, 'Loaded page only', { contains: true });
     fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('60 drives')).toBeInTheDocument();
-    expect(within(drawer).getByText('32 charge sessions')).toBeInTheDocument();
+    expect(within(drawer).getByRole('group', { name: 'Total Distance' })).toHaveTextContent('2 trips');
+    expect(within(drawer).getByRole('group', { name: 'Energy Used' })).toHaveTextContent('60 drives');
+    expect(within(drawer).getByRole('group', { name: 'Total Cost' })).toHaveTextContent('$5.00/100km');
+    expect(within(drawer).getByRole('group', { name: 'Total Trips' })).toHaveTextContent('60 total drives');
+    expect(within(drawer).getByRole('group', { name: 'Total Charges' })).toHaveTextContent('32 charge sessions');
     expect(within(drawer).getByText('400 km')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('keeps loaded summaries and export controls through a failed background refresh', () => {
@@ -712,7 +716,8 @@ describe('TripListPage modernization regressions', () => {
       vehicle_id: 7, limit: 50, offset: 0,
       start: '2026-03-08T08:00:00.000Z', end: '2026-03-09T07:00:00.000Z',
     });
-    expect(within(statsRegion()).getAllByText(/2026-03-08 – 2026-03-08/).length).toBeGreaterThan(0);
+    // The scope range moved off the brief face into the drawer header.
+    assertOperationalBriefDisclosure(statsRegion(), '2026-03-08 – 2026-03-08', { contains: true });
     expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument();
   });
@@ -792,7 +797,14 @@ describe('TripListPage modernization regressions', () => {
     expect(within(card).getByText(expected)).toBeInTheDocument();
     expect(within(card).getByText('—')).toBeInTheDocument();
     expect(within(card).queryByText('0 Wh/km')).not.toBeInTheDocument();
-    expect(within(statsRegion()).getByText('—/100km')).toBeInTheDocument();
+    // The per-100km cost context moved off the brief face into the drawer's
+    // Total Cost group; the measured cost itself stays numeric on the face.
+    const stats = statsRegion();
+    expect(within(stats).queryByText('—/100km')).not.toBeInTheDocument();
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Total Cost' })).toHaveTextContent('—/100km');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(cardValue(statsRegion(), 'Total Cost')).toBe(expected);
   });
 
@@ -838,7 +850,8 @@ describe('TripListPage modernization regressions', () => {
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     if (data) {
       expect(cardByName('Weekend to Coast')).toBeInTheDocument();
-      expect(within(statsRegion()).getByText('Retained source')).toBeInTheDocument();
+      // The retained status moved off the brief face into the drawer header.
+      assertOperationalBriefDisclosure(statsRegion(), 'Retained source');
       expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
     } else {
       expect(listRegion().querySelectorAll('[data-card]')).toHaveLength(6);

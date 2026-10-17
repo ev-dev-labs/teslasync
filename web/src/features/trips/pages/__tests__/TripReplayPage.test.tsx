@@ -78,7 +78,12 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
-        const text = typeof fallback === 'string' ? fallback : key;
+        // Honor i18next plural defaults like the shared fixture so counted
+        // sentences (e.g. the drawer's hidden-field explanation) render the
+        // same singular/plural the real catalog produces.
+        let text = typeof fallback === 'string' ? fallback : key;
+        if (options?.count === 1 && typeof options.defaultValue_one === 'string') text = options.defaultValue_one;
+        else if (typeof options?.count === 'number' && typeof options.defaultValue_other === 'string') text = options.defaultValue_other;
         return text.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
           options?.[name] != null ? String(options[name]) : match);
       },
@@ -165,6 +170,13 @@ vi.mock('@/components/data-display', async () => {
   };
 });
 
+// Spy the real metric mapper so omitted tiles can pin their missing/invalid
+// classification (omitted tiles carry no face tile and no drawer group).
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics');
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
+});
+
 import TripReplayPage, { fmtDuration, fmtDriveTime } from '../TripReplayPage';
 import {
   convertDistanceFromSI,
@@ -179,6 +191,8 @@ import type { TripReplayChartPoint } from '@/features/trips/components/TripRepla
 import type { TripReplayElevationPoint } from '../../components/TripReplayElevation';
 import type { AppSettings } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 /* ── Captured-prop shapes ─────────────────────────────────────────── */
 
@@ -352,13 +366,20 @@ describe('Trip replay summary event bounds', () => {
     });
     driveMock.mockReturnValue(makeDriveQuery({ data: drive }));
     renderPage(settings);
-    const scope = screen.getByTitle('Drive #7 · 2024-06-16T06:59:00Z – 2024-06-16T07:01:00Z');
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    // The scope (raw instants in `title`, formatted bounds as text) moved off
+    // the brief face into the Review-details drawer header.
+    expect(within(summary).queryByTitle('Drive #7 · 2024-06-16T06:59:00Z – 2024-06-16T07:01:00Z')).not.toBeInTheDocument();
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const scope = within(drawer).getByTitle('Drive #7 · 2024-06-16T06:59:00Z – 2024-06-16T07:01:00Z');
     const opts = { locale: settings.locale, tz: settings.timezone_user };
     expect(scope).toHaveTextContent(
       `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)} (${opts.tz})`,
     );
     expect(scope).toHaveTextContent('15. Juni 2024');
     expect(scope).toHaveTextContent('16. Juni 2024');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(drive.startTs).toBe('2024-06-16T06:59:00Z');
     expect(drive.endTs).toBe('2024-06-16T07:01:00Z');
     // Positions keep every raw field; the page only adds per-field source origins.
@@ -372,30 +393,42 @@ describe('Trip replay summary event bounds', () => {
   ])('keeps invalid or missing bounds explicit: $startTs / $endTs', ({ startTs, endTs, endLabel }) => {
     driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startTs, endTs }) }));
     renderPage(settings);
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
     // Empty raw bounds leave a double space in the title; match it verbatim.
-    const scope = screen.getByTitle(`Drive #7 · ${startTs} – ${endTs ?? 'In progress'}`, {
+    const scope = within(drawer).getByTitle(`Drive #7 · ${startTs} – ${endTs ?? 'In progress'}`, {
       normalizer: getDefaultNormalizer({ trim: false, collapseWhitespace: false }),
     });
     expect(scope).toHaveTextContent(`Drive #7 · — – ${endLabel} (${settings.timezone_user})`);
     expect(scope).not.toHaveTextContent('Invalid Date');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('discloses UTC when the saved display mode overrides the user timezone', () => {
     const drive = makeDrive();
     renderPage({ ...settings, tz_display_default: 'utc' });
-    const scope = screen.getByTitle(`Drive #7 · ${drive.startTs} – ${drive.endTs}`);
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const scope = within(drawer).getByTitle(`Drive #7 · ${drive.startTs} – ${drive.endTs}`);
     const opts = { locale: settings.locale, tz: 'UTC' };
     expect(scope).toHaveTextContent(
       `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)} (UTC)`,
     );
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('does not invent event bounds when the drive record is missing', () => {
     // A settled response without a drive record (not a still-pending request).
     driveMock.mockReturnValue({ ...makeDriveQuery(), data: null, isSuccess: true, isPending: false });
     renderPage(settings);
-    expect(screen.getByTitle('Drive record unavailable; event bounds unknown.'))
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByTitle('Drive record unavailable; event bounds unknown.'))
       .toHaveTextContent('Drive record unavailable; event bounds unknown.');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 });
 
@@ -476,8 +509,12 @@ describe('TripReplayPage postures', () => {
     }));
     renderPage();
     expect(screen.getByTestId('replay-summary-source')).toHaveAttribute('data-provenance', 'historical');
-    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Source: Position · Historical');
-    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
+    // Per-quantity source identity moved off the face into the Sources drawer.
+    expect(screen.queryByTestId('replay-source-speed')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByTestId('replay-source-speed')).toHaveTextContent('Source: Position · Historical');
+    expect(within(drawer).getByTestId('replay-source-speed')).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
     expect(screen.getByTestId('replay-derived-source')).toHaveTextContent('Estimated');
     expect(captured.map.positions).toHaveLength(2);
     expect(captured.charts.data).toHaveLength(2);
@@ -495,14 +532,24 @@ describe('TripReplayPage postures', () => {
       }),
     }));
     renderPage();
+    // Per-quantity source detail moved off the face into the Sources drawer.
+    expect(screen.queryByTestId('replay-source-speed')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
+    const drawer = screen.getByRole('dialog');
     for (const field of ['speed', 'power', 'batteryLevel', 'elevation', 'ratedRange', 'outsideTemp']) {
-      expect(screen.getByTestId(`replay-source-${field}`)).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
+      expect(within(drawer).getByTestId(`replay-source-${field}`)).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
     }
     expect(captured.map.positions[0].speed).toBe(10);
     act(() => captured.map.onSeekToIndex(1));
     for (const field of ['speed', 'power', 'batteryLevel', 'elevation', 'ratedRange', 'outsideTemp']) {
-      expect(screen.getByTestId(`replay-source-${field}`)).toHaveTextContent('Timestamp: 2024-06-15T12:01:00.000Z · Age: 0.00 s');
+      const source = within(drawer).getByTestId(`replay-source-${field}`);
+      // Known timestamps render as a <time> element: the ISO instant stays in
+      // `dateTime` while the display text follows the saved locale/timezone.
+      expect(source.querySelector('time')).toHaveAttribute('dateTime', '2024-06-15T12:01:00.000Z');
+      expect(source).toHaveTextContent('Age: 0.00 s');
     }
+    expect(within(drawer).getByTestId('replay-source-speed').querySelector('time')).not.toHaveTextContent('2024-06-15T12:01:00.000Z');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('shows only the page spinner while the drive load is in flight', () => {
@@ -682,8 +729,18 @@ describe('TripReplayPage populated', () => {
     driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startBatteryPct: 0, endBatteryPct: Number.NaN }) }));
     renderPage();
     const summary = screen.getByRole('region', { name: 'Drive Summary' });
-    expect(summary.querySelector('[data-operational-metric="battery"]')).toHaveAttribute('data-value-state', 'invalid');
+    // The invalid paired endpoint omits the Battery tile (no em-dash tile,
+    // no invented reading) and is counted in the drawer's hidden explanation.
+    expect(summary.querySelector('[data-operational-metric="battery"]')).toBeNull();
     expect(summary).not.toHaveTextContent('NaN');
+    assertOperationalMetricUnavailable(summary, 'Battery');
+    const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+      readonly { key?: string; valueState?: string }[] | undefined;
+    expect(mapped?.find(metric => metric.key === 'battery')?.valueState).toBe('invalid');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('places the live readouts and playback in the same outer map surface without metric panels', () => {
@@ -763,7 +820,15 @@ describe('TripReplayPage populated', () => {
     expect(screen.getByTestId('playback-controls')).toBeInTheDocument();
     expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
     expect(screen.getByText(`${fmtNumber(convertDistanceFromSI(12_000, 'km'))} km`)).toBeInTheDocument();
-    expect(screen.getByLabelText('Data freshness: Stale · 2m ago')).toHaveAttribute('title', expect.stringContaining('Last updated:'));
+    // The brief freshness moved off the face into the drawer header; its
+    // update instant is the tooltip description now, not a `title` attribute.
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const freshness = within(drawer).getByRole('button', { name: 'Data freshness: Stale · 2m ago' });
+    expect(freshness).toHaveAccessibleDescription(expect.stringContaining('Last updated:'));
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive Summary' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });

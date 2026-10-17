@@ -35,6 +35,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 
 import { TripKpiBand, safeMetric } from './TripKpiBand';
 import type { TripDetail } from '@/api/types';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 /* ── Controllable mock state, hoisted above the vi.mock factories ─────────── */
 const h = vi.hoisted(() => ({ system: 'km' as 'km' | 'mi' }));
@@ -166,9 +167,15 @@ describe('TripKpiBand — km preference', () => {
     expect(screen.getByText('7.2 kWh')).toBeInTheDocument();
     expect(screen.getByText('$12.50')).toBeInTheDocument();
 
-    // Subtitles interpolate the drive / charge counts.
-    expect(screen.getByText('3 drives')).toBeInTheDocument();
-    expect(screen.getByText('2 charges')).toBeInTheDocument();
+    // Subtitles (metric context) moved off the face into the drawer's
+    // per-metric groups; the counts still interpolate the same values.
+    expect(screen.queryByText('3 drives')).not.toBeInTheDocument();
+    expect(screen.queryByText('2 charges')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Distance' })).toHaveTextContent('3 drives');
+    expect(within(drawer).getByRole('group', { name: 'Drives' })).toHaveTextContent('2 charges');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
   });
 
   it('feeds SI Wh to formatEnergy and the raw cost to formatCurrency', () => {
@@ -249,8 +256,16 @@ describe('TripKpiBand — empty', () => {
     expect(screen.queryByText('0 charges')).not.toBeInTheDocument();
     expect(fmt.formatEnergy).not.toHaveBeenCalled();
     expect(fmt.formatCurrency).not.toHaveBeenCalled();
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
-    expect(screen.getAllByText(DASH)).toHaveLength(6);
+    // Unknown readings omit their tiles (no em-dash tiles); the face keeps
+    // the explanatory state with label chips, and the drawer counts them.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.queryByText(DASH)).not.toBeInTheDocument();
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    const region = screen.getByRole('region', REGION);
+    for (const label of ['Distance', 'Energy Used', 'Efficiency', 'Duration', 'Drives', 'Cost']) {
+      expect(within(region).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(container, label);
+    }
   });
 
   describe('TripKpiBand — real Review details', () => {
@@ -273,13 +288,25 @@ describe('TripKpiBand — empty', () => {
         total_cost: 0, drive_count: 0, charge_count: 0,
       })} isLoading={false} />);
       expect(screen.getByText('0 km')).toBeInTheDocument();
-      expect(screen.getByText('0 drives')).toBeInTheDocument();
-      expect(screen.getByText('0 charges')).toBeInTheDocument();
+      // The zero counts are metric context now, in the drawer's groups.
+      expect(screen.queryByText('0 drives')).not.toBeInTheDocument();
+      expect(screen.queryByText('0 charges')).not.toBeInTheDocument();
       expect(fmt.formatEnergy).toHaveBeenCalledWith(0);
       expect(fmt.formatCurrency).toHaveBeenCalledWith(0);
+      // Four known-zero tiles stay numeric; efficiency (needs positive
+      // distance) and duration (needs positive seconds) omit with a count.
+      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
       expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-      expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
-      expect(screen.getAllByText(DASH)).toHaveLength(2);
+      expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+      expect(screen.queryByText(DASH)).not.toBeInTheDocument();
+      assertOperationalMetricUnavailable(container, 'Efficiency');
+      assertOperationalMetricUnavailable(container, 'Duration');
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      expect(within(drawer).getByRole('group', { name: 'Distance' })).toHaveTextContent('0 drives');
+      expect(within(drawer).getByRole('group', { name: 'Drives' })).toHaveTextContent('0 charges');
+      expect(within(drawer).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+      fireEvent.keyDown(drawer, { key: 'Escape' });
     });
   });
 });
@@ -305,9 +332,16 @@ describe('TripKpiBand — malformed data hardening', () => {
     expect(screen.getByText('0 km')).toBeInTheDocument();
     expect(screen.queryByText('-5 km')).not.toBeInTheDocument();
 
-    // Counts are clamped: "0 drives" / "0 charges", never "-3 drives".
-    expect(screen.getByText('0 drives')).toBeInTheDocument();
-    expect(screen.getByText('0 charges')).toBeInTheDocument();
+    // Counts are clamped: "0 drives" / "0 charges" in the drawer's groups,
+    // never "-3 drives" on either surface.
+    expect(screen.queryByText('0 drives')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 charges')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Distance' })).toHaveTextContent('0 drives');
+    expect(within(drawer).getByRole('group', { name: 'Drives' })).toHaveTextContent('0 charges');
+    expect(drawer).not.toHaveTextContent('-3 drives');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.queryByText('-3 drives')).not.toBeInTheDocument();
 
     // Energy + cost formatters receive the clamped 0, never the raw negatives —
