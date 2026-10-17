@@ -20,12 +20,13 @@ vi.mock('@/hooks/useChartPalette', async (importOriginal) => {
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
-  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const { chartTestDoubles, inertCartesianParts } = await import('@/test/chartTestDoubles');
   const { createElement } = await import('react');
   const container = ({ children }: { children?: import('react').ReactNode }) => createElement('div', null, children);
   return {
     ...actual,
     ...chartTestDoubles,
+    ...inertCartesianParts,
     ResponsiveContainer: container,
     LineChart: vi.fn(container),
     AreaChart: vi.fn(container),

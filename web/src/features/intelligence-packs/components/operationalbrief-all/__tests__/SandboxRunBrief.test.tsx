@@ -64,10 +64,16 @@ describe('SandboxRunBrief actual raw bridge and drawer', () => {
     ]);
     expect(metric(container, 'sandbox-sample-rows')).toHaveAttribute('data-value-state', 'value');
     expect(metric(container, 'sandbox-elapsed-time')).toHaveTextContent('2.375 ms');
-    expect(screen.getByText('5 sample rows · 117 evaluation steps · 2.375ms')).toBeInTheDocument();
-    expect(screen.getByText(/not a subscription or evidence of model accuracy/i)).toBeInTheDocument();
-    expect(screen.getByText('Local sample pack · v1.2.3')).toBeInTheDocument();
-    expect(screen.getByText('Selected run; no vehicle-data timestamp')).toBeInTheDocument();
+    // Face-value disclosure: the face keeps live metric values only; run
+    // context moved to the Review-details drawer.
+    const brief = within(screen.getByTestId('intelligence-packs-sandbox-run-brief'));
+    expect(brief.queryByText('5 sample rows · 117 evaluation steps · 2.375ms')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Selected pack evaluation details' });
+    expect(within(drawer).getByText('5 sample rows · 117 evaluation steps · 2.375ms')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/not a subscription or evidence of model accuracy/i)).toHaveLength(2);
+    expect(within(drawer).getByText('Local sample pack · v1.2.3')).toBeInTheDocument();
+    expect(within(drawer).getByText('Selected run; no vehicle-data timestamp')).toBeInTheDocument();
   });
 
   it('shows genuine measured zero and does not present invalid counts or elapsed values as zero', () => {
@@ -85,16 +91,22 @@ describe('SandboxRunBrief actual raw bridge and drawer', () => {
           packName="Invalid sample" packVersion="1.0.0" grantDescription="Simulated grant" />
       </MemoryRouter>,
     );
+    // Unknown values are omitted from the face (never presented as zero) and
+    // counted in the Review-details drawer.
     for (const key of ['sandbox-sample-rows', 'sandbox-evaluation-steps', 'sandbox-elapsed-time']) {
-      const node = metric(container, key);
-      expect(node).toHaveAttribute('data-value-state', 'invalid');
-      expect(node.querySelector('[data-operational-value]')).toHaveTextContent('—');
+      expect(container.querySelector(`[data-operational-metric="${key}"]`)).toBeNull();
     }
+    expect(within(screen.getByTestId('intelligence-packs-sandbox-run-brief'))
+      .getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Selected pack evaluation details' });
+    expect(within(drawer).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('keeps partial-output limitations, source operands and the installed grant reviewable in the real details drawer', () => {
     renderBrief({ ...preparedRun(), truncated: true });
-    expect(screen.getByText('5 sample rows · 117 evaluation steps · 2.375ms · truncated by budget')).toBeInTheDocument();
+    expect(within(screen.getByTestId('intelligence-packs-sandbox-run-brief'))
+      .queryByText('5 sample rows · 117 evaluation steps · 2.375ms · truncated by budget')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Selected pack evaluation details' });
     expect(within(drawer).getByText(/Local bounded interpreter over bundled synthetic sample data/i))

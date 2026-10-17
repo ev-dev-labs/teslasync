@@ -93,8 +93,9 @@ describe('resolveDashboardWidgetResults', () => {
       expect(r.widgetId).toBe(dashboard.widgets[i].id);
       expect(r.result?.formulaId).toBe(dashboard.widgets[i].formulaRef);
     });
+  });
 
-    describe('runSandboxPreview — interrupted formula partial rows', () => {
+  describe('runSandboxPreview — interrupted formula partial rows', () => {
       it.each([
         'exceeded 20000 total node evaluations.',
         'exceeded the wall-clock time budget.',
@@ -178,7 +179,6 @@ describe('resolveDashboardWidgetResults', () => {
           evaluate.mockRestore();
         }
       });
-    });
   });
 
   it('returns null result for a widget whose formulaRef somehow was not run', () => {

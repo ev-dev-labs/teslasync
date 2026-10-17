@@ -103,7 +103,11 @@ describe('Sandbox actual-component content preservation', () => {
     expect(metric.getByText('23.50 flag')).toBeInTheDocument();
     expect(metric.getByText('avg 6.65 flag')).toBeInTheDocument();
     expect(screen.getByText('sample -12.50–23.50 %')).toBeInTheDocument();
-    expect(screen.getByText('5 sample rows · 117 evaluation steps · 2ms')).toBeInTheDocument();
+    expect(within(screen.getByTestId('intelligence-packs-sandbox-run-brief'))
+      .queryByText('5 sample rows · 117 evaluation steps · 2ms')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Selected pack evaluation details' });
+    expect(within(drawer).getByText('5 sample rows · 117 evaluation steps · 2ms')).toBeInTheDocument();
   });
 
   it('distinguishes a real zero result from an unsupported empty result without removing sibling widgets', () => {
@@ -126,7 +130,9 @@ describe('Sandbox actual-component content preservation', () => {
     expect(widget('Efficiency Gap vs Target').getByText('Sandbox step budget exceeded')).toBeInTheDocument();
     expect(widget('Efficiency Gap vs Target').queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Charge Added — data table' })).toBeInTheDocument();
-    expect(screen.getByText(/truncated by budget/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Selected pack evaluation details' });
+    expect(within(drawer).getByText(/truncated by budget/i)).toBeInTheDocument();
   });
 
   it('updates metric precision and locale through the existing preference bridge without changing raw chart samples', () => {
@@ -168,7 +174,9 @@ describe('Sandbox actual-component content preservation', () => {
     expect(widget('Efficiency Gap vs Target').getByText('Partial result retained')).toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: 'Efficiency Gap vs Target — data table' })).getAllByRole('row'))
       .toHaveLength(6);
-    expect(screen.getByText(/truncated by budget/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Selected pack evaluation details' });
+    expect(within(drawer).getByText(/truncated by budget/i)).toBeInTheDocument();
   });
 
   it('retains the installed partial grant and complete preview results when the trust read fails its refresh', async () => {
