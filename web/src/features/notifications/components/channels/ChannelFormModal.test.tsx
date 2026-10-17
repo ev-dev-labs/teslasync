@@ -157,7 +157,7 @@ function submitForm() {
   fireEvent.submit(form);
 }
 
-function setValue(label: string, value: string) {
+function setValue(label: string | RegExp, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
@@ -201,7 +201,7 @@ describe('ChannelFormModal — create mode', () => {
     expect(screen.getByText('Configuration de Point de terminaison')).toBeInTheDocument();
     expect(screen.getByLabelText('Secret de signature')).toHaveAttribute('placeholder', 'Facultatif pour la signature HMAC');
     setValue('Channel name', 'Automation');
-    setValue('URL', 'https://receiver.example.test/events');
+    setValue(/^URL/, 'https://receiver.example.test/events');
     setValue('Secret de signature', 'sample-secret');
     submitForm();
     expect(h.saveMutate).toHaveBeenCalledWith(expect.objectContaining({
@@ -250,7 +250,7 @@ describe('ChannelFormModal — create mode', () => {
     renderModal();
     fireEvent.click(screen.getByRole('radio', { name: 'Webhook' }));
     setValue('Channel name', 'Automation hook');
-    setValue('URL', 'https://receiver.example.test/events');
+    setValue(/^URL/, 'https://receiver.example.test/events');
     setValue('Signing secret', 'sample-secret');
     fireEvent.change(screen.getByLabelText('HTTP method'), { target: { value: 'PUT' } });
     expect(screen.queryByLabelText('Headers (JSON)')).toBeNull();
@@ -303,12 +303,12 @@ describe('ChannelFormModal — create mode', () => {
     renderModal();
     setValue('Channel name', 'Webhook validation');
     await user.click(screen.getByRole('radio', { name: 'Webhook' }));
-    expect(screen.getByLabelText('URL')).toHaveAttribute('type', 'url');
-    expect(screen.getByLabelText('URL')).toBeRequired();
+    expect(screen.getByLabelText(/^URL/)).toHaveAttribute('type', 'url');
+    expect(screen.getByLabelText(/^URL/)).toBeRequired();
     expect(screen.getByLabelText('Signing secret')).not.toBeRequired();
     await user.click(screen.getByRole('button', { name: 'Create' }));
     expect(h.saveMutate).not.toHaveBeenCalled();
-    setValue('URL', 'ftp://receiver.example.com');
+    setValue(/^URL/, 'ftp://receiver.example.com');
     submitForm();
     expect(screen.getByRole('alert')).toHaveTextContent('URL must start with http:// or https://.');
     expect(h.saveMutate).not.toHaveBeenCalled();

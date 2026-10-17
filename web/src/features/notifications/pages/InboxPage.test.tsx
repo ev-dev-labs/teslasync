@@ -115,6 +115,7 @@ vi.mock('../components/NotificationReportPanel', () => ({
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import InboxPage from './InboxPage';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAlertRules, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
@@ -253,9 +254,16 @@ describe('InboxPage — summary KPI derivation (happy path)', () => {
     renderPage();
     const summary = summaryScope();
     expect(summary.getByText('5')).toBeInTheDocument(); // total rows
-    expect(summary.getByText('Latest 50 active entries · all time')).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-backlog-brief');
+    assertOperationalBriefDisclosure(brief, 'Latest 50 active entries · all time');
     expect(summary.getByText('3')).toBeInTheDocument(); // unread (rows w/o read_at)
-    expect(summary.getByText('3 of 5')).toBeInTheDocument(); // unread subtitle
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Unread' })).toHaveTextContent('3 of 5'); // unread subtitle
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(summary.getByText('1')).toBeInTheDocument(); // warnings
     expect(summary.getAllByText('2')).toHaveLength(2); // critical + info both 2
   });

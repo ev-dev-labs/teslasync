@@ -38,6 +38,7 @@ vi.mock('../components/AlertRuleEditor', () => ({
 
 import type { AlertRule } from '@/api/types';
 import AlertRulesPage, { subjectOf, isSnoozed } from './AlertRulesPage';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 // framer-motion's useMotionPreference (reached via <FadeIn>) reads matchMedia,
 // which jsdom does not implement. Install a minimal stub before any module that
@@ -592,7 +593,7 @@ describe('AlertRulesPage — restrained presentation and retained sources', () =
       expect(screen.getByText(title)).toBeInTheDocument();
     }
     expect(screen.getByRole('table')).toBeInTheDocument();
-    expect(screen.getByTestId('alert-rules-brief')).toHaveTextContent('Data may be stale');
+    assertOperationalBriefDisclosure(screen.getByTestId('alert-rules-brief'), 'Data may be stale');
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
     fireEvent.click(screen.getByRole('link', { name: 'Alpha' }));
     expect(screen.getByTestId('full-rule-editor')).toHaveTextContent('Alpha');

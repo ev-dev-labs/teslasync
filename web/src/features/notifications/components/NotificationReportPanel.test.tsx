@@ -60,6 +60,7 @@ vi.mock('react-i18next', async () => {
 import { useNotificationReport } from '@/api/hooks/useNotifications';
 import { resolveChartPalette, useChartPalette } from '@/hooks/useChartPalette';
 import { NotificationReportPanel } from './NotificationReportPanel';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const useReport = vi.mocked(useNotificationReport);
 const usePalette = vi.mocked(useChartPalette);
@@ -146,8 +147,16 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
     expect(screen.getByText('Outbound HTTP calls').closest('[data-operational-metric]')).toHaveTextContent('11');
-    expect(screen.getByText(/Outbound HTTP calls include retries and failures/)).toBeInTheDocument();
-    expect(screen.getByText(/Compare with Notifications under API Logs’ By Service/)).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-report-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      const httpGroup = within(drawer).getByRole('group', { name: 'Outbound HTTP calls' });
+      expect(httpGroup).toHaveTextContent('Outbound HTTP calls include retries and failures');
+      expect(httpGroup).toHaveTextContent('Compare with Notifications under API Logs’ By Service');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(screen.getByText('1.67')).toBeInTheDocument();
     expect(screen.getByText('Deliveries without a linked trigger')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
@@ -166,7 +175,15 @@ describe('NotificationReportPanel', () => {
     renderPanel();
     expect(screen.getByText('1.00')).toBeInTheDocument();
     expect(screen.getByText('Deliveries without a linked trigger').closest('[data-operational-metric]')).toHaveTextContent('2');
-    expect(screen.getByText(/Older deliveries without an event identifier appear only in delivery counts/)).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-report-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Triggers recorded' }))
+        .toHaveTextContent('Older deliveries without an event identifier appear only in delivery counts');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
   it('aggregates long all-time windows without dropping older daily counts', () => {
@@ -215,8 +232,8 @@ describe('NotificationReportPanel', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     const unavailable = screen.getByTestId('notification-report-brief');
-    expect(unavailable.querySelector('[data-operational-metric="report-triggered"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(unavailable.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    assertOperationalMetricUnavailable(unavailable, 'Triggers recorded');
+    expect(unavailable.querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Trigger sources' })).toBeInTheDocument();
   });
 

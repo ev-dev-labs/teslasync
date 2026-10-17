@@ -59,12 +59,11 @@ vi.mock('@/lib/notificationSound', async () => {
 
 import { BrowserNotificationsKpis } from './BrowserNotificationsKpis';
 import { NOTIFICATION_SOUND_CATEGORIES } from '@/lib/notificationSound';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 type Props = ComponentProps<typeof BrowserNotificationsKpis>;
 
 const TOTAL_CHANNELS = NOTIFICATION_SOUND_CATEGORIES.length;
-/** Em-dash (U+2014) the band renders for a tab count that isn't known yet. */
-const EM_DASH = '—';
 
 const LABEL_PERMISSION = 'Browser permission';
 const LABEL_PUSH = 'In-tab events';
@@ -110,15 +109,28 @@ function metricValue(label: string): string {
   return metricCard(label).querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
-/** Preserve the original active/total caption within the rich metric detail. */
-function metricSubtitle(label: string): string | null {
-  return metricCard(label).textContent?.match(/\d+ of \d+ on/)?.[0] ?? null;
+/** Open the Review-details drawer, run drawer assertions, then close it. */
+function withDrawer(assert: (dialog: HTMLElement) => void) {
+  const brief = screen.getByTestId('browser-notifications-brief');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    assert(dialog);
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
 }
 
-/** className of the div wrapping a card's icon glyph — carries the neon text hue. */
-function iconTextClass(label: string): string {
-  const card = metricCard(label);
-  return card.querySelector('svg')?.parentElement?.className ?? '';
+/** Preserve the original active/total caption within the drawer metric group. */
+function drawerSubtitle(label: string, dialog: HTMLElement): string | null {
+  const group = within(dialog).getByRole('group', { name: label });
+  return group.textContent?.match(/\d+ of \d+ on/)?.[0] ?? null;
+}
+
+/** className of the span wrapping a drawer group's icon glyph — carries the neon text hue. */
+function drawerIconTextClass(label: string, dialog: HTMLElement): string {
+  const group = within(dialog).getByRole('group', { name: label });
+  return group.querySelector('svg')?.parentElement?.className ?? '';
 }
 
 beforeEach(() => {
@@ -134,28 +146,36 @@ describe('BrowserNotificationsKpis — permission KPI', () => {
 
     // Unsupported must win over the granted permission value.
     expect(metricValue(LABEL_PERMISSION)).toBe('Unsupported');
-    expect(iconTextClass(LABEL_PERMISSION)).toContain(neonColorMap.amber.text);
+    withDrawer(dialog => {
+      expect(drawerIconTextClass(LABEL_PERMISSION, dialog)).toContain(neonColorMap.amber.text);
+    });
   });
 
   it('shows "Enabled" (green) when supported and granted', () => {
     renderKpis({ notificationsSupported: true, permission: 'granted' });
 
     expect(metricValue(LABEL_PERMISSION)).toBe('Enabled');
-    expect(iconTextClass(LABEL_PERMISSION)).toContain(neonColorMap.green.text);
+    withDrawer(dialog => {
+      expect(drawerIconTextClass(LABEL_PERMISSION, dialog)).toContain(neonColorMap.green.text);
+    });
   });
 
   it('shows "Blocked" (red) when the user has denied permission', () => {
     renderKpis({ notificationsSupported: true, permission: 'denied' });
 
     expect(metricValue(LABEL_PERMISSION)).toBe('Blocked');
-    expect(iconTextClass(LABEL_PERMISSION)).toContain(neonColorMap.red.text);
+    withDrawer(dialog => {
+      expect(drawerIconTextClass(LABEL_PERMISSION, dialog)).toContain(neonColorMap.red.text);
+    });
   });
 
   it('shows "Not enabled" (cyan) in the default, not-yet-asked state', () => {
     renderKpis({ notificationsSupported: true, permission: 'default' });
 
     expect(metricValue(LABEL_PERMISSION)).toBe('Not enabled');
-    expect(iconTextClass(LABEL_PERMISSION)).toContain(neonColorMap.cyan.text);
+    withDrawer(dialog => {
+      expect(drawerIconTextClass(LABEL_PERMISSION, dialog)).toContain(neonColorMap.cyan.text);
+    });
   });
 });
 
@@ -164,21 +184,27 @@ describe('BrowserNotificationsKpis — push-events KPI', () => {
     renderKpis({ pushPrefs: { alerts: true, exportStatus: true } });
 
     expect(metricValue(LABEL_PUSH)).toBe('2/2');
-    expect(metricSubtitle(LABEL_PUSH)).toBe('2 of 2 on');
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_PUSH, dialog)).toBe('2 of 2 on');
+    });
   });
 
   it('counts a single enabled push event as 1/2', () => {
     renderKpis({ pushPrefs: { alerts: true, exportStatus: false } });
 
     expect(metricValue(LABEL_PUSH)).toBe('1/2');
-    expect(metricSubtitle(LABEL_PUSH)).toBe('1 of 2 on');
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_PUSH, dialog)).toBe('1 of 2 on');
+    });
   });
 
   it('counts no enabled push events as 0/2', () => {
     renderKpis({ pushPrefs: { alerts: false, exportStatus: false } });
 
     expect(metricValue(LABEL_PUSH)).toBe('0/2');
-    expect(metricSubtitle(LABEL_PUSH)).toBe('0 of 2 on');
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_PUSH, dialog)).toBe('0 of 2 on');
+    });
   });
 });
 
@@ -188,8 +214,7 @@ describe('BrowserNotificationsKpis — tab-signals KPI', () => {
     renderKpis();
 
     // A missing settings payload must not be dressed up as a truthful "2/2".
-    expect(metricValue(LABEL_TAB)).toBe(EM_DASH);
-    expect(metricSubtitle(LABEL_TAB)).toBeNull();
+    assertOperationalMetricUnavailable(screen.getByTestId('browser-notifications-brief'), LABEL_TAB);
   });
 
   it('treats absent tab flags as enabled (defaults on) → 2/2', () => {
@@ -198,7 +223,9 @@ describe('BrowserNotificationsKpis — tab-signals KPI', () => {
     renderKpis();
 
     expect(metricValue(LABEL_TAB)).toBe('2/2');
-    expect(metricSubtitle(LABEL_TAB)).toBe('2 of 2 on');
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_TAB, dialog)).toBe('2 of 2 on');
+    });
   });
 
   it('counts both tab signals off as 0/2 when explicitly disabled', () => {
@@ -208,7 +235,9 @@ describe('BrowserNotificationsKpis — tab-signals KPI', () => {
     renderKpis();
 
     expect(metricValue(LABEL_TAB)).toBe('0/2');
-    expect(metricSubtitle(LABEL_TAB)).toBe('0 of 2 on');
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_TAB, dialog)).toBe('0 of 2 on');
+    });
   });
 
   it('counts a single disabled tab signal as 1/2', () => {
@@ -228,7 +257,9 @@ describe('BrowserNotificationsKpis — sound-channels KPI', () => {
     renderKpis();
 
     expect(metricValue(LABEL_SOUND)).toBe(`0/${TOTAL_CHANNELS}`);
-    expect(metricSubtitle(LABEL_SOUND)).toBe(`0 of ${TOTAL_CHANNELS} on`);
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_SOUND, dialog)).toBe(`0 of ${TOTAL_CHANNELS} on`);
+    });
   });
 
   it('counts only the enabled per-category channels when the master switch is on', () => {
@@ -237,7 +268,9 @@ describe('BrowserNotificationsKpis — sound-channels KPI', () => {
     renderKpis();
 
     expect(metricValue(LABEL_SOUND)).toBe(`3/${TOTAL_CHANNELS}`);
-    expect(metricSubtitle(LABEL_SOUND)).toBe(`3 of ${TOTAL_CHANNELS} on`);
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_SOUND, dialog)).toBe(`3 of ${TOTAL_CHANNELS} on`);
+    });
   });
 
   it('counts every channel when all are enabled and master is on', () => {
@@ -261,11 +294,13 @@ describe('BrowserNotificationsKpis — accessibility & structure', () => {
   });
 
   it('marks every metric icon decorative so assistive tech skips the glyphs', () => {
-    const { container } = renderKpis();
+    renderKpis();
 
-    // One decorative icon per card, each hidden from the accessibility tree.
-    expect(container.querySelectorAll('[data-operational-metric] svg[aria-hidden="true"]')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-operational-metric] svg:not([aria-hidden="true"])')).toHaveLength(0);
+    // One decorative icon per drawer metric group, each hidden from the accessibility tree.
+    withDrawer(dialog => {
+      expect(dialog.querySelectorAll('[role="group"] svg[aria-hidden="true"]')).toHaveLength(4);
+      expect(dialog.querySelectorAll('[role="group"] svg:not([aria-hidden="true"])')).toHaveLength(0);
+    });
   });
 
   it('reviews all configuration fractions and independent browser/settings provenance in the actual drawer', () => {
@@ -290,7 +325,9 @@ describe('BrowserNotificationsKpis — null-safety', () => {
     ).not.toThrow();
 
     expect(metricValue(LABEL_PUSH)).toBe('0/2');
-    expect(metricSubtitle(LABEL_PUSH)).toBe('0 of 2 on');
+    withDrawer(dialog => {
+      expect(drawerSubtitle(LABEL_PUSH, dialog)).toBe('0 of 2 on');
+    });
   });
 
   it('tolerates a malformed sound-prefs object (missing perCategory) as 0 active', () => {

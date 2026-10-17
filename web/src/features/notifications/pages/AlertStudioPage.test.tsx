@@ -202,7 +202,7 @@ describe('AlertStudioPage navigation protection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Templates' }));
     const useTemplate = screen.getByRole('button', { name: 'Use template Battery Low (< 20%)' });
     expect(useTemplate).toHaveClass('mt-auto', 'w-full');
-    expect(useTemplate.closest('[data-print-card]')).toHaveClass('h-full');
+    expect(useTemplate.closest('[data-surface-variant="embedded"]')).toHaveClass('h-full');
 
     fireEvent.click(useTemplate);
     await waitFor(() => expect(screen.getByPlaceholderText('My alert rule')).toHaveValue('Battery Low (< 20%)'));

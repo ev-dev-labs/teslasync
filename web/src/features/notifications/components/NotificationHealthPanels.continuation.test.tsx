@@ -11,6 +11,11 @@ import { NotificationLatencyPanel } from './NotificationLatencyPanel';
 import * as burnRateAnalysis from '../lib/notificationBurnRate';
 import { analyzeAlertFatigue } from '../lib/alertFatigue';
 import * as fatigueAnalysis from '../lib/alertFatigue';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 const state = vi.hoisted(() => ({
   analysis: undefined as NotificationLog[] | undefined,
@@ -64,6 +69,12 @@ vi.mock('@/components/charts', async importOriginal => {
     },
   };
 });
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>(
+    '@/hooks/useOperationalMetrics',
+  );
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
+});
 
 function log(overrides: Partial<NotificationLog> = {}): NotificationLog {
   return {
@@ -86,6 +97,22 @@ function statTile(region: HTMLElement, label: string): HTMLElement {
   const tile = within(region).getByText(label, { selector: '[data-operational-metric] *' }).closest<HTMLElement>('[data-operational-metric]');
   expect(tile).not.toBeNull();
   return tile!;
+}
+
+// Omitted metrics carry no drawer group, so the missing/invalid
+// classification is pinned on the mapped hook output instead. Panels share
+// the spy, so select the latest call that carries the occurrence id.
+function hookProbe(occurrenceId: string) {
+  const mocked = vi.mocked(useOperationalMetrics);
+  for (let index = mocked.mock.calls.length - 1; index >= 0; index--) {
+    const input = mocked.mock.calls[index]![0];
+    if (input.some(metric => metric.occurrenceId === occurrenceId)) {
+      const mapped = mocked.mock.results[index]?.value as
+        readonly { valueState?: string }[] | undefined;
+      return { input, mapped };
+    }
+  }
+  throw new Error(`Missing hook call for ${occurrenceId}`);
 }
 
 describe('Notification health continuation source independence', () => {
@@ -128,15 +155,19 @@ describe('Notification health continuation source independence', () => {
     expect(within(table).getByText('Measured')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     const fatigue = screen.getByRole('region', { name: 'Alert fatigue' });
-    expect(fatigue.querySelector('[data-operational-brief]')).toBeInTheDocument();
-    expect(within(fatigue).getByText('Data may be stale')).toBeInTheDocument();
-    expect(fatigue.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    const fatigueBrief = within(fatigue).getByTestId('alert-fatigue-brief');
+    expect(fatigueBrief).toBeInTheDocument();
+    assertOperationalBriefDisclosure(fatigueBrief, 'Data may be stale');
+    expect(fatigue.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    assertOperationalMetricUnavailable(fatigueBrief, 'Never read');
+    assertOperationalMetricUnavailable(fatigueBrief, 'Arrived in bursts');
     fireEvent.click(within(fatigue).getByRole('button', { name: 'Refresh' }));
     expect(state.retryAnalysis).toHaveBeenCalledOnce();
     expect(state.retryDelivery).not.toHaveBeenCalled();
     const burn = screen.getByRole('region', { name: 'Notification burn rate' });
-    expect(burn.querySelector('[data-operational-brief]')).toBeInTheDocument();
-    expect(within(burn).getByText('Data may be stale')).toBeInTheDocument();
+    const burnBrief = within(burn).getByTestId('notification-burn-rate-brief');
+    expect(burnBrief).toBeInTheDocument();
+    assertOperationalBriefDisclosure(burnBrief, 'Data may be stale');
     expect(burn.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     fireEvent.click(within(burn).getByRole('button', { name: 'Refresh' }));
     expect(state.retryDelivery).toHaveBeenCalledOnce();
@@ -216,18 +247,26 @@ describe('Notification health continuation source independence', () => {
     expect(fatigue.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     const rules = statTile(fatigue, 'Fatiguing rules');
     expect(rules.querySelector('[data-operational-value]')).toHaveTextContent(/^1$/);
-    expect(within(rules).getByText('of 1 rules')).toBeInTheDocument();
-    expect(within(rules).getByRole('button', { name: 'More info about fatiguing rules' })).toBeInTheDocument();
     const perDay = statTile(fatigue, 'Notifications per day');
     expect(perDay.querySelector('[data-operational-value]')).toHaveTextContent(/^20.00$/);
-    expect(within(perDay).getByText('across 1.00 days')).toBeInTheDocument();
     const ignored = statTile(fatigue, 'Never read');
     expect(ignored.querySelector('[data-operational-value]')).toHaveTextContent(/^100.00%$/);
-    expect(within(ignored).getByText('of notifications with read tracking')).toBeInTheDocument();
     const bursts = statTile(fatigue, 'Arrived in bursts');
     expect(bursts.querySelector('[data-operational-value]')).toHaveTextContent(/^100.00%$/);
-    expect(within(bursts).getByText('firings that piled onto another')).toBeInTheDocument();
-    expect(within(fatigue).getByText('Rates use the recorded firing span, not a complete requested analysis period; read tracking includes delivered notifications only.')).toBeInTheDocument();
+    const brief = within(fatigue).getByTestId('alert-fatigue-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Fatiguing rules' })).toHaveTextContent('of 1 rules');
+      expect(within(within(drawer).getByRole('group', { name: 'Fatiguing rules' }))
+        .getByRole('button', { name: 'More info about fatiguing rules' })).toBeInTheDocument();
+      expect(within(drawer).getByRole('group', { name: 'Notifications per day' })).toHaveTextContent('across 1.00 days');
+      expect(within(drawer).getByRole('group', { name: 'Never read' })).toHaveTextContent('of notifications with read tracking');
+      expect(within(drawer).getByRole('group', { name: 'Arrived in bursts' })).toHaveTextContent('firings that piled onto another');
+      expect(drawer).toHaveTextContent('Rates use the recorded firing span, not a complete requested analysis period; read tracking includes delivered notifications only.');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(within(fatigue).getByRole('heading', { name: 'Rule breakdown' })).toBeInTheDocument();
   });
 
@@ -249,7 +288,8 @@ describe('Notification health continuation source independence', () => {
       'Notifications are grouped by alert ID, event type and normalised title together. Titles are lowercased, numeric values are replaced with placeholders and whitespace is collapsed; vehicle names and other text remain. Different alert IDs or event types stay separate even when their normalised titles match.',
     );
     expect(tooltip).not.toHaveTextContent('vehicle names are stripped');
-    const tables = within(fatigue).getAllByRole('table');
+    const detailPanel = heading.closest('[data-print-card]')!;
+    const tables = within(detailPanel).getAllByRole('table');
     expect(tables).toHaveLength(5);
     const grouped = within(fatigue).getByRole('table', { name: 'Roadster battery at 19%' });
     expect(within(grouped).getByText('2 · 2.00/day')).toBeInTheDocument();
@@ -312,11 +352,11 @@ describe('Notification health continuation source independence', () => {
     state.analysis = [log()];
     renderPanels();
     const fatigue = screen.getByRole('region', { name: 'Alert fatigue' });
-    const ignored = statTile(fatigue, 'Never read');
-    expect(ignored).toHaveAttribute('data-value-state', 'missing');
-    expect(ignored.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(within(ignored).getByText('Not tracked')).toBeInTheDocument();
-    expect(within(ignored).queryByText('0')).not.toBeInTheDocument();
+    const brief = within(fatigue).getByTestId('alert-fatigue-brief');
+    assertOperationalMetricUnavailable(brief, 'Never read');
+    const { input, mapped } = hookProbe('fatigue-ignored');
+    expect(input.find(metric => metric.occurrenceId === 'fatigue-ignored')?.missingReason).toBe('Not tracked');
+    expect(mapped?.find((_, index) => input[index]?.occurrenceId === 'fatigue-ignored')?.valueState).toBe('missing');
   });
 
   it.each([
@@ -343,14 +383,27 @@ describe('Notification health continuation source independence', () => {
     vi.spyOn(fatigueAnalysis, 'analyzeAlertFatigue').mockReturnValue(summary);
     render(<MemoryRouter><AlertFatiguePanel /></MemoryRouter>);
     const fatigue = screen.getByRole('region', { name: 'Alert fatigue' });
-    for (const label of ['Notifications per day', 'Never read', 'Arrived in bursts']) {
-      const tile = statTile(fatigue, label);
-      expect(tile).toHaveAttribute('data-value-state', expectedState);
-      expect(tile.querySelector('[data-operational-value]')).toHaveTextContent(
-        expectedState === 'value'
-          ? label === 'Notifications per day' ? fmtNumber(value) : `${fmtNumber(Number(value) * 100)}%`
-          : '—',
-      );
+    const brief = within(fatigue).getByTestId('alert-fatigue-brief');
+    const labels = ['Notifications per day', 'Never read', 'Arrived in bursts'] as const;
+    if (expectedState === 'value') {
+      for (const label of labels) {
+        const tile = statTile(fatigue, label);
+        expect(tile).toHaveAttribute('data-value-state', expectedState);
+        expect(tile.querySelector('[data-operational-value]')).toHaveTextContent(
+          label === 'Notifications per day' ? fmtNumber(value) : `${fmtNumber(Number(value) * 100)}%`,
+        );
+      }
+    } else {
+      const { mapped, input } = hookProbe('fatigue-per-day');
+      for (const label of labels) {
+        assertOperationalMetricUnavailable(brief, label);
+      }
+      const states = labels.map(label => {
+        const occurrenceId = label === 'Notifications per day' ? 'fatigue-per-day'
+          : label === 'Never read' ? 'fatigue-ignored' : 'fatigue-bursts';
+        return mapped?.find((_, index) => input[index]?.occurrenceId === occurrenceId)?.valueState;
+      });
+      expect(states).toEqual([expectedState, expectedState, expectedState]);
     }
     const details = within(fatigue).getByRole('table', { name: group.title });
     expect(within(details).getByText(
@@ -384,7 +437,14 @@ describe('Notification health continuation source independence', () => {
       setGlobalPrecision(4);
     });
     expect(perDay.querySelector('[data-operational-value]')).toHaveTextContent(/^1.234,5679$/);
-    expect(within(perDay).getByText('across 1,2346 days')).toBeInTheDocument();
+    const brief = within(fatigue).getByTestId('alert-fatigue-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Notifications per day' })).toHaveTextContent('across 1,2346 days');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(statTile(fatigue, 'Never read').querySelector('[data-operational-value]')).toHaveTextContent(/^12,3456%$/);
     expect(statTile(fatigue, 'Arrived in bursts').querySelector('[data-operational-value]')).toHaveTextContent(/^-12,3456%$/);
     const details = within(fatigue).getByRole('table', { name: summary.groups[0]!.title });
@@ -402,26 +462,34 @@ describe('Notification health continuation source independence', () => {
     })];
     renderPanels();
     const burn = screen.getByRole('region', { name: 'Notification burn rate' });
+    const brief = within(burn).getByTestId('notification-burn-rate-brief');
     expect(burn.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
-    expect(burn.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(within(burn).getByText('Recorded outcomes · 1h and 24h windows')).toBeInTheDocument();
+    expect(burn.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    assertOperationalBriefDisclosure(brief, 'Recorded outcomes · 1h and 24h windows');
     const delivery = statTile(burn, '24h delivery SLO');
     expect(delivery.querySelector('[data-operational-value]')).toHaveTextContent(/^0.00%$/);
-    expect(within(delivery).getByText('99% objective')).toBeInTheDocument();
-    const short = statTile(burn, '1h burn rate');
-    expect(short).toHaveAttribute('data-value-state', 'missing');
-    expect(short.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(within(short).getByText('0 delivery outcomes')).toBeInTheDocument();
-    expect(within(short).getByText('No delivery outcomes in the last hour')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, '1h burn rate');
+    const { input, mapped } = hookProbe('burn-short');
+    expect(mapped?.find((_, index) => input[index]?.occurrenceId === 'burn-short')?.valueState).toBe('missing');
+    expect(input.find(metric => metric.occurrenceId === 'burn-short')?.missingReason)
+      .toBe('No delivery outcomes in the last hour');
+    expect(burnRateAnalysis.analyzeNotificationBurnRate(state.delivery!, { nowMs: Date.now() }).shortWindow.eligible).toBe(0);
     const long = statTile(burn, '24h burn rate');
     expect(long).toHaveAttribute('data-operational-metric', 'burn-long');
     expect(long.querySelector('[data-operational-value]')).toHaveTextContent(/^100.00×$/);
     expect(within(long).queryByText('%')).not.toBeInTheDocument();
-    expect(within(long).getByText('1 failed · 0 sent')).toBeInTheDocument();
     const budget = statTile(burn, 'Budget status');
     expect(budget.querySelector('[data-operational-value]')).toHaveTextContent('Burning fast');
-    expect(within(budget).getByText('0 deferred by DND')).toBeInTheDocument();
-    expect(within(burn).getByText('Short and long windows are separate; only sent and failed outcomes consume the 1% error budget. Deferred DND and pending attempts are excluded.')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: '24h delivery SLO' })).toHaveTextContent('99% objective');
+      expect(within(drawer).getByRole('group', { name: '24h burn rate' })).toHaveTextContent('1 failed · 0 sent');
+      expect(within(drawer).getByRole('group', { name: 'Budget status' })).toHaveTextContent('0 deferred by DND');
+      expect(drawer).toHaveTextContent('Short and long windows are separate; only sent and failed outcomes consume the 1% error budget. Deferred DND and pending attempts are excluded.');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(within(burn).getByRole('heading', { name: 'Delivery outcomes by hour' })).toBeInTheDocument();
     expect(within(burn).getByRole('heading', { name: 'Severity breakdown' })).toBeInTheDocument();
   });
@@ -439,7 +507,7 @@ describe('Notification health continuation source independence', () => {
       const { rerender } = render(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
       const burn = screen.getByRole('region', { name: 'Notification burn rate' });
       const asOf = within(burn).getByTestId('notification-burn-rate-as-of');
-      expect(asOf).toHaveTextContent('As of 2026-10-14T12:00:00.000Z');
+      expect(asOf).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
       expect(statTile(burn, '1h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^100.00×$/);
       expect(statTile(burn, '24h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^50.00×$/);
       expect(statTile(burn, 'Budget status')).toHaveTextContent('SLO breach');
@@ -448,7 +516,7 @@ describe('Notification health continuation source independence', () => {
       state.deliveryError = new Error('snapshot refresh failed');
       state.paused = true;
       rerender(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(asOf).toHaveTextContent('As of 2026-10-14T12:00:00.000Z');
+      expect(asOf).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
       expect(statTile(burn, '1h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^100.00×$/);
       expect(statTile(burn, '24h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^50.00×$/);
       expect(within(burn).getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -457,8 +525,8 @@ describe('Notification health continuation source independence', () => {
       state.paused = false;
       state.deliveryUpdatedAt = Date.now();
       rerender(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(asOf).toHaveTextContent('As of 2026-10-14T14:00:00.000Z');
-      expect(statTile(burn, '1h burn rate')).toHaveAttribute('data-value-state', 'missing');
+      expect(asOf).toHaveTextContent('As of Oct 14, 2026, 02:00 PM (UTC)');
+      assertOperationalMetricUnavailable(within(burn).getByTestId('notification-burn-rate-brief'), '1h burn rate');
       expect(statTile(burn, '24h burn rate').querySelector('[data-operational-value]')).toHaveTextContent(/^100.00×$/);
       expect(statTile(burn, 'Budget status')).toHaveTextContent('Burning fast');
       expect(within(burn).getByRole('heading', { name: 'Delivery outcomes by hour' })).toBeInTheDocument();
@@ -476,11 +544,11 @@ describe('Notification health continuation source independence', () => {
     try {
       state.delivery = [log()];
       const { rerender } = render(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent('As of 2026-10-14T12:00:00.000Z');
+      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
       vi.setSystemTime(new Date('2026-10-15T14:00:00Z'));
       state.delivery = [...state.delivery];
       rerender(<MemoryRouter><NotificationBurnRatePanel /></MemoryRouter>);
-      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent('As of 2026-10-14T12:00:00.000Z');
+      expect(screen.getByTestId('notification-burn-rate-as-of')).toHaveTextContent('As of Oct 14, 2026, 12:00 PM (UTC)');
       expect(statTile(screen.getByRole('region', { name: 'Notification burn rate' }), '1h burn rate')
         .querySelector('[data-operational-value]')).toHaveTextContent(/^0.00×$/);
       expect(state.retryDelivery).not.toHaveBeenCalled();
@@ -507,13 +575,18 @@ describe('Notification health continuation source independence', () => {
     state.delivery = [log({ status: 'deferred_dnd', latency_ms: null })];
     renderPanels();
     burn = screen.getByRole('region', { name: 'Notification burn rate' });
+    const brief = within(burn).getByTestId('notification-burn-rate-brief');
     for (const label of ['24h delivery SLO', '1h burn rate', '24h burn rate']) {
-      const tile = statTile(burn, label);
-      expect(tile).toHaveAttribute('data-value-state', 'missing');
-      expect(tile.querySelector('[data-operational-value]')).toHaveTextContent('—');
+      assertOperationalMetricUnavailable(brief, label);
     }
     expect(statTile(burn, 'Budget status').querySelector('[data-operational-value]')).toHaveTextContent('No outcomes');
-    expect(within(statTile(burn, 'Budget status')).getByText('1 deferred by DND')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Budget status' })).toHaveTextContent('1 deferred by DND');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
   it.each(['deferred_dnd', 'pending'] as const)(
@@ -570,6 +643,11 @@ describe('Notification health continuation source independence', () => {
   });
 
   it('reviews full fatigue and mixed-window SLO evidence without removing the latency analysis', () => {
+    const now = Date.now();
+    state.analysis = Array.from({ length: 20 }, (_, index) => log({
+      id: index + 1, created_at: new Date(now - index * 60_000).toISOString(),
+      read_at: null,
+    }));
     state.delivery = [log({ status: 'failed', created_at: new Date(Date.now() - 2 * 3_600_000).toISOString() })];
     renderPanels();
     const fatigue = screen.getByRole('region', { name: 'Alert fatigue' });
@@ -584,11 +662,14 @@ describe('Notification health continuation source independence', () => {
     fireEvent.click(within(burn).getByRole('button', { name: 'Review details' }));
     drawer = screen.getByRole('dialog');
     expect(drawer).toHaveTextContent('99% objective');
-    expect(drawer).toHaveTextContent('No delivery outcomes in the last hour');
     expect(drawer).toHaveTextContent('100.00×');
     expect(drawer).toHaveTextContent('1 failed · 0 sent');
     expect(drawer).toHaveTextContent('0 deferred by DND');
     fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
+    // The omitted short-window tile keeps its missing reason on the mapped input.
+    const { input } = hookProbe('burn-short');
+    expect(input.find(metric => metric.occurrenceId === 'burn-short')?.missingReason)
+      .toBe('No delivery outcomes in the last hour');
     expect(screen.getByRole('region', { name: 'Notification latency' })).toBeInTheDocument();
   });
 });

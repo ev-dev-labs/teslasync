@@ -43,6 +43,8 @@ describe('Notification Health', () => {
     expect(screen.getByText('No notifications have been delivered yet, so there is nothing to score.')).toBeInTheDocument();
     expect(screen.getByText('No notification outcomes are available in the last 24 hours.')).toBeInTheDocument();
     expect(screen.getByText(/No measured channel deliveries yet/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage delivery channels' }))
+      .toHaveAttribute('href', '/notifications/channels');
   });
 
   it('offers a responsive, keyboard-accessible overview without collapsing any analysis', () => {
@@ -61,15 +63,31 @@ describe('Notification Health', () => {
   });
 
   it('keeps each metrics band readable at phone, tablet, and desktop widths', () => {
+    const now = Date.now();
+    const delivered = (id: number, minutesAgo: number, latency: number): NotificationLog => ({
+      id, channel_id: 1, alert_id: 7, title: 'Battery warning', message: '', status: 'sent',
+      severity: 'warn', event_type: 'battery', error: '',
+      created_at: new Date(now - minutesAgo * 60_000).toISOString(),
+      sent_at: new Date(now - minutesAgo * 60_000).toISOString(),
+      latency_ms: latency, read_at: null,
+    });
+    queries.events.data = [delivered(1, 2, 120), delivered(2, 1, 340)];
+    queries.deliveries.data = [delivered(3, 2, 150), delivered(4, 1, 410)];
     render(<MemoryRouter><NotificationHealthPage /></MemoryRouter>);
     for (const name of ['Alert fatigue metrics', 'Delivery SLO metrics', 'Notification latency metrics']) {
       const band = screen.getByRole('region', { name });
       expect(band.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
       expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-      expect(within(band).getByRole('list')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3', '3xl:grid-cols-6');
+      const banks = within(band).getAllByRole('list');
+      expect(banks).toHaveLength(2);
+      for (const bank of banks) {
+        expect(bank).toHaveAttribute('data-operational-metric-bank', 'true');
+        expect(bank).toHaveClass('flex', 'flex-wrap');
+        for (const tile of within(bank).getAllByRole('listitem')) {
+          expect(tile).toHaveClass('flex-[1_1_200px]');
+        }
+      }
     }
-    expect(screen.getByRole('link', { name: 'Manage delivery channels' }))
-      .toHaveAttribute('href', '/notifications/channels');
   });
 
   it('leaves reliability and latency visible if fatigue history fails', () => {

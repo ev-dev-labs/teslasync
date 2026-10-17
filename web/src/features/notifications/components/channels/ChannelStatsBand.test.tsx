@@ -30,11 +30,16 @@
  * fallback so copy is deterministic without booting the real catalog.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { NotificationStats } from '@/api/types';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
@@ -58,14 +63,54 @@ vi.mock('framer-motion', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (_key: string, fallback?: string, options?: Record<string, unknown>) => {
+      let template = fallback ?? _key;
+      const count = options?.count;
+      if (typeof count === 'number' && options) {
+        const plural = count === 1 ? options.defaultValue_one : options.defaultValue_other;
+        if (typeof plural === 'string') template = plural;
+      }
+      if (options) {
+        for (const [name, value] of Object.entries(options)) {
+          if (name.startsWith('defaultValue')) continue;
+          template = template.replaceAll(`{{${name}}}`, String(value));
+        }
+      }
+      return template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>(
+    '@/hooks/useOperationalMetrics',
+  );
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
+});
+
 import { ChannelStatsBand } from './ChannelStatsBand';
+
+function expectHiddenCount(brief: HTMLElement, count: number) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  try {
+    expect(within(dialog).getByText(
+      count === 1 ? '1 empty field is hidden.' : `${count} empty fields are hidden.`,
+    )).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function mappedValueStates() {
+  const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+    readonly { valueState?: string }[] | undefined;
+  return mapped?.map(metric => metric.valueState);
+}
 
 // Every rendered figure is distinct so getByText is unambiguous. `total_sent`
 // is deliberately a value that appears nowhere else on screen — the band must
@@ -98,7 +143,14 @@ describe('ChannelStatsBand — loaded', () => {
     expect(screen.getByText('7')).toBeInTheDocument(); // failed
     expect(screen.getByText('3')).toBeInTheDocument(); // pending
     expect(screen.getByText('5/8')).toBeInTheDocument(); // enabled/total
-    expect(screen.getByText('Delivery counts have no reported time bounds; active channels are the configured enabled/total count.')).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-channel-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    try {
+      expect(dialog).toHaveTextContent('Delivery counts have no reported time bounds; active channels are the configured enabled/total count.');
+    } finally {
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+    }
   });
 
   it('retains the screenshot active-channel numerator and denominator without duplicating the band', () => {
@@ -176,22 +228,34 @@ describe('ChannelStatsBand — error', () => {
 
 describe('ChannelStatsBand — null safety', () => {
   it('keeps all four missing metrics and their reasons for an undefined payload', () => {
-    const { container } = render(<ChannelStatsBand stats={undefined} isLoading={false} />);
+    render(<ChannelStatsBand stats={undefined} isLoading={false} />);
+    const brief = screen.getByTestId('notification-channel-brief');
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
-    expect(screen.getAllByText('—')).toHaveLength(4);
-    expect(screen.getAllByText('No measurement supplied')).toHaveLength(4);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(mappedValueStates()).toEqual(['missing', 'missing', 'missing', 'missing']);
+    for (const label of ['Total sent', 'Failed', 'Pending', 'Active channels']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenCount(brief, 4);
+    assertOperationalBriefDisclosure(brief, 'No statistics supplied');
     expect(screen.queryByText('0/0')).not.toBeInTheDocument();
-    expect(screen.getByText('Active channels')).toBeInTheDocument();
+    expect(brief).toHaveTextContent('Active channels');
   });
 
   it('keeps individually-missing numeric fields unknown while retaining valid siblings', () => {
     const partial: NotificationStats = JSON.parse('{"sent":9}');
-    const { container } = render(<ChannelStatsBand stats={partial} isLoading={false} />);
+    render(<ChannelStatsBand stats={partial} isLoading={false} />);
+    const brief = screen.getByTestId('notification-channel-brief');
 
     expect(screen.getByText('9')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0);
+    expect(mappedValueStates()).toEqual(['value', 'missing', 'missing', 'missing']);
+    for (const label of ['Failed', 'Pending', 'Active channels']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenCount(brief, 3);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
@@ -199,9 +263,14 @@ describe('ChannelStatsBand — null safety', () => {
     const stats: NotificationStats = JSON.parse(
       '{"sent":null,"failed":null,"pending":null,"enabled_channels":null,"total_channels":null}',
     );
-    const { container } = render(<ChannelStatsBand stats={stats} isLoading={false} />);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
-    expect(screen.getAllByText('No measurement supplied')).toHaveLength(4);
+    render(<ChannelStatsBand stats={stats} isLoading={false} />);
+    const brief = screen.getByTestId('notification-channel-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(mappedValueStates()).toEqual(['missing', 'missing', 'missing', 'missing']);
+    for (const label of ['Total sent', 'Failed', 'Pending', 'Active channels']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenCount(brief, 4);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
@@ -209,19 +278,25 @@ describe('ChannelStatsBand — null safety', () => {
     const stats: NotificationStats = JSON.parse(
       '{"sent":"12","failed":"0","pending":"3","enabled_channels":"5","total_channels":8}',
     );
-    const { container } = render(<ChannelStatsBand stats={stats} isLoading={false} />);
-    expect(container.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(4);
-    expect(screen.getAllByText('Expected a finite numeric measurement')).toHaveLength(4);
+    render(<ChannelStatsBand stats={stats} isLoading={false} />);
+    const brief = screen.getByTestId('notification-channel-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(mappedValueStates()).toEqual(['invalid', 'invalid', 'invalid', 'invalid']);
+    for (const label of ['Total sent', 'Failed', 'Pending', 'Active channels']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenCount(brief, 4);
   });
 
   it.each(['enabled_channels', 'total_channels'] as const)('keeps the ratio unknown when %s is missing', field => {
     const partial = { ...FULL };
     Reflect.deleteProperty(partial, field);
-    const { container } = render(<ChannelStatsBand stats={partial} isLoading={false} />);
-    const active = container.querySelector('[data-operational-metric="channels-active"]');
-    expect(active).toHaveAttribute('data-value-state', 'missing');
-    expect(active).toHaveTextContent('No measurement supplied');
-    expect(active?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    render(<ChannelStatsBand stats={partial} isLoading={false} />);
+    const brief = screen.getByTestId('notification-channel-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(mappedValueStates()).toEqual(['value', 'value', 'value', 'missing']);
+    assertOperationalMetricUnavailable(brief, 'Active channels');
+    expectHiddenCount(brief, 1);
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
@@ -237,22 +312,31 @@ describe('ChannelStatsBand — null safety', () => {
 
   it.each([NaN, Infinity, -Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
     'passes invalid count %s through shared validation without rounding or clamping', value => {
-      const { container } = render(<ChannelStatsBand stats={{
+      render(<ChannelStatsBand stats={{
         ...FULL, sent: value, failed: value, pending: value, enabled_channels: value,
       }} isLoading={false} />);
-      expect(container.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(4);
-      expect(screen.getAllByText('—')).toHaveLength(4);
-      expect(container.textContent).toContain(Number.isFinite(value)
-        ? 'Expected a non-negative safe integer count' : 'Expected a finite numeric measurement');
+      const brief = screen.getByTestId('notification-channel-brief');
+      const inputs = vi.mocked(useOperationalMetrics).mock.calls.at(-1)![0];
+      for (const metric of inputs) {
+        expect(Object.is(metric.rawValue, value)).toBe(true);
+      }
+      expect(mappedValueStates()).toEqual(['invalid', 'invalid', 'invalid', 'invalid']);
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+      for (const label of ['Total sent', 'Failed', 'Pending', 'Active channels']) {
+        assertOperationalMetricUnavailable(brief, label);
+      }
+      expectHiddenCount(brief, 4);
     },
   );
 
   it.each([NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
     'rejects invalid ratio total %s while retaining delivery counts', total => {
-      const { container } = render(<ChannelStatsBand stats={{ ...FULL, total_channels: total }} isLoading={false} />);
-      const active = container.querySelector('[data-operational-metric="channels-active"]');
-      expect(active).toHaveAttribute('data-value-state', 'invalid');
-      expect(active).toHaveTextContent('Expected a non-negative safe integer total');
+      render(<ChannelStatsBand stats={{ ...FULL, total_channels: total }} isLoading={false} />);
+      const brief = screen.getByTestId('notification-channel-brief');
+      expect(mappedValueStates()).toEqual(['value', 'value', 'value', 'invalid']);
+      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+      assertOperationalMetricUnavailable(brief, 'Active channels');
+      expectHiddenCount(brief, 1);
       expect(screen.getByText('42')).toBeInTheDocument();
     },
   );
@@ -270,10 +354,17 @@ describe('ChannelStatsBand — null safety', () => {
 
 describe('ChannelStatsBand — accessibility', () => {
   it('marks all four metric glyphs as decorative', () => {
-    const { container } = render(<ChannelStatsBand stats={FULL} isLoading={false} />);
+    render(<ChannelStatsBand stats={FULL} isLoading={false} />);
+    const brief = screen.getByTestId('notification-channel-brief');
 
-    // One lucide icon per card, each hidden from assistive tech.
-    expect(container.querySelectorAll('[data-operational-metric] svg[aria-hidden="true"]')).toHaveLength(4);
+    // One lucide icon per drawer metric group, each hidden from assistive tech.
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    try {
+      expect(dialog.querySelectorAll('[role="group"] svg[aria-hidden="true"]')).toHaveLength(4);
+    } finally {
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+    }
   });
 
   it('opens the shared Review details drawer with every count and its source context', () => {

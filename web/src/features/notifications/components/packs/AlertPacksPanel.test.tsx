@@ -19,6 +19,33 @@ vi.mock('@/hooks/useAiEnabled', () => ({ useAiEnabled: () => false }))
 vi.mock('@/hooks/useMediaQuery', () => ({ useMediaQuery: vi.fn(() => true) }))
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ formatTemperature: (value: number) => `${value} C` }) }))
 
+// InstalledPackCard reads locale/timezone through useSettings; the global
+// mock pins en-US/UTC, so provide a controllable double mirroring the global
+// defaults. The global timezone stub resolves the user zone from
+// settings.timezone_user, so overriding these prefs drives both.
+const displayPrefs = vi.hoisted(() => ({ locale: 'en-US', tz_display_default: 'vehicle', timezone_user: '' }))
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings')
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings: {
+        unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar', preferred_range: 'rated',
+        language: 'en', base_cost_per_kwh: 0.12, api_suspended: false, theme: 'neon-cyan', mode: 'dark',
+        custom_primary: '#00b4d8', custom_accent: '#e63946', gas_price_per_unit: 0, gas_unit: 'gallon',
+        gas_efficiency_mpg: 25, decimal_precision: 2, quiet_hours_enabled: false, quiet_hours_start: '22:00',
+        quiet_hours_end: '07:00', alert_digest_mode: 'instant', currency_symbol: '$', locale: displayPrefs.locale,
+        tz_display_default: displayPrefs.tz_display_default, timezone_user: displayPrefs.timezone_user,
+        tab_badge_enabled: true, critical_flash_enabled: true, ui_density: 'comfortable',
+        time_format_default: 'relative', chart_palette: 'cb_safe', ai_mode: 'off', ai_features: {},
+        ai_provider_config: {}, ai_cost_cap_cents: 0,
+      },
+      isMiles: false, isFahrenheit: false, isPSI: false, decimals: 2,
+      locale: displayPrefs.locale, density: 'comfortable' as const, rangeType: 'rated' as const,
+    }),
+  }
+})
+
 const pack: AlertPack = {
   id: 'everyday', version: 1, name: 'Everyday essentials', description: 'Useful reminders',
   rules: [{
@@ -67,6 +94,9 @@ function ruleFields(name: keyof typeof fieldRoles) {
 
 beforeEach(() => {
   vi.mocked(useMediaQuery).mockReturnValue(true)
+  displayPrefs.locale = 'en-US'
+  displayPrefs.tz_display_default = 'vehicle'
+  displayPrefs.timezone_user = ''
   vi.mocked(request).mockReset()
   vi.mocked(request).mockImplementation(async (path) => {
     if (path === '/alerts/packs') return [pack]
@@ -113,7 +143,7 @@ describe('Alert Packs', () => {
     client.setQueryData(['alert-packs'], [pack])
     await screen.findByRole('button', { name: 'Preview Everyday essentials' })
     fireEvent.change(screen.getByPlaceholderText('Search packs...'), { target: { value: 'unmatched' } })
-    expect(screen.getByText('No matching packs')).toBeInTheDocument()
+    expect(await screen.findByText('No matching packs')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }))
     expect(screen.getByRole('button', { name: 'Preview Everyday essentials' })).toBeInTheDocument()
   })
@@ -161,7 +191,7 @@ describe('Alert Packs', () => {
     const vehiclesWarning = await screen.findByText('Vehicles may be out of date')
     const defaults = screen.getByRole('region', { name: 'Pack defaults' })
     expect(channelsWarning.compareDocumentPosition(defaults) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(vehiclesWarning.compareDocumentPosition(screen.getByRole('button', { name: 'All vehicles' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(vehiclesWarning.compareDocumentPosition(screen.getByRole('button', { name: 'Vehicles' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(ruleFields('Channels')[0]).toBeEnabled()
     expect(within(ruleFields('Channels')[0]).getByRole('option', { name: 'Phone' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled()
@@ -212,15 +242,19 @@ describe('Alert Packs', () => {
     expect(screen.getByRole('button', { name: 'Install selected rules' })).toBeEnabled()
   })
 
-  it('renders installed timestamps using saved locale and timezone and updates when preferences change', async () => {
-    const { client } = setup(<InstalledPackCard installation={installation} name="Essentials" onEditRule={vi.fn()} />, queryClient => {
-      queryClient.setQueryDefaults(['settings'], { enabled: false })
-      queryClient.setQueryData(['settings'], { locale: 'de-DE', tz_display_default: 'user', timezone_user: 'Asia/Tokyo' })
-    })
+  it('renders installed timestamps using saved locale and timezone and updates when preferences change', () => {
+    displayPrefs.locale = 'de-DE'
+    displayPrefs.tz_display_default = 'user'
+    displayPrefs.timezone_user = 'Asia/Tokyo'
+    const card = <InstalledPackCard installation={installation} name="Essentials" onEditRule={vi.fn()} />
+    const first = setup(card)
     const expected = formatDateTime(installation.created_at, { locale: 'de-DE', tz: 'Asia/Tokyo' })
     expect(screen.getByText(`Version 1 · installed ${expected}`)).toBeInTheDocument()
-    client.setQueryData(['settings'], { locale: 'en-US', tz_display_default: 'utc', timezone_user: 'Asia/Tokyo' })
-    await screen.findByText(`Version 1 · installed ${formatDateTime(installation.created_at, { locale: 'en-US', tz: 'UTC' })}`)
+    first.unmount()
+    displayPrefs.locale = 'en-US'
+    displayPrefs.tz_display_default = 'utc'
+    setup(card)
+    expect(screen.getByText(`Version 1 · installed ${formatDateTime(installation.created_at, { locale: 'en-US', tz: 'UTC' })}`)).toBeInTheDocument()
     expect(installation.created_at).toBe('2026-09-18T10:00:00Z')
   })
 
@@ -574,7 +608,7 @@ describe('Alert Packs', () => {
     expect(within(dialog).getByRole('switch', { name: 'Owned rule' })).not.toBeChecked()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm removal' }))
     await waitFor(() => expect(request).toHaveBeenCalledWith('/alerts/pack-installations/10/remove', {
-      method: 'POST', body: JSON.stringify({ delete_rule_ids: [] }),
+      method: 'POST', body: JSON.stringify({ delete_rule_ids: [] }), requiresLiveMode: true,
     }))
   })
 
@@ -610,7 +644,7 @@ describe('Alert Packs', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Owned rule' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm removal' }))
     await waitFor(() => expect(request).toHaveBeenCalledWith('/alerts/pack-installations/10/remove', {
-      method: 'POST', body: JSON.stringify({ delete_rule_ids: [1] }),
+      method: 'POST', body: JSON.stringify({ delete_rule_ids: [1] }), requiresLiveMode: true,
     }))
   })
 

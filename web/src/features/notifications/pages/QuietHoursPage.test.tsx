@@ -42,11 +42,12 @@
  * src/test-setup.ts.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -162,13 +163,6 @@ const WINDOWS: QuietHoursWindow[] = [
   makeWindow({ id: 3, enabled: false, weekdays: 127, bypass_severities: ['info'] }),
 ];
 
-// start==end=='00:00' with all weekdays set is the cross-midnight wrap case that
-// is active for every minute of every day — deterministic "Quiet" without
-// touching the wall clock.
-const ALWAYS_ON: QuietHoursWindow[] = [
-  makeWindow({ id: 9, enabled: true, start_local: '00:00', end_local: '00:00', weekdays: 127, bypass_severities: ['critical'] }),
-];
-
 type Resolver = () => Promise<unknown>;
 
 function installRequest(handlers: { quietHours?: Resolver } = {}) {
@@ -204,6 +198,10 @@ beforeEach(() => {
   installRequest();
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe('QuietHoursPage', () => {
   it('renders the header, copy-link, guide, both children, and a populated KPI band from a SI-clean fetch', async () => {
     renderPage();
@@ -231,8 +229,15 @@ describe('QuietHoursPage', () => {
     expect(within(region).getByText('3')).toBeInTheDocument(); // total windows
     expect(within(region).getByText('2/3')).toBeInTheDocument(); // enabled/total
     expect(within(region).getByText('Delivering')).toBeInTheDocument(); // none active now
-    expect(within(region).getByText('No window active now')).toBeInTheDocument();
-    expect(within(region).getByText('critical, warn')).toBeInTheDocument(); // bypass union
+    const brief = within(region).getByTestId('quiet-hours-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Right now' })).toHaveTextContent('No window active now');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
+    expect(within(region).getByText('Critical, Warning')).toBeInTheDocument(); // bypass union
 
     // The window fetch uses the SI-clean path: no /api/v1 double-prefix.
     expect(mockedRequest).toHaveBeenCalledWith('/notifications/quiet-hours', expect.anything());
@@ -241,13 +246,29 @@ describe('QuietHoursPage', () => {
   });
 
   it('flips the "Right now" KPI to Quiet with an interpolated subtitle when a window is active', async () => {
-    installRequest({ quietHours: () => Promise.resolve({ windows: ALWAYS_ON }) });
+    // A degenerate start==end window is malformed (Unknown), so freeze the
+    // clock inside a real daytime window instead. Only Date is faked; the
+    // query fetch still resolves on real timers.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-03-04T14:30:00Z'));
+    installRequest({
+      quietHours: () => Promise.resolve({
+        windows: [makeWindow({ id: 9, start_local: '09:00', end_local: '17:00', timezone: 'UTC', weekdays: 127, bypass_severities: ['critical'] })],
+      }),
+    });
     renderPage();
 
     const region = await screen.findByRole('region', { name: 'Quiet hours summary' });
     await within(region).findByText('Windows');
     expect(within(region).getByText('Quiet')).toBeInTheDocument();
-    expect(within(region).getByText('1 window active now')).toBeInTheDocument();
+    const brief = within(region).getByTestId('quiet-hours-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Right now' })).toHaveTextContent('1 window active now');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(within(region).getByText('1/1')).toBeInTheDocument(); // enabled/total
   });
 
@@ -290,9 +311,17 @@ describe('QuietHoursPage', () => {
     await within(region).findByText('Windows');
     expect(within(region).getByText('0')).toBeInTheDocument(); // total
     expect(within(region).getByText('Delivering')).toBeInTheDocument();
-    expect(within(region).getByText('No window active now')).toBeInTheDocument();
-    // Enabled + bypass both collapse to an em dash when there is nothing to show.
-    expect(within(region).getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    const brief = within(region).getByTestId('quiet-hours-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Right now' })).toHaveTextContent('No window active now');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
+    // Enabled + bypass tiles are omitted when there is nothing to show.
+    assertOperationalMetricUnavailable(brief, 'Enabled');
+    assertOperationalMetricUnavailable(brief, 'Always allowed');
   });
 
   it('seeds the panel when the AI advisor applies a draft, then clears it once consumed', async () => {
@@ -335,7 +364,7 @@ describe('QuietHoursPage', () => {
     await waitFor(() => expect(client.getQueryState(notificationKeys.quietHours)?.status).toBe('error'));
     expect(within(region).getByText('3')).toBeInTheDocument();
     expect(within(region).getByText('2/3')).toBeInTheDocument();
-    expect(within(region).getByText('critical, warn')).toBeInTheDocument();
+    expect(within(region).getByText('Critical, Warning')).toBeInTheDocument();
     expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
     expect(screen.getByTestId('quiet-hours-panel')).toBeInTheDocument();
     expect(screen.getByTestId('ai-suggestion')).toBeInTheDocument();

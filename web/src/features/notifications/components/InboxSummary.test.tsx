@@ -29,6 +29,10 @@ import type { NotificationLog } from '@/api/types';
 import { formatDateTime, formatRelativeTime } from '@/lib/dateFormat';
 import * as settingsModule from '@/hooks/useSettings';
 import * as timezoneModule from '@/lib/timezone';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -207,7 +211,7 @@ describe('InboxSummary — accepted severity aliases and archived scope', () => 
 
     expect(cardValue('Recent notifications')).toBe('1');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('notification-backlog-brief'), 'Refresh paused');
     expect(screen.queryByText('Sample loaded')).not.toBeInTheDocument();
   });
 
@@ -236,11 +240,12 @@ describe('InboxSummary — empty states', () => {
 
   it('keeps an idle query with undefined data unknown rather than empty (null-safety)', () => {
     renderSummary(makeQuery());
+    const brief = screen.getByTestId('notification-backlog-brief');
 
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Unknown');
     expect(screen.queryByText('No notifications yet')).not.toBeInTheDocument();
-    expect(cardValue('Recent notifications')).toBe('—');
-    expect(screen.getByTestId('notification-backlog-brief')).not.toHaveAttribute('aria-busy');
+    assertOperationalMetricUnavailable(brief, 'Recent notifications');
+    expect(brief).not.toHaveAttribute('aria-busy');
   });
 });
 
@@ -254,17 +259,17 @@ describe('InboxSummary — initial acquisition is not resolved emptiness', () =>
     renderSummary(makeQuery({ fetchStatus, refetch }));
     const brief = screen.getByTestId('notification-backlog-brief');
     expect(getRegion()).toBeInTheDocument();
-    expect(screen.getByText(label)).toBeInTheDocument();
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    assertOperationalBriefDisclosure(brief, label);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(busy ? 6 : 0);
     expect(brief.hasAttribute('aria-busy')).toBe(busy);
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(busy ? 0 : 6);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No notifications yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Sample loaded')).not.toBeInTheDocument();
     expect(screen.queryByText('0 of 0')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
     if (!busy) {
-      expect(cardValue('Recent notifications')).toBe('—');
+      assertOperationalMetricUnavailable(brief, 'Recent notifications');
       fireEvent.click(within(getRegion()).getByRole('button', { name: 'Retry' }));
       expect(refetch).toHaveBeenCalledTimes(1);
     }
@@ -272,8 +277,9 @@ describe('InboxSummary — initial acquisition is not resolved emptiness', () =>
 
   it('does not promote a null payload to a confirmed zero', () => {
     renderSummary(makeQuery({ data: null as unknown as NotificationLog[] }));
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(cardValue('Recent notifications')).toBe('—');
+    const brief = screen.getByTestId('notification-backlog-brief');
+    assertOperationalBriefDisclosure(brief, 'Unknown');
+    assertOperationalMetricUnavailable(brief, 'Recent notifications');
     expect(screen.queryByText('No notifications yet')).not.toBeInTheDocument();
   });
 
@@ -349,8 +355,15 @@ describe('InboxSummary — populated aggregation', () => {
     expect(cardValue('Critical')).toBe('1');
     expect(cardValue('Warnings')).toBe('2');
     expect(cardValue('Info')).toBe('1');
-    // "N of M" subtitle on the unread card.
-    expect(screen.getByText('3 of 5')).toBeInTheDocument();
+    // "N of M" subtitle on the unread drawer group.
+    const brief = screen.getByTestId('notification-backlog-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Unread' })).toHaveTextContent('3 of 5');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     // Last received tracks the most-recent created_at (5 min ago) → relative.
     expect(cardValue('Last received')).toMatch(/ago/i);
   });
@@ -365,7 +378,14 @@ describe('InboxSummary — populated aggregation', () => {
 
     expect(cardValue('Recent notifications')).toBe('2');
     expect(cardValue('Unread')).toBe('0');
-    expect(screen.getByText('0 of 2')).toBeInTheDocument();
+    const brief = screen.getByTestId('notification-backlog-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Unread' })).toHaveTextContent('0 of 2');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 });
 
@@ -384,8 +404,8 @@ describe('InboxSummary — null-safety & accessibility', () => {
     expect(cardValue('Info')).toBe('0');
     // Both rows are unread (no read_at).
     expect(cardValue('Unread')).toBe('2');
-    // No valid created_at anywhere → em-dash placeholder, never a blank cell.
-    expect(cardValue('Last received')).toBe('—');
+    // No valid created_at anywhere → omitted tile, never a blank cell.
+    assertOperationalMetricUnavailable(screen.getByTestId('notification-backlog-brief'), 'Last received');
   });
 
   it('exposes the band as a labelled region with decorative icons', () => {

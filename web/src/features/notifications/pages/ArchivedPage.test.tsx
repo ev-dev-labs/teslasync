@@ -191,7 +191,7 @@ describe('ArchivedPage independent lookup trust', () => {
 
     const vehicles = screen.getByRole('region', { name: 'Vehicles' });
     expect(within(vehicles).getByRole('status')).toBeInTheDocument();
-    expect(vehicles.querySelector('.animate-pulse')).not.toBeNull();
+    expect(vehicles.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No vehicles yet')).toBeNull();
     await waitFor(() => expect(captured.inbox?.rules).toEqual(RULES));
     expect(screen.getByTestId('inbox-body')).toBeInTheDocument();
@@ -206,7 +206,7 @@ describe('ArchivedPage independent lookup trust', () => {
       const region = screen.getByRole('region', { name: label });
       expect(within(region).getByText('Refresh paused')).toBeInTheDocument();
       expect(within(region).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-      expect(region.querySelector('.animate-pulse')).toBeNull();
+      expect(region.querySelector('[class*="--skeleton-bg"]')).toBeNull();
       expect(within(region).queryByRole('alert')).toBeNull();
     }
     expect(mockedRequest).not.toHaveBeenCalled();
@@ -236,8 +236,10 @@ describe('ArchivedPage independent lookup trust', () => {
     renderPage();
     const summary = screen.getByRole('region', { name: 'Archived summary' });
     await waitFor(() => expect(within(summary).getByText('Total archived')).toBeInTheDocument());
-    expect(within(summary).getAllByText('0')).toHaveLength(2);
-    expect(within(summary).getAllByText('1').length).toBeGreaterThanOrEqual(3);
+    await waitFor(() => {
+      expect(within(summary).getAllByText('0')).toHaveLength(2);
+      expect(within(summary).getAllByText('1').length).toBeGreaterThanOrEqual(3);
+    });
   });
 
   it('retains lookup evidence on refresh failure and retries only the affected source', async () => {

@@ -26,13 +26,18 @@
  */
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { UseQueryResult } from '@tanstack/react-query';
 import '../../../i18n';
 
 import { QuietHoursSummary } from './QuietHoursSummary';
 import type { QuietHoursWindow } from '@/api/types';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 const translations = vi.hoisted(() => ({ labels: {} as Record<string, string> }));
 vi.mock('react-i18next', async importOriginal => ({
@@ -49,6 +54,13 @@ vi.mock('react-i18next', async importOriginal => ({
     i18n: { language: 'en' },
   }),
 }));
+
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>(
+    '@/hooks/useOperationalMetrics',
+  );
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
+});
 
 let winId = 1;
 function makeWindow(overrides: Partial<QuietHoursWindow> = {}): QuietHoursWindow {
@@ -151,14 +163,16 @@ describe('QuietHoursSummary — loading & error states', () => {
 
   it('retains cached windows after a refresh failure, including an authoritative empty schedule', () => {
     const refetch = vi.fn();
-    const { container } = renderSummary(makeQuery({
+    renderSummary(makeQuery({
       data: [], isError: true, error: new Error('refresh failed'), refetch,
     }));
-    expect(container.querySelector('[data-operational-brief]')).toBeInTheDocument();
-    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    const brief = screen.getByTestId('quiet-hours-brief');
+    expect(brief).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Data may be stale');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
     expect(cardValue('Windows')).toBe('0');
-    expect(cardValue('Enabled')).toBe('—');
+    assertOperationalMetricUnavailable(brief, 'Enabled');
+    assertOperationalMetricUnavailable(brief, 'Always allowed');
     expect(cardValue('Right now')).toBe('Delivering');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -182,25 +196,38 @@ describe('QuietHoursSummary — loading & error states', () => {
 describe('QuietHoursSummary — empty & idle (zeros, never blank)', () => {
   it('renders the band as zeros — not an empty-state — when no windows exist', () => {
     renderSummary(makeQuery({ isSuccess: true, data: [] }));
+    const brief = screen.getByTestId('quiet-hours-brief');
 
     // Band stays visible with real zeros rather than a blank/CTA panel.
     expect(getRegion()).toBeInTheDocument();
     expect(cardValue('Windows')).toBe('0');
-    expect(cardValue('Enabled')).toBe('—');
+    assertOperationalMetricUnavailable(brief, 'Enabled');
+    assertOperationalMetricUnavailable(brief, 'Always allowed');
     expect(cardValue('Right now')).toBe('Delivering');
-    expect(screen.getByText('No window active now')).toBeInTheDocument();
-    expect(cardValue('Always allowed')).toBe('—');
-    expect(screen.getByText('No configured windows')).toBeInTheDocument();
-    expect(screen.getByText('No bypass severities configured')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'No schedules');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    try {
+      expect(within(dialog).getByRole('group', { name: 'Right now' })).toHaveTextContent('No window active now');
+    } finally {
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+    }
+    // The omitted tiles keep their empty-state reasons on the mapped input.
+    const inputs = vi.mocked(useOperationalMetrics).mock.calls.at(-1)![0];
+    expect(inputs.find(metric => metric.occurrenceId === 'quiet-enabled')?.missingReason)
+      .toBe('No configured windows');
+    expect(inputs.find(metric => metric.occurrenceId === 'quiet-bypass')?.missingReason)
+      .toBe('No bypass severities configured');
     // Not loading → no skeleton either.
     expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
   });
 
   it('keeps an idle query with undefined data unknown, not empty', () => {
     renderSummary(makeQuery());
+    const brief = screen.getByTestId('quiet-hours-brief');
 
     expect(getRegion()).toBeInTheDocument();
-    expect(cardValue('Windows')).toBe('—');
+    assertOperationalMetricUnavailable(brief, 'Windows');
     expect(cardValue('Right now')).toBe('Unknown');
     expect(screen.queryByText('No schedules')).not.toBeInTheDocument();
     expect(screen.queryByText('No window active now')).not.toBeInTheDocument();
@@ -225,11 +252,18 @@ describe('QuietHoursSummary — active-now status (schedule evaluation)', () => 
 
     expect(cardValue('Windows')).toBe('3');
     expect(cardValue('Enabled')).toBe('2/3');
-    expect(screen.getByText('Configured schedules')).toBeInTheDocument();
-    expect(screen.getByText('Active on schedule')).toBeInTheDocument();
-    expect(screen.getByText('Severities that break through')).toBeInTheDocument();
+    const brief = screen.getByTestId('quiet-hours-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Windows' })).toHaveTextContent('Configured schedules');
+      expect(within(drawer).getByRole('group', { name: 'Enabled' })).toHaveTextContent('Active on schedule');
+      expect(within(drawer).getByRole('group', { name: 'Always allowed' })).toHaveTextContent('Severities that break through');
+      expect(within(drawer).getByRole('group', { name: 'Right now' })).toHaveTextContent('2 window active now');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(cardValue('Right now')).toBe('Quiet');
-    expect(screen.getByText('2 window active now')).toBeInTheDocument();
     // Deduped, enabled-only union — "emergency" (disabled) is absent.
     expect(cardValue('Always allowed')).toBe('Critical, warning');
     expect(cardValue('Always allowed')).not.toContain('emergency');
@@ -242,7 +276,14 @@ describe('QuietHoursSummary — active-now status (schedule evaluation)', () => 
     expect(cardValue('Windows')).toBe('1');
     expect(cardValue('Enabled')).toBe('1/1');
     expect(cardValue('Right now')).toBe('Delivering');
-    expect(screen.getByText('No window active now')).toBeInTheDocument();
+    const brief = screen.getByTestId('quiet-hours-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Right now' })).toHaveTextContent('No window active now');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
   it('credits the post-midnight leg of a cross-midnight window to the previous day', () => {
@@ -263,7 +304,14 @@ describe('QuietHoursSummary — active-now status (schedule evaluation)', () => 
     );
 
     expect(cardValue('Right now')).toBe('Quiet');
-    expect(screen.getByText('1 window active now')).toBeInTheDocument();
+    const brief = screen.getByTestId('quiet-hours-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Right now' })).toHaveTextContent('1 window active now');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
     expect(cardValue('Windows')).toBe('2');
   });
 });
@@ -292,10 +340,11 @@ describe('QuietHoursSummary — null-safety & weekday gating', () => {
     expect(cardValue('Windows')).toBe('3');
     expect(cardValue('Enabled')).toBe('3/3');
     expect(cardValue('Right now')).toBe('Unknown');
-    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    const brief = screen.getByTestId('quiet-hours-brief');
+    assertOperationalBriefDisclosure(brief, 'Partial data');
     expect(screen.queryByText('No window active now')).not.toBeInTheDocument();
-    // No enabled bypass severities anywhere → em-dash placeholder.
-    expect(cardValue('Always allowed')).toBe('—');
+    // No enabled bypass severities anywhere → omitted tile.
+    assertOperationalMetricUnavailable(brief, 'Always allowed');
   });
 });
 
@@ -308,7 +357,8 @@ describe('QuietHoursSummary — accessibility', () => {
 
     expect(getRegion()).toHaveAttribute('aria-label', 'Quiet hours summary');
     expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    assertOperationalMetricUnavailable(screen.getByTestId('quiet-hours-brief'), 'Always allowed');
     // Card icons are purely decorative — hidden from the a11y tree so the
     // metric label + value carry the meaning.
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThan(0);
@@ -382,15 +432,16 @@ describe('QuietHoursSummary — configured zone and clock', () => {
 
 describe('QuietHoursSummary — unresolved and incomplete policy', () => {
   it('keeps four unknown metrics for an initial paused query without claiming an empty policy', () => {
-    const { container } = renderSummary(makeQuery({
+    renderSummary(makeQuery({
       isPending: true, fetchStatus: 'paused', isLoading: false,
     }));
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(cardValue('Windows')).toBe('—');
-    expect(cardValue('Enabled')).toBe('—');
+    const brief = screen.getByTestId('quiet-hours-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    assertOperationalMetricUnavailable(brief, 'Windows');
+    assertOperationalMetricUnavailable(brief, 'Enabled');
     expect(cardValue('Right now')).toBe('Unknown');
-    expect(cardValue('Always allowed')).toBe('—');
-    expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0);
+    assertOperationalMetricUnavailable(brief, 'Always allowed');
+    assertOperationalBriefDisclosure(brief, 'Refresh paused');
     expect(screen.queryByText('No schedules')).not.toBeInTheDocument();
     expect(screen.queryByText('No window active now')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
@@ -412,7 +463,7 @@ describe('QuietHoursSummary — unresolved and incomplete policy', () => {
     freeze('2026-03-04T14:30:00Z');
     renderSummary(makeQuery({ data: [makeWindow(overrides)] }));
     expect(cardValue('Right now')).toBe('Unknown');
-    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('quiet-hours-brief'), 'Partial data');
     expect(screen.queryByText('No window active now')).not.toBeInTheDocument();
   });
 
@@ -423,9 +474,10 @@ describe('QuietHoursSummary — unresolved and incomplete policy', () => {
       Reflect.deleteProperty(window, field);
       renderSummary(makeQuery({ data: [window] }));
       expect(cardValue('Right now')).toBe('Unknown');
-      expect(screen.getByText('Partial data')).toBeInTheDocument();
+      const brief = screen.getByTestId('quiet-hours-brief');
+      assertOperationalBriefDisclosure(brief, 'Partial data');
       expect(Object.hasOwn(window, field)).toBe(false);
-      if (field === 'enabled') expect(cardValue('Enabled')).toBe('—');
+      if (field === 'enabled') assertOperationalMetricUnavailable(brief, 'Enabled');
     },
   );
 
@@ -433,8 +485,15 @@ describe('QuietHoursSummary — unresolved and incomplete policy', () => {
     freeze('2026-03-04T14:30:00Z');
     renderSummary(makeQuery({ data: [makeWindow(), makeWindow({ timezone: 'Not/AZone' })] }));
     expect(cardValue('Right now')).toBe('Quiet');
-    expect(screen.getByText('1 window active now')).toBeInTheDocument();
-    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    const brief = screen.getByTestId('quiet-hours-brief');
+    assertOperationalBriefDisclosure(brief, 'Partial data');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    try {
+      expect(within(drawer).getByRole('group', { name: 'Right now' })).toHaveTextContent('1 window active now');
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+    }
   });
 
   it('preserves known inactivity for a zero mask and disabled malformed windows', () => {

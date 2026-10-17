@@ -7,6 +7,10 @@ import type { ReactNode } from 'react';
 import { NotificationLatencyPanel } from './NotificationLatencyPanel';
 import { AlertFatiguePanel } from './AlertFatiguePanel';
 import { NotificationBurnRatePanel } from './NotificationBurnRatePanel';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 const state = vi.hoisted(() => ({
   logs: [] as NotificationLog[] | undefined, error: null as Error | null,
@@ -49,12 +53,15 @@ vi.mock('react-i18next', async () => {
 });
 vi.mock('@/components/charts', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
-  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const { chartTestDoubles, inertCartesianParts } = await import('@/test/chartTestDoubles');
   return {
-    ...actual, ...chartTestDoubles,
+    ...actual, ...chartTestDoubles, ...inertCartesianParts,
     BarChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (
       <div data-testid="notification-chart-data" data-rows={JSON.stringify(data)}>{children}</div>
     ),
+    Bar: () => null,
+    Cell: () => null,
+    ReferenceLine: () => null,
   };
 });
 
@@ -152,11 +159,9 @@ describe('NotificationLatencyPanel shared delivery table', () => {
       state.logs = logs;
       render(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
       const brief = screen.getByTestId('notification-latency-brief');
-      const metric = brief.querySelector('[data-operational-metric="latency-apdex"]');
-      expect(metric).toHaveAttribute('data-value-state', 'missing');
-      expect(metric?.querySelector('[data-operational-value]')).toHaveClass('text-[var(--text-primary)]');
-      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('—');
-      expect(brief).toHaveTextContent('No usable latency measurements');
+      assertOperationalMetricUnavailable(brief, 'Delivery Apdex');
+      assertOperationalBriefDisclosure(brief, 'No usable latency measurements');
+      expect(brief).toHaveTextContent('No metric values are available yet.');
     },
   );
 
@@ -175,13 +180,15 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     }];
     render(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
     const brief = screen.getByTestId('notification-latency-brief');
-    for (const id of ['latency-p50', 'latency-p95', 'latency-p99', 'latency-apdex']) {
-      expect(brief.querySelector(`[data-operational-metric="${id}"]`))
-        .toHaveAttribute('data-value-state', 'missing');
+    for (const label of ['p50 latency', 'p95 latency', 'p99 latency', 'Delivery Apdex']) {
+      assertOperationalMetricUnavailable(brief, label);
     }
     expect(screen.queryByRole('table', { name: 'Slowest delivery records' })).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'No usable latency measurements');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('0 deliveries have usable latency measurements.');
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('4 empty fields are hidden.');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
   });
 
   it.each([
@@ -258,9 +265,9 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     });
 
     it.each([
-      { count: 0, rules: 'of 0 rules', days: 'across 0 days' },
-      { count: 1, rules: 'of 1 rule', days: 'across 1 day' },
-      { count: 2, rules: 'of 2 rules', days: 'across 2 days' },
+      { count: 0, rules: 'of 0 rules', days: null as string | null },
+      { count: 1, rules: 'of 1 rules', days: 'across 1.00 days' },
+      { count: 2, rules: 'of 2 rules', days: 'across 2.00 days' },
     ])('uses canonical plural forms for $count rules', ({ count, rules, days }) => {
       state.logs = Array.from({ length: count }, (_, index) => ({
         id: index + 1, channel_id: 1, alert_id: null, title: index === 0 ? 'Battery warning' : 'Security warning',
@@ -268,10 +275,17 @@ describe('NotificationLatencyPanel shared delivery table', () => {
         created_at: `2026-08-0${4 + index * 2}T12:00:00Z`, sent_at: null,
       }));
       render(<MemoryRouter><AlertFatiguePanel /></MemoryRouter>);
-      fireEvent.click(within(screen.getByTestId('alert-fatigue-brief')).getByRole('button', { name: 'Review details' }));
+      const brief = screen.getByTestId('alert-fatigue-brief');
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog');
       expect(drawer).toHaveTextContent(rules);
-      expect(drawer).toHaveTextContent(days);
+      if (days == null) {
+        fireEvent.keyDown(drawer, { key: 'Escape' });
+        assertOperationalMetricUnavailable(brief, 'Notifications per day');
+      } else {
+        expect(drawer).toHaveTextContent(days);
+        fireEvent.keyDown(drawer, { key: 'Escape' });
+      }
     });
   });
 
@@ -307,8 +321,8 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(drawer).toHaveTextContent('trimmed mean 1,250.00 ms');
-    expect(drawer).toHaveTextContent('1 attempt with usable latency');
-    expect(screen.getAllByText('1 sample · 0.00% tail')).toHaveLength(2);
+    expect(drawer).toHaveTextContent('1 delivery has a usable latency measurement.');
+    expect(screen.getAllByText('1 samples · 0.00% tail')).toHaveLength(2);
     expect(drawer).toHaveTextContent('0.00% slower than 4 seconds');
     expect(drawer).toHaveTextContent('T = 1 s · tolerating through 4 s');
     expect(drawer).toHaveTextContent('0.500');
@@ -376,10 +390,10 @@ describe('NotificationLatencyPanel shared delivery table', () => {
 });
 
 describe.each([
-  { name: 'latency', Panel: NotificationLatencyPanel, sections: ['Latency distribution', 'Severity and status cohorts', 'Slowest delivery records'], briefId: 'notification-latency-brief' },
-  { name: 'fatigue', Panel: AlertFatiguePanel, sections: ['When notifications arrive', 'Rule breakdown'], briefId: 'alert-fatigue-brief' },
-  { name: 'burn rate', Panel: NotificationBurnRatePanel, sections: ['Delivery outcomes by hour', 'Severity breakdown'], briefId: 'notification-burn-rate-brief' },
-])('$name source feedback', ({ Panel, sections, briefId }) => {
+  { name: 'latency', Panel: NotificationLatencyPanel, sections: ['Latency distribution', 'Severity and status cohorts', 'Slowest delivery records'], briefId: 'notification-latency-brief', drawerIcons: { empty: 0, populated: 4 } },
+  { name: 'fatigue', Panel: AlertFatiguePanel, sections: ['When notifications arrive', 'Rule breakdown'], briefId: 'alert-fatigue-brief', drawerIcons: { empty: 1, populated: 2 } },
+  { name: 'burn rate', Panel: NotificationBurnRatePanel, sections: ['Delivery outcomes by hour', 'Severity breakdown'], briefId: 'notification-burn-rate-brief', drawerIcons: { empty: 1, populated: 4 } },
+])('$name source feedback', ({ Panel, sections, briefId, drawerIcons }) => {
   beforeEach(() => {
     state.logs = undefined;
     state.error = null;
@@ -399,7 +413,8 @@ describe.each([
       created_at: '2024-01-01T00:15:00Z', sent_at: null,
     }];
     const { rerender } = render(<MemoryRouter><Panel /></MemoryRouter>);
-    const badge = () => within(screen.getByTestId(briefId)).getByLabelText('Historical');
+    fireEvent.click(within(screen.getByTestId(briefId)).getByRole('button', { name: 'Review details' }));
+    const badge = () => within(screen.getByRole('dialog')).getByLabelText('Historical');
     expect(badge()).toHaveAttribute('data-provenance', 'historical');
     expect(badge()).toHaveAttribute('data-data-status', 'ok');
     expect(badge()).toHaveAttribute('title', expect.stringContaining(
@@ -425,6 +440,7 @@ describe.each([
     expect(badge()).toHaveAttribute('data-data-status', 'ok');
     expect(badge()).toHaveAttribute('title', expect.stringContaining('04:45 PM'));
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   });
 
   it('does not substitute a delivery event time for an unknown fetch time', () => {
@@ -434,7 +450,8 @@ describe.each([
       created_at: '2024-01-01T00:15:00Z', sent_at: null,
     }];
     render(<MemoryRouter><Panel /></MemoryRouter>);
-    const badge = within(screen.getByTestId(briefId)).getByLabelText('Historical');
+    fireEvent.click(within(screen.getByTestId(briefId)).getByRole('button', { name: 'Review details' }));
+    const badge = within(screen.getByRole('dialog')).getByLabelText('Historical');
     expect(badge).toHaveAttribute('data-provenance', 'historical');
     expect(badge).toHaveAttribute('title', 'Read from stored history rather than current state.');
   });
@@ -456,7 +473,7 @@ describe.each([
     fireEvent.click(within(screen.getByTestId(briefId)).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     const contextIcons = drawer.querySelectorAll('svg.h-5.w-5');
-    expect(contextIcons).toHaveLength(4);
+    expect(contextIcons).toHaveLength(populated ? drawerIcons.populated : drawerIcons.empty);
     for (const icon of contextIcons) {
       expect(icon).toHaveClass('text-[var(--text-muted)]');
       expect(icon).toHaveAttribute('aria-hidden', 'true');

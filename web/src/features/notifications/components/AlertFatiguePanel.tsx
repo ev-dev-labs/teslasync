@@ -112,7 +112,7 @@ export function AlertFatiguePanel() {
           n: summary.groups.length,
           defaultValue_one: 'of {{count}} rule',
           defaultValue_other: 'of {{count}} rules',
-          replace: { count: countLabel(summary.groups.length) },
+          replace: { count: countLabel(summary.groups.length), n: countLabel(summary.groups.length) },
         })}
         <HelpTooltip size="sm" i18nKey="help.alertFatigue.fatiguing" defaultValue={fatigueHelp}
           ariaLabel={t('help.alertFatigue.fatiguingIconLabel', 'More info about fatiguing rules')} />
@@ -128,7 +128,7 @@ export function AlertFatiguePanel() {
         n: summary.analyzedDays,
         defaultValue_one: 'across {{count}} day',
         defaultValue_other: 'across {{count}} days',
-        replace: { count: numberLabel(summary.analyzedDays) },
+        replace: { count: numberLabel(summary.analyzedDays), n: numberLabel(summary.analyzedDays) },
       })}</>,
     },
     {

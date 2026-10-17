@@ -7,6 +7,7 @@ import type { MetricPreferences } from '@/lib/metric-reference';
 import { NotificationLatencyPanel } from '../NotificationLatencyPanel';
 import { NotificationReportPanel } from '../NotificationReportPanel';
 import { BrowserNotificationsKpis } from '../BrowserNotificationsKpis';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const source = vi.hoisted(() => ({
   deliveries: [] as NotificationLog[],
@@ -94,8 +95,7 @@ describe('Notification briefs use the actual validated raw bridge', () => {
     source.deliveries = [delivery({ latency_ms: null })];
     render(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
     expect(rawMetric('latency-p50').rawValue).toBeNull();
-    expect(screen.getByTestId('notification-latency-brief').querySelector('[data-operational-metric="latency-p50"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('notification-latency-brief'), 'p50 latency');
   });
 
   it('keeps independent configuration counts numeric and missing tab settings unknown', () => {
@@ -105,7 +105,7 @@ describe('Notification briefs use the actual validated raw bridge', () => {
     expect(rawMetric('browser-tab')).toMatchObject({ metricId: 'count', rawValue: null, display: { countTotal: 2 } });
     expect(rawMetric('browser-sounds')).toMatchObject({ metricId: 'count', rawValue: 0 });
     const brief = screen.getByTestId('browser-notifications-brief');
-    expect(brief.querySelector('[data-operational-metric="browser-tab"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(brief, 'Tab signals');
     expect(brief.querySelector('[data-operational-metric="browser-sounds"]')).toHaveAttribute('data-value-state', 'value');
   });
 
@@ -125,7 +125,6 @@ describe('Notification briefs use the actual validated raw bridge', () => {
     source.report = { ...source.report, triggered: 0 };
     render(<MemoryRouter><NotificationReportPanel fromInstant="2026-08-01T00:00:00Z" toExclusive="2026-09-01T00:00:00Z" timezone="UTC" /></MemoryRouter>);
     expect(rawMetric('report-fanout').rawValue).toBeNull();
-    expect(screen.getByTestId('notification-report-brief').querySelector('[data-operational-metric="report-fanout"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('notification-report-brief'), 'Linked deliveries per trigger');
   });
 });

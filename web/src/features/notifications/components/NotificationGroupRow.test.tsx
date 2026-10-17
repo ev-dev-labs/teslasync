@@ -367,7 +367,9 @@ describe('NotificationGroupRow', () => {
 });
 
 describe('real group-member hook contract in the granted row fixture', () => {
-  beforeEach(() => requestMock.mockReset());
+  // Block body: an implicit return would register the mock itself as a
+  // Vitest hook cleanup and invoke request() with zero arguments.
+  beforeEach(() => { requestMock.mockReset(); });
 
   async function renderMembers(filters: NotificationFilters = {}, enabled = true) {
     const actual = await vi.importActual<typeof import('@/api/hooks/useNotifications')>('@/api/hooks/useNotifications');
@@ -424,7 +426,8 @@ describe('real group-member hook contract in the granted row fixture', () => {
     requestMock.mockResolvedValueOnce(Array.from({ length: 1000 }, (_, i) => makeLog({ id: 2000 - i })));
     requestMock.mockRejectedValueOnce(new Error('second page unavailable'));
     await act(async () => { await result.current.refetch(); });
-    expect(result.current.isError).toBe(true);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toMatchObject({ message: 'second page unavailable' });
     expect(result.current.data).toEqual([sibling]);
   });
 
