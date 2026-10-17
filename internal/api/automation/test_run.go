@@ -560,18 +560,6 @@ func parseTestRunActionRaw(raw json.RawMessage) ([]action.ActionConfig, error) {
 	return []action.ActionConfig{{Type: peek.Type, Raw: raw}}, nil
 }
 
-func testRunCommandActionRaw(a *models.AutomationAction) json.RawMessage {
-	payload := map[string]any{
-		"type":    "command",
-		"command": a.CommandName,
-	}
-	if len(a.CommandParams) > 0 && string(a.CommandParams) != "null" {
-		payload["params"] = a.CommandParams
-	}
-	raw, _ := json.Marshal(payload)
-	return raw
-}
-
 func testRunNotifyActionRaw(a *models.AutomationStepActionNotify) json.RawMessage {
 	raw, _ := json.Marshal(map[string]any{
 		"type":    "notify",

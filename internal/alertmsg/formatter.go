@@ -475,7 +475,7 @@ func Substitute(tmpl string, ctx Context) string {
 // groups by Placeholder.Group when rendering.
 func Placeholders(rule *alertmodel.AlertRule, preferences ...Preferences) (out []Placeholder) {
 	defer func() {
-		for _, entry := range []Placeholder{
+		out = append(out, []Placeholder{
 			{Key: "NowDisplay", Label: "Timestamp", Description: "Uses the persisted relative/absolute time preference.", Group: "Built-in"},
 			{Key: "NowAbsolute", Label: "Timestamp", Description: "Locale-sensitive full date and time.", Group: "Built-in"},
 			{Key: "NowRelative", Label: "Timestamp", Description: "Relative time; older than seven days uses the locale-sensitive date.", Group: "Built-in"},
@@ -483,9 +483,7 @@ func Placeholders(rule *alertmodel.AlertRule, preferences ...Preferences) (out [
 			{Key: "NowDateShort", Label: "Date", Description: "Short date without year in the display timezone.", Group: "Built-in"},
 			{Key: "NowTime", Label: "Timestamp", Description: "Time with the locale's hour cycle.", Group: "Built-in"},
 			{Key: "NowRFC3339", Label: "Timestamp", Description: "Explicit raw UTC RFC3339 instant, independent of display preferences.", Group: "Built-in"},
-		} {
-			out = append(out, entry)
-		}
+		}...)
 		if len(preferences) == 0 {
 			return
 		}

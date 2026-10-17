@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
-	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
+	"github.com/ev-dev-labs/teslasync/internal/app"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
@@ -32,7 +32,7 @@ func TestDatetimeWorkerPreviewDispatchParity(t *testing.T) {
 				reqs := client.requests(t)
 				reqBody, _ := json.Marshal(map[string]any{"name": rule.Name, "kind": rule.Kind, "metric_id": "charging_cost", "vehicle_name": "Falcon", "vehicle_timezone": "America/Los_Angeles", "include_title": false, "msg_template": template, "signals": map[string]any{"MetricValue": 12.345}})
 				rr := httptest.NewRecorder()
-				apialertmsg.NewAlertMessageHandler(messageSettings{settings}).WithClock(func() time.Time { return at }).MessagePreview(rr, httptest.NewRequest(http.MethodPost, "/alerts/message-preview", strings.NewReader(string(reqBody))))
+				app.NewAlertMessagePreviewHandler(messageSettings{settings}, func() time.Time { return at }).ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/alerts/message-preview", strings.NewReader(string(reqBody))))
 				var preview struct{ Title, Body string }
 				if err := json.Unmarshal(rr.Body.Bytes(), &preview); err != nil {
 					t.Fatal(err)

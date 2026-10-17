@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
-	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
+	"github.com/ev-dev-labs/teslasync/internal/app"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
@@ -42,7 +42,7 @@ func TestDispatchPreviewPreferenceParity(t *testing.T) {
 					t.Fatal(err)
 				}
 				rr := httptest.NewRecorder()
-				apialertmsg.NewAlertMessageHandler(messageSettings{settings}).MessagePreview(rr, httptest.NewRequest(http.MethodPost, "/alerts/message-preview", strings.NewReader(string(previewBody))))
+				app.NewAlertMessagePreviewHandler(messageSettings{settings}, nil).ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/alerts/message-preview", strings.NewReader(string(previewBody))))
 				var preview struct{ Title, Body string }
 				if err := json.Unmarshal(rr.Body.Bytes(), &preview); err != nil {
 					t.Fatal(err)

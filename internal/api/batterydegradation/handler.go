@@ -1125,11 +1125,6 @@ func historyToRegressionSnapshots(history []batteryHealthHistoryPoint) []battery
 	return snapshots
 }
 
-func medianRecentCapacity(history []batteryHealthHistoryPoint, sampleCount int) float64 {
-	value, _ := recentCapacityEvidence(history, sampleCount)
-	return value
-}
-
 func temperatureExposure(avgTempC *float64, sampleCount int) (*int, *string) {
 	if avgTempC == nil || math.IsNaN(*avgTempC) || math.IsInf(*avgTempC, 0) || sampleCount < 10 {
 		reason := "insufficient_data"
