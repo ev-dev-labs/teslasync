@@ -440,7 +440,9 @@ describe('OnboardingPage', () => {
     expect(within(screen.getByTestId('stale-refresh-warning')).getByText('Refresh paused')).toBeInTheDocument();
     expect(screen.getByText('Refresh is paused. Retained data remains available.')).toBeInTheDocument();
     expect(screen.queryByText('This page refreshes automatically every 30 seconds.')).toBeNull();
-    expect(screen.getByText('Retained setup status')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+    expect(within(drawer).getByText('Retained setup status')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Connect Tesla account' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
@@ -541,7 +543,9 @@ describe('OnboardingPage', () => {
     mockError = new Error('Setup status read unavailable');
     renderPage();
 
-    expect(screen.getByText('Setup status unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+    expect(within(drawer).getByText('Setup status unavailable')).toBeInTheDocument();
     expect(screen.getByText('Setup status not yet received')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Onboarding steps' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();

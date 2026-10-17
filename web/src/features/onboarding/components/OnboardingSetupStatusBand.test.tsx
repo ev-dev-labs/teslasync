@@ -59,6 +59,17 @@ function metric(key: string) {
   return element;
 }
 
+function openDrawer() {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog', { name: 'Setup status details' });
+}
+
+function drawerMetric(drawer: HTMLElement, label: string) {
+  return within(drawer).getByRole('group', { name: label });
+}
+
+const METRIC_LABELS = ['Setup progress', 'Tesla account', 'Vehicles synced', 'Telemetry'];
+
 describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge', () => {
   beforeEach(() => {
     retry.mockClear();
@@ -73,8 +84,11 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
     expect(metric('vehicles').querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(within(metric('tesla')).getByText('Not connected')).toBeInTheDocument();
     expect(within(metric('telemetry')).getByText('Unknown')).toBeInTheDocument();
-    expect(screen.getByText('Waiting for the first sync')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Setup progress: 0/3' })).toBeInTheDocument();
+    expect(screen.queryByText('Waiting for the first sync')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Setup progress: 0/3' })).not.toBeInTheDocument();
+    const drawer = openDrawer();
+    expect(within(drawer).getByText('Waiting for the first sync')).toBeInTheDocument();
+    expect(within(drawer).getByRole('img', { name: 'Setup progress: 0/3' })).toBeInTheDocument();
     expect(vi.mocked(formatMetric)).toHaveBeenCalledWith(
       'count', 0, expect.any(Object), expect.any(String), { countTotal: 3 },
     );
@@ -90,14 +104,13 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
         renderBand({ telemetryHealth: 'unknown', lastTelemetryAt });
         expect(within(metric('telemetry')).getByText('Unknown')).toBeInTheDocument();
         expect(screen.queryByText('No signals received yet')).toBeNull();
-        const icon = metric('telemetry').querySelector('svg.lucide-clock');
+        const drawer = openDrawer();
+        const icon = drawerMetric(drawer, 'Telemetry').querySelector('svg.lucide-clock');
         expect(icon).toHaveClass('text-[var(--text-secondary)]');
         expect(icon).not.toHaveClass('text-[var(--semantic-warning)]');
-        expect(screen.getByText(lastTelemetryAt
+        expect(within(drawer).getByText(lastTelemetryAt
           ? `Last telemetry: formatted ${lastTelemetryAt}`
           : 'Last telemetry time not supplied')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-        const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
         expect(within(drawer).getAllByText('Fleet Telemetry connection unknown').length).toBeGreaterThan(0);
         expect(within(drawer).queryByText('No current attention items.')).toBeNull();
         expect(within(drawer).getByText('Cause is not established by the available evidence.'))
@@ -116,12 +129,11 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
           telemetryHealth: 'stale', lastTelemetryAt,
         });
         expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('3/3');
-        expect(metric('tesla').querySelector('svg.lucide-check'))
+        const drawer = openDrawer();
+        expect(drawerMetric(drawer, 'Tesla account').querySelector('svg.lucide-check'))
           .toHaveClass('text-[var(--semantic-success)]');
-        expect(metric('telemetry').querySelector('svg.lucide-clock'))
+        expect(drawerMetric(drawer, 'Telemetry').querySelector('svg.lucide-clock'))
           .toHaveClass('text-[var(--semantic-warning)]');
-        fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-        const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
         const staleMessage = lastTelemetryAt
           ? `Fleet Telemetry is stale. The last signal arrived formatted ${lastTelemetryAt}.`
           : 'Fleet Telemetry is stale and live values may be out of date.';
@@ -170,13 +182,21 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
 
   it('does not turn an absent response into disconnected statuses or measured zero', () => {
     renderBand({ hasData: false });
-    for (const key of ['setup-progress', 'tesla', 'vehicles', 'telemetry']) {
-      expect(metric(key)).toHaveAttribute('data-value-state', 'missing');
-      expect(metric(key).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    const face = screen.getByTestId('onboarding-setup-brief');
+    expect(face.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(face).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of METRIC_LABELS) {
+      expect(within(face).getByText(label)).toBeInTheDocument();
     }
     expect(screen.queryByRole('img', { name: /Setup progress:/ })).toBeNull();
     expect(screen.queryByText('Not connected')).toBeNull();
-    expect(screen.getByText('Setup status not yet received')).toBeInTheDocument();
+    expect(screen.queryByText('Setup status not yet received')).toBeNull();
+    const drawer = openDrawer();
+    expect(within(drawer).getByText('Setup status not yet received', { selector: 'span.rounded-full' })).toBeInTheDocument();
+    expect(within(drawer).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    for (const label of METRIC_LABELS) {
+      expect(within(drawer).queryByRole('group', { name: label })).toBeNull();
+    }
     expect(vi.mocked(formatMetric)).toHaveBeenCalledWith(
       'count', null, expect.any(Object), expect.any(String), { countTotal: 3 },
     );
@@ -201,30 +221,41 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
     expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('3/3');
     expect(metric('vehicles').querySelector('[data-operational-value]')).toHaveTextContent('2');
     expect(within(metric('telemetry')).getByText('Interrupted')).toBeInTheDocument();
-    expect(screen.getByText('Stored history remains available')).toBeInTheDocument();
-    expect(screen.getByText('Last telemetry: formatted 2026-10-06T20:00:00Z')).toBeInTheDocument();
+    const drawer = openDrawer();
+    expect(within(drawer).getByText('Stored history remains available')).toBeInTheDocument();
+    expect(within(drawer).getByText('Last telemetry: formatted 2026-10-06T20:00:00Z')).toBeInTheDocument();
   });
 
   it('distinguishes retained source data from a currently healthy fetch', () => {
     renderBand({ retained: true, teslaConnected: true, vehicleCount: 2 });
-    expect(screen.getByText('Retained setup status')).toBeInTheDocument();
     expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('2/3');
     expect(metric('vehicles')).toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByText('Last telemetry time not supplied')).toBeInTheDocument();
+    const drawer = openDrawer();
+    expect(within(drawer).getByText('Retained setup status', { selector: 'span.rounded-full' })).toBeInTheDocument();
+    expect(within(drawer).getByText('Last telemetry time not supplied')).toBeInTheDocument();
   });
 
   it('retains fatal-error recovery beside missing summary values', () => {
     renderBand({ hasData: false, error: new Error('Setup check failed') });
-    expect(screen.getByText('Setup status unavailable')).toBeInTheDocument();
-    expect(metric('vehicles')).toHaveAttribute('data-value-state', 'missing');
+    const face = screen.getByTestId('onboarding-setup-brief');
+    expect(face.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    const drawer = openDrawer();
+    expect(within(drawer).getByText('Setup status unavailable', { selector: 'span.rounded-full' })).toBeInTheDocument();
+    expect(within(drawer).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /retry|try again/i }));
     expect(retry).toHaveBeenCalledOnce();
   });
 
   it('keeps invalid numerical counts invalid rather than coercing them to status text', () => {
     renderBand({ vehicleCount: Number.NaN });
-    expect(metric('vehicles')).toHaveAttribute('data-value-state', 'invalid');
-    expect(metric('vehicles').querySelector('[data-operational-value]')).toHaveTextContent('—');
+    const face = screen.getByTestId('onboarding-setup-brief');
+    expect(face.querySelector('[data-operational-metric="vehicles"]')).toBeNull();
+    expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('0/3');
+    expect(within(metric('tesla')).getByText('Not connected')).toBeInTheDocument();
+    expect(within(metric('telemetry')).getByText('Unknown')).toBeInTheDocument();
+    const drawer = openDrawer();
+    expect(within(drawer).queryByRole('group', { name: 'Vehicles synced' })).toBeNull();
+    expect(within(drawer).getByText('1 empty field is hidden.')).toBeInTheDocument();
     expect(vi.mocked(formatMetric)).toHaveBeenCalledWith(
       'count', Number.NaN, expect.any(Object), expect.any(String), undefined,
     );
@@ -240,7 +271,7 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
     expect(within(drawer).getByText('Synced from the Fleet API')).toBeInTheDocument();
     expect(within(drawer).getByText('Live signals arriving')).toBeInTheDocument();
     expect(within(drawer).getByRole('img', { name: 'Setup progress: 3/3' })).toBeInTheDocument();
-    expect(within(drawer).getByText(/Existing onboarding status response;/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Existing onboarding status response;/)).toHaveLength(2);
     fireEvent.keyDown(drawer, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(trigger).toHaveFocus());
@@ -299,7 +330,9 @@ describe('OnboardingSetupStatusBand — semantic setup ring', () => {
     props, completed, color, status,
   }) => {
     renderBand(props);
-    const ring = screen.getByRole('img', { name: `Setup progress: ${completed}/3` });
+    expect(screen.queryByRole('img', { name: `Setup progress: ${completed}/3` })).not.toBeInTheDocument();
+    const drawer = openDrawer();
+    const ring = within(drawer).getByRole('img', { name: `Setup progress: ${completed}/3` });
     const arc = ring.querySelector('circle[stroke-dasharray]');
     if (!(arc instanceof SVGElement)) throw new Error('Missing setup progress arc');
 
@@ -313,17 +346,20 @@ describe('OnboardingSetupStatusBand — semantic setup ring', () => {
     expect(within(ring).getByText(`${completed}/3`)).toBeInTheDocument();
     expect(metric('setup-progress').querySelector('[data-operational-value]'))
       .toHaveTextContent(`${completed}/3`);
-    expect(screen.getByText(status, { selector: 'span.rounded-full' }))
+    expect(within(drawer).getByText(status, { selector: 'span.rounded-full' }))
       .toBeInTheDocument();
   });
 
   it('keeps missing setup unknown without a success ring even when completion is supplied', () => {
     renderBand({ hasData: false, setupComplete: true, vehicleCount: 0 });
-    expect(screen.getByText('Setup status not yet received')).toBeInTheDocument();
+    const face = screen.getByTestId('onboarding-setup-brief');
+    expect(face.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     expect(screen.queryByRole('img', { name: /Setup progress:/ })).toBeNull();
-    for (const key of ['setup-progress', 'tesla', 'vehicles', 'telemetry']) {
-      expect(metric(key)).toHaveAttribute('data-value-state', 'missing');
-      expect(metric(key).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    const drawer = openDrawer();
+    expect(within(drawer).getByText('Setup status not yet received', { selector: 'span.rounded-full' })).toBeInTheDocument();
+    expect(within(drawer).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    for (const label of METRIC_LABELS) {
+      expect(within(drawer).queryByRole('group', { name: label })).toBeNull();
     }
   });
 
@@ -335,22 +371,21 @@ describe('OnboardingSetupStatusBand — semantic setup ring', () => {
       vehicleCount: 0,
       error: new Error('Setup refresh failed'),
     });
-    const ring = screen.getByRole('img', { name: 'Setup progress: 3/3' });
+    const drawer = openDrawer();
+    const ring = within(drawer).getByRole('img', { name: 'Setup progress: 3/3' });
     expect(ring.querySelector('circle[stroke-dasharray]'))
       .toHaveAttribute('stroke', 'var(--semantic-success)');
     expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('3/3');
     expect(metric('vehicles').querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(within(metric('telemetry')).getByText('Interrupted')).toBeInTheDocument();
-    expect(screen.getByText('Setup status unavailable')).toBeInTheDocument();
-    expect(screen.getByText('Stored history remains available')).toBeInTheDocument();
-    expect(screen.getByText('Last telemetry time not supplied')).toBeInTheDocument();
+    expect(within(drawer).getByText('Setup status unavailable', { selector: 'span.rounded-full' })).toBeInTheDocument();
+    expect(within(drawer).getByText('Stored history remains available')).toBeInTheDocument();
+    expect(within(drawer).getByText('Last telemetry time not supplied')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /retry|try again/i }));
     expect(retry).toHaveBeenCalledOnce();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
-    expect(within(drawer).getByText(/completed setup remains complete during a live-service outage/))
-      .toBeInTheDocument();
+    expect(within(drawer).getAllByText(/completed setup remains complete during a live-service outage/))
+      .toHaveLength(2);
     expect(within(drawer).getByRole('img', { name: 'Setup progress: 3/3' })
       .querySelector('circle[stroke-dasharray]'))
       .toHaveAttribute('stroke', 'var(--semantic-success)');
