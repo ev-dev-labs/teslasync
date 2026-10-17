@@ -22,8 +22,36 @@ vi.mock('@/api/client', () => ({
 }))
 
 import { AIUsageCard } from '../AIUsageCard'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import * as settingsHook from '@/hooks/useSettings'
 import { aiUsageKeys, type AiUsageToday } from '@/api/hooks/useAiUsage'
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(brief: HTMLElement, text: string) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
+// Source freshness renders in the drawer's header now; read the <time>
+// element there and close the drawer.
+function drawerUpdatedTime(scope: HTMLElement): string | null {
+  fireEvent.click(within(scope).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    const time = within(drawer).getByText(/Last updated:/)
+    expect(time.tagName).toBe('TIME')
+    return time.getAttribute('datetime')
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+}
 
 const totals: AiUsageToday = {
   user_subject: 'test', call_count: 1, input_tokens: 42, output_tokens: 10,
@@ -152,7 +180,11 @@ describe('AIUsageCard (Settings)', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('Usage could not be loaded.')
     })
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
-    expect(usageValues().map(node => node.textContent)).toEqual(['—', '—', '—'])
+    const errorSummary = screen.getByTestId('helix-usage-summary')
+    for (const label of ['Tokens in', 'Tokens out', 'Estimated cost']) {
+      assertOperationalMetricUnavailable(errorSummary, label)
+    }
+    expectHiddenCount(errorSummary, '3 empty fields are hidden.')
     expect(screen.queryByText(/Last updated:/)).not.toBeInTheDocument()
     requestMock.mockResolvedValue(totals)
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
@@ -198,13 +230,17 @@ describe('AIUsageCard (Settings)', () => {
     expect(screen.queryByText(/Loading today’s usage/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Refresh failed/)).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(usageValues().map(node => node.textContent)).toEqual(['—', '—', '—'])
+    const pausedSummary = screen.getByTestId('helix-usage-summary')
+    for (const label of ['Tokens in', 'Tokens out', 'Estimated cost']) {
+      assertOperationalMetricUnavailable(pausedSummary, label)
+    }
+    expectHiddenCount(pausedSummary, '3 empty fields are hidden.')
     expect(requestMock).not.toHaveBeenCalled()
 
     act(() => onlineManager.setOnline(true))
     await screen.findByText('1 call · 0 errors')
     expect(screen.queryByTestId('helix-daily-source-notice')).not.toBeInTheDocument()
-    expect(screen.getByText(/Last updated:/).tagName).toBe('TIME')
+    expect(drawerUpdatedTime(screen.getByTestId('ai-usage-card'))).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   })
 
   it.each(['paused', 'failed'] as const)('retains totals and source time during a %s refresh and recovers', async mode => {
@@ -212,7 +248,7 @@ describe('AIUsageCard (Settings)', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<QueryClientProvider client={client}><AIUsageCard /></QueryClientProvider>)
     await screen.findByText('1 call · 0 errors')
-    const timestamp = screen.getByText(/Last updated:/).getAttribute('datetime')
+    const timestamp = drawerUpdatedTime(screen.getByTestId('ai-usage-card'))
 
     if (mode === 'paused') {
       act(() => onlineManager.setOnline(false))
@@ -226,7 +262,7 @@ describe('AIUsageCard (Settings)', () => {
     expect(notice).toHaveTextContent(mode === 'paused' ? 'Refresh paused' : 'Refresh failed.')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(usageValues().map(node => node.textContent)).toEqual(['42', '10', '$0.001200'])
-    expect(screen.getByText(/Last updated:/)).toHaveAttribute('datetime', timestamp)
+    expect(drawerUpdatedTime(screen.getByTestId('ai-usage-card'))).toBe(timestamp)
 
     requestMock.mockResolvedValue({ ...totals, input_tokens: 99 })
     if (mode === 'paused') {
@@ -253,7 +289,8 @@ describe('AIUsageCard (Settings)', () => {
     expect(screen.getAllByTestId('helix-daily-source-notice')).toHaveLength(1)
     for (const card of screen.getAllByTestId('ai-usage-card')) {
       expect(within(card).getByText('1 call · 0 errors')).toBeInTheDocument()
-      expect(within(card).getByText(/Last updated:/)).toBeInTheDocument()
+      expect(drawerUpdatedTime(card)).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     }
     requestMock.mockResolvedValue(totals)
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))

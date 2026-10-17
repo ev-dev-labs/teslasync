@@ -211,11 +211,15 @@ describe('useTotpEnrollmentFlow — pending ownership', () => {
       await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(path, expect.objectContaining({
         method: path === '/auth/totp' ? 'DELETE' : 'POST',
       })))
-      act(() => { qc.setQueryData(totpKeys.status, { mode: 'open' }) })
-      expect(result.current.dialogStep).toBe('closed')
+      // The status observer propagates a cache write asynchronously, so
+      // await the contracted reset (and the restore below) rather than
+      // asserting synchronously inside the write's act() block.
+      await act(async () => { qc.setQueryData(totpKeys.status, { mode: 'open' }) })
+      await waitFor(() => expect(result.current.dialogStep).toBe('closed'))
       expect(result.current.enrollment).toBeNull()
       expect(result.current.showDisableConfirm).toBe(false)
-      act(() => { qc.setQueryData(totpKeys.status, NOT_ENROLLED) })
+      await act(async () => { qc.setQueryData(totpKeys.status, NOT_ENROLLED) })
+      await waitFor(() => expect(result.current.status.data).toEqual(NOT_ENROLLED))
       mockApi({ '/auth/totp/enroll': () => newWork.promise })
       act(() => { result.current.openDisableConfirm() })
       let newCompletion!: Promise<void>

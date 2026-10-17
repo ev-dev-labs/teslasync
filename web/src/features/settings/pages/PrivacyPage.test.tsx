@@ -61,6 +61,16 @@ vi.mock('react-i18next', async () => {
             s,
           )
         }
+        // Match the shared plural-capable fixture: counted sentences honour
+        // one/other defaults so the drawer's hidden-count reads correctly.
+        if (opts && typeof opts.count === 'number') {
+          const singular = opts.defaultValue_one
+          const plural = opts.defaultValue_other
+          if (typeof singular === 'string' || typeof plural === 'string') {
+            const chosen = opts.count === 1 ? singular : plural
+            return interpolate(typeof chosen === 'string' ? chosen : (fallback ?? key))
+          }
+        }
         if (opts && typeof opts.defaultValue === 'string') return interpolate(opts.defaultValue)
         if (fallback != null) return interpolate(fallback)
         return key
@@ -72,6 +82,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request, ApiError } from '@/api/client'
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import { ToastProvider } from '@/components/feedback/Toast'
 import {
   getConsent,
@@ -128,6 +139,23 @@ function renderPage() {
 
 function kpiRegion() {
   return screen.getByRole('region', { name: 'Privacy summary' })
+}
+
+function privacyStrip(): HTMLElement {
+  return kpiRegion().querySelector('[data-operational-brief][data-testid="privacy-summary"]') as HTMLElement
+}
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(strip: HTMLElement, text: string) {
+  fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 }
 
 beforeEach(() => {
@@ -241,22 +269,28 @@ describe('PrivacyPage — layout', () => {
 
     // Deployment policy defaults to Optional and the tab title is set.
     expect(within(kpiRegion()).getByText('Optional')).toBeInTheDocument()
-    const strip = kpiRegion().querySelector('[data-operational-brief][data-testid="privacy-summary"]')!
+    const strip = privacyStrip()
     const tiles = strip.querySelectorAll('[data-operational-metric]')
     expect(tiles).toHaveLength(4)
-    expect(strip).toHaveTextContent('Local browser state and the latest deployment policy have no common date range.')
     expect(tiles[0].querySelector('[data-operational-value]')).toHaveTextContent('3')
-    expect(tiles[0]).toHaveTextContent('of 50 max')
     expect(tiles[1].querySelector('[data-operational-value]')).toHaveTextContent('Not decided')
     expect(tiles[2].querySelector('[data-operational-value]')).toHaveTextContent('Optional')
     expect(tiles[3].querySelector('[data-operational-value]')).toHaveTextContent('This browser')
-    expect(tiles[3]).toHaveTextContent('Local only — never synced')
     expect(document.title).toContain('Privacy')
+    // Scope and per-metric context live in the Review-details drawer now.
+    assertOperationalBriefDisclosure(strip, 'Local browser state and the latest deployment policy have no common date range.', { contains: true })
     fireEvent.click(within(strip as HTMLElement).getByRole('button', { name: 'Review details' }))
     const drawer = await screen.findByRole('dialog')
-    expect(drawer).toHaveTextContent('of 50 max')
-    expect(drawer).toHaveTextContent('Not decided')
-    expect(drawer).toHaveTextContent('Local only — never synced')
+    try {
+      expect(drawer).toHaveTextContent('of 50 max')
+      expect(drawer).toHaveTextContent('Not decided')
+      expect(drawer).toHaveTextContent('Local only — never synced')
+      expect(within(within(drawer).getByRole('group', { name: 'Recent pages stored' })).getByText('of 50 max')).toBeInTheDocument()
+      expect(within(within(drawer).getByRole('group', { name: 'Data scope' })).getByText('Local only — never synced')).toBeInTheDocument()
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' })
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('disables the clear button and shows the empty hint with no history', async () => {
@@ -279,17 +313,25 @@ describe('PrivacyPage — deployment policy', () => {
     seedRecentPages(60)
     setConsent('declined')
     renderPage()
-    const strip = kpiRegion().querySelector('[data-operational-brief][data-testid="privacy-summary"]')!
+    const strip = privacyStrip()
     const tiles = strip.querySelectorAll('[data-operational-metric]')
-    expect(tiles).toHaveLength(4)
+    expect(tiles).toHaveLength(3)
     expect(tiles[0].querySelector('[data-operational-value]')).toHaveTextContent('50')
-    expect(tiles[0]).toHaveTextContent('of 50 max')
     expect(tiles[1].querySelector('[data-operational-value]')).toHaveTextContent('Declined')
-    expect(tiles[1]).toHaveTextContent('only essential storage in use')
-    expect(tiles[2]).toHaveAttribute('data-value-state', 'missing')
-    expect(tiles[2]).toHaveTextContent('Loading deployment consent policy')
+    assertOperationalMetricUnavailable(strip, 'Consent policy')
+    expectHiddenCount(strip, '1 empty field is hidden.')
+    assertOperationalBriefDisclosure(strip, 'Loading deployment consent policy')
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }))
+    const loadingDrawer = screen.getByRole('dialog')
+    try {
+      expect(within(within(loadingDrawer).getByRole('group', { name: 'Recent pages stored' })).getByText('of 50 max')).toBeInTheDocument()
+      expect(within(loadingDrawer).getByRole('group', { name: 'Consent status' })).toHaveTextContent('only essential storage in use')
+    } finally {
+      fireEvent.keyDown(loadingDrawer, { key: 'Escape' })
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(within(kpiRegion()).queryByText('Optional')).toBeNull()
-    expect(tiles[3].querySelector('[data-operational-value]')).toHaveTextContent('This browser')
+    expect(tiles[2].querySelector('[data-operational-value]')).toHaveTextContent('This browser')
     expect(screen.getByTestId('privacy-clear-recent-pages')).toBeEnabled()
     expect(screen.getByTestId('privacy-consent-decline')).toBeDisabled()
     expect(screen.getByTestId('privacy-consent-accept')).toBeEnabled()
@@ -301,14 +343,14 @@ describe('PrivacyPage — deployment policy', () => {
     delete response.require_cookie_consent
     mockedRequest.mockResolvedValue({ ...response, require_cookie_consent: flag })
     seedRecentPages(2)
-    renderPage()
-    await waitFor(() => {
-      const policyMetric = kpiRegion().querySelectorAll('[data-operational-metric]')[2]
-      expect(policyMetric).toHaveTextContent('Deployment policy unavailable')
-      expect(policyMetric).toHaveAttribute('data-value-state', 'missing')
-      expect(policyMetric.querySelector('[data-operational-value]')).toHaveTextContent('—')
-    })
-    expect(kpiRegion().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(1)
+    const { client } = renderPage()
+    await waitFor(() => expect(client.getQueryState(['version'])?.status).toBe('success'))
+    const strip = privacyStrip()
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(3)
+    expect(strip.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0)
+    assertOperationalMetricUnavailable(strip, 'Consent policy')
+    expectHiddenCount(strip, '1 empty field is hidden.')
+    assertOperationalBriefDisclosure(strip, 'Deployment policy unavailable')
     expect(within(kpiRegion()).queryByText('Optional')).toBeNull()
     expect(within(kpiRegion()).queryByText('Required')).toBeNull()
     expect(screen.queryByText('Failed to load privacy policy')).not.toBeInTheDocument()
@@ -469,14 +511,15 @@ describe('PrivacyPage — policy load failure', () => {
     // The policy failure remains retryable without hiding browser-local facts.
     expect(await screen.findByText('Server error')).toBeInTheDocument()
     expect(within(kpiRegion()).getByText('Recent pages stored')).toBeInTheDocument()
-    const tiles = kpiRegion().querySelectorAll('[data-operational-metric]')
-    expect(tiles).toHaveLength(4)
+    const strip = privacyStrip()
+    const tiles = strip.querySelectorAll('[data-operational-metric]')
+    expect(tiles).toHaveLength(3)
     expect(tiles[0].querySelector('[data-operational-value]')).toHaveTextContent('0')
-    expect(tiles[2]).toHaveAttribute('data-value-state', 'missing')
-    expect(tiles[2]).toHaveTextContent('Failed to load privacy policy')
-    expect(tiles[2].querySelector('[data-operational-value]')).toHaveTextContent('—')
+    assertOperationalMetricUnavailable(strip, 'Consent policy')
+    expectHiddenCount(strip, '1 empty field is hidden.')
+    assertOperationalBriefDisclosure(strip, 'Deployment policy unavailable')
     expect(within(kpiRegion()).queryByText('Optional')).toBeNull()
-    expect(tiles[3].querySelector('[data-operational-value]')).toHaveTextContent('This browser')
+    expect(tiles[2].querySelector('[data-operational-value]')).toHaveTextContent('This browser')
     // ...but the browser-local consent controls remain usable regardless.
     expect(screen.getByTestId('privacy-consent-accept')).toBeInTheDocument()
 
@@ -527,7 +570,7 @@ describe('PrivacyPage — retained policy', () => {
     expect(await screen.findByText('Data may be stale')).toBeInTheDocument()
     expect(within(kpiRegion()).getByText('Required')).toBeInTheDocument()
     expect(within(kpiRegion()).queryByText('Optional')).toBeNull()
-    expect(within(kpiRegion()).getByText('Retained deployment policy')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(privacyStrip(), 'Retained deployment policy')
     expect(screen.getByTestId('privacy-recent-count')).toHaveTextContent('2 entries stored')
     expect(screen.getByTestId('privacy-consent-state')).toHaveAttribute('data-consent-state', 'accepted')
     expect(screen.getByTestId('privacy-consent-accept')).toBeDisabled()
@@ -591,7 +634,10 @@ describe('PrivacyPage policy recovery', () => {
     expect(within(notice).getByText('Paused')).toBeInTheDocument()
     expect(within(notice).getByRole('button', { name: 'Retry' })).toBeEnabled()
     expect(within(kpiRegion()).queryByText('Optional')).not.toBeInTheDocument()
-    expect(kpiRegion().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(1)
+    const pausedStrip = privacyStrip()
+    expect(pausedStrip.querySelectorAll('[data-operational-metric]')).toHaveLength(3)
+    assertOperationalMetricUnavailable(pausedStrip, 'Consent policy')
+    expectHiddenCount(pausedStrip, '1 empty field is hidden.')
     expect(screen.getByTestId('privacy-recent-count')).toHaveTextContent('1 entries stored')
     expect(screen.getByTestId('privacy-consent-accept')).toBeEnabled()
     expect(screen.getByRole('region', { name: /How TeslaSync handles this data/i })).toBeInTheDocument()

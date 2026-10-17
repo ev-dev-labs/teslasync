@@ -563,7 +563,7 @@ export function AISettings() {
             />
           </div>
           {hasUnsavedEnforcement && (
-            <InlineCallout variant="info" data-testid="ai-settings-unsaved">
+            <InlineCallout variant="info" testId="ai-settings-unsaved">
               {t('forms.unsavedSettings', 'You have unsaved settings.')}
             </InlineCallout>
           )}
@@ -607,7 +607,7 @@ export function AISettings() {
             {showProviderSection && (
               <div className="xl:col-span-2">
                 {!providerSupportsMode(provider.provider, mode) && (
-                  <InlineCallout variant="warning" data-testid="ai-provider-incompatible">
+                  <InlineCallout variant="warning" testId="ai-provider-incompatible">
                     {t('ai.settings.provider.providerLabel', 'Provider')}
                     {': '}
                     {isCloud

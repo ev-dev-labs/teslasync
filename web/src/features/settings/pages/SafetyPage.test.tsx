@@ -49,6 +49,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import SafetyPage from './SafetyPage'
 import { BADGE_VARIANTS } from '@/components/ui';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 const mockUsePageTitle = usePageTitle as unknown as ReturnType<typeof vi.fn>
@@ -105,6 +106,21 @@ function kpiRegion(): HTMLElement {
 
 function valueBadge(titleKey: string): HTMLElement {
   return screen.getByTestId(`safety-settings-value-${titleKey}`)
+}
+
+const KPI_LABELS = ['Active safeguards', 'Quiet window', 'Alert cadence', 'Fleet API'] as const
+
+// Unknown KPI readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectKpiHiddenCount(kpi: HTMLElement, text: string) {
+  fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 }
 
 // makeReadableStream + sseFrame mirror the useAiStream test helpers so the
@@ -189,7 +205,12 @@ describe('SafetyPage — safety-posture KPI band', () => {
       refetch: refetchSettings,
     })
     render(<MemoryRouter><SafetyPage /></MemoryRouter>)
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
+    const kpi = kpiRegion()
+    expect(within(kpi).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of KPI_LABELS) {
+      assertOperationalMetricUnavailable(kpi, label)
+    }
+    expectKpiHiddenCount(kpi, '4 empty fields are hidden.')
     expect(screen.queryByText('3 / 3')).toBeNull()
     expect(screen.getByTestId('safety-settings-listing')).toBeInTheDocument()
     expect(within(screen.getByTestId('safety-settings-rows')).getAllByRole('listitem')).toHaveLength(7)
@@ -301,7 +322,8 @@ describe('SafetyPage — safety-posture KPI band', () => {
     })
 
     const kpi = kpiRegion()
-    expect(within(kpi).getAllByText(EM_DASH)).toHaveLength(1)
+    assertOperationalMetricUnavailable(kpi, 'Alert cadence')
+    expectKpiHiddenCount(kpi, '1 empty field is hidden.')
     expect(within(kpi).queryByText('Instant')).toBeNull()
     expect(within(kpi).getByText('0 / 3')).toBeInTheDocument()
     expect(within(kpi).getByText('Off')).toBeInTheDocument()
@@ -370,7 +392,12 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
       expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
     }
     expect(valueBadge('safetySettings.rows.alertDigestMode.title')).toHaveTextContent(EM_DASH)
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
+    const kpi = kpiRegion()
+    expect(within(kpi).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of KPI_LABELS) {
+      assertOperationalMetricUnavailable(kpi, label)
+    }
+    expectKpiHiddenCount(kpi, '4 empty fields are hidden.')
     expect(within(kpiRegion()).queryByText('Always delivering')).toBeNull()
     expect(within(list).getAllByRole('listitem')).toHaveLength(7)
     expect(within(list).getAllByRole('link')).toHaveLength(7)
@@ -386,7 +413,12 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
     expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
     expect(valueBadge('safetySettings.rows.quietHoursStart.title')).toHaveTextContent('22:00')
     expect(valueBadge('safetySettings.rows.quietHoursEnd.title')).toHaveTextContent('07:00')
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(2)
+    const kpi = kpiRegion()
+    assertOperationalMetricUnavailable(kpi, 'Active safeguards')
+    assertOperationalMetricUnavailable(kpi, 'Quiet window')
+    expectKpiHiddenCount(kpi, '2 empty fields are hidden.')
+    expect(within(kpi).getByText('Alert cadence')).toBeInTheDocument()
+    expect(within(kpi).getByText('Hourly')).toBeInTheDocument()
     expect(within(kpiRegion()).getByText('Active')).toBeInTheDocument()
   })
 
@@ -496,7 +528,9 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
     const badge = valueBadge('safetySettings.rows.alertDigestMode.title')
     expect(badge).toHaveTextContent(EM_DASH)
     expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(1)
+    const kpi = kpiRegion()
+    assertOperationalMetricUnavailable(kpi, 'Alert cadence')
+    expectKpiHiddenCount(kpi, '1 empty field is hidden.')
     expect(within(kpiRegion()).getByText('3 / 3')).toBeInTheDocument()
     expect(within(kpiRegion()).getByText(`22:00${EN_DASH}07:00`)).toBeInTheDocument()
     expect(within(kpiRegion()).getByText('Active')).toBeInTheDocument()
@@ -572,7 +606,12 @@ describe('SafetyPage — read-only recovery', () => {
     render(<SafetyPage />)
     expect(screen.getByText('Refresh paused')).toBeInTheDocument()
     expect(screen.getByText('Data may be stale')).toBeInTheDocument()
-    expect(screen.getByLabelText(/Data freshness: Stale.*Source: Install settings/)).toHaveAttribute('title', expect.stringContaining('Last updated:'))
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }))
+    const freshnessDrawer = screen.getByRole('dialog')
+    const freshness = within(freshnessDrawer).getByRole('button', { name: /Data freshness: Stale.*Source: Install settings/ })
+    expect(freshness).toHaveAccessibleDescription(expect.stringContaining('Last updated:'))
+    fireEvent.keyDown(freshnessDrawer, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(within(kpiRegion()).getByText('3 / 3')).toBeInTheDocument()
     expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
     const retry = screen.getByRole('button', { name: 'Retry' })
@@ -597,7 +636,12 @@ describe('SafetyPage — read-only recovery', () => {
     for (const badge of within(list).getAllByText(EM_DASH)) {
       expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
     }
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
+    const retryKpi = kpiRegion()
+    expect(within(retryKpi).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of KPI_LABELS) {
+      assertOperationalMetricUnavailable(retryKpi, label)
+    }
+    expectKpiHiddenCount(retryKpi, '4 empty fields are hidden.')
     expect(screen.queryByText('3 / 3')).toBeNull()
     expect(screen.queryByRole('button', { name: /Explain my settings/i })).toBeNull()
     expect(refetchSettings).not.toHaveBeenCalled()
@@ -677,7 +721,12 @@ describe('SafetyPage — read-only recovery', () => {
       refetch: refetchSettings,
     })
     render(<SafetyPage />)
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
+    const missingKpi = kpiRegion()
+    expect(within(missingKpi).getByText('No metric values are available yet.')).toBeInTheDocument()
+    for (const label of KPI_LABELS) {
+      assertOperationalMetricUnavailable(missingKpi, label)
+    }
+    expectKpiHiddenCount(missingKpi, '4 empty fields are hidden.')
     expect(within(screen.getByTestId('safety-settings-rows')).getAllByText(EM_DASH)).toHaveLength(7)
     expect(screen.queryByText('3 / 3')).toBeNull()
     expect(refetchSettings).not.toHaveBeenCalled()

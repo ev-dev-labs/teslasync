@@ -21,9 +21,23 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(brief: HTMLElement, text: string) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
@@ -138,19 +152,28 @@ describe('SessionsSummaryCards — loaded with data', () => {
     expect(screen.getByText('Active sessions')).toBeInTheDocument()
     expect(screen.getByText('4')).toBeInTheDocument()
 
-    // This device — label derived from the UA, IP as subtitle.
+    // This device — label derived from the UA on the face, IP in the drawer.
     expect(screen.getByText('This device')).toBeInTheDocument()
     expect(screen.getByText('Chrome · macOS')).toBeInTheDocument()
-    expect(screen.getByText('10.2.2.2')).toBeInTheDocument()
 
     // Other devices.
     expect(screen.getByText('Other devices')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
 
-    // Last active — relative label + absolute subtitle via the formatters.
+    // Last active — relative label on the face, absolute in the drawer.
     expect(screen.getByText('Last active')).toBeInTheDocument()
     expect(screen.getByText('rel:2026-05-05T12:00:00Z')).toBeInTheDocument()
-    expect(screen.getByText('dt:2026-05-05T12:00:00Z')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    try {
+      const deviceGroup = within(drawer).getByRole('group', { name: 'This device' })
+      expect(within(deviceGroup).getByText('10.2.2.2')).toBeInTheDocument()
+      const activeGroup = within(drawer).getByRole('group', { name: 'Last active' })
+      expect(within(activeGroup).getByText('dt:2026-05-05T12:00:00Z')).toBeInTheDocument()
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' })
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(formatRelativeTime).toHaveBeenCalledWith('2026-05-05T12:00:00Z')
     expect(formatDateTime).toHaveBeenCalledWith('2026-05-05T12:00:00Z')
 
@@ -207,9 +230,12 @@ describe('SessionsSummaryCards — error state', () => {
       onRetry,
     })
 
-    // Unavailable metric shells remain beside the error, with no loading values.
-    expect(screen.getByText('Active sessions')).toBeInTheDocument()
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4)
+    // Unavailable metrics are omitted beside the error, with no loading values.
+    for (const label of ['Active sessions', 'This device', 'Other devices', 'Last active']) {
+      assertOperationalMetricUnavailable(container, label)
+    }
+    expectHiddenCount(container, '4 empty fields are hidden.')
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument()
     expect(container.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]')).toHaveLength(0)
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
 

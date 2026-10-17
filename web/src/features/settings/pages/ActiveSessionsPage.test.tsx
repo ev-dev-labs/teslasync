@@ -600,7 +600,9 @@ describe('ActiveSessionsPage — revocation readiness', () => {
       })
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       expect(screen.getByTestId('active-sessions-current-pill-ready-current')).toBeInTheDocument()
-      expect(screen.getByText('10.0.0.2')).toBeInTheDocument()
+      // The IP also appears in the "By network" breakdown; scope to the
+      // device table whose row metadata this test retains.
+      expect(within(screen.getByTestId('active-sessions-section')).getByText('10.0.0.2')).toBeInTheDocument()
       expect(screen.getByTestId('active-sessions-deferred')).toHaveTextContent('not available with the current server or deployment configuration')
       expect(mockedRequest.mock.calls.some(call => call[1]?.method === 'DELETE')).toBe(false)
     },

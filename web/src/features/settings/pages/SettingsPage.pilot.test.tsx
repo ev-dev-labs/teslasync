@@ -1,7 +1,21 @@
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(summary: HTMLElement, text: string) {
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
 import { Input } from '@/components/ui'
 import type { AppSettings } from '@/api/types'
 import type { FontFamilyId } from '@/components/ui/FontProvider'
@@ -156,21 +170,20 @@ describe('SettingsPage real mixed-source Brief', () => {
       expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(1)
       expect(summary.querySelector('[data-operational-metric="settings-preference-6"]'))
         .toHaveTextContent('Atkinson Hyperlegible')
-      expect(summary.querySelector('[data-operational-metric="settings-preference-6"]'))
-        .toHaveTextContent('125%')
       for (let index = 0; index < 6; index++) {
         const remote = summary.querySelector(`[data-operational-metric="settings-preference-${index}"]`)
         expect(remote).toHaveAttribute('data-value-state', 'missing')
         expect(remote?.querySelector('[data-operational-value]')).toBeNull()
       }
-      expect(within(summary).getByText('Loading source')).toBeVisible()
+      assertOperationalBriefDisclosure(summary, 'Loading source')
       expect(container.querySelector('.lg\\:grid-cols-settings-navigation')).toBeInTheDocument()
       expect(container.querySelector('.grid-cols-settings-shortcuts')).toBeInTheDocument()
       fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
       const drawer = screen.getByRole('dialog')
       expect(within(drawer).getByText('Atkinson Hyperlegible')).toBeVisible()
       expect(within(drawer).getByText('Atkinson Hyperlegible')).not.toHaveAttribute('aria-busy')
-      expect(within(drawer).getByText('125%')).toBeVisible()
+      const typographyGroup = within(drawer).getByRole('group', { name: 'Typography' })
+      expect(within(typographyGroup).getByText('125%')).toBeVisible()
       expect(drawer.querySelectorAll('[aria-busy="true"]')).toHaveLength(6)
       expect(within(drawer).queryByText('$', { exact: true })).toBeNull()
       expect(within(drawer).queryByText('°C', { exact: true })).toBeNull()
@@ -181,10 +194,12 @@ describe('SettingsPage real mixed-source Brief', () => {
       sourceState.error = new Error('Remote settings unavailable')
       renderRealPage()
       const summary = screen.getByTestId('settings-preferences-summary')
-      expect(within(summary).getByText('Source unavailable')).toBeVisible()
+      assertOperationalBriefDisclosure(summary, 'Source unavailable')
       expect(within(summary).getByText('Atkinson Hyperlegible')).toBeVisible()
-      expect(summary.querySelector('[data-operational-metric="settings-preference-5"]'))
-        .toHaveAttribute('data-value-state', 'missing')
+      for (const label of ['Distance', 'Temperature', 'Pressure', 'Language', 'Currency', 'Energy cost']) {
+        assertOperationalMetricUnavailable(summary, label)
+      }
+      expectHiddenCount(summary, '6 empty fields are hidden.')
       expect(within(summary).queryByText('Source available')).toBeNull()
       fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
       const drawer = screen.getByRole('dialog')
@@ -202,7 +217,7 @@ describe('SettingsPage real mixed-source Brief', () => {
       settingsQuery.isError = true
       renderRealPage()
       const summary = screen.getByTestId('settings-preferences-summary')
-      expect(within(summary).getByText('Retained source')).toBeVisible()
+      assertOperationalBriefDisclosure(summary, 'Retained source')
       expect(within(summary).getByText('Atkinson Hyperlegible')).toBeVisible()
       expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(7)
       expect(summary.querySelector('[data-operational-metric="settings-preference-5"]'))
@@ -230,9 +245,11 @@ describe('SettingsPage real mixed-source Brief', () => {
       const summary = screen.getByTestId('settings-preferences-summary')
       expect(summary).not.toHaveAttribute('aria-busy')
       expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(7)
-      expect(within(summary).getByText('Source available')).toBeVisible()
       expect(within(summary).getByText('Atkinson Hyperlegible')).toBeVisible()
+      // The drawer stayed open across the rerender: assert the recovered
+      // status in its header directly instead of reopening it.
       const drawer = screen.getByRole('dialog')
+      expect(within(drawer.querySelector('[data-drawer-header]') as HTMLElement).getByText('Source available')).toBeVisible()
       expect(within(drawer).getByText('€0.25')).toBeVisible()
       expect(within(drawer).getByText('°F')).toBeVisible()
       expect(within(drawer).getByText('125%')).toBeVisible()

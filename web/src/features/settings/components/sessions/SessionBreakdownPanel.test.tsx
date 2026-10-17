@@ -116,23 +116,26 @@ describe('SessionBreakdownPanel', () => {
   })
 
   it('offsets bar colors by colorOffset so sibling panels differ', () => {
+    // In-range counts: out-of-range readings intentionally render a
+    // described group instead of a progressbar (see MetricBar), which is
+    // not this test's scenario.
     render(
       <MemoryRouter>
         <SessionBreakdownPanel
           {...base}
-          items={[{ key: 'a', label: 'A', count: 5 }]}
+          items={[{ key: 'a', label: 'A', count: 3 }]}
           colorOffset={0}
         />
         <SessionBreakdownPanel
           {...base}
-          items={[{ key: 'b', label: 'B', count: 7 }]}
+          items={[{ key: 'b', label: 'B', count: 1 }]}
           colorOffset={3}
         />
       </MemoryRouter>,
     )
 
-    const first = screen.getByText('5')
-    const second = screen.getByText('7')
+    const first = screen.getByText('3')
+    const second = screen.getByText('1')
 
     expect(first).toHaveClass('text-[var(--text-primary)]')
     expect(second).toHaveClass('text-[var(--text-primary)]')

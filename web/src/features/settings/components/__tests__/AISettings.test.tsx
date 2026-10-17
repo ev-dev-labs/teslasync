@@ -26,7 +26,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -249,7 +249,14 @@ describe('AISettings — §I9 API key never displayed in off mode', () => {
 
 describe('AISettings — saved enforcement and unsaved preview', () => {
   it('keeps a reached saved cap until a successful save updates the settings', async () => {
-    const saved = { ...baseSettings, ai_mode: 'cloud' as const, ai_cost_cap_cents: 1000 }
+    // Mode-compatible provider: the save guard pins inconsistent
+    // configurations as unsavable, and this test exercises the save flow.
+    const saved = {
+      ...baseSettings,
+      ai_mode: 'cloud' as const,
+      ai_cost_cap_cents: 1000,
+      ai_provider_config: { default: 'openai', openai: { model: 'saved-model', api_key: 'saved-key' } },
+    }
     const { client } = renderPanel(saved)
     act(() => {
       client.setQueryData(aiUsageKeys.today(), {
@@ -314,10 +321,11 @@ describe('AISettings — saved enforcement and unsaved preview', () => {
         }],
       })
     })
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1))
-    const populatedRow = screen.getByRole('listitem').textContent
+    const spendPanel = screen.getByTestId('ai-feature-spend-panel')
+    await waitFor(() => expect(within(spendPanel).getAllByRole('listitem')).toHaveLength(1))
+    const populatedRow = within(spendPanel).getByRole('listitem').textContent
     fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '0' } })
-    expect(screen.getByRole('listitem').textContent).toBe(populatedRow)
+    expect(within(spendPanel).getByRole('listitem').textContent).toBe(populatedRow)
     expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('The daily cap applies')
     expect(screen.queryByText('No audited Helix calls in the last 7 days.')).toBeNull()
   })
@@ -386,7 +394,7 @@ describe('AISettings — §I7 archive restore is explicit, never silent', () => 
     await waitFor(() => expect(screen.getByTestId('ai-restore-confirm')).toBeEnabled())
     expect(screen.getByTestId('ai-restore-panel')).toBeInTheDocument()
     expect(screen.getByTestId('ai-provider-model')).toHaveValue('draft-model')
-    expect(screen.getByTestId('ai-feature-toggle-chatbot-llm')).toBeChecked()
+    expect(within(screen.getByTestId('ai-feature-row-chatbot-llm')).getByRole('switch')).toBeChecked()
     expect(client.getQueryData(['settings'])).toMatchObject({ ai_features_archived: { 'chatbot-llm': true } })
     expect(screen.getByText('Server error')).toBeInTheDocument()
 

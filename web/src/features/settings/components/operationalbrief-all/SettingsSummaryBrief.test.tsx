@@ -1,4 +1,17 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(brief: HTMLElement, text: string) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -73,7 +86,7 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
       expect(container.querySelector('[data-operational-metric="remote"]')).toHaveAttribute('data-value-state', 'missing')
       expect(container.querySelector('[data-operational-metric="font"]')).toHaveAttribute('data-value-state', 'value')
       expect(screen.getByText('Atkinson')).toBeVisible()
-      expect(screen.getByText('Loading source')).toBeVisible()
+      assertOperationalBriefDisclosure(container, 'Loading source')
       fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
       const drawer = screen.getByRole('dialog')
       expect(within(drawer).getByText('Atkinson')).toBeVisible()
@@ -95,8 +108,9 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
             display: { formatter } },
           { metricId: 'count', occurrenceId: 'zero-local', label: 'Measured local zero', rawValue: 0, loading: false },
         ]} />)
-      expect(container.querySelector('[data-operational-metric="missing-local"]')).toHaveAttribute('data-value-state', 'missing')
-      expect(container.querySelector('[data-operational-metric="invalid-local"]')).toHaveAttribute('data-value-state', 'invalid')
+      assertOperationalMetricUnavailable(container, 'Missing local')
+      assertOperationalMetricUnavailable(container, 'Invalid local')
+      expectHiddenCount(container, '2 empty fields are hidden.')
       expect(container.querySelector('[data-operational-metric="zero-local"] [data-operational-value]')).toHaveTextContent('0')
       expect(formatter).not.toHaveBeenCalled()
       fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
@@ -116,8 +130,9 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
       ]} />)
     expect(container.querySelector('[data-operational-metric="zero"]')).toHaveAttribute('data-value-state', 'value')
     expect(container.querySelector('[data-operational-metric="zero"] [data-operational-value]')).toHaveTextContent('0')
-    expect(container.querySelector('[data-operational-metric="missing"]')).toHaveAttribute('data-value-state', 'missing')
-    expect(container.querySelector('[data-operational-metric="invalid"]')).toHaveAttribute('data-value-state', 'invalid')
+    assertOperationalMetricUnavailable(container, 'Unavailable')
+    assertOperationalMetricUnavailable(container, 'Invalid source')
+    expectHiddenCount(container, '2 empty fields are hidden.')
     assertOperationalBriefDisclosure(document.body, 'Retained source')
   })
 
@@ -148,8 +163,10 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
   it('does not turn an unavailable session list into a successful empty list', () => {
     const { container } = render(<SessionsSummaryCards total={0} otherCount={0} current={null}
       lastActive={null} sourceAvailable={false} isLoading={false} isError={false} />)
-    expect(container.querySelector('[data-operational-metric="sessions-total"]')).toHaveAttribute('data-value-state', 'missing')
-    expect(container.querySelector('[data-operational-metric="sessions-other"]')).toHaveAttribute('data-value-state', 'missing')
+    for (const label of ['Active sessions', 'This device', 'Other devices', 'Last active']) {
+      assertOperationalMetricUnavailable(container, label)
+    }
+    expectHiddenCount(container, '4 empty fields are hidden.')
     expect(screen.queryByText('0')).toBeNull()
   })
 
@@ -169,7 +186,9 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
       publicKey={undefined} onboarding={undefined} isLoading
       sourceLoading={{ domain: true, stream: true, account: false, token: false }} />)
     expect(container.querySelector('[data-operational-metric="fleet-setup-token"]')).toHaveTextContent('Auto-refresh on')
-    expect(container.querySelector('[data-operational-metric="fleet-setup-domain"]')).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalMetricUnavailable(container, 'Partner public key')
+    assertOperationalMetricUnavailable(container, 'Telemetry')
+    expectHiddenCount(container, '2 empty fields are hidden.')
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
     expect(within(screen.getByRole('dialog')).getByText('TeslaSync refreshes the Fleet token before it expires.')).toBeInTheDocument()
   })

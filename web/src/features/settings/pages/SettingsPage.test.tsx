@@ -145,6 +145,7 @@ vi.mock('../components/ResetSection', () => ({
 }))
 
 import SettingsPage from './SettingsPage'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import { TOUR_OPEN_LAUNCHER_EVENT } from '@/lib/tourRegistry'
 import { CHECKLIST_DISMISSED_KEY } from '@/features/onboarding/checklist'
 import { ToastProvider } from '@/components/feedback/Toast'
@@ -247,6 +248,39 @@ function statCard(label: string): HTMLElement {
   return card as HTMLElement
 }
 
+function preferencesSummary(): HTMLElement {
+  return screen.getByTestId('settings-preferences-summary')
+}
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(summary: HTMLElement, text: string) {
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
+// Per-metric context (sublabels) lives in the drawer's named groups now.
+function expectDrawerContext(entries: ReadonlyArray<readonly [string, string]>) {
+  const summary = preferencesSummary()
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    for (const [label, context] of entries) {
+      const group = within(drawer).getByRole('group', { name: label })
+      expect(within(group).getByText(context)).toBeInTheDocument()
+    }
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   translationMode.canonical = false
@@ -344,28 +378,27 @@ describe('SettingsPage — KPI band derivation', () => {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
 
-    // Distance: metric unit value + "Rated" range sublabel, associated.
-    const distance = statCard('Distance')
-    expect(within(distance).getByText('km')).toBeInTheDocument()
-    expect(within(distance).getByText('Rated')).toBeInTheDocument()
+    // Distance: metric unit value on the face; the "Rated" range sublabel
+    // is associated context in the drawer.
+    expect(within(statCard('Distance')).getByText('km')).toBeInTheDocument()
 
     // Temperature defaults to °C (unit_of_temp !== 'F').
     expect(within(statCard('Temperature')).getByText('°C')).toBeInTheDocument()
     // Pressure passes the stored unit straight through.
     expect(within(statCard('Pressure')).getByText('bar')).toBeInTheDocument()
-    // Language: uppercased code + friendly name from the label map.
-    const language = statCard('Language')
-    expect(within(language).getByText('EN')).toBeInTheDocument()
-    expect(within(language).getByText('English')).toBeInTheDocument()
-    // Currency glyph + energy cost formatted to 2dp with a "per kWh" sublabel.
+    // Language: uppercased code on the face; friendly name in the drawer.
+    expect(within(statCard('Language')).getByText('EN')).toBeInTheDocument()
+    // Currency glyph + energy cost formatted to 2dp; "per kWh" in the drawer.
     expect(within(statCard('Currency')).getByText('$')).toBeInTheDocument()
-    const energy = statCard('Energy cost')
-    expect(within(energy).getByText('$0.12')).toBeInTheDocument()
-    expect(within(energy).getByText('per kWh')).toBeInTheDocument()
-    // Typography: friendly font family name + rounded scale percentage.
-    const typography = statCard('Typography')
-    expect(within(typography).getByText('Inter')).toBeInTheDocument()
-    expect(within(typography).getByText('100%')).toBeInTheDocument()
+    expect(within(statCard('Energy cost')).getByText('$0.12')).toBeInTheDocument()
+    // Typography: friendly font family name on the face; scale in the drawer.
+    expect(within(statCard('Typography')).getByText('Inter')).toBeInTheDocument()
+    expectDrawerContext([
+      ['Distance', 'Rated'],
+      ['Language', 'English'],
+      ['Energy cost', 'per kWh'],
+      ['Typography', '100%'],
+    ])
   })
 
   it('reflects imperial units, ideal range, a custom currency, and a localized language', () => {
@@ -384,23 +417,22 @@ describe('SettingsPage — KPI band derivation', () => {
 
     renderPage()
 
-    const distance = statCard('Distance')
-    expect(within(distance).getByText('mi')).toBeInTheDocument()
-    expect(within(distance).getByText('Ideal')).toBeInTheDocument()
+    expect(within(statCard('Distance')).getByText('mi')).toBeInTheDocument()
     expect(within(statCard('Temperature')).getByText('°F')).toBeInTheDocument()
     expect(within(statCard('Pressure')).getByText('psi')).toBeInTheDocument()
 
-    const language = statCard('Language')
-    expect(within(language).getByText('DE')).toBeInTheDocument()
-    expect(within(language).getByText('Deutsch')).toBeInTheDocument()
+    expect(within(statCard('Language')).getByText('DE')).toBeInTheDocument()
 
     expect(within(statCard('Currency')).getByText('€')).toBeInTheDocument()
     // Formatted to 2dp and prefixed with the custom glyph.
     expect(within(statCard('Energy cost')).getByText('€0.34')).toBeInTheDocument()
 
-    const typography = statCard('Typography')
-    expect(within(typography).getByText('Atkinson Hyperlegible')).toBeInTheDocument()
-    expect(within(typography).getByText('110%')).toBeInTheDocument()
+    expect(within(statCard('Typography')).getByText('Atkinson Hyperlegible')).toBeInTheDocument()
+    expectDrawerContext([
+      ['Distance', 'Ideal'],
+      ['Language', 'Deutsch'],
+      ['Typography', '110%'],
+    ])
   })
 
   it('falls back to "$" when the settings omit a currency symbol', () => {
@@ -412,13 +444,18 @@ describe('SettingsPage — KPI band derivation', () => {
     expect(within(statCard('Energy cost')).getByText('$0.20')).toBeInTheDocument()
   })
 
-  it('coalesces a blank unit string to an em-dash instead of an empty cell', () => {
+  it('omits blank unit strings instead of rendering an empty cell', () => {
     setSettings(makeSettings({ unit_of_length: '', unit_of_pressure: '   ' }))
 
     renderPage()
 
-    expect(within(statCard('Distance')).getByText('—')).toBeInTheDocument()
-    expect(within(statCard('Pressure')).getByText('—')).toBeInTheDocument()
+    const summary = preferencesSummary()
+    assertOperationalMetricUnavailable(summary, 'Distance')
+    assertOperationalMetricUnavailable(summary, 'Pressure')
+    expectHiddenCount(summary, '2 empty fields are hidden.')
+    // Neighboring tiles keep their measured values.
+    expect(within(statCard('Temperature')).getByText('°C')).toBeInTheDocument()
+    expect(within(statCard('Energy cost')).getByText('$0.12')).toBeInTheDocument()
   })
 
   it('uppercases an unknown language code and omits the friendly name', () => {
@@ -438,9 +475,10 @@ describe('SettingsPage — KPI band derivation', () => {
     renderPage()
 
     const typography = statCard('Typography')
-    // 'custom' IS mapped to "Custom"; assert the mapped label + rounded scale.
+    // 'custom' IS mapped to "Custom"; assert the mapped label on the face and
+    // the rounded scale in the drawer group.
     expect(within(typography).getByText('Custom')).toBeInTheDocument()
-    expect(within(typography).getByText('85%')).toBeInTheDocument()
+    expectDrawerContext([['Typography', '85%']])
   })
 })
 
@@ -505,15 +543,15 @@ describe('SettingsPage — loading & empty placeholders', () => {
     expect(typography.querySelector('[aria-busy="true"]')).toBeNull()
     return waitFor(() => {
       expect(within(typography).getByText('Inter')).toBeVisible()
-      expect(within(typography).getByText('100%')).toBeVisible()
-      expect(within(summary).getByText('Loading source')).toBeVisible()
+      expect(summary).toHaveAttribute('aria-busy', 'true')
     }).then(() => {
       fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
       const drawer = screen.getByRole('dialog')
       return waitFor(() => {
         expect(within(drawer).getByText('Inter')).toBeVisible()
         expect(within(drawer).getByText('Inter')).not.toHaveAttribute('aria-busy')
-        expect(within(drawer).getByText('100%')).toBeVisible()
+        const typographyGroup = within(drawer).getByRole('group', { name: 'Typography' })
+        expect(within(typographyGroup).getByText('100%')).toBeVisible()
         expect(within(drawer).getByText('100%').closest('[aria-busy="true"]')).toBeNull()
         const pendingDrawerValues = drawer.querySelectorAll('[aria-busy="true"]')
         expect(pendingDrawerValues).toHaveLength(6)
@@ -528,15 +566,18 @@ describe('SettingsPage — loading & empty placeholders', () => {
     })
   })
 
-  it('renders em-dash placeholders — never blanks — when settings are unavailable', () => {
+  it('omits unavailable settings tiles — never blanks — while keeping live font prefs', () => {
     setSettings(undefined) // resolved, but no data (error/empty)
 
     renderPage()
 
-    // Labels ARE present (not loading), values fall back to the placeholder.
-    expect(screen.getByText('Distance')).toBeInTheDocument()
-    // Distance, Temperature, Pressure, Language, Currency, Energy all show "—".
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(6)
+    // The six settings-backed tiles are omitted and counted in the drawer.
+    const summary = preferencesSummary()
+    for (const label of ['Distance', 'Temperature', 'Pressure', 'Language', 'Currency', 'Energy cost']) {
+      assertOperationalMetricUnavailable(summary, label)
+    }
+    expectHiddenCount(summary, '6 empty fields are hidden.')
+    expect(screen.queryByText('—')).not.toBeInTheDocument()
     // Typography is independent of settings → still shows the live font prefs.
     expect(within(statCard('Typography')).getByText('Inter')).toBeInTheDocument()
   })

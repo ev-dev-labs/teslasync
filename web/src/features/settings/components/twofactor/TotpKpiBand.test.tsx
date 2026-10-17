@@ -10,22 +10,23 @@
  *     suppresses measured-value claims, and keeps the labelled landmark region so
  *     the summary never loses its accessible name mid-fetch;
  *   • open-mode (the install has no forward-auth header) and a missing
- *     `data` object both collapse the status card to "Unavailable" and the
- *     two per-user cells to an em-dash, and never invoke the date formatter;
+ *     `data` object both collapse the status card to "Unavailable" and omit
+ *     the two per-user tiles (counted in the drawer), never invoking the date formatter;
  *   • an activated session renders "Active", forwards its raw `last_used_at`
  *     ISO string to `formatDateTime` verbatim, and renders the formatter's
  *     result as the "Last verified" cell;
  *   • an activated session with missing or invalid use evidence stays unknown and never
  *     calls the formatter;
  *   • a session that exists but is not activated renders "Not enrolled" and
- *     dashes out the two per-user cells;
+ *     omits the two per-user tiles (counted in the drawer);
  *   • null-safety: a malformed session missing `backup_codes_remaining`
- *     degrades to an unknown dash rather than inventing zero,
+ *     omits the tile rather than inventing zero,
  *     and a genuine zero backup-code balance renders "0" — distinct from the
- *     "—" a non-activated credential shows, so an exhausted balance is never
- *     silently hidden;
+ *     omitted tile a non-activated credential shows, so an exhausted balance
+ *     is never silently hidden;
  *   • design-language §8 "always visible": every non-loading state renders
- *     the full four-card band, never a blank panel;
+ *     its known-value tiles plus the counted hidden-fields explanation, never
+ *     a blank panel;
  *   • a11y: the band is a labelled region and every lucide glyph is
  *     decorative and hidden from assistive tech.
  *
@@ -38,8 +39,9 @@
  * the band renders no motion itself.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 import type { TOTPStatus } from '@/api/types'
 
@@ -85,6 +87,11 @@ vi.mock('react-i18next', () => ({
     t: (_key: string, fallback?: string, opts?: Record<string, unknown>) => {
       let out = fallback ?? _key
       if (opts) {
+        // Match the shared plural-capable fixture: counted sentences honour
+        // one/other defaults so the drawer's hidden-count reads correctly.
+        if (typeof opts.count === 'number' && (opts.defaultValue_one != null || opts.defaultValue_other != null)) {
+          out = String(opts.count === 1 ? (opts.defaultValue_one ?? out) : (opts.defaultValue_other ?? out))
+        }
         for (const [k, v] of Object.entries(opts)) {
           out = out.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
         }
@@ -116,6 +123,23 @@ function sessionStatus(over: Partial<SessionStatus> = {}): TOTPStatus {
 const LABELS = ['Protection', 'Last verified', 'Backup codes remaining', 'Method'] as const
 
 const REGION_NAME = 'Two-factor status summary'
+
+function briefRegion(): HTMLElement {
+  return screen.getByRole('region', { name: REGION_NAME })
+}
+
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(region: HTMLElement, text: string) {
+  fireEvent.click(within(region).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
 
 beforeEach(() => {
   formatDateTime.mockClear()
@@ -175,7 +199,9 @@ describe('TotpKpiBand', () => {
       render(<TotpKpiBand data={sessionStatus({ last_used_at })} isLoading={false} />)
 
       expect(screen.getByText('Active')).toBeInTheDocument()
-      expect(screen.getByText('—')).toBeInTheDocument()
+      const region = briefRegion()
+      assertOperationalMetricUnavailable(region, 'Last verified')
+      expectHiddenCount(region, '1 empty field is hidden.')
       expect(screen.queryByText('Never')).not.toBeInTheDocument()
       expect(formatDateTime).not.toHaveBeenCalled()
     },
@@ -185,8 +211,11 @@ describe('TotpKpiBand', () => {
     render(<TotpKpiBand data={sessionStatus({ activated: false })} isLoading={false} />)
 
     expect(screen.getByText('Not enrolled')).toBeInTheDocument()
-    // Last-verified and backup-codes cells both collapse to an em-dash.
-    expect(screen.getAllByText('—')).toHaveLength(2)
+    // Last-verified and backup-codes tiles are omitted when the credential is not activated.
+    const region = briefRegion()
+    assertOperationalMetricUnavailable(region, 'Last verified')
+    assertOperationalMetricUnavailable(region, 'Backup codes remaining')
+    expectHiddenCount(region, '2 empty fields are hidden.')
     // A non-activated credential never has a verification time to format.
     expect(formatDateTime).not.toHaveBeenCalled()
   })
@@ -194,25 +223,39 @@ describe('TotpKpiBand', () => {
   it('collapses to "Unavailable" with two dashes in open mode, without calling the formatter', () => {
     render(<TotpKpiBand data={{ mode: 'open' }} isLoading={false} />)
 
-    for (const label of LABELS) {
-      expect(screen.getByText(label)).toBeInTheDocument()
+    const region = briefRegion()
+    for (const label of ['Protection', 'Method'] as const) {
+      expect(within(region).getByText(label)).toBeInTheDocument()
     }
     expect(screen.getByText('Unavailable')).toBeInTheDocument()
-    // Method is always a static TOTP / RFC 6238 pair, even when unavailable.
+    // Method is always a static TOTP value, even when unavailable; its
+    // RFC 6238 standard context lives in the Review-details drawer.
     expect(screen.getByText('TOTP')).toBeInTheDocument()
-    expect(screen.getByText('RFC 6238')).toBeInTheDocument()
-    expect(screen.getAllByText('—')).toHaveLength(2)
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    try {
+      const methodGroup = within(drawer).getByRole('group', { name: 'Method' })
+      expect(within(methodGroup).getByText('RFC 6238')).toBeInTheDocument()
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' })
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    assertOperationalMetricUnavailable(region, 'Last verified')
+    assertOperationalMetricUnavailable(region, 'Backup codes remaining')
+    expectHiddenCount(region, '2 empty fields are hidden.')
     expect(formatDateTime).not.toHaveBeenCalled()
   })
 
   it('treats a missing data object (not loading) as unavailable rather than a blank panel', () => {
     render(<TotpKpiBand data={undefined} isLoading={false} />)
 
-    expect(screen.getByRole('region', { name: REGION_NAME })).toBeInTheDocument()
+    const region = briefRegion()
     expect(screen.getByText('Unavailable')).toBeInTheDocument()
-    for (const label of LABELS) {
-      expect(screen.getByText(label)).toBeInTheDocument()
-    }
+    expect(within(region).getByText('Protection')).toBeInTheDocument()
+    expect(within(region).getByText('Method')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(region, 'Last verified')
+    assertOperationalMetricUnavailable(region, 'Backup codes remaining')
+    expectHiddenCount(region, '2 empty fields are hidden.')
   })
 
   it('keeps a missing backup balance unknown instead of inventing an exhausted balance', () => {
@@ -226,7 +269,10 @@ describe('TotpKpiBand', () => {
     expect(screen.getByText('Active')).toBeInTheDocument()
     expect(screen.queryByText('0')).toBeNull()
     expect(screen.queryByText('Never')).not.toBeInTheDocument()
-    expect(screen.getAllByText('—')).toHaveLength(2)
+    const region = briefRegion()
+    assertOperationalMetricUnavailable(region, 'Last verified')
+    assertOperationalMetricUnavailable(region, 'Backup codes remaining')
+    expectHiddenCount(region, '2 empty fields are hidden.')
     expect(formatDateTime).not.toHaveBeenCalled()
   })
 
@@ -236,7 +282,9 @@ describe('TotpKpiBand', () => {
   ])('keeps invalid backup balance %s unknown in the summary', backup_codes_remaining => {
     render(<TotpKpiBand data={sessionStatus({ backup_codes_remaining })} isLoading={false} />)
 
-    expect(screen.getByText('—')).toBeInTheDocument()
+    const region = briefRegion()
+    assertOperationalMetricUnavailable(region, 'Backup codes remaining')
+    expectHiddenCount(region, '1 empty field is hidden.')
     expect(screen.queryByText('0')).not.toBeInTheDocument()
     expect(screen.getByText('fmt:2026-02-01T10:00:00Z')).toBeInTheDocument()
   })
@@ -257,10 +305,19 @@ describe('TotpKpiBand', () => {
   })
 
   it('hides its decorative lucide icons from assistive technology (a11y)', () => {
-    const { container } = render(<TotpKpiBand data={sessionStatus()} isLoading={false} />)
+    render(<TotpKpiBand data={sessionStatus()} isLoading={false} />)
 
-    // One decorative glyph per card → at least four aria-hidden icons.
-    const hidden = container.querySelectorAll('[aria-hidden="true"]')
-    expect(hidden.length).toBeGreaterThanOrEqual(4)
+    // The four metric glyphs live in the Review-details drawer contexts now;
+    // each stays decorative (aria-hidden) with no accessible name of its own.
+    const region = briefRegion()
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    try {
+      const hidden = drawer.querySelectorAll('[aria-hidden="true"]')
+      expect(hidden.length).toBeGreaterThanOrEqual(4)
+    } finally {
+      fireEvent.keyDown(drawer, { key: 'Escape' })
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

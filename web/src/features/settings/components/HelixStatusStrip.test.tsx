@@ -7,11 +7,11 @@
  *
  *   1. Mode drives the "Status" tile label + the whole strip's a11y region.
  *   2. `providerName` maps through PROVIDER_LABELS, falls back to the raw
- *      key when unmapped, trims stray whitespace, and degrades a blank
- *      value to the em-dash.
+ *      key when unmapped, trims stray whitespace, and omits the tile for a
+ *      blank value (counted in the drawer).
  *   3. The spend tile reads `/ai/usage/today` and converts micro-cents →
  *      dollars before currency formatting (1 dollar = 1_000_000 micro-cents),
- *      staying at the em-dash while loading, on error, and when Helix is off.
+ *      omitted while loading, on error, and when Helix is off.
  *      Non-zero sub-cent costs retain six decimals, including signed values.
  *   4. When Helix is off the usage fetch is skipped entirely.
  *   5. A non-finite feature count is invalid, distinct from a measured zero.
@@ -27,22 +27,43 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 import type { AiUsageToday } from '@/api/hooks/useAiUsage'
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import { HelixStatusStrip } from './HelixStatusStrip'
-
-const EM_DASH = '\u2014'
 
 const requestMock = vi.fn()
 vi.mock('@/api/client', () => ({
   request: (...args: unknown[]) => requestMock(...args),
 }))
 
+// Passthrough spy: omitted tiles carry no drawer group, so missing/invalid
+// classifications are pinned on the mapped hook output instead.
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics')
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) }
+})
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown) =>
-        typeof fallbackOrOpts === 'string' ? fallbackOrOpts : key,
+      t: (key: string, fallbackOrOpts?: unknown, optsArg?: unknown) => {
+        if (typeof fallbackOrOpts !== 'string') return key
+        let out = fallbackOrOpts
+        const opts = optsArg as Record<string, unknown> | undefined
+        if (opts && typeof opts === 'object') {
+          // Match the shared plural-capable fixture: counted sentences honour
+          // one/other defaults so the drawer's hidden-count reads correctly.
+          if (typeof opts.count === 'number' && (opts.defaultValue_one != null || opts.defaultValue_other != null)) {
+            out = String(opts.count === 1 ? (opts.defaultValue_one ?? out) : (opts.defaultValue_other ?? out))
+          }
+          for (const [k, v] of Object.entries(opts)) {
+            out = out.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
+          }
+        }
+        return out
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -87,9 +108,29 @@ function tileValue(label: string): string {
   return (valueEl?.textContent ?? '').trim()
 }
 
+// Unknown readings are omitted from the brief face; the Review-details
+// drawer counts them. Pins the exact hidden-count sentence.
+function expectHiddenCount(strip: HTMLElement, text: string) {
+  fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }))
+  const drawer = screen.getByRole('dialog')
+  try {
+    expect(within(drawer).getByText(text)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
+function mappedSpendState(): string | undefined {
+  const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+    readonly { valueState?: string }[] | undefined
+  return mapped?.[3]?.valueState
+}
+
 beforeEach(() => {
   requestMock.mockReset()
   requestMock.mockResolvedValue(makeUsage())
+  vi.mocked(useOperationalMetrics).mockClear()
 })
 
 describe('HelixStatusStrip', () => {
@@ -127,9 +168,11 @@ describe('HelixStatusStrip', () => {
     renderStrip({ mode: 'off', enabledCount: 2, providerName: 'openai' })
 
     expect(tileValue('Status')).toBe('Off (default)')
-    // Provider + spend degrade to the em-dash regardless of the props.
-    expect(tileValue('Provider')).toBe(EM_DASH)
-    expect(tileValue('Spend today')).toBe(EM_DASH)
+    // Provider + spend tiles are omitted regardless of the props.
+    const strip = screen.getByTestId('helix-status-strip')
+    assertOperationalMetricUnavailable(strip, 'Provider')
+    assertOperationalMetricUnavailable(strip, 'Spend today')
+    expectHiddenCount(strip, '2 empty fields are hidden.')
     // The feature count still reflects the real value.
     expect(tileValue('Features enabled')).toBe('2')
     // No network is attempted while off (the endpoint would 403).
@@ -182,9 +225,14 @@ describe('HelixStatusStrip', () => {
     requestMock.mockResolvedValue({ ...makeUsage(), cost_micro_cents: cost })
     renderStrip({ mode: 'cloud', enabledCount: 1, providerName: 'openai' })
 
-    await waitFor(() => expect(screen.getByText('Source available')).toBeInTheDocument())
-    expect(tileValue('Spend today')).toBe(EM_DASH)
-    expect(screen.getByText('Spend today').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', state)
+    // Settle the usage query, then pin the omission: the unknown spend tile
+    // is absent from the face and counted in the drawer.
+    await waitFor(() => expect(requestMock).toHaveBeenCalled())
+    await waitFor(() => expect(vi.mocked(useOperationalMetrics).mock.calls.length).toBeGreaterThan(1))
+    await waitFor(() => expect(mappedSpendState()).toBe(state))
+    const strip = screen.getByTestId('helix-status-strip')
+    assertOperationalMetricUnavailable(strip, 'Spend today')
+    expectHiddenCount(strip, '1 empty field is hidden.')
   })
 
   it('falls back to the raw provider key when it is not in the label map', () => {
@@ -194,36 +242,52 @@ describe('HelixStatusStrip', () => {
     expect(tileValue('Features enabled')).toBe('4')
   })
 
-  it('trims the provider key and degrades a blank provider to the em-dash', () => {
+  it('trims the provider key and omits a blank provider tile', async () => {
     const first = renderStrip({ mode: 'cloud', enabledCount: 1, providerName: '  openai  ' })
     // Padded key still resolves through PROVIDER_LABELS after trimming.
     expect(tileValue('Provider')).toBe('OpenAI')
     first.unmount()
 
     renderStrip({ mode: 'cloud', enabledCount: 1, providerName: '   ' })
-    // Whitespace-only collapses to blank → placeholder, not an empty tile.
-    expect(tileValue('Provider')).toBe(EM_DASH)
+    // Whitespace-only collapses to blank → omitted tile, not an empty tile.
+    const blankStrip = screen.getByTestId('helix-status-strip')
+    assertOperationalMetricUnavailable(blankStrip, 'Provider')
+    // The default usage payload settles to measured-zero spend, leaving the
+    // blank provider as the single hidden field.
+    await waitFor(() => expect(tileValue('Spend today')).toBe('$0.00'))
+    expectHiddenCount(blankStrip, '1 empty field is hidden.')
   })
 
-  it('guards a non-finite feature count so it never renders as "NaN"', () => {
+  it('guards a non-finite feature count so it never renders as "NaN"', async () => {
     renderStrip({ mode: 'cloud', enabledCount: Number.NaN, providerName: 'openai' })
 
-    expect(tileValue('Features enabled')).toBe(EM_DASH)
-    expect(screen.getByText('Features enabled').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid')
-    expect(tileValue('Features enabled')).not.toContain('NaN')
+    const strip = screen.getByTestId('helix-status-strip')
+    assertOperationalMetricUnavailable(strip, 'Features enabled')
+    // Omitted tiles carry no drawer group, so the invalid classification is
+    // pinned on the mapped hook output instead.
+    const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+      readonly { valueState?: string }[] | undefined
+    expect(mapped?.[1]?.valueState).toBe('invalid')
+    expect(screen.queryByText('NaN')).not.toBeInTheDocument()
+    await waitFor(() => expect(tileValue('Spend today')).toBe('$0.00'))
+    expectHiddenCount(strip, '1 empty field is hidden.')
   })
 
-  it('keeps the spend tile at the em-dash while loading and on error', async () => {
-    // Loading: the query never settles, so the tile shows the placeholder.
+  it('omits the spend tile while loading and on error', async () => {
+    // Loading: the query never settles, so the tile stays omitted.
     requestMock.mockReturnValue(new Promise(() => {}))
     const loading = renderStrip({ mode: 'cloud', enabledCount: 1, providerName: 'openai' })
-    expect(tileValue('Spend today')).toBe(EM_DASH)
+    const loadingStrip = screen.getByTestId('helix-status-strip')
+    assertOperationalMetricUnavailable(loadingStrip, 'Spend today')
+    expectHiddenCount(loadingStrip, '1 empty field is hidden.')
     loading.unmount()
 
-    // Error: a rejected fetch leaves the tile at the placeholder too.
+    // Error: a rejected fetch leaves the tile omitted too.
     requestMock.mockRejectedValue(new Error('500 server error'))
     renderStrip({ mode: 'cloud', enabledCount: 1, providerName: 'openai' })
     await waitFor(() => expect(requestMock).toHaveBeenCalled())
-    expect(tileValue('Spend today')).toBe(EM_DASH)
+    const errorStrip = screen.getByTestId('helix-status-strip')
+    assertOperationalMetricUnavailable(errorStrip, 'Spend today')
+    expectHiddenCount(errorStrip, '1 empty field is hidden.')
   })
 })
