@@ -30,6 +30,7 @@ import type { ReactNode } from 'react';
 
 import type { Automation } from '@/api/types';
 import { automationNumber, automationTimestamp, automationStatus, assertAutomationInventory } from '@/api/hooks/useAutomations';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { request } from '@/api/client';
 import type { Vehicle } from '@/types/vehicle';
 
@@ -72,13 +73,17 @@ describe('automation inventory hook boundary', () => {
     const { result, unmount } = renderHook(() => actual.useAutomationList(), {
       wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
     });
+    // Refreshes are driven through invalidation (the production refresh path);
+    // the observer snapshot does not follow observer.refetch() failures.
+    const key = actual.automationKeys.all;
     await waitFor(() => expect(result.current.data).toEqual([base]));
-    await act(async () => { await result.current.refetch(); });
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.data).toEqual([base]);
-    await act(async () => { await result.current.refetch(); });
-    await waitFor(() => expect(result.current.isError).toBe(false));
-    await waitFor(() => expect(result.current.data).toEqual([]));
+    await act(async () => { await client.invalidateQueries({ queryKey: key, exact: true }); });
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe('error'));
+    expect(client.getQueryState(key)?.error).toMatchObject({ message: 'Invalid automation inventory response' });
+    expect(client.getQueryData(key)).toEqual([base]);
+    await act(async () => { await client.invalidateQueries({ queryKey: key, exact: true }); });
+    await waitFor(() => expect(client.getQueryData(key)).toEqual([]));
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe('success'));
     unmount();
     client.clear();
   });
@@ -747,8 +752,13 @@ describe('AutomationListPage', () => {
     expect(screen.getByTestId('stub-table')).toBeInTheDocument();
     expect(screen.getByTestId('stub-status')).toBeInTheDocument();
     // KPI band shows the error with retry — never fabricated zeros.
-    expect(within(kpiRegion()).getByText('Total')).toBeInTheDocument();
-    expect(kpiRegion().querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(kpiRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Total', 'Active', 'Disabled', 'Auto-disabled', 'Total runs', 'Failures']) {
+      assertOperationalMetricUnavailable(kpiRegion(), label);
+    }
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('6 empty fields are hidden.');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     const retry = within(kpiRegion()).getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
     expect(query.refetch).toHaveBeenCalledTimes(1);

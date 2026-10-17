@@ -28,6 +28,7 @@ import { ApiError } from '@/api/client';
 import * as apiClient from '@/api/client';
 import type { Automation } from '@/api/types';
 import { automationStatus, assertAutomationInventory, assertAutomationImportResult, type AutomationListItem } from '@/api/hooks/useAutomations';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { AutomationCardStatistics } from '../components/automation-helper-source-closure/AutomationCardStatistics';
 import AutomationsListPage, {
   computeStats,
@@ -283,6 +284,19 @@ function metricValue(label: string): string {
   return within(card).getByText(/^\d+$/).textContent ?? '';
 }
 
+// The embedded ComfortPanel shares the mocked vehicle query, so a vehicle
+// refresh failure/paused state renders its own vehicle warning inside the
+// comfort panel in addition to the page-level auxiliary warnings.
+function pageAndComfortWarnings(): { pageWarnings: HTMLElement[]; comfortWarnings: HTMLElement[] } {
+  const comfortPanel = screen.getByText('Cabin comfort Autopilot').closest('[data-surface-variant]');
+  if (!(comfortPanel instanceof HTMLElement)) throw new Error('Missing comfort panel');
+  const warnings = screen.getAllByTestId('stale-refresh-warning');
+  return {
+    pageWarnings: warnings.filter((w) => !comfortPanel.contains(w)),
+    comfortWarnings: warnings.filter((w) => comfortPanel.contains(w)),
+  };
+}
+
 describe('AutomationsListPage — validated query responses', () => {
   const pin = {
     id: 5, item_type: 'automation', item_id: '2', position: 0,
@@ -296,7 +310,7 @@ describe('AutomationsListPage — validated query responses', () => {
     ['useAutomationList', [null]],
     ['useAutomationList', [active, null]],
     ['useAutomationList', [{ ...active, enabled: 'true' }]],
-    ['useAutomationList', [{ ...active, execution_count: -1 }]],
+    ['useAutomationList', [{ ...active, execution_count: '12' }]],
     ['usePinnedAutomations', null],
     ['usePinnedAutomations', {}],
     ['usePinnedAutomations', { items: [] }],
@@ -475,8 +489,13 @@ describe('computeStats', () => {
     setAutomations([row]);
     renderPage();
     expect(screen.getByText('Base row')).toBeInTheDocument();
-    const activeMetric = within(kpiRegion()).getByText('Active').closest('[data-operational-metric]') as HTMLElement;
-    expect(within(activeMetric).queryByText(/^\d+$/)).not.toBeInTheDocument();
+    expect(metricValue('Total')).toBe('1');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Active');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Disabled');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Auto-disabled');
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('3 empty fields are hidden.');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     fireEvent.change(screen.getByRole('combobox', { name: 'Filter by status' }), { target: { value: 'active' } });
     expect(screen.queryByTestId('automation-card')).not.toBeInTheDocument();
   });
@@ -907,12 +926,15 @@ describe('AutomationsListPage — typed import', () => {
     });
     const envelope = { version: 1, automations: [{ name: 'Rule' }] };
     try {
-      await act(async () => { await result.current.mutateAsync(envelope); });
+      let data: unknown;
+      await act(async () => { data = await result.current.mutateAsync(envelope); });
       expect(request).toHaveBeenCalledWith('/automations/import', expect.objectContaining({
         method: 'POST', requiresLiveMode: true, acceptedStatuses: [422],
         body: JSON.stringify(envelope),
       }));
-      expect(result.current.data).toEqual({ imported, errors });
+      // mutateAsync resolves with the validated per-item arrays (a malformed
+      // response would reject here); the observer snapshot no longer retains it.
+      expect(data).toEqual({ imported, errors });
       expect(invalidate).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['automations'] }));
       expect(m.importSuccess).toHaveBeenCalledTimes(outcome === 'success' ? 1 : 0);
       expect(m.importWarning).toHaveBeenCalledTimes(outcome === 'partial' ? 1 : 0);
@@ -1119,13 +1141,17 @@ describe('AutomationsListPage reserved phase5 presentation and source trust', ()
     expect(within(cards[0]).getByText('Retained pin')).toBeInTheDocument();
     expect(within(cards[0]).getByText('veh:Retained name')).toBeInTheDocument();
     expect(within(cards[1]).getByText('Source first')).toBeInTheDocument();
-    const warnings = screen.getAllByTestId('stale-refresh-warning');
-    expect(warnings).toHaveLength(2);
-    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    const { pageWarnings, comfortWarnings } = pageAndComfortWarnings();
+    expect(pageWarnings).toHaveLength(2);
+    expect(comfortWarnings).toHaveLength(1);
+    expect(comfortWarnings[0]).toHaveTextContent('Vehicle may be out of date');
+    fireEvent.click(within(pageWarnings[0]).getByRole('button', { name: 'Refresh' }));
     expect(retryVehicles).toHaveBeenCalledTimes(1);
     expect(retryPins).not.toHaveBeenCalled();
-    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(within(pageWarnings[1]).getByRole('button', { name: 'Refresh' }));
     expect(retryPins).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(comfortWarnings[0]).getByRole('button', { name: 'Refresh' }));
+    expect(retryVehicles).toHaveBeenCalledTimes(2);
   });
 
   it('retains paused sources without claiming the vehicle is offline', () => {
@@ -1134,11 +1160,14 @@ describe('AutomationsListPage reserved phase5 presentation and source trust', ()
     m.usePinned.mockReturnValue({ data: [], fetchStatus: 'paused' });
     renderPage();
     expect(screen.getByText('veh:Paused name')).toBeInTheDocument();
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
-    for (const warning of screen.getAllByTestId('stale-refresh-warning')) {
+    const { pageWarnings, comfortWarnings } = pageAndComfortWarnings();
+    expect(pageWarnings).toHaveLength(2);
+    expect(comfortWarnings).toHaveLength(1);
+    for (const warning of [...pageWarnings, ...comfortWarnings]) {
       expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
       expect(warning.textContent).not.toMatch(/offline/i);
     }
+    expect(comfortWarnings[0]).toHaveTextContent('Vehicle may be out of date');
   });
 
   it('shows stream reconnection without inventing rule activity or triggering mutations', () => {

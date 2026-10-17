@@ -68,6 +68,9 @@ function handlers() {
   return { onToggle: vi.fn(), onReEnable: vi.fn(), onDelete: vi.fn(), onTestRun: vi.fn() };
 }
 
+// The actions trigger carries the per-automation accessible name.
+const menuName = 'Actions for Long automation name with every word retained';
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('AutomationCard extraction preservation (mock callbacks only)', () => {
@@ -103,10 +106,10 @@ describe('AutomationCard extraction preservation (mock callbacks only)', () => {
     fireEvent.click(screen.getByRole('switch'));
     expect(callbacks.onReEnable).toHaveBeenCalledWith(79);
     expect(callbacks.onToggle).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Actions menu' }));
+    fireEvent.click(screen.getByRole('button', { name: menuName }));
     fireEvent.click(screen.getByRole('button', { name: 'Re-enable' }));
     expect(callbacks.onReEnable).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('button', { name: 'Actions menu' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: menuName })).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('retains permission reasons, blocks write controls and keeps inherited dismiss-only actions', () => {
@@ -121,7 +124,7 @@ describe('AutomationCard extraction preservation (mock callbacks only)', () => {
       />,
     );
     expect(screen.getByRole('switch')).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Actions menu' }));
+    fireEvent.click(screen.getByRole('button', { name: menuName }));
     for (const label of ['Test run', 'Re-enable', 'Delete']) {
       const control = screen.getByRole('button', { name: label });
       expect(control).toBeDisabled();
@@ -130,16 +133,16 @@ describe('AutomationCard extraction preservation (mock callbacks only)', () => {
     }
     expect(screen.getByRole('button', { name: 'Export' })).not.toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }));
-    expect(screen.getByRole('button', { name: 'Actions menu' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: menuName })).toHaveAttribute('aria-expanded', 'false');
     Object.values(callbacks).forEach(callback => expect(callback).not.toHaveBeenCalled());
   });
 
   it('closes the shared action surface on Escape and dispatches test run only on an explicit click', () => {
     const callbacks = handlers();
     render(<AutomationCard automation={automation()} isFiring={false} {...callbacks} />);
-    const trigger = screen.getByRole('button', { name: 'Actions menu' });
+    const trigger = screen.getByRole('button', { name: menuName });
     fireEvent.click(trigger);
-    expect(screen.getByRole('dialog', { name: 'Actions menu' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: menuName })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('button', { name: 'Test run' })).not.toBeInTheDocument();
     expect(callbacks.onTestRun).not.toHaveBeenCalled();
@@ -154,7 +157,7 @@ describe('AutomationCard extraction preservation (mock callbacks only)', () => {
     const a = automation();
     const view = render(<AutomationCard automation={a} isFiring={false} {...callbacks} />);
     const requestDelete = () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Actions menu' }));
+      fireEvent.click(screen.getByRole('button', { name: menuName }));
       fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     };
     requestDelete();

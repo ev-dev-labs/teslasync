@@ -5,6 +5,7 @@ import type { AutomationHistory, AutomationHistoryListResponse } from '@/api/typ
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import '../../../i18n';
 import { formatDurationMs } from '@/lib/dateFormat';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import AutomationHistoryPage from './AutomationHistoryPage';
 
 const state = vi.hoisted(() => ({
@@ -262,7 +263,8 @@ describe('Automation History', () => {
     state.data = response([row], 60);
     render(<MemoryRouter initialEntries={['/automations/history?automation_id=7&status=failed&page=2']}><AutomationHistoryPage /></MemoryRouter>);
     const brief = screen.getByTestId('automation-history-brief');
-    expect(brief).toHaveTextContent('2026-09-01T07:00:00.000Z inclusive → 2026-10-01T07:00:00.000Z exclusive');
+    expect(brief).not.toHaveTextContent('2026-09-01T07:00:00.000Z');
+    assertOperationalBriefDisclosure(brief, '2026-09-01T07:00:00.000Z inclusive → 2026-10-01T07:00:00.000Z exclusive', { contains: true });
     expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('60');
     expect(brief.querySelector('[data-operational-metric="duration"] [data-operational-value]')).toHaveTextContent(formatDurationMs(1000));
     expect(state.metrics.find((metric) => metric.occurrenceId === 'duration')).toMatchObject({
@@ -284,9 +286,12 @@ describe('Automation History', () => {
     state.data = response([]);
     render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
     const brief = screen.getByTestId('automation-history-brief');
-    expect(brief.querySelector('[data-operational-metric="total"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="rate"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(brief.querySelector('[data-operational-metric="duration"]')).toHaveAttribute('data-value-state', 'missing');
+    for (const id of ['total', 'success', 'failed', 'partial']) {
+      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'value');
+      expect(brief.querySelector(`[data-operational-metric="${id}"] [data-operational-value]`)).toHaveTextContent('0');
+    }
+    assertOperationalMetricUnavailable(brief, 'Success rate');
+    assertOperationalMetricUnavailable(brief, 'Average duration');
     expect(screen.getByText('No executions match this period and filters.')).toBeInTheDocument();
   });
 
@@ -302,8 +307,13 @@ describe('Automation History', () => {
     state.data.summary.avg_duration_ms = Number.NaN;
     state.data.summary.success_rate = Number.POSITIVE_INFINITY;
     rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
-    expect(brief.querySelector('[data-operational-metric="duration"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(brief.querySelector('[data-operational-metric="rate"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(state.metrics.find((metric) => metric.occurrenceId === 'duration')?.rawValue).toBeNaN();
+    expect(state.metrics.find((metric) => metric.occurrenceId === 'rate')?.rawValue).toBe(Number.POSITIVE_INFINITY);
+    assertOperationalMetricUnavailable(brief, 'Success rate');
+    assertOperationalMetricUnavailable(brief, 'Average duration');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 empty fields are hidden.');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(brief.textContent).not.toMatch(/NaN|Infinity/);
   });
 

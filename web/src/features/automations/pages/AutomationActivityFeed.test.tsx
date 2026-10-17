@@ -19,6 +19,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 import { AutomationActivityFeed } from './AutomationActivityFeed';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { ApiError } from '@/api/client';
 import type { AutomationHistory, AutomationHistoryStats } from '@/api/types';
 import type { AutomationActivityEvent } from '@/hooks/useAutomationEvents';
@@ -168,17 +169,30 @@ describe('AutomationActivityFeed — header & connection state', () => {
 
 describe('AutomationActivityFeed — stats summary', () => {
   it('renders the totals/success/avg summary when there are executions', () => {
-    const { container } = renderFeed({ historyStats: makeStats({ total_executions: 42 }) });
-    expect(container.textContent).toContain('42 total');
-    expect(container.textContent).toContain('success');
-    expect(container.textContent).toContain('avg');
+    renderFeed({ historyStats: makeStats({ total_executions: 42 }) });
+    const brief = screen.getByTestId('automation-activity-brief');
+    expect(within(brief).getByText('42')).toBeInTheDocument();
+    expect(within(brief).getByText('92.00%')).toBeInTheDocument();
+    expect(within(brief).getByText('1.23s')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Execution summary details' });
+    expect(within(drawer).getByRole('group', { name: 'Total runs' })).toHaveTextContent('42 total');
+    expect(within(drawer).getByRole('group', { name: 'Success rate' })).toHaveTextContent('92.00% success');
+    expect(within(drawer).getByRole('group', { name: 'Average duration' })).toHaveTextContent('1.23s avg');
   });
 
   it('keeps a missing summary when historyStats is null without inventing totals or averages', () => {
     const { container } = renderFeed({ historyStats: null });
     expect(container.textContent).not.toContain('total');
     expect(container.textContent).not.toContain('avg');
-    expect(screen.getByTestId('automation-activity-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    const brief = screen.getByTestId('automation-activity-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    assertOperationalMetricUnavailable(brief, 'Total runs');
+    assertOperationalMetricUnavailable(brief, 'Success rate');
+    assertOperationalMetricUnavailable(brief, 'Average duration');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('3 empty fields are hidden.');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   });
 
   it('keeps measured zero executions separate from undefined rate and average', () => {
@@ -186,8 +200,8 @@ describe('AutomationActivityFeed — stats summary', () => {
     const brief = screen.getByTestId('automation-activity-brief');
     expect(brief.querySelector('[data-operational-metric="total"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('0');
-    expect(brief.querySelector('[data-operational-metric="rate"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(brief.querySelector('[data-operational-metric="duration"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(brief, 'Success rate');
+    assertOperationalMetricUnavailable(brief, 'Average duration');
   });
 
   it('reviews retained summary evidence without hiding independent live events or retry', () => {
@@ -196,7 +210,8 @@ describe('AutomationActivityFeed — stats summary', () => {
       liveEvents: [makeEvent({ data: { automation_id: 10, name: 'Independent stream',
         vehicle: 'Model 3', trigger: 'schedule', at: new Date().toISOString(), mode: 'live' } })] });
     const brief = screen.getByTestId('automation-activity-brief');
-    expect(within(brief).getByText('Retained execution summary')).toBeInTheDocument();
+    expect(within(brief).queryByText('Retained execution summary')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained execution summary');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Execution summary details' });
     expect(within(drawer).getAllByText('History aggregate window is not supplied. Independent live events and recent rows are not this summary denominator.').length).toBeGreaterThan(0);

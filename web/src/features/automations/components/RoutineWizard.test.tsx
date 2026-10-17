@@ -2,7 +2,7 @@
  * RoutineWizard — place picker gates install; install posts template + place.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render as renderView, renderHook, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render as renderView, renderHook, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@/api/client';
@@ -123,13 +123,17 @@ describe('RoutineWizard', () => {
     const { result, unmount } = renderHook(() => actual.useRoutineTemplates(), {
       wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
     });
+    // Refreshes are driven through invalidation (the production refresh path);
+    // the observer snapshot does not follow observer.refetch() failures.
+    const key = actual.routineKeys.all;
     await waitFor(() => expect(result.current.data).toEqual(routines));
-    await act(async () => { await result.current.refetch(); });
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.data).toEqual(routines);
-    await act(async () => { await result.current.refetch(); });
-    await waitFor(() => expect(result.current.isError).toBe(false));
-    await waitFor(() => expect(result.current.data).toEqual([]));
+    await act(async () => { await client.invalidateQueries({ queryKey: key, exact: true }); });
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe('error'));
+    expect(client.getQueryState(key)?.error).toMatchObject({ message: 'Invalid automation routine templates response' });
+    expect(client.getQueryData(key)).toEqual(routines);
+    await act(async () => { await client.invalidateQueries({ queryKey: key, exact: true }); });
+    await waitFor(() => expect(client.getQueryData(key)).toEqual([]));
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe('success'));
     unmount();
     client.clear();
   });
@@ -174,7 +178,10 @@ describe('RoutineWizard', () => {
     mockTemplates.mockReturnValue({ data: [], isLoading: false, isError: false, error: null, refetch: vi.fn() });
     render(<RoutineWizard />);
     expect(screen.getByRole('heading', { name: 'Geofence routines' })).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Geofence routines');
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('No geofence routine templates are available yet.');
+    expect(status).toHaveTextContent('You can still create a custom automation from the automations page.');
+    expect(within(status).getByRole('link', { name: 'Automations' })).toHaveAttribute('href', '/automations');
   });
   it('keeps both initial failures independently retryable under the routine heading', () => {
     const templatesRetry = vi.fn();
@@ -201,7 +208,9 @@ describe('RoutineWizard', () => {
     mockTemplates.mockReturnValue({ data: [], isSuccess: true });
     rerender(<RoutineWizard />);
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Geofence routines');
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('No geofence routine templates are available yet.');
+    expect(within(status).getByRole('link', { name: 'Automations' })).toHaveAttribute('href', '/automations');
     expect(screen.getByLabelText('Place')).toBeInTheDocument();
   });
   it('disables install until a place is chosen, then posts template + place', () => {

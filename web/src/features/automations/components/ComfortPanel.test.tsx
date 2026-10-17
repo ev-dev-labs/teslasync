@@ -45,9 +45,11 @@ const armedNext = {
   },
 };
 
+const testVehicles = [{ id: 7, display_name: 'Test Vehicle' }];
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mockVehicle.mockReturnValue({ vehicleId: 7 });
+  mockVehicle.mockReturnValue({ vehicleId: 7, vehicles: testVehicles, setVehicleId: vi.fn() });
   mockNext.mockReturnValue({ data: armedNext, isLoading: false, isError: false });
   mockRuns.mockReturnValue({ data: [], isLoading: false, isError: false });
   mockSave.mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false, error: null });
@@ -104,13 +106,14 @@ describe('ComfortPanel', () => {
     const { rerender } = render(<ComfortPanel />);
     expect(screen.getByText('Add a calendar subscription to watch for events.')).toBeInTheDocument();
 
-    mockVehicle.mockReturnValue({ vehicleId: null });
+    mockVehicle.mockReturnValue({ vehicleId: null, vehicles: [], setVehicleId: vi.fn() });
     rerender(<ComfortPanel />);
-    expect(screen.getByText('Select a vehicle to configure cabin comfort.')).toBeInTheDocument();
+    expect(screen.getAllByText('Select a vehicle to configure cabin comfort.')).toHaveLength(3);
 
-    mockVehicle.mockReturnValue({ vehicleId: 7 });
+    mockVehicle.mockReturnValue({ vehicleId: 7, vehicles: testVehicles, setVehicleId: vi.fn() });
     mockSave.mockReturnValue({
       mutate: vi.fn(), isPending: false, isError: true, error: new Error('db down'),
+      variables: { vehicle_id: 7 },
     });
     rerender(<ComfortPanel />);
     expect(screen.getByText('db down')).toBeInTheDocument();

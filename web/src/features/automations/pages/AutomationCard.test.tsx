@@ -423,11 +423,12 @@ describe('AutomationCard — stats row', () => {
     expect(container.textContent).toContain('Next:');
   });
 
-  it('treats a missing failure_count as zero (null-safety) without rendering Fails', () => {
+  it('keeps a missing failure_count unknown instead of inventing zero fails', () => {
     const { container } = renderCard(
       makeAutomation({ failure_count: undefined as unknown as number }),
     );
-    expect(container.textContent).not.toContain('Fails:');
+    expect(container.textContent).toContain('Fails: Unknown');
+    expect(container.textContent).not.toContain('Fails: 0');
   });
 });
 

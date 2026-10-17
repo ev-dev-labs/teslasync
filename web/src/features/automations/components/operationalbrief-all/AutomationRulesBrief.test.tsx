@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { AutomationRulesBrief } from './AutomationRulesBrief';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import '../../../../i18n';
 
 const source = vi.hoisted(() => ({
@@ -58,8 +59,14 @@ describe('AutomationRulesBrief raw source and real drawer', () => {
       autoDisabled: 0, totalRuns: 0, totalFailures: 0 }} hasData={false} loading={false} retained={false} /></MemoryRouter>);
     expect(source.metrics.every((metric) => metric.rawValue === null)).toBe(true);
     const brief = screen.getByTestId('automation-rules-brief');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
-    expect(within(brief).getByText('Rules unavailable')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Total', 'Active', 'Disabled', 'Auto-disabled', 'Total runs', 'Failures']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    assertOperationalBriefDisclosure(brief, 'Rules unavailable');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('6 empty fields are hidden.');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   });
 
   it('uses the real loading shell without publishing fabricated values', () => {
@@ -77,8 +84,9 @@ describe('AutomationRulesBrief raw source and real drawer', () => {
     render(<MemoryRouter><AutomationRulesBrief bulk stats={stats} hasData loading={false} retained /></MemoryRouter>);
     const brief = screen.getByTestId('automation-rules-brief');
     expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('1.234');
-    expect(within(brief).getByText('Retained rules')).toBeInTheDocument();
-    expect(brief).toHaveTextContent('Rule response; not a live execution stream');
+    expect(within(brief).queryByText('Retained rules')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained rules');
+    assertOperationalBriefDisclosure(brief, 'Rule response; not a live execution stream');
     expect(source.metrics[4].rawValue).toBe(2345);
   });
 });
