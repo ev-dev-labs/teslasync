@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { TypographyAgentProvider, __resetTypographyAgentForTests } from './TypographyAgentProvider';
 import { TypographyActuator } from '@/lib/typography-agent/actuator';
 
@@ -93,6 +93,11 @@ describe('AmbientTypographyHUD', () => {
 
     await act(async () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Reset to defaults' }));
+    });
+    // Destructive icon-only Reset requires confirmation.
+    const dialog = await screen.findByRole('dialog', { name: 'Reset typography?' });
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
     });
     await waitFor(() => {
       expect(screen.getByLabelText('Harmonic ratio')).toHaveValue('majorThird');

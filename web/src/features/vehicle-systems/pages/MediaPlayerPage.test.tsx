@@ -255,7 +255,9 @@ describe('MediaPlayerPage media slot placement', () => {
       expect(slot).toHaveAttribute('data-card-size', 'half');
       expect(slot).toHaveAttribute('data-card-resolved-span', '1');
       expect(slot).toHaveClass('min-w-0', '[&>div]:h-full', 'col-span-1');
-      expect(slot.parentElement).toHaveClass('grid');
+      // Row-17 CardGrid wraps each item: slot > span wrapper > grid node.
+      expect(slot.parentElement).toHaveClass('col-span-1', 'min-w-0');
+      expect(slot.parentElement?.parentElement).toHaveClass('grid');
     }
     expect(nowPlayingRegion()).toContainElement(slots[0]);
     expect(slots[0]).toHaveTextContent('Now Song');

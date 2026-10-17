@@ -78,7 +78,10 @@ describe('LiveIndicator', () => {
     setStatus('connected', new Date().toISOString())
     render(<LiveIndicator variant="pill" />)
     expect(screen.getByText('Live')).toBeInTheDocument()
-    expect(screen.getByText(/·/)).toBeInTheDocument()
+    // The timestamp lives in the accessible name + tooltip, not visible text.
+    const status = screen.getByRole('status', { name: /Live · .+/ })
+    expect(status).toHaveTextContent('Live')
+    expect(status.getAttribute('title')).toMatch(/.+/)
   })
 
   it('pill variant omits the timestamp when disconnected', () => {

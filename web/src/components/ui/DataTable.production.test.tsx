@@ -193,7 +193,26 @@ describe('DataTable production pipeline contracts', () => {
     expect(view.container.querySelector('table')).not.toBeNull()
     expect(observers.has(frame)).toBe(false)
     // The existing virtualizer still observes the desktop scroll viewport.
-    expect([...observers.keys()]).toEqual([view.container.querySelector('[data-grid-viewport]')])
+    // Icon-only actions add tooltip observers (one trigger + one bubble each),
+    // so pin membership + kind instead of the exact set.
+    // The existing virtualizer still observes the desktop scroll viewport.
+    // Icon-only actions add tooltip observers (one trigger wrapper + one
+    // bubble each), so pin membership + kind instead of the exact set.
+    const viewport = view.container.querySelector('[data-grid-viewport]')
+    const remaining = [...observers.keys()]
+    expect(remaining).toContain(viewport)
+    for (const el of remaining) {
+      if (el === viewport) continue
+      const node = el as Element
+      if (node.getAttribute?.('role') === 'tooltip') continue
+      // Tooltip trigger wrapper: holds the described button + its bubble.
+      const button = node.matches?.('button[aria-describedby]')
+        ? node
+        : node.querySelector?.('button[aria-describedby]')
+      const described = button?.getAttribute('aria-describedby')
+      const bubble = described ? view.container.querySelector(`#${CSS.escape(described)}`) : null
+      expect(bubble?.getAttribute('role')).toBe('tooltip')
+    }
     view.unmount()
     expect(observers.size).toBe(0)
   })

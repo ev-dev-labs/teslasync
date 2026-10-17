@@ -171,7 +171,8 @@ describe('mounted numeric displays follow formatter settings', () => {
     expect(screen.getByText('1.234 diagnostic')).toBeInTheDocument();
     expect(screen.getByText('03:04')).toBeInTheDocument();
     expect(document.querySelector('.clock-duration')?.textContent).toBe(clock);
-    expect(screen.getByTitle('125,000.000 ms')).toBeInTheDocument();
+    // Integer ms per open req 5b: the raw-ms title ignores global precision.
+    expect(screen.getByTitle('125,000 ms')).toBeInTheDocument();
   });
 
   it('updates a mounted bar and percentage delta without changing raw accessibility values', () => {

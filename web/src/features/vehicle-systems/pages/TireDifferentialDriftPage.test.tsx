@@ -179,7 +179,9 @@ describe('TireDifferentialDriftPage', () => {
     h.locale = 'de-DE'; h.tz = 'America/Los_Angeles';
     renderPage(); everySection();
     const time = formatTime(new Date(BASE), { locale: h.locale, tz: h.tz });
-    expect(screen.getByTitle(`Last updated: ${time}`)).toBeInTheDocument();
+    // FreshnessDot carries the timestamp in its tooltip description, not a title.
+    const escaped = time.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    expect(screen.getByRole('tooltip', { name: new RegExp(`Last updated: ${escaped}`) })).toBeInTheDocument();
     expect(screen.getByTestId('residual-plot')).toBeInTheDocument();
     expect(screen.getByTestId('slope-plot')).toBeInTheDocument();
   });

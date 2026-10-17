@@ -400,7 +400,8 @@ describe('Duration', () => {
 
   it('exposes raw ms via title', () => {
     const { container } = render(<Duration ms={1500} />);
-    expect(container.querySelector('span')?.title).toBe('1,500.0 ms');
+    // Integer ms per open req 5b (1,250.00 ms was the bug, not the contract).
+    expect(container.querySelector('span')?.title).toBe('1,500 ms');
   });
 });
 

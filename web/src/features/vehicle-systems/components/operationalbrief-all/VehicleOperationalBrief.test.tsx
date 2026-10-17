@@ -55,7 +55,9 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
     expect(placed).toHaveAttribute('data-card-resolved-span', '1');
     expect(placed).toHaveClass('min-w-0', '[&>div]:h-full', 'col-span-1');
     expect(screen.getByTestId('media-content').parentElement).toBe(placed);
-    expect(placed?.parentElement).toHaveClass('grid');
+    // Row-17 CardGrid wraps each item: slot > span wrapper > grid node.
+    expect(placed?.parentElement).toHaveClass('col-span-1', 'min-w-0');
+    expect(placed?.parentElement?.parentElement).toHaveClass('grid');
   });
 
   it.each([

@@ -20,7 +20,8 @@ import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMedia
  * (375 px) viewports:
  *   - `<Modal>` collapses to a bottom sheet (no `sm:rounded-lg` clipping)
  *   - `<BottomTabBar>` carries the `safe-bottom` class for notched devices
- *   - `<PageHeader>` stacks vertically below `sm` (`flex-col sm:flex-row`)
+ *   - `<PageHeader>` keeps title + one action group in a wrapping row
+ *     (`flex-row flex-wrap`); the commands group never splits (`flex-nowrap`)
  *   - `<DataTable mobileColumns>` hides non-essential columns at `<md`
  *   - `useMediaQuery()` reactively tracks `(pointer: coarse)` /
  *     `(max-width: 640px)` so chart consumers can opt into tap-tooltips
@@ -146,16 +147,22 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     });
   });
 
-  it('PageHeader stacks vertically until the large-screen action layout', () => {
+  it('PageHeader keeps title + one action group in a wrapping row on small screens', () => {
     patchMatchMedia(() => false);
     const { container } = render(
       <I18nextProvider i18n={i18n}>
         <PageHeader title="Charging" subtitle="14 sessions" actions={<button>Export</button>} />
       </I18nextProvider>,
     );
-    // The flex container is the first descendant of the FadeIn wrapper.
-    const flex = container.querySelector('.flex.flex-col.xl\\:flex-row') as HTMLElement | null;
-    expect(flex).not.toBeNull();
+    // Compact header: title + one action group share a row that wraps below
+    // when narrow; the commands group itself never splits (open req 3).
+    const header = container.querySelector('[data-role="page-header"]') as HTMLElement | null;
+    expect(header).not.toBeNull();
+    expect(header).toHaveClass('flex-row', 'flex-wrap');
+    const commands = header!.querySelector('[data-action-zone="commands"]');
+    expect(commands).not.toBeNull();
+    expect(commands).toHaveClass('flex-nowrap', 'shrink-0');
+    expect(commands).toContainElement(screen.getByRole('button', { name: 'Export' }));
     const info = screen.getByRole('button', { name: 'More info: Charging' });
     const description = screen.getByRole('tooltip');
     expect(info).toHaveAttribute('aria-describedby', description.id);

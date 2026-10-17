@@ -69,3 +69,5 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-17 14:57 | row 19 /live two-mode done | one surface + Live|Recent switch (?mode=) + bare playback + panel stats + shared style fix (TileLayer ignores className); suites 12/12+17/17+40/40; 6 screenshots; tsc/lint/catalog/build green; committing+pushing | none
 2026-10-17 16:55 UTC | wave-3 batch1 spawned (admin/analytics/charging/dashboard) | rows5/6 assessed (audits 0/OK); 1211 actionable fails; wave-3 lists generated | none
 2026-10-17 17:10 UTC | wave 3: all 16 children spawned (4 batches) | trio identified as 3 i18n producer/consistency suites (489); main-agent remainder 84 fails/41 files listed | none
+2026-10-17 22:20 UTC | wave-3 Stage 3: 8/16 integrated (poweruser/benchmarks/explore/action-center/dashcam/intelpacks/exports/onboarding, 108 resolved) | all 8 folders verified green post-pick; worktrees removed | none
+2026-10-17 22:55 UTC | wave-3 Stage 3: 14/16 integrated (admin partial 74/249 verified SUBSET-OK) | analytics + system still running | none

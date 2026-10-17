@@ -219,7 +219,9 @@ describe('DataTableBulkBar — restrained interaction', () => {
     expect(action.textContent).toBe(label)
     expect(action.parentElement).toHaveClass('ms-auto', 'flex-wrap', 'min-w-0', 'max-w-full')
     const clear = screen.getByRole('button', { name: 'Clear selection' })
-    expect(clear).toHaveClass('min-h-11', 'md:min-h-9', 'whitespace-normal')
+    // Icon-only Clear: fixed ghost footprint + tooltip label instead of wrapping text.
+    expect(clear).toHaveClass('h-9', 'w-9')
+    expect(clear).toHaveAccessibleDescription('Clear selection')
     expect(clear).toHaveClass('focus-visible:outline-[var(--focus-ring)]', 'motion-reduce:transition-none')
     expect(clear.className).not.toMatch(/cyan-500|bg-white|glow/)
     expect(screen.getByText('123456 selected')).toBeInTheDocument()

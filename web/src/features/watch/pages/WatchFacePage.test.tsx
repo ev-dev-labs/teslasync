@@ -254,7 +254,9 @@ describe('WatchFacePage', () => {
     renderPage()
 
     expect(screen.getByRole('status', { name: hooks.operational.description })).toBeInTheDocument()
-    expect(screen.getByText(hooks.operational.description)).toBeInTheDocument()
+    // The description also feeds the status tooltip bubble; pin the visible copy.
+    expect(screen.getByText((content, el) => content === hooks.operational.description
+      && el?.getAttribute?.('role') !== 'tooltip')).toBeInTheDocument()
     expect(screen.queryByText('No vehicle found')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Unlock vehicle' })).not.toBeInTheDocument()
     expect(hooks.command.mutate).not.toHaveBeenCalled()

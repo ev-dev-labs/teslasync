@@ -238,6 +238,7 @@ describe('UsageCard', () => {
     expect(link).toHaveClass('min-h-11', 'min-w-11', 'max-w-full', 'focus-visible:outline-2')
     link.focus()
     expect(link).toHaveFocus()
-    expect(screen.getByText('Prior history')).toHaveClass('break-all', 'text-start')
+    // Row-17 text rule: wrap at word boundaries (break-words), never per character.
+    expect(screen.getByText('Prior history')).toHaveClass('break-words', 'text-start')
   })
 })
