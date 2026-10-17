@@ -123,7 +123,8 @@ describe('DashcamIntelligencePage restrained persistence disclosure', () => {
     render(page());
     expect(screen.getByText(/imported clips will be lost when this tab closes/))
       .toHaveTextContent('(unknown reason)');
-    expect(screen.getByRole('option')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Imported clips' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toBeInTheDocument();
   });
 
   it('does not show memory-only disclosure for the persistent adapter', () => {
@@ -131,12 +132,13 @@ describe('DashcamIntelligencePage restrained persistence disclosure', () => {
     render(page());
     expect(screen.queryByText(/imported clips will be lost when this tab closes/)).not.toBeInTheDocument();
     expect(screen.getByLabelText('Video file(s)')).toBeInTheDocument();
-    expect(screen.getByRole('option')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Imported clips' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toBeInTheDocument();
   });
 
   it('retains selected playback and all detail destinations through warning and catalog refresh failure', () => {
     const { container, rerender } = render(page());
-    fireEvent.click(screen.getByRole('option'));
+    fireEvent.click(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ }));
     const video = container.querySelector('video');
     expect(video).toHaveAttribute('src', 'blob:synthetic-local-clip');
 
@@ -148,7 +150,7 @@ describe('DashcamIntelligencePage restrained persistence disclosure', () => {
     expect(screen.getByText(/imported clips will be lost when this tab closes/)).toHaveTextContent('Memory adapter');
     expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
     expect(container.querySelector('video')).toBe(video);
-    expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Restart' })).toBeInTheDocument();
     expect(screen.getByRole('slider')).toBeInTheDocument();
@@ -177,12 +179,12 @@ describe('DashcamIntelligencePage restrained persistence disclosure', () => {
 
   it('keeps no-match filters independent of selected detail and restores the full catalog', async () => {
     render(page());
-    fireEvent.click(screen.getByRole('option'));
+    fireEvent.click(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ }));
     fireEvent.change(screen.getByPlaceholderText('Search filename or notes…'), { target: { value: 'no match' } });
     expect(await screen.findByText('No clips match these filters')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Export' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    const selected = within(screen.getByRole('listbox', { name: 'Imported clips' })).getByRole('option');
-    expect(selected).toHaveAttribute('aria-selected', 'true');
+    const selected = within(screen.getByRole('list', { name: 'Imported clips' })).getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ });
+    expect(selected).toHaveAttribute('aria-pressed', 'true');
   });
 });

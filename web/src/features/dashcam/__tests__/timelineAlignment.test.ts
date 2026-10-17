@@ -1,10 +1,23 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeAll, describe, it, expect } from 'vitest';
+import i18n from 'i18next';
+import en from '@/i18n/en.json';
 import {
   alignSignalHistoryToClip,
   resolveClipEpochMs,
   toReconstructionMarkers,
   type SignalSeriesInput,
 } from '../lib/timelineAlignment';
+
+beforeAll(async () => {
+  await i18n.init({
+    lng: 'en', fallbackLng: 'en',
+    resources: { en: { translation: en } },
+    interpolation: { escapeValue: false },
+  });
+});
+afterEach(async () => {
+  await i18n.changeLanguage('en');
+});
 
 const CLIP_START = Date.parse('2024-01-15T12:30:00Z');
 

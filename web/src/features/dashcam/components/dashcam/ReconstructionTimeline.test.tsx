@@ -5,8 +5,20 @@ import { defaultDashcamSettings } from '../../lib/types';
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState } from '@/api/dataState';
 import type { SignalHistoryResponse } from '@/types/telemetry';
+import { formatDateTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-GB', tz: 'America/Los_Angeles' }));
 
 vi.mock('./SignalPicker', () => ({ SignalPicker: () => null }));
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  return {
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      formatDateTime: (value: string | Date | null | undefined) => formatDateTime(value, datePreferences),
+    }),
+  };
+});
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ formatDuration: (seconds: number) => `${seconds}s` }),
 }));
@@ -129,7 +141,7 @@ describe('reconstruction read-only event overview adoption', () => {
     const { container } = render(<ReconstructionTimeline {...input} />);
     const speed = container.querySelector('[data-signal-source="Speed"]') as HTMLElement;
     expect(within(speed).getByText('Cached · refresh failed')).toBeInTheDocument();
-    expect(within(speed).getByText(`Last updated: ${new Date(updatedAt).toLocaleString()}`)).toBeInTheDocument();
+    expect(within(speed).getByText(`Fetched ${formatDateTime(new Date(updatedAt), datePreferences)}`)).toBeInTheDocument();
     expect(input.result.sources[0].state.data).toBe(response);
     expect(input.result.sources[0].state.updatedAt).toBe(updatedAt);
     expect(screen.getByText('First: 0 at t=-10s · last: 6 at t=65s')).toBeInTheDocument();

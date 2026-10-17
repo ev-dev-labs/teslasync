@@ -109,11 +109,11 @@ describe('dashcam retained page and non-summary boundaries', () => {
   it('retains selected local media, source, camera-clock text and controls after catalog refresh failure', () => {
     const current = h.query.data![0];
     const { container, rerender } = renderPage();
-    fireEvent.click(screen.getByRole('option'));
-    expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ }));
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('2026-10-05 10:00:00')).toBeInTheDocument();
-    expect(within(screen.getByRole('option')).getByText('Front')).toBeInTheDocument();
-    expect(within(screen.getByRole('option')).getByText('Saved')).toBeInTheDocument();
+    expect(within(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).getByText('Front')).toBeInTheDocument();
+    expect(within(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).getByText('Saved')).toBeInTheDocument();
     expect(screen.getByText('— / —')).toBeInTheDocument();
     const video = container.querySelector('video');
     expect(video).toHaveAttribute('src', 'blob:retained-clip');
@@ -121,7 +121,7 @@ describe('dashcam retained page and non-summary boundaries', () => {
     h.query = { ...h.query, error: new Error('Local catalog refresh denied'), isError: true };
     rerender(<MemoryRouter><DashcamIntelligencePage /></MemoryRouter>);
     expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
-    expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toHaveAttribute('aria-pressed', 'true');
     expect(container.querySelector('video')).toBe(video);
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Restart' })).toBeInTheDocument();
@@ -155,11 +155,11 @@ describe('dashcam retained page and non-summary boundaries', () => {
 
   it('does not remove selected playback or local actions when catalog refresh is paused offline', () => {
     const { container, rerender } = renderPage();
-    fireEvent.click(screen.getByRole('option'));
+    fireEvent.click(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ }));
     const video = container.querySelector('video');
     h.query = { ...h.query, fetchStatus: 'paused', isFetching: false };
     rerender(<MemoryRouter><DashcamIntelligencePage /></MemoryRouter>);
-    expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toHaveAttribute('aria-pressed', 'true');
     expect(container.querySelector('video')).toBe(video);
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Run local motion analysis' })).toBeEnabled();
@@ -173,7 +173,8 @@ describe('dashcam retained page and non-summary boundaries', () => {
     expect(await screen.findByText('No clips match these filters')).toBeInTheDocument();
     expect(screen.queryByText('No clips imported yet')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    expect(screen.getByRole('option')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Imported clips' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toBeInTheDocument();
     h.query = { ...h.query, data: [] };
     rerender(<MemoryRouter><DashcamIntelligencePage /></MemoryRouter>);
     expect(screen.getByText('No clips imported yet')).toBeInTheDocument();
@@ -193,7 +194,7 @@ describe('dashcam retained page and non-summary boundaries', () => {
     h.query = { ...h.query, data: [clip()], isLoading: false };
     rerender(<MemoryRouter><DashcamIntelligencePage /></MemoryRouter>);
     expect(screen.getByText(/imported clips will be lost when this tab closes/)).toBeInTheDocument();
-    expect(within(screen.getByRole('listbox', { name: 'Imported clips' })).getByRole('option')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Imported clips' })).getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toBeInTheDocument();
     expect(container.querySelector('[data-operational-brief]')).toBeNull();
   });
 });

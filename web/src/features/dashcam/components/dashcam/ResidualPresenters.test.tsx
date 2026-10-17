@@ -19,7 +19,7 @@ vi.mock('../../hooks/useClipCatalog', () => ({
   useImportClips: () => ({ mutateAsync: h.importFiles, isPending: false, error: h.importError }),
 }));
 vi.mock('../../hooks/useDashcamSettings', () => ({
-  useDashcamSettings: () => ({ data: undefined }),
+  useDashcamSettings: () => ({ data: defaultDashcamSettings() }),
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ formatDuration: (seconds: number | null) => seconds == null ? '—' : `${seconds}s` }),
@@ -95,12 +95,13 @@ describe('dashcam residual presentation preservation', () => {
     const current = clip();
     const onSelect = vi.fn();
     render(<ClipCatalogList clips={[current]} totalCount={1} selectedClipId={current.id} onSelect={onSelect} onClearFilters={vi.fn()} />);
-    expect(screen.getByRole('option')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('list', { name: 'Imported clips' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Avant')).toBeInTheDocument();
     expect(screen.getByText('Enregistré')).toBeInTheDocument();
     expect(screen.getByText('2026-10-05 10:00:00')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('option'));
+    fireEvent.click(screen.getByRole('button', { name: /2026-10-05T10-00-00-front\.mp4/ }));
     expect(onSelect).toHaveBeenCalledWith(current.id);
     fireEvent.click(screen.getByRole('button', { name: 'Delete clip' }));
     expect(h.remove).toHaveBeenCalledWith(current.id);
