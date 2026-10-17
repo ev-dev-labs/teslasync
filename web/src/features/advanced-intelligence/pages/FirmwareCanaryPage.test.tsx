@@ -183,7 +183,7 @@ describe('FirmwareCanaryPage restrained decision presentation', () => {
       .toHaveClass('bg-[var(--surface-2)]');
     expect(within(screen.getByRole('region', { name: 'Data quality' }))
       .getByText('Unrecognized quality: future-quality'))
-      .toHaveClass('bg-[var(--semantic-danger-bg)]');
+      .toHaveClass('bg-[var(--surface-2)]');
     expect(decision('2026.21')).toHaveTextContent('Window quality: Unrecognized quality: future-quality');
     expect(decision('2026.21')).toHaveTextContent('window quality does not establish sufficient matched-peer support');
     expect(state.query.data?.items[0].decision).toBe('future-decision');

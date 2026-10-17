@@ -46,7 +46,7 @@ function query(data: unknown) {
 }
 
 function mutation(mutate: ReturnType<typeof vi.fn>) {
-  return { mutate, data: undefined, error: null, isPending: false };
+  return { mutate, reset: vi.fn(), data: undefined, error: null, isPending: false };
 }
 
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
@@ -80,7 +80,7 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 vi.mock('@/api/hooks/useStormguard', () => ({
   useStormguardStatus: () => ({ data: undefined, isLoading: true, isError: false }),
   useStormguardEvents: () => ({ data: [], isLoading: false, isError: false }),
-  useSaveStormguardConfig: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
+  useSaveStormguardConfig: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null }),
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -224,8 +224,8 @@ describe('critical advanced intelligence interactions', () => {
     const secondFinding = second.closest('article');
     expect(firstFinding).not.toBeNull();
     expect(secondFinding).not.toBeNull();
-    expect(within(firstFinding!).getByText('• No intent inferred')).toBeInTheDocument();
-    expect(within(secondFinding!).getByText('• No compromise inferred')).toBeInTheDocument();
+    expect(within(firstFinding!).getByText('No intent inferred')).toBeInTheDocument();
+    expect(within(secondFinding!).getByText('No compromise inferred')).toBeInTheDocument();
     expect(screen.getByText(/72.*confidence/)).toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
     expect(screen.getByText('Anomaly is not attribution')).toBeInTheDocument();

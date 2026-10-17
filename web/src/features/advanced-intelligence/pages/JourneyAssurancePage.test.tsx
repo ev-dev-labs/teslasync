@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, onlineManager, useMutation } from '@t
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { JourneyAssuranceRequest, JourneyAssuranceResponse } from '@/types/advancedIntelligence';
 import JourneyAssurancePage from './JourneyAssurancePage';
 import { journey } from './advancedIntelligenceClosure.fixtures';
@@ -65,7 +66,7 @@ describe('Journey assurance scoped modernization', () => {
     expect(form().querySelectorAll('input')).toHaveLength(6);
     expect(form().querySelector('.grid')).toHaveClass('@2xl:grid-cols-2', '@5xl:grid-cols-3');
     expect(runButton()).toHaveClass('min-h-11', 'max-w-full', 'whitespace-normal');
-    expect(screen.getByTestId('advanced-intelligence-journey-brief')).toHaveTextContent('Not calculated');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-journey-brief'), 'Not calculated');
     expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
     expect(screen.queryByText('No additional limitations were returned.')).not.toBeInTheDocument();
     expect(state.run).not.toHaveBeenCalled();
@@ -114,7 +115,8 @@ describe('Journey assurance scoped modernization', () => {
     state.vehicleId = null;
     view.rerender(<JourneyAssurancePage />);
     expect(runButton()).toBeDisabled();
-    expect(screen.getByTestId('advanced-intelligence-journey-brief')).toHaveTextContent('Vehicle scope not selected');
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('advanced-intelligence-journey-brief'), 'Vehicle scope not selected', { contains: true });
   });
 
   it('preserves legitimate zero weather load and reserve while leaving speed in raw SI', async () => {
@@ -142,7 +144,7 @@ describe('Journey assurance scoped modernization', () => {
     fireEvent.click(runButton());
     await waitFor(() => expect(state.run).toHaveBeenCalledTimes(1));
     expect(runButton()).toBeDisabled();
-    expect(screen.getByTestId('advanced-intelligence-journey-brief')).toHaveTextContent('Awaiting result');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-journey-brief'), 'Awaiting result');
     for (const title of ['Data quality', 'Evidence sources', 'Limitations']) {
       await waitFor(() => expect(screen.getByRole('heading', { name: title })).toBeVisible());
     }
@@ -156,9 +158,11 @@ describe('Journey assurance scoped modernization', () => {
     onlineManager.setOnline(false);
     renderPage();
     fireEvent.click(runButton());
-    await waitFor(() => expect(screen.getByTestId('advanced-intelligence-journey-brief')).toHaveTextContent(
+    await waitFor(() => expect(runButton()).toBeDisabled());
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('advanced-intelligence-journey-brief'),
       'The initial evidence query is paused; no empty result is inferred.',
-    ));
+    );
     expect(runButton()).toBeDisabled();
     expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
@@ -171,9 +175,11 @@ describe('Journey assurance scoped modernization', () => {
     fireEvent.click(runButton());
     await waitFor(() => expect(screen.getByText('observed charge')).toBeVisible());
     const brief = screen.getByTestId('advanced-intelligence-journey-brief');
-    for (const label of ['Readiness score', 'Arrival SoC low', 'Arrival SoC high', 'Energy required']) {
+    for (const label of ['Readiness score', 'Arrival SoC low']) {
       expect(within(brief).getByText(label)).toBeVisible();
     }
+    assertOperationalMetricUnavailable(brief, 'Arrival SoC high');
+    assertOperationalMetricUnavailable(brief, 'Energy required');
     const articles = screen.getAllByRole('article');
     expect(articles).toHaveLength(2);
     expect(articles[0]).toHaveTextContent(/0(?:\.0+)?%/);
@@ -198,7 +204,7 @@ describe('Journey assurance scoped modernization', () => {
     fireEvent.change(screen.getByLabelText(/Reserve target/), { target: { value: '30' } });
     fireEvent.click(runButton());
     await waitFor(() => expect(screen.getByText('journey recalculation unavailable')).toBeVisible());
-    expect(screen.getByTestId('advanced-intelligence-journey-brief')).toHaveTextContent('Retained result');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-journey-brief'), 'Retained result');
     expect(scenario().textContent).toBe(before);
     expect(screen.getByLabelText(/Route distance/)).toHaveValue(500000);
     expect(screen.getByText('observed charge')).toBeVisible();
@@ -229,7 +235,7 @@ describe('Journey assurance scoped modernization', () => {
     renderPage();
     fireEvent.click(runButton());
     await waitFor(() => expect(screen.getByText('No supported readiness factors are available.')).toBeVisible());
-    expect(screen.getByTestId('advanced-intelligence-journey-brief')).toHaveTextContent('Arrival SoC high');
+    assertOperationalMetricUnavailable(screen.getByTestId('advanced-intelligence-journey-brief'), 'Arrival SoC high');
     expect(screen.getAllByText('Observed vehicle energy, not a simulated outcome.').length).toBeGreaterThan(0);
     expect(screen.queryAllByRole('article')).toHaveLength(0);
   });
@@ -258,7 +264,8 @@ describe('Journey assurance scoped modernization', () => {
     await act(async () => { settle(journey); });
     expect(screen.queryByText('observed charge')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Journey readiness assessment' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('advanced-intelligence-journey-brief')).toHaveTextContent('Vehicle #8');
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('advanced-intelligence-journey-brief'), 'Vehicle #8', { contains: true });
     expect(screen.getByLabelText(/Route distance/)).toHaveValue(250000);
     expect(state.run.mock.calls[0][0].vehicle_id).toBe(7);
   });

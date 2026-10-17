@@ -62,7 +62,7 @@ describe('RoadHazardMeshPage restrained source preservation', () => {
     expect(screen.getByText(/Cells are identifiers, not map pins/)).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /map/i })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Data quality' })).toHaveTextContent('limited');
+    expect(screen.getByRole('region', { name: 'Data quality' })).toHaveTextContent('Limited evidence');
     expect(screen.getByRole('region', { name: 'Evidence sources' })).toHaveTextContent('recorded-session-ledger');
     expect(screen.getByRole('region', { name: 'Limitations' })).toHaveTextContent('No route reconstruction.');
     expect(screen.getByText(/Exact coordinates or route reconstruction/)).toBeInTheDocument();

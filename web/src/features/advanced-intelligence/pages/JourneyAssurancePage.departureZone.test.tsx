@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { AppSettings } from '@/api/types';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { JourneyAssuranceRequest } from '@/types/advancedIntelligence';
@@ -257,7 +258,7 @@ describe('Journey departure browser-local zone contract', () => {
     }
     expect(screen.getByText('Observed charge, not readiness proof.')).toBeVisible();
     expect(screen.getByText('Unknown weather is not zero degrees.')).toBeVisible();
-    expect(screen.getAllByText('Estimated energy requirement for the submitted route, not measured journey consumption.').length).toBeGreaterThan(0);
+    assertOperationalMetricUnavailable(screen.getByTestId('advanced-intelligence-journey-brief'), 'Energy required');
     // request() forwards the rejected direct attempt to resilientFetch once.
     expect(scenarioRequests()).toHaveLength(3);
     expect(payload(2)).toEqual(payload(1));

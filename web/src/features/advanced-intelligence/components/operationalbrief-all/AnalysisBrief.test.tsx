@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
 import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -131,12 +131,14 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
     />, { wrapper: Wrapper });
     const brief = screen.getByTestId('analysis-brief-contract');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(brief.querySelector('[data-operational-metric="zero-energy"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="invalid-percent"]')).toHaveAttribute('data-value-state', 'invalid');
+    assertOperationalMetricUnavailable(brief, 'Energy required');
+    assertOperationalMetricUnavailable(brief, 'Readiness');
     const reviewDetails = within(brief).getByRole('button', { name: 'Review details' });
     await user.click(reviewDetails);
     const drawer = screen.getByRole('dialog', { name: 'Modeled source summary details' });
+    expect(within(drawer).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(within(drawer).getAllByRole('button', { name: 'Close' })[0]).toHaveFocus();
     expect(within(drawer).getByText('First evidence. · 0 samples')).toBeInTheDocument();
     expect(within(drawer).getByText('Second evidence.')).toBeInTheDocument();
@@ -144,7 +146,6 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
     expect(within(drawer).getByText('Coverage is incomplete.')).toBeInTheDocument();
     expect(within(drawer).getByText('Source coverage not supplied')).toBeInTheDocument();
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
-    expect(within(drawer).getByText('Unsupported energy is not zero.')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(reviewDetails).toHaveFocus();
@@ -212,10 +213,11 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
   it('keeps never-submitted idle sources Not calculated with the submission instruction and every metric', () => {
     render(<AnalysisBrief {...baseProps} query={{ fetchStatus: 'idle' }} />, { wrapper: Wrapper });
     const brief = screen.getByTestId('analysis-state');
-    expect(within(brief).getAllByText('Not calculated')).toHaveLength(2);
+    expect(within(brief).getAllByText('Not calculated')).toHaveLength(1);
+    assertOperationalBriefDisclosure(brief, 'Not calculated');
     expect(within(brief).getByText('Submit a scenario.')).toBeInTheDocument();
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
   });
 
   it('shows first active work as busy but a first paused request as attention, never endless loading', () => {
@@ -224,13 +226,14 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
       isLoading: true, isFetching: true, fetchStatus: 'fetching', refetch: retry,
     }} />, { wrapper: Wrapper });
     expect(screen.getByTestId('analysis-state')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByText('Awaiting result')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('analysis-state'), 'Awaiting result');
     rerender(<AnalysisBrief {...baseProps} pending query={{
       isLoading: true, isPending: true, fetchStatus: 'paused', refetch: retry,
     }} />);
     const brief = screen.getByTestId('analysis-state');
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(within(brief).getAllByText('The initial evidence query is paused; no empty result is inferred.')).toHaveLength(3);
+    expect(within(brief).getAllByText('The initial evidence query is paused; no empty result is inferred.')).toHaveLength(2);
+    assertOperationalBriefDisclosure(brief, 'The initial evidence query is paused; no empty result is inferred.');
     expect(screen.queryByText('Awaiting result')).not.toBeInTheDocument();
     expect(retry).not.toHaveBeenCalled();
   });
@@ -247,9 +250,9 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
       />, { wrapper: Wrapper });
       const brief = screen.getByTestId('analysis-state');
       expect(brief).not.toHaveAttribute('aria-busy');
-      expect(within(brief).getByText(label)).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, label);
       expect(within(brief).getByText('0.00 kWh')).toBeInTheDocument();
-      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(6);
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
       fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog', { name: 'Assessment details' });
       expect(within(drawer).getByText('0.00 kWh')).toBeInTheDocument();
@@ -268,7 +271,7 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
     expect(screen.getByTestId('analysis-state')).not.toHaveAttribute('aria-busy');
     rerender(<AnalysisBrief {...baseProps} hasResult metrics={[]} query={{ data: [], isSuccess: true }}
       quality={emptyQuality} />);
-    expect(screen.getByText('Limited evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('analysis-state'), 'Limited evidence');
     expect(screen.queryByText('Not calculated')).not.toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
@@ -289,7 +292,7 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
       data: {}, isFetching: true, fetchStatus: 'fetching', refetch: retry,
     }} />);
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-    expect(screen.getByText('Updating result')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('analysis-state'), 'Updating result');
     rerender(<AnalysisBrief {...baseProps} hasResult query={{
       data: {}, isSuccess: true, fetchStatus: 'idle', refetch: retry,
     }} />);
@@ -318,11 +321,13 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
     expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
     rerender(<ScopedBrief vehicleId={8} />);
     expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Not calculated')).toHaveLength(2);
+    expect(screen.getAllByText('Not calculated')).toHaveLength(1);
+    assertOperationalBriefDisclosure(screen.getByTestId('analysis-state'), 'Not calculated');
     rerender(<ScopedBrief vehicleId={7} />);
     expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
     rerender(<ScopedBrief vehicleId={null} />);
-    expect(screen.getAllByText('Select a vehicle to load intelligence.')).toHaveLength(3);
+    expect(screen.getAllByText('Select a vehicle to load intelligence.')).toHaveLength(2);
+    assertOperationalBriefDisclosure(screen.getByTestId('analysis-state'), 'Select a vehicle to load intelligence.');
     expect(screen.getByTestId('analysis-state')).not.toHaveAttribute('aria-busy');
   });
 });

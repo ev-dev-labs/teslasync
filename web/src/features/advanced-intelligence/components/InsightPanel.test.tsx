@@ -133,7 +133,9 @@ describe('InsightPanel empty source recovery', () => {
 
     it('shows successful observation freshness while refreshing without erasing actions', () => {
       renderQueryPanel({ data: 0, isFetching: true, dataUpdatedAt: Date.now() });
-      expect(screen.getByText('updating…')).toBeInTheDocument();
+      const dot = screen.getByRole('button', { name: 'Data freshness: {{state}}' });
+      expect(dot).toHaveAttribute('aria-busy', 'true');
+      expect(dot).toHaveAccessibleDescription('Data freshness: {{state}} · Last updated: {{time}}');
       expect(screen.getByRole('button', { name: 'Inspect evidence' })).toBeInTheDocument();
       expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
       expect(screen.getByText('Retained observation: 0').closest('[dir]')).toHaveAttribute('dir', 'rtl');
@@ -141,7 +143,8 @@ describe('InsightPanel empty source recovery', () => {
 
     it('keeps an unknown successful timestamp unknown', () => {
       renderQueryPanel({ data: 0 });
-      expect(screen.getByTitle(/Never updated/)).toBeInTheDocument();
+      const dot = screen.getByRole('button', { name: 'Data freshness: {{state}}' });
+      expect(dot).toHaveAccessibleDescription('Data freshness: {{state}} · Never updated');
       expect(screen.getByText('Retained observation: 0')).toBeInTheDocument();
       expect(screen.queryByText('just now')).not.toBeInTheDocument();
     });

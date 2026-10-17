@@ -13,6 +13,7 @@ import type {
 import type { StormguardEvent, StormguardStatus } from '@/api/hooks/useStormguard';
 import { ToastProvider } from '@/components/feedback';
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { EvidencePanel, InsightPanel, StormGuardPanel } from '../components';
 import BehavioralSentinelPage from './BehavioralSentinelPage';
 import CausalExperimentationPage from './CausalExperimentationPage';
@@ -32,8 +33,8 @@ import * as fixtures from './advancedIntelligenceClosure.fixtures';
 // DataTable, chart frames, Recharts, inputs and confirmation dialogs are real.
 const state = vi.hoisted(() => {
   function simulation<T>() {
-    const result: { data?: T; error: Error | null; isPending: boolean; mutate: ReturnType<typeof vi.fn> } = {
-      data: undefined, error: null, isPending: false, mutate: vi.fn(),
+    const result: { data?: T; error: Error | null; isPending: boolean; mutate: ReturnType<typeof vi.fn>; reset: ReturnType<typeof vi.fn> } = {
+      data: undefined, error: null, isPending: false, mutate: vi.fn(), reset: vi.fn(),
     };
     return result;
   }
@@ -61,7 +62,7 @@ const state = vi.hoisted(() => {
     tco: simulation<TCOOptimizerResponse>(),
     causal: simulation<CausalExperiment>(),
     federated: simulation<FederatedRoundResult>(),
-    stormSave: { mutate: vi.fn(), isPending: false, isError: false, error: null },
+    stormSave: { mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null },
     fetchAll: vi.fn(),
     retry: vi.fn(),
     readCalls: {
@@ -262,7 +263,7 @@ describe('returned history, details and caller-owned pagination', () => {
     const decision = article('2026.20');
     expect(within(decision).getByText('0.00%')).toBeInTheDocument();
     expect(within(decision).getAllByText('—')).toHaveLength(2);
-    expect(within(decision).getByText('insufficient')).toBeInTheDocument();
+    expect(within(decision).getByText('Insufficient evidence')).toBeInTheDocument();
     expect(within(decision).getByText(/do not contain enough supported observations/)).toBeInTheDocument();
     expect(screen.getByText(/does not install, hold, or roll back firmware/)).toBeInTheDocument();
   });
@@ -306,7 +307,7 @@ describe('full reconciliation table controls and canonical exports', () => {
   it('keeps loaded rows, full-result scope, search, keyboard resize/density and column controls during refresh recovery', async () => {
     populateForensics();
     const view = renderSubject(<ChargingForensicsPage />);
-    const table = screen.getByRole('table', { name: 'advanced-intelligence:charging-forensics' });
+    const table = screen.getByRole('table', { name: 'Session reconciliation' });
     expect(within(table).getByText('#44')).toBeInTheDocument();
     expect(within(table).getByText('12.00 kWh')).toBeInTheDocument();
     expect(within(table).getByText('3.00 kWh (2.00 kWh–4.00 kWh)')).toBeInTheDocument();
@@ -323,9 +324,9 @@ describe('full reconciliation table controls and canonical exports', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
     const menu = screen.getByRole('menu', { name: 'Reorder or hide columns' });
     fireEvent.click(within(menu).getByRole('button', { name: 'Move Started up' }));
-    expect(within(table).getAllByRole('columnheader')[0]).toHaveAttribute('aria-label', 'Started');
+    expect(within(table).getAllByRole('columnheader')[1]).toHaveAttribute('aria-label', 'Started');
     fireEvent.click(within(menu).getByRole('button', { name: 'Reset' }));
-    expect(within(table).getAllByRole('columnheader')[0]).toHaveAttribute('aria-label', 'Session');
+    expect(within(table).getAllByRole('columnheader')[1]).toHaveAttribute('aria-label', 'Session');
     fireEvent.click(within(menu).getByRole('checkbox', { name: 'Show or hide Meter energy' }));
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(within(table).queryByRole('columnheader', { name: 'Meter energy' })).not.toBeInTheDocument();
@@ -368,13 +369,17 @@ describe('full reconciliation table controls and canonical exports', () => {
           estimated_loss_low_wh: 2000, estimated_loss_high_wh: 4000,
           recorded_cost_minor: 450, expected_cost_minor: 420, cost_discrepancy_minor: 30,
           currency: 'USD', status: 'reconciled',
+          ended_at: null, evidence: fixtures.forensicsItem.evidence,
+          limitations: fixtures.forensicsItem.limitations,
         },
         {
           session_id: 45, started_at: fixtures.forensicsItem.started_at,
-          vehicle_energy_wh: 0, meter_energy_wh: '', estimated_loss_wh: '',
-          estimated_loss_low_wh: '', estimated_loss_high_wh: '',
-          recorded_cost_minor: 0, expected_cost_minor: '', cost_discrepancy_minor: '',
+          vehicle_energy_wh: 0, meter_energy_wh: null, estimated_loss_wh: null,
+          estimated_loss_low_wh: null, estimated_loss_high_wh: null,
+          recorded_cost_minor: 0, expected_cost_minor: null, cost_discrepancy_minor: null,
           currency: 'USD', status: 'partial',
+          ended_at: null, evidence: [],
+          limitations: fixtures.unsupportedForensicsItem.limitations,
         },
         expect.objectContaining({ session_id: 99, estimated_loss_high_wh: 4000, currency: 'USD' }),
       ]);
@@ -409,21 +414,22 @@ describe('full reconciliation table controls and canonical exports', () => {
 
 describe('modeled analysis outputs and complete chart alternatives', () => {
   it.each([
-    { Page: TwinLabPage, id: 'advanced-intelligence-twin-brief', metricCount: 4 },
-    { Page: JourneyAssurancePage, id: 'advanced-intelligence-journey-brief', metricCount: 4 },
-    { Page: ChargingSiteTwinPage, id: 'advanced-intelligence-site-brief', metricCount: 6 },
-    { Page: EmergencyResiliencePage, id: 'advanced-intelligence-resilience-brief', metricCount: 2 },
-    { Page: FederatedLearningStudioPage, id: 'advanced-intelligence-federated-brief', metricCount: 3 },
-  ])('keeps $id mounted with unknown rather than zero metrics before its source returns', ({ Page, id, metricCount }) => {
+    { Page: TwinLabPage, id: 'advanced-intelligence-twin-brief',
+      labels: ['Model', 'Efficiency', 'Usable battery', 'Calibration samples'] },
+    { Page: JourneyAssurancePage, id: 'advanced-intelligence-journey-brief',
+      labels: ['Readiness score', 'Arrival SoC low', 'Arrival SoC high', 'Energy required'] },
+    { Page: ChargingSiteTwinPage, id: 'advanced-intelligence-site-brief',
+      labels: ['Utilization', 'Queue wait P50', 'Queue wait P90', 'Peak demand', 'Panel constraint', 'Projection status'] },
+    { Page: EmergencyResiliencePage, id: 'advanced-intelligence-resilience-brief',
+      labels: ['Modeled survival horizon', 'Risk checkpoints'] },
+    { Page: FederatedLearningStudioPage, id: 'advanced-intelligence-federated-brief',
+      labels: ['Total epsilon budget', 'Epsilon spent', 'Epsilon remaining'] },
+  ])('keeps $id mounted with unknown rather than zero metrics before its source returns', ({ Page, id, labels }) => {
     renderSubject(<Page />);
     const brief = screen.getByTestId(id);
     expect(brief).toHaveAttribute('data-operational-brief');
-    const metrics = brief.querySelectorAll('[data-operational-metric]');
-    expect(metrics).toHaveLength(metricCount);
-    metrics.forEach(metric => {
-      expect(metric).toHaveAttribute('data-value-state', 'missing');
-      expect(metric.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    });
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    labels.forEach(label => assertOperationalMetricUnavailable(brief, label));
     expect(within(brief).getByRole('button', { name: 'Review details' })).toBeEnabled();
     expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeInTheDocument();
   });
@@ -433,10 +439,10 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     renderSubject(<TwinLabPage />);
     const brief = screen.getByTestId('advanced-intelligence-twin-brief');
     expect(brief.querySelector('[data-operational-metric="usable-battery"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="efficiency"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(within(brief).getByText('Limited evidence')).toBeInTheDocument();
-    expect(within(brief).getByText(/Observation window:/)).toBeInTheDocument();
-    expect(within(brief).getByText(/Result generated:/)).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Efficiency');
+    assertOperationalBriefDisclosure(brief, 'Limited evidence');
+    assertOperationalBriefDisclosure(brief, 'Observation window:', { contains: true });
+    assertOperationalBriefDisclosure(brief, 'Result generated:', { contains: true });
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Calibrated baseline details' });
     expect(within(drawer).getByText(/Observed vehicle energy, not a simulated outcome.*0 samples/)).toBeInTheDocument();
@@ -469,8 +475,7 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     const brief = screen.getByTestId('advanced-intelligence-site-brief');
     expect(within(brief).getByText('Unstable')).toBeInTheDocument();
     expect(brief.querySelector('[data-operational-metric="projection-status"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="queue-p90"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(brief.querySelector('[data-operational-metric="queue-p90"] [data-operational-value]')).toHaveTextContent('—');
+    assertOperationalMetricUnavailable(brief, 'Queue wait P90');
     expect(state.site.data.queue_wait_p90_s).toBeNaN();
     expect(state.site.data.projected_unstable).toBe(true);
     expect(state.site.mutate).not.toHaveBeenCalled();
@@ -484,12 +489,12 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     view.rerender(<ChargingSiteTwinPage />);
     const brief = screen.getByTestId('advanced-intelligence-site-brief');
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(within(brief).getByText('Updating result')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Updating result');
     expect(within(brief).getByText('Stable')).toBeInTheDocument();
     state.site.isPending = false;
     state.site.error = new Error('recalculation unavailable');
     view.rerender(<ChargingSiteTwinPage />);
-    expect(within(brief).getByText('Retained result')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained result');
     expect(within(brief).getByText('0.00 h')).toBeInTheDocument();
     expect(within(brief).getByRole('button', { name: 'Review details' })).toBeEnabled();
     expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
@@ -511,7 +516,7 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     expect(brief.querySelector('[data-operational-metric="epsilon-spent"] [data-operational-value]')).toHaveTextContent('2.00');
     expect(brief.querySelector('[data-operational-metric="epsilon-remaining"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="epsilon-remaining"] [data-operational-value]')).toHaveTextContent('0.00');
-    expect(within(brief).getByText('Retained result')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained result');
     expect(screen.getByRole('button', { name: 'Review privacy spend' })).toBeDisabled();
     expect(screen.getByRole('heading', { name: 'local-observation-model' })).toBeInTheDocument();
     expect(state.federated.mutate).not.toHaveBeenCalled();
@@ -519,19 +524,27 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
 
   it('preserves every uncertainty bound, unknown versus zero, calibration and sensitivity ordering in the actual Twin chart frame', () => {
     state.twin.data = structuredClone(fixtures.twin);
+    state.twin.data.scenarios.push({
+      name: 'Supported C', horizon_s: 3600,
+      battery_delta_wh: null, battery_low_wh: null, battery_high_wh: null,
+      range_delta_m: 1000, range_low_m: 0, range_high_m: 3000,
+      thermal_delta_c: null, thermal_low_c: null, thermal_high_c: null,
+      wear_delta_pct: null, wear_low_pct: null, wear_high_pct: null,
+      sensitivity_drivers: [],
+    });
     const original = structuredClone(state.twin.data);
     renderSubject(<TwinLabPage />);
     const baseline = card('Calibrated baseline');
     expect(within(baseline).getByText('calibrated-not-guaranteed')).toBeInTheDocument();
     expect(within(baseline).getByText('0.00 kWh')).toBeInTheDocument();
     expect(within(baseline).getByText('0')).toBeInTheDocument();
-    expect(within(baseline).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(baseline, 'Efficiency');
     const chart = card('Range-effect uncertainty comparison');
     const table = within(chart).getByRole('table', { name: 'Range-effect uncertainty comparison — data table' });
     expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent))
       .toEqual(['Scenario name', 'Low', 'Estimate', 'High']);
     const rows = within(table).getAllByRole('row');
-    expect(within(rows[1]).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['Modeled A', '-1', '0', '2']);
+    expect(within(rows[1]).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['Modeled A', '-1.00', '0.00', '2.00']);
     expect(within(rows[2]).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['Unsupported B', '—', '—', '—']);
     expectBefore(screen.getByText('first-assumption'), screen.getByText('second-assumption'));
     expect(screen.getByText(fixtures.observation.summary)).toBeInTheDocument();
@@ -584,7 +597,7 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     expect(screen.queryByText('No supported mitigations were returned.')).not.toBeInTheDocument();
     const constraints = card('Utilization and constraints');
     expect(within(constraints).getByText('0.00 h')).toBeInTheDocument();
-    expect(within(constraints).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(constraints, 'Queue wait P90');
     expect(within(constraints).getByText('Stable')).toBeInTheDocument();
     expect(screen.getByText(/do not dispatch storage, change charger limits, or operate a site/)).toBeInTheDocument();
     expect(state.site.mutate).not.toHaveBeenCalled();
@@ -605,7 +618,8 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     renderSubject(<JourneyAssurancePage />);
     const summary = card('Readiness and arrival range');
     expect(within(summary).getAllByText('0.00%')).toHaveLength(2);
-    expect(within(summary).getAllByText('—')).toHaveLength(2);
+    assertOperationalMetricUnavailable(summary, 'Arrival SoC high');
+    assertOperationalMetricUnavailable(summary, 'Energy required');
     expectBefore(screen.getByRole('heading', { name: 'observed charge' }), screen.getByRole('heading', { name: 'modeled weather' }));
     expect(within(article('observed charge')).getByText('0.00%')).toBeInTheDocument();
     expect(within(article('modeled weather')).getByText('—')).toBeInTheDocument();
@@ -615,10 +629,16 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
   });
 
   it('preserves the full TCO matrices, unsupported cost/budget versus real zero, constraints and strategy order', () => {
-    state.tco.data = fixtures.tco;
+    state.tco.mutate.mockImplementationOnce((_request, options) => options?.onSuccess?.(fixtures.tco));
     renderSubject(<TCOOptimizerPage />);
-    const unknown = article('unsupported-price-strategy');
-    const known = article('zero-recorded-cost-strategy');
+    fireEvent.click(screen.getByRole('button', { name: 'Generate confirmed alternatives' }));
+    const strategyCard = (name: string): HTMLElement => {
+      const element = screen.getByRole('heading', { name }).closest<HTMLElement>('[role="article"]');
+      if (!element) throw new Error(`Missing actual strategy card: ${name}`);
+      return element;
+    };
+    const unknown = strategyCard('unsupported-price-strategy');
+    const known = strategyCard('zero-recorded-cost-strategy');
     expectBefore(unknown, known);
     expect(within(unknown).getAllByText('Unsupported')).toHaveLength(2);
     expect(within(unknown).getByText('—')).toBeInTheDocument();
@@ -629,7 +649,7 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
       .toEqual(['Projected cost', 'Risk score', 'Convenience', 'Home / public mix', 'Budget status']);
     expect(screen.getByText(/No complete maintenance source/)).toBeInTheDocument();
     expect(screen.getByText(/Optimization is not a purchase/)).toBeInTheDocument();
-    expect(state.tco.mutate).not.toHaveBeenCalled();
+    expect(state.tco.mutate).toHaveBeenCalledOnce();
   });
 });
 
@@ -663,7 +683,7 @@ describe('independent forecast, event history and modeled outage sources', () =>
     renderSubject(<EmergencyResiliencePage />);
     const chart = card('Outage risk timeline');
     const table = within(chart).getByRole('table', { name: 'Outage risk timeline — data table' });
-    expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['Time', 'Remaining energy', 'Risk']);
+    expect(within(table).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['Time (h)', 'Remaining energy (kWh)', 'Risk']);
     expect(within(table).getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell').map(cell => cell.textContent)))
       .toEqual([['0', '12', 'supported'], ['1', '6', 'modeled'], ['2', '0', 'depleted']]);
     expect(screen.getByText('Observed forecast, not modeled outage.')).toBeInTheDocument();
@@ -781,7 +801,7 @@ describe('complete caller-owned analysis inputs and propose-only actions', () =>
       vehicle_id: 7, confirmed: true, horizon_s: 31536000, annual_distance_m: 12345678,
       home_charging_pct: 60, public_charging_pct: 40, risk_tolerance_pct: 0,
       budget_minor: 123456, currency: 'JPY',
-    });
+    }, expect.objectContaining({ onSuccess: expect.any(Function) }));
   });
 
   const scenarios: Array<{
@@ -831,7 +851,7 @@ describe('complete caller-owned analysis inputs and propose-only actions', () =>
     expect(within(model).getByText('4')).toBeInTheDocument();
     expect(within(model).getByText('0')).toBeInTheDocument();
     expect(within(model).getByText('—')).toBeInTheDocument();
-    fireEvent.click(within(model).getByRole('button', { name: 'Use for next local round' }));
+    fireEvent.click(within(model).getByRole('button', { name: 'Use for next local round local-observation-model' }));
     expect(field('Model name')).toHaveValue('local-observation-model');
     expect(field('Model version')).toHaveValue('v4');
     expect(field('Expected model-card version')).toHaveValue(8);
@@ -916,8 +936,9 @@ describe('complete caller-owned analysis inputs and propose-only actions', () =>
     expect(within(history).getAllByText('—')).toHaveLength(2);
     expect(within(history).getByText('0 samples')).toBeInTheDocument();
     expect(within(history).getByText('2 samples')).toBeInTheDocument();
-    ['Baseline', 'Treatment', 'Estimated effect', 'Confounder coverage']
+    ['Baseline', 'Treatment', 'Estimated effect']
       .forEach(label => expect(within(history).getByText(label)).toBeInTheDocument());
+    expect(within(history).getByText('Confounder coverage', { selector: '[data-stat-label]' })).toBeInTheDocument();
     expect(screen.getByText('Association is not proof of causality')).toBeInTheDocument();
     expect(state.causal.mutate).not.toHaveBeenCalled();
   });

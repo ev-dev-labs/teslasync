@@ -354,7 +354,7 @@ describe('TCOOptimizerPage', () => {
     renderPage();
     run();
     assertSections();
-    expect(screen.getByText('No supported data is available.')).toBeInTheDocument();
+    expect(screen.getByText('No supported strategies are available for these inputs.')).toBeInTheDocument();
     expect(screen.queryByText('Submit constraints to generate supported alternatives.')).not.toBeInTheDocument();
     expect(screen.getByText('Last updated: display date 2026-10-01T12:00:00Z')).toBeInTheDocument();
     expect(screen.getByText(/Test-only projections are not guarantees/)).toBeInTheDocument();

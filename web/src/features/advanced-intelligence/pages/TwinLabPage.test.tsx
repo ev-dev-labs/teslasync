@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -143,10 +143,11 @@ describe('TwinLabPage restrained source adoption', () => {
     renderPage();
     expectSections();
     const brief = screen.getByTestId('advanced-intelligence-twin-brief');
-    expect(brief).toHaveTextContent('Not calculated');
-    const metrics = brief.querySelectorAll('[data-operational-metric]');
-    expect(metrics).toHaveLength(4);
-    for (const metric of metrics) expect(metric).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalBriefDisclosure(brief, 'Not calculated');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Model', 'Efficiency', 'Usable battery', 'Calibration samples']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
     expect(screen.getByText('At least two supported scenario results are required.')).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Scenario name/).map(input => (input as HTMLInputElement).value))
       .toEqual(['Scenario 1', 'Scenario 2']);
@@ -295,7 +296,7 @@ describe('TwinLabPage restrained source adoption', () => {
     renderPage();
     expectSections();
     expect(screen.getByRole('button', { name: 'Run confirmed simulation' })).toBeDisabled();
-    expect(screen.getByTestId('advanced-intelligence-twin-brief')).toHaveTextContent('Select a vehicle');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-twin-brief'), 'Select a vehicle', { contains: true });
     const limitations = screen.getByRole('region', { name: 'Limitations' });
     expect(within(limitations).getByText('• Vehicle commands and physical actuation')).toBeInTheDocument();
     expect(within(limitations).getByText('• Guaranteed real-world outcomes')).toBeInTheDocument();
@@ -308,7 +309,7 @@ describe('TwinLabPage restrained source adoption', () => {
     expectSections();
     expect(screen.getByRole('button', { name: 'Run confirmed simulation' })).toBeDisabled();
     const brief = screen.getByTestId('advanced-intelligence-twin-brief');
-    expect(brief).toHaveTextContent('Awaiting result');
+    assertOperationalBriefDisclosure(brief, 'Awaiting result');
     expect(brief).toHaveAttribute('aria-busy', 'true');
     expect(screen.getAllByLabelText(/Route distance/)[0]).toHaveValue(50000);
     expect(screen.queryByText('calibrated-not-guaranteed')).not.toBeInTheDocument();
@@ -325,7 +326,7 @@ describe('TwinLabPage restrained source adoption', () => {
     renderPage();
     expectSections();
     const message = 'The initial evidence query is paused; no empty result is inferred.';
-    expect(screen.getByTestId('advanced-intelligence-twin-brief')).toHaveTextContent(message);
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-twin-brief'), message);
     expect(card('Range-effect uncertainty comparison')).toHaveTextContent(message);
     expect(card('Sensitivity drivers')).toHaveTextContent(message);
     expect(screen.getByTestId('advanced-intelligence-twin-brief')).not.toHaveAttribute('aria-busy');
@@ -351,7 +352,7 @@ describe('TwinLabPage restrained source adoption', () => {
     renderPage();
     expectSections();
     const brief = screen.getByTestId('advanced-intelligence-twin-brief');
-    expect(brief.querySelector('[data-operational-metric="efficiency"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(brief, 'Efficiency');
     expect(brief.querySelector('[data-operational-metric="usable-battery"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief).toHaveTextContent('0.00 kWh');
     expect(card('Range-effect uncertainty comparison'))
@@ -426,7 +427,7 @@ describe('TwinLabPage restrained source adoption', () => {
     view.rerender(<TwinLabPage />);
     expectSections();
     expect(chartTable()).toHaveTextContent(rows ?? '');
-    expect(screen.getByTestId('advanced-intelligence-twin-brief')).toHaveTextContent(message);
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-twin-brief'), message);
     expect(scenario('Modeled A')).toHaveTextContent('first-assumption');
     expect(screen.getByRole('region', { name: 'Evidence sources' })).toHaveTextContent(twin.evidence[0].summary);
     if (error || isPaused) {
@@ -448,7 +449,7 @@ describe('TwinLabPage restrained source adoption', () => {
     expectSections();
     expect(screen.queryByText('calibrated-not-guaranteed')).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: /uncertainty.*data table/ })).not.toBeInTheDocument();
-    expect(screen.getByTestId('advanced-intelligence-twin-brief')).toHaveTextContent('Vehicle #8');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-twin-brief'), 'Vehicle #8', { contains: true });
     state.mutation.data = { ...twin, generated_at: '2026-08-05T00:00:00Z' };
     view.rerender(<TwinLabPage />);
     expect(screen.queryByText('calibrated-not-guaranteed')).not.toBeInTheDocument();

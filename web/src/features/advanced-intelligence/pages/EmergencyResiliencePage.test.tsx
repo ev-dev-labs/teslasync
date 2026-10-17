@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, onlineManager, useMutation } from '@t
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ResiliencePlanRequest, ResiliencePlanResponse } from '@/types/advancedIntelligence';
 import EmergencyResiliencePage from './EmergencyResiliencePage';
 import { resilience } from './advancedIntelligenceClosure.fixtures';
@@ -21,7 +22,7 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 vi.mock('@/api/hooks/useStormguard', () => ({
   useStormguardStatus: () => ({ data: undefined, isLoading: false, isError: false }),
   useStormguardEvents: () => ({ data: [], isLoading: false, isError: false }),
-  useSaveStormguardConfig: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
+  useSaveStormguardConfig: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null }),
 }));
 
 let client: QueryClient;
@@ -57,8 +58,9 @@ afterEach(() => {
 });
 
 describe('Emergency resilience scoped modernization', () => {
-  it('preserves seven section identities and independent guardian without implying a completed plan', () => {
+  it('preserves seven section identities and independent guardian without implying a completed plan', async () => {
     renderPage();
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeVisible());
     for (const title of ['Emergency resilience', 'Storm guardian', 'Outage plan scenario',
       'Survival horizon', 'Outage risk timeline', 'Load priorities and recommendations',
       'Evidence, quality, and limitations']) {
@@ -70,7 +72,7 @@ describe('Emergency resilience scoped modernization', () => {
     expect(form().querySelectorAll('input')).toHaveLength(7);
     expect(runButton()).toHaveClass('min-h-11', 'max-w-full', 'whitespace-normal');
     expect(form().querySelector('.grid')).toHaveClass('@2xl:grid-cols-2', '@5xl:grid-cols-3');
-    expect(screen.getByTestId('advanced-intelligence-resilience-brief')).toHaveTextContent('Not calculated');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-resilience-brief'), 'Not calculated');
     expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
     expect(state.run).not.toHaveBeenCalled();
   });
@@ -143,11 +145,12 @@ describe('Emergency resilience scoped modernization', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(4);
     expect(screen.getAllByRole('article')[0]).toHaveTextContent('#2');
     expect(screen.getByText('• Review evacuation reserve.')).toBeInTheDocument();
-    expect(screen.getAllByText('Modeled outage, not a weather observation.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('• Modeled outage, not a weather observation.').length).toBeGreaterThan(0);
     const before = table.textContent;
     fireEvent.change(screen.getByLabelText(/Vehicle energy/), { target: { value: '90000' } });
     fireEvent.click(runButton());
-    await waitFor(() => expect(screen.getByTestId('advanced-intelligence-resilience-brief')).toHaveTextContent('Retained result'));
+    await waitFor(() => expect(screen.getByText('modeled recalculation unavailable')).toBeVisible());
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-resilience-brief'), 'Retained result');
     expect(timeline().textContent).toBe(before);
     expect(screen.getByText('Caller priority second')).toBeVisible();
     expect(screen.getByText('modeled recalculation unavailable')).toBeVisible();
@@ -171,7 +174,7 @@ describe('Emergency resilience scoped modernization', () => {
     await waitFor(() => expect(screen.getByText('initial modeled calculation unavailable')).toBeVisible());
     expect(screen.getAllByText('Intelligence evidence could not be loaded.').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('heading', { name: 'Storm guardian' })).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeVisible());
     expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
     expect(runButton()).toBeEnabled();
   });
@@ -182,13 +185,14 @@ describe('Emergency resilience scoped modernization', () => {
     const view = renderPage();
     fireEvent.click(runButton());
     await waitFor(() => expect(state.run).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('heading', { name: 'Outage risk timeline' })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Outage risk timeline' })).toBeVisible());
     expect(screen.queryByText('At least two supported timeline points are required.')).not.toBeInTheDocument();
     state.vehicleId = 8;
     view.rerender(<EmergencyResiliencePage />);
     await act(async () => { settle(resilience); });
     expect(screen.queryByText('Caller priority first')).not.toBeInTheDocument();
-    expect(screen.getByTestId('advanced-intelligence-resilience-brief')).toHaveTextContent('Vehicle #8');
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('advanced-intelligence-resilience-brief'), 'Vehicle #8', { contains: true });
     expect(screen.getByLabelText(/Vehicle energy/)).toHaveValue(60000);
     expect(state.run.mock.calls[0][0].vehicle_id).toBe(7);
   });

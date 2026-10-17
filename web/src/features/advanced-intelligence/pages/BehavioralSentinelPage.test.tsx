@@ -146,7 +146,7 @@ describe('BehavioralSentinelPage', () => {
     expect(quality.getByText('Limited evidence')).toBeInTheDocument();
     expect(quality.getByText('12')).toBeInTheDocument();
     expect(quality.getByText('65.00%')).toBeInTheDocument();
-    expect(quality.getByText(/May 1, 2026.*Jun 1, 2026/)).toBeInTheDocument();
+    expect(quality.getByText(/1 May 2026.*1 Jun 2026/)).toBeInTheDocument();
     expect(quality.getByText(/Test-only observation gaps remain/)).toBeInTheDocument();
     const evidence = within(screen.getByRole('region', { name: 'Evidence sources' }));
     expect(evidence.getByText('test-command-history')).toBeInTheDocument();
@@ -205,7 +205,7 @@ describe('BehavioralSentinelPage', () => {
     { severity: 'info', label: 'Info', translated: 'Information', variant: 'info' },
   ] satisfies Array<{ severity: string; label: string; translated: string; variant: keyof typeof BADGE_VARIANTS }>)(
     'localizes $severity at the badge without changing source data or variants',
-    ({ severity, label, translated, variant }) => {
+    async ({ severity, label, translated, variant }) => {
       const item = Object.freeze(finding({ severity }));
       mocks.query.mockReturnValue(query(payload({ items: [item] })));
       const view = renderPage();
@@ -214,10 +214,10 @@ describe('BehavioralSentinelPage', () => {
       view.rerender(<BehavioralSentinelPage />);
       const article = within(findingArticle());
       expect(article.getByText(translated)).toHaveClass(...BADGE_VARIANTS[variant].split(' '));
+      await waitFor(() => expect(screen.getByText('Limited evidence')).toBeVisible());
       expect(article.getByText(item.explanation)).toBeVisible();
       expect(article.getByText(`${item.evidence[0].source}: ${item.evidence[0].summary}`)).toBeVisible();
       expect(article.getByText(item.limitations[0])).toBeVisible();
-      expect(screen.getByText('Limited evidence')).toBeVisible();
       expect(item.severity).toBe(severity);
       expect(mocks.refetch).not.toHaveBeenCalled();
     },

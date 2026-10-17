@@ -146,7 +146,7 @@ describe('RoadHazardMeshPage requested-page and severity boundaries', () => {
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Last page' })).toBeDisabled();
     expect(screen.getByRole('table', { name: 'Road hazard mesh' })).toHaveTextContent('0.00%');
-    expect(screen.getByRole('region', { name: 'Data quality' })).toHaveTextContent('limited');
+    expect(screen.getByRole('region', { name: 'Data quality' })).toHaveTextContent('Limited evidence');
     expect(screen.getByRole('region', { name: 'Evidence sources' })).toHaveTextContent('recorded-session-ledger');
     expect(screen.getByRole('region', { name: 'Limitations' })).toHaveTextContent('No route reconstruction.');
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();

@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type { DataStateSource } from '@/api/dataState';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type {
   FederatedModelCard, FederatedRoundResult, FederatedStatusPage, StartFederatedRoundRequest,
 } from '@/types/advancedIntelligence';
@@ -372,7 +373,9 @@ describe('Federated learning studio scoped adoption', () => {
     state.vehicleId = null;
     renderPage();
     expect(state.read).toHaveBeenLastCalledWith(null, 12, 0);
-    expect(screen.getAllByText('Select a vehicle to load intelligence.')).toHaveLength(4);
+    expect(screen.getAllByText('Select a vehicle to load intelligence.')).toHaveLength(3);
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('advanced-intelligence-federated-brief'), 'Select a vehicle to load intelligence.');
     expect(screen.getByRole('button', { name: 'Review privacy spend' })).toBeDisabled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(state.mutation.mutate).not.toHaveBeenCalled();

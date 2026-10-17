@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, onlineManager, useMutation } from '@t
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ChargingSiteTwinRequest, ChargingSiteTwinResponse } from '@/types/advancedIntelligence';
 import ChargingSiteTwinPage from './ChargingSiteTwinPage';
 import { site } from './advancedIntelligenceClosure.fixtures';
@@ -114,7 +115,8 @@ describe('Charging site twin scoped modernization', () => {
     await waitFor(() => expect(screen.getByText('Caller order first')).toBeVisible());
     fireEvent.change(screen.getByLabelText(/Panel limit/), { target: { value: '120000' } });
     fireEvent.click(runButton());
-    await waitFor(() => expect(screen.getByTestId('advanced-intelligence-site-brief')).toHaveTextContent('Retained result'));
+    await waitFor(() => expect(runButton()).toBeEnabled());
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-site-brief'), 'Retained result');
     expect(screen.getByText(/Unsaved changes/)).toBeVisible();
     expect(screen.getByText('Caller order first')).toBeVisible();
     fireEvent.change(screen.getByLabelText(/Panel limit/), { target: { value: '100000' } });
@@ -122,16 +124,17 @@ describe('Charging site twin scoped modernization', () => {
     expect(state.run).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps every initial section and ten fields without inventing a completed mitigation result', () => {
+  it('keeps every initial section and ten fields without inventing a completed mitigation result', async () => {
     renderPage();
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeVisible());
     for (const title of ['Site scenario', 'Utilization and constraints', 'Ranked mitigations and assumptions']) {
       expect(screen.getByRole('heading', { name: title })).toBeVisible();
     }
     expect(screen.getByText('Design scenario, not site control')).toBeVisible();
-    expect(screen.getByText('Charger, panel, solar, or storage control')).toBeVisible();
+    expect(screen.getByText('• Charger, panel, solar, or storage control')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeVisible();
     expect(form().querySelectorAll('input, select')).toHaveLength(10);
-    expect(screen.getByTestId('advanced-intelligence-site-brief')).toHaveTextContent('Not calculated');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-site-brief'), 'Not calculated');
     expect(screen.queryByText('No supported mitigations were returned.')).not.toBeInTheDocument();
     expect(runButton()).toHaveClass('min-h-11', 'max-w-full', 'whitespace-normal');
     expect(form().querySelector('.grid')).toHaveClass('@2xl:grid-cols-2', '@5xl:grid-cols-3');
@@ -192,7 +195,8 @@ describe('Charging site twin scoped modernization', () => {
     renderPage();
     fireEvent.click(runButton());
     const brief = screen.getByTestId('advanced-intelligence-site-brief');
-    await waitFor(() => expect(brief).toHaveTextContent('The initial evidence query is paused'));
+    await waitFor(() => expect(runButton()).toBeDisabled());
+    assertOperationalBriefDisclosure(brief, 'The initial evidence query is paused', { contains: true });
     expect(brief).not.toHaveAttribute('aria-busy');
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No supported mitigations were returned.')).not.toBeInTheDocument();
@@ -205,18 +209,20 @@ describe('Charging site twin scoped modernization', () => {
     renderPage();
     fireEvent.click(runButton());
     const brief = screen.getByTestId('advanced-intelligence-site-brief');
-    await waitFor(() => expect(brief).toHaveTextContent('Limited evidence'));
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    await waitFor(() => expect(within(brief).getByText('Stable')).toBeInTheDocument());
+    assertOperationalBriefDisclosure(brief, 'Limited evidence');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
     expect(within(brief).getByText('Stable')).toBeInTheDocument();
     const articles = screen.getAllByRole('article');
     expect(articles[0]).toHaveTextContent('#2');
     expect(articles[0]).toHaveTextContent('Caller order first');
     expect(articles[0]).toHaveTextContent('Assumed arrivals only.');
     expect(articles[0].querySelector('span')).toHaveClass('bg-[var(--surface-2)]');
-    expect(screen.getByText('Poisson arrivals are modeled, not live charger telemetry.')).toBeInTheDocument();
+    expect(screen.getByText('• Poisson arrivals are modeled, not live charger telemetry.')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Per-charger power/), { target: { value: '90000' } });
     fireEvent.click(runButton());
-    await waitFor(() => expect(brief).toHaveTextContent('Retained result'));
+    await waitFor(() => expect(runButton()).toBeEnabled());
+    assertOperationalBriefDisclosure(brief, 'Retained result');
     expect(within(brief).getByText('0.00 h')).toBeInTheDocument();
     expect(within(brief).getByRole('button', { name: 'Review details' })).toBeEnabled();
     expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeVisible();
@@ -231,8 +237,8 @@ describe('Charging site twin scoped modernization', () => {
     renderPage();
     fireEvent.click(runButton());
     await waitFor(() => expect(screen.getByText('No supported mitigations were returned.')).toBeVisible());
-    expect(screen.getByTestId('advanced-intelligence-site-brief').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(screen.getByText('Design approximation only.')).toBeInTheDocument();
+    expect(screen.getByTestId('advanced-intelligence-site-brief').querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(screen.getByText('• Design approximation only.')).toBeInTheDocument();
   });
 
   it('clears published vehicle results before a late old-scope response can replace the selected vehicle', async () => {
@@ -252,7 +258,8 @@ describe('Charging site twin scoped modernization', () => {
     await act(async () => { settle(site); });
     expect(screen.queryByText('Caller order first')).not.toBeInTheDocument();
     expect(screen.queryByText(/Unsaved changes/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('advanced-intelligence-site-brief')).toHaveTextContent('Vehicle #8');
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('advanced-intelligence-site-brief'), 'Vehicle #8', { contains: true });
     state.vehicleId = 7;
     view.rerender(<ChargingSiteTwinPage />);
     expect(screen.queryByText('Caller order first')).not.toBeInTheDocument();

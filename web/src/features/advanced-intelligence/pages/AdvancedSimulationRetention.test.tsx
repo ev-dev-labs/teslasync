@@ -5,6 +5,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+
+const utcDateTime = (value: Parameters<typeof formatDateTime>[0]) => formatDateTime(value, { tz: 'UTC' });
 import type {
   ChargingSiteTwinRequest, ChargingSiteTwinResponse,
   JourneyAssuranceRequest, JourneyAssuranceResponse,
@@ -38,7 +41,7 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 vi.mock('@/api/hooks/useStormguard', () => ({
   useStormguardStatus: () => ({ data: undefined, isLoading: false, isError: false }),
   useStormguardEvents: () => ({ data: [], isLoading: false, isError: false }),
-  useSaveStormguardConfig: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
+  useSaveStormguardConfig: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null }),
 }));
 
 function deferred<T>() {
@@ -71,9 +74,10 @@ function subject<TInputs, TData extends { vehicle_id: number; generated_at: stri
   preservedSection: string,
   briefId: string,
   chartTitle?: string,
+  retainedNotices = 1,
 ) {
   return {
-    name, Page, title, runLabel, editLabel, preservedSection, briefId, chartTitle,
+    name, Page, title, runLabel, editLabel, preservedSection, briefId, chartTitle, retainedNotices,
     prepare() {
       const held = deferred<TData>();
       handler.mockResolvedValueOnce(response).mockImplementationOnce(() => held.promise);
@@ -101,7 +105,7 @@ const subjects = [
     'advanced-intelligence-twin-brief', 'Range-effect uncertainty comparison'),
   subject('journey', JourneyAssurancePage, state.journey, journey, 'Readiness and arrival range',
     'Run confirmed readiness assessment', /Route distance/, 'Readiness factors',
-    'advanced-intelligence-journey-brief'),
+    'advanced-intelligence-journey-brief', undefined, 2),
   subject('site', ChargingSiteTwinPage, state.site, site, 'Utilization and constraints',
     'Run confirmed site simulation', /Per-charger power/, 'Ranked mitigations and assumptions',
     'advanced-intelligence-site-brief'),
@@ -144,15 +148,16 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     const view = renderPage(current.Page);
     const brief = screen.getByTestId(current.briefId);
     const run = screen.getByRole('button', { name: current.runLabel });
-    expect(brief).toHaveTextContent('Not calculated');
+    assertOperationalBriefDisclosure(brief, 'Not calculated');
     fireEvent.click(run);
-    await waitFor(() => expect(brief).toHaveTextContent('Limited evidence'));
+    await waitFor(() => expect(run).toBeEnabled());
+    assertOperationalBriefDisclosure(brief, 'Limited evidence');
     const publishedValues = values(brief);
     const firstInputs = current.firstInputs();
-    expect(brief).toHaveTextContent('Vehicle #7');
-    expect(brief).toHaveTextContent(formatDateTime(quality.window_start));
-    expect(brief).toHaveTextContent(formatDateTime(quality.window_end));
-    expect(brief).toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
+    assertOperationalBriefDisclosure(brief, 'Vehicle #7', { contains: true });
+    assertOperationalBriefDisclosure(brief, utcDateTime(quality.window_start), { contains: true });
+    assertOperationalBriefDisclosure(brief, utcDateTime(quality.window_end), { contains: true });
+    assertOperationalBriefDisclosure(brief, utcDateTime('2026-08-03T00:00:00Z'), { contains: true });
     await waitFor(() => expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible());
     let chartRows: string | undefined;
     if (current.chartTitle) {
@@ -162,12 +167,12 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     fireEvent.change(edit, { target: { value: '90000' } });
     fireEvent.click(run);
     await waitFor(() => expect(current.callCount()).toBe(2));
-    await waitFor(() => expect(brief).toHaveTextContent('Updating result'));
-    expect(run).toBeDisabled();
+    await waitFor(() => expect(run).toBeDisabled());
+    assertOperationalBriefDisclosure(brief, 'Updating result');
     expect(brief).not.toHaveAttribute('aria-busy');
     expect(values(brief)).toEqual(publishedValues);
     expect(current.firstInputs()).toEqual(firstInputs);
-    expect(brief).toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
+    assertOperationalBriefDisclosure(brief, utcDateTime('2026-08-03T00:00:00Z'), { contains: true });
     expect(edit).toHaveValue(90000);
     const drawer = sourceDrawer(brief, current.title);
     expect(values(brief)).toEqual(publishedValues);
@@ -179,10 +184,13 @@ describe.each(subjects)('$name publication retention with actual mutation transi
 
     if (outcome === 'error') {
       held.reject(new Error('recalculation unavailable'));
-      await waitFor(() => expect(brief).toHaveTextContent('Retained result'));
+      await waitFor(() => expect(run).toBeEnabled());
+      assertOperationalBriefDisclosure(brief, 'Retained result');
       expect(values(brief)).toEqual(publishedValues);
-      expect(brief).toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
-      expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeVisible();
+      assertOperationalBriefDisclosure(brief, utcDateTime('2026-08-03T00:00:00Z'), { contains: true });
+      const notices = screen.getAllByText('Previously loaded data remains visible while affected sources recover.');
+      expect(notices).toHaveLength(current.retainedNotices);
+      notices.forEach(notice => expect(notice).toBeVisible());
       expect(screen.getByText('recalculation unavailable')).toBeVisible();
       sourceDrawer(brief, current.title);
       fireEvent.keyDown(screen.getByRole('dialog', { name: `${current.title} details` }), { key: 'Escape' });
@@ -191,8 +199,9 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     } else {
       held.resolve();
     }
-    await waitFor(() => expect(brief).toHaveTextContent(formatDateTime('2026-08-05T00:00:00Z')));
-    expect(brief).toHaveTextContent('Limited evidence');
+    await waitFor(() => expect(run).toBeEnabled());
+    assertOperationalBriefDisclosure(brief, utcDateTime('2026-08-05T00:00:00Z'), { contains: true });
+    assertOperationalBriefDisclosure(brief, 'Limited evidence');
     expect(brief).not.toHaveTextContent('Retained result');
     expect(run).toBeEnabled();
     expect(values(brief)).toEqual(publishedValues);
@@ -204,32 +213,34 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     const view = renderPage(current.Page);
     const brief = screen.getByTestId(current.briefId);
     fireEvent.click(screen.getByRole('button', { name: current.runLabel }));
-    await waitFor(() => expect(brief).toHaveTextContent('Limited evidence'));
+    await waitFor(() => expect(screen.getByRole('button', { name: current.runLabel })).toBeEnabled());
+    assertOperationalBriefDisclosure(brief, 'Limited evidence');
     fireEvent.click(screen.getByRole('button', { name: current.runLabel }));
-    await waitFor(() => expect(brief).toHaveTextContent('Updating result'));
+    await waitFor(() => expect(screen.getByRole('button', { name: current.runLabel })).toBeDisabled());
+    assertOperationalBriefDisclosure(brief, 'Updating result');
     const drawer = sourceDrawer(brief, current.title);
     state.vehicleId = 8;
     view.rerender(<current.Page />);
-    expect(brief).toHaveTextContent('Vehicle #8');
-    expect(brief).not.toHaveTextContent('Vehicle #7');
-    expect(brief).toHaveTextContent('Not calculated');
-    expect(brief).toHaveTextContent('Observation window not supplied');
-    expect(brief).toHaveTextContent('Result generation time not supplied');
-    expect(values(brief).every(metric => metric.state === 'missing')).toBe(true);
     expect(drawer).not.toHaveTextContent(observation.summary);
     expect(drawer).not.toHaveTextContent(quality.reasons[0]);
-    expect(drawer).not.toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
+    expect(drawer).not.toHaveTextContent(utcDateTime('2026-08-03T00:00:00Z'));
     fireEvent.keyDown(screen.getByRole('dialog', { name: `${current.title} details` }), { key: 'Escape' });
+    assertOperationalBriefDisclosure(brief, 'Vehicle #8', { contains: true });
+    assertOperationalBriefDisclosure(brief, 'Vehicle #7', { contains: true, absent: true });
+    assertOperationalBriefDisclosure(brief, 'Not calculated');
+    assertOperationalBriefDisclosure(brief, 'Observation window not supplied', { contains: true });
+    assertOperationalBriefDisclosure(brief, 'Result generation time not supplied', { contains: true });
+    expect(values(brief)).toHaveLength(0);
     held.resolve();
     await waitFor(() => expect(screen.getByRole('button', { name: current.runLabel })).toBeEnabled());
     state.vehicleId = 7;
     view.rerender(<current.Page />);
-    expect(brief).toHaveTextContent('Not calculated');
-    expect(brief).not.toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
+    assertOperationalBriefDisclosure(brief, 'Not calculated');
+    assertOperationalBriefDisclosure(brief, utcDateTime('2026-08-03T00:00:00Z'), { contains: true, absent: true });
     await waitFor(() => expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible());
     state.vehicleId = null;
     view.rerender(<current.Page />);
-    expect(brief).toHaveTextContent('Select a vehicle');
+    assertOperationalBriefDisclosure(brief, 'Select a vehicle', { contains: true });
     expect(screen.getByRole('button', { name: current.runLabel })).toBeDisabled();
   });
 
@@ -238,9 +249,10 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     renderPage(current.Page);
     const brief = screen.getByTestId(current.briefId);
     fireEvent.click(screen.getByRole('button', { name: current.runLabel }));
-    await waitFor(() => expect(brief).toHaveTextContent('Source unavailable'));
+    await waitFor(() => expect(screen.getByRole('button', { name: current.runLabel })).toBeEnabled());
+    assertOperationalBriefDisclosure(brief, 'Source unavailable');
     expect(brief).not.toHaveTextContent('Retained result');
-    expect(values(brief).every(metric => metric.state === 'missing')).toBe(true);
+    expect(values(brief)).toHaveLength(0);
     expect(screen.getByRole('button', { name: current.runLabel })).toBeEnabled();
     await waitFor(() => expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible());
   });
