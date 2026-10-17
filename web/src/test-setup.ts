@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom'
 import { beforeEach, vi } from 'vitest'
 import * as resilience from '@/lib/resilience'
+import * as numberFormat from '@/lib/numberFormat'
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -241,6 +242,15 @@ vi.mock('@/lib/timezone', async () => {
 beforeEach(() => {
   try {
     resilience._resetAuthExpiredLatch?.()
+  } catch {
+    /* test mocked the module and stripped the hook — fine */
+  }
+  // Same leak class as the auth latch: formatter locale/precision is module
+  // state, so a French-locale or precision-4 case would otherwise bleed into
+  // later tests in the same file. Runs before file-level hooks, which can
+  // still pin their own values on top.
+  try {
+    numberFormat._resetFormatterPreferences?.()
   } catch {
     /* test mocked the module and stripped the hook — fine */
   }

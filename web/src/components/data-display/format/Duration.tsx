@@ -53,7 +53,7 @@ export function Duration({ ms, variant = 'short', className }: DurationProps) {
   }
 
   return (
-    <span className={className} title={fmtWithUnit(ms, 'ms')}>
+    <span className={className} title={fmtWithUnit(ms, 'ms', 0)}>
       {display}
     </span>
   );

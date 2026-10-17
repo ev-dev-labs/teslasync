@@ -513,7 +513,7 @@ export default function SystemStatusPage() {
       metadataActions={<LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />}
       secondaryActions={
         <div className="flex items-center gap-2">
-          <IconButton icon={<RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />} label={t('common.refresh', 'Refresh')} onClick={handleRefresh} disabled={isFetching} aria-label={t('systemStatus.refreshAria', 'Refresh (r)')} />
+          <IconButton icon={<RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />} label={t('common.refresh', 'Refresh')} onClick={handleRefresh} disabled={isFetching} busy={isFetching} aria-label={t('systemStatus.refreshAria', 'Refresh (r)')} />
         </div>
       }
     >
@@ -604,7 +604,7 @@ export default function SystemStatusPage() {
                     </ul>
                   ) : (
                     <EmptyState message={t('systemStatus.noComponents', 'Current component status is unavailable.')}
-                      action={{ label: t('common.retry', 'Retry'), onClick: () => { void extendedQuery.refetch(); } }} className="py-6" />
+                      action={{ label: t('common.retry', 'Retry'), onClick: () => { void refetchHealth(); } }} className="py-6" />
                   )}
                 </GlassPanel>
               </section>

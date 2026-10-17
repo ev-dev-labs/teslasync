@@ -64,7 +64,7 @@ const STYLE: Record<string, { tint: string; label: string; labelKey?: string; de
 
 function formatAge(ms: number | null | undefined, fmtWithUnit: ReturnType<typeof useNumberFormatting>['fmtWithUnit']): string | null {
   if (ms == null || !Number.isFinite(ms)) return null;
-  if (ms < 1000) return fmtWithUnit(ms, 'ms');
+  if (ms < 1000) return fmtWithUnit(ms, 'ms', 0);
   if (ms < 60_000) return fmtWithUnit(ms / 1000, 's');
   if (ms < 3_600_000) return fmtWithUnit(ms / 60_000, 'min');
   if (ms < 86_400_000) return fmtWithUnit(ms / 3_600_000, 'h');

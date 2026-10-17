@@ -37,7 +37,7 @@ describe('SourceLayerBadge', () => {
     fireEvent.click(trigger);
 
     expect(trigger).toHaveFocus();
-    expect(trigger).toHaveAccessibleDescription(/Past 2-min window\. Source layer unknown\. \(age: 500(?:\.0+)? ms\)/);
+    expect(trigger).toHaveAccessibleDescription(/Past 2-min window\. Source layer unknown\. \(age: 500 ms\)/);
     expect(screen.getAllByRole('tooltip')).toHaveLength(1);
     trigger.blur();
     expect(trigger).not.toHaveFocus();

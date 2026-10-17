@@ -14,6 +14,8 @@ import {
   fmtInt,
   fmtCompact,
   formatBytes,
+  getFormatterPreferences,
+  _resetFormatterPreferences,
 } from './numberFormat'
 
 // The module keeps precision + locale as mutable module-level state that
@@ -81,6 +83,19 @@ describe('numberFormat — global locale', () => {
     setGlobalLocale('de-DE')
     // de-DE groups with '.' and uses ',' as the decimal separator.
     expect(fmtNumber(1234.5).replace(/\s/g, ' ')).toBe('1.234,50')
+  })
+})
+
+describe('numberFormat — test reset hook', () => {
+  it('restores en-US + precision 2 so a French-locale case cannot leak into later tests', () => {
+    setGlobalLocale('fr-FR')
+    setGlobalPrecision(4)
+    expect(fmtNumber(1234.5).replace(/[\s\u202f]/g, ' ')).toBe('1 234,5000')
+    _resetFormatterPreferences()
+    expect(getGlobalLocale()).toBe('en-US')
+    expect(getGlobalPrecision()).toBe(2)
+    expect(getFormatterPreferences()).toEqual({ precision: 2, locale: 'en-US' })
+    expect(fmtNumber(1234.5)).toBe('1,234.50')
   })
 })
 

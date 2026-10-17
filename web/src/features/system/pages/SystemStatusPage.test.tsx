@@ -942,6 +942,27 @@ describe('SystemStatusPage — assessment source authority', () => {
     expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
   })
 
+  it('clears a no-data empty source block when data arrives on recovery', () => {
+    mockSystemHealth.mockReturnValue(q(undefined, { dataUpdatedAt: 0 }) as any)
+    const view = renderPage()
+    expect(screen.getByText('Health is unavailable.')).toBeInTheDocument()
+    mockSystemHealth.mockReturnValue(q(systemHealth()) as any)
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(screen.queryByText('Health is unavailable.')).not.toBeInTheDocument()
+  })
+
+  it('retries the health query from the services empty state so recovery clears it', () => {
+    // Regression: the Retry refetched the extended query while the section
+    // reads health.components, so after an outage the retry recovered the
+    // wrong cache entry and the empty state stayed.
+    mockSystemHealth.mockReturnValue(q(undefined, { error: new Error('health down'), refetch: refetchHealth }) as any)
+    renderPage()
+    const services = within(screen.getByRole('region', { name: 'Current component status' }))
+    expect(services.getByText('Current component status is unavailable.')).toBeInTheDocument()
+    fireEvent.click(services.getByRole('button', { name: 'Retry' }))
+    expect(refetchHealth).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
     { error: new Error('worker refresh failed') },
     { fetchStatus: 'paused' },

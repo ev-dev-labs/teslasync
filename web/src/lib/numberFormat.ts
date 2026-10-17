@@ -57,6 +57,22 @@ export function getGlobalLocale(): string {
   return _globalLocale
 }
 
+/**
+ * Test-only reset for the shared formatter preferences.
+ *
+ * `setGlobalLocale` / `setGlobalPrecision` mutate module state that survives
+ * across tests in the same file, so a French-locale case leaks `fr-FR` (and a
+ * precision-4 case leaks `4`) into every later test that assumes the
+ * defaults. The global setup calls this in `beforeEach`; individual files
+ * that need other values set them in their own (later-running) hooks.
+ * Subscribed components are notified when anything actually changed.
+ */
+export function _resetFormatterPreferences(): void {
+  _globalPrecision = 2
+  _globalLocale = 'en-US'
+  publishPreferences()
+}
+
 /** Safe number extraction from unknown values, returns 0 for nullish/NaN */
 export function safeNumber(v: unknown): number {
   return typeof v === 'number' && isFinite(v) ? v : 0

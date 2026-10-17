@@ -1,7 +1,7 @@
 import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { Duration } from '../Duration';
-import { fmtWithUnit, getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 /**
  * `Duration` is a pure display leaf: it delegates formatting to the
@@ -112,7 +112,7 @@ describe('Duration — clock variant', () => {
   it('renders 0:00 for a zero-length clock and keeps the hover title', () => {
     const { container } = render(<Duration ms={0} variant="clock" />);
     expect(container.textContent).toBe('0:00');
-    expect(span(container)?.getAttribute('title')).toBe(fmtWithUnit(0, 'ms'));
+    expect(span(container)?.getAttribute('title')).toBe('0 ms');
   });
 });
 
@@ -149,9 +149,9 @@ describe('Duration — empty / invalid input', () => {
 });
 
 describe('Duration — hover title contract', () => {
-  it('formats the millisecond title at settings precision on a valid value', () => {
+  it('formats the millisecond title as grouped integers on a valid value', () => {
     const { container } = render(<Duration ms={1500} />);
-    expect(span(container)?.getAttribute('title')).toBe(fmtWithUnit(1500, 'ms'));
+    expect(span(container)?.getAttribute('title')).toBe('1,500 ms');
   });
 
   it('omits the title attribute on the null empty state', () => {
@@ -225,7 +225,7 @@ describe('Duration — className + structure', () => {
       });
       expect(container.querySelector('.milliseconds')).toHaveTextContent('250,126ms');
       expect(container.querySelector('.seconds')).toHaveTextContent('1,500s');
-      expect(container.querySelector('.seconds')).toHaveAttribute('title', '1.500,000 ms');
+      expect(container.querySelector('.seconds')).toHaveAttribute('title', '1.500 ms');
       expect(container.querySelector('.minutes')).toHaveTextContent('2,000m');
       expect(container.querySelector('.long-seconds')).toHaveTextContent('45,000s');
       expect(container.querySelector('.long-clock')).toHaveTextContent('2m 6s');
