@@ -268,6 +268,7 @@ Row 16 guard records (121 widgets × min/default/large × view/edit; Edge, dev s
 - Baseline build emitted CSS warning `Unexpected "$"` at generated input `hue.bg-$`; build still exited 0.
 - Baseline bundle report warns startup JS is 404.8 KB against 400 KB; non-failing.
 - Row 15: negative `Age: -X.XX s` in replay per-field sources. Nearest-telemetry alignment can select a future row, so `positionTs - sourceTs` goes negative (see the "Signed age" comment in TripReplayPage). Timestamp ordering / clock issue, calculation-owned; the UI renders the signed value unchanged (locked by the "reveals future telemetry as negative age" test).
+- Group 26: the `invalid` metric valueState is a dead contract -- `OperationalBriefMetric` declares `'value' | 'missing' | 'invalid'`, but no producer in the metrics pipeline has ever set `'invalid'` (verified via history search) and both the brief face and drawer filter to `'value'` only. Known-bad readings (e.g. NaN tire pressure) therefore omit their tile exactly like unknown data instead of an Invalid marker. Pipeline + brief change, needs product say on the invalid presentation; the science test pins omission-with-explanation in the meantime.
 
 ## Summary
 

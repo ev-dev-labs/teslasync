@@ -53,3 +53,4 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-17 03:35 | repair group 24 singletons done | 185/185 green (was 180/5 failed); tsc/lint/catalog/build green; committing+pushing | none
 2026-10-17 04:20 | full suite classified (53473/3473); i18n trio DEFERRED | suite JSON parsed; trio = pre-existing main-branch drift (frozen at 1184a05f21, broken by d2cb6396ac before UI base), needs key-by-key product review, over timebox | trio deferred with diagnosis; moving to FreshnessDot (25)
 2026-10-17 04:55 | repair group 25 FreshnessDot done | 41/41 green (was 16/25 failed); i18n trio deferred w/ diagnosis; tsc/lint/catalog/build green; committing+pushing | none
+2026-10-17 06:10 | repair group 26 ScienceLab done | 67/67 green (was 26/41 failed); gallery chunk0 clean, chunk1/2 env-load-errors (HMR interference), re-running quietly after commit | chunk1/2 stragglers

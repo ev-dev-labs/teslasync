@@ -107,6 +107,25 @@ vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: vi.fn(),
 }));
 
+// The global setup mock of `@/lib/timezone` drops the vehicle tz ("no
+// vehicle is selected in bare renders"), which makes vehicle-mode dates
+// untestable. This file selects vehicles with timezones, so override with
+// a faithful resolution (identical whenever the mock vehicle has no tz).
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  const { useSettings } = await import('@/hooks/useSettings');
+  const { useSelectedVehicle } = await import('@/hooks/useSelectedVehicle');
+  return {
+    ...actual,
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') => {
+      const settings = (useSettings() as { settings?: { timezone_user?: string | null } } | undefined)?.settings;
+      const { vehicle } = useSelectedVehicle() as { vehicle?: { timezone?: string | null } | null };
+      const userTz = settings?.timezone_user?.trim() ? settings.timezone_user : 'UTC';
+      return actual.resolveTimezone(mode, vehicle?.timezone ?? undefined, userTz);
+    },
+  };
+});
+
 vi.mock('recharts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('recharts')>();
   return {
@@ -130,6 +149,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import ScienceLabPage from './ScienceLabPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { deriveDataState } from '@/api/dataState';
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors';
 import * as operationalMetrics from '@/hooks/useOperationalMetrics';
@@ -521,11 +541,28 @@ describe('ScienceLabPage', () => {
       expect(screen.getByTestId('science-notebook')).toHaveTextContent(
         `${formatted(reports.notebook.entries[0].start)} → ${formatted(reports.notebook.entries[0].end)}`,
       );
-      expect(screen.getByTestId('science-overview')).toHaveTextContent(
+      // Scope/freshness moved off the brief faces into the drawer headers.
+      const overviewBrief = screen.getByTestId('science-evidence-brief');
+      fireEvent.click(within(overviewBrief).getByRole('button', { name: 'Review details' }));
+      const overviewDrawer = screen.getByRole('dialog');
+      const overviewHeader = overviewDrawer.querySelector('[data-drawer-header]');
+      if (!(overviewHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+      expect(overviewHeader).toHaveTextContent(
         `${formatted(reports.electrochem.start)} → ${formatted(reports.electrochem.end)}`,
       );
-      expect(screen.getByTestId('science-overview')).toHaveTextContent(`Report loaded ${formatted(loadedAt)}`);
-      expect(screen.getByTestId('science-electrochem-brief')).toHaveTextContent(`Report loaded ${formatted(loadedAt)}`);
+      // (The overview never repeats per-domain load times when states are
+      // plain success -- 'Independent reports…' in the header; the load time
+      // is pinned via the electrochem header below.)
+      fireEvent.keyDown(overviewDrawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      const electrochemBrief = screen.getByTestId('science-electrochem-brief');
+      fireEvent.click(within(electrochemBrief).getByRole('button', { name: 'Review details' }));
+      const electrochemDrawer = screen.getByRole('dialog');
+      const electrochemHeader = electrochemDrawer.querySelector('[data-drawer-header]');
+      if (!(electrochemHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+      expect(electrochemHeader).toHaveTextContent(`Report loaded ${formatted(loadedAt)}`);
+      fireEvent.keyDown(electrochemDrawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     };
     assertDates();
     settingsMock.locale = 'de-DE';
@@ -605,23 +642,45 @@ describe('ScienceLabPage', () => {
       expect(within(panel).getAllByRole('heading', { name: title, exact: true })).toHaveLength(1);
       expect(panel.querySelector('[data-print-card] [data-print-card]')).toBeNull();
       expect(panel.querySelector('[data-card]')).toBeNull();
-      expect(brief).toHaveTextContent('Vehicle 1');
-      expect(brief).toHaveTextContent(section === 'overview' ? 'Independent reports' : 'Report loaded');
       fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog', { name: `${title} details` });
+      // Scope/freshness live in the drawer header, not on the brief face.
+      const drawerHeader = drawer.querySelector('[data-drawer-header]');
+      if (!(drawerHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+      expect(drawerHeader).toHaveTextContent('Vehicle 1');
+      expect(drawerHeader).toHaveTextContent(section === 'overview' ? 'Independent reports' : 'Report loaded');
       expect(drawer).toHaveTextContent('Historical inputs and derived fits');
       fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close', exact: true })[0]);
     }
   });
-  it('renders all five domain panels with data', () => {
+  it('renders all five domain panels with data', async () => {
+    const { fireEvent } = await import('@testing-library/react');
     renderPage();
-    const overview = screen.getByTestId('science-overview');
-    expect(overview).toHaveTextContent('1 rest points · 2 resistance steps');
-    expect(overview).toHaveTextContent('1 qualified cooldown fits');
-    expect(overview).toHaveTextContent('1 drives joined to archive weather');
-    expect(overview).toHaveTextContent('4 of 4 corners reported');
-    expect(overview).toHaveTextContent('1 of 1 rows with a result');
-    expect(overview.querySelectorAll('a[href^="#science-"]')).toHaveLength(5);
+    const overviewBrief = screen.getByTestId('science-evidence-brief');
+    // Counts render as face tiles; the prose measures live in the drawer's
+    // per-domain groups with the inspect anchors.
+    for (const [label, value] of [
+      ['rest points', '1'], ['Resistance steps', '2'], ['Thermal fits', '1'],
+      ['Weather matches', '1'], ['Tire evidence', '4'], ['Analysis records', '1'],
+    ]) {
+      const tile = within(overviewBrief).getByText(label).closest('[data-operational-metric]');
+      expect(tile?.querySelector('[data-operational-value]')).toHaveTextContent(value);
+    }
+    fireEvent.click(within(overviewBrief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'rest points' }))
+      .toHaveTextContent('1 rest points · 2 resistance steps');
+    expect(within(drawer).getByRole('group', { name: 'Thermal fits' }))
+      .toHaveTextContent('1 qualified cooldown fits');
+    expect(within(drawer).getByRole('group', { name: 'Weather matches' }))
+      .toHaveTextContent('1 drives joined to archive weather');
+    expect(within(drawer).getByRole('group', { name: 'Tire evidence' }))
+      .toHaveTextContent('4 of 4 corners reported');
+    expect(within(drawer).getByRole('group', { name: 'Analysis records' }))
+      .toHaveTextContent('1 of 1 rows with a result');
+    expect(drawer.querySelectorAll('a[href^="#science-"]')).toHaveLength(5);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     for (const testId of ['science-electrochem', 'science-thermal', 'science-weather', 'science-tires', 'science-notebook']) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
@@ -656,7 +715,11 @@ describe('ScienceLabPage', () => {
     expect(weatherPanel).toHaveTextContent('1.225 kg/m³');
     expect(weatherPanel).toHaveTextContent('Session energy / distance');
     expect(weatherPanel.querySelector('a[href="/drives/7"]')).toBeInTheDocument();
-    expect(weatherPanel).toHaveTextContent('r(density, residual)');
+    // Unknown correlations omit their tiles (never zeroed) with a counted
+    // drawer explanation; the fit guide stays on the face.
+    expect(weatherPanel).toHaveTextContent('Pearson r requires at least five');
+    assertOperationalMetricUnavailable(screen.getByTestId('science-weather-brief'), 'r(density, residual)');
+    assertOperationalMetricUnavailable(screen.getByTestId('science-weather-brief'), 'r(wind, residual)');
   });
 
   it('allows the full supported 30-day window without hiding any report', async () => {
@@ -689,7 +752,9 @@ describe('ScienceLabPage', () => {
     report.aging.equiv_full_cycles = null;
     scienceMocks.electrochem.mockReturnValue(queryState({ data: report }));
     renderPage();
-    expect(screen.getByTestId('science-electrochem').textContent).toMatch(/Throughput:\s*Unknown/);
+    // The unknown throughput omits its tile (never zeroed) with a counted
+    // drawer explanation; the 'Throughput: Unknown' caption fed the old tile.
+    assertOperationalMetricUnavailable(screen.getByTestId('science-aging-brief'), 'Throughput');
   });
 
   it('keeps empty domains visible and provides working retry actions', async () => {
@@ -699,7 +764,7 @@ describe('ScienceLabPage', () => {
     renderPage();
     const panel = screen.getByTestId('science-electrochem');
     expect(panel.textContent).toMatch(/No fit inputs/);
-    expect(screen.getByTestId('science-overview')).toHaveTextContent('Limited evidence');
+    assertOperationalBriefDisclosure(screen.getByTestId('science-evidence-brief'), 'Limited evidence');
     fireEvent.click(within(panel).getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
     expect(screen.getByTestId('science-thermal')).toBeInTheDocument();
@@ -711,8 +776,10 @@ describe('ScienceLabPage', () => {
     }));
     renderPage();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByTestId('science-overview')).toHaveTextContent('Cached · refresh failed');
-    expect(screen.getByTestId('science-overview')).toHaveTextContent('1 rest points');
+    assertOperationalBriefDisclosure(screen.getByTestId('science-evidence-brief'), 'Cached · refresh failed');
+    const retainedTile = within(screen.getByTestId('science-evidence-brief'))
+      .getByText('rest points').closest('[data-operational-metric]');
+    expect(retainedTile?.querySelector('[data-operational-value]')).toHaveTextContent('1');
     expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();
   });
 
@@ -735,7 +802,16 @@ describe('ScienceLabPage', () => {
         status: 'pending', fetchStatus: 'paused', refetch: retry,
       }));
       rerenderPage();
-      expect(panel).toHaveTextContent('Refresh paused');
+      // Briefed domains surface pause in the drawer badge; brief-less
+      // domains (thermal, notebook) keep the panel-body notice.
+      if (domain === 'thermal' || domain === 'notebook') {
+        expect(panel).toHaveTextContent('Refresh paused');
+      } else {
+        assertOperationalBriefDisclosure(
+          screen.getByTestId(`science-${domain}-brief`),
+          'Refresh paused',
+        );
+      }
       expect(panel).toHaveTextContent('No requested source has returned usable data yet.');
       expect(panel.querySelector('[aria-busy="true"]')).toBeNull();
       expect(panel).not.toHaveTextContent('No fit inputs');
@@ -743,11 +819,15 @@ describe('ScienceLabPage', () => {
       expect(panel).not.toHaveTextContent('Service unavailable');
       expect(panel).not.toHaveTextContent('offline');
       expect(panel).not.toHaveTextContent('Failed to load');
-      const source = screen.getByTestId('science-overview')
-        .querySelector(`[data-operational-metric="science-${domain}"]`);
-      expect(source).toHaveAttribute('data-value-state', 'missing');
-      expect(source).toHaveTextContent('Refresh paused');
-      expect(source).not.toHaveTextContent('Cached');
+      // The paused domain omits its overview tile (never zeroed); the pause
+      // marker lives in the overview drawer's badge.
+      const overviewLabels = {
+        electrochem: 'rest points', thermal: 'Thermal fits', weather: 'Weather matches',
+        tires: 'Tire evidence', notebook: 'Analysis records',
+      } as const;
+      const overviewBrief = screen.getByTestId('science-evidence-brief');
+      assertOperationalMetricUnavailable(overviewBrief, overviewLabels[domain]);
+      assertOperationalBriefDisclosure(overviewBrief, 'Refresh paused');
       fireEvent.click(within(panel).getByRole('button', { name: /^Retry unavailable sources:/ }));
       expect(retry).toHaveBeenCalledOnce();
       expect(screen.getByTestId(domain === 'electrochem' ? 'science-thermal' : 'science-electrochem'))
@@ -760,7 +840,17 @@ describe('ScienceLabPage', () => {
       const reports = { electrochem: electrochem(), thermal: thermal(), weather: weather(), tires: tires(), notebook: notebook() };
       scienceMocks[domain].mockReturnValue(queryState({ data: reports[domain] }));
       rerenderPage();
-      expect(panel).toHaveTextContent(reports[domain].honesty);
+      // Brief descriptions (honesty) live in the drawer for briefed domains.
+      if (domain === 'thermal' || domain === 'notebook') {
+        expect(panel).toHaveTextContent(reports[domain].honesty);
+      } else {
+        const domainBrief = screen.getByTestId(`science-${domain}-brief`);
+        fireEvent.click(within(domainBrief).getByRole('button', { name: 'Review details' }));
+        const honestyDrawer = screen.getByRole('dialog');
+        expect(honestyDrawer).toHaveTextContent(reports[domain].honesty);
+        fireEvent.keyDown(honestyDrawer, { key: 'Escape' });
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      }
       expect(panel).not.toHaveTextContent('No requested source');
     },
   );
@@ -776,7 +866,7 @@ describe('ScienceLabPage', () => {
     const { rerenderPage } = renderPage();
     const brief = screen.getByTestId('science-evidence-brief');
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(brief).toHaveTextContent('Refresh paused');
+    assertOperationalBriefDisclosure(brief, 'Refresh paused');
     expect(brief).not.toHaveTextContent('Cached');
     expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
 
@@ -788,7 +878,11 @@ describe('ScienceLabPage', () => {
     rerenderPage();
     expect(screen.queryByText('No requested source has returned usable data yet.')).toBeNull();
     expect(brief).not.toHaveTextContent('Refresh paused');
-    expect(brief).toHaveTextContent('0 rest points · 0 resistance steps');
+    // Genuine zeros stay numeric on the face tiles.
+    const restTile = within(brief).getByText('rest points').closest('[data-operational-metric]');
+    expect(restTile?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    const resistanceTile = within(brief).getByText('Resistance steps').closest('[data-operational-metric]');
+    expect(resistanceTile?.querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(screen.getByTestId('science-thermal')).toHaveTextContent('No park cooldown');
     expect(screen.getByTestId('science-notebook')).toHaveTextContent('No notebook rows');
     for (const [briefId, metric] of [['weather', 'wind-correlation'], ['tires', 'extra-rolling']]) {
@@ -800,7 +894,7 @@ describe('ScienceLabPage', () => {
 
   it.each(['electrochem', 'thermal', 'weather', 'tires', 'notebook'] as const)(
     'retains %s evidence through refresh failure and removes the warning on recovery',
-    (domain) => {
+    async (domain) => {
       const reports = { electrochem: electrochem(), thermal: thermal(), weather: weather(), tires: tires(), notebook: notebook() };
       const report = reports[domain];
       scienceMocks[domain].mockReturnValue(queryState({
@@ -809,13 +903,35 @@ describe('ScienceLabPage', () => {
       const { rerenderPage } = renderPage();
       const panel = screen.getByTestId(`science-${domain}`);
       expect(within(panel).getByTestId('stale-refresh-warning')).toBeInTheDocument();
-      expect(screen.getByTestId('science-overview')).toHaveTextContent('Cached · refresh failed');
-      expect(panel).toHaveTextContent(report.honesty);
+      assertOperationalBriefDisclosure(screen.getByTestId('science-evidence-brief'), 'Cached · refresh failed');
+      if (domain === 'thermal' || domain === 'notebook') {
+        expect(panel).toHaveTextContent(report.honesty);
+      } else {
+        const retainBrief = screen.getByTestId(`science-${domain}-brief`);
+        const { fireEvent: click } = await import('@testing-library/react');
+        click.click(within(retainBrief).getByRole('button', { name: 'Review details' }));
+        const retainDrawer = screen.getByRole('dialog');
+        expect(retainDrawer).toHaveTextContent(report.honesty);
+        click.keyDown(retainDrawer, { key: 'Escape' });
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      }
       scienceMocks[domain].mockReturnValue(queryState({ data: report }));
       rerenderPage();
       expect(within(panel).queryByTestId('stale-refresh-warning')).toBeNull();
       expect(screen.getByTestId('science-overview')).not.toHaveTextContent('Cached · refresh failed');
-      expect(panel).toHaveTextContent(report.honesty);
+      // Recovery swaps the overview badge back to available.
+      assertOperationalBriefDisclosure(screen.getByTestId('science-evidence-brief'), 'Evidence available');
+      if (domain === 'thermal' || domain === 'notebook') {
+        expect(panel).toHaveTextContent(report.honesty);
+      } else {
+        const recoveredBrief = screen.getByTestId(`science-${domain}-brief`);
+        const { fireEvent: press } = await import('@testing-library/react');
+        press.click(within(recoveredBrief).getByRole('button', { name: 'Review details' }));
+        const recoveredDrawer = screen.getByRole('dialog');
+        expect(recoveredDrawer).toHaveTextContent(report.honesty);
+        press.keyDown(recoveredDrawer, { key: 'Escape' });
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      }
     },
   );
 
@@ -830,10 +946,12 @@ describe('ScienceLabPage', () => {
     expect(screen.getByTestId('science-electrochem')).toBeInTheDocument();
     expect(screen.getByTestId('science-thermal')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    const overview = screen.getByTestId('science-overview');
-    expect(overview).toHaveTextContent('Loading');
-    expect(overview).toHaveTextContent('Unavailable');
-    expect(overview).toHaveTextContent('Awaiting a successful report');
+    // Loading/fatal domains omit their tiles (never zeroed); the partial
+    // state lives in the overview drawer's badge with a counted explanation.
+    const overview = screen.getByTestId('science-evidence-brief');
+    assertOperationalMetricUnavailable(overview, 'Thermal fits');
+    assertOperationalMetricUnavailable(overview, 'Tire evidence');
+    assertOperationalBriefDisclosure(overview, 'Some reports unavailable', { contains: true });
   });
 
   it('renders the notebook entry with n, method, and honesty', async () => {
@@ -885,7 +1003,7 @@ describe('ScienceLabPage', () => {
     expect(screen.getByTestId('science-weather').textContent).toMatch(/Correlation/);
   });
 
-  it('does not crash when Go encodes empty slices as null', () => {
+  it('does not crash when Go encodes empty slices as null', async () => {
     scienceMocks.electrochem.mockReturnValue(queryState({
       data: electrochem({
         ocv_points: null as unknown as ScienceElectrochem['ocv_points'],
@@ -906,10 +1024,23 @@ describe('ScienceLabPage', () => {
     }));
     renderPage();
     expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
-    expect(screen.getByTestId('science-electrochem').textContent).toMatch(/n=0/);
+    // Sample counts live in the drawer's per-metric groups.
+    const { fireEvent: sliceFire } = await import('@testing-library/react');
+    const sliceBrief = screen.getByTestId('science-electrochem-brief');
+    sliceFire.click(within(sliceBrief).getByRole('button', { name: 'Review details' }));
+    const sliceDrawer = screen.getByRole('dialog');
+    expect(within(sliceDrawer).getByRole('group', { name: 'rest points' })).toHaveTextContent('n=0');
+    expect(within(sliceDrawer).getByRole('group', { name: 'Resistance steps' })).toHaveTextContent('n=0');
+    sliceFire.keyDown(sliceDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByTestId('science-thermal').textContent).toMatch(/No park cooldown/);
     expect(screen.getByTestId('science-notebook').textContent).toMatch(/No notebook rows/);
-    expect(screen.getByTestId('science-overview')).toHaveTextContent('0 rest points · 0 resistance steps');
+    // Null slices collapse to genuine zero tiles (never blanked, never NaN).
+    const nullBrief = screen.getByTestId('science-evidence-brief');
+    const nullRest = within(nullBrief).getByText('rest points').closest('[data-operational-metric]');
+    expect(nullRest?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    const nullResistance = within(nullBrief).getByText('Resistance steps').closest('[data-operational-metric]');
+    expect(nullResistance?.querySelector('[data-operational-value]')).toHaveTextContent('0');
   });
 
   it('does not substitute zero for missing weather and thermal measurements', () => {
@@ -923,7 +1054,9 @@ describe('ScienceLabPage', () => {
     }) }));
     renderPage();
     expect(screen.getByTestId('science-thermal')).toHaveTextContent('unknown');
-    expect(screen.getByTestId('science-overview')).toHaveTextContent('0 qualified cooldown fits');
+    const zeroBrief = screen.getByTestId('science-evidence-brief');
+    const zeroThermal = within(zeroBrief).getByText('Thermal fits').closest('[data-operational-metric]');
+    expect(zeroThermal?.querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(screen.getByTestId('science-weather')).toHaveTextContent('unknown');
     expect(screen.getByTestId('science-weather')).not.toHaveTextContent('0.000 kg/m³');
   });
@@ -955,8 +1088,10 @@ describe('ScienceLabPage', () => {
     ]));
     expect(screen.getByTestId('science-tires-brief').querySelector('[data-operational-metric="front-left"]'))
       .toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByTestId('science-weather-brief').querySelector('[data-operational-metric="density-correlation"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(
+      screen.getByTestId('science-weather-brief'),
+      'r(density, residual)',
+    );
     bridge.mockRestore();
   });
 
@@ -990,10 +1125,22 @@ describe('ScienceLabPage', () => {
     renderPage();
     const arrhenius = screen.getByTestId('science-arrhenius-brief');
     expect(arrhenius).toHaveTextContent('12,345.68 J/mol');
-    expect(arrhenius).toHaveTextContent('10,000.00…15,000.00 J/mol');
+    const { fireEvent: openDrawer } = await import('@testing-library/react');
+    openDrawer.click(within(arrhenius).getByRole('button', { name: 'Review details' }));
+    const arrheniusDrawer = screen.getByRole('dialog');
+    // Interval context lives in the drawer's per-metric groups.
+    expect(within(arrheniusDrawer).getByRole('group', { name: 'Ea' }))
+      .toHaveTextContent('10,000.00…15,000.00 J/mol');
+    openDrawer.keyDown(arrheniusDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const aging = screen.getByTestId('science-aging-brief');
     expect(aging).toHaveTextContent('-125.75 Wh/day');
-    expect(aging).toHaveTextContent('n=8.00');
+    openDrawer.click(within(aging).getByRole('button', { name: 'Review details' }));
+    const agingDrawer = screen.getByRole('dialog');
+    expect(within(agingDrawer).getByRole('group', { name: 'Proxy slope' }))
+      .toHaveTextContent('n=8.00');
+    openDrawer.keyDown(agingDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const weatherBrief = screen.getByTestId('science-weather-brief');
     const density = weatherBrief.querySelector('[data-operational-metric="density-correlation"]');
     const wind = weatherBrief.querySelector('[data-operational-metric="wind-correlation"]');
@@ -1015,11 +1162,11 @@ describe('ScienceLabPage', () => {
     }));
     renderPage();
     const tiresBrief = screen.getByTestId('science-tires-brief');
-    expect(tiresBrief).toHaveTextContent('Cached · refresh paused');
+    assertOperationalBriefDisclosure(tiresBrief, 'Cached · refresh paused');
     expect(tiresBrief.querySelector('[data-operational-metric="front-left"]'))
       .toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByTestId('science-evidence-brief')).toHaveTextContent('Cached · refresh paused');
-    expect(screen.getByTestId('science-electrochem-brief')).toHaveTextContent('Evidence available');
+    assertOperationalBriefDisclosure(screen.getByTestId('science-evidence-brief'), 'Cached · refresh paused');
+    assertOperationalBriefDisclosure(screen.getByTestId('science-electrochem-brief'), 'Evidence available');
     expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();
   });
 
@@ -1037,11 +1184,24 @@ describe('ScienceLabPage', () => {
     };
     scienceMocks.electrochem.mockReturnValue(queryState({ data: report }));
     renderPage();
+    const { fireEvent: drawerFire } = await import('@testing-library/react');
     const arrhenius = screen.getByTestId('science-arrhenius-brief');
-    expect(arrhenius).toHaveTextContent(`CI: ${interval} J/mol`);
+    drawerFire.click(within(arrhenius).getByRole('button', { name: 'Review details' }));
+    const arrheniusIntervalDrawer = screen.getByRole('dialog');
+    // Interval + n context lives in the drawer's per-metric groups.
+    expect(within(arrheniusIntervalDrawer).getByRole('group', { name: 'Ea' }))
+      .toHaveTextContent(`CI: ${interval} J/mol`);
+    drawerFire.keyDown(arrheniusIntervalDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const aging = screen.getByTestId('science-aging-brief');
-    expect(aging).toHaveTextContent(`CI: ${interval} Wh/day`);
-    expect(aging).toHaveTextContent('n=8.00');
+    drawerFire.click(within(aging).getByRole('button', { name: 'Review details' }));
+    const agingIntervalDrawer = screen.getByRole('dialog');
+    expect(within(agingIntervalDrawer).getByRole('group', { name: 'Proxy slope' }))
+      .toHaveTextContent(`CI: ${interval} Wh/day`);
+    expect(within(agingIntervalDrawer).getByRole('group', { name: 'Proxy slope' }))
+      .toHaveTextContent('n=8.00');
+    drawerFire.keyDown(agingIntervalDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(aging.querySelector('[data-operational-metric="proxy-slope"]')).toHaveAttribute('data-value-state', 'value');
     expect(aging).toHaveTextContent(`${slope.toFixed(2)} Wh/day`);
     expect(aging).toHaveTextContent('Assumed reference capacity');
@@ -1072,17 +1232,18 @@ describe('ScienceLabPage', () => {
     Object.assign(report.aging, { proxy_ci95_low: low, proxy_ci95_high: high, proxy_slope_wh_per_day: null });
     scienceMocks.electrochem.mockReturnValue(queryState({ data: report }));
     renderPage();
+    // Unusable intervals omit their tiles (never zeroed) with a counted
+    // drawer explanation; the unknown-interval caption fed the old tiles.
+    assertOperationalMetricUnavailable(screen.getByTestId('science-arrhenius-brief'), 'Ea');
+    assertOperationalMetricUnavailable(screen.getByTestId('science-aging-brief'), 'Proxy slope');
     for (const id of ['arrhenius', 'aging']) {
       const brief = screen.getByTestId(`science-${id}-brief`);
-      expect(brief).toHaveTextContent('Confidence interval unknown');
       expect(brief).not.toHaveTextContent('CI: 0.00…0.00');
       expect(brief).not.toHaveTextContent('NaN');
       expect(brief).not.toHaveTextContent('Infinity');
     }
     const aging = screen.getByTestId('science-aging-brief');
-    expect(aging).toHaveTextContent('n=1.00');
-    expect(aging.querySelector('[data-operational-metric="proxy-slope"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(aging.querySelector('[data-operational-metric="holdout-rmse"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(aging, 'holdout RMSE');
   });
 
   it('does not turn absent summaries into zero while preserving successful peers and genuine zeros', () => {
@@ -1096,14 +1257,15 @@ describe('ScienceLabPage', () => {
     expect(battery.querySelector('[data-operational-value]')).toBeNull();
     const overview = screen.getByTestId('science-evidence-brief');
     expect(overview).not.toHaveAttribute('aria-busy');
-    expect(overview.querySelector('[data-operational-metric="science-electrochem"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(overview, 'rest points');
     expect(overview.querySelector('[data-operational-metric="science-weather"]'))
       .toHaveAttribute('data-value-state', 'value');
     expect(screen.getByTestId('science-weather-brief').querySelector('[data-operational-metric="density-correlation"]'))
       .toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByTestId('science-weather-brief').querySelector('[data-operational-metric="wind-correlation"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(
+      screen.getByTestId('science-weather-brief'),
+      'r(wind, residual)',
+    );
   });
 
   it('keeps nullable fit ledgers unknown and exposes invalid readings rather than displaying zero', () => {
@@ -1112,13 +1274,13 @@ describe('ScienceLabPage', () => {
     scienceMocks.electrochem.mockReturnValue(queryState({ data: report }));
     scienceMocks.tires.mockReturnValue(queryState({ data: tires({ fl_kpa: Number.NaN, extra_model_low: null, extra_model_high: null }) }));
     renderPage();
-    expect(screen.getByTestId('science-arrhenius-brief').querySelector('[data-operational-metric="temperature-span"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByTestId('science-aging-brief').querySelector('[data-operational-metric="throughput"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByTestId('science-tires-brief').querySelector('[data-operational-metric="front-left"]'))
-      .toHaveAttribute('data-value-state', 'invalid');
-    expect(screen.getByTestId('science-tires-brief')).toHaveTextContent('unknown…unknown');
+    assertOperationalMetricUnavailable(screen.getByTestId('science-arrhenius-brief'), 'Temperature span');
+    assertOperationalMetricUnavailable(screen.getByTestId('science-aging-brief'), 'Throughput');
+    // No producer sets the 'invalid' valueState (verified: never in pipeline
+    // history), so the NaN reading omits its tile like any unknown -- never
+    // zeroed, with a counted drawer explanation. See Report-only findings.
+    // (The 'unknown…unknown' range caption fed the old omitted tile.)
+    assertOperationalMetricUnavailable(screen.getByTestId('science-tires-brief'), 'Front left');
     expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();
   });
 });
