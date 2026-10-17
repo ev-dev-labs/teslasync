@@ -28,7 +28,7 @@
  * intentionally NOT a dependency of this codebase — interactions use fireEvent,
  * consistent with the other page tests.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -177,6 +177,20 @@ vi.mock('@/components/feedback/Toast', async () => {
 });
 
 import GeofencesPage from './GeofencesPage';
+import i18n from 'i18next';
+
+// The zod form schema resolves its messages through the raw i18next
+// singleton (not the mocked `useTranslation`), so initialise it with an
+// empty catalogue — exactly like the app boot does before feature code
+// runs — letting every message fall back to its interpolated default.
+beforeAll(async () => {
+  await i18n.init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: { translation: {} } },
+    interpolation: { escapeValue: false },
+  });
+});
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 function makeGeofence(o: Partial<Geofence> & { id: string; name: string }): Geofence {
@@ -446,12 +460,16 @@ describe('GeofencesPage — KPI band', () => {
     store.error = new Error('kaboom');
     renderPage();
 
-    // A failed source is unknown, not a measured empty directory.
+    // A failed source is unknown, not a measured empty directory: unknown
+    // counts are omitted from the face and counted in the details drawer.
     await zones().findByRole('button', { name: 'Retry' });
-    expect(kpiValue('Total geofences')).toBe('—');
-    expect(kpiValue('Reviewed places')).toBe('—');
-    expect(kpiValue('Awaiting review')).toBe('—');
+    expect(summary().queryByText('Total geofences')).not.toBeInTheDocument();
+    expect(summary().queryByText('Reviewed places')).not.toBeInTheDocument();
+    expect(summary().queryByText('Awaiting review')).not.toBeInTheDocument();
     await waitFor(() => expect(kpiValue('Visited candidates')).toBe('0'));
+    fireEvent.click(summary().getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Geofence summary details' });
+    expect(within(drawer).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('retains saved counts and the independent directory after a summary refresh fails', async () => {
@@ -645,7 +663,7 @@ describe('GeofencesPage — bulk selection', () => {
     await waitFor(() => expect(callsMatching('POST', (url) => url === '/geofences/bulk')).toHaveLength(1));
     await screen.findByText(/Place 2: Synthetic history requires archive/);
     const workRow = zones().getByText('Work').closest('tr');
-    expect(within(workRow as HTMLElement).getByRole('checkbox', { name: 'Select row' })).toBeChecked();
+    expect(within(workRow as HTMLElement).getByRole('checkbox', { name: 'Deselect row' })).toBeChecked();
     expect(toastMock.success).not.toHaveBeenCalledWith('Geofences deleted');
     if (result.deleted === 0) {
       expect(screen.getByText(/Place 1: Synthetic refusal/)).toBeInTheDocument();
@@ -668,7 +686,7 @@ describe('GeofencesPage — bulk selection', () => {
     await waitFor(() => expect(toastMock[mode === 'transport' ? 'error' : 'warning']).toHaveBeenCalled());
     for (const name of ['Home', 'Work']) {
       const row = zones().getByText(name).closest('tr');
-      expect(within(row as HTMLElement).getByRole('checkbox', { name: 'Select row' })).toBeChecked();
+      expect(within(row as HTMLElement).getByRole('checkbox', { name: 'Deselect row' })).toBeChecked();
     }
     expect(toastMock.success).not.toHaveBeenCalledWith('Geofences deleted');
   });

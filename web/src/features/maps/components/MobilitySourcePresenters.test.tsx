@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -73,7 +73,13 @@ describe('mobility independent specialist sources', () => {
     renderPresenter(<EfficiencyDetectivePanel vehicleId="7" />);
     expect(screen.getByText('Stable')).toBeInTheDocument();
     expect(screen.getByText(shift.explanation)).toBeInTheDocument();
-    expect(screen.getByText('0% vs prior month · 0% temperature-attributed · 0°C shift')).toBeInTheDocument();
+    // Face-value disclosure: the face shows live values only (measured zeros included).
+    expect(screen.getAllByText('0%')).toHaveLength(2);
+    expect(screen.getByText('0°C')).toBeInTheDocument();
+    // The complete detail moved to the Review-details drawer.
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Month-over-month diagnosis details' });
+    expect(within(drawer).getAllByText('0% vs prior month · 0% temperature-attributed · 0°C shift').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(h.refetchShift).toHaveBeenCalledOnce();
   });

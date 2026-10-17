@@ -670,7 +670,7 @@ export default function TemperatureImpactPage() {
                   return (
                     <li key={tip.text} className="flex items-start gap-3">
                       <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${typography.color.muted}`} aria-hidden="true" />
-                      <Text variant="bodySm" className="min-w-0 break-words">
+                      <Text as="p" variant="bodySm" className="min-w-0 break-words">
                         {tip.text}
                       </Text>
                     </li>

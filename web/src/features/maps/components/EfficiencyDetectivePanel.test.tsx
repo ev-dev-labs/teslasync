@@ -159,12 +159,19 @@ describe('EfficiencyDetectivePanel', () => {
       error: refresh === 'failed' ? new Error('refresh failed') : null,
       fetchStatus: refresh === 'paused' ? 'paused' : 'idle', refetch,
     });
-    render(<EfficiencyDetectivePanel vehicleId="4" />);
+    render(<MemoryRouter><EfficiencyDetectivePanel vehicleId="4" /></MemoryRouter>);
     expect(screen.getByText(data.explanation)).toBeInTheDocument();
     expect(screen.getByText('Colder weather')).toBeInTheDocument();
-    expect(screen.getByText('15.00% vs prior month · 12.00% temperature-attributed · -8.00°C shift')).toBeInTheDocument();
+    // Face-value disclosure: the face shows live values only.
+    expect(screen.getByText('15.00%')).toBeInTheDocument();
+    expect(screen.getByText('12.00%')).toBeInTheDocument();
+    expect(screen.getByText('-8.00°C')).toBeInTheDocument();
     expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
+    // The signed detail moved to the Review-details drawer.
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Month-over-month diagnosis details' });
+    expect(within(drawer).getAllByText('15.00% vs prior month · 12.00% temperature-attributed · -8.00°C shift').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(data)).toBe(original);

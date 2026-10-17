@@ -66,6 +66,25 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicle: selectedVehicle }),
 }));
 
+// Vehicle-aware timezone: the global setup mock hardcodes the vehicle to
+// undefined (UTC for bare renders), but the saved-zone cases drive
+// 'vehicle' mode through the selected vehicle's timezone. Resolve through
+// the file-mocked vehicle + preferences instead.
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  const { useSelectedVehicle } = await import('@/hooks/useSelectedVehicle');
+  const { useSettings } = await import('@/hooks/useSettings');
+  return {
+    ...actual,
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') => {
+      const { vehicle } = (useSelectedVehicle() ?? {}) as { vehicle?: { timezone?: string | null } | null };
+      const settings = (useSettings() as { settings?: { timezone_user?: string | null } } | undefined)?.settings;
+      const userTz = settings?.timezone_user?.trim() ? settings.timezone_user : 'UTC';
+      return actual.resolveTimezone(mode, vehicle?.timezone, userTz);
+    },
+  };
+});
+
 vi.mock('@/api/hooks/useLocations', () => ({
   useCreateGeofenceRate: vi.fn(),
 }));

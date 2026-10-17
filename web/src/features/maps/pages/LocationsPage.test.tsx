@@ -34,6 +34,7 @@ import type { ReactNode } from 'react';
 import type { LocationLeaderboardPanelProps } from '../components/LocationLeaderboardPanel';
 import type { AIAutoNameUnnamedLocationsProps } from '@/components/ai/AIAutoNameUnnamedLocations';
 import type { SelectedVehicleResult } from '@/hooks/useSelectedVehicle';
+import type { AppSettings } from '@/api/types';
 import { deriveDataState } from '@/api/dataState';
 import { chartTokens, typography } from '@/lib/tokens';
 
@@ -97,6 +98,97 @@ vi.mock('@/hooks/useRangeState', async (importActual) => {
       setCompare: vi.fn(),
       reset: vi.fn(),
     }),
+  };
+});
+
+// Cache-backed settings: the global setup mock pins useSettings to fixed
+// defaults, but the saved locale/timezone test drives formatting through
+// the ['settings'] query cache. This file-level mock binds the real
+// normalization to that cache — seeded with identical defaults, reactive
+// to setQueryData, and never fetching (so no '/settings' request can
+// disturb the request-contract assertions or the machine timezone).
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  const { useMemo, useSyncExternalStore } = await import('react');
+  const { useQueryClient } = await import('@tanstack/react-query');
+  const { deriveDataState } = await import('@/api/dataState');
+  const { resolveLocale } = await import('@/lib/locale');
+  const cacheDefaults: AppSettings = {
+    unit_of_length: 'km',
+    unit_of_temp: 'C',
+    unit_of_pressure: 'bar',
+    preferred_range: 'rated',
+    language: 'en',
+    base_cost_per_kwh: 0.12,
+    api_suspended: false,
+    theme: 'neon-cyan',
+    mode: 'dark',
+    custom_primary: '#00b4d8',
+    custom_accent: '#e63946',
+    gas_price_per_unit: 0,
+    gas_unit: 'gallon',
+    gas_efficiency_mpg: 25,
+    decimal_precision: 2,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '07:00',
+    alert_digest_mode: 'instant',
+    currency_symbol: '$',
+    locale: 'en-US',
+    tz_display_default: 'vehicle',
+    timezone_user: '',
+    tab_badge_enabled: true,
+    critical_flash_enabled: true,
+    ui_density: 'comfortable',
+    time_format_default: 'relative',
+    chart_palette: 'cb_safe',
+    ai_mode: 'off',
+    ai_features: {},
+    ai_provider_config: {},
+    ai_cost_cap_cents: 0,
+  };
+  return {
+    ...actual,
+    useSettings: () => {
+      // Direct cache subscription (no useQuery observer): the ['settings']
+      // entry is seeded by tests via setQueryData and intentionally never
+      // fetched, so read it straight from the client and re-render only
+      // when its reference changes.
+      const client = useQueryClient();
+      const cached = useSyncExternalStore(
+        (onStoreChange) => client.getQueryCache().subscribe(onStoreChange),
+        () => client.getQueryData(['settings']) ?? cacheDefaults,
+        () => client.getQueryData(['settings']) ?? cacheDefaults,
+      );
+      const s: AppSettings = useMemo(() => {
+        const raw = cached as AppSettings;
+        return raw.locale && raw.locale.trim().length > 0
+          ? raw
+          : { ...raw, locale: cacheDefaults.locale };
+      }, [cached]);
+      const decimals = typeof s.decimal_precision === 'number' && Number.isFinite(s.decimal_precision)
+        ? Math.max(0, Math.min(20, Math.trunc(s.decimal_precision)))
+        : 2;
+      const locale = resolveLocale(s.locale);
+      return useMemo(() => {
+        const density: 'compact' | 'comfortable' | 'spacious' =
+          s.ui_density === 'compact' || s.ui_density === 'spacious' ? s.ui_density : 'comfortable';
+        const rangeType: 'rated' | 'ideal' = s.preferred_range === 'ideal' ? 'ideal' : 'rated';
+        return {
+          settings: s,
+          settingsState: deriveDataState({ data: s, isSuccess: true }),
+          settingsUnavailable: false,
+          refetch: () => client.refetchQueries({ queryKey: ['settings'] }),
+          isMiles: s.unit_of_length === 'mi',
+          isFahrenheit: s.unit_of_temp === 'F',
+          isPSI: (s.unit_of_pressure ?? 'bar') === 'psi',
+          decimals,
+          locale,
+          density,
+          rangeType,
+        };
+      }, [s, decimals, locale, client]);
+    },
   };
 });
 
@@ -304,9 +396,10 @@ describe('LocationsPage — shell & request contract', () => {
   it('retains loaded-page scope and opens the original-duration evidence in the real summary drawer', async () => {
     renderPage();
     await waitFor(() => expect(kpiValue('Total visits')).toBe('46'));
-    expect(within(kpiRegion()).getAllByText(/not server-wide totals/).length).toBeGreaterThan(0);
+    // Face-value disclosure: the loaded-page scope moved to the summary drawer.
     fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Location summary details' });
+    expect(within(drawer).getAllByText(/not server-wide totals/).length).toBeGreaterThan(0);
     expect(within(drawer).getByText('Home, Seattle')).toBeInTheDocument();
     expect(within(drawer).getByText('Loaded-page total duration divided by loaded-page visits; zero when the successful page contains no visits.')).toBeInTheDocument();
   });
