@@ -42,7 +42,7 @@
  * {{placeholder}} interpolation applied.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
@@ -524,7 +524,12 @@ describe('NavigationRoutePage — independent source posture', () => {
     h.historyMode = 'reject';
     fireEvent.click(getHeaderRefresh());
     await waitFor(() => expect(qc.getQueryState(['location-history', 7])?.status).toBe('error'));
-    await screen.findByText('Retained source data');
+    // Retained status moved off the face into the drawer header badge; poll
+    // the drawer until the failed refresh lands.
+    const metricsBand = screen.getByRole('region', { name: 'Route metrics' });
+    await waitFor(() => {
+      assertOperationalBriefDisclosure(metricsBand, 'Retained source data');
+    });
     expect(qc.getQueryData(['location-history', 7])).toBe(retained);
     expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '1');
     expect(screen.getByTestId('line-chart')).toHaveAttribute('data-points', '1');
@@ -537,7 +542,8 @@ describe('NavigationRoutePage — independent source posture', () => {
     fireEvent.click(getHeaderRefresh());
     await waitFor(() => expect(qc.getQueryState(['location-history', 7])?.status).toBe('success'));
     await waitFor(() => expect(within(screen.getByTestId('maps:navigation-location-history')).getByText('Recovered destination')).toBeInTheDocument());
-    expect(screen.queryByText('Retained source data')).not.toBeInTheDocument();
+    // Recovery swaps the drawer badge back to available.
+    assertOperationalBriefDisclosure(metricsBand, 'Source data available');
     expect(qc.getQueryState(['location-history', 7])?.error).toBeNull();
   });
 
@@ -578,7 +584,9 @@ describe('NavigationRoutePage — independent source posture', () => {
     expect(within(metrics).getByText('0.00 min')).toBeInTheDocument();
     expect(within(metrics).getByText('0s')).toBeInTheDocument();
     expect(within(metrics).queryByText('0.00 km/h')).not.toBeInTheDocument();
-    expect(within(metrics).getByText('—')).toBeInTheDocument();
+    // Unmeasured average speed is omitted (never zeroed) with a counted
+    // drawer explanation.
+    assertOperationalMetricUnavailable(metrics, 'Avg speed');
   });
   it('keeps the active route while the fleet and history are loading', () => {
     h.vehiclesLoading = true;
@@ -685,7 +693,16 @@ describe('NavigationRoutePage — ready state', () => {
 
     // Current location (valid coords, 4 dp), GPS fix (GpsValid → locked),
     // heading 0 → "N (0°)", work present, home away.
-    expect(screen.getByText('37.5000, -122.2500')).toBeInTheDocument();
+    // The face shows Lat/Lon as separate tiles; the combined caption lives
+    // in the drawer's Lat group.
+    const location = screen.getByRole('region', { name: 'Location status' });
+    expect(within(location).getByText('37.5000')).toBeInTheDocument();
+    expect(within(location).getByText('-122.2500')).toBeInTheDocument();
+    fireEvent.click(within(location).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Lat' })).toHaveTextContent('37.5000, -122.2500');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('locked')).toBeInTheDocument();
     expect(screen.getByText('N (0°)')).toBeInTheDocument();
     expect(screen.getByText('At work')).toBeInTheDocument();
@@ -786,8 +803,16 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     renderPage();
 
     expect(screen.getByText('Inactive')).toBeInTheDocument();
-    // Distance + ETA + Traffic Delay + Energy metrics all fall back to em-dash.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    // Distance + ETA + Traffic Delay + Energy + Avg speed are all unknown:
+    // no face tiles, an explanatory face state with label chips, and a
+    // counted drawer explanation per missing metric.
+    const blanked = screen.getByRole('region', { name: 'Route metrics' });
+    expect(blanked.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(within(blanked).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Distance', 'ETA', 'Traffic delay', 'Avg speed', 'Energy at arrival']) {
+      expect(within(blanked).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(blanked, label);
+    }
     expect(screen.getByText(/No active navigation/)).toBeInTheDocument();
     expect(screen.getAllByText('No active route selected')).toHaveLength(2);
     expect(within(screen.getByRole('region', { name: 'Route details' })).queryByText(/600s/)).not.toBeInTheDocument();
@@ -812,7 +837,11 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     renderPage();
 
     expect(screen.getByText(/GPS coordinates not available/)).toBeInTheDocument();
-    expect(screen.getByText('Location unavailable')).toBeInTheDocument();
+    // Zeroed coordinates omit both tiles (the 'Location unavailable' caption
+    // now only feeds the Lat context when valid) with a counted explanation.
+    const zeroed = screen.getByRole('region', { name: 'Location status' });
+    assertOperationalMetricUnavailable(zeroed, 'Lat');
+    assertOperationalMetricUnavailable(zeroed, 'Lon');
   });
 
   it('renders a per-section EmptyState for every history-bound panel when empty', async () => {
@@ -827,10 +856,9 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     expect(screen.getByText('No destination history available.')).toBeInTheDocument();
     expect(screen.getByText('No location snapshots recorded yet.')).toBeInTheDocument();
     // An empty history has no measured average, not a measured stationary speed.
-    const metrics = within(screen.getByRole('region', { name: 'Route metrics' }));
-    const average = metrics.getByText('Avg speed').closest('[data-operational-metric]');
-    expect(average?.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(metrics.queryByText('0.00 km/h')).not.toBeInTheDocument();
+    const metrics = screen.getByRole('region', { name: 'Route metrics' });
+    assertOperationalMetricUnavailable(metrics, 'Avg speed');
+    expect(within(metrics).queryByText('0.00 km/h')).not.toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
   });
 
@@ -1023,7 +1051,13 @@ describe('NavigationRoutePage — original trust, dates, zero coordinates and de
     ];
     renderPage();
     const table = await screen.findByTestId('maps:navigation-location-history');
-    expect(screen.getByText(current)).toBeInTheDocument();
+    // The combined current-location caption lives in the drawer's Lat group.
+    const currentStatus = screen.getByRole('region', { name: 'Location status' });
+    fireEvent.click(within(currentStatus).getByRole('button', { name: 'Review details' }));
+    const currentDrawer = screen.getByRole('dialog');
+    expect(within(currentDrawer).getByRole('group', { name: 'Lat' })).toHaveTextContent(current);
+    fireEvent.keyDown(currentDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.queryByText(/GPS coordinates not available/)).not.toBeInTheDocument();
     expect(within(table).getByText(lat)).toBeInTheDocument();
     expect(within(table).getByText(lon)).toBeInTheDocument();
@@ -1050,10 +1084,14 @@ describe('NavigationRoutePage — heading cardinal (edge hardening)', () => {
     rerender(buildTree(qc));
     expect(screen.getByText('N (0°)')).toBeInTheDocument();
 
-    // Missing heading → the "Unknown" fallback, card marked inactive.
+    // Missing heading → the tile is omitted with a counted drawer
+    // explanation instead of an "Unknown" tile.
     h.latest = { ...baseLatest(), heading: undefined };
     rerender(buildTree(qc));
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Location status' }),
+      'Heading',
+    );
   });
 
   describe('NavigationRoutePage — modernization preservation', () => {

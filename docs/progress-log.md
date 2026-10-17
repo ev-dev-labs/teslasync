@@ -47,3 +47,4 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-17 00:01 | repair group 19 TariffLab (hang bisect) | row 17 closeout 07076a6bb8 + row 18 open-req-5 fixes a168c21688 committed+pushed; TariffLab 32->26 via FadeIn/motion mock; drawer-migration script applied (18 sites); hang isolated to waitFor+drawer churn (probe running) | hang defeats testTimeout; bisect in progress
 2026-10-17 00:35 | repair group 19 TariffLab done | 56/56 green (was 24/32 failed); settle-then-open pattern fixed hang; tsc/lint/catalog/build green; committing+pushing | none
 2026-10-17 01:10 | repair group 20 DriveScore done | 127/127 green (was 120/7 failed) across 5 files; tsc/lint/catalog/build green; committing+pushing | none
+2026-10-17 01:45 | repair group 21 maps-nav done | 80/80 green (was 66/14 failed); tsc/lint/catalog/build green; committing+pushing | none

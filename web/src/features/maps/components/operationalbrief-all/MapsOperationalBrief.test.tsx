@@ -174,7 +174,10 @@ describe('maps OperationalBrief source contract', () => {
     assertOperationalBriefDisclosure(band, statusLabel);
     expect(band).not.toHaveAttribute('aria-busy');
     expect(within(band).getByText('0.00 km/h')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    // The missing heading is omitted from the face (no missing tile) and
+    // explained in the drawer; measured zero stays numeric.
+    assertOperationalMetricUnavailable(band, 'Heading');
     expect(screen.queryByText('Loading source data')).not.toBeInTheDocument();
   });
 
