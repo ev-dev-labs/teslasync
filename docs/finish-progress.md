@@ -384,6 +384,11 @@ Report-C split (excl. trio): **1,211 actionable fails in 325 files**. Sixteen fo
 
 15/16 integrated (analytics pending): power-user 7/7, benchmarks 8/8, explore 14/14, action-center 12/12, dashcam 15/15, intelligence-packs 14/14, exports 18/18, onboarding 20/20, sharing 20/20, diagnostics 71/71, dashboard partial 50/136 (86 left, SUBSET-OK vs baseline), maps 13/13, charging partial 72/194 (122 left), admin partial 74/249 (175 left, SUBSET-OK), system 112/112. Wave-3 resolved so far: **520** (full-green folders 334 + partials 186). Each pick verified post-cherry-pick; worktrees/branches removed after push.
 Review notes: explore/diagnostics/maps production hunks are UI-only (accessible-name whitespace, `as="p"`). System pick: 4 production files; `StateTimeline presetLabel` ("120.00m" → "2 h" widen labels) initially reverted as unpinned scope creep, but 2 untouched pre-existing tests pin the humanized labels, so the revert was itself reverted and the child's fix stands (verified 8/8 on the 2 affected files). OutageAutobiographyPage retry-gating (`!isRefreshBlocked`) accepted as honest-UI behavior, unpinned — recorded here for visibility.
+Analytics pick (16/16): 192/201 resolved, 9 left in 5 files (SUBSET-OK). Its 1-char production hunk (YearReviewPage constraint '2010-2100' → '2010–2100') satisfies a pre-existing unweakened test pin — legitimate. All wave-3 worktrees/branches removed.
+
+### Wave 3 closeout (2026-10-17)
+
+Children resolved **712** (full-green 12 folders: power-user 7, benchmarks 8, explore 14, action-center 12, dashcam 15, intelligence-packs 14, exports 18, onboarding 20, sharing 20, diagnostics 71, maps 13, system 112 = 334; partials: analytics 192, admin 74, charging 72, dashboard 50 = 378) + main-agent 14 = **726 wave-3 resolved**. Cumulative original failures resolved: **3002** (2276 + 726). Expected remaining: ~974 (trio 489 + trio-class i18n 18 + proven pre-existing 52 + wave-3 partials 392 [admin 175, charging 122, dashboard 86, analytics 9] + documented blocks 23 [battery 14, telemetry 5, driving 3, vehicles flake 1]).
 
 ### Main-agent sequential remainder (2026-10-17)
 
