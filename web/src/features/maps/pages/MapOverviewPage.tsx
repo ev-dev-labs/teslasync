@@ -1,20 +1,21 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   MapPin, Clock, Home, Briefcase,
   Link2, Navigation, Route, Fence, LocateFixed,
+  Gauge, Compass, Info,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 
 import {
-  GlassPanel, Badge, Button, DataTable, Text, type Column, type MobileDataTablePresentation,
+  GlassPanel, Badge, DataTable, Text, IconButton, CopyButton, Drawer, PanelTitle,
+  type Column, type MobileDataTablePresentation,
 } from '@/components/ui';
-import { TimeStamp } from '@/components/data-display';
-import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
-import { Skeleton, EmptyState, QueryError, AlertBanner, LiveStaleDataBanner, DataSourceNotice } from '@/components/feedback';
+import { TimeStamp, FreshnessDotAuto } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError, AlertBanner, LiveStaleDataBanner, DataSourceNotice, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Marker, Popup, Polyline,
@@ -33,6 +34,7 @@ import { useUrlEnum } from '@/hooks/useUrlState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
 import { cn } from '@/lib/cn';
+import { headingToCardinal } from '@/lib/heading';
 import { typography } from '@/lib/tokens';
 import { request } from '@/api/client';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -94,8 +96,9 @@ function StatusRow({ icon, label, children }: { icon: ReactNode; label: string; 
 export default function MapOverviewPage() {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('maps');
-  const { formatDateTime } = useDateFormat();
+  const { formatDateTime, formatRelativeTime } = useDateFormat();
   const navigate = useGuardedNavigate();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   usePageTitle(t('mapOverview.pageTitle', 'Map overview'));
 
   /* ---- unit prefs: format at the display boundary from SI ---- */
@@ -217,13 +220,11 @@ export default function MapOverviewPage() {
   const atWork = locationDetails?.located_at_work ?? locationDetails?.locatedAtWork;
   const homelinkNearby = locationDetails?.homelink_nearby;
   const briefScope = t('mapOverview.brief.scope', 'Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.');
-  const briefMetrics = [
-    { metricId: 'speed', occurrenceId: 'overview-speed', rawValue: latest?.speed, label: t('mapOverview.observedSpeed', 'Observed speed'), description: briefScope, display: { formatter: (raw: number) => ({ value: formatSpeed(raw), unit: '' }) } },
-    { metricId: 'number', occurrenceId: 'overview-heading', rawValue: latest?.heading, label: t('mapOverview.heading', 'Heading'), description: t('mapOverview.brief.heading', 'Reported heading in degrees.'), display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}°`, unit: '' }) } },
-    { metricId: 'number', occurrenceId: 'overview-latitude', rawValue: hasValidLocation ? latest?.latitude : null, label: t('mapOverview.colLat', 'Lat'), description: t('mapOverview.latLon', 'Lat / lon'), context: hasValidLocation && latest ? `${fmtScientificNumber(latest.latitude, 4)}, ${fmtScientificNumber(latest.longitude, 4)}` : undefined, display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
-    { metricId: 'number', occurrenceId: 'overview-longitude', rawValue: hasValidLocation ? latest?.longitude : null, label: t('mapOverview.colLon', 'Lon'), description: t('mapOverview.latLon', 'Lat / lon'), display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
-    { metricId: 'text', occurrenceId: 'overview-updated', rawValue: latest?.created_at ? formatDateTime(latest.created_at) : null, label: t('mapOverview.lastObserved', 'Last observed'), description: t('mapOverview.observationFreshness', 'Stored observation time. Polling every 15 s checks for positions, not whether this observation is current.') },
-  ] as const;
+  const coordinateLine = hasValidLocation && latest
+    ? `${fmtScientificNumber(latest.latitude, 4)}, ${fmtScientificNumber(latest.longitude, 4)}`
+    : null;
+  const positionMapLabel = t('mapOverview.positionMap', 'Recorded location map');
+  const sourceLine = `${positionMapLabel}: ${t('provenance.historical', 'Historical')}`;
 
   const triLabel = (v: boolean | null | undefined): string =>
     v === true ? t('mapOverview.yes', 'Yes')
@@ -330,26 +331,15 @@ export default function MapOverviewPage() {
         </AlertBanner>
       )}
 
-      {/* 1 — KPI band: recorded vehicle status, full-width responsive metric grid. */}
-      <FadeIn>
-        <MapsOperationalBrief
-          title={t('mapOverview.kpis', 'Vehicle status')}
-          description={t('mapOverview.brief.description', 'Reported motion and coordinates from the latest position; missing GPS is not a measured zero.')}
-          scope={briefScope}
-          metrics={briefMetrics}
-          sources={[{ label: t('mapOverview.positionMap', 'Recorded location map'), state: latestState }]}
-          loading={latestLoading}
-        />
-      </FadeIn>
-
-      {/* 2 — Hero: recorded position map + side context column. */}
+      {/* 1 — Hero: recorded position map + info panel in ONE surface (trip replay model). */}
       <FadeIn delay={0.05}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <GlassPanel className="overflow-hidden p-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,13fr)_minmax(300px,7fr)]" data-testid="map-overview-hero">
           {/* Recorded position map — the hero visual. */}
-          <GlassPanel
+          <div
             role="region"
-            aria-label={t('mapOverview.positionMap', 'Recorded location map')}
-            className="relative h-[380px] overflow-hidden sm:h-[460px] xl:col-span-2 xl:h-[600px]"
+            aria-label={positionMapLabel}
+            className="relative h-[380px] overflow-hidden sm:h-[460px] lg:h-auto lg:min-h-[560px]"
           >
             {latestLoading && !latest ? (
               <>
@@ -394,12 +384,70 @@ export default function MapOverviewPage() {
                 />
               </div>
             )}
-          </GlassPanel>
+          </div>
 
-          {/* Side context: location status + quick links (fills the map height on xl). */}
-          <div className="flex flex-col gap-4">
-            <LayoutCard title={t('mapOverview.locationDetails', 'Location details')}>
+          {/* Info panel: latest observation, location status, coordinates. */}
+          <section
+            aria-label={t('mapOverview.locationDetails', 'Location details')}
+            aria-busy={latestLoading || undefined}
+            className="flex min-w-0 flex-col gap-4 border-t border-[var(--border-subtle)] p-4 sm:p-5 lg:border-s lg:border-t-0"
+          >
+            <header className="flex min-w-0 flex-wrap items-center gap-2">
+              <PanelTitle className="mb-0 min-w-0 flex-1">{t('mapOverview.locationDetails', 'Location details')}</PanelTitle>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <IconButton icon={<Route className="h-4 w-4" aria-hidden="true" />} label={t('mapOverview.navRoute', 'Navigation route')} onClick={() => { void navigate('/navigation'); }} />
+                <IconButton icon={<Fence className="h-4 w-4" aria-hidden="true" />} label={t('mapOverview.geofences', 'Geofences')} onClick={() => { void navigate('/geofences'); }} />
+                <IconButton icon={<LocateFixed className="h-4 w-4" aria-hidden="true" />} label={t('mapOverview.locations', 'Locations')} onClick={() => { void navigate('/locations'); }} />
+                <IconButton icon={<Info className="h-4 w-4" aria-hidden="true" />} label={t('mapOverview.details', 'Details')} onClick={() => setDetailsOpen(true)} />
+                <FreshnessDotAuto query={latestQuery} refreshIntervalMs={15_000} source={positionMapLabel} />
+              </div>
+            </header>
+            <StaleRefreshWarning state={latestState} label={positionMapLabel} />
+            {latestLoading ? (
+              <Skeleton lines={3} height={20} />
+            ) : (
               <div className="space-y-3">
+                <StatusRow
+                  icon={<Gauge className={cn('h-5 w-5', typography.color.muted)} />}
+                  label={t('mapOverview.observedSpeed', 'Observed speed')}
+                >
+                  <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
+                    {formatSpeed(latest?.speed ?? null)}
+                  </Text>
+                </StatusRow>
+                <StatusRow
+                  icon={<Compass className={cn('h-5 w-5', typography.color.muted)} />}
+                  label={t('mapOverview.heading', 'Heading')}
+                >
+                  <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
+                    {latest?.heading != null
+                      ? t('mapOverview.headingValue', '{{cardinal}} ({{degrees}}°)', {
+                        cardinal: headingToCardinal(latest.heading),
+                        degrees: Math.round(latest.heading),
+                      })
+                      : '—'}
+                  </Text>
+                </StatusRow>
+                <StatusRow
+                  icon={<Clock className={cn('h-5 w-5', typography.color.muted)} />}
+                  label={t('mapOverview.lastObserved', 'Last observed')}
+                >
+                  {latest?.created_at ? (
+                    <span className="text-right">
+                      <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
+                        {formatDateTime(latest.created_at)}
+                      </Text>{' '}
+                      <Text as="span" variant="caption" color="muted" className="tabular-nums">
+                        · {formatRelativeTime(latest.created_at)}
+                      </Text>
+                    </span>
+                  ) : (
+                    <Text size="sm" weight="semibold" color="primary">—</Text>
+                  )}
+                </StatusRow>
+              </div>
+            )}
+            <div className="space-y-3">
                   <DataSourceNotice sources={[{ id: 'location-details', label: t('mapOverview.locationDetails', 'Location details'), query: locationQuery, enabled: selectedId !== '' }]} />
                   {locationLoading && <Skeleton lines={3} height={20} />}
                   {locationError && <QueryError error={locationError} onRetry={() => locationQuery.refetch()} />}
@@ -433,57 +481,61 @@ export default function MapOverviewPage() {
                     </Badge>
                   </StatusRow>
 
-                  {/* Odometer */}
-                  <StatusRow
-                    icon={<Navigation className={cn('h-5 w-5', typography.color.muted)} />}
-                    label={t('mapOverview.odometer', 'Odometer')}
-                  >
-                    <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
-                      {formatDistance(latest?.odometer ?? null)}
-                    </Text>
-                  </StatusRow>
                   {locationQuery.isSuccess && !locationDetails && !latest && (
                     <EmptyState /* no-action: transient empty state — no location data yet */
                       message={t('mapOverview.noLocation', 'No location data available yet')}
                     />
                   )}
+            </div>
+            {latestLoading ? (
+              <Skeleton lines={2} height={20} />
+            ) : (
+              <div className="space-y-3">
+                {/* Odometer */}
+                <StatusRow
+                  icon={<Navigation className={cn('h-5 w-5', typography.color.muted)} />}
+                  label={t('mapOverview.odometer', 'Odometer')}
+                >
+                  <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
+                    {formatDistance(latest?.odometer ?? null)}
+                  </Text>
+                </StatusRow>
+                <StatusRow
+                  icon={<MapPin className={cn('h-5 w-5', typography.color.muted)} />}
+                  label={t('mapOverview.coordinates', 'Coordinates')}
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
+                      {coordinateLine ?? '—'}
+                    </Text>
+                    {coordinateLine && (
+                      <CopyButton
+                        iconOnly
+                        text={coordinateLine}
+                        label={t('mapOverview.copyCoordinates', 'Copy coordinates')}
+                        title={t('mapOverview.copyCoordinates', 'Copy coordinates')}
+                      />
+                    )}
+                  </span>
+                </StatusRow>
               </div>
-            </LayoutCard>
-
-            <LayoutCard title={t('mapOverview.quickLinks', 'Quick links')}>
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  wrapLabel
-                  icon={<Route className="h-4 w-4" aria-hidden="true" />}
-                  onClick={() => { void navigate('/navigation'); }}
-                  className="min-h-11 w-full justify-start"
-                >
-                  {t('mapOverview.navRoute', 'Navigation route')}
-                </Button>
-                <Button
-                  variant="outline"
-                  wrapLabel
-                  icon={<Fence className="h-4 w-4" aria-hidden="true" />}
-                  onClick={() => { void navigate('/geofences'); }}
-                  className="min-h-11 w-full justify-start"
-                >
-                  {t('mapOverview.geofences', 'Geofences')}
-                </Button>
-                <Button
-                  variant="outline"
-                  wrapLabel
-                  icon={<LocateFixed className="h-4 w-4" aria-hidden="true" />}
-                  onClick={() => { void navigate('/locations'); }}
-                  className="min-h-11 w-full justify-start"
-                >
-                  {t('mapOverview.locations', 'Locations')}
-                </Button>
-              </div>
-            </LayoutCard>
+            )}
+          </section>
           </div>
-        </section>
+        </GlassPanel>
       </FadeIn>
+      <Drawer open={detailsOpen} onClose={() => setDetailsOpen(false)} title={t('mapOverview.sourcesTitle', 'Sources and method')}>
+        <div className="space-y-3">
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('mapOverview.brief.description', 'Reported motion and coordinates from the latest position; missing GPS is not a measured zero.')}
+          </Text>
+          <Text as="p" variant="bodySm" color="secondary">{briefScope}</Text>
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('mapOverview.observationFreshness', 'Stored observation time. Polling every 15 s checks for positions, not whether this observation is current.')}
+          </Text>
+          <Text as="p" variant="bodySm" color="secondary">{sourceLine}</Text>
+        </div>
+      </Drawer>
 
       {/* 3 — Recent route playback: full-width band with an animated replay. */}
       <FadeIn delay={0.1}>

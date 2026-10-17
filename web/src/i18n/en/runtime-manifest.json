@@ -609,7 +609,6 @@
       "metrics",
       "ocpp",
       "powershare",
-      "provenance",
       "tesla_charging",
       "tesla_sessions",
       "wait_oracle"
@@ -689,6 +688,7 @@
       "mapOverview",
       "mapsBrief",
       "navigation",
+      "provenance",
       "tempImpact"
     ],
     "trips": [
@@ -1929,6 +1929,7 @@
       "powerSql",
       "problemReport",
       "productPreferences",
+      "provenance",
       "pwa",
       "quietHours",
       "range",
@@ -2532,7 +2533,6 @@
       "powerSql",
       "problemReport",
       "productPreferences",
-      "provenance",
       "pwa",
       "quietHours",
       "range",

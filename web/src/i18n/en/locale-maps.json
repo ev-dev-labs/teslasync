@@ -387,10 +387,12 @@
     "vehicle": "Vehicle",
     "currentSpeed": "Current speed",
     "heading": "Heading",
-    "latLon": "Lat / Lon",
+    "headingValue": "{{cardinal}} ({{degrees}}°)",
     "lastUpdated": "Last updated",
     "autoRefresh": "Auto-refreshes every 15 s",
     "locationDetails": "Location details",
+    "details": "Details",
+    "sourcesTitle": "Sources and method",
     "atHome": "At home",
     "yes": "Yes",
     "no": "No",
@@ -398,11 +400,12 @@
     "atWork": "At work",
     "homelinkNearby": "HomeLink nearby",
     "odometer": "Odometer",
+    "coordinates": "Coordinates",
+    "copyCoordinates": "Copy coordinates",
     "distanceUnit": "mi",
     "speedUnitValue": "{{unit}}",
     "distanceUnitValue": "{{unit}}",
     "noLocation": "No location data available yet",
-    "quickLinks": "Quick links",
     "navRoute": "Navigation route",
     "geofences": "Geofences",
     "locations": "Locations",
@@ -412,12 +415,10 @@
     "recentPlayback": "Recent route playback",
     "playbackLabel": "Recent route playback map",
     "subtitle": "Live vehicle location and recent history",
-    "kpis": "Vehicle status",
     "noPlayback": "Not enough GPS points to replay a route yet.",
     "mapRegion": "Live location map",
     "brief": {
       "scope": "Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.",
-      "heading": "Reported heading in degrees.",
       "description": "Reported motion and coordinates from the latest position; missing GPS is not a measured zero."
     }
   },
@@ -437,6 +438,14 @@
   },
   "navigation": {
     "noRoute": "No active route selected"
+  },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
   },
   "tempImpact": {
     "tipCold": "Precondition your cabin in cold weather to reduce battery drain",
@@ -1828,14 +1837,6 @@
         "label": "Owner"
       }
     }
-  },
-  "provenance": {
-    "cached": "Cached",
-    "historical": "Historical",
-    "inferred": "Estimated",
-    "live": "Live",
-    "repaired": "Repaired",
-    "unknown": "Unknown source"
   },
   "pwa": {
     "lowBandwidth": {

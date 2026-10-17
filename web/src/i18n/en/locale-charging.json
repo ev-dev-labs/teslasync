@@ -1274,14 +1274,6 @@
       "sectionLabel": "Powershare runtime trend and stop reason"
     }
   },
-  "provenance": {
-    "cached": "Cached",
-    "historical": "Historical",
-    "inferred": "Estimated",
-    "live": "Live",
-    "repaired": "Repaired",
-    "unknown": "Unknown source"
-  },
   "tesla_charging": {
     "title": "Tesla charging history",
     "durationHoursMinutes": "{{hours}}h {{minutes}}m",
@@ -3011,6 +3003,14 @@
         "label": "Owner"
       }
     }
+  },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
   },
   "pwa": {
     "lowBandwidth": {

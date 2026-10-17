@@ -4,9 +4,12 @@
  * The page is the "Map Overview" recorded-location dashboard. It fans one
  * TanStack Query hook (`useVehicles`) and three raw `request()` queries
  * (latest position, 50-point history, latest location snapshot) through the
- * real `useUnits` SI→display boundary into six surfaces: an observed-status KPI
- * band, a hero leaflet map, a location-details rail, a quick-links rail, a
- * recent-route playback panel, and a recent-history table.
+ * real `useUnits` SI→display boundary into one hero surface (a leaflet map
+ * beside an info panel with the latest observation, location status and
+ * coordinates), a recent-route playback panel, and a recent-history table.
+ * The panel header carries icon-only shortcuts to the navigation, geofences
+ * and locations routes, a Details disclosure for sources and method, and the
+ * freshness dot for the latest position.
  *
  * Two layers are exercised:
  *
@@ -20,7 +23,7 @@
  *      independent query error branches (map / location / history) with their
  *      Retry affordances, the latest-position loading skeletons, the SI→km and
  *      SI→mi unit boundary, the shareable map-layer switch, registered router
- *      quick links, and labelled landmark regions.
+ *      shortcuts, the coordinates copy affordance, and labelled landmarks.
  *
  * Network is mocked at the `@/api/client` boundary (repo convention — see
  * TeslaChargingSessionsPage.test.tsx). `useTimezone` comes from the global stub
@@ -29,7 +32,6 @@
  * would hand to leaflet so we can assert on them.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
@@ -376,7 +378,18 @@ beforeEach(() => {
   install()
 })
 
-afterEach(() => onlineManager.setOnline(true))
+afterEach(() => {
+  onlineManager.setOnline(true)
+  // Remove the clipboard shadow so each test starts clean.
+  if ('clipboard' in navigator) {
+    try {
+      // @ts-expect-error test-only cleanup of the defineProperty shadow
+      delete navigator.clipboard
+    } catch {
+      // jsdom owns the property; nothing to clean.
+    }
+  }
+})
 
 /* ── Full render ──────────────────────────────────────────────────────── */
 
@@ -388,16 +401,19 @@ describe('MapOverviewPage — full render', () => {
       await screen.findByRole('heading', { level: 1, name: 'Map overview' }),
     ).toBeInTheDocument()
 
-    // KPI band derives live status from the latest position (SI → km).
-    expect(await screen.findByText('90.00 km/h')).toBeInTheDocument()
-    expect(screen.getByText('Observed speed')).toBeInTheDocument()
-    expect(screen.getByText('42.00°')).toBeInTheDocument()
-    expect(screen.getByText('37.5000, -121.9000')).toBeInTheDocument()
-    expect(screen.getByText('Last observed')).toBeInTheDocument()
+    // The info panel derives its rows from the latest position (SI → km).
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    expect(await within(panel).findByText('90.00 km/h')).toBeInTheDocument()
+    expect(within(panel).getByText('Observed speed')).toBeInTheDocument()
+    expect(within(panel).getByText('NE (42°)')).toBeInTheDocument()
+    expect(within(panel).getByText('37.5000, -121.9000')).toBeInTheDocument()
+    expect(within(panel).getByText('Last observed')).toBeInTheDocument()
 
     // Every section panel is present — nothing stubbed out.
     expect(screen.getByRole('heading', { name: 'Location details' })).toBeInTheDocument()
-    expect(screen.getByText('Quick links')).toBeInTheDocument()
+    for (const name of ['Navigation route', 'Geofences', 'Locations']) {
+      expect(within(panel).getByRole('button', { name })).toBeInTheDocument()
+    }
     expect(screen.getByText('Recent route playback')).toBeInTheDocument()
     expect(screen.getByText('Recent location history')).toBeInTheDocument()
 
@@ -562,12 +578,11 @@ describe('MapOverviewPage — position loading', () => {
 
     // The page shell mounts (fleet resolved) …
     expect(await screen.findByRole('heading', { name: 'Location details' })).toBeInTheDocument()
-    // … but the KPI band shows skeletons, not half-populated metrics.
-    const band = screen.getByRole('region', { name: 'Vehicle status' })
-    expect(within(band).getByText('Observed speed')).toBeInTheDocument()
-    expect(band).toHaveAttribute('aria-busy', 'true')
-    expect(band.querySelector('[data-operational-value]')).toBeNull()
-    expect(screen.queryByText('90.00 km/h')).toBeNull()
+    // … but the info panel shows skeletons, not half-populated rows.
+    const panel = screen.getByRole('region', { name: 'Location details' })
+    expect(panel).toHaveAttribute('aria-busy', 'true')
+    expect(within(panel).queryByText('90.00 km/h')).toBeNull()
+    expect(within(panel).queryByText('37.5000, -121.9000')).toBeNull()
     expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0)
   })
 })
@@ -577,10 +592,10 @@ describe('MapOverviewPage — position loading', () => {
 describe('MapOverviewPage — interactions', () => {
   it('opens retained position evidence without changing map layers or playback', async () => {
     renderPage()
-    const band = await screen.findByRole('region', { name: 'Vehicle status' })
-    await waitFor(() => expect(within(band).getByText('90.00 km/h')).toBeInTheDocument())
-    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }))
-    const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' })
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    await waitFor(() => expect(within(panel).getByText('90.00 km/h')).toBeInTheDocument())
+    fireEvent.click(within(panel).getByRole('button', { name: 'Details' }))
+    const drawer = screen.getByRole('dialog', { name: 'Sources and method' })
     expect(within(drawer).getByText(/Polling every 15 s checks for positions/)).toBeInTheDocument()
     expect(within(drawer).getAllByText(/latest-50-position history request/).length).toBeGreaterThan(0)
     expect(screen.getByTestId('map-marker')).toBeInTheDocument()
@@ -610,6 +625,16 @@ describe('MapOverviewPage — interactions', () => {
     expect(screen.getByTestId('router-destination')).toHaveTextContent(path)
     expect(window.location.hash).toBe('')
   })
+
+  it('copies the one-line coordinates to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    renderPage()
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    await waitFor(() => expect(within(panel).getByText('37.5000, -121.9000')).toBeInTheDocument())
+    fireEvent.click(within(panel).getByRole('button', { name: 'Copy coordinates' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('37.5000, -121.9000'))
+  })
 })
 
 /* ── Accessibility ────────────────────────────────────────────────────── */
@@ -618,10 +643,10 @@ describe('MapOverviewPage — accessibility', () => {
   it('exposes labelled landmarks without a duplicate vehicle filter', async () => {
     renderPage()
 
-    // The KPI band and the hero map are both labelled regions. findByRole
+    // The info panel and the hero map are both labelled regions. findByRole
     // waits for the fleet + position queries to resolve past the loading shell.
-    const status = await screen.findByRole('region', { name: 'Vehicle status' })
-    expect(status).toBeInTheDocument()
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    expect(panel).toBeInTheDocument()
     const map = screen.getByRole('region', { name: 'Recorded location map' })
     expect(await within(map).findByTestId('map-container')).toBeInTheDocument()
 
@@ -646,15 +671,15 @@ describe('MapOverviewPage modernization preservation', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     client.setQueryData(['vehicles'], [makeVehicle()])
     onlineManager.setOnline(false)
-    renderPage({ client })
-    const band = await screen.findByRole('region', { name: 'Vehicle status' })
-    assertOperationalBriefDisclosure(band, 'Loading source data')
-    expect(within(band).queryByText('Source data unavailable')).toBeNull()
+    const { container } = renderPage({ client })
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    expect(panel).toHaveAttribute('aria-busy', 'true')
+    expect(within(panel).queryByText('90.00 km/h')).toBeNull()
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0)
     expect(screen.queryByText('No location history found.')).toBeNull()
     expect(screen.queryByText('Not enough GPS points to replay a route yet.')).toBeNull()
     expect(screen.queryByText(/No GPS data available/)).toBeNull()
-    expect(screen.getByText('Odometer')).toBeInTheDocument()
     for (const label of ['At home', 'At work', 'HomeLink nearby']) {
       const row = screen.getByText(label).parentElement!
       expect(within(row).getByText('Unknown')).toBeInTheDocument()
@@ -731,17 +756,19 @@ describe('MapOverviewPage modernization preservation', () => {
     })
     try {
       const { client } = renderPage()
-      const band = await screen.findByRole('region', { name: 'Vehicle status' })
+      const panel = await screen.findByRole('region', { name: 'Location details' })
       const expected = formatDateTime(timestamp, { locale: h.dates.locale, tz: h.dates.timezone })
-      await waitFor(() => expect(within(band).getByText(expected)).toBeInTheDocument())
+      await waitFor(() => expect(within(panel).getByText(expected)).toBeInTheDocument())
       fireEvent.click((await screen.findAllByRole('button', { name: 'Quick view' }))[0])
       expect(within(screen.getByRole('dialog')).getByText(expected)).toBeInTheDocument()
-      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }))
+      // The dialog has the shared header X plus its own footer Close; either dismisses.
+      const closes = within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close' })
+      fireEvent.click(closes[closes.length - 1])
       h.dates.locale = 'de-DE'
       h.dates.timezone = 'Asia/Tokyo'
       client.setQueryData(['position-latest', '7'], { ...latest })
       const updated = formatDateTime(timestamp, { locale: h.dates.locale, tz: h.dates.timezone })
-      await waitFor(() => expect(within(band).getByText(updated)).toBeInTheDocument())
+      await waitFor(() => expect(within(panel).getByText(updated)).toBeInTheDocument())
       fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[0])
       expect(within(screen.getByRole('dialog')).getByText(updated)).toBeInTheDocument()
       expect(client.getQueryData(['position-history', '7'])).toEqual(history)
@@ -778,11 +805,13 @@ describe('MapOverviewPage modernization preservation', () => {
   it('labels durable GPS history as historical and resolved emptiness as unavailable', async () => {
     install({ latest: null, history: [] })
     renderPage()
-    const band = await screen.findByRole('region', { name: 'Vehicle status' })
-    await waitFor(() => expect(within(band).getByText('Source data unavailable')).toBeInTheDocument())
-    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }))
-    const dialog = screen.getByRole('dialog', { name: 'Vehicle status details' })
-    expect(within(dialog).getByText(/Recorded location map: historical/)).toBeInTheDocument()
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    // No observation: latest-derived rows show em dashes, never fabricated zeros.
+    await waitFor(() => expect(within(panel).getAllByText('—').length).toBeGreaterThan(0))
+    expect(within(panel).queryByText('90.00 km/h')).toBeNull()
+    fireEvent.click(within(panel).getByRole('button', { name: 'Details' }))
+    const dialog = screen.getByRole('dialog', { name: 'Sources and method' })
+    expect(within(dialog).getByText(/Recorded location map: Historical/)).toBeInTheDocument()
     expect(screen.getByText('Recent route playback')).toBeInTheDocument()
     expect(screen.getByText('Recent location history')).toBeInTheDocument()
     expect(screen.getByText('HomeLink nearby')).toBeInTheDocument()
@@ -794,12 +823,12 @@ describe('MapOverviewPage modernization preservation', () => {
     await screen.findByTestId('route-playback')
     install({ latestError: true })
     await client.refetchQueries({ queryKey: ['position-latest', '7'] })
-    const band = screen.getByRole('region', { name: 'Vehicle status' })
-    await waitFor(() => expect(within(band).getByText('Retained source data')).toBeInTheDocument())
+    const panel = screen.getByRole('region', { name: 'Location details' })
+    expect(await screen.findByText('Recorded location map may be out of date')).toBeInTheDocument()
     expect(screen.getByTestId('map-marker')).toBeInTheDocument()
     expect(screen.getByTestId('route-playback')).toHaveAttribute('data-count', '3')
-    expect(within(band).getByText('37.5000, -121.9000')).toBeInTheDocument()
-    expect(within(band).getByText('90.00 km/h')).toBeInTheDocument()
+    expect(within(panel).getByText('37.5000, -121.9000')).toBeInTheDocument()
+    expect(within(panel).getByText('90.00 km/h')).toBeInTheDocument()
   })
 
   it.each([
