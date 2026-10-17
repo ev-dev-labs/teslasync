@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { deriveDataState } from '@/api/dataState';
@@ -55,10 +55,10 @@ describe('VaultSummaryBrief retained evidence and real drawer', () => {
     const brief = screen.getByTestId('vault-test-brief');
     assertOperationalBriefDisclosure(brief, 'Retained evidence');
     expect(brief.querySelector('[data-operational-metric="records"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="capacity"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(brief, 'Recorded capacity');
     expect(within(brief).getByText('0')).toBeInTheDocument();
     rerender(<VaultSummaryBrief {...props} sources={[source({ data: [], isSuccess: true })]} />);
-    expect(within(brief).getByText('Evidence available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Evidence available');
     assertOperationalBriefDisclosure(brief, 'Retained evidence', { absent: true });
     expect(within(brief).getByText('0')).toBeInTheDocument();
   });
@@ -75,20 +75,24 @@ describe('VaultSummaryBrief retained evidence and real drawer', () => {
       sources={[source({ isLoading: true })]} />);
     const brief = screen.getByTestId('vault-test-brief');
     expect(brief).toHaveAttribute('aria-busy', 'true');
-    expect(within(brief).getByText('Loading evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Loading evidence');
     expect(brief.querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(within(brief).queryByText('0')).not.toBeInTheDocument();
   });
 
   it('opens the actual Review details drawer with complete scope, missing reason and unscored confidence', () => {
+    const { result } = renderHook(() => useOperationalMetrics(metrics));
+    expect(result.current[1]).toMatchObject({ rawValue: null, valueState: 'missing' });
     render(<VaultSummaryBrief {...props} provenance="Existing evidence source" />);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('No measurement supplied')).toBeInTheDocument();
     expect(within(drawer).getByText('Account-wide records; bounds unknown.', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
-    expect(within(drawer).getAllByText('Account-wide records; bounds unknown.', { selector: 'div' })).toHaveLength(2);
+    const recordsGroup = within(drawer).getByRole('group', { name: 'Observed records' });
+    expect(within(recordsGroup).getAllByText('Account-wide records; bounds unknown.', { selector: 'div' })).toHaveLength(1);
     expect(within(drawer).getByText('Existing evidence source')).toBeInTheDocument();
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     expect(within(drawer).getByText('0')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    assertOperationalMetricUnavailable(document.body, 'Recorded capacity');
   });
 });

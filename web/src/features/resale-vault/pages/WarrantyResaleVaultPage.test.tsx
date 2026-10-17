@@ -50,7 +50,7 @@ function routeResponse(path: string): unknown {
   if (path.startsWith('/drives/score')) return { overall: 90, efficiency: 90, smoothness: 90, speedDiscipline: 90, grade: 'A', totalDrives: 1, trend: 'up' };
   if (path.startsWith('/drives/stats')) return { totalDrives: 1, totalDistanceKm: 10, totalDurationS: 600, avgEfficiencyWhKm: 150, avgSpeedKmh: 40, topSpeedKmh: 80, regenRatio: 0.1, regenEnergyWh: 100, co2SavedKg: 1 };
   if (path.startsWith('/drives')) return [];
-  if (path.startsWith('/charging-sessions')) return [];
+  if (path.startsWith('/charging-sessions') || path.startsWith('/charging?') || path === '/charging') return [];
   if (path.includes('/guard/events')) return { vehicle_id: 1, events: [] };
   return null;
 }

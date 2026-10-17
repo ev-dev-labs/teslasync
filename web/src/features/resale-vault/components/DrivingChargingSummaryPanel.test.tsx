@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { DrivingChargingSummaryPanel } from './DrivingChargingSummaryPanel';
 import type { ChargingHistoryEvidence, DrivingHistoryEvidence } from '../lib/types';
 
@@ -69,9 +70,13 @@ describe('DrivingChargingSummaryPanel', () => {
       return rendered;
     };
     const { rerender } = render(<DrivingChargingSummaryPanel driving={driving} charging={charging} />);
-    for (const label of ['Total distance', 'Total duration', 'Avg. efficiency', 'Regen ratio', 'CO2 saved', 'Total energy added', 'Avg. peak power', 'Total cost']) {
-      expect(value(label)).toHaveTextContent(/^—$/);
-      expect(value(label).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    const drivingBrief = screen.getByTestId('vault-driving-brief');
+    const chargingBrief = screen.getByTestId('vault-charging-brief');
+    for (const label of ['Total distance', 'Total duration', 'Avg. efficiency', 'Regen ratio', 'CO2 saved']) {
+      assertOperationalMetricUnavailable(drivingBrief, label);
+    }
+    for (const label of ['Total energy added', 'Avg. peak power', 'Total cost']) {
+      assertOperationalMetricUnavailable(chargingBrief, label);
     }
     expect(value('Drives observed')).toHaveTextContent(/^42$/);
     expect(value('Sessions observed')).toHaveTextContent(/^10$/);
@@ -102,12 +107,15 @@ describe('DrivingChargingSummaryPanel', () => {
     render(<DrivingChargingSummaryPanel driving={DRIVING} charging={CHARGING} />);
     const chargingBrief = screen.getByTestId('vault-charging-brief');
     expect(within(chargingBrief).getByText('45.50')).toBeInTheDocument();
-    expect(within(chargingBrief).getAllByText('Observed evidence: 2024-01-05 → 2024-06-02')).toHaveLength(6);
-    expect(within(screen.getByTestId('vault-driving-brief')).getAllByText('Observed evidence: 2024-01-01 → 2024-06-01')).toHaveLength(7);
+    assertOperationalBriefDisclosure(chargingBrief, 'Observed evidence: 2024-01-05 → 2024-06-02');
+    assertOperationalBriefDisclosure(screen.getByTestId('vault-driving-brief'), 'Observed evidence: 2024-01-01 → 2024-06-01');
     fireEvent.click(within(chargingBrief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('45.50')).toBeInTheDocument();
+    const costGroup = within(drawer).getByRole('group', { name: 'Total cost' });
+    expect(within(costGroup).getAllByText('Observed evidence: 2024-01-05 → 2024-06-02', { selector: 'div' })).toHaveLength(1);
     expect(within(drawer).getByText(/source does not supply a currency denomination/)).toBeInTheDocument();
     expect(within(drawer).queryByText(/500(\.\d+)? km/)).not.toBeInTheDocument();
+    expect(within(drawer).queryByText('Observed evidence: 2024-01-01 → 2024-06-01')).not.toBeInTheDocument();
   });
 });

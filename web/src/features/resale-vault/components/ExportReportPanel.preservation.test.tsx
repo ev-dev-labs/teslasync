@@ -166,7 +166,8 @@ describe('ExportReportPanel preservation', () => {
     const recovered = signedReport(next);
     vi.mocked(signReport).mockResolvedValueOnce(recovered);
     fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
-    await waitFor(() => expect(onSigned).toHaveBeenLastCalledWith(recovered));
+    await waitFor(() => expect(onSigned).toHaveBeenLastCalledWith(recovered, expect.any(String)));
+    expect(JSON.parse(onSigned.mock.calls.at(-1)?.[1] as string)[0]).toMatchObject({ report_id: next.report_id });
     expect(signReport).toHaveBeenLastCalledWith(next);
     fireEvent.click(screen.getByRole('button', { name: 'Download JSON' }));
     await waitFor(() => expect(downloadedName).toBe(`${next.report_id}.json`));

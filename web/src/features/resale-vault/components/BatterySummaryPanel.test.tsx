@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { BatterySummaryPanel } from './BatterySummaryPanel';
 import type { BatteryEvidence } from '../lib/types';
 
@@ -79,9 +80,9 @@ describe('BatterySummaryPanel', () => {
       return rendered;
     };
     const { rerender } = render(<BatterySummaryPanel battery={unknown} />);
+    const brief = screen.getByTestId('vault-battery-brief');
     for (const label of labels) {
-      expect(value(label)).toHaveTextContent(/^—$/);
-      expect(value(label).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalMetricUnavailable(brief, label);
     }
     expect(screen.queryByText('A-')).not.toBeInTheDocument();
     expect(screen.queryByText(/No battery passport evidence/)).not.toBeInTheDocument();
@@ -109,10 +110,8 @@ describe('BatterySummaryPanel', () => {
     expect(screen.getByText(`Passport provenance hash: ${hash}`)).toBeInTheDocument();
     expect(screen.getAllByRole('listitem').filter((item) => !item.hasAttribute('data-operational-metric'))).toHaveLength(24);
     for (const recommendation of recommendations) expect(screen.getByText(recommendation)).toBeInTheDocument();
-    const row = screen.getByText('State of health').closest('[data-operational-metric]');
-    if (!row) throw new Error('Missing health metric');
-    expect(row.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
-    expect(row).toHaveAttribute('data-value-state', 'missing');
+    const brief = screen.getByTestId('vault-battery-brief');
+    assertOperationalMetricUnavailable(brief, 'State of health');
   });
 
   it('opens the real details drawer with source measurements, provenance and observation bounds', () => {
