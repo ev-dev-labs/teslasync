@@ -15,6 +15,10 @@ const props = {
   onRetry: vi.fn(),
 };
 
+// Document links reuse the ghost button chrome with a deliberate
+// left-aligned override (justify-start wins over BUTTON_BASE justify-center).
+const ghostLinkClasses = [...BUTTON_BASE.split(' ').filter((c) => c !== 'justify-center'), 'justify-start'];
+
 describe('CommunicationsPanel authoritative versus unavailable evidence', () => {
   it('shows unknown source availability rather than authoritative empty and keeps local retry', async () => {
     const onRetry = vi.fn();
@@ -57,7 +61,7 @@ describe('CommunicationsPanel authoritative versus unavailable evidence', () => 
       expect(screen.getByText(label)).toHaveClass('text-[var(--semantic-danger)]');
     }
     const link = screen.getByRole('link', { name: 'Open NHTSA campaign' });
-    expect(link).toHaveClass(...BUTTON_BASE.split(' '));
+    expect(link).toHaveClass(...ghostLinkClasses);
     expect(link).toHaveAttribute('href', serviceReport.recall_findings[0].source_document_url);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -79,7 +83,7 @@ describe('CommunicationsPanel authoritative versus unavailable evidence', () => 
       expect(hypothesis.parentElement).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-subtle)]');
     }
     for (const link of screen.getAllByRole('link', { name: 'Open official NHTSA document' })) {
-      expect(link).toHaveClass(...BUTTON_BASE.split(' '));
+      expect(link).toHaveClass(...ghostLinkClasses);
     }
   });
 
@@ -154,7 +158,7 @@ describe('CommunicationsPanel authoritative versus unavailable evidence', () => 
     expect(screen.getByRole('link', { name: 'Review NHTSA datasets' }))
       .toHaveAttribute('href', props.source.source_url);
     expect(screen.getByRole('link', { name: 'Review NHTSA datasets' }))
-      .toHaveClass(...BUTTON_BASE.split(' '));
+      .toHaveClass(...ghostLinkClasses);
     expect(screen.queryByText('No communications found')).not.toBeInTheDocument();
   });
 

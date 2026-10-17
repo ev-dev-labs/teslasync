@@ -70,8 +70,8 @@ describe('WarrantyPanel', () => {
     const view = render(
       <WarrantyPanel selected loading={false} error={null} outlook={outlook} onRetry={vi.fn()} />,
     );
-    expect(screen.getByText(/ends Jan 1, 2028/)).toHaveTextContent('50,000 km remaining');
-    expect(screen.getByText(/ends Jan 1, 2032/)).toHaveTextContent('160,000 km remaining');
+    expect(screen.getByText(/ends Jan 1, 2028/)).toHaveTextContent('50,000.0 km remaining');
+    expect(screen.getByText(/ends Jan 1, 2032/)).toHaveTextContent('160,000.0 km remaining');
 
     preferences.distance = 'mi';
     preferences.precision = 2;

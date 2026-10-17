@@ -7,6 +7,7 @@ import {
   SudoCanceledError,
 } from '@/api/hooks/useServiceIntelligence';
 import { ApiError } from '@/lib/resilience';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { catalogReport, claimReport, serviceReport, warrantyReport } from './ServiceIntelligencePage.closure.fixtures';
 
 const hooks = vi.hoisted(() => ({
@@ -90,14 +91,18 @@ function expectCompleteServiceReport() {
     .toHaveAttribute('href', serviceReport.communications[0].source_document_url);
   expect(screen.getByRole('link', { name: 'Open evidence source' }))
     .toHaveAttribute('href', 'https://example.org/maintenance-7');
-  expect(screen.getByTitle('2026-07-01T00:00:00.000Z')).toBeInTheDocument();
+  expect(screen.getByTitle('2026-07-01')).toHaveTextContent('Jul 1, 2026');
   const first = screen.getByText('first_server_rank').closest('li');
   const second = screen.getByText('second_server_rank').closest('li');
   expect(first).not.toBeNull();
   expect(second).not.toBeNull();
   expect(first?.nextElementSibling).toBe(second);
-  const factor = screen.getByText('model year: matched');
-  expect(factor).toHaveAttribute('title', 'Decoded model year matched the publication.');
+  const factor = screen.getByRole('button', { name: 'model year: matched' });
+  const describedBy = (factor.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean);
+  expect(describedBy).toHaveLength(1);
+  const factorTooltip = document.getElementById(describedBy[0]);
+  expect(factorTooltip).toHaveAttribute('role', 'tooltip');
+  expect(factorTooltip).toHaveTextContent('Decoded model year matched the publication.');
 }
 
 beforeEach(() => {
@@ -121,7 +126,7 @@ describe('ServiceIntelligencePage bounded behavior closure', () => {
     const catalogBrief = screen.getByTestId('service-intelligence-catalog-summary');
     expect(serviceBrief).toHaveAttribute('data-operational-brief');
     expect(catalogBrief).toHaveAttribute('data-operational-brief');
-    expect(within(serviceBrief).getByText('Retained report')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(serviceBrief, 'Retained report');
     expect(catalogBrief.querySelector('[data-operational-metric="normalized-tesla-records"] [data-operational-value]')).toHaveTextContent('321');
     fireEvent.click(within(serviceBrief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Service match summary details' });

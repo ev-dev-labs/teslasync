@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import { VehicleMatchPanel } from './VehicleMatchPanel';
 import { serviceReport } from '../pages/ServiceIntelligencePage.closure.fixtures';
 
@@ -27,7 +31,7 @@ describe('VehicleMatchPanel OperationalBrief source preservation', () => {
     render(<VehicleMatchPanel {...props} retained />);
     const brief = screen.getByTestId('service-intelligence-summary');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(within(brief).getByText('Retained report')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained report');
     for (const [key, value] of [
       ['recall-candidates', '1'], ['potentially-applicable', '1'],
       ['manufacturer-communications', '1'], ['symptom-matches', '2'],
@@ -54,16 +58,15 @@ describe('VehicleMatchPanel OperationalBrief source preservation', () => {
   it('distinguishes missing summaries, measured zero, and invalid returned counts', () => {
     const view = render(<VehicleMatchPanel {...props} summary={null} />);
     let brief = screen.getByTestId('service-intelligence-summary');
-    expect(within(brief).getByText('Summary unavailable')).toBeInTheDocument();
-    for (const metric of brief.querySelectorAll('[data-operational-metric]')) {
-      expect(metric).toHaveAttribute('data-value-state', 'missing');
-      expect(metric.querySelector('[data-operational-value]')).not.toHaveTextContent(/^0$/);
+    assertOperationalBriefDisclosure(brief, 'Summary unavailable');
+    for (const label of ['Recall candidates', 'Potentially applicable', 'Communications', 'Symptom matches']) {
+      assertOperationalMetricUnavailable(brief, label);
     }
     view.rerender(<VehicleMatchPanel {...props} summary={{ ...serviceReport.summary, recall_candidates: 0, symptom_matches: -1 }} />);
     brief = screen.getByTestId('service-intelligence-summary');
     expect(brief.querySelector('[data-operational-metric="recall-candidates"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="recall-candidates"] [data-operational-value]')).toHaveTextContent('0');
-    expect(brief.querySelector('[data-operational-metric="symptom-matches"]')).toHaveAttribute('data-value-state', 'invalid');
+    assertOperationalMetricUnavailable(brief, 'Symptom matches');
   });
 
   it.each(['unselected', 'loading', 'failed'] as const)('preserves the %s source state without exposing retained vehicle counts', (state) => {

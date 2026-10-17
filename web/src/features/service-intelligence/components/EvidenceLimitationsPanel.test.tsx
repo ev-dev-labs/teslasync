@@ -4,6 +4,10 @@ import { EvidenceLimitationsPanel } from './EvidenceLimitationsPanel';
 import type { ServiceIntelligenceEvidenceBundle } from '@/api/hooks/useServiceIntelligence';
 import { BUTTON_BASE } from '@/components/ui';
 
+// Document links reuse the ghost button chrome with a deliberate
+// left-aligned override (justify-start wins over BUTTON_BASE justify-center).
+const ghostLinkClasses = [...BUTTON_BASE.split(' ').filter((c) => c !== 'justify-center'), 'justify-start'];
+
 describe('Service evidence remains domain-owned', () => {
   it('retains interpretation limits and the supplied disclaimer even when the evidence inventory is genuinely empty', () => {
     render(
@@ -42,7 +46,7 @@ describe('Service evidence remains domain-owned', () => {
     expect(screen.getByText('2 items')).toHaveClass('text-[var(--text-secondary)]');
     for (const row of rows.slice(0, 2)) {
       const link = within(row).getByRole('link', { name: 'Open evidence source' });
-      expect(link).toHaveClass(...BUTTON_BASE.split(' '));
+      expect(link).toHaveClass(...ghostLinkClasses);
       expect(link).toHaveClass('text-[var(--text-primary)]');
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');

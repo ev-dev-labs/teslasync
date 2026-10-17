@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 const preferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
 
@@ -86,9 +90,14 @@ describe('CommunicationsCatalogPanel', () => {
     render(
       <CommunicationsCatalogPanel {...baseProps} status={successfulStatus('2026-08-05T02:30:47Z')} />,
     );
-    const observation = screen.getByTitle('2026-08-05T02:30:47.000Z (America/Los_Angeles)');
+    const brief = screen.getByTestId('service-intelligence-catalog-summary');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Catalog coverage summary details' });
+    const observation = within(drawer).getByTitle('2026-08-05T02:30:47.000Z (America/Los_Angeles)');
     expect(observation).toHaveTextContent('4. Aug. 2026');
     expect(observation).toHaveTextContent('19:30:47');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('321')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Import official NHTSA artifact/ })).toHaveLength(5);
   });
@@ -110,10 +119,10 @@ describe('CommunicationsCatalogPanel', () => {
     expect(screen.getByText('0 rejected')).toBeInTheDocument();
     expect(screen.getByText('Latest import failed')).toBeInTheDocument();
     expect(screen.getByText(status.latest_attempt.error_detail!)).toBeInTheDocument();
-    expect(screen.getByText('Fresh')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('service-intelligence-catalog-summary'), 'Fresh');
     expect(screen.queryByText('TSB catalog is not populated')).not.toBeInTheDocument();
     expect(screen.getByTitle('a'.repeat(64))).toHaveTextContent('SHA-256 aaaaaaaaaaaa…');
-    const artifact = screen.getByText('188 Tesla rows').parentElement?.parentElement;
+    const artifact = screen.getByText('188 Tesla rows').closest('div.rounded-lg');
     expect(artifact).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-subtle)]');
     expect(artifact?.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
     expect(screen.getByText('Latest successful')).toHaveClass('text-[var(--semantic-success)]');
@@ -179,7 +188,7 @@ describe('CommunicationsCatalogPanel', () => {
     expect(screen.getByText('Catalog import failed')).toBeInTheDocument();
     expect(screen.getByText('Administrator authorization denied')).toBeInTheDocument();
     expect(screen.getByText('321')).toBeInTheDocument();
-    expect(screen.getByText('Fresh')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('service-intelligence-catalog-summary'), 'Fresh');
     expect(screen.getAllByRole('button', { name: /Import official NHTSA artifact/ })).toHaveLength(5);
   });
 
@@ -205,7 +214,7 @@ describe('CommunicationsCatalogPanel', () => {
     );
 
     expect(screen.getByText('321')).toBeInTheDocument();
-    expect(screen.getByText('Fresh')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('service-intelligence-catalog-summary'), 'Fresh');
     for (const artifact of OFFICIAL_NHTSA_COMMUNICATION_ARTIFACTS) {
       expect(screen.getByText(artifact.period)).toBeInTheDocument();
     }
@@ -233,7 +242,7 @@ describe('CommunicationsCatalogPanel', () => {
     );
 
     expect(screen.getByText('TSB catalog is not populated')).toBeInTheDocument();
-    expect(screen.getByText('Not imported')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('service-intelligence-catalog-summary'), 'Not imported');
     expect(screen.getAllByRole('button', { name: /Import official NHTSA artifact/ })).toHaveLength(5);
   });
 
@@ -277,18 +286,16 @@ describe('CommunicationsCatalogPanel', () => {
     );
     expect(screen.getByTestId('service-intelligence-catalog-summary')
       .querySelector('[data-operational-metric="normalized-tesla-records"] [data-operational-value]')).toHaveTextContent('0');
-    expect(screen.getByText('Not imported')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('service-intelligence-catalog-summary'), 'Not imported');
   });
 
   it('keeps unknown catalog counts missing and rejects invalid counts instead of inventing zero', () => {
     const view = render(<CommunicationsCatalogPanel {...baseProps} status={null} />);
-    expect(screen.getByTestId('service-intelligence-catalog-summary')
-      .querySelector('[data-operational-metric="normalized-tesla-records"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('service-intelligence-catalog-summary'), 'Normalized Tesla records');
     view.rerender(
       <CommunicationsCatalogPanel {...baseProps} status={{ latest_attempt: null, latest_successful: null, record_count: -1 }} />,
     );
-    expect(screen.getByTestId('service-intelligence-catalog-summary')
-      .querySelector('[data-operational-metric="normalized-tesla-records"]')).toHaveAttribute('data-value-state', 'invalid');
+    assertOperationalMetricUnavailable(screen.getByTestId('service-intelligence-catalog-summary'), 'Normalized Tesla records');
     expect(screen.getAllByRole('button', { name: /Import official NHTSA artifact/ })).toHaveLength(5);
   });
 });
