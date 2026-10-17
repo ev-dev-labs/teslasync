@@ -910,9 +910,11 @@ describe('ClimateControlPage — interactions', () => {
       });
       renderPage();
 
-      const refresh = screen.getByText('Refresh').closest('button')!;
+      // Icon-only Refresh exposes its label via aria-label + tooltip.
+      const refresh = screen.getByRole('button', { name: 'Refresh' });
       expect(refresh).toBeDisabled();
-      expect(refresh).toHaveAccessibleDescription('Select a vehicle');
+      // Prerequisite caption first, shared tooltip label after.
+      expect(refresh).toHaveAccessibleDescription('Select a vehicle Refresh');
       fireEvent.click(refresh);
       expect(refetch).not.toHaveBeenCalled();
       expect(mockClimateHistory.mock.results[0].value.refetch).not.toHaveBeenCalled();
@@ -926,11 +928,14 @@ describe('ClimateControlPage — interactions', () => {
     install({ latest: climate(), latestOpts: { refetch }, history: HISTORY });
     renderPage();
 
-    // The page's own Refresh <button> carries visible text; the freshness chip
-    // shares the "Refresh" accessible name but has no visible label.
-    const refresh = screen.getByText('Refresh').closest('button')!;
+    // The page's own Refresh is icon-only (label via aria-label + tooltip);
+    // the freshness chip is a span, so the role query is unambiguous.
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
     expect(refresh).toBeEnabled();
-    expect(refresh).not.toHaveAttribute('aria-describedby');
+    // No prerequisite caption when enabled: the description is the shared
+    // tooltip label alone.
+    expect(refresh).toHaveAccessibleDescription('Refresh');
+    expect(screen.queryByText('Select a vehicle')).not.toBeInTheDocument();
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(mockClimateHistory.mock.results[0].value.refetch).not.toHaveBeenCalled();
@@ -1079,7 +1084,7 @@ describe('ClimateControlPage — independent charging source registry', () => {
       expect(screen.getByRole('table', { name: 'Climate history' })).toBeInTheDocument();
       expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2);
       expect(within(group('climate-status')).getByText(/Showing retained measurements/)).toBeInTheDocument();
-      fireEvent.click(screen.getByText('Refresh').closest('button')!);
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
       expect(retry).toHaveBeenCalledTimes(1);
       expect(screen.queryByRole('button', { name: /apply|start climate|stop climate/i })).not.toBeInTheDocument();
       expect(latest.insideTemp).toBe(22);
@@ -1122,7 +1127,8 @@ describe('ClimateControlPage — independent charging source registry', () => {
       expect(hotSeat.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
       expect(container.querySelector('[class*="text-cyan-400"], [class*="text-amber-400"], [class*="text-red-400"]'))
         .not.toBeInTheDocument();
-      expect(screen.getByText('Refresh').closest('button')).toHaveClass('min-h-11', 'min-w-11');
+      // Shared icon-only size (the sweep replaced the labelled button).
+      expect(screen.getByRole('button', { name: 'Refresh' })).toHaveClass('h-9', 'w-9');
       expect(within(group('climate-systems')).queryByText(/\d+\s*(W|kW)\b/)).not.toBeInTheDocument();
     });
 
