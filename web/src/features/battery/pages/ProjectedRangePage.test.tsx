@@ -23,7 +23,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * page tests.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -464,7 +464,7 @@ describe('ProjectedRangePage · states', () => {
 
     expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
     expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
-    expect(metricValue('Your Estimate')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Range summary metrics' }), 'Your Estimate');
     expect(screen.getByRole('heading', { level: 1, name: 'Projected Range' })
       .closest('[data-role="page-container"]')).not.toHaveAttribute('aria-busy');
     expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
@@ -479,7 +479,7 @@ describe('ProjectedRangePage · states', () => {
 
     expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
     expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
-    expect(metricValue('Your Estimate')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Range summary metrics' }), 'Your Estimate');
     expect(screen.getByText('Efficiency data unavailable yet.')).toBeInTheDocument();
   });
 
@@ -529,9 +529,10 @@ describe('ProjectedRangePage · states', () => {
     renderPage();
 
     // No measurement is not a measured zero (MDC-026 / dataState contract).
-    // The KPI shell remains, with an explicit missing value.
-    expect(metricValue('Your Estimate')).toBe('—');
-    expect(metricValue('Your Estimate')).not.toContain('0');
+    // The KPI shell remains, with the tile omitted.
+    const nullSummary = screen.getByRole('region', { name: 'Range summary metrics' });
+    assertOperationalMetricUnavailable(nullSummary, 'Your Estimate');
+    expect(within(nullSummary).queryByText('0.00 km')).not.toBeInTheDocument();
     // The `!data` branches of the gauge, curve and what-if calculator.
     expect(screen.getByText('Efficiency data unavailable yet.')).toBeInTheDocument();
     expect(screen.getByText('Range projection curve will appear once this vehicle logs drives.')).toBeInTheDocument();
@@ -724,7 +725,7 @@ describe('ProjectedRangePage · mile units', () => {
       } }));
       renderPage();
 
-      expect(metricValue('Usable Capacity')).toBe('—');
+      assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Range summary metrics' }), 'Usable Capacity');
       expect(screen.getByText('Measured battery level and usable capacity are required to calculate a range.')).toBeInTheDocument();
       expect(screen.queryByText('304.20 km')).not.toBeInTheDocument();
       expect(screen.getByLabelText('Speed')).toBeInTheDocument();

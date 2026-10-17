@@ -58,14 +58,14 @@ describe('Phase 4 battery presentation preservation', () => {
     for (const fact of [
       'const payloadResolved =\n    passportQuery.data !== undefined',
       'useVerifyPassport(', 'passport?.provenance_hash ?? null',
-      'const [pageNowMs] = useState(', 'JSON.stringify(certificate, null, 2)',
-      'toBatteryPassportCertificate(passport)', 'URL.revokeObjectURL(url)',
+      'const [pageNowMs] = useState(', 'const certificate = JSON.stringify(passport, function (',
+      'downloadCertificate(passport)', 'URL.revokeObjectURL(url)',
       'anchor.download', 'verifyQuery.data?.valid === false', 'passportSource.refreshError',
     ]) expect(passport).toContain(fact);
     const advisor = read('../../pages/ChargeAdvisorPage.tsx');
     for (const fact of [
-      'HISTORY_LIMIT = 1_000', 'useDriveHistory(vehicleIdStr, HISTORY_LIMIT)',
-      'useChargingHistory(vehicleIdStr, HISTORY_LIMIT)', 'const [analysisNowMs]',
+      'HISTORY_LIMIT = 1_000', 'useDriveHistory(vehicleIdStr, HISTORY_LIMIT, historyWindow)',
+      'useChargingHistory(vehicleIdStr, HISTORY_LIMIT, historyWindow)', 'const [analysisNowMs]',
       'currentStateNowMs', 'Math.max(previous, Date.now())',
       'charge-advisor-reserve-floor', '[10, 20, 30]',
       'driveSource.fatalError ?? chargingSource.fatalError',
@@ -136,10 +136,10 @@ describe('Phase 4 battery presentation preservation', () => {
     const source = read('../../pages/EnergyLedgerPage.tsx');
     for (const fact of [
       'buildEnergyLedger(sessionsQuery.data ?? [], drivesQuery.data ?? [])',
-      'driven: -Math.round(m.drivenWh / 100) / 10',
-      'standby: -Math.round(m.standbyWh / 100) / 10',
-      'stored: Math.round(m.storedDeltaWh / 100) / 10',
-      'residual: Math.round(m.residualWh / 100) / 10',
+      'driven: -Math.round(convertEnergyFromSI(m.drivenWh, unitPrefs.energy) * 10) / 10',
+      'standby: -Math.round(convertEnergyFromSI(m.standbyWh, unitPrefs.energy) * 10) / 10',
+      'stored: Math.round(convertEnergyFromSI(m.storedDeltaWh, unitPrefs.energy) * 10) / 10',
+      'residual: Math.round(convertEnergyFromSI(m.residualWh, unitPrefs.energy) * 10) / 10',
       'm.closureRate < worst.closureRate', 'summary.packCapacityWh != null',
       'm.residualWh >= 0', 'summary.months.map((m)', 'energy-ledger-monthly',
       'sessionsState.fatalError ?? drivesState.fatalError',

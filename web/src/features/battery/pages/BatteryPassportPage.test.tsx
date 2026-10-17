@@ -26,6 +26,7 @@ import type {
 } from '@/api/hooks/useBatteryPassport';
 import { ToastProvider } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
 const refetchPassport = vi.fn();
@@ -102,7 +103,7 @@ describe('BatteryPassportPage retained trust and raw export regressions', () => 
       role ? `text-[var(--semantic-${role})]` : 'text-[var(--text-muted)]',
     );
     expect(masthead.querySelector('[class*="gradient"], [class*="text-cyan-300"]')).toBeNull();
-    expect(masthead.querySelector('svg.lucide-file-check-2'))
+    expect(masthead.querySelector('svg.lucide-file-check2'))
       .toHaveClass('text-[var(--text-secondary)]');
     expect(masthead.querySelector('svg.lucide-award')?.parentElement)
       .toHaveClass('text-[var(--text-secondary)]');
@@ -531,20 +532,29 @@ describe('BatteryPassportPage', () => {
     const expected = formatDateTime(facts.issued_at, { locale, tz });
     expect(expected).toContain(day);
     const kpis = screen.getByTestId('battery-passport-kpis');
-    expect(kpis.querySelector('[data-battery-period]')).toHaveTextContent(expected);
-    expect(within(kpis).getAllByText(expected)).toHaveLength(2);
-    expect(kpis).not.toHaveTextContent(facts.issued_at);
     fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getAllByText(expected).length).toBeGreaterThan(0);
+    const kpiDialog = screen.getByRole('dialog');
+    const kpiHeader = kpiDialog.querySelector('[data-drawer-header]');
+    if (!(kpiHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+    expect(within(kpiHeader).getAllByText(expected)).toHaveLength(2);
+    fireEvent.keyDown(kpiDialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(kpis).not.toHaveTextContent(facts.issued_at);
     expect(facts.issued_at).toBe('2026-08-08T00:30:00Z');
     expectEverySection();
   });
 
-  it.each(['not-a-date', ''])('withholds an invalid or missing KPI timestamp: %s', issued_at => {
+  it.each([['not-a-date', 2], ['', 1]] as const)('withholds an invalid or missing KPI timestamp: %s', (issued_at, dashes) => {
     h.passportQuery = passportQuery({ data: certificate({ issued_at }) });
     renderPage();
     const kpis = screen.getByTestId('battery-passport-kpis');
-    expect(kpis.querySelector('[data-battery-period]')).toHaveTextContent('—');
+    fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
+    const kpiDialog = screen.getByRole('dialog');
+    const kpiHeader = kpiDialog.querySelector('[data-drawer-header]');
+    if (!(kpiHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+    expect(within(kpiHeader).getAllByText('—')).toHaveLength(dashes);
+    fireEvent.keyDown(kpiDialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(kpis).not.toHaveTextContent('Invalid Date');
     expectEverySection();
   });
@@ -745,14 +755,9 @@ describe('BatteryPassportPage', () => {
     renderPage();
 
     expectEverySection();
-    const kpis = within(
-      screen.getByTestId('battery-passport-kpis'),
-    );
-    const sohMetric = kpis
-      .getByText('Certificate-reported SoH')
-      .closest('[data-operational-metric]');
-    expect(sohMetric).toHaveTextContent('—');
-    expect(sohMetric).not.toHaveTextContent('0%');
+    const kpis = screen.getByTestId('battery-passport-kpis');
+    assertOperationalMetricUnavailable(kpis, 'Certificate-reported SoH');
+    expect(kpis).not.toHaveTextContent('Certificate-reported SoH');
 
     const gradeAudit = within(
       screen.getByTestId('battery-passport-grade-audit'),
@@ -939,7 +944,7 @@ describe('BatteryPassportPage', () => {
     expect(screen.queryByRole('button', { name: 'Retry verification' })).not.toBeInTheDocument();
     const efc = within(screen.getByTestId('battery-passport-kpis'))
       .getByText('EFC proxy').closest('[data-operational-metric]');
-    expect(efc).toHaveTextContent(/\b0(?:\.0+)?\b/);
+    expect(efc?.querySelector('[data-operational-value]')).toHaveTextContent('0.00');
     expect(efc).not.toHaveTextContent('—');
   });
 

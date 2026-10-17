@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { StatMetric } from '@/components/data-display';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { BatteryEvidenceBrief } from './BatteryEvidenceBrief';
 import { BatteryCellsStats } from '../battery-cells-modernization/BatteryCellsStats';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -42,14 +43,15 @@ describe('battery source evidence through the real OperationalBrief and bridge',
     undefined,
   ])('formats freshness with explicit context or unchanged shared defaults: %j', timestampContext => {
     const observedAt = '2026-08-08T00:30:00Z';
-    render(<BatteryEvidenceBrief title="Timestamp evidence" timestampContext={timestampContext}
+    const view = render(<BatteryEvidenceBrief title="Timestamp evidence" timestampContext={timestampContext}
       metrics={[{ metricId: 'count', label: 'Sessions', rawValue: 0 }]}
       period={{ kind: 'snapshot', label: 'Source snapshot', observedAt, provenance: 'Original evidence' }} />,
     { wrapper: Provider });
-    expect(screen.getByText(formatDateTime(observedAt, timestampContext))).toBeVisible();
+    const expected = formatDateTime(observedAt, timestampContext);
+    assertOperationalBriefDisclosure(view.container, expected, { contains: true });
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText(formatDateTime(observedAt, timestampContext))).toBeVisible();
-    expect(within(screen.getByRole('dialog')).getByText('Original evidence')).toBeVisible();
+    expect(within(screen.getByRole('dialog')).getByText(expected)).toBeVisible();
+    expect(within(screen.getByRole('dialog')).getAllByText('Original evidence').length).toBeGreaterThan(0);
   });
 
   it.each(['not-a-date', null, undefined])('handles unavailable freshness without inventing evidence: %s', observedAt => {
@@ -60,7 +62,14 @@ describe('battery source evidence through the real OperationalBrief and bridge',
     { wrapper: Provider });
     expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
     expect(view.container.querySelector('[data-operational-value]')).toHaveTextContent('0');
-    if (observedAt) expect(screen.getByText('—')).toBeVisible();
+    if (observedAt) {
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog');
+      const header = dialog.querySelector('[data-drawer-header]');
+      if (!(header instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+      expect(within(header).getByText('—')).toBeVisible();
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+    }
   });
 
   it('keeps descriptive scope visible without treating it as a source reading', () => {
@@ -68,7 +77,7 @@ describe('battery source evidence through the real OperationalBrief and bridge',
       metrics={[{ metricId: 'text', label: 'Window', rawValue: 'Selected UTC dates' }]}
       period={{ kind: 'unknown', label: 'Selected window', reason: 'Requested scope, not response coverage' }} />,
     { wrapper: Provider });
-    expect(screen.getByText('Source readings unavailable')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Source readings unavailable', { contains: true });
     expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
     expect(view.container.querySelector('[data-operational-value]')).toHaveTextContent('Selected UTC dates');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
@@ -82,12 +91,12 @@ describe('battery source evidence through the real OperationalBrief and bridge',
       period: { kind: 'unknown', label: 'Requested window', reason: 'Scope only' } as const,
     };
     const view = render(<BatteryEvidenceBrief {...props} hasEvidence={false} retained />, { wrapper: Provider });
-    expect(screen.getByText('Source readings unavailable')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Source readings unavailable', { contains: true });
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
     view.rerender(<BatteryEvidenceBrief {...props} hasEvidence retained />);
-    expect(screen.getByText('Retained source evidence')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Retained source evidence', { contains: true });
     view.rerender(<BatteryEvidenceBrief {...props} hasEvidence />);
-    expect(screen.getByText('Available source readings')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Available source readings', { contains: true });
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
   });
 
@@ -109,18 +118,18 @@ describe('battery source evidence through the real OperationalBrief and bridge',
     const root = view.container.querySelector('[data-operational-brief]');
     expect(root).not.toBeNull();
     const readings = view.container.querySelectorAll('[data-operational-metric]');
-    expect(readings).toHaveLength(4);
+    expect(readings).toHaveLength(2);
     expect(readings[0]).toHaveAttribute('data-value-state', 'value');
     expect(readings[0].querySelector('[data-operational-value]')).toHaveTextContent('-2.50 kW');
     expect(readings[1]).toHaveAttribute('data-value-state', 'value');
     expect(readings[1].querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(readings[2]).toHaveAttribute('data-value-state', 'missing');
-    expect(readings[3]).toHaveAttribute('data-value-state', 'invalid');
-    expect(screen.getByText('Retained source evidence')).toBeVisible();
+    assertOperationalMetricUnavailable(view.container, 'Capacity');
+    assertOperationalMetricUnavailable(view.container, 'Voltage');
+    assertOperationalBriefDisclosure(view.container, 'Retained source evidence', { contains: true });
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = within(screen.getByRole('dialog'));
     expect(drawer.getByText('Exporting to grid')).toBeVisible();
-    expect(drawer.getByText('No qualified capacity estimate')).toBeVisible();
+    expect(drawer.queryByText('No qualified capacity estimate')).not.toBeInTheDocument();
     expect(drawer.getByText('Counted completed sessions in the returned window')).toBeVisible();
     expect(drawer.getAllByText('Independent sources have different bounds').length).toBeGreaterThan(0);
     expect(metrics.map(metric => metric.rawValue)).toEqual(before);
@@ -132,7 +141,7 @@ describe('battery source evidence through the real OperationalBrief and bridge',
       period={{ kind: 'snapshot', label: 'Snapshot', observedAt: null, provenance: 'No measurement timestamp' }} />,
     { wrapper: Provider });
     expect(view.container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByText('Loading source evidence')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Loading source evidence', { contains: true });
     expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     expect(view.container.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.queryByText('0 kWh')).not.toBeInTheDocument();
@@ -141,8 +150,10 @@ describe('battery source evidence through the real OperationalBrief and bridge',
   it('keeps absent cell extrema and pack readings absent with truthful synthesis provenance', () => {
     const view = render(<BatteryCellsStats data={undefined} cells={[]} minCell={null} maxCell={null}
       loading={false} retained={false} updatedAt={null} variant="overview" />, { wrapper: Provider });
-    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Total cells', 'Avg voltage', 'Min cell', 'Max cell', 'Imbalance', 'Pack voltage']) {
+      assertOperationalMetricUnavailable(view.container, label);
+    }
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getAllByText(/synthesized from brick extrema/).length).toBeGreaterThan(0);
     expect(within(screen.getByRole('dialog')).getAllByText(/reported values alone do not establish health/).length).toBeGreaterThan(0);
@@ -159,17 +170,17 @@ describe('battery source evidence through the real OperationalBrief and bridge',
       ]} period={{ kind: 'snapshot', label: 'Last source snapshot', observedAt: null,
         provenance: 'Independent pack source' }} />, { wrapper: Provider });
     expect(view.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
-    expect(screen.getByText('Retained source evidence')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Retained source evidence', { contains: true });
     expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
     expect(view.container.querySelector('[data-operational-value]')).toHaveTextContent('0.000 V');
-    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
-    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    assertOperationalMetricUnavailable(view.container, 'Capacity');
     expect(formatter).toHaveBeenCalledWith(0, expect.anything());
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = within(screen.getByRole('dialog'));
     expect(drawer.getByText('0.000 V')).toBeVisible();
     expect(drawer.getByText('Measured zero, not an inferred pack health assessment')).toBeVisible();
-    expect(drawer.getByText('Estimate unavailable')).toBeVisible();
+    expect(drawer.queryByText('Estimate unavailable')).not.toBeInTheDocument();
     expect(drawer.getAllByText(/Refresh failed; showing the last source snapshot/).length).toBeGreaterThan(0);
     expect(drawer.getByText('Independent pack source')).toBeVisible();
   });
@@ -181,10 +192,10 @@ describe('battery source evidence through the real OperationalBrief and bridge',
         metrics={[{ metricId: 'energy', label: 'Capacity', rawValue: undefined }]}
         period={{ kind: 'unknown', label: 'Unknown source window', reason: 'No qualified source window' }} />,
       { wrapper: Provider });
-      expect(screen.getByText('Source readings unavailable')).toBeVisible();
-      expect(screen.getByText(secondary, { exact: false })).toBeVisible();
-      expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
-      expect(view.container.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalBriefDisclosure(view.container, 'Source readings unavailable', { contains: true });
+      assertOperationalBriefDisclosure(view.container, secondary, { contains: true });
+      expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+      assertOperationalMetricUnavailable(view.container, 'Capacity');
       expect(screen.queryByText('0 kWh')).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
       expect(within(screen.getByRole('dialog')).getAllByText(/No qualified source window/).length).toBeGreaterThan(0);
@@ -200,16 +211,18 @@ describe('battery source evidence through the real OperationalBrief and bridge',
         { metricId: 'energy', label: 'Capacity', rawValue: null },
       ]} period={{ kind: 'unknown', label: 'Returned window', reason: 'Mixed source bounds' }} /></div>,
     { wrapper: Provider });
-    expect(screen.getByText('Available source readings')).toBeVisible();
-    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    assertOperationalBriefDisclosure(view.container, 'Available source readings', { contains: true });
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     expect(view.container.querySelectorAll('[data-value-state="value"]')).toHaveLength(1);
-    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
-    expect(view.container.querySelector('[data-battery-detail-context]')?.textContent).toBe(context);
-    expect(view.container.querySelector('[data-operational-brief] [role="list"]')).toHaveClass('grid-cols-1');
+    assertOperationalMetricUnavailable(view.container, 'Capacity');
+    expect(view.container.querySelector('[data-operational-brief] [role="list"]')).toHaveAttribute('data-columns', '1');
     const review = screen.getByRole('button', { name: 'Review details' });
-    expect(review).toHaveClass('min-h-11');
+    expect(review).toHaveClass('h-9', 'w-9');
     fireEvent.click(review);
-    expect(within(screen.getByRole('dialog')).getByText(context.trim())).toBeVisible();
-    expect(within(screen.getByRole('dialog')).getAllByText(/Mixed source bounds/).length).toBeGreaterThan(0);
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Sessions' })).toHaveTextContent(context.trim());
+    expect(within(dialog).getByText(context.trim())).toBeVisible();
+    expect(within(dialog).getAllByText(/Mixed source bounds/).length).toBeGreaterThan(0);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
   });
 });

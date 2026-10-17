@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -8,6 +8,9 @@ import { deriveDataState } from '@/api/dataState';
 import type { ChargingTelemetry } from '@/api/types';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import {
+  assertOperationalBriefDisclosure, assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import {
   BatteryPanelGrid, BatterySpecialistSummary, CostComparisonCard,
   HealthSummary, HealthThermalPanel, HealthQuickLinksPanel,
@@ -87,14 +90,16 @@ describe('battery specialist display fidelity', () => {
       { wrapper: Provider },
     );
     expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent))
-      .toEqual(['$0.0167', '≥ 100', '12.3456', '—']);
+      .toEqual(['$0.0167', '≥ 100', '12.3456']);
     expect(container.querySelector('[data-stat-delta]')).toBeNull();
-    expect(screen.getByText('Coverage is not a lifetime measurement.')).toBeVisible();
+    assertOperationalMetricUnavailable(container, 'State of Health');
+    assertOperationalBriefDisclosure(container, 'Coverage is not a lifetime measurement.', { region: 'drawer', contains: true });
     setGlobalPrecision(0);
     rerender(<BatterySpecialistSummary title="Source summary" testId="specialist-test" metrics={metrics}
       period={{ kind: 'unknown', label: 'Independent source periods' }} />);
     expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent))
-      .toEqual(['$0.0167', '≥ 100', '12.3456', '—']);
+      .toEqual(['$0.0167', '≥ 100', '12.3456']);
+    assertOperationalMetricUnavailable(container, 'State of Health');
     expect(metrics[0].value).toBe('$0.0167');
   });
 
@@ -102,11 +107,19 @@ describe('battery specialist display fidelity', () => {
     const { container } = render(<HealthSummary chargingLive={telemetry({ bms_fullcharge_complete: false })}
       healthMeasured={false} healthValue="—" capacityMeasured={false} originalCapacityMeasured={false}
       formatEnergy={value => String(value)} formatNumber={value => String(value)} />, { wrapper: Provider });
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
     expect(Array.from(container.querySelectorAll('[data-operational-value]')).map(node => node.textContent))
-      .toEqual(['—', '—', '—', '—', '—', '—', 'No']);
+      .toEqual(['No']);
     expect(screen.getByText('Full Charge Complete')).toBeVisible();
-    expect(container.querySelector('[data-battery-period]')).toHaveTextContent('Battery health summary metrics');
+    assertOperationalBriefDisclosure(container, 'Battery health summary metrics', { region: 'drawer', contains: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Full Charge Complete' })).toHaveTextContent('No');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    for (const label of ['State of Health', 'Current Capacity', 'Original Capacity', 'Degradation Rate', 'Total Cycles', 'Battery Age']) {
+      assertOperationalMetricUnavailable(container, label);
+    }
   });
 
   it('preserves the original fractional health, capacity, annual rate, cycles and integer-month displays', () => {

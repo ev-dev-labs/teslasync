@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it } from 'vitest';
 import { deriveDataState, type DataStateSource } from '@/api/dataState';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { SleepEfficiencyData } from '@/types/energy';
 import { analyzeSleepEfficiency } from '../../lib/sleepEfficiencyAnalysis';
 import { sleepEfficiencyFixture } from './sleepEfficiency.fixture';
@@ -53,8 +54,8 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
   ])('withholds transition counts for %s inputs rather than inventing zero', (_label, rows) => {
     const data = Object.assign(sleepEfficiencyFixture(), { state_distribution: rows });
     const view = render(<SleepEvidenceOverview {...props({ data, isSuccess: true })} />, { wrapper: Provider });
-    expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric(view.container, 'sleep-asleep-count-share')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(view.container, 'Valid transition destinations');
+    assertOperationalMetricUnavailable(view.container, 'Asleep-transition share');
   });
 
   it('preserves supplied zero counts even when other rows are invalid', () => {
@@ -68,7 +69,7 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
     const view = render(<SleepEvidenceOverview {...props({ data, isSuccess: true })} />, { wrapper: Provider });
     expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'value');
     expect(metric(view.container, 'sleep-destinations').querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(metric(view.container, 'sleep-asleep-count-share')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(view.container, 'Asleep-transition share');
   });
 
   it('preserves fractional duration evidence and signed source values without changing count validation', () => {
@@ -97,7 +98,7 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
     const view = render(<SleepEvidenceOverview {...props({ isLoading: true, isFetching: true, fetchStatus: 'fetching' })} />,
       { wrapper: Provider });
     expect(screen.getByRole('status', { name: 'Loading sleep evidence' })).toBeInTheDocument();
-    expect(screen.getByText('Loading source evidence')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Loading source evidence', { contains: true });
     expect(view.container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
     expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'missing');
@@ -105,8 +106,8 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
     view.rerender(<SleepEvidenceOverview {...props({ isLoading: true, fetchStatus: 'paused' })} />);
     expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
     expect(view.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
-    expect(screen.getByText(/Sleep evidence has not loaded because the request is paused/)).toBeVisible();
-    expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalBriefDisclosure(view.container, 'Sleep evidence has not loaded because the request is paused', { contains: true });
+    assertOperationalMetricUnavailable(view.container, 'Valid transition destinations');
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
   });
 
@@ -123,9 +124,9 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
     const view = render(<SleepEvidenceOverview {...props({ data, isSuccess: true })} />, { wrapper: Provider });
     expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'value');
     expect(metric(view.container, 'sleep-destinations').querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(metric(view.container, 'sleep-asleep-count-share')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric(view.container, 'sleep-duration-efficiency')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('Source readings unavailable')).toBeVisible();
+    assertOperationalMetricUnavailable(view.container, 'Asleep-transition share');
+    assertOperationalMetricUnavailable(view.container, 'Duration-based sleep efficiency');
+    assertOperationalBriefDisclosure(view.container, 'Source readings unavailable', { contains: true });
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
 
     view.rerender(<SleepEvidenceOverview {...props({
@@ -134,7 +135,7 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
     })} />);
     expect(metric(view.container, 'sleep-asleep-count-share')).toHaveAttribute('data-value-state', 'value');
     expect(metric(view.container, 'sleep-asleep-count-share').querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(screen.getByText('Available source readings')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Available source readings', { contains: true });
   });
 
   it('preserves the payload through refresh failure, pause, active refresh and recovery including review details', () => {
@@ -145,8 +146,8 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
     const originalReadings = readings();
     view.rerender(<SleepEvidenceOverview {...props({ data, isError: true, error: new Error('private transport detail') })} />);
     expect(readings()).toEqual(originalReadings);
-    expect(screen.getByText('Retained source evidence')).toBeVisible();
-    expect(screen.getByText(/Sleep evidence could not refresh/)).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Retained source evidence', { contains: true });
+    assertOperationalBriefDisclosure(view.container, 'Sleep evidence could not refresh', { contains: true });
     expect(screen.queryByTestId('sleep-query-initial-error')).not.toBeInTheDocument();
     expect(screen.queryByText('private transport detail')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
@@ -154,14 +155,14 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
     fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close', exact: true })[0]);
 
     view.rerender(<SleepEvidenceOverview {...props({ data, fetchStatus: 'paused' })} />);
-    expect(screen.getByText(/Refresh paused/)).toBeVisible();
-    expect(screen.getByText('Retained source evidence')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Refresh paused', { contains: true });
+    assertOperationalBriefDisclosure(view.container, 'Retained source evidence', { contains: true });
     expect(readings()).toEqual(originalReadings);
     view.rerender(<SleepEvidenceOverview {...props({ data, isFetching: true, fetchStatus: 'fetching' })} />);
     expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
     expect(readings()).toEqual(originalReadings);
     view.rerender(<SleepEvidenceOverview {...props({ data, isSuccess: true })} />);
-    expect(screen.getByText('Available source readings')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Available source readings', { contains: true });
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
     expect(screen.queryByText(/Sleep evidence could not refresh|Refresh paused/)).not.toBeInTheDocument();
     expect(readings()).toEqual(originalReadings);

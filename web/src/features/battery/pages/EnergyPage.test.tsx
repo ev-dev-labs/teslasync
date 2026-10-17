@@ -130,6 +130,7 @@ import { ToastProvider } from '@/components/feedback/Toast'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import EnergyPage from './EnergyPage'
 import type { EnergyStats } from '@/types/energy'
 import type { ChargingSession } from '@/api/types'
@@ -370,7 +371,12 @@ describe('EnergyPage', () => {
     // charging-loss semantics instead of manufacturing a percentage.
     expect(screen.getByText('1.20%/day')).toBeInTheDocument()
     expect(screen.getByText('Projected 30-day use')).toBeInTheDocument()
-    expect(screen.getByText('Not measured')).toBeInTheDocument()
+    const decisionBrief = screen.getByTestId('energy-operational-brief')
+    assertOperationalMetricUnavailable(decisionBrief, 'Charging losses')
+    fireEvent.click(within(decisionBrief).getByRole('button', { name: 'Review details' }))
+    const decisionDialog = screen.getByRole('dialog')
+    expect(within(decisionDialog).getByText('Charging losses are not measured')).toBeInTheDocument()
+    fireEvent.keyDown(decisionDialog, { key: 'Escape' })
     expect(getCardHeading('Efficiency driver investigation')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Review temperature impact' })).toHaveAttribute('href', '/temperature-impact')
     expect(screen.getByRole('link', { name: 'Review speed profile' })).toHaveAttribute('href', '/speed-profile')
@@ -505,7 +511,7 @@ describe('EnergyPage', () => {
     )
     expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
-    expect(screen.getByText('Not measured')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(screen.getByTestId('energy-operational-brief'), 'Charging losses')
   })
 
   it('withholds savings and projections when session cost coverage is partial', async () => {
@@ -518,7 +524,7 @@ describe('EnergyPage', () => {
     renderPage()
 
     expect(await screen.findByText('Cost coverage is partial')).toBeInTheDocument()
-    expect(screen.getByText(/1 of 2 returned sessions include cost/)).toBeInTheDocument()
+    expect(screen.getByText(/1 of 2 returned sessions include recorded cost/)).toBeInTheDocument()
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
     expect(
       screen.getAllByText('Complete charging-cost coverage is required before savings are modeled.'),
@@ -607,10 +613,12 @@ describe('EnergyPage', () => {
         'min-h-11', 'focus-visible:outline-2', 'focus-visible:outline-offset-2',
       )
     }
+    const sessionsTable = screen.getByRole('table', { name: 'battery:energy-sessions' })
     for (const name of ['Date', 'Energy', 'Battery', 'Power', 'Type', 'Cost', '$/kWh']) {
-      expect(screen.getByRole('columnheader', { name })).toBeInTheDocument()
+      expect(within(sessionsTable).getByRole('columnheader', { name })).toBeInTheDocument()
     }
-    expect(screen.getByRole('link', { name: 'Jun 1' })).toHaveAttribute('href', '/charging/101')
+    const sessionLink = sessionsTable.querySelector('a[href="/charging/101"]')
+    expect(sessionLink).toHaveTextContent(/^[A-Z][a-z]{2} \d{1,2}$/)
   })
 
   it('retries failed idle evidence without dropping independent charging content', async () => {
@@ -624,6 +632,6 @@ describe('EnergyPage', () => {
     ).toBeGreaterThan(before))
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Charging by time of day' })).toBeInTheDocument()
-    expect(screen.getByText('Not measured')).toBeInTheDocument()
+    assertOperationalMetricUnavailable(screen.getByTestId('energy-operational-brief'), 'Charging losses')
   })
 })

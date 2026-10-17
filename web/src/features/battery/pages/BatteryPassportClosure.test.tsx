@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BatteryPassport, BatteryPassportVerifyResponse } from '@/api/hooks/useBatteryPassport';
 import { ToastProvider } from '@/components/feedback';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const NOW = Date.parse('2026-08-08T12:00:00Z');
 const h = vi.hoisted(() => ({
@@ -168,8 +169,7 @@ describe('Battery Passport bounded closure — actual evidence and export', () =
     }));
     view.update();
     for (const label of ['Certificate-reported SoH', 'Fast-charge session share', 'EFC proxy']) {
-      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
-      expect(metric(label).querySelector('[data-operational-value]')).toHaveTextContent('—');
+      assertOperationalMetricUnavailable(screen.getByTestId('battery-passport-kpis'), label);
     }
     expect(metric('Average charge-end SoC proxy')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Average charge-end SoC proxy').querySelector('[data-operational-value]')).toHaveTextContent('0.00%');

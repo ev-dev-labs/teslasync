@@ -5,6 +5,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { BatteryHealthAnalytics } from '@/types/energy';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import BatteryDegradationPage from '../../pages/BatteryDegradationPage';
 
 const source = vi.hoisted(() => ({
@@ -150,13 +151,13 @@ describe('battery degradation trust and preservation', () => {
       'aria-labelledby', rangeFigure.closest('[data-card]')!.querySelector('[data-card-title]')!.id,
     );
     expect(within(rangeFigure).getByRole('group', {
-      name: 'Original and current estimated driving range over time', exact: true,
+      name: 'First retained comparison baseline and estimated driving range over time', exact: true,
     })).toBeVisible();
     expect(screen.getByText('Keep the existing charging pattern.')).toBeVisible();
     expect(screen.getByText('No fast charges in this sample.')).toBeVisible();
     expect(mounted.container.querySelectorAll('figure')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(3);
-    expect(screen.getByText('2032-03-01', { exact: false })).toBeVisible();
+    expect(screen.getByText('Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)')).toBeVisible();
   });
 
   it('preserves actual zero metrics while unknown temperature remains neutral with its evidence', () => {
@@ -170,7 +171,7 @@ describe('battery degradation trust and preservation', () => {
     expect(within(tempPanel as HTMLElement).getByText('—/100')).toBeVisible();
     expect(screen.getByText('Temperature telemetry is unavailable.')).toBeVisible();
     expect(mounted.container.textContent).not.toContain('NaN');
-    expect(mounted.container.textContent).toContain('1y 1m');
+    expect(screen.queryByText('Battery age')).not.toBeInTheDocument();
   });
 
   it('keeps every mobile history field reachable through the real detail dialog', () => {
@@ -245,12 +246,11 @@ describe('battery degradation trust and preservation', () => {
     Reflect.deleteProperty(source.data!, 'current_soh');
     const mounted = render(<BatteryDegradationPage />, { wrapper: Harness });
     const summary = mounted.container.querySelector('#battery-degradation-summary')!;
-    expect(summary.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
-    expect(summary.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    assertOperationalMetricUnavailable(summary, 'Current SOH');
     expect(screen.getByText('Battery health is not available yet.')).toBeVisible();
     expect(screen.queryByText('Excellent', { exact: true })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Prediction', exact: true })).toBeVisible();
-    expect(screen.getByText('Need more data points to generate prediction (minimum 3 snapshots required)')).toBeVisible();
+    expect(screen.getByText('Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)')).toBeVisible();
     expect(screen.getByText('Range data will appear once history is available.')).toBeVisible();
     expect(screen.getByText('Risk data will appear once charging history is available.')).toBeVisible();
     expect(screen.getByText('Recommendations will appear based on your usage patterns.')).toBeVisible();

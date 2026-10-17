@@ -7,6 +7,7 @@ import type { ParkTruth, VampireSplit } from '@/types/teslaPhysics';
 import english from '@/i18n/en.json';
 import batteryEnglish from '@/i18n/en/locale-battery.json';
 import { VampireCulpritPanel } from './VampireCulpritPanel';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 vi.mock('@/api/client', async importOriginal => {
   const actual = await importOriginal<typeof import('@/api/client')>();
@@ -84,8 +85,12 @@ describe('VampireCulpritPanel observed loss, not attributed cause', () => {
     expect(screen.getByText('Cause unconfirmed')).toBeInTheDocument();
     expect(screen.getAllByText(/Current Park truth is independent of historical SOC-loss windows/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/genuine leak|12V upkeep|remains after Sentry\/HVAC|Tonight:/)).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Independent Park and historical SOC-loss evidence' }))
-      .toHaveTextContent('Current confirmed Park. Historical unplugged windows.');
+    const evidence = screen.getByRole('region', { name: 'Independent Park and historical SOC-loss evidence' });
+    fireEvent.click(within(evidence).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('Current confirmed Park. Historical unplugged windows.');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it.each(['sentry', 'cabin_overheat', 'preconditioning'] as const)(
@@ -137,7 +142,10 @@ describe('VampireCulpritPanel observed loss, not attributed cause', () => {
     mount('7');
     await waitFor(() => expect(screen.getAllByText('Off')).toHaveLength(3));
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
-    expect(screen.getAllByText('No confirmed measurement supplied by this source.').length).toBeGreaterThan(0);
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Independent Park and historical SOC-loss evidence' }),
+      'Observed unplugged SOC loss',
+    );
   });
 
   it('preserves the panel and vehicle setup action without scoped requests when no vehicle is selected', () => {

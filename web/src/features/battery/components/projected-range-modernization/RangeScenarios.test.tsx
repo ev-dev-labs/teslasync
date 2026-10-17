@@ -58,7 +58,7 @@ describe('RangeScenarios drive-count plurals', () => {
       mount(count);
       expect(screen.getByText(label)).toBeInTheDocument();
       expect(screen.queryByText(count === 1 ? '1 drives' : `${count} drive`)).not.toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Range Scenarios' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Range scenarios' })).toBeInTheDocument();
       for (const text of ['Highway', 'Current', '250 km', '108 km/h', '20 C', '180 Wh/km', 'sentry']) {
         expect(screen.getByText(text)).toBeInTheDocument();
       }

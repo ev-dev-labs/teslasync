@@ -6,6 +6,7 @@ import type { PropsWithChildren } from 'react';
 import VampireDrainPage from '../../pages/VampireDrainPage';
 import { request } from '@/api/client';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { ToastProvider } from '@/components/feedback';
 
 // Keep the production frame/exports/table owner; reuse the repository tooltip/legend doubles.
@@ -146,15 +147,15 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     const call = mockedRequest.mock.calls.find(([path]) => path === '/vampire-drain?vehicle_id=7&limit=200');
     expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
     const trend = chartCard('Drain rate trend');
-    const daily = chartCard('Daily drain while parked');
+    const daily = chartCard('Parked sessions by start date');
     expect(within(trend).getByRole('group', { name: 'Daily vampire drain rate over parked sessions' })).toBeInTheDocument();
-    expect(within(daily).getByRole('group', { name: 'Daily battery loss and parked hours' })).toBeInTheDocument();
+    expect(within(daily).getByRole('group', { name: 'Whole-session battery loss and parked hours grouped by session start date' })).toBeInTheDocument();
     expect(within(trend).getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
     expect(within(daily).getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
     expect(within(trend).getByText('Drain rate trend', { selector: '[data-card-title]' })).toBeInTheDocument();
-    expect(within(daily).getByText('Daily drain while parked', { selector: '[data-card-title]' })).toBeInTheDocument();
+    expect(within(daily).getByText('Parked sessions by start date', { selector: '[data-card-title]' })).toBeInTheDocument();
     expect(within(trend).getByRole('figure', { name: 'Drain rate trend' })).toBeInTheDocument();
-    expect(within(daily).getByRole('figure', { name: 'Daily drain while parked' })).toBeInTheDocument();
+    expect(within(daily).getByRole('figure', { name: 'Parked sessions by start date' })).toBeInTheDocument();
   });
 
   it('keeps cached stats, charts and table visible after a failed refresh with source-specific recovery', async () => {
@@ -192,7 +193,9 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     const culprits = screen.getByTestId('vampire-culprits');
     await waitFor(() => expect(within(culprits).getByText('6.00%')).toBeInTheDocument());
     expect(within(culprits).queryByText('Off')).not.toBeInTheDocument();
-    expect(within(culprits).getAllByText('No confirmed measurement supplied by this source.').length).toBeGreaterThan(0);
+    for (const label of ['sentry', 'cabin overheat', 'precondition']) {
+      assertOperationalMetricUnavailable(culprits, label);
+    }
   });
 
   it('preserves Park evidence when split fails and retries only the named split source', async () => {
@@ -201,8 +204,9 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     const culprits = screen.getByTestId('vampire-culprits');
     await within(culprits).findByRole('button', { name: 'Retry Plugged and unplugged drain' });
     expect(within(culprits).getAllByText('Off')).toHaveLength(3);
-    const evidence = within(culprits).getByRole('region', { name: 'Observed culprit evidence' });
-    expect(within(evidence).getByText('Confirmed Park. Sentry, cabin overheat, and preconditioning only count after confirmed Park. Drain percentages are parked windows, not invented watt-hours.')).toBeInTheDocument();
+    const evidence = within(culprits).getByRole('region', { name: 'Independent Park and historical SOC-loss evidence' });
+    assertOperationalBriefDisclosure(evidence, 'Confirmed Park.', { contains: true });
+    assertOperationalBriefDisclosure(evidence, 'correlation does not establish a cause', { contains: true });
     const parkCalls = mockedRequest.mock.calls.filter(([path]) => path.startsWith('/physics/park-truth')).length;
     splitFail = false;
     fireEvent.click(within(culprits).getByRole('button', { name: 'Retry Plugged and unplugged drain' }));
@@ -217,7 +221,7 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     scope.vehicleId = null;
     mounted.rerender(<VampireDrainPage />);
     expect(screen.getByRole('region', { name: 'Drain summary' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Daily drain and reduction tips' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sessions by start date and reduction tips' })).toBeInTheDocument();
     expect(screen.getByText('Disable Sentry Mode when parked at home to save 1–2 % per day.')).toBeInTheDocument();
     expect(screen.getByTestId('vampire-split')).toBeInTheDocument();
     expect(screen.getByTestId('vampire-culprits')).toBeInTheDocument();
@@ -232,23 +236,16 @@ describe('Vampire drain modernization — authored runtime preservation', () => 
     mount();
     await screen.findByRole('table', { name: 'Drain sessions' });
     const summary = screen.getByRole('region', { name: 'Drain summary' });
-    const observed = within(summary).getByText('Observed hours');
-    const tile = observed.closest('[data-operational-metric]');
-    expect(tile?.querySelector('[data-battery-detail-context]')).toHaveTextContent('1 sessions');
-    if (!(tile instanceof HTMLElement)) throw new Error('Missing observed-hours metric');
-    const explanation = within(tile).getByText('Total parked, non-charging hours sampled for the drain statistics.');
-    expect(explanation).toHaveTextContent('Total parked, non-charging hours sampled for the drain statistics.');
-    expect(explanation).not.toHaveTextContent('1 sessions');
     const review = within(summary).getByRole('button', { name: 'Review details' });
     review.focus();
     expect(review).toHaveFocus();
     fireEvent.click(review);
     const details = await screen.findByRole('dialog', { name: 'Observed parked-drain statistics details' });
-    const detailedObserved = within(details).getByText('Observed hours').parentElement?.parentElement;
-    if (!(detailedObserved instanceof HTMLElement)) throw new Error('Missing observed-hours detail');
-    expect(within(detailedObserved).getByText('1 sessions', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
-    const detailedExplanation = within(detailedObserved).getByText('Total parked, non-charging hours sampled for the drain statistics.');
+    const observedGroup = within(details).getByRole('group', { name: 'Observed hours' });
+    expect(within(observedGroup).getByText('1 sessions', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
+    const detailedExplanation = within(observedGroup).getByText('Total parked, non-charging hours sampled for the drain statistics.');
     expect(detailedExplanation).toHaveTextContent('Total parked, non-charging hours sampled for the drain statistics.');
     expect(detailedExplanation).not.toHaveTextContent('1 sessions');
+    fireEvent.keyDown(details, { key: 'Escape' });
   });
 });

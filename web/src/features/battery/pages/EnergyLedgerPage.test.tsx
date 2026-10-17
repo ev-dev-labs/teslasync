@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { ChartContainerProps } from '@/components/charts/ChartContainer';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface FakeQuery<T> {
@@ -111,9 +112,13 @@ vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
 
-vi.mock('@/components/motion', () => ({
-  FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
-}));
+vi.mock('@/components/motion', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/motion')>();
+  return {
+    ...actual,
+    FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  };
+});
 
 // Spy at the concrete frame boundary used by ChartCard, retaining its real rendering.
 vi.mock('@/components/charts/ChartContainer', async importOriginal => {
@@ -226,9 +231,9 @@ describe('EnergyLedgerPage partial-data contract', () => {
     renderPage();
 
     const summary = screen.getByRole('region', { name: 'Energy ledger metrics' });
-    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     for (const label of ['Books Closure', 'Reached the Wheels', 'Vampire Drain', 'Unexplained']) {
-      expect(within(summary).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(summary, label);
     }
     expect(screen.queryByText('Energy ledger evidence is unavailable.')).not.toBeInTheDocument();
     expect(screen.getByText('Month by Month')).toBeInTheDocument();
@@ -250,10 +255,9 @@ describe('EnergyLedgerPage partial-data contract', () => {
     renderPage();
 
     const summary = screen.getByRole('region', { name: 'Energy ledger metrics' });
-    const metrics = summary.querySelectorAll('[data-operational-metric]');
-    expect(metrics).toHaveLength(4);
-    for (const metric of metrics) {
-      expect(metric).toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Books Closure', 'Reached the Wheels', 'Vampire Drain', 'Unexplained']) {
+      assertOperationalMetricUnavailable(summary, label);
     }
     expect(within(summary).queryByText('0%')).not.toBeInTheDocument();
     expect(within(summary).queryByText('0 Wh/day')).not.toBeInTheDocument();
@@ -360,8 +364,7 @@ describe('EnergyLedgerPage partial-data contract', () => {
     renderPage();
 
     const summary = screen.getByRole('region', { name: 'Energy ledger metrics' });
-    const vampire = summary.querySelector('[data-operational-metric="ledger-vampire"]');
-    expect(vampire).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(summary, 'Vampire Drain');
     expect(within(summary).queryByText('0 Wh/day')).not.toBeInTheDocument();
     expect(screen.getByText('36000 Wh · 1 sessions')).toBeInTheDocument();
   });
@@ -378,9 +381,8 @@ describe('EnergyLedgerPage partial-data contract', () => {
     renderPage();
 
     const summary = screen.getByRole('region', { name: 'Energy ledger metrics' });
-    for (const key of ['ledger-closure', 'ledger-driving']) {
-      expect(summary.querySelector(`[data-operational-metric="${key}"]`))
-        .toHaveAttribute('data-value-state', 'missing');
+    for (const label of ['Books Closure', 'Reached the Wheels']) {
+      assertOperationalMetricUnavailable(summary, label);
     }
     expect(within(summary).queryByText('0%')).not.toBeInTheDocument();
     expect(screen.getByText('9000 Wh · 50000 m')).toBeInTheDocument();

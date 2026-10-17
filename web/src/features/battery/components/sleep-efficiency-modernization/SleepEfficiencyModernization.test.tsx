@@ -8,6 +8,9 @@ import { Button } from '@/components/ui';
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { deriveDataState } from '@/api/dataState';
+import type { AppSettings } from '@/api/types';
 import { MockResizeObserver } from '@/test/setup';
 import SleepEfficiencyPage from '../../pages/SleepEfficiencyPage';
 import { sleepEfficiencyFixture, sleepSectionIds } from './sleepEfficiency.fixture';
@@ -24,6 +27,20 @@ vi.mock('@/components/motion', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/motion')>();
   return { ...actual, FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> };
 });
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({
+    pricingState: deriveDataState({
+      data: { currency_symbol: '$' } as AppSettings,
+      fetchStatus: 'idle',
+    }),
+    costPerKwh: 0.12,
+    currencySymbol: '$',
+    formatEnergyCost: (value: number) => `$${value.toFixed(2)}`,
+    formatCurrency: (value: number) => `$${value.toFixed(2)}`,
+    costPerDistanceUnit: () => null,
+    estimateGasCost: () => null,
+  }),
+}));
 
 type SleepQuery = ReturnType<typeof useSleepEfficiency>;
 const mockSleep = vi.mocked(useSleepEfficiency);
@@ -88,13 +105,14 @@ describe('live Sleep Efficiency modernization (authored; execution NOTRUN)', () 
     mount();
     allShells();
     const evidence = screen.getByTestId('sleep-efficiency-kpi-evidence');
-    expect(evidence.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
-    const durationMetric = evidence.querySelector('[data-operational-metric="sleep-duration-efficiency"]');
-    expect(durationMetric).toHaveTextContent('—');
-    expect(durationMetric).toHaveTextContent('Unavailable pending dwell reconstruction');
-    expect(within(evidence).getByText('Count-based; not a time share', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
-    expect(within(evidence).getByText('Placeholder zero withheld', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
-    expect(within(evidence).getByText('Source support score; not confidence', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
+    expect(evidence.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    assertOperationalMetricUnavailable(evidence, 'Duration-based sleep efficiency');
+    assertOperationalMetricUnavailable(evidence, 'Average time-to-sleep');
+    fireEvent.click(within(evidence).getByRole('button', { name: 'Review details' }));
+    const evidenceDialog = screen.getByRole('dialog');
+    expect(within(evidenceDialog).getByRole('group', { name: 'Asleep-transition share' })).toHaveTextContent('Count-based; not a time share');
+    expect(within(evidenceDialog).getByRole('group', { name: 'Evidence breadth' })).toHaveTextContent('Source support score; not confidence');
+    fireEvent.keyDown(evidenceDialog, { key: 'Escape' });
     expect(screen.getAllByRole('figure')).toHaveLength(3);
   });
 

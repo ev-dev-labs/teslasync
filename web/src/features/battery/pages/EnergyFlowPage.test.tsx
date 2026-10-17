@@ -36,6 +36,7 @@ import en from '@/i18n/en.json';
 import type { StatMetric } from '@/components/data-display';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const briefProps = vi.hoisted(() => vi.fn());
 const translationCalls = vi.hoisted(() => vi.fn());
@@ -490,7 +491,7 @@ describe('EnergyFlowPage — shell & KPI band', () => {
     const charged = within(kpi).getByText('Total charged').closest('[data-operational-metric]')!;
     expect(used.getAttribute('data-operational-metric')).not.toBe(charged.getAttribute('data-operational-metric'));
     for (const tile of [used, charged]) {
-      expect(within(tile as HTMLElement).getByText('Shared source total')).toBeVisible();
+      expect(within(tile as HTMLElement).queryByText('Shared source total')).not.toBeInTheDocument();
     }
     expect(metricValue('Total energy', kpi)).toBe('42.00 kWh');
     expect(metricValue('Total charged', kpi)).toBe('42.00 kWh');
@@ -517,7 +518,9 @@ describe('EnergyFlowPage — shell & KPI band', () => {
 
     // Silent-zero hardening: no misleading "0.00 kWh" while data is unknown.
     expect(within(kpiRegion()).queryByText('0.00 kWh')).not.toBeInTheDocument();
-    expect(within(kpiRegion()).getAllByText('—').length).toBeGreaterThanOrEqual(6);
+    for (const label of ['Total energy', 'Total charged', 'Distance', 'Efficiency', 'CO₂ saved', 'Period']) {
+      assertOperationalMetricUnavailable(kpiRegion(), label);
+    }
     // Every data section falls back to the no-vehicle prompt.
     expect(
       screen.getAllByText('Select a vehicle to view its energy flow.').length,
@@ -567,7 +570,7 @@ describe('EnergyFlowPage — period presentation', () => {
     'keeps missing/invalid period %s distinct from measured zero', (days) => {
       mockStats.mockReturnValue(qr({ data: makeStatsData({ period_days: days }) }));
       renderPage();
-      expect(metricValue('Period')).toBe('—');
+      assertOperationalMetricUnavailable(kpiRegion(), 'Period');
       expect(translationCalls.mock.calls.some(([key]) => key === 'energyFlow.units.days')).toBe(false);
     },
   );
@@ -583,13 +586,16 @@ describe('EnergyFlowPage — period presentation', () => {
 
   it('uses canonical singular copy for a one-day trailing window and retains the warning', () => {
     renderPage(['/battery/energy?from=2025-03-07&to=2025-03-07']);
-    expect(screen.getAllByText('Trailing 1 day').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(kpiRegion(), 'Trailing 1 day', { contains: true });
     expect(translationCalls).toHaveBeenCalledWith(
       'energyFlow.summary.trailingWindow', 'Trailing {{days}} days', { count: 1, days: '1' },
     );
-    expect(screen.getAllByText(
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const trailingDialog = screen.getByRole('dialog');
+    expect(within(trailingDialog).getAllByText(
       'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.',
-    ).length).toBeGreaterThan(0);
+    )).toHaveLength(3);
+    fireEvent.keyDown(trailingDialog, { key: 'Escape' });
     expect(en.energyFlow.units.days_one).toBe('day');
     expect(en.energyFlow.units.days_other).toBe('days');
     expect(en.energyFlow.summary.trailingWindow_one).toBe('Trailing {{days}} day');
@@ -752,7 +758,10 @@ describe('EnergyFlowPage — historical sections', () => {
     expect(within(card.querySelector('header')!).getByRole('heading', { name: 'Efficiency metrics' }))
       .toBeInTheDocument();
     // avg 160 Wh/km → "good" bucket.
-    expect(within(efficiency).getByText('Good')).toBeInTheDocument();
+    fireEvent.click(within(efficiency).getByRole('button', { name: 'Review details' }));
+    const efficiencyDialog = screen.getByRole('dialog');
+    expect(within(efficiencyDialog).getByRole('group', { name: 'Wh/km' })).toHaveTextContent('Good');
+    fireEvent.keyDown(efficiencyDialog, { key: 'Escape' });
     expect(metricValue('Avg energy/day', efficiency)).toBe('6.00 kWh');
   });
 

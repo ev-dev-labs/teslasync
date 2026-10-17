@@ -114,9 +114,11 @@ describe('Energy flow modernization — real shared surfaces', () => {
     }
     expect(within(card('Energy flow diagram')).getByText('12.00 kW')).toBeInTheDocument();
     const efficiency = card('Efficiency metrics');
-    const context = efficiency.querySelector('[data-battery-detail-context]');
-    expect(context).not.toBeNull();
-    expect(within(context as HTMLElement).getByText('Excellent')).toBeInTheDocument();
+    fireEvent.click(within(efficiency).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Excellent')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps retained stats and all independent live facts when refresh fails or pauses', () => {

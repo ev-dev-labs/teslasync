@@ -7,6 +7,7 @@ import type { ChargingSession, ChargingTelemetry } from '@/api/types';
 import type { EnergyStats } from '@/types/energy';
 import { ToastProvider } from '@/components/feedback';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const mocks = vi.hoisted(() => ({
   energy: vi.fn(), health: vi.fn(), sessions: vi.fn(), live: vi.fn(), idle: vi.fn(),
@@ -157,7 +158,11 @@ describe('live battery pages: independent sources and preserved orchestration', 
     expect(screen.getByRole('link', { name: 'Battery Cells' })).toHaveAttribute('href', '/battery-cells');
     expect(screen.getByTestId('test-ai-vehicle-scope')).toHaveAttribute('data-vehicle-id', '7');
     expect(container.querySelectorAll('[data-battery-panel]')).toHaveLength(11);
-    expect(screen.getByTestId('battery-health-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(7);
+    const healthSummary = screen.getByTestId('battery-health-summary');
+    expect(healthSummary.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    for (const label of ['State of Health', 'Current Capacity', 'Original Capacity', 'Degradation Rate', 'Total Cycles', 'Battery Age']) {
+      assertOperationalMetricUnavailable(healthSummary, label);
+    }
     expect(mocks.health).toHaveBeenCalledWith('7');
     expect(mocks.live).toHaveBeenCalledWith(7);
     if (state === 'error') {

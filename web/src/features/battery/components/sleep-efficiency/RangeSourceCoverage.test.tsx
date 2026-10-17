@@ -21,17 +21,29 @@ const state: SleepEfficiencyQueryState = {
 };
 
 function mount(width: number) {
-  const analysis = analyzeSleepEfficiency(
+  const base = analyzeSleepEfficiency(
     sleepEfficiencyFixture(), Date.parse('2026-08-07T12:00:00Z'),
     '2026-08-04', '2026-08-06',
   );
-  analysis.stateAccounting.categories = {
-    included: counts[0], missing_state: counts[1], invalid_count: counts[2],
-    invalid_minutes: counts[3], duplicate_state: counts[4],
-  };
-  analysis.events.accounting.categories = {
-    included: counts[5], invalid_timestamp: counts[6], future: counts[7],
-    invalid_duration: counts[8], invalid_battery: counts[9], duplicate_id: counts[10],
+  const analysis = {
+    ...base,
+    stateAccounting: {
+      ...base.stateAccounting,
+      categories: {
+        included: counts[0], missing_state: counts[1], invalid_count: counts[2],
+        invalid_minutes: counts[3], duplicate_state: counts[4],
+      },
+    },
+    events: {
+      ...base.events,
+      accounting: {
+        ...base.events.accounting,
+        categories: {
+          included: counts[5], invalid_timestamp: counts[6], future: counts[7],
+          invalid_duration: counts[8], invalid_battery: counts[9], duplicate_id: counts[10],
+        },
+      },
+    },
   };
   const view = render(<RangeSourceCoverage analysis={analysis} state={state} />);
   act(() => observers.forEach(({ element, callback }) => callback(
@@ -97,8 +109,11 @@ describe('RangeSourceCoverage responsive accounting', () => {
       expect(card).toHaveFocus();
     }
     await user.click(screen.getAllByRole('button', { name: 'Quick view' })[0]);
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close', exact: true }));
+    const quickDialog = screen.getByRole('dialog');
+    expect(quickDialog).toBeInTheDocument();
+    const quickFooter = quickDialog.querySelector('[data-modal-footer]');
+    if (!(quickFooter instanceof HTMLElement)) throw new Error('Missing quick-view dialog footer');
+    await user.click(within(quickFooter).getByRole('button', { name: 'Close', exact: true }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

@@ -388,9 +388,9 @@ describe('BatteryDegradationPage — date-preference boundary', () => {
       expect(table).toHaveTextContent(formatDayKey('2023-01-01', opts));
       expect(table).toHaveTextContent(formatDateTime(source.history[0].range_sampled_at, opts));
       expect(table).toHaveTextContent(formatDateTime(source.history[0].odometer_sampled_at, opts));
-      expect(kpiRegion()).toHaveTextContent(
-        `Start: ${formatDate(HEALTH.observation_started_at, opts)};`,
-      );
+      assertOperationalBriefDisclosure(kpiRegion(), `Start: ${formatDate(HEALTH.observation_started_at, opts)};`, {
+        contains: true,
+      });
       expect(screen.getByText(/Juni 2029/)).toBeInTheDocument();
       expect(source.history[0].date).toBe(HEALTH.history[0].date);
       expect(source.history[0].range_sampled_at).toBe('2023-01-01T00:05:00Z');
@@ -410,7 +410,7 @@ describe('BatteryDegradationPage — date-preference boundary', () => {
       mockHealth.mockReturnValue(makeQuery({ data: source }));
       renderPage();
       expect(screen.getByRole('table', { name: 'Degradation history' })).toHaveTextContent('—');
-      expect(kpiRegion()).toHaveTextContent('Start: —;');
+      assertOperationalBriefDisclosure(kpiRegion(), 'Start: —;', { contains: true });
       expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
       expect(source.history[0].date).toBe(date);
     },
@@ -591,8 +591,9 @@ describe('BatteryDegradationPage — stats source trust', () => {
       <BatteryDegradationPage />
     </QueryClientProvider></MemoryRouter>);
     for (const id of statsIds) {
-      expect(screen.getByTestId(id)).toHaveTextContent('Available source readings');
-      expect(screen.getByTestId(id)).not.toHaveTextContent('Retained source evidence');
+      const brief = screen.getByTestId(id);
+      assertOperationalBriefDisclosure(brief, 'Available source readings', { contains: true });
+      assertOperationalBriefDisclosure(brief, 'Retained source evidence', { absent: true, contains: true });
     }
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
@@ -615,7 +616,7 @@ describe('BatteryDegradationPage — stats source trust', () => {
     } }));
     renderPage();
     for (const id of statsIds) {
-      expect(screen.getByTestId(id)).toHaveTextContent('Available source readings');
+      assertOperationalBriefDisclosure(screen.getByTestId(id), 'Available source readings', { contains: true });
     }
     expect(metricValue(kpiRegion(), 'Current SOH')).toBe('0.00%');
     expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('0.0 kWh');
@@ -634,13 +635,15 @@ describe('BatteryDegradationPage — populated (km)', () => {
       } }));
       renderPage();
       const summary = kpiRegion();
-      expect(within(summary).getAllByText(
-        new RegExp(`capacity_source=${capacity_source}; original_capacity_wh=78000\\.125`),
-      )[0]).toHaveTextContent('assumption, not an observed or calibrated original pack capacity');
-      expect(within(summary).getAllByText(/Nominal baseline evidence:/)[0])
-        .toHaveTextContent('telemetry-derived estimator');
-      expect(within(summary).getAllByText(/Nominal baseline evidence:/)[0])
-        .toHaveTextContent('candidate BD-C01');
+      assertOperationalBriefDisclosure(summary, `capacity_source=${capacity_source}; original_capacity_wh=78000.125`, {
+        contains: true,
+      });
+      assertOperationalBriefDisclosure(summary, 'assumption, not an observed or calibrated original pack capacity', {
+        contains: true,
+      });
+      assertOperationalBriefDisclosure(summary, 'Nominal baseline evidence:', { contains: true });
+      assertOperationalBriefDisclosure(summary, 'telemetry-derived estimator', { contains: true });
+      assertOperationalBriefDisclosure(summary, 'candidate BD-C01', { contains: true });
       expect(metricValue(summary, 'Estimated capacity')).toBe('72.5 kWh');
       expect(metricValue(summary, 'Current SOH')).toBe('91.00%');
     },
@@ -652,8 +655,8 @@ describe('BatteryDegradationPage — populated (km)', () => {
       estimated_capacity_wh_available: false, current_soh_available: false,
     } }));
     renderPage();
-    expect(within(kpiRegion()).getAllByText(/Nominal baseline evidence:/)[0])
-      .toHaveTextContent('Observed current-capacity estimator unavailable');
+    assertOperationalBriefDisclosure(kpiRegion(), 'Nominal baseline evidence:', { contains: true });
+    assertOperationalBriefDisclosure(kpiRegion(), 'Observed current-capacity estimator unavailable', { contains: true });
     assertOperationalMetricUnavailable(kpiRegion(), 'Estimated capacity');
     assertOperationalMetricUnavailable(kpiRegion(), 'Current SOH');
   });
@@ -667,8 +670,8 @@ describe('BatteryDegradationPage — populated (km)', () => {
     expect(metricValue(kpi, 'Degradation rate')).toBe('2.10%/yr');
     // Recorded observation duration 30 months → 2 years, 6 months.
     expect(metricValue(kpi, 'Observation duration')).toBe('2y 6m');
-    expect(kpi).toHaveTextContent('Start: Jan 1, 2023; source: battery_health_history');
-    expect(kpi).toHaveTextContent('it is not true pack age');
+    assertOperationalBriefDisclosure(kpi, 'Start: Jan 1, 2023; source: battery_health_history', { contains: true });
+    assertOperationalBriefDisclosure(kpi, 'it is not true pack age', { contains: true });
   });
 
   it.each([null, undefined])('does not fabricate estimated capacity from an absent value %s', (capacity) => {
@@ -678,8 +681,6 @@ describe('BatteryDegradationPage — populated (km)', () => {
     renderPage();
     const kpi = kpiRegion();
     assertOperationalMetricUnavailable(kpi, 'Estimated capacity');
-    expect(within(kpi).getByText('Estimated capacity').closest('[data-operational-metric]'))
-      .toHaveAttribute('data-value-state', 'missing');
     expect(within(kpi).queryByText('0.0 kWh', { exact: true })).not.toBeInTheDocument();
     expect(metricValue(kpi, 'Current SOH')).toBe('91.00%');
   });
@@ -944,9 +945,9 @@ describe('BatteryDegradationPage — SOH verdict + observation-duration branches
     renderPage();
     assertOperationalMetricUnavailable(kpiRegion(), 'Observation duration');
     expect(within(kpiRegion()).queryByText('Battery age')).not.toBeInTheDocument();
-    expect(kpiRegion()).toHaveTextContent('it is not true pack age');
-    expect(kpiRegion()).toHaveTextContent('source: unavailable');
-    expect(kpiRegion()).toHaveTextContent('Manufacture and replacement dates are unknown');
+    assertOperationalBriefDisclosure(kpiRegion(), 'it is not true pack age', { contains: true });
+    assertOperationalBriefDisclosure(kpiRegion(), 'source: unavailable', { contains: true });
+    assertOperationalBriefDisclosure(kpiRegion(), 'Manufacture and replacement dates are unknown', { contains: true });
   });
 });
 
@@ -1140,10 +1141,18 @@ describe('BatteryDegradationPage — empty states', () => {
     renderPage();
     const evidence = screen.getByText('Total cycles').closest('[data-operational-brief]');
     expect(evidence).toHaveTextContent('0.50');
-    expect(evidence).toHaveTextContent(/recorded energy added across 2 valid charging sessions divided by nominal original capacity/);
-    expect(evidence).toHaveTextContent(/not a measured lifetime count/);
-    expect(evidence).toHaveTextContent(/across 3 valid recorded drives/);
-    expect(evidence).toHaveTextContent(/per-drive SOC change, not depth of a full discharge\/recharge cycle/);
+    assertOperationalBriefDisclosure(
+      evidence,
+      'recorded energy added across 2 valid charging sessions divided by nominal original capacity',
+      { contains: true },
+    );
+    assertOperationalBriefDisclosure(evidence, 'not a measured lifetime count', { contains: true });
+    assertOperationalBriefDisclosure(evidence, 'across 3 valid recorded drives', { contains: true });
+    assertOperationalBriefDisclosure(
+      evidence,
+      'per-drive SOC change, not depth of a full discharge/recharge cycle',
+      { contains: true },
+    );
     expect(screen.getByText('Avg DoD').parentElement).toHaveTextContent(`${fmtNumber(12.345)}%`);
   });
 
@@ -1154,7 +1163,9 @@ describe('BatteryDegradationPage — empty states', () => {
     } }));
     renderPage();
     expect(screen.getByText('Avg DoD').parentElement).toHaveTextContent('—%');
-    expect(screen.getByText('Total cycles').parentElement).not.toHaveTextContent('0.00');
+    const cyclesBrief = screen.getByTestId('battery-degradation-prediction-stats');
+    assertOperationalMetricUnavailable(cyclesBrief, 'Total cycles');
+    expect(cyclesBrief).not.toHaveTextContent('0.00');
   });
 
   it('keeps counts and all evidence shells when denominators and scores are unavailable', () => {
@@ -1311,3 +1322,4 @@ describe('BatteryDegradationPage — a11y + interaction', () => {
     expect(setVehicleId).not.toHaveBeenCalled();
   });
 });
+

@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { DataStateSource } from '@/api/dataState';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 
@@ -121,8 +122,11 @@ describe('live Battery Care mounted preservation', () => {
     const summary = screen.getByTestId('battery-care-kpis');
     expect(summary).toHaveTextContent(fmtInt(care.score));
     expect(summary).toHaveTextContent(fmtPercent(care.fullChargeShare == null ? null : care.fullChargeShare * 100));
-    expect(summary).toHaveTextContent('of 5 sessions');
-    expect(summary).toHaveTextContent('of 5 drive arrivals below 10%');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const summaryDialog = screen.getByRole('dialog');
+    expect(within(summaryDialog).getByRole('group', { name: 'Charges to 95%+' })).toHaveTextContent('of 5 sessions');
+    expect(within(summaryDialog).getByRole('group', { name: 'Deep Discharges' })).toHaveTextContent('of 5 drive arrivals below 10%');
+    fireEvent.keyDown(summaryDialog, { key: 'Escape' });
     expect(screen.getByTestId('battery-care-habits')).toHaveTextContent('Current index deduction:');
     expect(screen.getByTestId('battery-care-methodology')).toHaveTextContent('peak power exceeds');
   });
@@ -156,7 +160,7 @@ describe('live Battery Care mounted preservation', () => {
     mountPage();
     for (const id of sections) expect(screen.getByTestId(id)).toBeInTheDocument();
     expect(screen.getByTestId('battery-care-energy')).toHaveTextContent('Measured energy returned');
-    expect(screen.getByTestId('battery-care-kpis')).toHaveTextContent('calibrating evidence');
+    assertOperationalMetricUnavailable(screen.getByTestId('battery-care-kpis'), 'Care Score');
     expect(screen.getByTestId('battery-care-score')).toHaveTextContent('Not calibrated');
     const failedArrivals = screen.getByTestId('battery-care-arrivals');
     expect(within(failedArrivals).getByRole('alert')).toHaveTextContent("Can't reach server");
@@ -176,7 +180,7 @@ describe('live Battery Care mounted preservation', () => {
     fireEvent.click(within(failedEnergy).getByRole('button', { name: 'Retry' }));
     expect(mocks.retryCharging).toHaveBeenCalledTimes(1);
     expect(mocks.retryDriving).not.toHaveBeenCalled();
-    expect(screen.getByTestId('battery-care-kpis')).toHaveTextContent('calibrating evidence');
+    assertOperationalMetricUnavailable(screen.getByTestId('battery-care-kpis'), 'Care Score');
   });
 
   it('keeps all shells on both initial failures and retries only failed sources', () => {
@@ -194,7 +198,7 @@ describe('live Battery Care mounted preservation', () => {
     mountPage();
     expect(screen.getByTestId('battery-care-energy')).not.toHaveTextContent('Measured energy returned');
     expect(screen.getByTestId('battery-care-arrivals')).toHaveTextContent('Median drive-arrival SoC');
-    expect(screen.getByTestId('battery-care-kpis')).toHaveTextContent('calibrating evidence');
+    assertOperationalMetricUnavailable(screen.getByTestId('battery-care-kpis'), 'Care Score');
   });
 
   it('distinguishes authoritative empty from initial loading', () => {
@@ -257,7 +261,7 @@ describe('live Battery Care mounted preservation', () => {
   it('does not invent retained evidence for an initially paused source', () => {
     mocks.charging.mockReturnValue(query(undefined, mocks.retryCharging, { fetchStatus: 'paused' }));
     mountPage();
-    expect(screen.getByTestId('battery-care-energy')).toHaveTextContent('No observations have been received yet');
+    expect(screen.getByTestId('battery-care-energy')).toHaveTextContent('No requested source has returned usable data yet.');
     expect(screen.getByTestId('battery-care-energy')).not.toHaveTextContent('Measured energy returned');
   });
 
@@ -265,7 +269,7 @@ describe('live Battery Care mounted preservation', () => {
     mocks.charging.mockReturnValue(query([session(1, null)], mocks.retryCharging));
     mocks.driving.mockReturnValue(query([drive(1, null)], mocks.retryDriving));
     mountPage();
-    expect(screen.getByTestId('battery-care-kpis')).toHaveTextContent('calibrating evidence');
+    assertOperationalMetricUnavailable(screen.getByTestId('battery-care-kpis'), 'Care Score');
     expect(screen.getByTestId('battery-care-score')).toHaveTextContent('Not calibrated');
     expect(screen.getByTestId('battery-care-targets')).toHaveTextContent('No charging sessions with a valid end SoC');
     expect(screen.getByTestId('battery-care-arrivals')).toHaveTextContent('No drives with a valid arrival SoC');

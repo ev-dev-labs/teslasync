@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import type { BatteryCellData } from '@/api/hooks/useAnalytics';
 import type { DataStateSource } from '@/api/dataState';
 import { formatTemperature, type UnitPref } from '@/lib/unitConversion';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { request } from '@/api/client';
 import { ToastProvider } from '@/components/feedback';
 import BatteryCellsPage from '../../pages/BatteryCellsPage';
@@ -147,7 +148,7 @@ describe('Battery cells live modernization preservation', () => {
     h.query = { data: undefined, isError: true, error: new Error('Initial failure'), refetch: h.retry };
     view.rerenderPage();
     expect(view.container.querySelectorAll('[data-card-title]')).toHaveLength(9);
-    expect(stat(view.container, 'battery-cells-overview', 0).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(view.container.querySelector('#battery-cells-overview')!, 'Total cells');
     expect(screen.queryByText('Cells well balanced')).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     expect(h.retry).toHaveBeenCalledOnce();
@@ -159,9 +160,10 @@ describe('Battery cells live modernization preservation', () => {
       imbalance_mv: 0, cells: [], history: [],
     }) };
     const view = fixture();
-    expect(stat(view.container, 'battery-cells-overview', 0).getByText('—')).toBeInTheDocument();
-    expect(stat(view.container, 'battery-cells-overview', 1).getByText('—')).toBeInTheDocument();
-    expect(stat(view.container, 'battery-cells-overview', 5).getByText('400.00 V')).toBeInTheDocument();
+    const noDataOverview = view.container.querySelector('#battery-cells-overview')!;
+    assertOperationalMetricUnavailable(noDataOverview, 'Total cells');
+    assertOperationalMetricUnavailable(noDataOverview, 'Avg voltage');
+    expect(within(noDataOverview).getByText('Pack voltage').closest('[data-operational-metric]')).toHaveTextContent('400.00 V');
     expect(stat(view.container, 'battery-cells-temperature', 0).getByText('25.00°C')).toBeInTheDocument();
     expect(screen.queryByText('Cells well balanced')).not.toBeInTheDocument();
     expect(screen.queryByText('Thermal balance good')).not.toBeInTheDocument();
@@ -189,14 +191,15 @@ describe('Battery cells live modernization preservation', () => {
     Reflect.set(raw, 'pack_voltage', null);
     h.query = { ...h.query, data: raw };
     const view = fixture();
-    expect(stat(view.container, 'battery-cells-overview', 4).getByText('—')).toBeInTheDocument();
-    expect(stat(view.container, 'battery-cells-overview', 5).getByText('—')).toBeInTheDocument();
+    const absentOverview = view.container.querySelector('#battery-cells-overview')!;
+    assertOperationalMetricUnavailable(absentOverview, 'Imbalance');
+    assertOperationalMetricUnavailable(absentOverview, 'Pack voltage');
     expect(screen.queryByText('Cells well balanced')).not.toBeInTheDocument();
     expect(screen.queryByText('Thermal balance good')).not.toBeInTheDocument();
     expect(screen.queryByText('All cells healthy')).not.toBeInTheDocument();
     h.query = { ...h.query, data: payload({ pack_voltage: 0 }) };
     view.rerenderPage();
-    expect(stat(view.container, 'battery-cells-overview', 5).getByText('0.00 V')).toBeInTheDocument();
+    expect(within(view.container.querySelector('#battery-cells-overview')!).getByText('Pack voltage').closest('[data-operational-metric]')).toHaveTextContent('0.00 V');
   });
 
   it('uses the actual mobile table pipeline and exposes the full delta detail at allocated phone width', () => {

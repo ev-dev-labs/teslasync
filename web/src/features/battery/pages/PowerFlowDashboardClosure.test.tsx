@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import { ApiError } from '@/lib/resilience';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { TeslaEnergyLiveStatus } from '@/types/energy';
 
 const h = vi.hoisted(() => ({
@@ -160,7 +161,9 @@ describe('Power Flow bounded closure — actual mounted preservation', () => {
     }, h.liveRetry));
     const view = mount();
     const kpis = () => within(screen.getByRole('region', { name: 'Current power' }));
-    expect(kpis().getAllByText('—')).toHaveLength(4);
+    for (const label of ['Solar Production', 'Battery', 'Home Consumption', 'Grid']) {
+      assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Current power' }), label);
+    }
     expect(card('Power Flow').querySelector('svg.lucide-arrow-down, svg.lucide-arrow-up')).toBeNull();
     expect(within(card('Battery State')).queryByRole('meter')).not.toBeInTheDocument();
     h.live.mockReturnValue(query({
@@ -201,10 +204,10 @@ describe('Power Flow bounded closure — actual mounted preservation', () => {
     const beforePower = tableRows('Power Over Time');
     const beforeSoc = tableRows('Battery State of Charge');
     expect(beforePower).toHaveLength(27);
-    expect(beforePower[0].slice(1)).toEqual(['—', '0.00 W', '0.00 W', '0.00 W']);
-    expect(beforePower[1].slice(1)).toEqual(['100.00 W', '—', '-25.00 W', '75.00 W']);
+    expect(beforePower[0].slice(1)).toEqual(['—', '0.00 W', '0.00 W', '0.00 W', '—']);
+    expect(beforePower[1].slice(1)).toEqual(['100.00 W', '—', '-25.00 W', '75.00 W', '0.00%']);
     expect(beforeSoc[0][1]).toBe('—');
-    expect(beforeSoc[1][1]).toBe('0%');
+    expect(beforeSoc[1][1]).toBe('0.00%');
     const power = card('Power Over Time');
     await waitFor(() => {
       for (const name of ['Solar', 'Battery', 'Grid', 'Home']) {
@@ -223,9 +226,10 @@ describe('Power Flow bounded closure — actual mounted preservation', () => {
       .toHaveAttribute('aria-valuenow', '46.3');
     exportCsv('Power Over Time');
     const expected = [
-      'time,solar,battery,grid,load',
+      'time,solar,battery,grid,load,soc',
       ...history.map(sample => [
         Date.parse(sample.timestamp), sample.solar_power, sample.battery_power, sample.grid_power, sample.load_power,
+        sample.percentage_charged,
       ].map(value => value ?? '').join(',')),
     ].join('\r\n');
     expect(h.download).toHaveBeenLastCalledWith(expect.any(String), expected);

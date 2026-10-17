@@ -67,7 +67,7 @@ describe('source-backed battery orchestration preservation', () => {
       'hasHealthMeasurement(health)', 'isProjectionTrustworthy(health?.prediction)',
       '(health.estimated_capacity_wh / health.original_capacity_wh) * 100',
       'history[0].range_m', 'history[history.length - 1].range_m',
-      'health.original_capacity_wh - health.estimated_capacity_wh',
+      'health.estimated_capacity_wh - health.original_capacity_wh',
       'severityTokens[insightSeverity[ins.status]]',
       '<BatteryTrendCharts health={health} vehicleId={vehicleId} />',
       'analysis={health.charging_analysis}', 'totalCycles={health.total_cycles}',

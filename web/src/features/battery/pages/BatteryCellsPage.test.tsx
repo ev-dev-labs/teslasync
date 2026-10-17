@@ -42,6 +42,7 @@ import type { ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { BatteryCellData, CellReading } from '@/api/hooks/useAnalytics';
 import type { BatteryCellsSnapshot } from '../components/battery-cells-modernization/BatteryCellsStats';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -427,8 +428,10 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByText('No cell details available.')).toBeInTheDocument();
     expect(screen.getByText('Not enough history for spread trend')).toBeInTheDocument();
     expect(screen.getAllByText('Not enough history yet.').length).toBeGreaterThanOrEqual(2);
-    // Min/Max-cell KPIs degrade to an em dash rather than crashing.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    // Min/Max-cell KPIs are omitted rather than crashing.
+    const emptySummary = screen.getByRole('region', { name: 'Summary metrics' });
+    assertOperationalMetricUnavailable(emptySummary, 'Min cell');
+    assertOperationalMetricUnavailable(emptySummary, 'Max cell');
   });
 
   it('renders <NoVehicleSelected> instead of data scaffolding when no vehicle is selected', () => {
@@ -641,14 +644,22 @@ describe('BatteryCellsPage', () => {
     expect(screen.queryByText('Cells well balanced') != null).toBe(healthy);
     expect(screen.queryByText('Thermal balance good') != null).toBe(healthy);
     expect(screen.queryByText('All cells healthy') != null).toBe(healthy);
-    const metrics = within(screen.getByRole('region', { name: 'Summary metrics' }));
+    const summaryRegion = screen.getByRole('region', { name: 'Summary metrics' });
+    const metrics = within(summaryRegion);
     if (Number.isFinite(value)) {
       expect(metrics.getByText(`${value.toFixed(2)} mV`)).toBeInTheDocument();
     } else {
       expect(metrics.queryByText('NaN mV')).not.toBeInTheDocument();
     }
     if (!healthy) {
-      expect(metrics.getByText('Unknown')).toBeInTheDocument();
+      if (Number.isFinite(value)) {
+        fireEvent.click(within(summaryRegion).getByRole('button', { name: 'Review details' }));
+        const unknownDialog = screen.getByRole('dialog');
+        expect(within(unknownDialog).getByRole('group', { name: 'Imbalance' })).toHaveTextContent('Unknown');
+        fireEvent.keyDown(unknownDialog, { key: 'Escape' });
+      } else {
+        assertOperationalMetricUnavailable(summaryRegion, 'Imbalance');
+      }
     }
   });
 

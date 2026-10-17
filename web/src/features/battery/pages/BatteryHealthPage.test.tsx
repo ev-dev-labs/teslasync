@@ -22,7 +22,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * slice tests.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -94,6 +94,41 @@ vi.mock('react-i18next', async () => {
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  };
+});
+
+// ── framer-motion: strip animation props, keep motion.div + useReducedMotion. ──
+vi.mock('framer-motion', () => {
+  const motionProxy: Record<string, unknown> = new Proxy(
+    {},
+    {
+      get:
+        () =>
+        ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+          const safe: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(rest)) {
+            if (
+              k === 'animate' ||
+              k === 'initial' ||
+              k === 'exit' ||
+              k === 'transition' ||
+              k === 'whileHover' ||
+              k === 'whileTap' ||
+              k === 'whileInView' ||
+              k === 'viewport' ||
+              k === 'variants'
+            )
+              continue;
+            safe[k] = v;
+          }
+          return <div {...(safe as Record<string, unknown>)}>{children}</div>;
+        },
+    },
+  );
+  return {
+    motion: motionProxy,
+    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    useReducedMotion: () => true,
   };
 });
 
@@ -493,8 +528,9 @@ describe('BatteryHealthPage · states', () => {
       'Charging Statistics', 'Explore More', 'Recommendations',
     ]) expect(within(outline).getByRole('heading', { name })).toBeVisible();
     expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
-    expect(summaryMetricValue('State of Health')).toBe('—');
-    expect(summaryMetricValue('Current Capacity')).toBe('—');
+    const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
+    assertOperationalMetricUnavailable(summary, 'State of Health');
+    assertOperationalMetricUnavailable(summary, 'Current Capacity');
     expect(summaryMetricValue('Full Charge Complete')).toBe('Yes');
     expect(thermalMetricValue('Module Temp (Max)')).toContain('32');
     expect(thermalMetricValue('Module Temp (Max)')).toContain('°C');
@@ -514,8 +550,9 @@ describe('BatteryHealthPage · states', () => {
 
     expect(screen.getByText('No battery health data available yet.')).toBeInTheDocument();
     const outline = screen.getByTestId('battery-health-unavailable-outline');
-    expect(summaryMetricValue('State of Health')).toBe('—');
-    expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+    const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
+    assertOperationalMetricUnavailable(summary, 'State of Health');
+    assertOperationalMetricUnavailable(summary, 'Full Charge Complete');
     expect(thermalMetricValue('Module Temp (Max)')).toBe('—');
     expect(screen.queryByText('Degraded')).not.toBeInTheDocument();
     for (const name of [
@@ -531,9 +568,15 @@ describe('BatteryHealthPage · states', () => {
     expect(within(outline).getByText('No charging statistics yet')).toBeVisible();
     expect(within(outline).getByRole('link', { name: 'Battery Cells' })).toHaveAttribute('href', '/battery-cells');
     const comparison = within(outline).getByRole('region', { name: 'Capacity and range evidence' });
-    expect(comparison.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    expect(comparison.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Capacity When New', 'Capacity Now', 'Range When New', 'Range Now']) {
+      assertOperationalMetricUnavailable(comparison, label);
+    }
     const brief = within(outline).getByTestId('battery-operational-brief');
-    expect(brief.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Pack score', 'Degradation pace', 'Range confidence', 'Charging stress', 'Thermal impact', 'Cycle exposure']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
     fireEvent.click(within(comparison).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('Capacity When New')).toBeVisible();
@@ -549,7 +592,10 @@ describe('BatteryHealthPage · dashboard render', () => {
       data: makeHealth({ current_soh: 0, estimated_capacity_wh: 0, history: [] }),
     }));
     renderPage();
-    expect(summaryMetricValue('State of Health')).toContain('—');
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Battery health summary metrics' }),
+      'State of Health',
+    );
     expect(screen.queryByText('Degraded')).toBeNull();
     expect(screen.queryByText('Health Concern')).toBeNull();
     expect(screen.queryByText('Your battery health looks great — keep up the good habits!')).toBeNull();
@@ -578,11 +624,14 @@ describe('BatteryHealthPage · dashboard render', () => {
     expect(within(operationalMetric('Range confidence')).getByText('High')).toBeInTheDocument();
     expect(within(operationalMetric('Charging stress')).getByText('Low')).toBeInTheDocument();
     expect(within(operationalMetric('Thermal impact')).getByText('90 / 100')).toBeInTheDocument();
+    const postureBrief = screen.getByTestId('battery-operational-brief');
+    fireEvent.click(within(postureBrief).getByRole('button', { name: 'Review details' }));
+    const postureDialog = screen.getByRole('dialog');
     expect(
-      within(screen.getByTestId('battery-operational-brief')).getByRole('button', {
-        name: /Source: Battery analytics/,
-      }),
+      within(postureDialog).getByRole('button', { name: /Source: Battery analytics/ }),
     ).toBeInTheDocument();
+    fireEvent.keyDown(postureDialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     // Health verdict badge + a11y years-to-80 hero value.
     expect(screen.getByText('Excellent')).toBeInTheDocument();
@@ -706,7 +755,10 @@ describe('BatteryHealthPage · branches & resilience', () => {
     chargingLiveMock.mockReturnValue(makeQuery({ data: null }));
     renderPage();
 
-    expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Battery health summary metrics' }),
+      'Full Charge Complete',
+    );
     expect(thermalMetricValue('Battery Heater')).toBe('—');
     expect(thermalMetricValue('Module Temp (Max)')).toBe('—');
   });
@@ -719,7 +771,10 @@ describe('BatteryHealthPage · branches & resilience', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeInTheDocument();
-    expect(screen.getByText('Range When New')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Capacity and range evidence' }),
+      'Range When New',
+    );
     expect(screen.queryByText('Capacity & range comparison failed to load')).not.toBeInTheDocument();
   });
 
@@ -836,7 +891,10 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(within(source).getByText('Source readings unavailable')).toBeVisible();
       expect(within(source).queryByText('Available source readings')).not.toBeInTheDocument();
       expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'unavailable');
-      expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'Full Charge Complete',
+      );
       expect(thermalMetricValue('Module Temp (Max)')).toContain('0');
       expect(summaryMetricValue('State of Health')).toContain('96');
     });
@@ -849,7 +907,10 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(within(source).getByText('Source readings unavailable')).toBeVisible();
       expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'unavailable');
       expect(within(source).queryByText('Live')).not.toBeInTheDocument();
-      expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'Full Charge Complete',
+      );
       expect(summaryMetricValue('State of Health')).toContain('96');
       expect(thermalMetricValue('Battery Heater')).toBe('—');
     });
@@ -862,7 +923,10 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(within(source).getByText('Loading source evidence')).toBeVisible();
       expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'initial');
       expect(within(source).queryByText('Source readings unavailable')).not.toBeInTheDocument();
-      expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'Full Charge Complete',
+      );
       expect(summaryMetricValue('Current Capacity')).toContain('72.50');
     });
 
@@ -882,7 +946,7 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(within(source).getByText('Retained source evidence')).toBeVisible();
       expect(within(source).getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale');
       expect(within(source).getByLabelText('Cached')).toHaveAttribute(
-        'title', expect.stringContaining(new Date(query.dataUpdatedAt).toLocaleString()),
+        'title', expect.stringContaining('Last updated: Oct 11, 2026, 12:00:00 PM (UTC)'),
       );
       expect(summaryMetricValue('Full Charge Complete')).toBe('Yes');
       expect(summaryMetricValue('State of Health')).toContain('96');
@@ -920,7 +984,10 @@ describe('BatteryHealthPage · design-system consistency', () => {
       renderPage();
 
       expect(screen.getByTestId('battery-health-unavailable-outline')).toBeVisible();
-      expect(summaryMetricValue('State of Health')).toBe('—');
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Battery health summary metrics' }),
+        'State of Health',
+      );
       expect(summaryMetricValue('Full Charge Complete')).toBe('No');
       expect(thermalMetricValue('Module Temp (Max)')).toContain('0');
       const source = screen.getByTestId('battery-full-charge-source');
@@ -940,8 +1007,12 @@ describe('BatteryHealthPage · design-system consistency', () => {
       renderPage();
 
       const comparison = screen.getByRole('region', { name: 'Capacity and range evidence' });
-      expect(within(comparison).getByText(/^Δ \+3(?:\.0+)? kWh$/)).toBeVisible();
-      expect(within(comparison).getByText('Δ +50 km')).toBeVisible();
+      fireEvent.click(within(comparison).getByRole('button', { name: 'Review details' }));
+      const deltaDialog = screen.getByRole('dialog');
+      expect(within(deltaDialog).getByRole('group', { name: 'Capacity Now' })).toHaveTextContent('Δ +3.00 kWh');
+      expect(within(deltaDialog).getByRole('group', { name: 'Range Now' })).toHaveTextContent('Δ +50 km');
+      fireEvent.keyDown(deltaDialog, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(comparison).not.toHaveTextContent('--');
       expect(health.estimated_capacity_wh).toBe(78_000);
       expect(health.history[1].range_m).toBe(550_000);
@@ -950,9 +1021,13 @@ describe('BatteryHealthPage · design-system consistency', () => {
     it('preserves declining capacity and range evidence with one signed delta and the original source-scope caveat', () => {
       renderPage();
       const comparison = screen.getByRole('region', { name: 'Capacity and range evidence' });
-      expect(within(comparison).getByText(/^Δ -2\.50? kWh$/)).toBeVisible();
-      expect(within(comparison).getByText('Δ -30 km')).toBeVisible();
-      expect(comparison).toHaveTextContent('not a controlled capacity test');
+      fireEvent.click(within(comparison).getByRole('button', { name: 'Review details' }));
+      const deltaDialog = screen.getByRole('dialog');
+      expect(within(deltaDialog).getByRole('group', { name: 'Capacity Now' })).toHaveTextContent('Δ -2.50 kWh');
+      expect(within(deltaDialog).getByRole('group', { name: 'Range Now' })).toHaveTextContent('Δ -30 km');
+      fireEvent.keyDown(deltaDialog, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      assertOperationalBriefDisclosure(comparison, 'not a controlled capacity test', { contains: true });
       expect(comparison).not.toHaveTextContent('--');
     });
 

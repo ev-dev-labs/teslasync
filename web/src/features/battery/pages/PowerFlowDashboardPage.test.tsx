@@ -39,6 +39,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ComponentProps, ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { TeslaEnergyLiveStatus } from '@/types/energy';
 
 // ── i18n stub: resolve the fallback (or the key when it IS the template) and
@@ -280,7 +281,9 @@ describe('PowerFlowDashboardPage — unresolved source authority', () => {
     expect(within(statusRegion()).getByText(`Live energy status: ${status}`)).toBeInTheDocument();
     expect(within(overviewRegion()).getAllByText(`Live energy status: ${status}`)).toHaveLength(3);
     expect(within(historyRegion()).getAllByText(`Energy status history: ${status}`)).toHaveLength(2);
-    expect(within(kpiRegion()).getAllByText('—')).toHaveLength(4);
+    for (const label of ['Solar Production', 'Battery', 'Home Consumption', 'Grid']) {
+      assertOperationalMetricUnavailable(kpiRegion(), label);
+    }
     for (const title of ['Battery State', 'Power Flow', 'Site Details']) {
       expect(within(overviewRegion()).getByText(title)).toBeInTheDocument();
     }
@@ -394,10 +397,13 @@ describe('PowerFlowDashboardPage — populated (charging / importing)', () => {
     expect(within(kpi).getByText('900.00 W')).toBeInTheDocument(); // home 900 W
     // Battery is negative → the KPI shows the signed reading + "Charging".
     expect(within(kpi).getByText('-1.50 kW')).toBeInTheDocument();
-    expect(within(kpi).getByText('Charging')).toBeInTheDocument();
     // Grid positive → "Importing".
     expect(within(kpi).getByText('2.00 kW')).toBeInTheDocument();
-    expect(within(kpi).getByText('Importing')).toBeInTheDocument();
+    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
+    const kpiDialog = screen.getByRole('dialog');
+    expect(within(kpiDialog).getByRole('group', { name: 'Battery' })).toHaveTextContent('Charging');
+    expect(within(kpiDialog).getByRole('group', { name: 'Grid' })).toHaveTextContent('Importing');
+    fireEvent.keyDown(kpiDialog, { key: 'Escape' });
   });
 
   it('renders the SOC gauge and the energy KVList (Wh → kWh)', () => {
@@ -466,9 +472,12 @@ describe('PowerFlowDashboardPage — discharging / exporting branch', () => {
     renderPage();
 
     // KPI direction labels.
-    expect(within(kpiRegion()).getByText('Discharging')).toBeInTheDocument();
-    expect(within(kpiRegion()).getByText('Exporting')).toBeInTheDocument();
     expect(within(kpiRegion()).getByText('-2.00 kW')).toBeInTheDocument(); // signed grid reading
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const flipDialog = screen.getByRole('dialog');
+    expect(within(flipDialog).getByRole('group', { name: 'Battery' })).toHaveTextContent('Discharging');
+    expect(within(flipDialog).getByRole('group', { name: 'Grid' })).toHaveTextContent('Exporting');
+    fireEvent.keyDown(flipDialog, { key: 'Escape' });
 
     // Flow arrows: discharging battery points down, exporting grid points up.
     expect(flowChip('1.50 kW').querySelector('svg.lucide-arrow-down')).not.toBeNull();
@@ -493,7 +502,10 @@ describe('PowerFlowDashboardPage — edge branches', () => {
     setHistory({ data: HISTORY, isError: true, error: new Error('history refresh failed') });
     renderPage();
     expect(within(kpiRegion()).getByText('-1.50 kW')).toBeInTheDocument();
-    expect(within(kpiRegion()).getByText('Charging')).toBeInTheDocument();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const cachedDialog = screen.getByRole('dialog');
+    expect(within(cachedDialog).getByRole('group', { name: 'Battery' })).toHaveTextContent('Charging');
+    fireEvent.keyDown(cachedDialog, { key: 'Escape' });
     expect(within(overviewRegion()).getByRole('meter', { name: /State of Charge/i })).toHaveAttribute('aria-valuenow', '46.3');
     expect(within(historyRegion()).getByRole('group', { name: /stacked area chart/i })).toBeInTheDocument();
     expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
@@ -565,8 +577,10 @@ describe('PowerFlowDashboardPage — live query error', () => {
       within(statusRegion()).getByText('Live status unavailable — refresh to fetch'),
     ).toBeInTheDocument();
 
-    // Every KPI reads "—" on error (4 tiles).
-    expect(within(kpiRegion()).getAllByText('—')).toHaveLength(4);
+    // Every KPI tile is omitted on error (4 unavailable).
+    for (const label of ['Solar Production', 'Battery', 'Home Consumption', 'Grid']) {
+      assertOperationalMetricUnavailable(kpiRegion(), label);
+    }
 
     // Each of the three live panels renders a retryable server-error state.
     const retries = within(overviewRegion()).getAllByRole('button', { name: 'Retry' });
@@ -606,7 +620,9 @@ describe('PowerFlowDashboardPage — no-data envelope', () => {
     expect(
       within(statusRegion()).getByText('Live status unavailable — refresh to fetch'),
     ).toBeInTheDocument();
-    expect(within(kpiRegion()).getAllByText('—')).toHaveLength(4);
+    for (const label of ['Solar Production', 'Battery', 'Home Consumption', 'Grid']) {
+      assertOperationalMetricUnavailable(kpiRegion(), label);
+    }
 
     const overview = overviewRegion();
     expect(within(overview).getByText('No battery data — refresh to fetch')).toBeInTheDocument();
@@ -664,7 +680,9 @@ describe('PowerFlowDashboardPage — interactions', () => {
         percentage_charged: Number.NaN,
       }) });
       renderPage();
-      expect(within(kpiRegion()).getAllByText('—')).toHaveLength(3);
+      for (const label of ['Solar Production', 'Battery', 'Grid']) {
+        assertOperationalMetricUnavailable(kpiRegion(), label);
+      }
       expect(within(kpiRegion()).getByText('0.00 W')).toBeInTheDocument();
       expect(within(kpiRegion()).queryByText('Discharging')).not.toBeInTheDocument();
       expect(within(kpiRegion()).queryByText('Exporting')).not.toBeInTheDocument();
@@ -706,7 +724,8 @@ describe('PowerFlowDashboardPage — interactions', () => {
       expect(within(kpiRegion()).getAllByText('0.00 W')).toHaveLength(4);
       expect(within(statusRegion()).getByText(/^Updated:/)).toHaveTextContent('2001');
       expect(within(statusRegion()).getByText(/^Updated:/)).not.toHaveTextContent('2040');
-      expect(screen.queryByText(/up to date|confirmed fresh/i)).not.toBeInTheDocument();
+      expect(within(statusRegion()).queryByText(/up to date|confirmed fresh/i)).not.toBeInTheDocument();
+      expect(within(kpiRegion()).queryByText(/up to date|confirmed fresh/i)).not.toBeInTheDocument();
       expect(within(kpiRegion()).queryByText('Charging')).not.toBeInTheDocument();
       expect(within(kpiRegion()).queryByText('Exporting')).not.toBeInTheDocument();
     });

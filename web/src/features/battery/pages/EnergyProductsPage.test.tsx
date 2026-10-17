@@ -34,7 +34,7 @@
  * i18n is stubbed so visible copy is the English fallback.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -251,13 +251,13 @@ afterEach(() => {
 });
 
 describe('EnergyProductsPage — ready dashboard', () => {
-  it('keeps the discovery action wrapping and mobile-sized with a decorative shared icon', () => {
+  it('keeps the discovery action icon-only and mobile-sized with a decorative shared icon', () => {
     renderPage();
 
     const refresh = screen.getByRole('button', { name: 'Refresh from Tesla' });
-    expect(refresh).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'max-w-full');
-    expect(refresh).not.toHaveClass('h-10');
-    expect(within(refresh).getByText('Refresh from Tesla')).toHaveClass('min-w-0', 'break-words');
+    expect(refresh).toHaveClass('h-9', 'w-9');
+    expect(refresh).toHaveAccessibleName('Refresh from Tesla');
+    expect(refresh.querySelectorAll('svg')).toHaveLength(1);
     expect(refresh.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(refresh.querySelector('svg')).toHaveAttribute('focusable', 'false');
     expect(refresh.querySelector('svg')).toHaveClass('shrink-0');
@@ -703,9 +703,7 @@ describe('resourceIcon', () => {
       renderPage();
 
       const summary = screen.getByRole('region', { name: 'Energy summary' });
-      const capacity = within(summary).getByText('Total Capacity').closest('[data-operational-metric]');
-      expect(capacity).toHaveAttribute('data-value-state', 'missing');
-      expect(capacity?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+      assertOperationalMetricUnavailable(summary, 'Total Capacity');
       expect(within(summary).queryByText('13.50 kWh')).not.toBeInTheDocument();
       expect(screen.getByText('Cabin')).toBeInTheDocument();
       expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
@@ -716,9 +714,7 @@ describe('resourceIcon', () => {
       renderPage();
 
       const summary = screen.getByRole('region', { name: 'Energy summary' });
-      const count = within(summary).getByText('Energy Sites').closest('[data-operational-metric]');
-      expect(count).toHaveAttribute('data-value-state', 'missing');
-      expect(count?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+      assertOperationalMetricUnavailable(summary, 'Energy Sites');
       expect(within(summary).queryByText('0.00 Wh')).not.toBeInTheDocument();
       expect(screen.getByText('No energy-site snapshot has loaded. Refresh from Tesla to discover your installations.')).toBeInTheDocument();
     });

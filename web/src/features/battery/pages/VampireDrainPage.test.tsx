@@ -113,6 +113,7 @@ import { EmbeddedChart } from '@/components/charts'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import * as settingsHooks from '@/hooks/useSettings'
 import { formatDateTime } from '@/lib/dateFormat'
 import VampireDrainPage, { buildDailyDrainRollup } from './VampireDrainPage'
@@ -435,7 +436,7 @@ describe('VampireDrainPage', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh vampire drain' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Refresh vampire drain' }))
     expect(mockedRequest.mock.calls.filter(([path]) => String(path).startsWith('/physics/'))).toHaveLength(0)
-    expect(metricValues('After unplug')).not.toContain('0.00%')
+    expect(within(screen.getByTestId('vampire-split')).queryByText('0.00%')).not.toBeInTheDocument()
     expect(screen.queryByText(emptySplit.honesty)).not.toBeInTheDocument()
     expect(within(screen.getByTestId('vampire-split')).getByText('Source paused')).toBeInTheDocument()
     act(() => onlineManager.setOnline(true))
@@ -461,8 +462,13 @@ describe('VampireDrainPage', () => {
     // median + p95 appear twice: once in the KPI band and once in the gauge side rail.
     expect(metricValues('Median drain / day').filter((value) => value === '1.81%').length).toBeGreaterThanOrEqual(2)
     expect(metricValues('P95 drain / day').filter((value) => value === '4.56%').length).toBeGreaterThanOrEqual(2)
-    // Session count is echoed by both the observed-hours subtitle and the table badge.
-    expect(screen.getAllByText('3 sessions').length).toBeGreaterThanOrEqual(2)
+    // Session count is echoed by the observed-hours drawer group and the table badge.
+    expect(screen.getAllByText('3 sessions')).toHaveLength(1)
+    const drainKpi = screen.getByRole('region', { name: 'Drain summary' })
+    fireEvent.click(within(drainKpi).getByRole('button', { name: 'Review details' }))
+    const drainDialog = screen.getByRole('dialog')
+    expect(within(drainDialog).getByRole('group', { name: 'Observed hours' })).toHaveTextContent('3 sessions')
+    fireEvent.keyDown(drainDialog, { key: 'Escape' })
 
     // Gauge rendered the average as its own value node (direct text node "2.34").
     expect(screen.getByRole('meter', { name: 'Avg %/day' })).toHaveAttribute('aria-valuenow', '2.34')
@@ -755,11 +761,19 @@ describe('VampireDrainPage', () => {
     install({ stats: emptyStats, events: [] })
     renderPage()
 
-    // The KPI band still renders, but the percentile cards read "—", not "0.00%".
-    expect(await screen.findByText('Observed hours')).toBeInTheDocument()
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3)
-    // Both the observed subtitle and the table badge fold to zero sessions.
-    await waitFor(() => expect(screen.getAllByText('0 sessions').length).toBeGreaterThanOrEqual(2))
+    // The KPI band still renders, but the percentile tiles are omitted, not "0.00%".
+    await screen.findAllByText(NO_EVENTS)
+    const emptySummary = screen.getByRole('region', { name: 'Drain summary' })
+    expect(within(emptySummary).getByText('Observed hours')).toBeInTheDocument()
+    for (const label of ['Avg drain / day', 'Median drain / day', 'P95 drain / day']) {
+      assertOperationalMetricUnavailable(emptySummary, label)
+    }
+    // The table badge folds to zero sessions; the observed subtitle lives in the drawer group.
+    expect(screen.getAllByText('0 sessions')).toHaveLength(1)
+    fireEvent.click(within(emptySummary).getByRole('button', { name: 'Review details' }))
+    const emptyDialog = screen.getByRole('dialog')
+    expect(within(emptyDialog).getByRole('group', { name: 'Observed hours' })).toHaveTextContent('0 sessions')
+    fireEvent.keyDown(emptyDialog, { key: 'Escape' })
 
     // Gauge + trend + daily + table all show the same no-sessions copy.
     expect(screen.getAllByText(NO_EVENTS).length).toBeGreaterThanOrEqual(4)
@@ -919,7 +933,7 @@ describe('VampireDrainPage', () => {
 
     await screen.findByText('Vampire-drain statistics may be out of date')
     const warnings = screen.getAllByTestId('stale-refresh-warning')
-    expect(warnings.filter(warning => warning.getAttribute('data-refresh-blocked') === 'true')).toHaveLength(2)
+    expect(warnings.filter(warning => warning.getAttribute('data-refresh-blocked') === 'true')).toHaveLength(5)
     expect(statsCallCount()).toBe(statsBefore)
     expect(eventsCallCount()).toBe(eventsBefore)
     expect(metricValues('Avg drain / day')).toContain('2.34%')
@@ -964,9 +978,9 @@ describe('VampireDrainPage', () => {
 
     const culprit = within(await screen.findByTestId('vampire-culprits'))
     await waitFor(() => expect(culprit.getAllByText('Off')).toHaveLength(3))
-    expect(culprit.getByText('Tonight: unknown')).toBeInTheDocument()
+    expect(culprit.getByText('Cause unconfirmed')).toBeInTheDocument()
     expect(culprit.queryByText(/Turn Sentry off at home tonight/)).not.toBeInTheDocument()
-    expect(metricValues('At-limit plugged')).toContain('—')
+    assertOperationalMetricUnavailable(screen.getByTestId('vampire-split'), 'At-limit plugged')
     expect(metricValues('After unplug')).toContain('0.00%')
     const split = within(screen.getByTestId('vampire-split'))
     expect(split.getAllByText('Synthetic source: parked SOC loss is measured, watt-hours are not supplied.').length).toBeGreaterThanOrEqual(1)

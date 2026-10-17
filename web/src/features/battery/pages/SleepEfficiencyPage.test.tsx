@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   fireEvent,
@@ -531,11 +531,11 @@ describe('SleepEfficiencyPage persistent workspace', () => {
       '2026-07-16',
     );
     expect(screen.queryByTestId('sleep-efficiency-range')).not.toBeInTheDocument();
-    expect(
-      within(screen.getByTestId('sleep-efficiency-kpi-evidence')).getByText(
-        '2026-06-17 to 2026-07-16 UTC', { selector: '[data-battery-period]' },
-      ),
-    ).toBeInTheDocument();
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('sleep-efficiency-kpi-evidence'),
+      '2026-06-17 to 2026-07-16 UTC',
+      { contains: true },
+    );
   });
 
   it('keeps all shells mounted with no vehicle and disables evidence values', () => {
@@ -622,9 +622,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
       'Sleep evidence could not refresh',
     );
     expect(screen.getAllByText('10').length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('Unavailable pending dwell reconstruction').length,
-    ).toBeGreaterThan(0);
+    const refreshEvidence = screen.getByTestId('sleep-efficiency-kpi-evidence');
+    assertOperationalMetricUnavailable(refreshEvidence, 'Duration-based sleep efficiency');
+    assertOperationalMetricUnavailable(refreshEvidence, 'Average time-to-sleep');
     expect(
       screen.queryByRole('button', { name: 'Retry' }),
     ).not.toBeInTheDocument();
@@ -663,14 +663,12 @@ describe('SleepEfficiencyPage persistent workspace', () => {
 
     expect(screen.getAllByText('10').length).toBeGreaterThan(0);
     expect(screen.getAllByText('80.00%').length).toBeGreaterThan(0);
-    expect(
-      within(screen.getByTestId('sleep-efficiency-kpi-evidence')).getByText(
-        'Count-based; not a time share', { selector: '[data-battery-detail-context]' },
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Placeholder zero withheld'),
-    ).toBeInTheDocument();
+    const transitionEvidence = screen.getByTestId('sleep-efficiency-kpi-evidence');
+    fireEvent.click(within(transitionEvidence).getByRole('button', { name: 'Review details' }));
+    const transitionDialog = screen.getByRole('dialog');
+    expect(within(transitionDialog).getByRole('group', { name: 'Asleep-transition share' })).toHaveTextContent('Count-based; not a time share');
+    fireEvent.keyDown(transitionDialog, { key: 'Escape' });
+    assertOperationalMetricUnavailable(transitionEvidence, 'Average time-to-sleep');
     expect(
       screen.getByText(
         'Monthly drain and cost remain unavailable because no count-bearing Sentry on/off comparison exists.',
@@ -976,7 +974,11 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
     expect(screen.queryByTestId('sleep-refresh-error')).not.toBeInTheDocument();
     expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
-    expect(screen.getByText('2026-06-17 to 2026-07-16 UTC', { selector: '[data-battery-period]' })).toBeInTheDocument();
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('sleep-efficiency-kpi-evidence'),
+      '2026-06-17 to 2026-07-16 UTC',
+      { contains: true },
+    );
   });
 
   it('preserves dwell ratios, duplicate policy, and exact state exclusion accounting', () => {
