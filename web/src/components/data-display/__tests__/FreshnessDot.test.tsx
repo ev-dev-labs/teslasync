@@ -77,7 +77,6 @@ describe('FreshnessDot widget variant', () => {
         isStale={false}
         isError={false}
         onRefresh={onRefresh}
-        variant="widget"
       />,
     )
 
@@ -140,7 +139,7 @@ describe('FreshnessDot widget variant', () => {
 describe('FreshnessDot age thresholds', () => {
   it('marks automatically refreshed data stale at exactly two intervals', () => {
     const now = Date.now()
-    const { container } = render(
+    render(
       <FreshnessDot
         updatedAt={now - 2 * 60_000}
         isFetching={false}
@@ -149,12 +148,16 @@ describe('FreshnessDot age thresholds', () => {
         refreshIntervalMs={60_000}
       />,
     )
-    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
+    // Stale renders as an outlined ring, not a filled amber dot.
+    expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
+      'border-[var(--semantic-warning)]',
+      'bg-transparent',
+    )
   })
 
   it('uses the 15-minute manual freshness window when no polling cadence is supplied', () => {
     const now = Date.now()
-    const { container } = render(
+    render(
       <FreshnessDot
         updatedAt={now - 15 * 60_000}
         isFetching={false}
@@ -163,7 +166,11 @@ describe('FreshnessDot age thresholds', () => {
         manual
       />,
     )
-    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
+    // Stale renders as an outlined ring, not a filled amber dot.
+    expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
+      'border-[var(--semantic-warning)]',
+      'bg-transparent',
+    )
   })
 })
 
@@ -186,14 +193,11 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByText('just now')).toBeInTheDocument()
-    expect(screen.getByText('just now')).toHaveClass(
-      'inline-block', 'min-w-freshness-age', 'break-words', 'text-start', 'tabular-nums',
-    )
-    expect(screen.getByText('just now')).not.toHaveClass('min-w-[4.5rem]')
+    // Dot-only: age and status live in the accessible name, never as text.
+    const button = screen.getByRole('button', { name: 'Data freshness: Up to date · just now' })
     expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveClass('border-0', 'bg-transparent')
-    expect(screen.getByRole('status')).not.toHaveClass('rounded-pill')
+    expect(button).toHaveClass('!h-7', '!w-7', '!min-h-0', '!min-w-0', '!p-0')
+    expect(button).toBeDisabled()
   })
 
   it('formats a 5-minute-old timestamp as "5m ago"', () => {
@@ -205,7 +209,7 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByText('5m ago')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: Up to date · 5m ago' })).toBeInTheDocument()
   })
 
   it('formats a 3-hour-old timestamp as "3h ago"', () => {
@@ -217,7 +221,7 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByText('3h ago')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: Up to date · 3h ago' })).toBeInTheDocument()
   })
 
   it('formats a 2-day-old timestamp as "2d ago"', () => {
@@ -229,7 +233,7 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByText('2d ago')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: Up to date · 2d ago' })).toBeInTheDocument()
   })
 
   it('formats a 3-week-old timestamp as "3w ago"', () => {
@@ -241,7 +245,7 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByText('3w ago')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: Up to date · 3w ago' })).toBeInTheDocument()
   })
 
   it('shows "updating…" while fetching', () => {
@@ -253,8 +257,10 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByText('updating…')).toBeInTheDocument()
-    expect(container.getElementsByClassName(FRESHNESS_COLORS.fetching.dot)[0]).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: Updating… · just now' })).toBeInTheDocument()
+    // Busy swaps the dot for the shared spinner until data lands.
+    expect(container.querySelector('span.rounded-full')).toBeNull()
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument()
   })
 
   it('shows "error" with red dot when isError', () => {
@@ -266,12 +272,12 @@ describe('FreshnessDot', () => {
         isError
       />,
     )
-    expect(screen.getByText('error')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: Error' })).toBeInTheDocument()
     expect(container.getElementsByClassName(FRESHNESS_COLORS.error.dot)[0]).toBeInTheDocument()
   })
 
   it('flags stale state with amber dot', () => {
-    const { container } = render(
+    render(
       <FreshnessDot
         updatedAt={Date.now() - 60_000}
         isFetching={false}
@@ -279,7 +285,12 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
+    // Stale renders as an outlined ring, not a filled amber dot.
+    const button = screen.getByRole('button', { name: 'Data freshness: Stale · 1m ago' })
+    expect(button.querySelector('span.rounded-full')).toHaveClass(
+      'border-[var(--semantic-warning)]',
+      'bg-transparent',
+    )
   })
 
   it('hides relative time text in compact mode', () => {
@@ -308,15 +319,14 @@ describe('FreshnessDot', () => {
       />,
     )
     const refresh = screen.getByRole('button', { name: /Refresh data/ })
-    expect(refresh).toHaveClass('border-0', 'bg-transparent', '!px-0')
-    expect(refresh).not.toHaveClass('rounded-pill')
+    expect(refresh).toHaveClass('!h-7', '!w-7', '!min-h-0', '!min-w-0', '!p-0')
     fireEvent.click(refresh)
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
   it('does not call onRefresh while fetching', () => {
     const onRefresh = vi.fn()
-    const { container } = render(
+    render(
       <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching
@@ -325,10 +335,10 @@ describe('FreshnessDot', () => {
         onRefresh={onRefresh}
       />,
     )
-    const root = container.firstElementChild!
-    expect(root).toBeDisabled()
-    expect(root).toHaveClass('disabled:!bg-transparent')
-    fireEvent.click(root)
+    const refresh = screen.getByRole('button', { name: /Refresh data/ })
+    expect(refresh).toBeDisabled()
+    expect(refresh).toHaveClass('disabled:bg-transparent')
+    fireEvent.click(refresh)
     expect(onRefresh).not.toHaveBeenCalled()
   })
 
@@ -345,13 +355,14 @@ describe('FreshnessDot', () => {
       />,
     )
     const refresh = screen.getByRole('button')
-    expect(refresh).toHaveClass('!min-h-11', '!min-w-11', 'md:!min-h-0', 'md:!min-w-0')
-    expect(refresh).not.toHaveClass('!min-h-0')
+    // Fixed icon-button footprint (compact shrinks to !h-5 !w-5).
+    expect(refresh).toHaveClass(...(compact
+      ? ['!h-5', '!w-5', '!min-h-0', '!min-w-0', '!p-0']
+      : ['!h-7', '!w-7', '!min-h-0', '!min-w-0', '!p-0']))
     expect(refresh).toHaveAccessibleName(
       'Refresh data · Stale · 1m ago · Source: Battery analytics',
     )
-    expect(refresh).toHaveAttribute('title', expect.stringContaining('Source: Battery analytics'))
-    expect(refresh).toHaveClass(...(compact ? ['!p-0'] : ['!px-0', '!py-1.5']))
+    expect(refresh).toHaveAccessibleDescription(expect.stringContaining('Source: Battery analytics'))
 
     rerender(
       <FreshnessDot
@@ -364,7 +375,7 @@ describe('FreshnessDot', () => {
       />,
     )
     expect(refresh).toBeDisabled()
-    expect(refresh).toHaveClass('!min-h-11', '!min-w-11', 'md:!min-h-0', 'md:!min-w-0')
+    expect(refresh).toHaveClass(...(compact ? ['!h-5', '!w-5'] : ['!h-7', '!w-7']))
   })
 
   it.each([false, true])('does not enlarge read-only status with compact=%s', (compact) => {
@@ -377,8 +388,12 @@ describe('FreshnessDot', () => {
         compact={compact}
       />,
     )
-    expect(screen.getByRole('status')).not.toHaveClass('!min-h-11', '!min-w-11')
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    // Read-only renders a disabled button (never a status region) with the
+    // same fixed footprint.
+    const button = screen.getByRole('button', { name: 'Data freshness: Up to date · just now' })
+    expect(button).toBeDisabled()
+    expect(button).toHaveClass(...(compact ? ['!h-5', '!w-5'] : ['!h-7', '!w-7']))
+    expect(button).not.toHaveClass('!min-h-11', '!min-w-11')
   })
 
   it.each([false, true])('refreshes via Enter and Space with compact=%s', async (compact) => {
@@ -410,7 +425,7 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(screen.getByText('Stale · 5m ago')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Data freshness: Stale · 5m ago' })).toBeInTheDocument()
   })
 
   it('includes source provenance in the hover and accessible detail', () => {
@@ -423,8 +438,8 @@ describe('FreshnessDot', () => {
         source="Battery analytics"
       />,
     )
-    const status = screen.getByRole('status')
-    expect(status).toHaveAttribute('title', expect.stringContaining('Source: Battery analytics'))
+    const status = screen.getByRole('button')
+    expect(status).toHaveAccessibleDescription(expect.stringContaining('Source: Battery analytics'))
     expect(status).toHaveAccessibleName(
       'Data freshness: Up to date · just now · Source: Battery analytics',
     )
@@ -440,13 +455,8 @@ describe('FreshnessDot', () => {
         source="Battery analytics"
       />,
     )
-    expect(screen.getByText('5m ago')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveAccessibleName(
-      'Data freshness: Error · 5m ago · Source: Battery analytics',
-    )
-    expect(screen.getByRole('status')).toHaveAttribute(
-      'title', expect.stringContaining('Last updated:'),
-    )
+    const failed = screen.getByRole('button', { name: 'Data freshness: Error · 5m ago · Source: Battery analytics' })
+    expect(failed).toHaveAccessibleDescription(expect.stringContaining('Last updated:'))
   })
 
   it('keeps error precedence while fetching and the native refresh disabled', () => {
@@ -480,11 +490,11 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    expect(container.getElementsByClassName(FRESHNESS_COLORS.fetching.dot)[0]).toBeInTheDocument()
-    expect(container.querySelector('.animate-pulse, .animate-ping')).toBeNull()
+    // In-flight state swaps the dot for the shared busy spinner (no ping
+    // ring, no data-bg-refetch marker in the icon-only design).
+    expect(container.querySelector('span.rounded-full')).toBeNull()
     expect(container.querySelector('.animate-spin')).toBeInTheDocument()
-    // Sanity-check the data-attribute used by tooling/tests to spot the state.
-    expect(container.querySelector('[data-bg-refetch="true"]')).not.toBeNull()
+    expect(container.querySelector('.animate-pulse, .animate-ping')).toBeNull()
   })
 
   it('does not pulse during the initial fetch (no prior data)', () => {
@@ -519,7 +529,7 @@ describe('FreshnessDot', () => {
 
   it('falls back to an "Updating…" tooltip when reduced-motion + fetching', () => {
     reducedMotionMock.mockReturnValue(true)
-    const { container } = render(
+    render(
       <FreshnessDot
         updatedAt={Date.now() - 30_000}
         isFetching
@@ -527,13 +537,16 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    const root = container.firstElementChild as HTMLElement
-    expect(root.getAttribute('title')).toBe('Updating…')
+    // No title attribute in the icon-only design: the tooltip text is the
+    // accessible description (accessible name + update line).
+    expect(screen.getByRole('button')).toHaveAccessibleDescription(
+      'Data freshness: Updating… · just now · Updating…',
+    )
   })
 
   it('keeps the standard "Last updated" tooltip when reduced-motion but not fetching', () => {
     reducedMotionMock.mockReturnValue(true)
-    const { container } = render(
+    render(
       <FreshnessDot
         updatedAt={Date.now() - 30_000}
         isFetching={false}
@@ -541,8 +554,9 @@ describe('FreshnessDot', () => {
         isError={false}
       />,
     )
-    const root = container.firstElementChild as HTMLElement
-    expect(root.getAttribute('title')).toMatch(/^Last updated:/)
+    expect(screen.getByRole('button')).toHaveAccessibleDescription(
+      expect.stringContaining('Last updated:'),
+    )
   })
 })
 
@@ -582,10 +596,19 @@ describe('FreshnessDotAuto', () => {
   })
 
   it('omits the click handler when refetchable is false', () => {
-    const { container } = render(
-      <FreshnessDotAuto query={makeQuery()} refetchable={false} />,
+    const refetch = vi.fn().mockResolvedValue(undefined)
+    render(
+      <FreshnessDotAuto
+        query={makeQuery({ refetch: refetch as unknown as FreshnessQuery['refetch'] })}
+        refetchable={false}
+      />,
     )
-    expect(container.querySelector('button')).toBeNull()
+    // Read-only renders a disabled button (never a status region); clicks
+    // never reach refetch.
+    const button = screen.getByRole('button', { name: 'Data freshness: Up to date · just now' })
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+    expect(refetch).not.toHaveBeenCalled()
   })
 
   it('forces stale visual when forceStaleAfterMs threshold is exceeded', () => {
@@ -593,10 +616,14 @@ describe('FreshnessDotAuto', () => {
       dataUpdatedAt: Date.now() - 10 * 60_000, // 10 minutes
       isStale: false,
     })
-    const { container } = render(
+    render(
       <FreshnessDotAuto query={query} forceStaleAfterMs={5 * 60_000} />,
     )
-    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
+    // Stale renders as an outlined ring, not a filled amber dot.
+    expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
+      'border-[var(--semantic-warning)]',
+      'bg-transparent',
+    )
   })
 
   it('does not force stale when forceStaleAfterMs is below the data age', () => {
@@ -618,8 +645,12 @@ describe('FreshnessDotAuto', () => {
       vi.advanceTimersByTime(60_001)
     })
 
-    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
-    expect(screen.getByText('Stale · 1m ago')).toBeInTheDocument()
+    // Stale renders as an outlined ring; status + age move to the name.
+    expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
+      'border-[var(--semantic-warning)]',
+      'bg-transparent',
+    )
+    expect(screen.getByRole('button', { name: 'Refresh data · Stale · 1m ago' })).toBeInTheDocument()
   })
 
   it('treats dataUpdatedAt=0 (never fetched) as null updatedAt', () => {

@@ -51,3 +51,5 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-17 02:15 | repair group 22 climate done | 79/79 green (was 70/9 failed); tsc/lint/catalog/build green; committing+pushing | none
 2026-10-17 03:00 | repair group 23 battery done | 51/51 green (was 37/14 failed); tsc/lint/catalog/build green; committing+pushing | none
 2026-10-17 03:35 | repair group 24 singletons done | 185/185 green (was 180/5 failed); tsc/lint/catalog/build green; committing+pushing | none
+2026-10-17 04:20 | full suite classified (53473/3473); i18n trio DEFERRED | suite JSON parsed; trio = pre-existing main-branch drift (frozen at 1184a05f21, broken by d2cb6396ac before UI base), needs key-by-key product review, over timebox | trio deferred with diagnosis; moving to FreshnessDot (25)
+2026-10-17 04:55 | repair group 25 FreshnessDot done | 41/41 green (was 16/25 failed); i18n trio deferred w/ diagnosis; tsc/lint/catalog/build green; committing+pushing | none
