@@ -678,6 +678,9 @@ function EmptyResult({
                 >
                   <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-start">
                     <span className="min-w-0 break-words">{t(s.i18nKey, s.label)}</span>
+                    {/* Word separator for the accessible name; a whitespace-only
+                        anonymous flex item is not rendered, so layout is unchanged. */}
+                    {' '}
                     <Caption className="break-all">{s.path}</Caption>
                   </span>
                 </Button>

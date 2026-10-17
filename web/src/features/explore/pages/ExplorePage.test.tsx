@@ -165,6 +165,35 @@ function kpiValue(label: string): string {
   return metric?.querySelector('[data-operational-value]')?.textContent?.trim() ?? '';
 }
 
+/**
+ * Face-value disclosure: an unknown metric leaves the brief face entirely —
+ * no tile, no label, no em-dash placeholder.
+ */
+function expectVehiclesOmittedFromFace(overview: HTMLElement) {
+  expect(overview.querySelector('[data-operational-metric="vehicles"]')).not.toBeInTheDocument();
+  expect(within(overview).queryByText('Vehicles')).not.toBeInTheDocument();
+}
+
+/** Open the Review-details drawer and return the dialog. */
+function openReviewDrawer(overview: HTMLElement): HTMLElement {
+  fireEvent.click(within(overview).getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog', { name: 'Feature overview details' });
+}
+
+function closeReviewDrawer(drawer: HTMLElement) {
+  const close = within(drawer).getAllByRole('button', { name: 'Close' });
+  fireEvent.click(close[close.length - 1]);
+  expect(screen.queryByRole('dialog', { name: 'Feature overview details' })).not.toBeInTheDocument();
+}
+
+/**
+ * The drawer counts omitted metrics instead of rendering empty tiles.
+ * (The i18n stub does not pluralize, so the singular also renders "fields".)
+ */
+function expectHiddenFieldCount(drawer: HTMLElement, count: number) {
+  expect(within(drawer).getByText(`${count} empty fields are hidden.`)).toBeInTheDocument();
+}
+
 beforeEach(() => {
   state.vehicles = [{ id: 1 }, { id: 2 }];
   state.forwardAuth = true;
@@ -257,7 +286,11 @@ describe('ExplorePage — operational evidence', () => {
     state.vehiclePending = true;
     state.vehicleFetchStatus = 'paused';
     const { rerenderPage } = renderPage();
-    expect(kpiValue('Vehicles')).toBe('—');
+    const overview = screen.getByTestId('explore-operational-brief');
+    expectVehiclesOmittedFromFace(overview);
+    const pausedDrawer = openReviewDrawer(overview);
+    expectHiddenFieldCount(pausedDrawer, 1);
+    closeReviewDrawer(pausedDrawer);
     expect(screen.getByTestId('explore-operational-brief')).toHaveTextContent('Refresh paused');
     fireEvent.click(screen.getByRole('button', { name: 'Retry · Vehicles' }));
     expect(state.vehicleRetry).toHaveBeenCalledOnce();
@@ -345,9 +378,11 @@ describe('ExplorePage — operational evidence', () => {
     state.vehicleFetchStatus = 'fetching';
     const { rerenderPage } = renderPage();
     const overview = screen.getByTestId('explore-operational-brief');
-    expect(overview.querySelector('[data-operational-metric="vehicles"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(kpiValue('Vehicles')).toBe('—');
+    expectVehiclesOmittedFromFace(overview);
+    const unknownDrawer = openReviewDrawer(overview);
+    expectHiddenFieldCount(unknownDrawer, 1);
+    expect(within(unknownDrawer).getAllByText('Fleet pending').length).toBeGreaterThan(0);
+    closeReviewDrawer(unknownDrawer);
     expect(kpiValue('Features')).toBe(String(ALL_COUNT - 1));
     expect(within(overview).getAllByText('Fleet pending').length).toBeGreaterThan(0);
     expect(overview).not.toHaveAttribute('aria-busy', 'true');
@@ -361,7 +396,10 @@ describe('ExplorePage — operational evidence', () => {
     expect(overview.querySelector('[data-operational-metric="vehicles"]'))
       .toHaveAttribute('data-value-state', 'value');
     expect(kpiValue('Vehicles')).toBe('0');
-    expect(within(overview).getAllByText('Catalog ready').length).toBeGreaterThan(0);
+    expect(within(overview).queryByText('Catalog ready')).not.toBeInTheDocument();
+    const readyDrawer = openReviewDrawer(overview);
+    expect(within(readyDrawer).getAllByText('Catalog ready').length).toBeGreaterThan(0);
+    closeReviewDrawer(readyDrawer);
   });
 
   it('formats fleet counts with saved locale while retaining integer raw values', () => {
@@ -379,10 +417,9 @@ describe('ExplorePage — operational evidence', () => {
     const freshness = 'Fleet last loaded: Oct 6, 2026, 03:00 PM';
     const { getLocation } = renderPage('/explore?q=powershare&section=charging');
     const overview = screen.getByTestId('explore-operational-brief');
-    expect(within(overview).getAllByText('Visible catalog and returned fleet list · no date window').length)
-      .toBeGreaterThan(0);
-    expect(within(overview).getAllByText(freshness).length)
-      .toBeGreaterThan(0);
+    // Face-value disclosure: scope and freshness context live in the drawer, not on the face.
+    expect(within(overview).queryByText('Visible catalog and returned fleet list · no date window')).not.toBeInTheDocument();
+    expect(within(overview).queryByText(freshness)).not.toBeInTheDocument();
     const review = within(overview).getByRole('button', { name: 'Review details' });
     review.focus();
     fireEvent.click(review);
@@ -414,16 +451,21 @@ describe('ExplorePage — operational evidence', () => {
     state.vehicleUpdatedAt = timestamp;
     const { rerenderPage } = renderPage();
     const overview = screen.getByTestId('explore-operational-brief');
-    expect(within(overview).getAllByText('Fleet last loaded: Oct 6, 2026, 03:00 PM').length)
+    expect(within(overview).queryByText('Fleet last loaded: Oct 6, 2026, 03:00 PM')).not.toBeInTheDocument();
+    const initialDrawer = openReviewDrawer(overview);
+    expect(within(initialDrawer).getAllByText('Fleet last loaded: Oct 6, 2026, 03:00 PM').length)
       .toBeGreaterThan(0);
+    closeReviewDrawer(initialDrawer);
 
     state.locale = 'de-DE';
     state.timezone = 'Europe/Berlin';
     state.vehicleError = new Error('Fleet refresh failed');
     rerenderPage();
-    expect(within(overview).getAllByText('Fleet last loaded: 7. Okt. 2026, 00:00').length)
+    const retainedDrawer = openReviewDrawer(overview);
+    expect(within(retainedDrawer).getAllByText('Fleet last loaded: 7. Okt. 2026, 00:00').length)
       .toBeGreaterThan(0);
-    expect(within(overview).getAllByText('Retained fleet').length).toBeGreaterThan(0);
+    expect(within(retainedDrawer).getAllByText('Retained fleet').length).toBeGreaterThan(0);
+    closeReviewDrawer(retainedDrawer);
     expect(state.vehicleUpdatedAt).toBe(timestamp);
     expect(kpiValue('Vehicles')).toBe('2');
     expect(screen.getByTestId('explore-card-/vehicle-comparison')).toBeInTheDocument();
@@ -435,15 +477,22 @@ describe('ExplorePage — operational evidence', () => {
     state.vehicleFetchStatus = 'fetching';
     const { rerenderPage } = renderPage();
     const overview = screen.getByTestId('explore-operational-brief');
-    expect(within(overview).getAllByText('Fleet load time not supplied').length).toBeGreaterThan(0);
+    expect(within(overview).queryByText('Fleet load time not supplied')).not.toBeInTheDocument();
     expect(overview).not.toHaveTextContent('Fleet last loaded:');
-    expect(kpiValue('Vehicles')).toBe('—');
+    expectVehiclesOmittedFromFace(overview);
+    const unknownDrawer = openReviewDrawer(overview);
+    expect(within(unknownDrawer).getAllByText('Fleet load time not supplied').length).toBeGreaterThan(0);
+    expectHiddenFieldCount(unknownDrawer, 1);
+    closeReviewDrawer(unknownDrawer);
 
     state.vehicles = [];
     state.vehiclePending = false;
     state.vehicleFetchStatus = 'idle';
     rerenderPage();
-    expect(within(overview).getAllByText('Fleet load time not supplied').length).toBeGreaterThan(0);
+    expect(within(overview).queryByText('Fleet load time not supplied')).not.toBeInTheDocument();
+    const emptyDrawer = openReviewDrawer(overview);
+    expect(within(emptyDrawer).getAllByText('Fleet load time not supplied').length).toBeGreaterThan(0);
+    closeReviewDrawer(emptyDrawer);
     expect(overview).not.toHaveTextContent('Fleet last loaded:');
     expect(kpiValue('Vehicles')).toBe('0');
   });
@@ -455,8 +504,12 @@ describe('ExplorePage — operational evidence', () => {
     else state.vehicleFetchStatus = 'paused';
     rerenderPage();
     const overview = screen.getByTestId('explore-operational-brief');
-    expect(within(overview).getAllByText(mode === 'error' ? 'Retained fleet' : 'Refresh paused').length)
-      .toBeGreaterThan(0);
+    if (mode === 'error') {
+      // Retained status is drawer context; the face keeps only live values.
+      expect(within(overview).queryByText('Retained fleet')).not.toBeInTheDocument();
+    } else {
+      expect(within(overview).getAllByText('Refresh paused').length).toBeGreaterThan(0);
+    }
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(kpiValue('Vehicles')).toBe('2');
     expect(getLocation().search).toBe('?section=vehicles');
@@ -473,7 +526,11 @@ describe('ExplorePage — operational evidence', () => {
     const { rerenderPage, getLocation } = renderPage('/explore?q=powershare');
     const overview = screen.getByTestId('explore-operational-brief');
     expect(within(overview).getAllByText('Fleet unavailable').length).toBeGreaterThan(0);
-    expect(kpiValue('Vehicles')).toBe('—');
+    expectVehiclesOmittedFromFace(overview);
+    const fatalDrawer = openReviewDrawer(overview);
+    expectHiddenFieldCount(fatalDrawer, 1);
+    expect(within(fatalDrawer).getAllByText('Fleet unavailable').length).toBeGreaterThan(0);
+    closeReviewDrawer(fatalDrawer);
     expect(kpiValue('Showing')).toBe('1');
     expect(screen.getByTestId('explore-card-/powershare')).toBeInTheDocument();
     expect(screen.getByRole('searchbox')).toBeEnabled();
@@ -486,7 +543,10 @@ describe('ExplorePage — operational evidence', () => {
     state.vehiclePending = true;
     state.vehicleFetchStatus = 'fetching';
     rerenderPage();
-    expect(kpiValue('Vehicles')).toBe('—');
+    expectVehiclesOmittedFromFace(overview);
+    const pendingDrawer = openReviewDrawer(overview);
+    expectHiddenFieldCount(pendingDrawer, 1);
+    closeReviewDrawer(pendingDrawer);
     expect(overview).toHaveTextContent('Fleet pending');
     expect(screen.queryByRole('button', { name: 'Retry · Vehicles' })).not.toBeInTheDocument();
     expect(screen.getByTestId('explore-card-/powershare')).toBeInTheDocument();
@@ -496,7 +556,10 @@ describe('ExplorePage — operational evidence', () => {
     state.vehicleFetchStatus = 'idle';
     rerenderPage();
     expect(kpiValue('Vehicles')).toBe('0');
-    expect(overview).toHaveTextContent('Catalog ready');
+    expect(overview).not.toHaveTextContent('Catalog ready');
+    const recoveredDrawer = openReviewDrawer(overview);
+    expect(within(recoveredDrawer).getAllByText('Catalog ready').length).toBeGreaterThan(0);
+    closeReviewDrawer(recoveredDrawer);
     expect(screen.queryByRole('button', { name: 'Retry · Vehicles' })).not.toBeInTheDocument();
     expect(screen.getByTestId('explore-card-/powershare')).toBeInTheDocument();
     expect(getLocation().search).toBe('?q=powershare');
@@ -506,13 +569,14 @@ describe('ExplorePage — operational evidence', () => {
     state.vehicleFetchStatus = 'fetching';
     const { getLocation } = renderPage('/explore?q=powershare');
     const overview = screen.getByTestId('explore-operational-brief');
-    expect(within(overview).getAllByText('Fleet refreshing').length).toBeGreaterThan(0);
+    expect(within(overview).queryByText('Fleet refreshing')).not.toBeInTheDocument();
     expect(kpiValue('Vehicles')).toBe('2');
     expect(kpiValue('Showing')).toBe('1');
     const review = within(overview).getByRole('button', { name: 'Review details' });
     review.focus();
     fireEvent.click(review);
     const drawer = screen.getByRole('dialog', { name: 'Feature overview details' });
+    expect(within(drawer).getAllByText('Fleet refreshing').length).toBeGreaterThan(0);
     fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Feature overview details' })).not.toBeInTheDocument();
     expect(review).toHaveFocus();
@@ -723,7 +787,11 @@ describe('ExplorePage — visibility gates', () => {
   it('is null-safe when the vehicles query has no data yet', () => {
     state.vehicles = undefined;
     renderPage();
-    expect(kpiValue('Vehicles')).toBe('—');
+    const overview = screen.getByTestId('explore-operational-brief');
+    expectVehiclesOmittedFromFace(overview);
+    const drawer = openReviewDrawer(overview);
+    expectHiddenFieldCount(drawer, 1);
+    closeReviewDrawer(drawer);
     expect(screen.queryByTestId('explore-card-/vehicle-comparison')).toBeNull();
   });
 });
@@ -869,7 +937,11 @@ describe('ExplorePage — keyboard', () => {
         state.vehiclePending = true;
         state.vehicleFetchStatus = fetchStatus;
         const { rerenderPage } = renderPage();
-        expect(kpiValue('Vehicles')).toBe('—');
+        const overview = screen.getByTestId('explore-operational-brief');
+        expectVehiclesOmittedFromFace(overview);
+        const unresolvedDrawer = openReviewDrawer(overview);
+        expectHiddenFieldCount(unresolvedDrawer, 1);
+        closeReviewDrawer(unresolvedDrawer);
         expect(screen.queryByTestId('explore-empty')).not.toBeInTheDocument();
         expect(screen.getByRole('searchbox')).toBeInTheDocument();
         expect(screen.getByTestId('explore-card-/charging')).toBeInTheDocument();
@@ -901,7 +973,11 @@ describe('ExplorePage — keyboard', () => {
       state.vehicles = undefined;
       state.vehicleError = new Error('Fleet unavailable');
       const { getLocation } = renderPage('/explore?q=powershare');
-      expect(kpiValue('Vehicles')).toBe('—');
+      const overview = screen.getByTestId('explore-operational-brief');
+      expectVehiclesOmittedFromFace(overview);
+      const failedDrawer = openReviewDrawer(overview);
+      expectHiddenFieldCount(failedDrawer, 1);
+      closeReviewDrawer(failedDrawer);
       expect(kpiValue('Showing')).toBe('1');
       fireEvent.click(screen.getByTestId('explore-card-/powershare'));
       expect(getLocation().pathname).toBe('/powershare');
