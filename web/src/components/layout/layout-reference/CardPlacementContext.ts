@@ -15,5 +15,12 @@ const spanClasses: Record<number, string> = {
 
 export function useCardPlacement() {
   const placement = useContext(CardPlacementContext);
-  return placement && { ...placement, className: spanClasses[placement.span] };
+  return placement && { ...placement, className: colSpanClass(placement.span) };
+}
+
+/** Grid span class for a packed span (1–12). Shared by CardGrid's own item
+ * wrappers so custom sections that never read the placement still span. */
+export function colSpanClass(span: number): string {
+  const clamped = Math.min(12, Math.max(1, Math.round(span)));
+  return spanClasses[clamped] ?? 'col-span-1';
 }

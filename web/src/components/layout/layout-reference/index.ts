@@ -1,6 +1,7 @@
 export { PageLayout, type PageLayoutProps } from './PageLayout';
 export { Section, type SectionProps } from './Section';
 export { CardGrid, type CardGridItem, type CardGridProps } from './CardGrid';
+export { MetricGrid, type MetricGridProps } from './MetricGrid';
 export { useCardPlacement } from './CardPlacementContext';
 export { LayoutCard, type LayoutCardProps } from './LayoutCard';
 export { ChartCard, type ChartCardProps } from './ChartCard';

@@ -370,9 +370,11 @@ export function TelemetryPipelineCard({
               ? t('systemStatus.pipeline.stream', 'stream')
               : source === 'poll' ? t('systemStatus.pipeline.poll', 'poll') : null
             return (
-              <li key={v.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3">
-                {/* Status pip + name */}
-                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <li key={v.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                {/* Status pip + name (floored: flex-1 would crush the name to
+                    make room for the fixed battery/liveness blocks instead of
+                    wrapping the row). */}
+                <div className="flex min-w-[min(100%,12rem)] flex-1 items-center gap-2.5">
                   <span
                     className={`h-2.5 w-2.5 shrink-0 rounded-full ${cls.dot}`}
                     role="img"

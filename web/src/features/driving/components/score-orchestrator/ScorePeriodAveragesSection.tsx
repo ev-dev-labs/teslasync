@@ -1,4 +1,5 @@
 import { FadeIn } from '@/components/motion';
+import { MetricGrid } from '@/components/layout';
 import { Icons } from '@/lib/icons';
 import { ScorePeriodAverages } from '../continuation-driving-primary/ScorePeriodAverages';
 import type { ScoreSectionProps } from './scoreSectionTypes';
@@ -10,15 +11,14 @@ export function ScorePeriodAveragesSection({ model, driveState }: ScorePeriodAve
 
   return (
     <FadeIn delay={0.35}>
-      <section
-        aria-label={t('driveScore.periodAverages', 'Period averages')}
-        className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-6"
-      >
-        <ScorePeriodAverages stats={periodStats} sourceFallback={driveState(
-          120,
-          t('driveScore.noPeriodStats', 'No weekly/monthly averages available yet'),
-          <Icons.target className="h-8 w-8" aria-hidden="true" />,
-        )} />
+      <section aria-label={t('driveScore.periodAverages', 'Period averages')}>
+        <MetricGrid className="sm:gap-4">
+          <ScorePeriodAverages stats={periodStats} sourceFallback={driveState(
+            120,
+            t('driveScore.noPeriodStats', 'No weekly/monthly averages available yet'),
+            <Icons.target className="h-8 w-8" aria-hidden="true" />,
+          )} />
+        </MetricGrid>
       </section>
     </FadeIn>
   );

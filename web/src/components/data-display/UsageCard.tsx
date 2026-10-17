@@ -362,14 +362,14 @@ function FooterSection({ links }: { links: UsageCardFooterLink[] }) {
               rel="noopener noreferrer"
               className={baseClass}
             >
-              <span className="min-w-0 break-all text-start">{link.label}</span>
+              <span className="min-w-0 break-words text-start">{link.label}</span>
               <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
             </a>
           )
         }
         return (
           <Link key={link.key} to={link.to} className={baseClass}>
-            <span className="min-w-0 break-all text-start">{link.label}</span>
+            <span className="min-w-0 break-words text-start">{link.label}</span>
             <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </Link>
         )

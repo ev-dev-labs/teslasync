@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
+import { MetricGrid } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { CycleStressResult } from '../../lib/cycleStress';
 import {
@@ -59,7 +60,7 @@ export function CycleStressEvidenceSupport({
           state={state}
           requirement="none"
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <MetricGrid>
             <MetricCard
               compact
               label={t('cycleStress.support.index', 'Support index')}
@@ -166,7 +167,7 @@ export function CycleStressEvidenceSupport({
               icon={<Layers3 className="h-5 w-5" />}
               color="neutral"
             />
-          </div>
+          </MetricGrid>
           <AlertBanner className="mt-4" variant="info">
             <Text as="p" variant="caption">
               {t(

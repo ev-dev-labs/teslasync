@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
+import { MetricGrid } from '@/components/layout';
 import {
   GlassPanel,
   PanelTitle,
@@ -147,7 +148,7 @@ export function CycleStressKpiBand({
             />
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <MetricGrid>
           <MetricCard
             label={t('cycleStress.kpis.intervals', 'Accepted intervals')}
             value={
@@ -281,7 +282,7 @@ export function CycleStressKpiBand({
             icon={<ShieldCheck className="h-5 w-5" />}
             color="red"
           />
-        </div>
+        </MetricGrid>
         <CycleStressQueryStatus result={result} state={state} />
       </GlassPanel>
     </section>

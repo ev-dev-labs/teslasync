@@ -37,7 +37,10 @@ export function LayoutCard({ title, description, actions, children, footer, size
       )}
     >
       <header className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 flex-1 space-y-1">
+        {/* flex-1 (basis 0) would absorb all shrinkage and defeat the wrap,
+            crushing the title when the actions row is wide. Floor the title
+            so it wraps to its own line instead of collapsing. */}
+        <div className="min-w-[min(100%,12rem)] flex-1 space-y-1">
           <Heading id={`${id}-title`} level="panel" data-card-title className="break-words">{title}</Heading>
           {description && (
             <Tooltip content={description} multiline boundaryRef={cardRef}>

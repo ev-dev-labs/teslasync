@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
+import { MetricGrid } from '@/components/layout';
 import {
   GlassPanel,
   Heading,
@@ -176,7 +177,7 @@ export function CycleStressMethodology({
             'Eligibility, accounting, continuity, rainflow definitions, calendar semantics, and explicit non-claims.',
           )}
         </Text>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <MetricGrid>
           {items.map((item) => (
             <article
               key={item.key}
@@ -191,7 +192,7 @@ export function CycleStressMethodology({
               </Text>
             </article>
           ))}
-        </div>
+        </MetricGrid>
         <AlertBanner className="mt-4" variant="warning">
           <Text as="p" variant="caption">
             {t(

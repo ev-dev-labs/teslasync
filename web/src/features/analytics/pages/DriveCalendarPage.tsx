@@ -99,7 +99,12 @@ function DriveCalendarContent() {
           <Grid
             gap={4}
             className={compactHeatmap
-              ? 'grid-cols-1 xl:grid-cols-[max-content_minmax(0,1fr)] 2xl:grid-cols-[max-content_minmax(0,3fr)_minmax(0,2fr)]'
+              // The heatmap panel is a LayoutCard, which is a size-contained
+              // (@container) element: it contributes ~0 intrinsic width, so a
+              // bare max-content track collapses to padding (26px) with
+              // per-character text wrap. Floor the track at the 15rem
+              // side-panel minimum instead; the week grid scrolls inside.
+              ? 'grid-cols-1 xl:grid-cols-[minmax(min(100%,15rem),max-content)_minmax(0,1fr)] 2xl:grid-cols-[minmax(min(100%,15rem),max-content)_minmax(0,3fr)_minmax(0,2fr)]'
               : 'grid-cols-1 xl:grid-cols-5'}
           >
             <DriveCalendarHeatmap

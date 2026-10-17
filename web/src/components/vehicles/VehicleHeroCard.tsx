@@ -12,7 +12,7 @@ import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
 import { Heading, Text } from '@/components/ui/Typography';
-import { Grid } from '@/components/layout/Grid';
+import { MetricGrid } from '@/components/layout';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FSM_REGISTRY } from '@/types/fsm';
 import { useUnits } from '@/hooks/useUnits';
@@ -62,9 +62,6 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   className?: string;
 }
 
-/** Stable grid layout for the detail stat cards — hoisted so the object
- *  reference is identical across renders and never re-triggers <Grid>. */
-const STAT_GRID_COLS = { default: 2, md: 4 } as const;
 const NAV_LINK_CLASS = cn(
   BUTTON_BASE,
   typography.size.sm,
@@ -284,7 +281,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             </div>
 
             {/* Detail cards mirror the same display-unit conversions as the gauges */}
-            <Grid cols={STAT_GRID_COLS} gap={3}>
+            <MetricGrid>
               <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside temp')} value={insideTempDisplay ?? '—'} unit={temperatureLabel} />
               <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside temp')} value={outsideTempDisplay ?? '—'} unit={temperatureLabel} />
               <StatCard
@@ -311,7 +308,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 value={isFiniteNumber(vs.power) ? fmtNumber(convertPowerFromSI(vs.power, unitPrefs.power)) : '—'}
                 unit={unitPrefs.power}
               />
-            </Grid>
+            </MetricGrid>
           </>
         ) : (
           <EmptyState

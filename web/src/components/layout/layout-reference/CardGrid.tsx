@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Grid } from '../Grid';
 import { cn } from '@/lib/cn';
-import { CardPlacementContext } from './CardPlacementContext';
+import { CardPlacementContext, colSpanClass } from './CardPlacementContext';
 import { containerPolicy, packCardRows, type CardSize } from './layoutPolicy';
 import { useContainerWidth } from './useContainerWidth';
 
@@ -34,9 +34,14 @@ export function CardGrid({ items, label }: CardGridProps) {
           direct child, not interpret the measurement boundary as a grid. */}
       <Grid cols={columns} gap={policy.gutter} className={cn(gridClasses[policy.columns], 'items-stretch')}>
         {safeItems.map((item, index) => (
-          <CardPlacementContext.Provider key={item.id} value={{ size: item.size, span: spans[index], width }}>
-            {item.content}
-          </CardPlacementContext.Provider>
+          // The span lives on the grid item itself: custom sections that
+          // never read the placement context (the common case) previously
+          // dropped their span and collapsed to a single column.
+          <div key={item.id} className={cn(colSpanClass(spans[index]), 'min-w-0')}>
+            <CardPlacementContext.Provider value={{ size: item.size, span: spans[index], width }}>
+              {item.content}
+            </CardPlacementContext.Provider>
+          </div>
         ))}
       </Grid>
     </div>

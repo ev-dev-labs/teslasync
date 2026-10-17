@@ -231,7 +231,7 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
                       key={`${inst.name}::${inst.host}`}
                       className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
                     >
-                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <div className="flex min-w-[min(100%,12rem)] flex-1 items-center gap-2.5">
                         <span
                           className={`h-2 w-2 shrink-0 rounded-full ${cls.dot}`}
                           role="img"

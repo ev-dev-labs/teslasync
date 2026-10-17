@@ -47,6 +47,7 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 | 14 | Map overview page (`/live`) restructure on the trip-replay model | `/live` | map + info panel hero in one surface | done | done | done | done | none; UI only | 1 | done |
 | 15 | Trip replay page layout fixes (map height, sources drawer, timestamps, style switcher) | trip replay route | replay hero | done | done | done | done | none; UI only; negative Age logged report-only | 1 | done |
 | 16 | Dashboard widget shell: horizontal overflow, padding tokens, container-query resize, vertical scroll, Playwright guard | all dashboard widgets | WidgetShell + panel | done | done | done | done | none; UI only; per-widget guard records below | 1 | done |
+| 17 | Layout-collapse regression: attribute + shared grid/panel/break/chart fixes + route guard (277 routes × 4 widths) + route gallery | app-wide | Grid / LayoutCard / pages | in progress | n/a | n/a | in progress | none; UI only; cause: LayoutCard `@container` (pre-existing, `3ca496945b`) inside `max-content` tracks — NOT row 16 (A/B identical); per-route guard records below | 1 | in progress |
 
 Exit-check inventory (run from `web/`):
 

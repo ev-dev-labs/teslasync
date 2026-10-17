@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
+import { MetricGrid } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { CycleStressResult } from '../../lib/cycleStress';
 import { cycleStressNumber } from './labels';
@@ -58,7 +59,7 @@ export function CycleStressContinuity({
           state={state}
           requirement="none"
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <MetricGrid>
             <MetricCard
               compact
               label={t(
@@ -242,7 +243,7 @@ export function CycleStressContinuity({
               icon={<Combine className="h-5 w-5" />}
               color="neutral"
             />
-          </div>
+          </MetricGrid>
           <AlertBanner className="mt-4" variant="info">
             <Text as="p" variant="caption">
               {t(
