@@ -420,7 +420,16 @@
     "brief": {
       "scope": "Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.",
       "description": "Reported motion and coordinates from the latest position; missing GPS is not a measured zero."
-    }
+    },
+    "modeLive": "Live",
+    "modeRecent": "Recent route",
+    "mapMode": "Map mode",
+    "playbackPosition": "Playback position",
+    "playbackSpeed": "Speed",
+    "playbackBattery": "Battery",
+    "playbackPower": "Power",
+    "noRecentRoute": "No recent route to replay yet.",
+    "recentRouteError": "Recent route unavailable."
   },
   "mapsBrief": {
     "status": {

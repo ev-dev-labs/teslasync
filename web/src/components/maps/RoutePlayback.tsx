@@ -73,6 +73,12 @@ export interface RoutePlaybackProps {
   className?: string;
   /** Empty-state message override when `points` is empty. */
   emptyMessage?: string;
+  /**
+   * Omit the outer GlassPanel and fixed height so the widget fills a
+   * caller's surface (map flex-fills, controls sit below it). The `height`
+   * prop is ignored when set. Default false.
+   */
+  bare?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -185,6 +191,7 @@ export function RoutePlayback({
   ariaLabel,
   className,
   emptyMessage,
+  bare = false,
 }: RoutePlaybackProps) {
   const { fmtNumber } = useNumberFormatting();
   const { formatSpeed } = useUnits();
@@ -359,15 +366,19 @@ export function RoutePlayback({
 
   /* ── Empty state ──────────────────────────────────────────────── */
   if (trail.length === 0) {
+    const empty = (
+      <EmptyState /* no-action: route playback has no fallback when telemetry has no GPS points */
+        icon={<MapPin className="h-8 w-8" />}
+        message={
+          emptyMessage ??
+          t('maps.routePlayback.empty', 'No GPS points to replay for this route.')
+        }
+      />
+    );
+    if (bare) return empty;
     return (
       <GlassPanel className={cn('overflow-hidden', className)}>
-        <EmptyState /* no-action: route playback has no fallback when telemetry has no GPS points */
-          icon={<MapPin className="h-8 w-8" />}
-          message={
-            emptyMessage ??
-            t('maps.routePlayback.empty', 'No GPS points to replay for this route.')
-          }
-        />
+        {empty}
       </GlassPanel>
     );
   }
@@ -378,12 +389,13 @@ export function RoutePlayback({
     pointCount: trail.length,
     duration: fmtDuration(totalMs),
   });
+  const Frame = bare ? 'div' : GlassPanel;
 
   return (
-    <GlassPanel className={cn('overflow-hidden', className)}>
+    <Frame className={bare ? cn('flex h-full min-h-0 w-full flex-col', className) : cn('overflow-hidden', className)}>
       <div
-        className="relative w-full"
-        style={{ height: heightStyle }}
+        className={bare ? 'relative min-h-0 w-full flex-1' : 'relative w-full'}
+        style={bare ? undefined : { height: heightStyle }}
         role="application"
         aria-label={ariaLabel ?? t('maps.routePlayback.mapLabel', 'Route playback map')}
         aria-describedby={routeSummaryId}
@@ -487,6 +499,6 @@ export function RoutePlayback({
           />
         </div>
       )}
-    </GlassPanel>
+    </Frame>
   );
 }

@@ -500,6 +500,14 @@ html[data-status-bar='off'] {
 :root.light-mode .leaflet-tile-pane {
   filter: none;
 }
+/* MapTileLayer toggles `map-style-dark` on the Leaflet container when the
+   effective style needs CSS darkening (free OSM raster + Dark style; Azure
+   and Google serve natively dark tiles). L.TileLayer ignores `className`,
+   so the marker must live on the container. Placed after the rules above
+   so it wins ties and follows the selection in both app themes. */
+.leaflet-container.map-style-dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85);
+}
 
 /* === RECHARTS OVERRIDES === */
 .recharts-cartesian-grid line {

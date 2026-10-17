@@ -344,4 +344,27 @@ describe('RoutePlayback', () => {
     for (const listener of registered) expect(remove).toHaveBeenCalledWith('change', listener);
     expect(listeners.size).toBe(0);
   });
+
+  it('bare mode fills the caller frame with no outer surface and no fixed height', () => {
+    const { container } = render(<RoutePlayback points={trail} bare height={360} />);
+    expect(container.querySelector('[data-surface-variant]')).toBeNull();
+    const map = screen.getByRole('application', { name: /route playback map/i });
+    expect(map).toHaveClass('flex-1');
+    expect(map.style.height).toBe('');
+    // Controls stay reachable below the map.
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Playback progress' })).toBeInTheDocument();
+  });
+
+  it('framed mode keeps the outer surface and fixed height by default', () => {
+    const { container } = render(<RoutePlayback points={trail} height={360} />);
+    expect(container.querySelector('[data-surface-variant="standalone"]')).not.toBeNull();
+    expect(screen.getByRole('application', { name: /route playback map/i }).style.height).toBe('360px');
+  });
+
+  it('bare mode renders the empty state without an outer surface', () => {
+    const { container } = render(<RoutePlayback points={[]} bare emptyMessage="Nothing to replay" />);
+    expect(container.querySelector('[data-surface-variant]')).toBeNull();
+    expect(screen.getByText('Nothing to replay')).toBeInTheDocument();
+  });
 });

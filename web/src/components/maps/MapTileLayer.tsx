@@ -53,6 +53,7 @@ function googleTiles(key: string): Record<MapStyle, TileDef> {
 }
 
 export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
+  const map = useMap()
   const { data: mapConfig } = useQuery({
     queryKey: ['map-config'],
     queryFn: getMapConfig,
@@ -74,21 +75,30 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
   }
 
   const t = tiles[effectiveStyle] || tiles.dark
-  // react-leaflet updates only url/opacity/zIndex on a mounted TileLayer —
-  // the dark-mode CSS filter (className) applies at construction only. Key
-  // the layer on provider + effective style so a style switch always mounts
-  // a fresh layer and the selected option matches the tiles shown.
+  // CARTO's former anonymous dark tiles now return an API-key watermark, so
+  // the free dark style is OSM raster plus a CSS invert. L.TileLayer ignores
+  // the `className` option entirely (only markers and image overlays honor
+  // it), which is why "Dark" stayed selected while light tiles displayed.
+  // Instead, mark the map container and let index.css darken the tile pane;
+  // routes and markers live in other panes and keep their colors. Azure and
+  // Google serve natively dark tiles and need no marker.
+  const needsCssDarkening = tiles === freeTiles && effectiveStyle === 'dark'
+  useEffect(() => {
+    const container = map.getContainer()
+    container.classList.toggle('map-style-dark', needsCssDarkening)
+    return () => {
+      container.classList.remove('map-style-dark')
+    }
+  }, [map, needsCssDarkening])
+  // react-leaflet updates only url/opacity/zIndex on a mounted TileLayer.
+  // Key the layer on provider + effective style so a style switch always
+  // mounts a fresh layer and the selected option matches the tiles shown.
   const layerKey = `${mapConfig?.provider ?? 'free'}:${effectiveStyle}`
   return (
     <TileLayer
       key={layerKey}
       url={t.url}
       attribution={t.attribution}
-      // CARTO's former anonymous dark tiles now return an API-key watermark.
-      // Darken only OSM's raster layer, leaving route and marker colors intact.
-      className={tiles === freeTiles && t === freeTiles.dark
-        ? '[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]'
-        : undefined}
       // Defer tile requests until the pan/zoom gesture settles so a drag does
       // not fire a request storm on a constrained link.
       updateWhenIdle={!richMapTiles}

@@ -66,3 +66,4 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-17 14:02 | wave2 16/16 integrated | +telemetry 146 (418/418), battery 171 (1214+14known), driving 219 (3350+3known); wave2 total 1464; cumulative 2276; row 19 (/live two-mode) added to plan | none
 2026-10-17 14:10 | cleanup + full suite | 15 worktrees + 16 branches removed; teslasync-wt-system husk locked by live handle (empty, unregistered, retry later); full suite alone running | husk
 2026-10-17 14:20 | post-wave2 suite: 55246/1700 | -1463 (1464 resolved + 1 flake); 220 files green; 1 new fail = TeslaPhysicsPage load flake (67/67 solo); starting row 19 /live | none
+2026-10-17 14:57 | row 19 /live two-mode done | one surface + Live|Recent switch (?mode=) + bare playback + panel stats + shared style fix (TileLayer ignores className); suites 12/12+17/17+40/40; 6 screenshots; tsc/lint/catalog/build green; committing+pushing | none

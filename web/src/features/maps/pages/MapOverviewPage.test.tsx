@@ -4,12 +4,14 @@
  * The page is the "Map Overview" recorded-location dashboard. It fans one
  * TanStack Query hook (`useVehicles`) and three raw `request()` queries
  * (latest position, 50-point history, latest location snapshot) through the
- * real `useUnits` SI→display boundary into one hero surface (a leaflet map
- * beside an info panel with the latest observation, location status and
- * coordinates), a recent-route playback panel, and a recent-history table.
+ * real `useUnits` SI→display boundary into one hero surface with a Live /
+ * Recent route mode switch: Live pairs a leaflet map with an info panel
+ * (latest observation, location status, coordinates); Recent route replays
+ * the 50-point history on the same map cell with the playback bar below it
+ * and cursor stats in the panel. A recent-history table sits below the hero.
  * The panel header carries icon-only shortcuts to the navigation, geofences
- * and locations routes, a Details disclosure for sources and method, and the
- * freshness dot for the latest position.
+ * and locations routes, a Details disclosure for sources and method, and —
+ * in Live mode — the freshness dot for the latest position.
  *
  * Two layers are exercised:
  *
@@ -33,6 +35,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { useEffect, useRef } from 'react'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
@@ -183,9 +186,22 @@ vi.mock('@/components/maps', () => ({
       </button>
     )
   },
-  RoutePlayback: ({ points, ariaLabel }: { points: unknown[]; ariaLabel?: string }) => {
+  RoutePlayback: ({ points, ariaLabel, onPositionChange }: {
+    points: Array<{ timestamp: string }>; ariaLabel?: string; onPositionChange?: (point: unknown, index: number) => void
+  }) => {
     h.maps.playbackCounts.push(points.length)
     h.maps.playbackLabels.push(ariaLabel ?? '')
+    // Faithful to the real widget contract (pinned by its own suite): the
+    // cursor position fires on mount so panels can render initial stats.
+    // Once only — the page passes an inline callback, so refiring on every
+    // identity change would loop setState.
+    const fired = useRef(false)
+    useEffect(() => {
+      if (!fired.current && points.length > 0) {
+        fired.current = true
+        onPositionChange?.(points[0], 0)
+      }
+    }, [points, onPositionChange])
     return (
       <div data-testid="route-playback" data-count={points.length} aria-label={ariaLabel}>
         playback:{points.length}
@@ -414,8 +430,15 @@ describe('MapOverviewPage — full render', () => {
     for (const name of ['Navigation route', 'Geofences', 'Locations']) {
       expect(within(panel).getByRole('button', { name })).toBeInTheDocument()
     }
-    expect(screen.getByText('Recent route playback')).toBeInTheDocument()
     expect(screen.getByText('Recent location history')).toBeInTheDocument()
+
+    // One map surface: the mode switch replaces the old separate playback
+    // section. Live is the default; no separate playback heading exists.
+    const modeSwitch = screen.getByRole('group', { name: 'Map mode' })
+    expect(within(modeSwitch).getByRole('button', { name: 'Live' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(modeSwitch).getByRole('button', { name: 'Recent route' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('heading', { name: 'Recent route playback' })).toBeNull()
+    expect(screen.queryByTestId('route-playback')).toBeNull()
 
     // The hero map rendered with the vehicle marker + popup name (scoped to the
     // popup so it doesn't collide with the vehicle-picker <option>).
@@ -426,9 +449,14 @@ describe('MapOverviewPage — full render', () => {
     // The 3-point trail reaches the (stubbed) polyline.
     expect(h.maps.polylines.at(-1)).toHaveLength(3)
 
-    // Route playback receives all 3 points, time-ordered ascending.
+    // Recent route mode mounts playback with all 3 points, time-ordered
+    // ascending, and the panel follows with the cursor stats.
+    fireEvent.click(within(modeSwitch).getByRole('button', { name: 'Recent route' }))
     const playback = await screen.findByTestId('route-playback')
     expect(playback).toHaveAttribute('data-count', '3')
+    const recentPanel = await screen.findByRole('region', { name: 'Playback position' })
+    expect(await within(recentPanel).findByText('Speed')).toBeInTheDocument()
+    expect(within(recentPanel).getByText('72.00 km/h')).toBeInTheDocument()
   })
 
   it('renders location-details tri-state badges and a null odometer as an em dash', async () => {
@@ -483,15 +511,23 @@ describe('MapOverviewPage — empty data', () => {
     install({ history: [] })
     renderPage()
 
-    expect(
-      await screen.findByText('Not enough GPS points to replay a route yet.'),
-    ).toBeInTheDocument()
+    // Live mode: hero map plus the history table's own empty state.
+    expect(await screen.findByTestId('map-container')).toBeInTheDocument()
     expect(screen.getByText('No location history found.')).toBeInTheDocument()
     expect(screen.getByText(/appears after the selected vehicle reports valid GPS positions/)).toBeInTheDocument()
 
     // No trail polyline and no playback widget with too few points.
     expect(screen.queryByTestId('route-playback')).toBeNull()
     expect(h.maps.polylines).toHaveLength(0)
+
+    // Recent route mode: short empty states in the map cell and the panel,
+    // and no playback bar at all.
+    fireEvent.click(screen.getByRole('button', { name: 'Recent route' }))
+    expect(
+      await screen.findByText('Not enough GPS points to replay a route yet.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('No recent route to replay yet.')).toBeInTheDocument()
+    expect(screen.queryByTestId('route-playback')).toBeNull()
   })
 
   it('renders NoVehicleSelected once the fleet has loaded and is genuinely empty', async () => {
@@ -556,16 +592,32 @@ describe('MapOverviewPage — per-section errors', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
   })
 
-  it('shows errors in BOTH the playback and history panels when history fails', async () => {
+  it('shows errors in the history table (Live) and the playback surface (Recent) when history fails', async () => {
     install({ historyError: true })
     renderPage()
 
-    await screen.findByText('Recent route playback')
-    // Two independent surfaces read the same history query.
+    // Live mode: the hero map is fine (latest is independent) while the
+    // history table carries its own error.
+    expect(await screen.findByTestId('map-container')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Recent location history' })).toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(2)
+      expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(1)
     })
+
+    // Recent route mode: the map cell shows the retryable error and the
+    // panel carries a short note instead of stats.
+    fireEvent.click(screen.getByRole('button', { name: 'Recent route' }))
+    const playback = await screen.findByText('Recent route unavailable.')
+    expect(playback).toBeInTheDocument()
     expect(screen.queryByTestId('route-playback')).toBeNull()
+    const before = mockedRequest.mock.calls.filter((c) => String(c[0]).includes('/positions?limit=50')).length
+    const heroMap = screen.getByRole('region', { name: 'Recorded location map' })
+    fireEvent.click(within(heroMap).getByRole('button', { name: 'Retry' }))
+    await waitFor(() => {
+      expect(
+        mockedRequest.mock.calls.filter((c) => String(c[0]).includes('/positions?limit=50')).length,
+      ).toBeGreaterThan(before)
+    })
   })
 })
 
@@ -594,12 +646,15 @@ describe('MapOverviewPage — interactions', () => {
     renderPage()
     const panel = await screen.findByRole('region', { name: 'Location details' })
     await waitFor(() => expect(within(panel).getByText('90.00 km/h')).toBeInTheDocument())
-    fireEvent.click(within(panel).getByRole('button', { name: 'Details' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Recent route' }))
+    await screen.findByTestId('route-playback')
+    const recentPanel = screen.getByRole('region', { name: 'Playback position' })
+    fireEvent.click(within(recentPanel).getByRole('button', { name: 'Details' }))
     const drawer = screen.getByRole('dialog', { name: 'Sources and method' })
     expect(within(drawer).getByText(/Polling every 15 s checks for positions/)).toBeInTheDocument()
     expect(within(drawer).getAllByText(/latest-50-position history request/).length).toBeGreaterThan(0)
-    expect(screen.getByTestId('map-marker')).toBeInTheDocument()
     expect(screen.getByTestId('route-playback')).toBeInTheDocument()
+    expect(h.maps.playbackCounts.at(-1)).toBe(3)
   })
   it('mirrors the chosen map layer into the URL so the view is shareable', async () => {
     renderPage()
@@ -725,20 +780,24 @@ describe('MapOverviewPage modernization preservation', () => {
     client.setQueryData(['location-latest', '8'], makeLocation({ vehicle_id: 8 }))
     renderPage({ client, entry: '/live?layer=terrain' })
     const originalMap = await screen.findByTestId('map-container')
-    const originalPlayback = await screen.findByTestId('route-playback')
+    expect(screen.queryByTestId('route-playback')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Select test vehicle B' }))
     await waitFor(() => expect(screen.getByTestId('map-container')).not.toBe(originalMap))
     const switchedMap = screen.getByTestId('map-container')
-    const switchedPlayback = screen.getByTestId('route-playback')
     expect(switchedMap).toHaveAttribute('data-center', '[48.85,2.35]')
-    expect(switchedPlayback).not.toBe(originalPlayback)
-    expect(switchedPlayback).toHaveAttribute('data-count', '3')
     expect(h.maps.tileStyles.at(-1)).toBe('terrain')
     expect(h.maps.polylines.at(-1)).toEqual(secondHistory.map(row => [row.latitude, row.longitude]))
+    // Recent route mode mounts a fresh replay for the new vehicle.
+    fireEvent.click(screen.getByRole('button', { name: 'Recent route' }))
+    const switchedPlayback = await screen.findByTestId('route-playback')
+    expect(switchedPlayback).toHaveAttribute('data-count', '3')
+    // A same-vehicle latest poll leaves the mounted replay untouched and the
+    // Live camera stable once we switch back.
     client.setQueryData(['position-latest', '8'], { ...second, latitude: 48.86 })
-    await waitFor(() => expect(switchedMap).toHaveAttribute('data-center', '[48.86,2.35]'))
-    expect(screen.getByTestId('map-container')).toBe(switchedMap)
-    expect(screen.getByTestId('route-playback')).toBe(switchedPlayback)
+    await waitFor(() => expect(screen.getByTestId('route-playback')).toBe(switchedPlayback))
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }))
+    const liveMap = await screen.findByTestId('map-container')
+    expect(liveMap).toHaveAttribute('data-center', '[48.86,2.35]')
     expect(client.getQueryData(['position-history', '8'])).toEqual(secondHistory)
   })
 
@@ -812,7 +871,7 @@ describe('MapOverviewPage modernization preservation', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Details' }))
     const dialog = screen.getByRole('dialog', { name: 'Sources and method' })
     expect(within(dialog).getByText(/Recorded location map: Historical/)).toBeInTheDocument()
-    expect(screen.getByText('Recent route playback')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Map mode' })).toBeInTheDocument()
     expect(screen.getByText('Recent location history')).toBeInTheDocument()
     expect(screen.getByText('HomeLink nearby')).toBeInTheDocument()
   })
@@ -820,13 +879,16 @@ describe('MapOverviewPage modernization preservation', () => {
   it('keeps genuine position and history after a latest-position refresh failure', async () => {
     const { client } = renderPage()
     await screen.findByTestId('map-marker')
+    fireEvent.click(screen.getByRole('button', { name: 'Recent route' }))
     await screen.findByTestId('route-playback')
     install({ latestError: true })
     await client.refetchQueries({ queryKey: ['position-latest', '7'] })
+    // Recent route mode is independent of the latest-position read.
+    expect(screen.getByTestId('route-playback')).toHaveAttribute('data-count', '3')
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }))
     const panel = screen.getByRole('region', { name: 'Location details' })
     expect(await screen.findByText('Recorded location map may be out of date')).toBeInTheDocument()
     expect(screen.getByTestId('map-marker')).toBeInTheDocument()
-    expect(screen.getByTestId('route-playback')).toHaveAttribute('data-count', '3')
     expect(within(panel).getByText('37.5000, -121.9000')).toBeInTheDocument()
     expect(within(panel).getByText('90.00 km/h')).toBeInTheDocument()
   })
@@ -838,13 +900,13 @@ describe('MapOverviewPage modernization preservation', () => {
     h.motion.reduce = reduce
     renderPage()
     const map = await screen.findByTestId('map-container')
-    await screen.findByTestId('route-playback')
     expect(map).toHaveAttribute('data-zoom-animation', animation)
     expect(map).toHaveAttribute('data-fade-animation', animation)
     expect(map).toHaveAttribute('data-marker-animation', animation)
     expect(h.maps.trailColors.at(-1)).toBe('var(--semantic-info)')
     expect(h.maps.polylines.at(-1)).toEqual(defaultHistory.map(row => [row.latitude, row.longitude]))
-    expect(screen.getByTestId('route-playback')).toHaveAttribute('data-count', '3')
+    fireEvent.click(screen.getByRole('button', { name: 'Recent route' }))
+    expect(await screen.findByTestId('route-playback')).toHaveAttribute('data-count', '3')
   })
 
   it('forwards cancellable signals to all three independent reads without aliasing limits', async () => {
@@ -869,6 +931,42 @@ describe('MapOverviewPage modernization preservation', () => {
     })
     unmount()
     expect(signals.every(signal => signal.aborted)).toBe(true)
+  })
+
+  it('renders battery and power stats when the playback cursor carries them', async () => {
+    install({
+      history: defaultHistory.map((row) => ({ ...row, battery_level: 78, power: 15000 })),
+    })
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Recent route' }))
+    const recentPanel = await screen.findByRole('region', { name: 'Playback position' })
+    expect(await within(recentPanel).findByText('Battery')).toBeInTheDocument()
+    expect(within(recentPanel).getByText('78.00%')).toBeInTheDocument()
+    expect(within(recentPanel).getByText('Power')).toBeInTheDocument()
+    expect(within(recentPanel).getByText('15.00 kW')).toBeInTheDocument()
+  })
+
+  it('restores Live location details when switching back from Recent route', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Recent route' }))
+    await screen.findByRole('region', { name: 'Playback position' })
+    expect(screen.queryByRole('region', { name: 'Location details' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }))
+    const panel = await screen.findByRole('region', { name: 'Location details' })
+    expect(await within(panel).findByText('90.00 km/h')).toBeInTheDocument()
+    expect(within(panel).getByText('37.5000, -121.9000')).toBeInTheDocument()
+    expect(screen.queryByTestId('route-playback')).toBeNull()
+  })
+
+  it('mirrors the hero mode into the URL so the view is shareable', async () => {
+    renderPage({ entry: '/live?mode=recent' })
+    // Deep link lands directly in Recent route mode.
+    expect(await screen.findByTestId('route-playback')).toBeInTheDocument()
+    expect(screen.getByTestId('router-destination')).toHaveTextContent('/live?mode=recent')
+    // Back to Live removes the default param again.
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }))
+    await waitFor(() => expect(screen.getByTestId('router-destination')).toHaveTextContent('/live'))
+    expect(screen.getByTestId('router-destination')).not.toHaveTextContent('mode=')
   })
 
   it('keeps all five precise history fields reachable in narrow-container quick view', async () => {
