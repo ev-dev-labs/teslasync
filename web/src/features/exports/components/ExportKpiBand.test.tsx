@@ -14,8 +14,9 @@
  *   • design-language §8 "always visible": an empty account (real
  *     `deriveExportStats([])`) still renders the full five-card band with every
  *     count collapsed to `0` and the storage cell to `—`, never a blank panel;
- *   • null-safety: missing aggregates remain unknown (`—`), not fabricated zero
- *     counts, NaN or empty cells;
+ *   • null-safety: missing aggregates stay unknown — omitted from the face
+ *     and counted as "N empty fields hidden" in the drawer — not fabricated
+ *     zero counts, NaN or empty cells;
  *   • a11y: the band is a labelled region with no exposed decorative glyphs.
  *
  * react-i18next is mocked to echo the English fallback so labels are
@@ -196,8 +197,16 @@ describe('ExportKpiBand', () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(screen.queryByText('0')).not.toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(5);
+    // Face-value disclosure: unknown values are omitted from the face (no
+    // em-dash placeholders) and counted in the Review-details drawer instead.
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
     expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Export summary details' });
+    expect(within(drawer).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('does not expose decorative glyphs as accessible images (a11y)', () => {
@@ -222,9 +231,16 @@ describe('ExportKpiBand', () => {
     expect(formatSpy).toHaveBeenCalledWith('count', 0, expect.any(Object), undefined, undefined);
 
     view.rerender(<ExportKpiBand stats={deriveExportStats([])} isLoading={false} hasData={false} />);
-    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
-    expect(screen.getAllByText('No measurement supplied')).toHaveLength(5);
+    // Face-value disclosure: the five missing metrics are omitted from the
+    // face and counted in the Review-details drawer instead.
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const missingDrawer = view.getByRole('dialog', { name: 'Export summary details' });
+    expect(within(missingDrawer).getByText('5 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(missingDrawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(formatSpy).toHaveBeenCalledWith('bytes', null, expect.any(Object), undefined,
       expect.objectContaining({ formatter: expect.any(Function) }));
     formatSpy.mockRestore();
@@ -232,10 +248,21 @@ describe('ExportKpiBand', () => {
 
   it('rejects invalid counts and bytes before the specialist formatter runs', () => {
     const { container } = renderBand({ total: 1.5, ready: -1, totalBytes: Number.NaN });
-    expect(container.querySelector('[data-operational-metric="total"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(container.querySelector('[data-operational-metric="ready"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(container.querySelector('[data-operational-metric="storage"]')).toHaveAttribute('data-value-state', 'invalid');
+    // Face-value disclosure: invalid metrics are omitted from the face while
+    // the valid ones keep their values; the drawer counts the three empties.
+    expect(container.querySelector('[data-operational-metric="total"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="ready"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="storage"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="in-progress"]')).toHaveAttribute('data-value-state', 'value');
+    expect(container.querySelector('[data-operational-metric="failed"]')).toHaveAttribute('data-value-state', 'value');
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.queryByText('NaN')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Export summary details' });
+    expect(within(drawer).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps binary storage formatting and saved locale/precision without treating numeric bytes as text', () => {

@@ -31,7 +31,7 @@
  *     rejection) and the multi-select is PRESERVED so the user can retry.
  *   - refresh: the header refresh control re-invokes the query's refetch.
  */
-import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -202,7 +202,7 @@ describe('ExportsPage — phase-five contract adoption', () => {
       fireEvent.click(within(mobile).getByRole('button', { name: 'Select' }));
       fireEvent.click(within(mobile).getAllByRole('checkbox', { name: /export,/ })[0]);
       expect(screen.getByText('1 selected')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('min-h-11', 'min-w-11');
+      expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('h-9', 'w-9');
       fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
       expect(screen.getByRole('menuitemradio', { name: 'Selected (1)' })).toHaveAttribute('aria-checked', 'true');
       fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
@@ -415,8 +415,10 @@ describe('ExportsPage — saved date preferences', () => {
       view.rerenderPage();
       const created = expectedDate(JOBS[0].created_at);
       expect(within(screen.getByRole('table')).getByText(created)).toBeInTheDocument();
-      expect(screen.getByRole('checkbox', { name: `drives export, ${created}` })).toBeInTheDocument();
-      expect(within(kpiRegion()).getByText(`Last successful load: ${expectedDate(updatedAt)}`)).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: `Select drives export, ${created}` })).toBeInTheDocument();
+      // Face-value disclosure: freshness lives in the Review-details drawer header, not on the face.
+      expect(within(kpiRegion()).queryByText(`Last successful load: ${expectedDate(updatedAt)}`)).not.toBeInTheDocument();
+      assertOperationalBriefDisclosure(kpiRegion(), `Last successful load: ${expectedDate(updatedAt)}`);
       fireEvent.click(screen.getByRole('button', { name: 'Created filter' }));
       const filter = screen.getByRole('dialog', { name: 'Created filter' });
       expect(within(filter).getByText(created)).toBeInTheDocument();
@@ -425,8 +427,11 @@ describe('ExportsPage — saved date preferences', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
     await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+    // JSON export carries raw values where the row has one (UTC created_at,
+    // numeric bytes) and the displayed cell text otherwise — the same "—"
+    // the page renders for a missing size, matching the actions column below.
     expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual(JOBS.map((row) => ({
-      type: row.type, format: row.format, file_size: row.file_size,
+      type: row.type, format: row.format, file_size: row.file_size ?? '—',
       created_at: row.created_at, status: row.status,
       actions: row.status === 'ready' ? 'Download' : '—',
     })));
@@ -446,14 +451,16 @@ describe('ExportsPage — saved date preferences', () => {
       const mobile = screen.getByRole('group', { name: 'Export jobs' });
       expect(within(mobile).getByText(created)).toBeInTheDocument();
       fireEvent.click(within(mobile).getByRole('button', { name: 'Select' }));
-      expect(within(mobile).getByRole('checkbox', { name: `drives export, ${created}` })).toBeInTheDocument();
+      expect(within(mobile).getByRole('checkbox', { name: `Select drives export, ${created}` })).toBeInTheDocument();
       fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0]);
       const details = await screen.findByRole('dialog');
       expect(within(details).getByText(created)).toBeInTheDocument();
       for (const label of ['Type', 'Format', 'Size', 'Created', 'Status', 'Actions']) {
         expect(within(details).getByText(label)).toBeInTheDocument();
       }
-      fireEvent.keyDown(window, { key: 'Escape' });
+      // Escape is dispatched on the dialog itself: the shared Modal listens
+      // on its container (a window-dispatched keypress never reaches it).
+      fireEvent.keyDown(details, { key: 'Escape' });
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     } finally {
       bounds.mockRestore();
@@ -527,7 +534,7 @@ describe('ExportsPage — controlled raw sorting', () => {
   ];
   const rowTypes = () => within(screen.getByRole('table'))
     .getAllByRole('checkbox', { name: /export,/ })
-    .map((checkbox) => checkbox.getAttribute('aria-label')?.split(' export,')[0]);
+    .map((checkbox) => checkbox.getAttribute('aria-label')?.replace(/^(Select|Deselect) /, '').split(' export,')[0]);
 
   it.each([
     { header: 'Type', descending: ['gamma', 'beta', 'alpha'] },
@@ -655,7 +662,7 @@ describe('ExportsPage — populated', () => {
 
     // One selection checkbox per data row → all six jobs rendered.
     // Row checkboxes are named after the job, not its UUID (A11Y):
-    // "drives export, 22 Apr 2026". One per data row → all six rendered.
+    // "Select drives export, 22 Apr 2026". One per data row → all six rendered.
     expect(within(table).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(6);
 
     // Ready jobs expose a download <a> pointing at the /api/v1 artifact URL.
@@ -801,26 +808,35 @@ describe('ExportsPage — refresh', () => {
     expect(screen.getByText('1 selected')).toBeInTheDocument();
     expect(screen.queryByText('Server error')).not.toBeInTheDocument();
     expect(screen.getByText('Storage used')).toBeInTheDocument();
-    expect(within(kpiRegion()).getByText('Retained export jobs')).toBeInTheDocument();
+    // Face-value disclosure: the status label and freshness live in the
+    // Review-details drawer header, not on the face.
+    expect(within(kpiRegion()).queryByText('Retained export jobs')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(kpiRegion(), 'Retained export jobs');
     expect(kpiRegion().querySelector('[data-operational-metric="storage"]')).toHaveAttribute('data-value-state', 'value');
-    expect(within(kpiRegion()).getByText(/Last successful load:/)).toBeInTheDocument();
+    expect(within(kpiRegion()).queryByText(/Last successful load:/)).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(kpiRegion(), 'Last successful load:', { contains: true });
   });
 
   it('does not substitute zero totals when the initial source failed', () => {
     mockJobs.mockReturnValue(makeQuery({ data: undefined, error: new Error('offline'), isError: true }));
     renderPage();
     const region = kpiRegion();
-    const total = within(region).getByText('Total exports').closest('[data-operational-metric]');
-    expect(total).toHaveAttribute('data-value-state', 'missing');
+    // Face-value disclosure: the missing metric is omitted from the face
+    // (rather than rendered with a missing state) and the status label lives
+    // in the Review-details drawer header.
+    expect(region.querySelector('[data-operational-metric="total"]')).not.toBeInTheDocument();
     assertOperationalMetricUnavailable(kpiRegion(), 'Total exports');
-    expect(within(kpiRegion()).getByText('Export-job source failed')).toBeInTheDocument();
+    expect(within(kpiRegion()).queryByText('Export-job source failed')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(kpiRegion(), 'Export-job source failed');
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
   });
 
   it('keeps retained raw counts, byte units, downloads and the real drawer when refresh is paused', async () => {
     mockJobs.mockReturnValue(makeQuery({ data: JOBS, fetchStatus: 'paused' }));
     renderPage();
-    expect(within(kpiRegion()).getByText('Retained jobs · refresh paused')).toBeInTheDocument();
+    // Face-value disclosure: the status label lives in the Review-details
+    // drawer (asserted below), not on the face.
+    expect(within(kpiRegion()).queryByText('Retained jobs · refresh paused')).not.toBeInTheDocument();
     expect(kpiValue('Total exports')).toBe('6');
     expect(kpiValue('Total size')).toBe('5.00 MB');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -845,8 +861,11 @@ describe('ExportsPage — refresh', () => {
     expect(screen.queryByText('No exports yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
-    expect(within(kpiRegion()).getByText(fetchStatus === 'paused'
-      ? 'Export-job source paused' : 'Export-job source unresolved')).toBeInTheDocument();
+    // Face-value disclosure: the status label lives in the Review-details
+    // drawer header, not on the face.
+    const expectedStatus = fetchStatus === 'paused' ? 'Export-job source paused' : 'Export-job source unresolved';
+    expect(within(kpiRegion()).queryByText(expectedStatus)).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(kpiRegion(), expectedStatus);
   });
 
   describe('ExportsPage — recovery interactions', () => {
