@@ -4,6 +4,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive } from '@/types/driving';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { TargetSummary, WeekResult } from '../lib/efficiencyTarget';
 import { downloadJSON } from '@/lib/csvExport';
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors';
@@ -170,7 +171,8 @@ vi.mock('@/components/layout', () => ({
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async () => ({
+  ...await vi.importActual<typeof import('@/components/motion')>('@/components/motion'),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
@@ -489,6 +491,15 @@ describe('RecentWeekScorecard mobile adoption', () => {
 });
 
 describe('EfficiencyTargetPage', () => {
+  /** Pin the status badge inside both GoalPulse brief drawers. */
+  function expectBothBriefs(status: string): void {
+    const cards = screen.getByTestId('efficiency-target-pulse').querySelectorAll('[data-operational-brief]');
+    expect(cards).toHaveLength(2);
+    for (const card of cards) {
+      assertOperationalBriefDisclosure(card, status);
+    }
+  }
+
   describe('GoalPulse source trust', () => {
     const rows = () => [
       drive(new Date(2026, 6, 28, 12).toISOString(), 10000, 1500),
@@ -538,12 +549,12 @@ describe('EfficiencyTargetPage', () => {
       historyMock.mockReturnValue(query({ data }));
       const { rerender } = render(pulse(data));
       const panel = within(screen.getByTestId('efficiency-target-pulse'));
-      expect(panel.getAllByText('Returned evidence')).toHaveLength(2);
+      expectBothBriefs('Returned evidence');
       const content = panel.getByText(/150(?:\.0+)? Wh\/km/).textContent;
 
       historyMock.mockReturnValue(query({ data, ...overrides }));
       rerender(pulse(data));
-      expect(panel.getAllByText('Retained source')).toHaveLength(2);
+      expectBothBriefs('Retained source');
       expect(panel.getByText(/150(?:\.0+)? Wh\/km/)).toHaveTextContent(content ?? '');
       expect(panel.getByText(/170(?:\.0+)? Wh\/km/)).toBeInTheDocument();
       expect(panel.getByText('10 km')).toBeInTheDocument();
@@ -553,7 +564,7 @@ describe('EfficiencyTargetPage', () => {
 
       historyMock.mockReturnValue(query({ data, dataUpdatedAt: Date.now() }));
       rerender(pulse(data));
-      expect(panel.getAllByText('Returned evidence')).toHaveLength(2);
+      expectBothBriefs('Returned evidence');
       expect(panel.queryByText('Retained source')).not.toBeInTheDocument();
     });
 
@@ -562,7 +573,7 @@ describe('EfficiencyTargetPage', () => {
       historyMock.mockReturnValue(query({ data, isFetching: true }));
       render(pulse(data));
       const panel = within(screen.getByTestId('efficiency-target-pulse'));
-      expect(panel.getAllByText('Returned evidence')).toHaveLength(2);
+      expectBothBriefs('Returned evidence');
       expect(panel.getByText(/150(?:\.0+)? Wh\/km/)).toBeInTheDocument();
       expect(panel.getByText(/170(?:\.0+)? Wh\/km/)).toBeInTheDocument();
       expect(panel.queryByText('Loading source')).not.toBeInTheDocument();
@@ -588,7 +599,7 @@ describe('EfficiencyTargetPage', () => {
         />,
       );
       const panel = within(screen.getByTestId('efficiency-target-pulse'));
-      expect(panel.getAllByText('Returned evidence')).toHaveLength(2);
+      expectBothBriefs('Returned evidence');
       expect(panel.getAllByText(/^0(?:\.0+)? Wh\/km$/)).toHaveLength(2);
       expect(panel.getByText('0 km')).toBeInTheDocument();
       expect(panel.getByText(/^0(?:\.0+)?$/)).toBeInTheDocument();

@@ -28,6 +28,8 @@ import RideOverview from '../driving-dynamics-modernization/RideOverview';
 import { GoalPulse } from '../efficiency-target/GoalPulse';
 import { FsdObservatoryPanel } from '../fsd-insights/FsdObservatoryPanel';
 import { FsdDriveAnalyticsPanels } from '../fsd-insights/FsdDriveAnalyticsPanels';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import type { FsdInsights } from '@/types/fsd';
 import { buildDriveDnaModel } from '../../lib/driveDNA';
 import { summarizeColdStarts } from '../../lib/coldStart';
 import { summarizeExplorer } from '../../lib/explorer';
@@ -40,7 +42,10 @@ const h = vi.hoisted(() => {
     distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
     energy: 'kWh', power: 'kW', duration: 'min', precision: 2, locale: 'en-US',
   };
-  return { units, capture: vi.fn<(metrics: readonly StatMetric[]) => void>() };
+  return { units, capture: vi.fn<(metrics: readonly StatMetric[]) => void>(),
+    history: vi.fn(() => ({ data: [], isLoading: false, isError: false, error: null,
+      isFetching: false, isStale: false, dataUpdatedAt: 1, refetch: vi.fn() })),
+    vehicle: vi.fn(() => ({ vehicleId: 42 })) };
 });
 
 vi.mock('react-i18next', () => ({
@@ -68,6 +73,12 @@ vi.mock('@/hooks/useUnits', () => ({
     formatTemperature: (raw: number | null | undefined) => raw == null ? '—' : `${convertTempFromSI(raw, h.units.temperature).toFixed(2)} ${h.units.temperature}`,
     formatSpeed: (raw: number | null | undefined) => raw == null ? '—' : `${convertSpeedFromSI(raw, h.units.speed).toFixed(2)} ${h.units.speed}`,
   }),
+}));
+vi.mock('@/api/hooks/useDriving', () => ({
+  useDriveHistory: (...args: unknown[]) => h.history(...args),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => h.vehicle(),
 }));
 vi.mock('@/hooks/useOperationalMetrics', async () => {
   const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics');
@@ -127,8 +138,8 @@ describe('NestedDrivingBrief — real compact renderer and unconditional numeric
     const { container } = show(<NestedDrivingBrief {...props} />);
     expect(h.capture).toHaveBeenCalledWith(metrics);
     expect(container.querySelector('[data-operational-metric="zero"]')).toHaveAttribute('data-value-state', 'value');
-    expect(container.querySelector('[data-operational-metric="missing"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(container.querySelector('[data-operational-metric="invalid"]')).toHaveAttribute('data-value-state', 'invalid');
+    assertOperationalMetricUnavailable(container, 'Missing share');
+    assertOperationalMetricUnavailable(container, 'Invalid operand');
     expect(screen.getByText('0/8', { selector: '[data-operational-value]' })).toBeVisible();
     expect(screen.getByText('-5.00 kW', { selector: '[data-operational-value]' })).toBeVisible();
     expect(captured('distance')?.rawValue).toBe(1000);
@@ -140,7 +151,7 @@ describe('NestedDrivingBrief — real compact renderer and unconditional numeric
     expect(screen.getByText('Recorded distance')).toBeVisible();
     view.rerender(<MemoryRouter><NestedDrivingBrief {...props} retained /></MemoryRouter>);
     expect(h.capture.mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Retained source')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Retained source');
     expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
   });
   it('keeps bounds, provenance and raw-denominator context in the actual Review details drawer', () => {
@@ -160,26 +171,31 @@ describe('NestedDrivingBrief — real compact renderer and unconditional numeric
   ])('retains usable values and warning semantics during source refresh: %j', (state) => {
     const { container } = show(<NestedDrivingBrief {...props} {...state} retained testId="retained-driving" />);
     expect(screen.getByTestId('retained-driving')).toBeVisible();
-    const status = screen.getByText('Retained source');
-    expect(status).toBeVisible();
-    expect(status).toHaveClass('text-[var(--semantic-warning)]');
+    assertOperationalBriefDisclosure(container, 'Retained source');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const refreshDrawer = screen.getByRole('dialog', { name: 'Returned evidence details' });
+    expect(within(refreshDrawer).getByText('Retained source')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(within(refreshDrawer).queryByText('Source unavailable')).not.toBeInTheDocument();
+    expect(within(refreshDrawer).getByText('0/8')).toBeVisible();
+    fireEvent.keyDown(refreshDrawer, { key: 'Escape' });
     expect(screen.queryByText('Source unavailable')).not.toBeInTheDocument();
     expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
-    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('0/8')).toBeVisible();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    assertOperationalMetricUnavailable(container, 'Missing share');
+    assertOperationalMetricUnavailable(container, 'Invalid operand');
   });
   it('preserves the initial and fatal source shells without manufacturing numerical readings', () => {
     const view = show(<NestedDrivingBrief {...props} loading />);
-    expect(screen.getByText('Loading source')).toBeVisible();
+    assertOperationalBriefDisclosure(view.container, 'Loading source');
     expect(view.container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).queryByText('1.00 km')).not.toBeInTheDocument();
     view.unmount();
     const fatal = show(<NestedDrivingBrief {...props} metrics={metrics.map(metric => ({ ...metric, rawValue: null }))} unavailable />);
-    expect(screen.getByText('Source unavailable')).toBeVisible();
-    expect(fatal.container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(5);
-    expect(screen.getByText('Recorded distance')).toBeVisible();
+    assertOperationalBriefDisclosure(fatal.container, 'Source unavailable');
+    expect(fatal.container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeVisible();
+    assertOperationalMetricUnavailable(fatal.container, 'Recorded distance');
   });
   it('preserves specialist display and effective preferences while validating the raw operand', () => {
     const formatter = vi.fn(() => ({ value: 'specialist value', unit: 'source unit' }));
@@ -195,7 +211,7 @@ describe('NestedDrivingBrief — real compact renderer and unconditional numeric
     expect(formatter).toHaveBeenCalledWith(-12, preferences);
     expect(screen.getByText('specialist value source unit', { selector: '[data-operational-value]' })).toBeVisible();
     expect(screen.getByText('Measured zero observations', { selector: '[data-operational-value]' })).toBeVisible();
-    expect(container.querySelector('[data-operational-metric="invalid-source-display"]')).toHaveAttribute('data-value-state', 'invalid');
+    assertOperationalMetricUnavailable(container, 'Invalid source display');
     expect(screen.queryByText('Not a valid count')).not.toBeInTheDocument();
     expect(captured('source-display')?.rawValue).toBe(0);
   });
@@ -204,15 +220,14 @@ describe('NestedDrivingBrief — real compact renderer and unconditional numeric
     const label = 'حدود المصدر غير المعروفة '.repeat(20);
     const reason = 'Independent source did not establish its analysis coverage.';
     const { container } = show(<NestedDrivingBrief {...props} period={{ kind: 'unknown', label, reason }} testId="unknown-driving" />);
-    const scope = within(screen.getByTestId('unknown-driving')).getByText(label.trim());
-    expect(scope).toHaveClass('min-w-0', 'break-words', 'text-[var(--text-muted)]');
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
     const review = screen.getByRole('button', { name: 'Review details' });
     review.focus();
     await user.keyboard('{Enter}');
     const drawer = screen.getByRole('dialog', { name: 'Returned evidence details' });
     expect(within(drawer).getByText(reason)).toBeVisible();
-    expect(within(drawer).getByText(label.trim())).toBeVisible();
+    const scope = within(drawer).getByText(label.trim());
+    expect(scope).toHaveClass('min-w-0', 'break-words', 'text-[var(--text-muted)]');
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(review).toHaveFocus();
@@ -231,7 +246,8 @@ describe('Released nested driving quantity contracts', () => {
     expect(captured('largest-gap')?.rawValue).toBe(2);
     expect(screen.getByText('0.008 min', { selector: '[data-operational-value]' })).toBeVisible();
     expect(screen.getByText('2 / 1', { selector: '[data-operational-value]' })).toBeVisible();
-    expect(screen.getByText('Invalid / duplicate')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByRole('group', { name: 'Timestamp issues' })).toHaveTextContent('Invalid / duplicate');
   });
   it('keeps all five forward-folded channel denominators and zero availability', () => {
     const base = buildDriveDnaModel(undefined);
@@ -241,7 +257,8 @@ describe('Released nested driving quantity contracts', () => {
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
     expect(captured('speed')?.rawValue).toBe(0);
     expect(captured('speed')?.display?.countTotal).toBe(4);
-    expect(screen.getByText('0.00% available')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByRole('group', { name: 'Speed availability' })).toHaveTextContent('0.00% available');
   });
   it('preserves a signed supported cold/warm difference and both cohort populations', () => {
     const base = summarizeColdStarts([]);
@@ -254,7 +271,7 @@ describe('Released nested driving quantity contracts', () => {
     expect(captured('warm-consumption')?.rawValue).toBe(0.2);
     expect(screen.getByText('-20.00 Wh/km', { selector: '[data-operational-value]' })).toBeVisible();
     expect(screen.getAllByText('5 cold and 7 warm observations').length).toBeGreaterThan(0);
-    expect(screen.getByText(/no avoidable energy is claimed/)).toBeVisible();
+    expect(screen.getByText(/No positive whole-drive difference or savings is claimed/)).toBeVisible();
   });
   it('retains Explorer eligibility denominator separately from coordinate and timestamp proxies', () => {
     const base = summarizeExplorer([]);
@@ -291,8 +308,18 @@ describe('Released nested driving quantity contracts', () => {
     expect(captured('weekday-rate')?.rawValue).toBe(0.5);
     expect(captured('weekend-rate')?.rawValue).toBe(0.5);
     expect(captured('weekend-distance')?.rawValue).toBeNull();
-    expect(screen.getAllByText('6 selected local calendar days define the rate denominator.').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('2 selected local calendar days define the rate denominator.').length).toBeGreaterThan(0);
+    const weekday = screen.getByRole('region', { name: 'Weekdays' });
+    fireEvent.click(within(weekday).getByRole('button', { name: 'Review details' }));
+    const weekdayDrawer = screen.getByRole('dialog', { name: 'Weekdays details' });
+    expect(within(weekdayDrawer).getByRole('group', { name: 'Drives / selected day' }))
+      .toHaveTextContent('6 selected local calendar days define the rate denominator.');
+    fireEvent.keyDown(weekdayDrawer, { key: 'Escape' });
+    const weekend = screen.getByRole('region', { name: 'Weekends' });
+    fireEvent.click(within(weekend).getByRole('button', { name: 'Review details' }));
+    const weekendDrawer = screen.getByRole('dialog', { name: 'Weekends details' });
+    expect(within(weekendDrawer).getByRole('group', { name: 'Drives / selected day' }))
+      .toHaveTextContent('2 selected local calendar days define the rate denominator.');
+    fireEvent.keyDown(weekendDrawer, { key: 'Escape' });
   });
   it('keeps linked-parking seconds and observed stopovers without changing journey arithmetic', () => {
     const base = analyzeJourneyFragmentation([], now, 'UTC', { maxParkingGapMin: 120, historyLimit: 1000 });
@@ -333,13 +360,19 @@ describe('Released nested driving quantity contracts', () => {
     const state = deriveDataState({ data: motor, dataUpdatedAt: now });
     const { container } = show(<LiveMotorPanel motorLatest={motor} isolationResistance={0}
       state={state} loading={false} connected={false} />);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(13);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
     expect(captured('rpm-front')).toMatchObject({ metricId: 'number', rawValue: 0 });
     expect(captured('torque-front')).toMatchObject({ metricId: 'number', rawValue: -12 });
     expect(captured('isolation')?.rawValue).toBeNull();
-    expect(container.querySelector('[data-operational-metric="regen"]')).toHaveAttribute('data-value-state', 'missing');
+    const motorBriefs = container.querySelectorAll('[data-operational-brief]');
+    expect(motorBriefs).toHaveLength(2);
+    assertOperationalMetricUnavailable(motorBriefs[0], 'Regen');
+    assertOperationalMetricUnavailable(motorBriefs[0], 'Rear Motor Temp');
+    assertOperationalMetricUnavailable(motorBriefs[0], 'Inverter Temp');
+    assertOperationalMetricUnavailable(motorBriefs[0], 'Battery Temp');
+    assertOperationalMetricUnavailable(motorBriefs[1], 'HV Isolation');
     expect(screen.getByText('Live motor record details')).toBeVisible();
-    expect(screen.getAllByText(/freshness and continuous coverage are not established/).length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(motorBriefs[0], 'freshness and continuous coverage are not established', { contains: true });
   });
   it('preserves the selected-ride empty shell and selection instructions without inventing totals', () => {
     show(<RideOverview drive={null} />);
@@ -355,7 +388,8 @@ describe('Released nested driving quantity contracts', () => {
     expect(captured('ride-distance')?.rawValue).toBe(1000);
     expect(captured('ride-energy-recovered')?.rawValue).toBe(0);
     expect(screen.getByRole('link', { name: 'Open trip details' })).toHaveAttribute('href', '/drives/82');
-    expect(screen.getByText(/#82.*2026-08-08T10:00:00Z.*2026-08-08T10:10:00Z/)).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByTestId('dynamics-ride-metrics'),
+      'Selected ride · #82 · 2026-08-08T10:00:00Z – 2026-08-08T10:10:00Z');
     expect(screen.getByText(/recorded regeneration, not peak regen power/)).toBeVisible();
   });
   it('keeps completed-week grading separate from the ungraded active-week snapshot', () => {
@@ -374,20 +408,36 @@ describe('Released nested driving quantity contracts', () => {
     expect(screen.getAllByText(/target grading and streaks exclude the active week/).length).toBeGreaterThan(0);
   });
   it('does not label absent observatory reset or unknown-distance data as measured zero', () => {
-    const { container } = show(<FsdObservatoryPanel insights={undefined} state={{ ...sectionState, noVehicle: false }} />);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    const absent = {
+      period: { start_at: '2026-08-01T00:00:00Z', end_at: '2026-08-08T00:00:00Z', timezone: 'UTC' },
+      drive_analytics: { observatory: { totals: {}, timeline: [], commute_stories: [] } },
+    } as unknown as FsdInsights;
+    const resolved = deriveDataState({ data: absent, isSuccess: true }, { provenance: 'historical' });
+    const { container } = show(<FsdObservatoryPanel insights={undefined}
+      state={{ ...sectionState, noVehicle: false }} dataState={resolved} />);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeVisible();
     expect(captured('counter-resets')?.rawValue).toBeUndefined();
     expect(captured('unknown-drive-distance')?.rawValue).toBeUndefined();
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
+    const observatory = screen.getByTestId('fsd-observatory');
+    assertOperationalMetricUnavailable(observatory, 'Stitched reported FSD');
+    assertOperationalMetricUnavailable(observatory, 'Ambiguous FSD');
+    assertOperationalMetricUnavailable(observatory, 'Unknown drive distance');
+    assertOperationalMetricUnavailable(observatory, 'Counter resets');
     expect(screen.getByText('Stitched journal')).toBeVisible();
     expect(screen.getByText('Commute stories')).toBeVisible();
   });
   it('retains the independent FSD comparison placeholders and all attribution/export section shells', () => {
     const { container } = show(<FsdDriveAnalyticsPanels insights={undefined} state={{ ...sectionState, noVehicle: false }} />);
     const comparison = screen.getByTestId('fsd-period-comparison');
-    expect(comparison.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(3);
+    expect(comparison.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(comparison).getByText('No metric values are available yet.')).toBeVisible();
     expect(captured('previous-fsd-distance')?.rawValue).toBeUndefined();
+    assertOperationalMetricUnavailable(comparison, 'Reported FSD distance');
+    assertOperationalMetricUnavailable(comparison, 'Share of observed driving');
+    assertOperationalMetricUnavailable(comparison, 'Previous FSD distance');
     expect(container.querySelector('[data-testid="fsd-attribution"]')).not.toBeNull();
     expect(screen.getByText('Counter-reset timeline')).toBeVisible();
-    expect(screen.getAllByText('Periods lack comparable trusted coverage').length).toBeGreaterThan(0);
   });
 });

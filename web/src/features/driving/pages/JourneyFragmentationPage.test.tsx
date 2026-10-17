@@ -404,10 +404,9 @@ describe('JourneyFragmentationPage', () => {
 
     // The composition is one surface: its nested brief is the only region inside it.
     expect(within(composition).getAllByRole('region')).toEqual([brief]);
-    expect(within(composition).getAllByText(explanation)).toHaveLength(2);
-    expect(within(brief).getByText('Elapsed composition')).toBeInTheDocument();
+    expect(within(composition).getAllByText(explanation)).toHaveLength(1);
+    expect(within(brief).getByText('Linked journey timing')).toBeInTheDocument();
     assertOperationalBriefDisclosure(brief, 'Returned evidence');
-    expect(within(brief).getByText(provenance)).toBeInTheDocument();
     expect(elapsedValues()).toEqual(['90 min', '30 min', '1']);
 
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
@@ -417,6 +416,7 @@ describe('JourneyFragmentationPage', () => {
     expect(within(details).getByText('Returned evidence')).toBeInTheDocument();
     expect(within(details).getAllByText(explanation).length).toBeGreaterThan(0);
     expect(within(details).getAllByText(provenance).length).toBeGreaterThan(0);
+    expect(within(details).getByRole('group', { name: 'Linked stopovers' })).toHaveTextContent(provenance);
   });
 
   it('uses neutral surfaces and subtle borders for every accounting category without changing counts or layout', () => {
@@ -520,7 +520,10 @@ describe('JourneyFragmentationPage', () => {
     h.history = { data: undefined, isLoading: false, isError: false, error: null, refetch };
     renderPage();
     expectPersistentAnalyticalShells();
-    expect(screen.getByText('Choose a vehicle to populate this observed history window.')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(
+      screen.getByRole('region', { name: 'Journey evidence and summary' }),
+      'Choose a vehicle to populate this observed history window.',
+    );
     expect(screen.queryByText('No returned drive rows are available for this vehicle yet.')).not.toBeInTheDocument();
     expect(screen.queryByText('No data available')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -546,14 +549,22 @@ describe('JourneyFragmentationPage', () => {
     renderPage();
     expectPersistentAnalyticalShells();
     const brief = screen.getByRole('region', { name: 'Whole-journey intensity' });
-    expect(within(brief).getByText(
-      `Support band: ${label}; recommended minimum: 3 complete-energy journeys per group`,
-    )).toBeInTheDocument();
-    const metric = within(brief).getByText('Observed energy-intensity difference')
-      .closest('[data-operational-metric]');
-    expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent(difference);
-    expect(within(brief).getByText('Single-drive journeys')).toBeInTheDocument();
-    expect(within(brief).getByText('Multi-drive journeys')).toBeInTheDocument();
+    const band = `Support band: ${label}; recommended minimum: 3 complete-energy journeys per group`;
+    if (groups === 0) {
+      assertOperationalMetricUnavailable(brief, 'Observed energy-intensity difference');
+      assertOperationalMetricUnavailable(brief, 'Multi-drive journeys');
+      expect(within(brief).getByText('Single-drive journeys')).toBeInTheDocument();
+    } else {
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      expect(within(drawer).getByRole('group', { name: 'Observed energy-intensity difference' })).toHaveTextContent(band);
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+      const metric = within(brief).getByText('Observed energy-intensity difference')
+        .closest('[data-operational-metric]');
+      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent(difference);
+      expect(within(brief).getByText('Single-drive journeys')).toBeInTheDocument();
+      expect(within(brief).getByText('Multi-drive journeys')).toBeInTheDocument();
+    }
     expect(h.historyHook).toHaveBeenCalledWith('7', 1_000);
   });
 
@@ -583,7 +594,10 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Observed journeys');
     assertOperationalBriefDisclosure(elapsedBrief(), 'Source unavailable');
-    expect(elapsedValues()).toEqual(['—', '—', '—']);
+    expect(elapsedValues()).toEqual([]);
+    for (const label of ['Driving time', 'Observed parking time', 'Linked stopovers']) {
+      assertOperationalMetricUnavailable(elapsedBrief(), label);
+    }
   });
 
   it('keeps all shells visible for selected-vehicle empty history', () => {
@@ -614,7 +628,7 @@ describe('JourneyFragmentationPage', () => {
     };
     renderPage();
     expectPersistentAnalyticalShells();
-    expect(screen.getByText('Observed window')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Observed window');
     expect(metricValue('Linked pairs')).toBe('0');
     expect(elapsedValues()).toEqual(['90 min', '0 min', '0']);
     assertOperationalBriefDisclosure(elapsedBrief(), 'Returned evidence');
@@ -630,7 +644,7 @@ describe('JourneyFragmentationPage', () => {
     };
     renderPage();
     expectPersistentAnalyticalShells();
-    expect(screen.getByText('Thin observed window')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Thin observed window');
   });
 
   it('keeps all shells visible and labels a capped observed window', () => {
@@ -647,9 +661,10 @@ describe('JourneyFragmentationPage', () => {
     };
     renderPage();
     expectPersistentAnalyticalShells();
-    expect(screen.getByText('Capped observed window')).toBeInTheDocument();
-    const summary = within(screen.getByRole('region', { name: 'Journey evidence and summary' }));
-    expect(summary.getByText(/history cap was reached/)).toBeInTheDocument();
+    const evidence = screen.getByRole('region', { name: 'Journey evidence and summary' });
+    assertOperationalBriefDisclosure(evidence, 'Capped observed window');
+    const summary = within(evidence);
+    assertOperationalBriefDisclosure(evidence, 'history cap was reached', { contains: true });
     expect(summary.getAllByText('0', { selector: '[data-operational-value]' }).length).toBeGreaterThanOrEqual(2);
   });
 
@@ -773,7 +788,10 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.queryByText('Loading')).not.toBeInTheDocument();
     expect(elapsedBrief()).not.toHaveAttribute('aria-busy');
     assertOperationalBriefDisclosure(elapsedBrief(), 'Source unavailable');
-    expect(elapsedValues()).toEqual(['—', '—', '—']);
+    expect(elapsedValues()).toEqual([]);
+    for (const label of ['Driving time', 'Observed parking time', 'Linked stopovers']) {
+      assertOperationalMetricUnavailable(elapsedBrief(), label);
+    }
     expect(screen.getAllByText('The initial evidence query is paused; no empty result is inferred.').length).toBeGreaterThan(1);
     expectOneRecoveryControl();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -820,7 +838,7 @@ describe('JourneyFragmentationPage', () => {
     expect(elapsedValues()).toEqual(elapsed);
     assertOperationalBriefDisclosure(elapsedBrief(), 'Retained source');
     expect(screen.getAllByRole('button', { name: /^(Retry|Refresh)$/ })).toHaveLength(1);
-    expect(screen.getAllByText('Retained source').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Retained source');
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     h.history = { ...h.history, isError: false, error: null, isFetching: true };

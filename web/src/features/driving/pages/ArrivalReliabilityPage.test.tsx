@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -284,11 +284,16 @@ describe('ArrivalReliabilityPage', () => {
       view.rerenderPage();
       expectEverySection();
       expect(quantities()).toEqual(original);
-      expect(within(briefs()[0]!).getByText(
-        refresh === 'failed' ? 'Retained source' : 'Refresh paused',
-      )).toBeVisible();
+      assertOperationalBriefDisclosure(briefs()[0]!,
+        refresh === 'failed' ? 'Retained source' : 'Refresh paused');
       for (const brief of briefs().slice(1)) {
-        assertOperationalBriefDisclosure(brief, 'Retained source', { allMatches: true });
+        const cards = brief.matches('[data-operational-brief]')
+          ? [brief]
+          : Array.from(brief.querySelectorAll('[data-operational-brief]'));
+        expect(cards.length).toBeGreaterThan(0);
+        for (const card of cards) {
+          assertOperationalBriefDisclosure(card, 'Retained source');
+        }
         expect(within(brief).queryByText('Returned evidence')).toBeNull();
       }
       const warning = refresh === 'failed'
@@ -313,7 +318,13 @@ describe('ArrivalReliabilityPage', () => {
         view.rerenderPage();
         expect(quantities()).toEqual(original);
         for (const brief of briefs().slice(1)) {
-          assertOperationalBriefDisclosure(brief, 'Retained source', { allMatches: true });
+          const cards = brief.matches('[data-operational-brief]')
+            ? [brief]
+            : Array.from(brief.querySelectorAll('[data-operational-brief]'));
+          expect(cards.length).toBeGreaterThan(0);
+          for (const card of cards) {
+            assertOperationalBriefDisclosure(card, 'Retained source');
+          }
         }
         expect(screen.getAllByRole('alert')).toHaveLength(1);
         expect(screen.getByRole('button', { name: 'Updating…' })).toBeDisabled();
@@ -328,7 +339,13 @@ describe('ArrivalReliabilityPage', () => {
       expect(screen.queryByRole('alert')).toBeNull();
       expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
       for (const brief of briefs().slice(1)) {
-        assertOperationalBriefDisclosure(brief, 'Returned evidence', { allMatches: true });
+        const cards = brief.matches('[data-operational-brief]')
+          ? [brief]
+          : Array.from(brief.querySelectorAll('[data-operational-brief]'));
+        expect(cards.length).toBeGreaterThan(0);
+        for (const card of cards) {
+          assertOperationalBriefDisclosure(card, 'Returned evidence');
+        }
       }
     },
   );
@@ -343,8 +360,8 @@ describe('ArrivalReliabilityPage', () => {
     expect(support.querySelectorAll('[data-operational-value]')).toHaveLength(6);
     expect(accounting).toHaveTextContent('Rows returned');
     expect(coverage).toHaveTextContent('First parseable returned start');
-    expect(coverage).toHaveTextContent('source timestamps and denominators are shown separately');
-    expect(support).toHaveTextContent('Support indices are not confidence scores');
+    assertOperationalBriefDisclosure(coverage, 'source timestamps and denominators are shown separately', { contains: true });
+    assertOperationalBriefDisclosure(support, 'Support indices are not confidence scores', { contains: true });
     expectEverySection();
   });
 
@@ -357,7 +374,7 @@ describe('ArrivalReliabilityPage', () => {
     expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
     expect(notice).toHaveTextContent('Previously loaded data remains visible.');
     expect(notice).not.toHaveTextContent(/offline/i);
-    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('arrival-kpis'), 'Refresh paused');
     expect(screen.queryByLabelText('Loading arrival timing history')).toBeNull();
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
@@ -366,7 +383,7 @@ describe('ArrivalReliabilityPage', () => {
     view.rerenderPage();
     expectEverySection();
     expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
-    expect(screen.getByText('Updating…')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('arrival-kpis'), 'Updating…');
     expect(screen.getAllByText('Home → Office').length).toBeGreaterThan(0);
 
     h.history = query({ data });
@@ -374,7 +391,7 @@ describe('ArrivalReliabilityPage', () => {
     expectEverySection();
     expect(screen.queryByText('Refresh paused')).toBeNull();
     expect(screen.queryByText('Updating…')).toBeNull();
-    expect(screen.getAllByText('Returned evidence').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(screen.getByTestId('arrival-kpis'), 'Returned evidence');
   });
 
   it('renders all ten persistent analytical shells with the capped hook and vehicle timezone', () => {
@@ -505,9 +522,10 @@ describe('ArrivalReliabilityPage', () => {
         name: 'Loading arrival timing history',
       }),
     ).toHaveLength(1);
-    expect(
-      screen.getAllByText('Waiting for returned drive history…'),
-    ).toHaveLength(6);
+    fireEvent.click(within(screen.getByTestId('arrival-kpis')).getByRole('button', { name: 'Review details' }));
+    const loadingDrawer = screen.getByRole('dialog');
+    expect(within(loadingDrawer).getAllByText('Waiting for returned drive history…')).toHaveLength(6);
+    fireEvent.keyDown(loadingDrawer, { key: 'Escape' });
     expect(screen.queryByText('0 rows returned')).toBeNull();
     expect(screen.queryByText('Below the 1,000-row cap')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
@@ -556,7 +574,7 @@ describe('ArrivalReliabilityPage', () => {
     expect(within(screen.getByTestId('arrival-kpis')).getAllByText('0').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
     const accounting = screen.getByTestId('arrival-row-accounting-brief');
-    expect(within(accounting).getByText('Returned evidence')).toBeVisible();
+    assertOperationalBriefDisclosure(accounting, 'Returned evidence');
     expect(within(accounting).getByText('Rows returned').closest('[data-operational-metric]'))
       .toHaveTextContent('0');
     expect(screen.queryByText('Retained source')).toBeNull();
@@ -567,7 +585,13 @@ describe('ArrivalReliabilityPage', () => {
     renderPage();
     expectEverySection();
     expect(screen.queryByLabelText('Loading arrival timing history')).toBeNull();
-    expect(screen.getAllByText('Drive-history availability has not resolved.')).toHaveLength(6);
+    const idleKpis = screen.getByTestId('arrival-kpis');
+    expect(within(idleKpis).queryByText('Drive-history availability has not resolved.')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(idleKpis, 'Awaiting evidence');
+    for (const label of ['Supported routes', 'Included drives', 'Repeated-route coverage',
+      'Timing consistency index', 'Observed within-allowance share', 'Observed p90 buffer']) {
+      assertOperationalMetricUnavailable(idleKpis, label);
+    }
     expect(screen.queryByText('0 rows returned')).toBeNull();
   });
 
@@ -606,7 +630,7 @@ describe('ArrivalReliabilityPage', () => {
     expectEverySection();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
-    expect(screen.getAllByText('Returned evidence').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(screen.getByTestId('arrival-kpis'), 'Returned evidence');
   });
 
   it('shows one actionable initial error without removing any shell', () => {
@@ -620,11 +644,13 @@ describe('ArrivalReliabilityPage', () => {
     expectEverySection();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getAllByText("Can't reach server")).toHaveLength(1);
-    expect(
-      screen.getAllByText(
-        'Drive history is unavailable; use the status below to retry.',
-      ),
-    ).toHaveLength(6);
+    const errorKpis = screen.getByTestId('arrival-kpis');
+    expect(within(errorKpis).queryByText('Drive history is unavailable; use the status below to retry.')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(errorKpis, 'Source unavailable');
+    for (const label of ['Supported routes', 'Included drives', 'Repeated-route coverage',
+      'Timing consistency index', 'Observed within-allowance share', 'Observed p90 buffer']) {
+      assertOperationalMetricUnavailable(errorKpis, label);
+    }
     expect(screen.queryByText('0 rows returned')).toBeNull();
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
@@ -664,9 +690,13 @@ describe('ArrivalReliabilityPage', () => {
         'Select a vehicle to analyze its returned directional-route timing.',
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByText('Select a vehicle above to load timing evidence.'),
-    ).toHaveLength(6);
+    const noVehicleKpis = screen.getByTestId('arrival-kpis');
+    expect(within(noVehicleKpis).queryByText('Select a vehicle above to load timing evidence.')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(noVehicleKpis, 'Select a vehicle');
+    for (const label of ['Supported routes', 'Included drives', 'Repeated-route coverage',
+      'Timing consistency index', 'Observed within-allowance share', 'Observed p90 buffer']) {
+      assertOperationalMetricUnavailable(noVehicleKpis, label);
+    }
     expect(screen.queryByText('Below the 1,000-row cap')).toBeNull();
   });
 

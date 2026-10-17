@@ -79,6 +79,16 @@ beforeEach(() => {
 });
 
 describe('FsdDriveAnalyticsPanels', () => {
+  // Metric context moved off the brief face into the evidence drawer group.
+  function expectComparisonGroupContext(groupName: string, text: string) {
+    const brief = within(screen.getByTestId('fsd-period-comparison'))
+      .getByRole('region', { name: 'Current and previous period quantities' });
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: groupName })).toHaveTextContent(text);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  }
   it.each([null, undefined, NaN, Infinity, -Infinity, '', '0'])(
     'preserves populations when shares are unavailable (%s) without fabricating zero',
     (value) => {
@@ -408,8 +418,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     const resets = screen.getByTestId('fsd-attribution');
     expect(within(drives).getByRole('link', { name: '3. März 2026, 08:30' })).toBeInTheDocument();
     expect(within(resets).getByText('3. März 2026, 08:30')).toBeInTheDocument();
-    const comparison = screen.getByTestId('fsd-period-comparison');
-    expect(within(comparison).getByText('2026-01-03 - 2026-02-01 · America/Los_Angeles')).toBeInTheDocument();
+    expectComparisonGroupContext('Previous FSD distance', '2026-01-03 - 2026-02-01 · America/Los_Angeles');
     expect(insights.period.timezone).toBe('America/Los_Angeles');
     fireEvent.click(within(drives).getByRole('button', { name: 'JSON' }));
     expect(downloadJSON.mock.calls[0][1].drives[0].started_at).toBe(instant);
@@ -424,7 +433,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     expect(within(drives).getByRole('link', { name: 'Mar 2, 2026, 03:30 PM' })).toBeInTheDocument();
     expect(within(resets).getByText('Mar 2, 2026, 03:30 PM')).toBeInTheDocument();
     expect(within(drives).queryByRole('link', { name: '3. März 2026, 08:30' })).not.toBeInTheDocument();
-    expect(within(comparison).getByText('2026-01-03 - 2026-02-01 · America/Los_Angeles')).toBeInTheDocument();
+    expectComparisonGroupContext('Previous FSD distance', '2026-01-03 - 2026-02-01 · America/Los_Angeles');
   });
 
   it.each(['not-a-date', '', null, undefined])('shows unavailable timestamps (%s) without hiding drives or resets', (value) => {
@@ -579,8 +588,8 @@ describe('FsdDriveAnalyticsPanels', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Periods lack comparable trusted coverage')).toBeInTheDocument();
-    expect(screen.getByText('Share periods lack comparable trusted coverage')).toBeInTheDocument();
+    expectComparisonGroupContext('Reported FSD distance', 'Periods lack comparable trusted coverage');
+    expectComparisonGroupContext('Share of observed driving', 'Share periods lack comparable trusted coverage');
   });
 
   it('keeps missing legacy attribution unavailable instead of showing zero', () => {

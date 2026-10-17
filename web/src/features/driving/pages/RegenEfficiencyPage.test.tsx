@@ -6,6 +6,7 @@ import { Button } from '@/components/ui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { Drive, RegenEfficiencyData } from '@/types/driving';
 
 const h = vi.hoisted(() => ({
@@ -414,7 +415,7 @@ describe('RegenEfficiencyPage', () => {
       for (const testId of [
         'regen-selected-window-summary', 'regen-overview-brief', 'regen-coverage-brief',
       ]) {
-        expect(within(screen.getByTestId(testId)).getByText('Retained source')).toBeInTheDocument();
+        assertOperationalBriefDisclosure(screen.getByTestId(testId), 'Retained source');
       }
       for (const testId of [
         'regen-kpis', 'regen-overview', 'regen-monthly', 'regen-distribution',
@@ -456,7 +457,7 @@ describe('RegenEfficiencyPage', () => {
     for (const testId of [
       'regen-selected-window-summary', 'regen-overview-brief', 'regen-coverage-brief',
     ]) {
-      expect(within(screen.getByTestId(testId)).getByText('Source available')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByTestId(testId), 'Source available');
     }
   });
 
@@ -602,9 +603,13 @@ describe('RegenEfficiencyPage', () => {
 
     const returnedRows = screen.getByText('Detailed rows returned').closest('[data-operational-metric]');
     expect(returnedRows).not.toBeNull();
-    expect(within(returnedRows as HTMLElement).getByText('1,000-row cap reached')).toBeInTheDocument();
     expect(within(returnedRows as HTMLElement).getByText('1,000', { selector: '[data-operational-value]' })).toBeInTheDocument();
     expect(returnedRows).toHaveAttribute('data-value-state', 'value');
+    const capBrief = screen.getByText('Detailed rows returned').closest('[data-operational-brief]')!;
+    fireEvent.click(within(capBrief).getByRole('button', { name: 'Review details' }));
+    const capDrawer = screen.getByRole('dialog');
+    expect(within(capDrawer).getByRole('group', { name: 'Detailed rows returned' })).toHaveTextContent('1,000-row cap reached');
+    fireEvent.keyDown(capDrawer, { key: 'Escape' });
     expect(
       screen.getAllByText('Detailed history cap reached').length,
     ).toBeGreaterThanOrEqual(6);
@@ -730,11 +735,7 @@ describe('RegenEfficiencyPage', () => {
 
     renderPage();
 
-    const shareCard = screen
-      .getByText('Aggregate recovery share')
-      .closest('[data-operational-metric]');
-    expect(shareCard).not.toBeNull();
-    expect(within(shareCard as HTMLElement).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(screen.getByTestId('regen-selected-window-summary'), 'Aggregate recovery share');
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 

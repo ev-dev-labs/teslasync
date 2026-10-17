@@ -32,7 +32,10 @@ vi.mock('@/api/hooks/useDriving', () => ({
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: 7 }) }));
 vi.mock('@/hooks/useRangeState', () => ({
-  useRangeState: () => ({ start: '2026-07-01', end: '2026-07-31' }),
+  useRangeState: () => ({
+    start: '2026-07-01', end: '2026-07-31',
+    startInstant: '2026-07-01T00:00:00Z', endInstantExclusive: '2026-08-01T00:00:00Z',
+  }),
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({

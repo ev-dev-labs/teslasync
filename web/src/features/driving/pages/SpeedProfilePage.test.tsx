@@ -327,6 +327,15 @@ function renderPage() {
   return { ...view, rerenderPage: () => view.rerender(element()) };
 }
 
+/** Pin metric context inside the speed-profile brief drawer. */
+function expectBriefGroup(label: string, text: string): void {
+  const brief = screen.getByTestId('speed-profile-brief');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getByRole('group', { name: label })).toHaveTextContent(text);
+  fireEvent.keyDown(drawer, { key: 'Escape' });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   for (const key of Object.keys(captured)) delete captured[key];
@@ -467,7 +476,7 @@ describe('SpeedProfilePage', () => {
     expect(screen.getByText('144.00 km/h')).toBeInTheDocument(); // peak 40 m/s → 144 km/h
     expect(screen.getByText('54.00 km/h')).toBeInTheDocument(); // optimal 15 m/s → 54 km/h
     expect(screen.getByText('500')).toBeInTheDocument(); // total readings
-    expect(screen.getByText('5 drives analysed')).toBeInTheDocument();
+    expectBriefGroup('Eligible drives', '5 drives analysed');
 
     // Envelope gauges receive the same converted values.
     expect(screen.getByTestId('gauge-Avg Speed')).toHaveTextContent('90km/h');
@@ -586,7 +595,7 @@ describe('SpeedProfilePage', () => {
     expect(
       screen.getByText('Efficiency insight appears once optimal-speed data is available'),
     ).toBeInTheDocument();
-    expect(screen.getByText('0 drives analysed')).toBeInTheDocument();
+    expectBriefGroup('Eligible drives', '0 drives analysed');
   });
 
   it('keeps the complete report outline and independent drive evidence while the profile loads', () => {
@@ -618,7 +627,12 @@ describe('SpeedProfilePage', () => {
     const view = renderPage();
     expectOutline();
     expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
-    assertOperationalBriefDisclosure(document.body, 'Loading source', { allMatches: true });
+    if (source === 'profile') {
+      assertOperationalBriefDisclosure(document.body, 'Loading source', { allMatches: true });
+    } else {
+      const firstCard = within(screen.getByText('0-15').parentElement!.parentElement!);
+      expect(firstCard.getAllByText('Loading source')).toHaveLength(2);
+    }
     expect(screen.getByTestId(source === 'profile' ? 'scatter' : 'bar-chart')).toBeInTheDocument();
 
     mock.mockReturnValue(makeQuery({ fetchStatus: 'paused', refetch }));
@@ -626,8 +640,9 @@ describe('SpeedProfilePage', () => {
     expectOutline();
     expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
     expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0);
-    expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    const pausedNotice = screen.getByText('The initial evidence query is paused; no empty result is inferred.')
+      .closest('[role="status"]')!;
+    fireEvent.click(within(pausedNotice).getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
 
     mock.mockReturnValue(makeQuery({ data: source === 'profile' ? emptyProfile : [] }));
@@ -651,7 +666,8 @@ describe('SpeedProfilePage', () => {
     for (const title of ['Speed Distribution', 'Speed Envelope', 'Speed Buckets', 'Efficiency vs Speed', 'Efficiency Insight']) {
       expect(screen.getByText(title)).toBeInTheDocument();
     }
-    expect(screen.getAllByText('Select a vehicle')).toHaveLength(6);
+    expect(screen.getAllByText('Select a vehicle')).toHaveLength(5);
+    assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), 'Select a vehicle');
     expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
     expect(screen.queryByText('0 drives analysed')).not.toBeInTheDocument();
     expect(screen.queryByText('Source available')).not.toBeInTheDocument();
@@ -661,7 +677,7 @@ describe('SpeedProfilePage', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
     view.rerenderPage();
     expect(screen.queryByText('Select a vehicle')).not.toBeInTheDocument();
-    expect(screen.getByText('5 drives analysed')).toBeInTheDocument();
+    expectBriefGroup('Eligible drives', '5 drives analysed');
     expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
     expect(screen.getByTestId('scatter')).toBeInTheDocument();
   });
@@ -670,14 +686,14 @@ describe('SpeedProfilePage', () => {
     const brief = () => within(screen.getByTestId('speed-profile-brief'));
     speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ isLoading: true }));
     const view = renderPage();
-    expect(brief().getByText('Loading source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), 'Loading source');
     expect(captured.scatterData).toHaveLength(3);
 
     speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({
       isLoading: true, isFetching: false, fetchStatus: 'paused',
     }));
     view.rerenderPage();
-    expect(brief().getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), 'Refresh paused');
     expect(brief().queryByText('Loading source')).not.toBeInTheDocument();
     expect(brief().queryByText('Source available')).not.toBeInTheDocument();
     expect(screen.queryByText('No speed distribution available yet')).not.toBeInTheDocument();
@@ -687,7 +703,7 @@ describe('SpeedProfilePage', () => {
       data: { distribution: [], avgSpeedMps: 0, peakSpeedMps: 0, optimalSpeedMps: 0 },
     }));
     view.rerenderPage();
-    expect(brief().getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), 'Source available');
     expect(brief().getAllByText('0.00 km/h')).toHaveLength(3);
     expect(brief().getByText('0')).toBeInTheDocument();
     expect(screen.getByText('No speed distribution available yet')).toBeInTheDocument();
@@ -703,7 +719,7 @@ describe('SpeedProfilePage', () => {
       ...(posture === 'failure' ? { error: new Error('profile refresh') } : { fetchStatus: 'paused' }),
     }));
     view.rerenderPage();
-    expect(brief().getByText(posture === 'failure' ? 'Retained source' : 'Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), posture === 'failure' ? 'Retained source' : 'Refresh paused');
     expect(brief().getByText('90.00 km/h')).toBeInTheDocument();
     expect(captured.barChartData).toHaveLength(4);
     expect(captured.scatterData).toHaveLength(3);
@@ -714,7 +730,7 @@ describe('SpeedProfilePage', () => {
 
     speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ data: PROFILE }));
     view.rerenderPage();
-    expect(brief().getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), 'Source available');
     expect(brief().queryByText('Retained source')).not.toBeInTheDocument();
     expect(brief().queryByText('Refresh paused')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
@@ -755,7 +771,7 @@ describe('SpeedProfilePage', () => {
     expect(rangeStateMock).toHaveBeenCalledWith({ timezone: 'UTC' });
     expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
     expect(setRangeMock).not.toHaveBeenCalled();
-    expect(screen.getByText('2024-02-01 — 2024-02-28')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), '2024-02-01 — 2024-02-28');
   });
 
   it('uses saved locale and timezone with inclusive lower and exclusive DST day boundaries', () => {
@@ -939,7 +955,7 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
       const view = renderPage();
       expectLabels();
       expect(card().getAllByText('Unavailable')).toHaveLength(2);
-      expect(screen.getByText('0 drives analysed')).toBeInTheDocument();
+      expectBriefGroup('Eligible drives', '0 drives analysed');
       drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [D_NULL] }));
       view.rerenderPage();
       expect(card().getAllByText('Unknown')).toHaveLength(2);
@@ -963,14 +979,14 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
       expect(card().getAllByText('Unknown')).toHaveLength(2);
       expect(card().queryByText('Unavailable')).not.toBeInTheDocument();
       expect(screen.queryByText('0 drives analysed')).not.toBeInTheDocument();
-      expect(screen.getByText('Drive sample coverage is unavailable independently of the speed profile.')).toBeInTheDocument();
+      expectBriefGroup('Eligible drives', 'Drive sample coverage is unavailable independently of the speed profile.');
       expect(screen.queryByTestId('scatter')).not.toBeInTheDocument();
       expect(screen.queryByText('Not enough drive data for the efficiency scatter yet')).not.toBeInTheDocument();
 
       drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [] }));
       view.rerenderPage();
       expect(card().getAllByText('Unavailable')).toHaveLength(2);
-      expect(screen.getByText('0 drives analysed')).toBeInTheDocument();
+      expectBriefGroup('Eligible drives', '0 drives analysed');
       expect(screen.getByText('Not enough drive data for the efficiency scatter yet')).toBeInTheDocument();
     });
 

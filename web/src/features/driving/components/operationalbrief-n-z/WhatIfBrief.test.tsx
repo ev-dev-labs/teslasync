@@ -7,6 +7,7 @@ import type { UnitPref } from '@/lib/unitConversion';
 import { DEFAULT_KNOBS, simulateWhatIf } from '../../lib/whatIfModel';
 import WhatIfPage from '../../pages/WhatIfPage';
 import { makeBriefDrive } from './drivingBrief.fixtures';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const h = vi.hoisted(() => ({ drive: undefined as Drive | undefined, loading: false, refetch: vi.fn() }));
 const unitPrefs: UnitPref = {
@@ -74,7 +75,7 @@ describe('What-If — real summary preserves the simulation and its controls', (
   it('keeps unavailable energy distinct from a measured scenario and retains the recovery drive picker', () => {
     h.drive = makeBriefDrive(1, 10_000, { energyUsedWh: null });
     renderPage();
-    expect(screen.getByTestId('what-if-brief').querySelector('[data-operational-metric="scenario-energy"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('what-if-brief'), 'Energy used');
     expect(screen.getAllByText('This drive lacks the energy data needed to simulate.').length).toBeGreaterThan(0);
     expect(screen.getByRole('combobox', { name: 'Choose a drive' })).toBeInTheDocument();
   });

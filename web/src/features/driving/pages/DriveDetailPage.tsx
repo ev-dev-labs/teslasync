@@ -114,7 +114,7 @@ export default function DriveDetailPage() {
       overflowActions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
           {id ? (
-            <IconButton icon={<Icon icon={Share2} />} label={t('driveDetail.share', 'Share')} onClick={() => setShareDialogOpen(true)} />
+            <IconButton icon={<Icon icon={Share2} />} label={t('driveDetail.share', 'Share')} onClick={() => setShareDialogOpen(true)} className="min-h-11 min-w-11 md:min-h-9" />
           ) : null}
           <PrintButton className={actionTargetClassName} />
         </div>

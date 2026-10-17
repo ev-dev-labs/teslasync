@@ -20,10 +20,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
@@ -34,12 +35,17 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown) => {
-        if (typeof fallbackOrOpts === 'string') return fallbackOrOpts
-        if (fallbackOrOpts && typeof fallbackOrOpts === 'object' && 'defaultValue' in fallbackOrOpts) {
-          if (typeof fallbackOrOpts.defaultValue === 'string') return fallbackOrOpts.defaultValue
-        }
-        return key
+      t: (key: string, fallbackOrOpts?: unknown, maybeOptions?: unknown) => {
+        const text = typeof fallbackOrOpts === 'string' ? fallbackOrOpts
+          : (fallbackOrOpts && typeof fallbackOrOpts === 'object' && 'defaultValue' in fallbackOrOpts
+            && typeof fallbackOrOpts.defaultValue === 'string')
+            ? fallbackOrOpts.defaultValue
+            : key
+        const values = (maybeOptions && typeof maybeOptions === 'object'
+          ? maybeOptions as Record<string, unknown>
+          : {})
+        return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match: string, name: string) =>
+          values[name] != null ? String(values[name]) : '')
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
@@ -197,41 +203,37 @@ describe('AutopilotSection — Follow Distance enum decoding', () => {
       expect(metricValueText(label)).toBe('7')
     })
     expect(metricValueText(label)).not.toContain('FollowDistance')
-    expect(label.closest('[data-operational-metric]')).toHaveTextContent('FollowDistance7')
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(within(screen.getByRole('dialog')).getByRole('group', { name: 'Follow Distance' }))
+      .toHaveTextContent('FollowDistance7')
   })
 
   it('renders em-dash when no follow-distance observations exist', async () => {
     stubResponses({ vehicleSpeedMps: 0, followDistanceEnum: null })
 
-    renderWithClient(<AutopilotSection vehicleId={1} />)
-    const label = await screen.findByText('Follow Distance')
-    await waitFor(() => {
-      expect(metricValueText(label)).toContain('—')
-    })
+    const { container } = renderWithClient(<AutopilotSection vehicleId={1} />)
+    await screen.findByText(/0\.00/, { selector: '[data-operational-value]' })
+    assertOperationalMetricUnavailable(container, 'Follow Distance')
   })
 })
 
 describe('AutopilotSection — empty state', () => {
   it('does not display a zero fallback when speed is not verified and cruise is absent', async () => {
     stubResponses({ vehicleSpeedMps: 0, verifiedSpeed: false })
-    renderWithClient(<AutopilotSection vehicleId={1} />)
+    const { container } = renderWithClient(<AutopilotSection vehicleId={1} />)
     expect(await screen.findByText('No cruise / autopilot telemetry received yet')).toBeInTheDocument()
-    const label = screen.getByText('Current Speed')
-    expect(metricValueText(label)).toBe('—')
-    expect(metricValueText(label)).not.toMatch(/0\.0/)
-    expect(label.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalMetricUnavailable(container, 'Current Speed')
+    expect(container.querySelector('[data-operational-value]')).toBeNull()
   })
 
   it('keeps a missing current speed unknown when other cruise evidence exists', async () => {
     stubResponses({ vehicleSpeedMps: 0, verifiedSpeed: false, cruiseSetSpeedMps: 11.176 })
-    renderWithClient(<AutopilotSection vehicleId={1} />)
-    const label = await screen.findByText('Current Speed')
+    const { container } = renderWithClient(<AutopilotSection vehicleId={1} />)
     await waitFor(() => {
-      expect(metricValueText(label)).toContain('—')
-      expect(metricValueText(screen.getByText('Cruise Set Speed'))).toContain('25')
+      expect(container.querySelector('[data-operational-metric="cruise-set-speed"] [data-operational-value]')).toHaveTextContent('25')
     })
-    expect(metricValueText(label)).not.toMatch(/0\.0/)
-    expect(label.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalMetricUnavailable(container, 'Current Speed')
+    expect(container.querySelector('[data-operational-metric="current-speed"]')).toBeNull()
   })
 
   it('preserves a true verified current zero instead of showing missing', async () => {
@@ -247,31 +249,27 @@ describe('AutopilotSection — empty state', () => {
 
   it('does not call a stale verified speed current', async () => {
     stubResponses({ vehicleSpeedMps: 0, freshness: 'stale', followDistanceEnum: 'FollowDistance7' })
-    renderWithClient(<AutopilotSection vehicleId={1} />)
-    const label = await screen.findByText('Current Speed')
+    const { container } = renderWithClient(<AutopilotSection vehicleId={1} />)
     await waitFor(() => {
-      expect(metricValueText(label)).toContain('—')
-      expect(metricValueText(screen.getByText('Follow Distance'))).toBe('7')
+      expect(container.querySelector('[data-operational-metric="follow-distance"] [data-operational-value]')).toHaveTextContent('7')
     })
-    expect(metricValueText(label)).not.toMatch(/0\.0/)
-    expect(label.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
+    assertOperationalMetricUnavailable(container, 'Current Speed')
+    expect(container.querySelector('[data-operational-metric="current-speed"]')).toBeNull()
   })
 
   it('renders the empty state when no signals are present anywhere', async () => {
     stubResponses({}) // all three sources empty
 
-    renderWithClient(<AutopilotSection vehicleId={1} />)
+    const { container } = renderWithClient(<AutopilotSection vehicleId={1} />)
     await waitFor(() => {
       expect(
         screen.getByText('No cruise / autopilot telemetry received yet'),
       ).toBeInTheDocument()
     })
-    // Empty sources retain all metric shells, without fabricated readings.
+    // Empty sources omit every metric shell, without fabricated readings.
     for (const label of ['Current Speed', 'Cruise Set Speed', 'Follow Distance']) {
-      const metricLabel = screen.getByText(label)
-      expect(metricValueText(metricLabel)).toBe('—')
-      expect(metricValueText(metricLabel)).not.toMatch(/0\.0/)
-      expect(metricLabel.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
+      assertOperationalMetricUnavailable(container, label)
     }
+    expect(container.querySelector('[data-operational-value]')).toBeNull()
   })
 })

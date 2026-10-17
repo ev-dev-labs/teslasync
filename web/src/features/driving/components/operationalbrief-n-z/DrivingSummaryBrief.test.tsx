@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { UnitPref } from '@/lib/unitConversion';
 import type { StatMetric } from '@/components/data-display';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const preferences = vi.hoisted(() => ({
   units: {
@@ -66,8 +67,8 @@ describe('DrivingSummaryBrief — real OperationalBrief and raw metric bridge', 
     expect(brief.querySelector('[data-operational-metric="unclassified"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="unclassified"] [data-operational-value]')).toHaveTextContent('50/50');
     expect(brief.querySelector('[data-operational-metric="zero"] [data-operational-value]')).toHaveTextContent('0');
-    expect(brief.querySelector('[data-operational-metric="missing"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(brief.querySelector('[data-operational-metric="invalid"]')).toHaveAttribute('data-value-state', 'invalid');
+    assertOperationalMetricUnavailable(brief, 'Unavailable count');
+    assertOperationalMetricUnavailable(brief, 'Invalid count');
   });
 
   it('converts SI distance with saved display preferences without converting the count denominator', () => {

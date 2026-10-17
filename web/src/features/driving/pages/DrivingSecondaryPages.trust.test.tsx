@@ -1,6 +1,6 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
@@ -24,7 +24,11 @@ vi.mock('@/api/hooks/useDriving', () => ({ useDrives: () => h.source }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: 7 }) }));
 vi.mock('@/hooks/useRangeState', () => ({
-  useRangeState: () => ({ start: '2026-01-01', end: '2026-12-31', setRange: vi.fn() }),
+  useRangeState: () => ({
+    start: '2026-01-01', end: '2026-12-31',
+    startInstant: '2026-01-01T00:00:00.000Z', endInstantExclusive: '2027-01-01T00:00:00.000Z',
+    setRange: vi.fn(),
+  }),
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -106,14 +110,26 @@ beforeEach(() => {
   h.source = { data: drives, isSuccess: true, error: null, refetch: h.refetch };
 });
 
+/** The logbook count caption lives in the drawer now; other surfaces keep face labels. */
+function expectMetricVisible(metric: string): void {
+  if (metric === 'of 12 drives') {
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Unclassified' })).toHaveTextContent('of 12 drives');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  } else {
+    expect(screen.getByText(metric)).toBeInTheDocument();
+  }
+}
+
 describe.each(surfaces)('$title retained source trust', ({ Component, sections, metric }) => {
   it('keeps every report body and metric through a failed refresh, with source-local recovery', () => {
     const view = render(<MemoryRouter><Component /></MemoryRouter>);
-    expect(screen.getByText(metric)).toBeInTheDocument();
+    expectMetricVisible(metric);
     for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     h.source = { ...h.source, isError: true, error: new Error('refresh failed') };
     view.rerender(<MemoryRouter><Component /></MemoryRouter>);
-    expect(screen.getByText(metric)).toBeInTheDocument();
+    expectMetricVisible(metric);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -128,10 +144,7 @@ describe.each(surfaces)('$title retained source trust', ({ Component, sections, 
     if (metric === 'of 12 drives') {
       expect(screen.queryByText(metric)).not.toBeInTheDocument();
     } else {
-      const metricItem = screen.getByText(metric).closest('[role="listitem"]');
-      expect(metricItem).toHaveAttribute('data-value-state', 'missing');
-      expect(metricItem?.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
-      expect(metricItem?.querySelector('[data-operational-value]')).not.toHaveTextContent(/^0(?:\s|$)/);
+      assertOperationalMetricUnavailable(document.body, metric);
     }
     assertOperationalBriefDisclosure(document.body, 'Source unavailable');
     expect(screen.queryByText('Returned evidence')).not.toBeInTheDocument();
@@ -141,7 +154,7 @@ describe.each(surfaces)('$title retained source trust', ({ Component, sections, 
   it('preserves retained content and declares paused/offline refreshes rather than inventing an empty window', () => {
     h.source = { ...h.source, fetchStatus: 'paused' };
     render(<MemoryRouter><Component /></MemoryRouter>);
-    expect(screen.getByText(metric)).toBeInTheDocument();
+    expectMetricVisible(metric);
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
     expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');

@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   fireEvent,
@@ -447,15 +447,23 @@ describe('DepartureForecastPage', () => {
     h.displayMode = 'utc';
     renderPage();
 
-    for (const id of ['departure-kpis', 'departure-methodology']) {
-      const section = screen.getByTestId(id);
-      expect(section).toHaveTextContent('Effective model timezone: Asia/Kolkata.');
-      expect(section).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
-      expect(section).toHaveTextContent('vehicle timezone metadata is missing or UTC');
-      expect(section.querySelector('time')).toHaveTextContent(
-        departureDateTime(FROZEN_NOW, 'de-DE', 'Asia/Kolkata'),
-      );
-    }
+    const method = screen.getByTestId('departure-methodology');
+    expect(method).toHaveTextContent('Effective model timezone: Asia/Kolkata.');
+    expect(method).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
+    expect(method).toHaveTextContent('vehicle timezone metadata is missing or UTC');
+    expect(method.querySelector('time')).toHaveTextContent(
+      departureDateTime(FROZEN_NOW, 'de-DE', 'Asia/Kolkata'),
+    );
+    const kpis = screen.getByTestId('departure-kpis');
+    assertOperationalBriefDisclosure(kpis, 'Effective model timezone: Asia/Kolkata.', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (saved user timezone)', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'vehicle timezone metadata is missing or UTC', { contains: true });
+    fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
+    const kpisDrawer = screen.getByRole('dialog');
+    expect(kpisDrawer.querySelector('time')).toHaveTextContent(
+      departureDateTime(FROZEN_NOW, 'de-DE', 'Asia/Kolkata'),
+    );
+    fireEvent.keyDown(kpisDrawer, { key: 'Escape' });
     expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
     expect(h.vehicleTimezone).toBe(metadata);
     expect(h.displayMode).toBe('utc');
@@ -467,23 +475,28 @@ describe('DepartureForecastPage', () => {
     h.vehicleTimezone = 'America/Los_Angeles';
     h.locale = 'fr-FR';
     renderPage();
-    for (const id of ['departure-kpis', 'departure-methodology']) {
-      expect(screen.getByTestId(id)).toHaveTextContent('Effective model timezone: America/Los_Angeles.');
-      expect(screen.getByTestId(id)).toHaveTextContent('Source: selected vehicle timezone metadata (America/Los_Angeles).');
-      expect(screen.getByTestId(id)).not.toHaveTextContent('shared vehicle-mode fallback');
-    }
+    const method = screen.getByTestId('departure-methodology');
+    expect(method).toHaveTextContent('Effective model timezone: America/Los_Angeles.');
+    expect(method).toHaveTextContent('Source: selected vehicle timezone metadata (America/Los_Angeles).');
+    expect(method).not.toHaveTextContent('shared vehicle-mode fallback');
+    const kpis = screen.getByTestId('departure-kpis');
+    assertOperationalBriefDisclosure(kpis, 'Effective model timezone: America/Los_Angeles.', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'Source: selected vehicle timezone metadata (America/Los_Angeles).', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback', { contains: true, absent: true });
   });
 
   it('identifies the browser fallback when no user timezone is saved', () => {
     h.useSharedTimezone = true;
     h.userTimezone = '';
     renderPage();
-    for (const id of ['departure-kpis', 'departure-methodology']) {
-      expect(screen.getByTestId(id)).toHaveTextContent('shared vehicle-mode fallback (browser timezone, or UTC if unavailable)');
-      expect(screen.getByTestId(id)).toHaveTextContent(
-        `Effective model timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}.`,
-      );
-    }
+    const method = screen.getByTestId('departure-methodology');
+    expect(method).toHaveTextContent('shared vehicle-mode fallback (browser timezone, or UTC if unavailable)');
+    expect(method).toHaveTextContent(
+      `Effective model timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}.`,
+    );
+    const kpis = screen.getByTestId('departure-kpis');
+    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (browser timezone, or UTC if unavailable)', { contains: true });
+    assertOperationalBriefDisclosure(kpis, `Effective model timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}.`, { contains: true });
     expect(h.userTimezone).toBe('');
   });
 
@@ -492,13 +505,21 @@ describe('DepartureForecastPage', () => {
     h.vehicleTimezone = zone;
     h.timeZone = zone;
     renderPage();
-    for (const id of ['departure-kpis', 'departure-methodology']) {
-      expect(screen.getByTestId(id)).toHaveTextContent('Effective model timezone: UTC.');
-      expect(screen.getByTestId(id)).toHaveTextContent('this model uses UTC without changing shared settings');
-      expect(screen.getByTestId(id).querySelector('time')).toHaveTextContent(
-        departureDateTime(FROZEN_NOW, h.locale, 'UTC'),
-      );
-    }
+    const method = screen.getByTestId('departure-methodology');
+    expect(method).toHaveTextContent('Effective model timezone: UTC.');
+    expect(method).toHaveTextContent('this model uses UTC without changing shared settings');
+    expect(method.querySelector('time')).toHaveTextContent(
+      departureDateTime(FROZEN_NOW, h.locale, 'UTC'),
+    );
+    const kpis = screen.getByTestId('departure-kpis');
+    assertOperationalBriefDisclosure(kpis, 'Effective model timezone: UTC.', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'this model uses UTC without changing shared settings', { contains: true });
+    fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
+    const kpisDrawer = screen.getByRole('dialog');
+    expect(kpisDrawer.querySelector('time')).toHaveTextContent(
+      departureDateTime(FROZEN_NOW, h.locale, 'UTC'),
+    );
+    fireEvent.keyDown(kpisDrawer, { key: 'Escape' });
     expect(h.vehicleTimezone).toBe(zone);
     expect(h.userTimezone).toBe('Asia/Tokyo');
     expectEverySection();
@@ -508,11 +529,14 @@ describe('DepartureForecastPage', () => {
     h.useSharedTimezone = true;
     h.userTimezone = 'Not/AZone';
     renderPage();
-    for (const id of ['departure-kpis', 'departure-methodology']) {
-      expect(screen.getByTestId(id)).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
-      expect(screen.getByTestId(id)).toHaveTextContent('Effective model timezone: UTC.');
-      expect(screen.getByTestId(id)).toHaveTextContent('The resolved timezone "Not/AZone" is missing or invalid');
-    }
+    const method = screen.getByTestId('departure-methodology');
+    expect(method).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
+    expect(method).toHaveTextContent('Effective model timezone: UTC.');
+    expect(method).toHaveTextContent('The resolved timezone "Not/AZone" is missing or invalid');
+    const kpis = screen.getByTestId('departure-kpis');
+    assertOperationalBriefDisclosure(kpis, 'shared vehicle-mode fallback (saved user timezone)', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'Effective model timezone: UTC.', { contains: true });
+    assertOperationalBriefDisclosure(kpis, 'The resolved timezone "Not/AZone" is missing or invalid', { contains: true });
     expect(h.userTimezone).toBe('Not/AZone');
   });
 
@@ -672,7 +696,7 @@ describe('DepartureForecastPage', () => {
     expect(notice).toHaveAttribute('role', 'status');
     expect(notice).not.toHaveTextContent(/offline|failed/i);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('departure-kpis')).getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('departure-kpis'), 'Refresh paused');
     expect(screen.queryByTestId('departure-loading-status')).not.toBeInTheDocument();
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
@@ -696,7 +720,7 @@ describe('DepartureForecastPage', () => {
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     const kpis = within(screen.getByTestId('departure-kpis'));
-    expect(kpis.getByText('Source paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('departure-kpis'), 'Source paused');
     expect(kpis.queryByText('0')).not.toBeInTheDocument();
     expect(kpis.queryByText('Support index needs qualifying departures')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('departure-next-24')).queryByRole('table')).not.toBeInTheDocument();
@@ -766,17 +790,25 @@ describe('DepartureForecastPage', () => {
     h.history = query({ isLoading: true });
     const view = renderPage();
     const assertAnchor = (anchor: number) => {
-      for (const sectionId of ['departure-kpis', 'departure-methodology']) {
-        const section = screen.getByTestId(sectionId);
-        const time = section.querySelector('time');
-        expect(time).toHaveAttribute('datetime', new Date(anchor).toISOString());
-        expect(time).toHaveTextContent(departureDateTime(anchor, h.locale, h.timeZone));
-        expect(section).toHaveTextContent(h.timeZone);
-      }
+      const method = screen.getByTestId('departure-methodology');
+      const time = method.querySelector('time');
+      expect(time).toHaveAttribute('datetime', new Date(anchor).toISOString());
+      expect(time).toHaveTextContent(departureDateTime(anchor, h.locale, h.timeZone));
+      expect(method).toHaveTextContent(h.timeZone);
+      const kpis = screen.getByTestId('departure-kpis');
+      fireEvent.click(within(kpis).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog');
+      const drawerTime = drawer.querySelector('time');
+      expect(drawerTime).toHaveAttribute('datetime', new Date(anchor).toISOString());
+      expect(drawerTime).toHaveTextContent(departureDateTime(anchor, h.locale, h.timeZone));
+      expect(drawer).toHaveTextContent(h.timeZone);
+      fireEvent.keyDown(drawer, { key: 'Escape' });
     };
     assertAnchor(FROZEN_NOW);
-    expect(screen.getByTestId('departure-kpis')).toHaveTextContent(
+    assertOperationalBriefDisclosure(
+      screen.getByTestId('departure-kpis'),
       'relative to this fixed anchor, not a live countdown',
+      { contains: true },
     );
     expect(screen.getByTestId('departure-methodology')).toHaveTextContent(
       'not the current clock or the history fetch time',
@@ -828,9 +860,10 @@ describe('DepartureForecastPage', () => {
         name: 'Loading departure history',
       }),
     ).toHaveLength(1);
-    expect(
-      screen.getAllByText('Waiting for returned drive history…'),
-    ).toHaveLength(6);
+    fireEvent.click(within(screen.getByTestId('departure-kpis')).getByRole('button', { name: 'Review details' }));
+    const loadingDrawer = screen.getByRole('dialog');
+    expect(within(loadingDrawer).getAllByText('Waiting for returned drive history…')).toHaveLength(6);
+    fireEvent.keyDown(loadingDrawer, { key: 'Escape' });
     expect(
       screen.queryByText('No supported slot crosses the model threshold'),
     ).toBeNull();
@@ -848,11 +881,13 @@ describe('DepartureForecastPage', () => {
     expectEverySection();
     expect(screen.getAllByText("Can't reach server")).toHaveLength(1);
     expect(screen.getAllByRole('alert')).toHaveLength(1);
-    expect(
-      screen.getAllByText(
-        'Departure history is unavailable; use the status below to retry.',
-      ),
-    ).toHaveLength(6);
+    const errorKpis = screen.getByTestId('departure-kpis');
+    expect(within(errorKpis).queryByText('Departure history is unavailable; use the status below to retry.')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(errorKpis, 'Source unavailable');
+    for (const label of ['Next supported departure window', 'Peak modeled likelihood', '24h modeled likelihood',
+      'Illustrative planning marker', 'Evidence strength', 'Already included departures']) {
+      assertOperationalMetricUnavailable(errorKpis, label);
+    }
     expect(
       screen.queryByText('Support index needs qualifying departures'),
     ).toBeNull();
@@ -927,8 +962,13 @@ describe('DepartureForecastPage', () => {
         'No drives were returned, so no peak, horizon likelihood, or planning marker is inferred.',
       ),
     ).toBeInTheDocument();
-    const kpis = within(screen.getByTestId('departure-kpis'));
-    expect(kpis.getAllByText('—').length).toBeGreaterThanOrEqual(5);
+    const kpisSection = screen.getByTestId('departure-kpis');
+    const kpis = within(kpisSection);
+    expect(kpis.queryByText('—')).not.toBeInTheDocument();
+    for (const label of ['Next supported departure window', 'Peak modeled likelihood', '24h modeled likelihood',
+      'Illustrative planning marker', 'Evidence strength']) {
+      assertOperationalMetricUnavailable(kpisSection, label);
+    }
     expect(kpis.getByText('0')).toBeInTheDocument();
     expect(
       screen.queryByText(/% modeled likelihood/),
@@ -948,9 +988,7 @@ describe('DepartureForecastPage', () => {
         'Thin evidence: estimates remain descriptive, and the illustrative planning marker is unavailable.',
       ),
     ).toBeInTheDocument();
-    const kpis = within(screen.getByTestId('departure-kpis'));
-    expect(kpis.getByText('Illustrative planning marker')).toBeInTheDocument();
-    expect(kpis.getAllByText('—').length).toBeGreaterThan(0);
+    assertOperationalMetricUnavailable(screen.getByTestId('departure-kpis'), 'Illustrative planning marker');
   });
 
   it('warns when exactly 1,000 returned rows reach the history cap', () => {

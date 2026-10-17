@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { Drive } from '@/types/driving';
 
 const FROZEN_NOW = Date.parse('2026-12-31T23:59:00.000Z');
@@ -101,7 +102,8 @@ vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
 
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async () => ({
+  ...await vi.importActual<typeof import('@/components/motion')>('@/components/motion'),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
@@ -312,7 +314,7 @@ describe('SeasonalEfficiencyPage', () => {
     renderPage();
     expectEveryShell();
     expect(screen.getAllByLabelText('Loading seasonal efficiency history').length).toBeGreaterThan(1);
-    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Returned-history coverage has not resolved.');
+    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Returned-history coverage has not resolved.', { contains: true });
     expect(screen.queryByText('No drives were returned for this vehicle.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
@@ -349,11 +351,11 @@ describe('SeasonalEfficiencyPage', () => {
 
   it('freezes the injected analysis clock across query changes', () => {
     const view = renderPage();
-    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Latest included: 16.50 days ago');
+    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Latest included: 16.50 days ago', { contains: true });
     vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 10 * 86_400_000);
     h.history = query({ data: readyHistory() });
     view.rerenderPage();
-    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Latest included: 16.50 days ago');
+    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Latest included: 16.50 days ago', { contains: true });
   });
 
   it('keeps every shell visible during loading without a retry action', () => {
@@ -384,7 +386,7 @@ describe('SeasonalEfficiencyPage', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/Latest included/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Latest included', { contains: true });
   });
 
   it('keeps all shells visible with no vehicle selected', () => {
@@ -417,7 +419,7 @@ describe('SeasonalEfficiencyPage', () => {
     renderPage();
     expectEveryShell();
     expect(screen.getByText('Insufficient samples')).toBeInTheDocument();
-    expect(screen.getByText(/Evidence band: Thin/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Evidence band: Thin', { contains: true });
   });
 
   it('warns when the latest returned 1,000-row window is capped', () => {
@@ -426,7 +428,7 @@ describe('SeasonalEfficiencyPage', () => {
     });
     renderPage();
     expectEveryShell();
-    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Latest returned 1,000-row window reached');
+    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Latest returned 1,000-row window reached', { contains: true });
     expect(screen.getByText(/Exactly the latest 1,000-row return window/)).toBeInTheDocument();
   });
 
@@ -436,7 +438,7 @@ describe('SeasonalEfficiencyPage', () => {
     renderPage();
     expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
     expect(screen.getAllByText('0.18 kWh / km').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Vehicle timezone: America\/Los_Angeles/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('seasonal-kpis'), 'Vehicle timezone: America/Los_Angeles', { contains: true });
   });
 
   it('offers accessible chart summaries for a ready descriptive fit', () => {

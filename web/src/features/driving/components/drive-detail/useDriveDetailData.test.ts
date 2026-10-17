@@ -512,8 +512,9 @@ describe('useDriveDetailData — unknown route speed', () => {
           positions: source === 'positions' ? samples.map((sample) => pos(sample)) : [],
         }));
         expect(result.current.routeSource[1]).toEqual({
-          lat: 2, lng: 2, speed: null, timestamp: 'end',
+          lat: 2, lng: 2, timestamp: 'end',
         });
+        expect('speed' in result.current.routeSource[1]).toBe(false);
         expect(result.current.chartData[1].speed).toBeNull();
         expect(result.current.speedSegments[0]).toEqual({
           positions: [[1, 1], [2, 2]], color: chartTokens.tooltipMutedText,
@@ -558,9 +559,12 @@ describe('useDriveDetailData — unknown route speed', () => {
       positions: [pos({ latitude: 3, longitude: 3, speed: 25, createdAt: 'position' })],
     }));
     expect(result.current.routeSource).toEqual([
-      { lat: 1, lng: 1, speed: null, timestamp: 'tele-start' },
-      { lat: 2, lng: 2, speed: null, timestamp: 'tele-end' },
+      { lat: 1, lng: 1, timestamp: 'tele-start' },
+      { lat: 2, lng: 2, timestamp: 'tele-end' },
     ]);
+    for (const point of result.current.routeSource) {
+      expect('speed' in point).toBe(false);
+    }
     expect(result.current.speedHistData).toEqual([]);
   });
 
@@ -577,8 +581,9 @@ describe('useDriveDetailData — unknown route speed', () => {
       ],
     }));
     expect(result.current.routeSource).toEqual([
-      { lat: -1.25, lng: 0, speed: null, timestamp: 'position' },
+      { lat: -1.25, lng: 0, timestamp: 'position' },
     ]);
+    expect('speed' in result.current.routeSource[0]).toBe(false);
   });
 });
 

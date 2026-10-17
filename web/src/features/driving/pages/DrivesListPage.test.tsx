@@ -510,14 +510,18 @@ describe('DrivesListPage — populated (km)', () => {
 
   it('renders every overview label and value in a compact, non-interactive metric grid', () => {
     renderPage();
-    const grid = within(kpiRegion()).getByRole('list');
-    expect(grid).toHaveClass('gap-px', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', '3xl:grid-cols-6');
-    const cards = within(grid).getAllByRole('listitem');
+    const grids = within(kpiRegion()).getAllByRole('list');
+    expect(grids.length).toBeGreaterThan(0);
+    for (const grid of grids) {
+      expect(grid).toHaveClass('flex', 'min-w-0', 'flex-wrap', 'gap-x-5', 'gap-y-3');
+    }
+    const cards = within(kpiRegion()).getAllByRole('listitem');
     expect(cards).toHaveLength(6);
-    expect(within(grid).getByText('Energy intensity (Wh/km)')).toHaveClass('min-w-0');
-    expect(within(grid).getByText('Energy intensity (Wh/km)')).not.toHaveClass('truncate');
-    expect(cards[5].querySelector('[data-operational-value]')).toHaveClass('break-words');
-    expect(within(grid).queryByRole('button')).toBeNull();
+    expect(within(kpiRegion()).getByText('Energy intensity (Wh/km)')).toHaveClass('text-xs', 'font-medium');
+    expect(within(kpiRegion()).getByText('Energy intensity (Wh/km)')).not.toHaveClass('truncate');
+    expect(cards[5].querySelector('[data-operational-value]')).toHaveClass('tabular-nums', 'break-normal');
+    const buttons = within(kpiRegion()).queryAllByRole('button');
+    expect(buttons.map((button) => button.getAttribute('aria-label') ?? button.textContent)).toEqual(['Review details']);
   });
 
   it('presents a six-signal decision brief with freshness and evidence coverage', () => {
@@ -534,12 +538,15 @@ describe('DrivesListPage — populated (km)', () => {
     ]) {
       expect(within(brief).getByText(label)).toBeInTheDocument();
     }
-    expect(within(brief).getByText('4 of 4 drives have measured energy and sufficient distance.'))
-      .toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const energyDrawer = screen.getByRole('dialog');
+    expect(within(energyDrawer).getByRole('group', { name: 'Energy intensity (Wh/km)' }))
+      .toHaveTextContent('4 of 4 drives have measured energy and sufficient distance.');
+    fireEvent.keyDown(energyDrawer, { key: 'Escape' });
     expect(within(brief).getByText('100%')).toBeInTheDocument();
     // Freshness lives in the page header; the brief keeps provenance only.
     const header = document.querySelector('header') as HTMLElement;
-    expect(within(header).getByText('just now')).toBeInTheDocument();
+    expect(within(header).getByText(/just now/)).toBeInTheDocument();
     expect(within(brief).queryByRole('button', { name: /Source: / })).toBeNull();
     expect(within(brief).getByRole('button', { name: 'Compare drives' })).toBeInTheDocument();
   });
@@ -568,12 +575,12 @@ describe('DrivesListPage — populated (km)', () => {
     // The shared brief keeps the prior window in provenance, without inventing
     // a comparison when the independent prior window contains no drives.
     expect(screen.getByRole('heading', { name: 'Overview', level: 3 })).toBeInTheDocument();
-    expect(screen.getByText('Apr 1, 2026 – Apr 30, 2026')).toBeInTheDocument();
     expect(kpiRegion().querySelector('[data-testid^="delta-"]')).toBeNull();
     expect(kpiRegion().querySelector('[title*=" vs "]')).toBeNull();
     expect(within(kpiRegion()).queryByText('Mar 2, 2026 – Mar 31, 2026')).not.toBeInTheDocument();
     fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
     const details = await screen.findByRole('dialog', { name: 'Overview details' });
+    expect(within(details).getByText('Apr 1, 2026 – Apr 30, 2026')).toBeInTheDocument();
     const calculation = within(details).getByRole('region', { name: 'How this was calculated' });
     expect(
       within(calculation).getByText(

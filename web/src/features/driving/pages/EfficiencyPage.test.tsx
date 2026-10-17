@@ -133,6 +133,7 @@ vi.mock('@/components/data-display', async (importOriginal) => {
 import EfficiencyPage, { efficiencyColor, getEfficiency } from './EfficiencyPage';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 /* ── Fixtures ─────────────────────────────────────────────────────────────── */
 interface FakeQuery<T> {
@@ -311,7 +312,10 @@ describe('efficiencyColor', () => {
       } }, { data: [] });
       renderPage();
       const metrics = screen.getByRole('region', { name: 'Key metrics' });
-      expect(within(metrics).getAllByText('—')).toHaveLength(5);
+      // The five null-derived KPIs are omitted from the face and each counted hidden.
+      for (const label of ['Avg consumption', 'Efficiency', 'Avg speed', 'Top speed', 'Est. cost/km']) {
+        assertOperationalMetricUnavailable(metrics, label);
+      }
       expect(screen.getByText('No efficiency summary available yet')).toBeInTheDocument();
     });
 
@@ -373,7 +377,7 @@ describe('EfficiencyPage', () => {
     expect(within(kpis).getByText('Unable to load Key metrics')).toBeInTheDocument();
     expect(within(kpis).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(within(kpis).getByText('Avg consumption')).toBeInTheDocument();
-    expect(within(kpis).getByText('Avg consumption').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(kpis, 'Avg consumption');
   });
 
   it('renders an empty-state placeholder (never a blank panel) when there are no stats', () => {

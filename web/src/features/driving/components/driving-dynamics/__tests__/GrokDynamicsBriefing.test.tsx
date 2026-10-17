@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DriveDynamicsSnapshot, MotorSnapshot } from '@/api/types';
 import type { UseUnitsResult } from '@/hooks/useUnits';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const paletteState = vi.hoisted(() => ({ colors: ['var(--semantic-info)', 'var(--semantic-purple)'] }));
 vi.mock('@/hooks/useChartPalette', () => ({
@@ -176,8 +177,7 @@ describe('GrokDynamicsBriefing', () => {
   it.each([null, undefined, NaN, Infinity])('keeps missing or invalid power unknown (%s)', value => {
     motorState.data = motor({ power_kw: value, regen_kw: 0 });
     renderBriefing();
-    const metric = screen.getByText('Drive power').closest('[data-operational-metric]');
-    expect(metric).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('grok-dynamics-briefing'), 'Drive power');
     const regen = screen.getByText('Regen harvest').closest('[data-operational-metric]');
     expect(regen).toHaveAttribute('data-value-state', 'value');
   });

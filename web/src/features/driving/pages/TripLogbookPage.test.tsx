@@ -37,7 +37,7 @@ describe('TripLogbookPage source preservation contract', () => {
 describe('TripLogbookPage localized drive count', () => {
   it('keeps numeric plural selection separate from formatted interpolation in the page', () => {
     expect(source).toContain("t('logbook.driveCount', '{{count}} drives', { count: totals.count, replace: { count: fmtInt(totals.count) } })");
-    expect(source).not.toContain('count: fmtInt(totals.count) } })');
+    expect(source).not.toContain('{ count: fmtInt(totals.count) })');
   });
 
   it.each([

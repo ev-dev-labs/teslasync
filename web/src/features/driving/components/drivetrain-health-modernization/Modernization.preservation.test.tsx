@@ -10,6 +10,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { DataStateSource } from '@/api/dataState';
 import { deriveDataState } from '@/api/dataState';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { DrivetrainHealthData, Drive, DrivingStats } from '@/types/driving';
 import type { MotorSnapshot } from '@/api/types';
 import { getFormatterPreferences, setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
@@ -156,12 +157,16 @@ describe('drivetrain live modernization preservation (authored)', () => {
     const { rerender } = render(<LiveMotorPanel motorLatest={latest}
       state={deriveDataState({ data: latest })} isolationResistance={0}
       loading={false} connected={false} />, { wrapper: Providers });
-    expect(screen.getByText('Latest returned motor snapshot; reported source: reported-source. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.')).toBeTruthy();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Returned motor readings' }),
+      'Latest returned motor snapshot; reported source: reported-source. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.',
+      { contains: true });
     const unknown = motorFixture({ source: null, ts: '' });
     rerender(<LiveMotorPanel motorLatest={unknown}
       state={deriveDataState({ data: unknown })} isolationResistance={0}
       loading={false} connected={false} />);
-    expect(screen.getByText('Latest returned motor snapshot; reported source: Unknown. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.')).toBeTruthy();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Returned motor readings' }),
+      'Latest returned motor snapshot; reported source: Unknown. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.',
+      { contains: true });
   });
 
   it('renders every original section plus complete record details with unchanged query calls', () => {
@@ -322,8 +327,8 @@ describe('drivetrain live modernization preservation (authored)', () => {
     const liveReadings = screen.getByRole('region', { name: 'Returned motor readings' });
     const powerValues = Array.from(liveReadings.querySelectorAll('[data-operational-metric="power"][data-value-state="value"], [data-operational-metric="regen"][data-value-state="value"]'));
     expect(powerValues.some(node => (node.textContent ?? '').includes('0.00'))).toBe(true);
-    const missingTemperatures = liveReadings.querySelectorAll('[data-operational-metric="temp-front"][data-value-state="missing"], [data-operational-metric="temp-rear"][data-value-state="missing"], [data-operational-metric="inverter"][data-value-state="missing"], [data-operational-metric="battery"][data-value-state="missing"]');
-    expect(missingTemperatures.length).toBeGreaterThan(0);
+    // The null battery temperature is omitted from the face and counted as hidden.
+    assertOperationalMetricUnavailable(liveReadings, 'Battery Temp');
   });
 
   it('keeps the original URL legend key and hidden flag across presenter rerenders', () => {
@@ -345,7 +350,10 @@ describe('drivetrain live modernization preservation (authored)', () => {
     expect(screen.queryByText('Real-time telemetry active')).toBeNull();
     expect(screen.getByText('No temperature evidence for an active health assessment')).toBeTruthy();
     expect(container.querySelectorAll('[data-recommendation]')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]').length).toBeGreaterThan(0);
+    // Null drive power is omitted from every Power Summary face and counted as hidden.
+    const powerBriefs = screen.getAllByRole('region', { name: 'Power Summary' });
+    expect(powerBriefs.length).toBeGreaterThan(0);
+    for (const power of powerBriefs) assertOperationalMetricUnavailable(power, 'Peak Power');
     expect(container.querySelectorAll('figure')).toHaveLength(4);
   });
 

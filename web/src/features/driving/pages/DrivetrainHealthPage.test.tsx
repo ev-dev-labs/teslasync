@@ -225,6 +225,7 @@ import {
 import type { DataState } from '@/api/dataState';
 import type { Drive, DrivetrainHealthData, DrivingStats } from '@/types/driving';
 import type { MotorSnapshot } from '@/api/types';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
@@ -826,7 +827,8 @@ describe('DrivetrainHealthPage', () => {
     expect(within(power).getByText('Avg Peak Power')).toBeInTheDocument();
     expect(within(power).getAllByText('—')).toHaveLength(3);
     expect(within(power).queryByText('No data')).not.toBeInTheDocument();
-    expect(within(thermalLoadPanel()).getByText('Returned evidence')).toBeInTheDocument();
+    // The returned-data status moved off the brief face into the evidence drawer.
+    assertOperationalBriefDisclosure(thermalLoadPanel(), 'Returned evidence', { contains: true });
     expect(within(thermalLoadPanel()).queryByText('No data')).not.toBeInTheDocument();
   });
 

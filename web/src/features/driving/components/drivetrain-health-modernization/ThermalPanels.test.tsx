@@ -5,6 +5,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { deriveDataState } from '@/api/dataState';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { healthFixture, statsFixture, driveFixture } from './fixtures';
 import { powerSummary, sensorsFor } from './model';
@@ -105,7 +106,7 @@ describe('Drivetrain statistics scope copy', () => {
   it('describes all completed-drive statistics and exact local bounds across a DST day', () => {
     renderScope();
     const scope = screen.getAllByText(/Drive start:.*inclusive.*exclusive/);
-    expect(scope.length).toBeGreaterThanOrEqual(2);
+    expect(scope.length).toBeGreaterThanOrEqual(1);
     for (const copy of scope) {
       expect(copy).toHaveTextContent('8. März 2026, 00:00');
       expect(copy).toHaveTextContent('9. März 2026, 00:00');
@@ -113,7 +114,18 @@ describe('Drivetrain statistics scope copy', () => {
       expect(copy).toHaveTextContent('[2026-03-09T07:00:00.000Z]');
       expect(copy).toHaveTextContent('America/Los_Angeles');
     }
-    expect(screen.getAllByText(/Server statistics cover all completed drives/).length).toBeGreaterThanOrEqual(2);
+    const stats = screen.getByRole('region', { name: 'Vehicle drive statistics' });
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    const statsDrawer = screen.getByRole('dialog');
+    const statsHeader = statsDrawer.querySelector('[data-drawer-header]')!;
+    expect(statsHeader).toHaveTextContent('8. März 2026, 00:00');
+    expect(statsHeader).toHaveTextContent('9. März 2026, 00:00');
+    expect(statsHeader).toHaveTextContent('[2026-03-08T08:00:00.000Z]');
+    expect(statsHeader).toHaveTextContent('[2026-03-09T07:00:00.000Z]');
+    expect(statsHeader).toHaveTextContent('America/Los_Angeles');
+    expect(statsHeader).toHaveTextContent(/Server statistics cover all completed drives/);
+    fireEvent.keyDown(statsDrawer, { key: 'Escape' });
+    expect(screen.getAllByText(/Server statistics cover all completed drives/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/unbounded 200-snapshot request.*last 30 returned drives/)).toBeVisible();
     expect(screen.queryByText(/Unbounded vehicle statistics|not motor history or vehicle drive statistics/)).not.toBeInTheDocument();
   });
@@ -374,13 +386,13 @@ describe('ThermalPanels independent source trust', () => {
         expect(statistic('Drives')).toHaveTextContent('2');
         expect(screen.queryByText('Peak Power')).not.toBeInTheDocument();
       } else {
-        expect(screen.getByText('Returned evidence')).toBeVisible();
+        assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Power Summary' }), 'Returned evidence');
         expect(screen.getByText('Peak Power')).toBeVisible();
         expect(screen.queryByText('Regen Ratio')).not.toBeInTheDocument();
       }
       rerender(<ThermalPanels {...props()} />);
       expect(container.querySelectorAll('.space-y-2[aria-hidden="true"]')).toHaveLength(0);
-      expect(screen.getByText('Returned evidence')).toBeVisible();
+      assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Power Summary' }), 'Returned evidence');
       expect(statistic('Regen Ratio')).toHaveTextContent('0.00%');
     },
   );
@@ -397,12 +409,10 @@ describe('ThermalPanels independent source trust', () => {
       { date: '2026-09-01', powerMax: null, powerMin: null, outsideTemp: null, distance: null },
     ]) })} />);
     expect(screen.queryByText('No data')).not.toBeInTheDocument();
-    expect(screen.getByText('Returned evidence')).toBeVisible();
-    expect(screen.getByText('Peak Power')).toBeVisible();
-    expect(powerMetric('Peak Power')).toHaveAttribute('data-value-state', 'missing');
-    expect(within(powerMetric('Peak Power')).getByText('—')).toBeVisible();
-    expect(powerMetric('Avg Power')).toHaveAttribute('data-value-state', 'missing');
-    expect(within(powerMetric('Avg Power')).getByText('—')).toBeVisible();
+    const power = screen.getByRole('region', { name: 'Power Summary' });
+    assertOperationalBriefDisclosure(power, 'Returned evidence');
+    assertOperationalMetricUnavailable(power, 'Peak Power');
+    assertOperationalMetricUnavailable(power, 'Avg Power');
     expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
   });
 
@@ -468,13 +478,14 @@ describe('ThermalPanels independent source trust', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(screen.getAllByText('0.00 kW')).toHaveLength(2);
       expect(statistic('Regen Ratio')).toHaveTextContent('0.00%');
-      expect(screen.getByText(source === 'drives' ? 'Retained source' : 'Returned evidence')).toBeVisible();
+      assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Power Summary' }),
+        source === 'drives' ? 'Retained source' : 'Returned evidence');
       fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
       expect(source === 'drives' ? retryDrive : retryStats).toHaveBeenCalledTimes(1);
       expect(source === 'drives' ? retryStats : retryDrive).not.toHaveBeenCalled();
       rerender(<ThermalPanels {...props()} />);
       expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-      expect(screen.getByText('Returned evidence')).toBeVisible();
+      assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Power Summary' }), 'Returned evidence');
     },
   );
 
@@ -483,7 +494,7 @@ describe('ThermalPanels independent source trust', () => {
       drivesState: deriveDataState({ data: [driveFixture()], fetchStatus: 'paused', dataUpdatedAt: timestamp }),
     });
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
-    expect(screen.getByText('Retained source')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Power Summary' }), 'Retained source');
     expect(screen.getByText('Peak Power')).toBeVisible();
     expect(statistic('Drives')).toHaveTextContent('2');
     expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
@@ -501,7 +512,7 @@ describe('ThermalPanels independent source trust', () => {
     expect(within(powerMetric('Peak Power')).getByText('2.00 kW')).toBeVisible();
     expect(statistic('Drives')).toHaveTextContent('2');
     expect(statistic('Regen Ratio')).toHaveTextContent('0.00%');
-    expect(screen.getByText('Returned evidence')).toBeVisible();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Power Summary' }), 'Returned evidence');
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

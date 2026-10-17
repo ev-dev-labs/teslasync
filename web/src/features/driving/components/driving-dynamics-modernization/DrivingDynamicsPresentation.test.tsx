@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { MotorSnapshot, DriveDynamicsSnapshot } from '@/api/types';
 import type { DataStateSource } from '@/api/dataState';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { Drive } from '@/types/driving';
 import { ChartCard } from '@/components/layout/layout-reference';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
@@ -197,8 +198,9 @@ describe('ride totals and display-only preferences', () => {
     const view = mount(<RideOverview drive={{ ...drive, energyUsedWh: 0, regenEnergyWh: null, distanceM: Number.NaN }} />);
     expect(metric('Energy used')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Energy used')).toHaveTextContent('0.00');
-    expect(metric('Energy recovered')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Distance')).toHaveAttribute('data-value-state', 'invalid');
+    const rideBrief = screen.getByTestId('dynamics-ride-metrics');
+    assertOperationalMetricUnavailable(rideBrief, 'Energy recovered');
+    assertOperationalMetricUnavailable(rideBrief, 'Distance');
     view.rerender(<RideOverview drive={null} />);
     expect(screen.getByTestId('dynamics-ride-overview')).toBeInTheDocument();
     expect(screen.getByText('Choose a trip with recorded data to review its outcome.')).toBeInTheDocument();
@@ -303,17 +305,17 @@ describe('signed live physics and independent errors', () => {
     view.rerender(<GForcePanel vehicleId={7} />);
     expect(metric('Lateral')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Lateral')).toHaveTextContent('0.00');
-    expect(metric('Combined')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(screen.getByTestId('dynamics-g-force'), 'Combined');
   });
   it('never promotes an invalid axis into a magnitude or fabricates an observation timestamp', () => {
     fixture.dynamics.data = { lateral_acceleration: Number.NaN, longitudinal_acceleration: -0.4 };
     mount(<GForcePanel vehicleId={7} />);
-    expect(metric('Lateral')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Combined')).toHaveAttribute('data-value-state', 'missing');
+    const gforce = screen.getByTestId('dynamics-g-force');
+    assertOperationalMetricUnavailable(gforce, 'Lateral');
+    assertOperationalMetricUnavailable(gforce, 'Combined');
     expect(metric('Longitudinal')).toHaveTextContent('-0.40');
-    expect(within(screen.getByTestId('dynamics-g-force')).getByText(
-      'Current signals · not trip history · Source observation time not provided',
-    )).toBeInTheDocument();
+    assertOperationalBriefDisclosure(gforce,
+      'Current signals · not trip history · Source observation time not provided');
   });
   it('preserves pedal false/true/unknown and distinguishes invalid position from known zero', () => {
     fixture.dynamics.data = { pedal_position: 0, brake_pedal_position: Number.NaN, brake_pedal_active: false };
@@ -349,12 +351,10 @@ describe('signed live physics and independent errors', () => {
     expect(metric('Avg Drive Speed')).toHaveTextContent('18.00');
     expect(metric('Top Drive Speed')).toHaveTextContent('72.00');
     expect(metric('Motor Power')).toHaveTextContent('42.35');
-    expect(within(screen.getByTestId('dynamics-current-motor-power')).getByText(
-      `Current signals · not trip history · ${sample.ts}`,
-    )).toBeInTheDocument();
-    expect(within(screen.getByTestId('dynamics-range-speeds')).getByText(
-      'Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.',
-    )).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('dynamics-current-motor-power'),
+      `Current signals · not trip history · ${sample.ts}`);
+    assertOperationalBriefDisclosure(screen.getByTestId('dynamics-range-speeds'),
+      'Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.');
   });
   it('surfaces independent state/cruise/follow failures without dropping motor/dynamics neighbors', () => {
     fixture.vehicle = { error: new Error('speed failed'), isError: true };

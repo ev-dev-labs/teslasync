@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -369,8 +369,13 @@ describe('DestinationTransitionsPage', () => {
       ]) {
         expect(metrics.find(metric => metric.label === label)?.rawValue).toBeNull();
       }
-      expect(within(screen.getByTestId('destination-coverage-recency-brief'))
-        .getAllByText('—').length).toBeGreaterThanOrEqual(6);
+      const recency = screen.getByTestId('destination-coverage-recency-brief');
+      expect(within(recency).queryByText('—')).not.toBeInTheDocument();
+      for (const label of ['First parseable returned start', 'Last parseable returned start',
+        'First included visit', 'Last included visit',
+        'First accepted transition', 'Last accepted transition']) {
+        assertOperationalMetricUnavailable(recency, label);
+      }
       expect(screen.queryByText(/Invalid Date|NaN/)).not.toBeInTheDocument();
       expect(data).toEqual(original);
       expectEverySection();
@@ -584,7 +589,7 @@ describe('DestinationTransitionsPage', () => {
 
     expect(screen.queryByTestId('destination-transitions-initial-pause')).not.toBeInTheDocument();
     for (const id of qualityBriefIds) {
-      expect(within(screen.getByTestId(id)).getByText('Returned evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByTestId(id), 'Returned evidence');
     }
     const accounting = screen.getByTestId('destination-row-accounting-brief');
     expect(accounting.querySelectorAll('[data-value-state="value"]')).toHaveLength(11);
@@ -620,7 +625,7 @@ describe('DestinationTransitionsPage', () => {
     h.history = query({ data, isFetching: true, fetchStatus: 'fetching' });
     view.rerenderPage();
     for (const id of qualityBriefIds) {
-      expect(within(screen.getByTestId(id)).getByText('Retained source')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByTestId(id), 'Retained source');
     }
     h.history = query({ data });
     view.rerenderPage();
@@ -806,7 +811,12 @@ describe('DestinationTransitionsPage', () => {
     }
     expect(screen.getByTestId('destination-continuity-accounting-brief')).toHaveTextContent('GPS continuity tolerance');
     expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('Effective successor count');
-    expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('not a counted event population');
+    const support = screen.getByTestId('destination-descriptive-support-brief');
+    fireEvent.click(within(support).getByRole('button', { name: 'Review details' }));
+    const supportDrawer = screen.getByRole('dialog');
+    expect(within(supportDrawer).getByRole('group', { name: 'Effective successor count' }))
+      .toHaveTextContent('not a counted event population');
+    fireEvent.keyDown(supportDrawer, { key: 'Escape' });
     expectEverySection();
   });
 
@@ -898,9 +908,10 @@ describe('DestinationTransitionsPage', () => {
         name: 'Loading destination transition history',
       }),
     ).toHaveLength(1);
-    expect(
-      screen.getAllByText('Waiting for returned drive history…'),
-    ).toHaveLength(6);
+    fireEvent.click(within(screen.getByTestId('destination-transitions-kpis')).getByRole('button', { name: 'Review details' }));
+    const loadingDrawer = screen.getByRole('dialog');
+    expect(within(loadingDrawer).getAllByText('Waiting for returned drive history…')).toHaveLength(6);
+    fireEvent.keyDown(loadingDrawer, { key: 'Escape' });
     expect(screen.queryByText('0 rows returned')).toBeNull();
     expect(
       screen.queryByText('returned history below the 1,000-row cap'),
@@ -918,11 +929,13 @@ describe('DestinationTransitionsPage', () => {
     expectEverySection();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getAllByText("Can't reach server")).toHaveLength(1);
-    expect(
-      screen.getAllByText(
-        'Drive history is unavailable; use the status below to retry.',
-      ),
-    ).toHaveLength(6);
+    const errorKpis = screen.getByTestId('destination-transitions-kpis');
+    expect(within(errorKpis).queryByText('Drive history is unavailable; use the status below to retry.')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(errorKpis, 'Source unavailable');
+    for (const label of ['Accepted consecutive transitions', 'Included destination visits', 'Distinct destinations observed',
+      'Supported origin states', 'Transition concentration index', 'Latest observed destination']) {
+      assertOperationalMetricUnavailable(errorKpis, label);
+    }
     const initialRetry = screen.getByRole('button', { name: 'Retry' });
     expect(initialRetry).toHaveClass('h-auto', 'whitespace-normal');
     expect(initialRetry.closest('[class*="[&_button]:min-h-11"]')).toHaveClass(
@@ -1009,11 +1022,12 @@ describe('DestinationTransitionsPage', () => {
         'Select a vehicle to analyze its returned destination visits and continuity-safe transitions.',
       ),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByText(
-        'Select a vehicle above to load destination evidence.',
-      ),
-    ).toHaveLength(6);
+    const noVehicleKpis = screen.getByTestId('destination-transitions-kpis');
+    expect(within(noVehicleKpis).queryByText('Select a vehicle above to load destination evidence.')).not.toBeInTheDocument();
+    for (const label of ['Accepted consecutive transitions', 'Included destination visits', 'Distinct destinations observed',
+      'Supported origin states', 'Transition concentration index', 'Latest observed destination']) {
+      assertOperationalMetricUnavailable(noVehicleKpis, label);
+    }
     expect(
       screen.queryByText('returned history below the 1,000-row cap'),
     ).toBeNull();
@@ -1114,14 +1128,9 @@ describe('DestinationTransitionsPage', () => {
     });
     renderPage();
 
-    const kpis = within(
-      screen.getByTestId('destination-transitions-kpis'),
-    );
-    expect(
-      kpis.getByText(
-        /The actual latest row is unusable, so no historical successor is shown/,
-      ),
-    ).toBeInTheDocument();
+    const kpisSection = screen.getByTestId('destination-transitions-kpis');
+    const kpis = within(kpisSection);
+    assertOperationalMetricUnavailable(kpisSection, 'Latest observed destination');
     expect(
       kpis.queryByText(
         /Historical leading successor from latest observed destination: B/,
@@ -1298,6 +1307,6 @@ describe('DestinationTransitionsPage snapshot clock', () => {
     expect(quality.getByText('Future rows').parentElement).toHaveTextContent('1');
     const summary = within(screen.getByTestId('destination-transitions-kpis'));
     expect(summary.getByText('Included destination visits').closest('[data-operational-metric="visits"]')).toHaveTextContent('1');
-    expect(summary.getByText('Latest observed destination').closest('[data-operational-metric="latest"]')).not.toHaveTextContent('Future fixture');
+    assertOperationalMetricUnavailable(screen.getByTestId('destination-transitions-kpis'), 'Latest observed destination');
   });
 });

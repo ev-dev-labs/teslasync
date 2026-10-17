@@ -11,6 +11,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { Drive, DriveTelemetryPoint } from '@/types/driving';
 import { resolveChartPalette } from '@/hooks/useChartPalette';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -538,9 +539,9 @@ describe('DriveDNAPage', () => {
       hour: '2-digit', minute: '2-digit',
     });
     const expectScope = () => {
-      expect(within(screen.getByTestId('drive-dna-kpis')).getByText(
+      assertOperationalBriefDisclosure(screen.getByTestId('drive-dna-kpis'),
         `Drive 1 · ${formatted(selectedDrive.startTs)}–${formatted(selectedDrive.endTs!)}; sampled coverage may be incomplete`,
-      )).toBeInTheDocument();
+        { contains: true });
       expectEverySection();
     };
     expectScope();
@@ -568,9 +569,9 @@ describe('DriveDNAPage', () => {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
-    expect(within(screen.getByTestId('drive-dna-kpis')).getByText(
+    assertOperationalBriefDisclosure(screen.getByTestId('drive-dna-kpis'),
       `Drive 1 · ${start}–ongoing; sampled coverage may be incomplete`,
-    )).toBeInTheDocument();
+      { contains: true });
     expect(selectedDrive.endTs).toBeNull();
     expectEverySection();
   });
@@ -956,9 +957,17 @@ describe('DriveDNAPage', () => {
           '[data-operational-brief] [role="list"] [data-operational-metric] [data-operational-value]',
       }),
     ).toHaveLength(6);
-    expect(
-      coverage.getAllByText('No valid-row denominator'),
-    ).toHaveLength(5);
+    const coverageSection = screen.getByTestId('drive-dna-coverage');
+    const coverageCards = coverageSection.querySelectorAll('[data-operational-brief]');
+    expect(coverageCards.length).toBeGreaterThan(0);
+    let denominatorCount = 0;
+    for (const card of coverageCards) {
+      fireEvent.click(within(card).getByRole('button', { name: 'Review details' }));
+      const coverageDrawer = screen.getByRole('dialog');
+      denominatorCount += within(coverageDrawer).queryAllByText('No valid-row denominator').length;
+      fireEvent.keyDown(coverageDrawer, { key: 'Escape' });
+    }
+    expect(denominatorCount).toBe(5);
     expect(
       coverage.queryByText(
         'One chronological emission is available; at least two are needed for this profile.',

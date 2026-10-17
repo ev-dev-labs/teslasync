@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deriveDataState } from '@/api/dataState';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { motorFixture } from './fixtures';
 import { LiveMotorPanel } from './LiveMotorPanel';
@@ -107,7 +108,7 @@ describe('LiveMotorPanel independent isolation trust', () => {
     expect(within(metric(container, 'isolation')).getByText('250.00 kΩ')).toBeVisible();
     expect(record('HV Isolation').getByText('250.00 kΩ')).toBeVisible();
     expect(screen.queryByText('900.00 kΩ')).not.toBeInTheDocument();
-    expect(screen.getByText('Retained source')).toBeVisible();
+    assertOperationalBriefDisclosure(container.querySelector('[data-operational-brief]'), 'Retained source');
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('HV Isolation may be out of date');
     expect(screen.getByText('Source observation time not provided')).toBeVisible();
     expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
@@ -126,16 +127,19 @@ describe('LiveMotorPanel independent isolation trust', () => {
 
   it('preserves measured isolation zero without reinterpreting the legacy default', () => {
     const view = show({ isolationResistance: 0 });
-    expect(metric(view.container, 'isolation')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(view.container.querySelectorAll('[data-operational-brief]')[1], 'HV Isolation');
     expect(record('HV Isolation').getByText('—')).toBeVisible();
-    expect(screen.getByText('Unknown')).toBeVisible();
     view.rerender(<LiveMotorPanel motorLatest={motor} state={deriveDataState({ data: motor })}
       isolationResistance={650} isolationState={deriveDataState({ data: 0 })}
       loading={false} connected />);
     expect(within(metric(view.container, 'isolation')).getByText('0.00 kΩ')).toBeVisible();
     expect(metric(view.container, 'isolation')).toHaveAttribute('data-value-state', 'value');
     expect(record('HV Isolation').getByText('0.00 kΩ')).toBeVisible();
-    expect(screen.getByText('Below 100 kΩ')).toBeVisible();
+    const zeroBrief = view.container.querySelectorAll('[data-operational-brief]')[1];
+    fireEvent.click(within(zeroBrief).getByRole('button', { name: 'Review details' }));
+    const zeroDrawer = screen.getByRole('dialog', { name: 'HV Isolation details' });
+    expect(within(zeroDrawer).getByRole('group', { name: 'HV Isolation' })).toHaveTextContent('Below 100 kΩ');
+    fireEvent.keyDown(zeroDrawer, { key: 'Escape' });
     expect(screen.queryByText(/Non-positive readings use/)).not.toBeInTheDocument();
   });
 
@@ -147,9 +151,8 @@ describe('LiveMotorPanel independent isolation trust', () => {
     { caseId: 'legacy-negative', value: -1 },
   ])('keeps $caseId isolation unknown rather than fabricating zero', ({ value }) => {
     const { container } = show({ isolationResistance: value, connected: true });
-    expect(metric(container, 'isolation')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(container.querySelectorAll('[data-operational-brief]')[1], 'HV Isolation');
     expect(record('HV Isolation').getByText('—')).toBeVisible();
-    expect(screen.getByText('Unknown')).toBeVisible();
     expect(screen.queryByText('0.00 kΩ')).not.toBeInTheDocument();
   });
 
@@ -161,7 +164,11 @@ describe('LiveMotorPanel independent isolation trust', () => {
   ])('preserves the isolation band $caseId', ({ value, band }) => {
     const { container } = show({ isolationResistance: value });
     expect(within(metric(container, 'isolation')).getByText(`${value}.00 kΩ`)).toBeVisible();
-    expect(screen.getByText(band)).toBeVisible();
+    const bandBrief = container.querySelectorAll('[data-operational-brief]')[1];
+    fireEvent.click(within(bandBrief).getByRole('button', { name: 'Review details' }));
+    const bandDrawer = screen.getByRole('dialog', { name: 'HV Isolation details' });
+    expect(within(bandDrawer).getByRole('group', { name: 'HV Isolation' })).toHaveTextContent(band);
+    fireEvent.keyDown(bandDrawer, { key: 'Escape' });
   });
 
   it('keeps all thirteen record fields and real details actions through retained motor loading', () => {
@@ -178,8 +185,9 @@ describe('LiveMotorPanel independent isolation trust', () => {
     }
     expect(within(metric(container, 'power')).getByText('0.00 kW')).toBeVisible();
     expect(record('Battery Temp').getByText('—')).toBeVisible();
-    expect(screen.getByText('Retained source')).toBeVisible();
-    expect(screen.getByText('Latest returned motor snapshot; reported source: reported-source. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.')).toBeVisible();
+    const readingsBrief = container.querySelectorAll('[data-operational-brief]')[0];
+    assertOperationalBriefDisclosure(readingsBrief, 'Retained source');
+    assertOperationalBriefDisclosure(readingsBrief, 'Latest returned motor snapshot; reported source: reported-source. Observation freshness and continuous coverage are not established. HV isolation comes from the separate live signal state.');
     fireEvent.click(screen.getAllByRole('button', { name: 'Review details' })[1]);
     const dialog = screen.getByRole('dialog', { name: 'HV Isolation details' });
     expect(within(dialog).getByText('650.00 kΩ')).toBeVisible();
@@ -193,9 +201,10 @@ describe('LiveMotorPanel independent isolation trust', () => {
         provenance: 'Reported isolation signal; freshness not established.' },
     });
     expect(within(metric(container, 'isolation')).getByText('987.00 kΩ')).toBeVisible();
-    expect(screen.getByText('HV Isolation · 2026-08-01T10:00:00Z')).toBeVisible();
+    const motorBriefs = container.querySelectorAll('[data-operational-brief]');
+    assertOperationalBriefDisclosure(motorBriefs[1], 'HV Isolation · 2026-08-01T10:00:00Z');
     expect(screen.getByText('Reported isolation signal; freshness not established.')).toBeVisible();
-    expect(screen.getByText('Live Motor Status · 2026-09-01T12:00:00Z')).toBeVisible();
+    assertOperationalBriefDisclosure(motorBriefs[0], 'Live Motor Status · 2026-09-01T12:00:00Z');
     expect(screen.queryByText(/1790000000000/)).not.toBeInTheDocument();
   });
 });

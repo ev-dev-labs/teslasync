@@ -76,8 +76,10 @@ describe('FsdObservatoryPanel', () => {
 
     const panel = screen.getByTestId('fsd-observatory');
     expect(within(panel).getByText('FSD observatory')).toBeInTheDocument();
-    expect(within(within(panel).getByRole('region', { name: 'Reset-safe counter quantities' }))
-      .getByText(/reset-safe counter change/i)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(
+      within(panel).getByRole('region', { name: 'Reset-safe counter quantities' }),
+      'Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed.',
+      { contains: true });
     expect(within(panel).getByText('14.0 km')).toBeInTheDocument();
     expect(within(panel).getByText('1.0 km')).toBeInTheDocument();
     expect(within(panel).getByText('5.0 km')).toBeInTheDocument();

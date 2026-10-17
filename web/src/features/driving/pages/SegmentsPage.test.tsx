@@ -82,7 +82,8 @@ vi.mock('@/components/layout', async (importActual) => {
     ),
   };
 });
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async () => ({
+  ...await vi.importActual<typeof import('@/components/motion')>('@/components/motion'),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 vi.mock('@/components/charts', async (importActual) => ({
@@ -258,8 +259,11 @@ describe('SegmentsPage pagination', () => {
     expect(pickA).toHaveAttribute('aria-pressed', 'true');
     expect(within(table).getAllByText('Oct 14')).toHaveLength(3);
     const brief = screen.getByTestId('segment-ghost-brief');
-    expect(within(brief).getByText('Attempt B · Oct 14')).toBeInTheDocument();
-    expect(within(brief).getAllByText('Oct 14')).toHaveLength(2);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const ghostDrawer = screen.getByRole('dialog');
+    expect(within(ghostDrawer).getByRole('group', { name: 'Attempt B' })).toHaveTextContent('Oct 14');
+    expect(within(ghostDrawer).getAllByText('Oct 14')).toHaveLength(2);
+    fireEvent.keyDown(ghostDrawer, { key: 'Escape' });
     expect(state.ghostArgs.at(-1)).toEqual([1, 103, 102]);
 
     state.formatDateShort = vi.fn((value) => formatDateShort(value, {
@@ -267,8 +271,11 @@ describe('SegmentsPage pagination', () => {
     }));
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
     expect(within(table).getAllByText('13. Okt.')).toHaveLength(3);
-    expect(within(brief).getByText('Attempt B · 13. Okt.')).toBeInTheDocument();
-    expect(within(brief).getAllByText('13. Okt.')).toHaveLength(2);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const deDrawer = screen.getByRole('dialog');
+    expect(within(deDrawer).getByRole('group', { name: 'Attempt B' })).toHaveTextContent('13. Okt.');
+    expect(within(deDrawer).getAllByText('13. Okt.')).toHaveLength(2);
+    fireEvent.keyDown(deDrawer, { key: 'Escape' });
     expect(screen.queryByText('Oct 14')).not.toBeInTheDocument();
     expect(pickA).toHaveFocus();
     expect(pickA).toHaveAccessibleName('Attempt A · 13. Okt. · #103');
@@ -504,8 +511,11 @@ describe('SegmentsPage pagination', () => {
     assertOperationalBriefDisclosure(brief, 'Source available', { absent: true });
     expect(within(brief).getByText('1:01')).toBeInTheDocument();
     expect(within(brief).getByText('1:02')).toBeInTheDocument();
-    expect(within(brief).getByText('Won by 0:01')).toBeInTheDocument();
-    expect(within(brief).getByText(/^Attempt A ·/)).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const marginDrawer = screen.getByRole('dialog');
+    expect(within(marginDrawer).getByRole('group', { name: 'Winner' })).toHaveTextContent('Won by 0:01');
+    expect(within(marginDrawer).getByText(/^Attempt A ·/)).toBeInTheDocument();
+    fireEvent.keyDown(marginDrawer, { key: 'Escape' });
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
     expect(screen.queryByText('No requested source has returned usable data yet.')).not.toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));

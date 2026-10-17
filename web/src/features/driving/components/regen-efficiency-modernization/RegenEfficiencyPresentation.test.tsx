@@ -258,18 +258,20 @@ describe('live regen presentation preservation', () => {
     const summary = within(screen.getByRole('region', { name: 'Selected-window recovery summary' }));
     const returnedRows = within(summary.getByText('Detailed rows returned').closest<HTMLElement>('[data-operational-metric]')!);
     expect(returnedRows.getByText('1,000')).toBeInTheDocument();
-    expect(returnedRows.getByText('1,000-row cap reached')).toBeInTheDocument();
+    // The cap explanation moved off the tile face into the drawer group.
+    expect(returnedRows.queryByText('1,000-row cap reached')).not.toBeInTheDocument();
     const eligibleCoverage = within(summary.getByText('Eligible detailed coverage').closest<HTMLElement>('[data-operational-metric]')!);
-    // The validated count-total value is unspaced; the source context is spaced.
+    // The validated count-total value is unspaced; no spaced duplicate renders on the tile.
     expect(eligibleCoverage.getByText('1,000/1,000', { selector: '[data-operational-value]' })).toBeInTheDocument();
-    expect(eligibleCoverage.getByText('1,000 / 1,000')).toBeInTheDocument();
+    expect(eligibleCoverage.queryByText('1,000 / 1,000')).not.toBeInTheDocument();
     expect(summary.getByText('The detailed request returned 1,000 rows. Additional drives in this selected window may be absent.')).toBeInTheDocument();
     // The shared brief discloses the cap in its summary and reachable details,
     // replacing the former stat tile's tooltip without losing either disclosure.
     fireEvent.click(summary.getByRole('button', { name: 'Review details' }));
-    expect(screen.getAllByText('1,000-row cap reached')).toHaveLength(2);
+    // Face omission leaves the single drawer disclosure page-wide.
+    expect(screen.getAllByText('1,000-row cap reached')).toHaveLength(1);
     const details = within(screen.getByRole('dialog', { name: 'Selected-window evidence details' }));
-    expect(details.getByText('1,000-row cap reached')).toBeInTheDocument();
+    expect(details.getByRole('group', { name: 'Detailed rows returned' })).toHaveTextContent('1,000-row cap reached');
     const monthly = h.charts.find(chart => chart.chartKey === 'regen-monthly-recovery')!;
     expect(monthly.data).toEqual([{
       month: '2026-01', recoveredEnergy: 2000, driveEnergy: 8000,

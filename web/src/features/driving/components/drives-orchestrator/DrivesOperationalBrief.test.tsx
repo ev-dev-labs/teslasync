@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { deriveDataState } from '@/api/dataState';
 import { computePeriodStats } from '@/lib/drivesAggregation';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { Drive } from '@/types/driving';
 import { DrivesOperationalBrief } from './DrivesOperationalBrief';
 
@@ -75,6 +76,18 @@ function value(key: string) {
   return metric(key).querySelector('[data-operational-value]');
 }
 
+/** Pin metric detail inside the brief drawer. */
+function expectGroup(label: string, text: string): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getByRole('group', { name: label })).toHaveTextContent(text);
+  fireEvent.keyDown(drawer, { key: 'Escape' });
+}
+
+function brief(): HTMLElement {
+  return screen.getByTestId('drives-operational-brief');
+}
+
 describe('DrivesOperationalBrief count caption regression', () => {
   it('counts completed drive 190 and ongoing drive 191 with inclusive caption and unchanged brief actions', async () => {
     const { props } = mount();
@@ -83,21 +96,21 @@ describe('DrivesOperationalBrief count caption regression', () => {
     ]);
     expect(props.currentStats.count).toBe(2);
     expect(value('drives')).toHaveTextContent(/^2$/);
-    expect(metric('drives')).toHaveTextContent('Drives in the selected analysis window, including ongoing activity.');
+    expectGroup('Drives', 'Drives in the selected analysis window, including ongoing activity.');
     expect(screen.queryByText('Completed drives in the selected analysis window.')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('drives-operational-brief')).getAllByRole('listitem')).toHaveLength(6);
     expect(value('distance')).toHaveTextContent(/^12$/);
     expect(metric('distance')).toHaveTextContent('Distance (km)');
     expect(value('efficiency')).toHaveTextContent(/^300$/);
     expect(metric('efficiency')).toHaveTextContent('Energy intensity (Wh/km)');
-    expect(metric('efficiency')).toHaveTextContent('1 of 2 drives have measured energy and sufficient distance.');
+    expectGroup('Energy intensity (Wh/km)', '1 of 2 drives have measured energy and sufficient distance.');
     expect(value('movement')).toHaveTextContent(/^8% higher$/);
     expect(value('exceptions')).toHaveTextContent(/^1$/);
     expect(value('route-context')).toHaveTextContent(/^50%$/);
-    expect(metric('route-context')).toHaveTextContent('1 of 2 drives include both origin and destination evidence.');
-    expect(screen.getByText('Review recommended')).toBeInTheDocument();
-    expect(screen.getByText('Today')).toBeInTheDocument();
-    expect(screen.getByText('Historical')).toBeInTheDocument();
+    expectGroup('Route context', '1 of 2 drives include both origin and destination evidence.');
+    assertOperationalBriefDisclosure(brief(), 'Review recommended');
+    assertOperationalBriefDisclosure(brief(), 'Today');
+    assertOperationalBriefDisclosure(brief(), 'Historical');
     expect(screen.getByText('1 energy-intensity exception')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Compare drives' }));
     expect(props.navigate).toHaveBeenCalledExactlyOnceWith('/drive-compare');
@@ -120,13 +133,12 @@ describe('DrivesOperationalBrief count caption regression', () => {
       efficiencyMovementValue: 'No baseline', efficiencyMovementTone: 'neutral',
     });
     expect(value('drives')).toHaveTextContent(/^0$/);
-    expect(metric('drives')).toHaveTextContent('Drives in the selected analysis window, including ongoing activity.');
+    expectGroup('Drives', 'Drives in the selected analysis window, including ongoing activity.');
     expect(value('distance')).toHaveTextContent(/^0$/);
     expect(value('exceptions')).toHaveTextContent(/^0$/);
-    expect(value('efficiency')).toHaveTextContent(/^—$/);
-    expect(metric('efficiency')).toHaveTextContent('0 of 0 drives have measured energy and sufficient distance.');
-    expect(value('route-context')).toHaveTextContent(/^—$/);
-    expect(screen.getByText('Awaiting data')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief(), 'Energy intensity (Wh/km)');
+    assertOperationalMetricUnavailable(brief(), 'Route context');
+    assertOperationalBriefDisclosure(brief(), 'Awaiting data');
     expect(screen.queryByText('Drive history is unavailable')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Compare drives' })).toBeEnabled();
   });
@@ -139,22 +151,21 @@ describe('DrivesOperationalBrief count caption regression', () => {
     expect(props.currentStats.avgEfficiencyWhKm).toBe(0.2);
     expect(props.fmtInt).toHaveBeenCalledWith(0.2);
     expect(value('efficiency')).toHaveTextContent(/^0$/);
-    expect(metric('efficiency')).toHaveTextContent('1 of 1 drives have measured energy and sufficient distance.');
+    expectGroup('Energy intensity (Wh/km)', '1 of 1 drives have measured energy and sufficient distance.');
     expect(value('drives')).toHaveTextContent(/^1$/);
     expect(value('route-context')).toHaveTextContent(/^100%$/);
-    expect(screen.getByText('On track')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief(), 'On track');
   });
 
   it('preserves mixed activity count two when energy evidence is unknown', () => {
     const { props } = mount([{ ...completed, energyUsedWh: null }, ongoing], { anomalyDrives: [] });
     expect(props.currentStats.avgEfficiencyWhKm).toBeNull();
     expect(value('drives')).toHaveTextContent(/^2$/);
-    expect(metric('drives')).toHaveTextContent('Drives in the selected analysis window, including ongoing activity.');
-    expect(value('efficiency')).toHaveTextContent(/^—$/);
-    expect(metric('efficiency')).toHaveTextContent('0 of 2 drives have measured energy and sufficient distance.');
+    expectGroup('Drives', 'Drives in the selected analysis window, including ongoing activity.');
+    assertOperationalMetricUnavailable(brief(), 'Energy intensity (Wh/km)');
     expect(props.fmtInt).not.toHaveBeenCalledWith(null);
     expect(value('exceptions')).toHaveTextContent(/^0$/);
-    expect(screen.getByText('Review recommended')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief(), 'Review recommended');
   });
 
   it('keeps initial loading source shaped without publishing count or caption', () => {
@@ -205,9 +216,9 @@ describe('DrivesOperationalBrief count caption regression', () => {
     expect(props.drivesState.status).toBe('stale');
     expect(props.drivesState.data).toBe(activity);
     expect(value('drives')).toHaveTextContent(/^2$/);
-    expect(metric('drives')).toHaveTextContent('Drives in the selected analysis window, including ongoing activity.');
+    expectGroup('Drives', 'Drives in the selected analysis window, including ongoing activity.');
     expect(value('efficiency')).toHaveTextContent(/^300$/);
-    expect(screen.getByText('Historical')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief(), 'Historical');
     expect(screen.queryByText('Drive history could not be loaded')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Compare drives' }));
     expect(props.navigate).toHaveBeenCalledExactlyOnceWith('/drive-compare');

@@ -10,6 +10,7 @@ import { ToastProvider } from '@/components/feedback';
 import { getFormatterPreferences } from '@/lib/numberFormat';
 import { fakeDrive, fakeQuery, fakeStats, fakeUnits } from './fixtures';
 import EfficiencyPage from '../../pages/EfficiencyPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const H = vi.hoisted(() => ({
   stats: {} as DataStateSource<unknown>,
@@ -102,7 +103,9 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     expect(screen.getByTestId('efficiency-glossary-strip')).toBeInTheDocument();
     expect(screen.getByTestId('saved-view-menu')).toBeInTheDocument();
-    expect(screen.getAllByText('Lifetime driving summary')).toHaveLength(2);
+    // The lifetime period label moved off both brief faces into their drawers.
+    assertOperationalBriefDisclosure(metricRegion(container, 'efficiency-kpis'), 'Lifetime driving summary', { contains: true });
+    assertOperationalBriefDisclosure(metricRegion(container, 'efficiency-insights'), 'Lifetime driving summary', { contains: true });
     expect(H.statsCall).toHaveBeenLastCalledWith('1');
     expect(H.drivesCall).toHaveBeenLastCalledWith('1');
     expect(H.rangeCall).toHaveBeenLastCalledWith({ persistKey: 'efficiency.range' });
@@ -136,14 +139,18 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
     expect(tile(container, 'efficiency-kpis', 'Drives analyzed')).toHaveAttribute('data-value-state', 'value');
     expect(tile(container, 'efficiency-insights', 'Total regen')).toHaveTextContent('0');
     expect(tile(container, 'efficiency-insights', 'Regen ratio')).toHaveTextContent('0');
-    expect(tile(container, 'efficiency-kpis', 'Est. cost/km')).toHaveAttribute('data-value-state', 'missing');
+    // Uncomputable cost is omitted from the face and counted hidden, never zero.
+    assertOperationalMetricUnavailable(metricRegion(container, 'efficiency-kpis'), 'Est. cost/km');
     H.stats = fakeQuery({ totalDrives: undefined, totalDistanceKm: Infinity,
       avgEfficiencyWhKm: NaN, avgSpeedKmh: '0', topSpeedKmh: null });
     rerender(<EfficiencyPage />);
     expectSections();
     for (const label of ['Drives analyzed', 'Total distance', 'Avg consumption', 'Avg speed', 'Top speed'])
-      expect(tile(container, 'efficiency-kpis', label)).toHaveAttribute('data-value-state', 'missing');
-    expect(within(metricRegion(container, 'efficiency-kpis')).getAllByRole('listitem')).toHaveLength(8);
+      assertOperationalMetricUnavailable(metricRegion(container, 'efficiency-kpis'), label);
+    // Absent/NaN/Infinity/string measurements collapse to the empty-values block, never zero tiles.
+    const items = within(metricRegion(container, 'efficiency-kpis')).queryAllByRole('listitem');
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveTextContent('No metric values are available yet.');
   });
   it('retains usable values/charts/table through stats and drives refresh failures and paused refresh', () => {
     const { container, rerender } = render(<EfficiencyPage />, { wrapper: Providers });

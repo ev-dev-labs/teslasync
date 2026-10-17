@@ -33,6 +33,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { Drive, DrivingCoachData } from '@/types/driving';
 import type { Vehicle } from '@/types/vehicle';
 import i18n from 'i18next';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const paletteState = vi.hoisted(() => ({
   colors: ['var(--semantic-info)', 'var(--semantic-purple)'],
@@ -106,14 +107,18 @@ describe('Driving dynamics layout import boundary', () => {
 // i18n stub: echo the fallback string so assertions target rendered English.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallbackOrOpts?: unknown) => {
-      if (typeof fallbackOrOpts === 'string') return fallbackOrOpts;
-      if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
-        if ('defaultValue' in fallbackOrOpts && typeof fallbackOrOpts.defaultValue === 'string') {
-          return fallbackOrOpts.defaultValue;
-        }
-      }
-      return key;
+    t: (key: string, fallbackOrOpts?: unknown, maybeOptions?: unknown) => {
+      const text = typeof fallbackOrOpts === 'string' ? fallbackOrOpts
+        : (fallbackOrOpts && typeof fallbackOrOpts === 'object' && 'defaultValue' in fallbackOrOpts
+          && typeof fallbackOrOpts.defaultValue === 'string')
+          ? fallbackOrOpts.defaultValue
+          : key;
+      const values = {
+        ...(fallbackOrOpts && typeof fallbackOrOpts === 'object' ? fallbackOrOpts as Record<string, unknown> : {}),
+        ...(maybeOptions && typeof maybeOptions === 'object' ? maybeOptions as Record<string, unknown> : {}),
+      };
+      return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match: string, name: string) =>
+        values[name] != null ? String(values[name]) : '');
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
@@ -852,7 +857,7 @@ describe('DrivingDynamicsPage — unit conversion boundary', () => {
     { name: 'fatal', result: qr<MotorSnapshot[]>({ isError: true, error: new Error('history failed') }), expected: 'missing' },
     { name: 'resolved empty', result: qr<MotorSnapshot[]>({ data: [] }), expected: 'value' },
     { name: 'resolved samples', result: qr<MotorSnapshot[]>({ data: [motorSnap({ power_kw: 0 })] }), expected: 'value' },
-  ])('keeps the motor sample count honest for $name evidence', async ({ result, expected }) => {
+  ])('keeps the motor sample count honest for $name evidence', async ({ name, result, expected }) => {
     const { MotorSamplesBrief } = await vi.importActual<typeof import('../components/operationalbrief-a-m/MotorSamplesBrief')>(
       '../components/operationalbrief-a-m/MotorSamplesBrief',
     );
@@ -861,6 +866,12 @@ describe('DrivingDynamicsPage — unit conversion boundary', () => {
     render(<QueryClientProvider client={client}><MemoryRouter>
       <MotorSamplesBrief vehicleId={1} historyQuery={{ enabled: true }} />
     </MemoryRouter></QueryClientProvider>);
+    if (expected === 'missing' && name !== 'loading') {
+      // Unresolved/fatal evidence omits the tile from the face and counts it hidden.
+      assertOperationalMetricUnavailable(
+        screen.getByRole('region', { name: 'Selected-drive motor samples' }), 'Total Readings');
+      return;
+    }
     const metric = screen.getByText('Total Readings').closest('[data-operational-metric]');
     expect(metric).toHaveAttribute('data-value-state', expected);
     if (expected === 'value') {

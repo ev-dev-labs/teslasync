@@ -22,7 +22,7 @@
  *     is genuinely exercised.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -316,6 +316,14 @@ function planWith(plan: TripPlan) {
   fireEvent.click(screen.getByRole('button', { name: /Plan Trip/i }));
 }
 
+/** Pin a KPI's bridge valueState without inventing a tile for an omitted metric. */
+function briefValueState(key: string): unknown {
+  return formatOperationalMetrics.mock.results
+    .map(result => (result.type === 'return' ? result.value : []))
+    .findLast(list => list.some(metric => metric.key === key))
+    ?.find(metric => metric.key === key)?.valueState;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   nextPlan = null;
@@ -436,8 +444,13 @@ describe('TripPlannerPage — structure & a11y', () => {
 describe('TripPlannerPage — empty state (no plan yet)', () => {
   it('renders six KPI tiles as placeholders and an insights empty state', () => {
     renderPage();
-    // All six KPI values are the em-dash placeholder until a plan exists.
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getAllByText('—')).toHaveLength(6);
+    // All six KPIs are omitted until a plan exists, with a counted explanation.
+    const summary = screen.getByRole('region', { name: 'Trip summary' });
+    expect(within(summary).queryByText('—')).not.toBeInTheDocument();
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Distance', 'Total Time', 'Driving', 'Charging', 'Energy', 'Est. Cost']) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
     expect(
       screen.getByText('Plan a trip to see feasibility, estimates, and weather impact.'),
     ).toBeInTheDocument();
@@ -665,10 +678,10 @@ describe('TripPlannerPage — KPI derivation after a successful plan', () => {
 
     const summary = screen.getByRole('region', { name: 'Trip summary' });
     for (const key of ['chargingTime', 'cost']) {
-      const tile = summary.querySelector(`[data-operational-metric="${key}"]`);
-      expect(tile).toHaveAttribute('data-value-state', state);
-      expect(tile).toHaveTextContent('—');
+      expect(briefValueState(key)).toBe(state);
     }
+    assertOperationalMetricUnavailable(summary, 'Charging');
+    assertOperationalMetricUnavailable(summary, 'Est. Cost');
     expect(within(summary).queryByText('Free')).not.toBeInTheDocument();
     expect(within(summary).queryByText('0m')).not.toBeInTheDocument();
     expect(within(summary).getByText('100.00 km')).toBeInTheDocument();
@@ -716,11 +729,10 @@ describe('TripPlannerPage — duration formatting edge cases', () => {
 
     const summary = screen.getByRole('region', { name: 'Trip summary' });
     for (const key of ['totalTime', 'drivingTime']) {
-      const tile = summary.querySelector(`[data-operational-metric="${key}"]`);
-      expect(tile).toHaveAttribute('data-value-state', 'invalid');
-      expect(tile).toHaveTextContent('Expected a non-negative duration for this display');
+      expect(briefValueState(key)).toBe('invalid');
     }
-    expect(within(summary).getAllByText('—')).toHaveLength(2);
+    assertOperationalMetricUnavailable(summary, 'Total Time');
+    assertOperationalMetricUnavailable(summary, 'Driving');
     expect(within(summary).getByText('0m')).toBeInTheDocument();
   });
 
@@ -756,8 +768,9 @@ describe('TripPlannerPage — duration formatting edge cases', () => {
     renderPage();
     planWith(makePlan({ route: { total_duration_s: Number.NaN } }));
 
-    // Only the total-time tile falls back to the em-dash; the rest are valued.
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getAllByText('—')).toHaveLength(1);
+    // Only the total-time metric is unknown; the rest are valued.
+    expect(briefValueState('totalTime')).toBe('invalid');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Trip summary' }), 'Total Time');
     expect(screen.getByText('1h 30m')).toBeInTheDocument(); // driving still renders
   });
 });
@@ -948,11 +961,11 @@ describe('TripPlannerPage — retained source scope', () => {
     });
     view.rerenderPage();
 
-    expect(within(summary).getByText('Cached · refresh failed')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Cached · refresh failed');
     assertOperationalBriefDisclosure(summary, 'Source available', { absent: true });
     expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
     expect(within(summary).getByText('100.00 km')).toBeInTheDocument();
-    expect(within(summary).getByText(/Current SOC: 80% · Min Arrival SOC: 20%/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Current SOC: 80% · Min Arrival SOC: 20%', { contains: true });
     expect(screen.getByTestId('map-legs')).toHaveTextContent('2');
     expect(screen.getByTestId('map-stops')).toHaveTextContent('1');
     expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
@@ -976,7 +989,7 @@ describe('TripPlannerPage — retained source scope', () => {
     });
     renderPage();
     const summary = screen.getByRole('region', { name: 'Trip summary' });
-    expect(within(summary).getByText('Failed')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Failed');
     expect(within(summary).queryByText('Cached · refresh failed')).not.toBeInTheDocument();
     expect(screen.getByText('Failed to compute trip plan. Please try again.')).toBeInTheDocument();
   });
@@ -1030,7 +1043,7 @@ describe('TripPlannerPage — retained source scope', () => {
     renderPage();
     planWith(makePlan({ legs: [] }));
     const summary = screen.getByRole('region', { name: 'Trip summary' });
-    expect(within(summary).getByText(/From Location → To Location · Vehicle: 1 · Current SOC: 80% · Min Arrival SOC: 20% · Driving Speed: Normal/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'From Location → To Location · Vehicle: 1 · Current SOC: 80% · Min Arrival SOC: 20% · Driving Speed: Normal');
     expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
 
     for (const [label, value, original] of [
@@ -1039,18 +1052,18 @@ describe('TripPlannerPage — retained source scope', () => {
     ]) {
       fireEvent.change(screen.getByRole('slider', { name: label }), { target: { value } });
       expect(screen.getByTestId('trip-inputs-changed')).toHaveTextContent('Unsaved changes');
-      expect(within(summary).getByText(/Current SOC: 80% · Min Arrival SOC: 20%/)).toBeInTheDocument();
+      assertOperationalBriefDisclosure(summary, 'Current SOC: 80% · Min Arrival SOC: 20%', { contains: true });
       fireEvent.change(screen.getByRole('slider', { name: label }), { target: { value: original } });
       expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
     }
     fireEvent.change(screen.getByRole('combobox', { name: 'Driving Speed' }), { target: { value: '1.2' } });
     expect(screen.getByTestId('trip-inputs-changed')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
-    expect(within(summary).getByText(/Driving Speed: Normal/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Driving Speed: Normal', { contains: true });
     expect(screen.getByText('100.00 km')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
     expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
-    expect(within(summary).getByText(/Driving Speed: Fast/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Driving Speed: Fast', { contains: true });
   });
 
   it('distinguishes active initial loading from a paused request without data', () => {
@@ -1065,7 +1078,7 @@ describe('TripPlannerPage — retained source scope', () => {
     });
     view.rerenderPage();
     expect(screen.getByRole('button', { name: 'Refresh paused' })).toBeDisabled();
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Trip summary' }), 'Refresh paused');
     expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
     expect(screen.queryByText('Failed to compute trip plan. Please try again.')).not.toBeInTheDocument();
     expect(screen.getByTestId('leg-count')).toHaveTextContent('0');
@@ -1089,7 +1102,7 @@ describe('TripPlannerPage — retained source scope', () => {
     expect(within(summary).queryByText('—')).not.toBeInTheDocument();
     expect(screen.getByTestId('leg-count')).toHaveTextContent('0');
     expect(screen.getByTestId('soc-points')).toHaveTextContent('0');
-    expect(within(summary).getByText(/From Location → To Location/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'From Location → To Location', { contains: true });
   });
 
   it('keeps old evidence and scenario through changed-input refresh, failure, pause and recovery', () => {
@@ -1102,7 +1115,7 @@ describe('TripPlannerPage — retained source scope', () => {
       ...mockUsePlanTrip(), isPending: true, isPaused: false,
     });
     view.rerenderPage();
-    expect(screen.getByText('Recomputing; showing the last computed plan')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Trip summary' }), 'Recomputing; showing the last computed plan');
     expect(screen.getByText('100.00 km')).toBeInTheDocument();
     expect(screen.getByTestId('soc-points')).toHaveTextContent('2');
 
@@ -1111,7 +1124,7 @@ describe('TripPlannerPage — retained source scope', () => {
     });
     view.rerenderPage();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Cached · refresh failed')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Trip summary' }), 'Cached · refresh failed');
     expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
     expect(screen.getByTestId('trip-inputs-changed')).toBeInTheDocument();
 
@@ -1121,7 +1134,7 @@ describe('TripPlannerPage — retained source scope', () => {
     view.rerenderPage();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
     expect(screen.getByRole('button', { name: 'Refresh paused' })).toBeDisabled();
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Refresh paused')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Trip summary' }), 'Refresh paused');
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(screen.queryByText('Recomputing; showing the last computed plan')).not.toBeInTheDocument();
     expect(screen.getByText('100.00 km')).toBeInTheDocument();
@@ -1135,7 +1148,7 @@ describe('TripPlannerPage — retained source scope', () => {
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
     expect(screen.getByText('200.00 km')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText(/Current SOC: 60%/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Trip summary' }), 'Current SOC: 60%', { contains: true });
   });
 
   it('selects Normal by default and preserves the dimensionless normal speed request', () => {
@@ -1174,7 +1187,7 @@ describe('TripPlannerPage — retained source scope', () => {
     view.rerenderPage();
     expect(screen.getByRole('button', { name: 'Send to Car' })).toBeDisabled();
     expect(screen.getByTestId('trip-inputs-changed')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText(/Vehicle: 1/)).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Trip summary' }), 'Vehicle: 1', { contains: true });
     expect(screen.getByTestId('map-legs')).toHaveTextContent('2');
     expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
   });

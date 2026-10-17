@@ -180,7 +180,8 @@ describe('MonthlyExplorationChart', () => {
         state={{ ...state, error: new Error('Unavailable'), onRetry }}
       />,
     );
-    fireEvent.click(screen.getByRole('alert'));
+    // The file mock renders QueryError as its retry button.
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
     expect(probes.frame.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({ data: [], exportable: false }),

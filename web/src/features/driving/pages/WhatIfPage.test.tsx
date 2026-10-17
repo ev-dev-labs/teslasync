@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import WhatIfPage from './WhatIfPage';
@@ -453,7 +453,7 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
     });
   });
 
-  it('preserves all four accessible knobs, physical bounds and reset defaults', () => {
+  it('preserves all four accessible knobs, physical bounds and reset defaults', async () => {
     mount();
     const speed = screen.getByRole('slider', { name: 'Average speed' });
     const ambient = screen.getByRole('slider', { name: 'Ambient temperature' });
@@ -476,13 +476,15 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
     fireEvent.change(tires, { target: { value: 'high' } });
     expect(tires).toHaveValue('high');
     fireEvent.click(screen.getByRole('button', { name: /Reset/ }));
-    expect(speed).toHaveValue('1');
+    expect(screen.getByText('Reset all inputs?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(speed).toHaveValue('1'));
     expect(ambient).toHaveValue('18');
     expect(tires).toHaveValue('nominal');
     expect(climate).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('recomputes raw Wh and seconds and preserves signed savings versus extra cost', () => {
+  it('recomputes raw Wh and seconds and preserves signed savings versus extra cost', async () => {
     mount();
     const initial = state.summary.mock.lastCall?.[0].metrics as readonly StatMetric[];
     expect(initial[0].context).toBe('was 2000 Wh');
@@ -491,6 +493,9 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
     expect(saving[0].rawValue).toBeLessThan(initial[0].rawValue as number);
     expect(screen.getByText(/This would save/)).toHaveTextContent('Wh');
     fireEvent.click(screen.getByRole('button', { name: /Reset/ }));
+    expect(screen.getByText('Reset all inputs?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(screen.queryByText('Reset all inputs?')).not.toBeInTheDocument());
     fireEvent.change(screen.getByRole('slider', { name: 'Average speed' }), { target: { value: '1.2' } });
     const fast = state.summary.mock.lastCall?.[0].metrics as readonly StatMetric[];
     // Duration scales the recorded 600 s by the speed factor (not the rounded fixture speed).

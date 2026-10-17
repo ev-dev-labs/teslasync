@@ -5,6 +5,7 @@ import { analyzeRangeBuffer } from '../../lib/rangeBuffer';
 import type { RangeBufferQueryState } from '../range-buffer/types';
 import type { UnitPref } from '@/lib/unitConversion';
 import { RangeBufferSummaryBrief } from './RangeBufferSummaryBrief';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const unitPrefs: UnitPref = {
   distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
@@ -33,9 +34,9 @@ describe('Range Buffer — raw summary ownership', () => {
     const brief = screen.getByTestId('range-buffer-kpis-brief');
     expect(brief.querySelector('[data-operational-metric="included"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="included"] [data-operational-value]')).toHaveTextContent('0');
-    expect(brief.querySelector('[data-operational-metric="median"]')).toHaveAttribute('data-value-state', 'missing');
+    assertOperationalMetricUnavailable(brief, 'Median arrival');
     expect(screen.getByText('No drives were returned for this vehicle-local date window.')).toBeInTheDocument();
-    expect(within(brief).getByText('2026-07-01 — 2026-08-01 (UTC)')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, '2026-07-01 — 2026-08-01 (UTC)', { contains: true });
   });
 
   it('retains the actual planning-threshold control instead of replacing it with drawer-only text', () => {

@@ -374,7 +374,6 @@ describe('RouteEfficiencyPage — no vehicle selected', () => {
     expect(screen.queryByTestId('chart-loading')).not.toBeInTheDocument();
     expect(within(cardsRegion()).queryByText('Beach')).not.toBeInTheDocument();
     assertOperationalMetricUnavailable(kpiRegion(), 'Routes');
-    expect(within(kpiRegion()).getByText('Routes').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getByTestId('ai-suggestions')).toHaveAttribute('data-vehicle-id', '');
   });
 });
@@ -414,7 +413,6 @@ describe('RouteEfficiencyPage — error', () => {
     fireEvent.click(retries[0]);
     expect(refetch).toHaveBeenCalledTimes(1);
 
-    expect(within(kpiRegion()).getByText('Total Trips').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     assertOperationalMetricUnavailable(kpiRegion(), 'Total Trips');
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
