@@ -89,6 +89,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import TimelinePage from './TimelinePage'
@@ -221,6 +222,19 @@ function renderPage(path = '/timeline?from=2025-03-01&to=2025-03-02') {
   )
 }
 
+const DWELL_LABELS = ['Driving time', 'Charging time', 'Idle / sleep time']
+
+function expectHiddenCount(brief: HTMLElement, count: number) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+  const dialog = screen.getByRole('dialog')
+  try {
+    expect(within(dialog).getByText(count === 1 ? '1 empty field is hidden.' : `${count} empty fields are hidden.`)).toBeInTheDocument()
+  } finally {
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
+
 function HeaderVehicleSwitch() {
   const { setVehicleId } = useSelectedVehicle()
   const [params, setParams] = useSearchParams()
@@ -277,8 +291,11 @@ describe('TimelinePage', () => {
       .mockReturnValue(new DOMRect(0, 0, 375, 44))
     try {
       renderPage()
-      const inspect = await screen.findByRole('button', { name: 'Inspect transition asleep to driving' })
-      const mobile = inspect.closest('[data-mobile-table]')!
+      // The mobile surface activates one effect after the desktop first frame;
+      // wait for it so the scoped queries below never catch the detached table.
+      await screen.findAllByRole('button', { name: 'Quick view' })
+      const mobile = document.querySelector('[data-mobile-table]')!
+      expect(mobile).not.toBeNull()
       fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0])
       expect(screen.getByRole('dialog')).toHaveTextContent('shift_state')
       fireEvent.click(screen.getByRole('button', {
@@ -303,7 +320,9 @@ describe('TimelinePage', () => {
   it('keeps paused first loads distinct from successful empty or zero evidence and recovers', async () => {
     onlineManager.setOnline(false)
     install({ emptyTimeline: true, emptySummary: true })
-    renderPage()
+    // A URL-scoped vehicle keeps the state queries enabled (and pausable)
+    // while the fleet list itself cannot load offline.
+    renderPage('/timeline?vehicle_id=1&from=2025-03-01&to=2025-03-02')
     expect(await screen.findByText('State transitions is paused while the connection is unavailable')).toBeInTheDocument()
     expect(screen.queryByText('No state transitions recorded')).toBeNull()
     expect(screen.queryByText('No daily transition activity yet')).toBeNull()
@@ -315,7 +334,10 @@ describe('TimelinePage', () => {
     expect(await screen.findByText('No state transitions recorded')).toBeInTheDocument()
     expect(screen.getByText('No daily transition activity yet')).toBeInTheDocument()
     expect(within(brief).getByText('0', { exact: true })).toBeInTheDocument()
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3)
+    await waitFor(() => expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1))
+    expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0)
+    for (const label of DWELL_LABELS) assertOperationalMetricUnavailable(brief, label)
+    expectHiddenCount(brief, 3)
   })
 
   it('preserves originating preview evidence through same-scope refresh failure and recovery', async () => {
@@ -341,9 +363,12 @@ describe('TimelinePage', () => {
     try {
       const user = userEvent.setup()
       renderPage()
-      const inspect = await screen.findByRole('button', { name: 'Inspect transition asleep to driving' })
-      const mobile = inspect.closest('[data-mobile-table]')!
+      // The mobile surface activates one effect after the desktop first frame;
+      // wait for it so the scoped queries below never catch the detached table.
+      await screen.findAllByRole('button', { name: 'Quick view' })
+      const mobile = document.querySelector('[data-mobile-table]')!
       expect(mobile).not.toBeNull()
+      const inspect = within(mobile).getByRole('button', { name: 'Inspect transition asleep to driving' })
       expect(within(mobile).getByText('1h')).toBeInTheDocument()
       expect(inspect).toHaveClass('min-h-11')
       inspect.focus()
@@ -600,7 +625,10 @@ describe('TimelinePage', () => {
     const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
     expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
     expect(within(kpiBand).getByText('0', { exact: true })).toBeInTheDocument()
-    expect(kpiBand.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3)
+    await waitFor(() => expect(kpiBand.querySelectorAll('[data-operational-metric]')).toHaveLength(1))
+    expect(kpiBand.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0)
+    for (const label of DWELL_LABELS) assertOperationalMetricUnavailable(kpiBand, label)
+    expectHiddenCount(kpiBand, 3)
     expect(within(kpiBand).queryByText('0m')).toBeNull()
   })
 
@@ -631,16 +659,31 @@ describe('TimelinePage', () => {
     renderPage()
     await screen.findByText('No state transitions recorded')
     const brief = screen.getByTestId('timeline-summary')
-    await waitFor(() => expect(brief.querySelectorAll(`[data-value-state="${state}"]`))
-      .toHaveLength(state === 'value' ? 4 : 3))
+    if (state === 'value') {
+      await waitFor(() => expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4))
+    } else {
+      await waitFor(() => expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1))
+      expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0)
+      for (const label of DWELL_LABELS) assertOperationalMetricUnavailable(brief, label)
+      expectHiddenCount(brief, 3)
+    }
     expect(within(brief).getByText('0', { exact: true })).toBeInTheDocument()
     if (text) expect(within(brief).getAllByText(text)).toHaveLength(3)
     else expect(within(brief).queryByText('0m')).toBeNull()
     expect(screen.queryByText('No state distribution available yet')).toBeNull()
-    const driving = screen.getByRole('progressbar', { name: 'Driving' })
-    if (state === 'value') {
+    if (state === 'value' && value !== 0) {
+      const driving = screen.getByRole('progressbar', { name: 'Driving' })
       expect(driving).toHaveAttribute('aria-valuenow', String(value))
+    } else if (state === 'value') {
+      // A zero total leaves the bar unscaled: a named group carrying the
+      // measured reading, never a fabricated progress value.
+      const driving = screen.getByRole('group', { name: 'Driving' })
+      const signed = Object.is(value, -0)
+      expect(driving).toHaveTextContent(signed ? '-0s · 0.00%' : '0s · 0.00%')
+      expect(driving).toHaveAccessibleDescription(signed ? '-0.00' : '0.00')
+      expect(driving).not.toHaveAttribute('aria-valuenow')
     } else {
+      const driving = screen.getByRole('progressbar', { name: 'Driving' })
       expect(driving).not.toHaveAttribute('aria-valuenow')
       expect(driving).toHaveAttribute('aria-valuetext', 'No reading')
       expect(driving).toHaveTextContent('—')
@@ -650,10 +693,11 @@ describe('TimelinePage', () => {
       expect(Object.is(metric.rawValue, value)).toBe(true)
       expect(metric.display?.durationStyle).toBe('roundedMinutes')
     }
-    if (typeof value === 'number' && value < 0) {
-      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
-      expect(await screen.findByRole('dialog')).toHaveTextContent('Expected a non-negative duration for this display')
-    }
+    // Omitted metrics carry no drawer group, so the missing/invalid
+    // classification is pinned on the mapped hook output instead.
+    const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+      readonly { valueState?: string }[] | undefined
+    expect(mapped?.slice(1).map(metric => metric.valueState)).toEqual([state, state, state])
   })
 
   it('keeps composition and transition-list emptiness independent', async () => {
@@ -663,7 +707,10 @@ describe('TimelinePage', () => {
     expect(screen.getAllByText('No state distribution available yet')).toHaveLength(2)
     expect(screen.queryByText('No state transitions recorded')).toBeNull()
     const brief = screen.getByTestId('timeline-summary')
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3)
+    await waitFor(() => expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1))
+    expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0)
+    for (const label of DWELL_LABELS) assertOperationalMetricUnavailable(brief, label)
+    expectHiddenCount(brief, 3)
   })
 
   it('preserves signed source percentages and fractional dwell without rewriting raw evidence', async () => {
@@ -699,10 +746,19 @@ describe('TimelinePage', () => {
     renderPage()
     await screen.findByText('No state transitions recorded')
     const brief = screen.getByTestId('timeline-summary')
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2)
+    await waitFor(() => expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(2))
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2)
+    expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0)
+    assertOperationalMetricUnavailable(brief, 'Driving time')
+    assertOperationalMetricUnavailable(brief, 'Charging time')
+    expectHiddenCount(brief, 2)
     expect(within(brief).getByText('0m')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar', { name: 'Online' })).toHaveAttribute('aria-valuenow', '0')
+    // A zero total leaves the bar unscaled: a named group carrying the
+    // measured reading, never a fabricated progress value.
+    const online = screen.getByRole('group', { name: 'Online' })
+    expect(online).toHaveTextContent('0s · 0.00%')
+    expect(online).toHaveAccessibleDescription('0.00')
+    expect(online).not.toHaveAttribute('aria-valuenow')
     expect(screen.queryByText('No state distribution available yet')).toBeNull()
   })
 
@@ -727,9 +783,15 @@ describe('TimelinePage', () => {
     renderPage()
     await screen.findByText('No state transitions recorded')
     const brief = screen.getByTestId('timeline-summary')
-    expect(brief.querySelectorAll(`[data-value-state="${state}"]`))
-      .toHaveLength(state === 'missing' ? 3 : 1)
+    await waitFor(() => expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1))
+    expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0)
+    for (const label of DWELL_LABELS) assertOperationalMetricUnavailable(brief, label)
+    expectHiddenCount(brief, 3)
     expect(within(brief).queryByText('1m')).toBeNull()
+    const mapped = vi.mocked(useOperationalMetrics).mock.results.at(-1)?.value as
+      readonly { valueState?: string }[] | undefined
+    expect(mapped?.slice(1).map(metric => metric.valueState)).toEqual(
+      state === 'missing' ? ['missing', 'missing', 'missing'] : ['missing', 'missing', 'invalid'])
   })
 
   it('shows the page-level loading shell while both state queries are pending', async () => {
@@ -1004,6 +1066,6 @@ describe('TimelinePage', () => {
       expect(url.searchParams.get('to')).toBe(path === '/maintenance' ? null : '2025-03-01')
       expect(url.searchParams.get('signals')).toBe(path === '/signals' ? 'shift_state' : null)
     }
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(within(drawer).queryByRole('combobox')).not.toBeInTheDocument()
   })
 })
