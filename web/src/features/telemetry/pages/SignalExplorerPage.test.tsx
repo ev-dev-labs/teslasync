@@ -20,7 +20,7 @@
  * `useRealtimeEvents`; framer-motion and i18n are stubbed for determinism.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
@@ -136,13 +136,20 @@ vi.mock('react-i18next', async () => {
     useTranslation: () => ({
       t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
         if (typeof fallbackOrOpts === 'string') {
+          // Mirror the global mock's plural selection so counted sentences use
+          // the same singular/plural defaults production i18next resolves.
+          let template = fallbackOrOpts;
           if (opts && typeof opts === 'object') {
             const o = opts as Record<string, unknown>;
-            return fallbackOrOpts.replace(/\{\{(\w+)\}\}/g, (_, name) =>
+            if (typeof o.count === 'number') {
+              const plural = o.count === 1 ? o.defaultValue_one : o.defaultValue_other;
+              if (typeof plural === 'string') template = plural;
+            }
+            return template.replace(/\{\{(\w+)\}\}/g, (_, name) =>
               name in o ? String(o[name]) : `{{${name}}}`,
             );
           }
-          return fallbackOrOpts;
+          return template;
         }
         if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
           const o = fallbackOrOpts as Record<string, unknown>;
@@ -265,7 +272,16 @@ describe('SignalExplorerPage', () => {
       screen.getByRole('region', { name: 'Exploration summary' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Idle')).toBeInTheDocument();
-    expect(screen.getByText('Records')).toBeInTheDocument();
+    const summary = screen.getByTestId('signal-explorer-summary');
+    assertOperationalMetricUnavailable(summary, 'Records');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const idleDrawer = screen.getByRole('dialog');
+    try {
+      expect(within(idleDrawer).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    } finally {
+      fireEvent.keyDown(idleDrawer, { key: 'Escape' });
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     // Deterministic guidance before Explore, and Explore is disabled with no
     // signals selected.
     expect(screen.getByText('Pick signals and click explore')).toBeInTheDocument();
@@ -415,11 +431,20 @@ describe('SignalExplorerPage', () => {
     // Live affordances swap in.
     expect(screen.getByRole('button', { name: 'Stop live' })).toBeInTheDocument();
     expect(screen.getByText('Connected')).toBeInTheDocument();
-    // KPI band flips to the streaming vocabulary — the Status value and the
-    // events subtitle both read "Streaming" when connected.
-    expect(screen.getAllByText('Streaming').length).toBeGreaterThanOrEqual(2);
+    // KPI band flips to the streaming vocabulary — the Status value reads
+    // "Streaming" on the face while the events subtitle lives in the drawer.
+    expect(screen.getAllByText('Streaming')).toHaveLength(1);
     expect(screen.getByText('Live events')).toBeInTheDocument();
     expect(screen.queryByText('Records')).not.toBeInTheDocument();
+    const liveSummary = screen.getByTestId('signal-explorer-summary');
+    fireEvent.click(within(liveSummary).getByRole('button', { name: 'Review details' }));
+    const liveDrawer = screen.getByRole('dialog');
+    try {
+      expect(within(liveDrawer).getByRole('group', { name: 'Live events' })).toHaveTextContent('Streaming');
+    } finally {
+      fireEvent.keyDown(liveDrawer, { key: 'Escape' });
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     // The live chart shows its waiting state and the history table (historical
     // only) is absent.
     expect(screen.getByText('Waiting for live signal data…')).toBeInTheDocument();

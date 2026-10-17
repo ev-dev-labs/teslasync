@@ -173,13 +173,20 @@ describe('SignalEntropyPage preservation and presentation', () => {
     expect(distribution.data?.[0]).toEqual({ bin: '0,00000–4,87500', lo: 0, hi: 4.875, key: 0, count: 5 });
     expect(rolling.height).toBe(300); expect(distribution.height).toBe(260);
     const brief = screen.getByTestId('signal-entropy-summary');
-    expect(brief).toHaveTextContent('48h requested · NumericSignal');
-    expect(brief).toHaveTextContent('2026-01-01T00:00:00.000Z → 2026-01-02T15:00:00.000Z');
+    expect(brief).not.toHaveTextContent('48h requested · NumericSignal');
+    expect(brief).not.toHaveTextContent('2026-01-01T00:00:00.000Z → 2026-01-02T15:00:00.000Z');
     expect(brief).toHaveTextContent('bits');
     expect(screen.getByText(/0,00000 to 39,00000 across 40 samples/)).toBeInTheDocument();
-    expect(screen.getAllByText(/not guaranteed full-window coverage/)).toHaveLength(2);
+    expect(screen.getAllByText(/not guaranteed full-window coverage/)).toHaveLength(1);
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('48h requested · NumericSignal');
+    expect(drawer).toHaveTextContent('2026-01-01T00:00:00.000Z → 2026-01-02T15:00:00.000Z');
+    expect(drawer).toHaveTextContent('not guaranteed full-window coverage');
+    // The drawer shows the description twice (header description + narrative
+    // details); the reading guide below the fold shows it once more.
+    expect(within(drawer).getAllByText(/not guaranteed full-window coverage/)).toHaveLength(2);
+    expect(screen.getAllByText(/not guaranteed full-window coverage/)).toHaveLength(3);
     for (const metric of latestMetrics()) expect(within(drawer).getByText(metric.label!)).toBeInTheDocument();
     expect(H.history).toEqual(original);
   });

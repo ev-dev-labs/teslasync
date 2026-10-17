@@ -10,7 +10,7 @@
  * of the (real) child components.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../components/operationalbrief-all/metricPreferencesTestSetup';
@@ -273,7 +273,7 @@ describe('LiveSignalMonitorPage', () => {
       expect(badge).not.toHaveClass('text-[var(--semantic-danger)]');
     }
     expect(screen.getByText(/attempting to reconnect/i)).toBeInTheDocument();
-    const icon = container.querySelector('svg.lucide-wifi-off');
+    const icon = container.querySelector('svg.lucide-cloud-off');
     expect(icon).toHaveAttribute('aria-hidden', 'true');
     expect(icon).toHaveAttribute('focusable', 'false');
     expect(icon).toHaveClass('h-5', 'w-5', 'shrink-0');
@@ -370,14 +370,17 @@ describe('LiveSignalMonitorPage', () => {
     expect(updater(true)).toBe(false);
   });
 
-  it('clears the tail buffer via clearTail', () => {
+  it('clears the tail buffer via clearTail', async () => {
     const clearTail = vi.fn();
     h.stream = makeStream({ connected: true, tailEntries: [], clearTail });
 
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(clearTail).not.toHaveBeenCalled();
+    expect(screen.getByText('Clear the stream?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
 
-    expect(clearTail).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(clearTail).toHaveBeenCalledTimes(1));
   });
 
   it('retains all four body bands, the top-12 policy and filtered raw tail across disconnect and resume', () => {

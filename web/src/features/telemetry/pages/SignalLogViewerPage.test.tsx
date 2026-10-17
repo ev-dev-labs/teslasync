@@ -27,6 +27,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
@@ -199,6 +200,30 @@ function renderPage(search = '') {
 
 const RANGE = 'from=2026-07-01&to=2026-07-01';
 
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId('signal-log-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('signal-log-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
@@ -243,9 +268,14 @@ describe('SignalLogViewerPage', () => {
     expect(queryBtn).toBeDisabled();
 
     // No request has run: a known selection count is distinct from unknown result counts.
-    const totalCard = screen.getByText('Total records').closest('[data-operational-metric]') as HTMLElement;
-    expect(within(totalCard).getByText('—')).toBeInTheDocument();
-    expect(within(totalCard).queryByText('0')).toBeNull();
+    const summary = screen.getByTestId('signal-log-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    for (const label of ['Total records', 'Numeric points', 'Text points', 'Boolean points', 'Time span']) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount('5 empty fields are hidden.');
+    const signalsCard = within(summary).getByText('Signals').closest('[data-operational-metric]') as HTMLElement;
+    expect(within(signalsCard).getByText('0')).toBeInTheDocument();
 
     // Breakdown + history each own their pre-query empty state (never a blank panel).
     expect(
@@ -313,7 +343,8 @@ describe('SignalLogViewerPage', () => {
     const textCard = within(kpi).getByText('Text points').closest('[data-operational-metric]') as HTMLElement;
     expect(within(textCard).getByText('1')).toBeInTheDocument();
     const signalsCard = within(kpi).getByText('Signals').closest('[data-operational-metric]') as HTMLElement;
-    expect(within(signalsCard).getByText('2 with data')).toBeInTheDocument();
+    expect(within(signalsCard).queryByText('2 with data')).toBeNull();
+    expectDrawerGroupText('Signals', '2 with data');
 
     // Rows are sorted newest-first: soc=80 @10:02 leads, 'charging' @09:59 trails.
     const rows = within(table).getAllByRole('row');
@@ -566,7 +597,7 @@ describe('SignalLogViewerPage shared range and catalog adoption', () => {
     expect(screen.getByRole('button', { name: 'Remove speed' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Query' })).toBeEnabled();
     const warning = screen.getByTestId('stale-refresh-warning');
-    fireEvent.click(within(warning).getByRole('button', { name: 'Retry' }));
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(mockedRequest).not.toHaveBeenCalled();
   });

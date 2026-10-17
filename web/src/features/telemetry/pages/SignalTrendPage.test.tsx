@@ -247,9 +247,12 @@ describe('SignalTrendPage shared-frame adoption', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(pageElement(client));
 
-    for (const title of ['Choose a signal', 'Trend metrics', 'Robust baseline & forecast band', 'Reading the result']) {
+    for (const title of ['Trend metrics', 'Robust baseline & forecast band', 'Reading the result']) {
       expect(screen.getByRole('heading', { name: title, exact: true })).toBeInTheDocument();
     }
+    // The picker heading also carries its always-mounted help tooltip in its
+    // accessible name; match the visible title by prefix.
+    expect(screen.getByRole('heading', { name: /^Choose a signal/ })).toBeInTheDocument();
     expect(H.chartFrame?.emptyMessage).toBe('Choose a signal above to compute its trend.');
     expect(screen.getByText('Pick a signal to see how its trend should be read.')).toBeInTheDocument();
     expect(H.chartFrame).toMatchObject({ loading: false, empty: false, error: null });

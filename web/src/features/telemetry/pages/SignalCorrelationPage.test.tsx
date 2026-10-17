@@ -1,6 +1,6 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import { Children, isValidElement, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -100,6 +100,32 @@ afterEach(() => {
 function setup() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={client}><MemoryRouter><SignalCorrelationPage /></MemoryRouter></QueryClientProvider>);
+}
+
+const SUMMARY_LABELS = ['Peak correlation', 'Best lag', 'Significance', 'Effective samples'];
+
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId('signal-correlation-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('signal-correlation-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 beforeEach(() => {
   mocks.signals.mockReset();
@@ -310,7 +336,8 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     if (detrend) fireEvent.click(screen.getByRole('switch', { name: 'Correlate changes, not levels' }));
     expect(screen.getByText('Signal A: BatteryLevel — 40 filled · 0 gaps')).toBeInTheDocument();
     expect(screen.getByText('Signal B: CabinTemperature — 13 filled · 27 gaps')).toBeInTheDocument();
-    expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('from 12 raw points');
+    expect(screen.getByTestId('signal-correlation-summary')).not.toHaveTextContent('from 12 overlapping resampled pairs');
+    expectDrawerGroupText('Effective samples', 'from 12 overlapping resampled pairs');
     expect(mocks.correlate).toHaveBeenLastCalledWith(SERIES, SERIES, { detrend });
   });
 
@@ -327,8 +354,10 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     expect(mocks.correlate).toHaveBeenLastCalledWith(SERIES, SERIES, { detrend: true });
     const strip = screen.getByTestId('signal-correlation-summary');
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(strip).toHaveTextContent('CabinTemperature leads');
-    expect(strip).toHaveTextContent('from 12 raw points');
+    expect(strip).not.toHaveTextContent('CabinTemperature leads');
+    expect(strip).not.toHaveTextContent('from 12 overlapping resampled pairs');
+    expectDrawerGroupText('Best lag', 'CabinTemperature leads');
+    expectDrawerGroupText('Effective samples', 'from 12 overlapping resampled pairs');
     expect(screen.getByText('Lagged correlogram')).toBeInTheDocument();
     expect(screen.getByText('Normalised overlay')).toBeInTheDocument();
     expect(screen.getByText('Reading the result')).toBeInTheDocument();
@@ -341,8 +370,12 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
   it('keeps unknown summary values and the choose-two message before any selection', () => {
     setup();
     const strip = screen.getByTestId('signal-correlation-summary');
-    expect([...strip.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true);
-    expect(strip).toHaveTextContent('from — raw points');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(strip).toHaveTextContent('No metric values are available yet.');
+    for (const label of SUMMARY_LABELS) {
+      assertOperationalMetricUnavailable(strip, label);
+    }
+    expectHiddenFieldCount('4 empty fields are hidden.');
     expect(screen.getAllByText('Choose two signals above to compute the correlogram.')).toHaveLength(3);
     expect(mocks.correlate).not.toHaveBeenCalled();
   });
@@ -413,8 +446,10 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     fireEvent.change(screen.getByLabelText('Signal B'), { target: { value: 'CabinTemperature' } });
     const strip = screen.getByTestId('signal-correlation-summary');
     assertOperationalBriefDisclosure(strip, 'Retained source data', { contains: true });
-    expect(strip).toHaveTextContent('CabinTemperature leads');
-    expect(strip).toHaveTextContent('from 12 raw points');
+    expect(strip).not.toHaveTextContent('CabinTemperature leads');
+    expect(strip).not.toHaveTextContent('from 12 overlapping resampled pairs');
+    expectDrawerGroupText('Best lag', 'CabinTemperature leads');
+    expectDrawerGroupText('Effective samples', 'from 12 overlapping resampled pairs');
     const overlayProps = mocks.charts.mock.calls.map(([props]) => props as ChartContainerProps)
       .filter(props => props.chartKey === 'signal-correlation-overlay').at(-1)!;
     expect(overlayProps.error).toBeNull();
@@ -468,7 +503,12 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     fireEvent.change(screen.getByLabelText('Signal A'), { target: { value: 'BatteryLevel' } });
     fireEvent.change(screen.getByLabelText('Signal B'), { target: { value: 'CabinTemperature' } });
     expect(screen.getAllByText(message)).toHaveLength(3);
-    expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('from — raw points');
+    const strip = screen.getByTestId('signal-correlation-summary');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of SUMMARY_LABELS) {
+      assertOperationalMetricUnavailable(strip, label);
+    }
+    expectHiddenFieldCount('4 empty fields are hidden.');
     expect(screen.queryByText('Pick two signals to see how the result should be read.')).not.toBeInTheDocument();
     if (reason === 'empty') expect(mocks.correlate).toHaveBeenCalledWith([], [], { detrend: false });
   });
@@ -487,16 +527,19 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     fireEvent.change(screen.getByLabelText('Signal A'), { target: { value: 'BatteryLevel' } });
     fireEvent.change(screen.getByLabelText('Signal B'), { target: { value: 'CabinTemperature' } });
     const strip = screen.getByTestId('signal-correlation-summary');
-    expect(strip).toHaveTextContent('Queried snapshot');
+    expect(strip).not.toHaveTextContent('Queried snapshot');
+    assertOperationalBriefDisclosure(strip, 'Queried snapshot');
     expect(strip.querySelector('[data-operational-metric]')).not.toHaveAttribute('data-value-state', 'missing');
-    expect(strip).toHaveTextContent('No relationship');
+    expect(strip).not.toHaveTextContent('No relationship');
+    expectDrawerGroupText('Best lag', 'No relationship');
+    expect(screen.getByText('No relationship')).toBeInTheDocument();
     failure = new Error('refresh unavailable');
     fireEvent.click(screen.getByRole('switch', { name: 'Correlate changes, not levels' }));
     assertOperationalBriefDisclosure(strip, 'Retained source data', { contains: true });
-    expect(strip).toHaveTextContent('from 12 raw points');
+    expectDrawerGroupText('Effective samples', 'from 12 overlapping resampled pairs');
     failure = null;
     fireEvent.click(screen.getByRole('switch', { name: 'Correlate changes, not levels' }));
-    expect(strip).toHaveTextContent('Queried snapshot');
+    assertOperationalBriefDisclosure(strip, 'Queried snapshot');
     assertOperationalBriefDisclosure(strip, 'Retained source data', { absent: true, contains: true });
     expect(screen.queryByText('refresh unavailable')).not.toBeInTheDocument();
     expect(retry).not.toHaveBeenCalled();

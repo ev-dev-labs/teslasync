@@ -106,10 +106,12 @@ describe('SignalDiffBreakdown', () => {
       pinnedSignals: pins,
     });
 
+    // The canonical series token; jsdom serializes its hex stops to rgb().
+    expect(chartTokens.series[0]).toBe('light-dark(#385e7e, #91b4d2)');
     for (const bar of within(panelFor(CATEGORY_TITLE)).getAllByRole('progressbar')) {
       const fill = bar.querySelector<HTMLElement>('[data-metric-fill]');
       expect(fill).not.toBeNull();
-      expect(fill?.style.background).toBe(chartTokens.series[0]);
+      expect(fill?.style.background).toBe('light-dark(rgb(56, 94, 126), rgb(145, 180, 210))');
     }
 
     const sources = within(panelFor(SOURCE_TITLE));

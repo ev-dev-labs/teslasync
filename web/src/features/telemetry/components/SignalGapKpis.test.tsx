@@ -24,7 +24,9 @@
  */
 import { type ComponentProps } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import './operationalbrief-all/metricPreferencesTestSetup';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn> via useReducedMotion) reads
@@ -53,10 +55,27 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        let template = typeof fallback === 'string' ? fallback : key;
+        // Mirror the global mock's plural selection and interpolation so
+        // counted sentences resolve exactly as production i18next renders.
+        if (options && typeof options.count === 'number') {
+          const plural = options.count === 1 ? options.defaultValue_one : options.defaultValue_other;
+          if (typeof plural === 'string') template = plural;
+        }
+        if (options) {
+          template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
+            options[name] != null ? String(options[name]) : `{{${name}}}`);
+        }
+        return template;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
+});
+vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
 });
 
 import { SignalGapKpis } from './SignalGapKpis';
@@ -98,13 +117,38 @@ function card(label: string) {
   return within(root);
 }
 
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('signal-gap-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function lastMetricStates(): Array<string | undefined> {
+  const results = vi.mocked(useOperationalMetrics).mock.results;
+  const last = results[results.length - 1];
+  if (last?.type !== 'return') throw new Error('missing operational metrics result');
+  return last.value.map(metric => metric.valueState);
+}
+
 describe('SignalGapKpis — populated (hasVehicle=true)', () => {
   it('distinguishes unavailable source counts from a successful empty catalog', () => {
-    renderKpis({ unavailable: true, buckets: makeBuckets(), freshnessPct: 0 });
+    const { container } = renderKpis({ unavailable: true, buckets: makeBuckets(), freshnessPct: 0 });
+    const brief = screen.getByTestId('signal-gap-summary');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(brief).toHaveTextContent('No metric values are available yet.');
     for (const label of Object.values(LABELS)) {
-      expect(card(label).getByText(DASH)).toBeInTheDocument();
-      expect(card(label).queryByText('0')).toBeNull();
+      assertOperationalMetricUnavailable(brief, label);
     }
+    expectHiddenFieldCount('6 empty fields are hidden.');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(screen.queryByText('0')).toBeNull();
+    expect(screen.queryByText('0%')).toBeNull();
   });
   it('renders all six labelled KPI cards', () => {
     renderKpis();
@@ -146,12 +190,15 @@ describe('SignalGapKpis — no vehicle (hasVehicle=false)', () => {
       hasVehicle: false,
     });
 
-    // All six values (five counts + freshness) read '—'.
-    expect(screen.getAllByText(DASH)).toHaveLength(6);
-    // The real numbers never leak through the placeholder.
+    // All six tiles are omitted; the real numbers never leak through.
+    const brief = screen.getByTestId('signal-gap-summary');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of Object.values(LABELS)) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenFieldCount('6 empty fields are hidden.');
     expect(screen.queryByText('42')).not.toBeInTheDocument();
     expect(screen.queryByText('87%')).not.toBeInTheDocument();
-    expect(card(LABELS.freshness).getByText(DASH)).toBeInTheDocument();
   });
 });
 
@@ -161,9 +208,12 @@ describe('SignalGapKpis — resilience + formatting', () => {
       renderKpis({ buckets: undefined as unknown as GapBuckets, freshnessPct: 50 }),
     ).not.toThrow();
 
-    expect(card(LABELS.total).getByText(DASH)).toBeInTheDocument();
-    expect(card(LABELS.stale).getByText(DASH)).toBeInTheDocument();
-    expect(card(LABELS.freshness).getByText(DASH)).toBeInTheDocument();
+    const brief = screen.getByTestId('signal-gap-summary');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of Object.values(LABELS)) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenFieldCount('6 empty fields are hidden.');
   });
 
   it('renders the em-dash without throwing when buckets is undefined and no vehicle is selected', () => {
@@ -171,7 +221,12 @@ describe('SignalGapKpis — resilience + formatting', () => {
       renderKpis({ buckets: undefined as unknown as GapBuckets, hasVehicle: false }),
     ).not.toThrow();
 
-    expect(screen.getAllByText(DASH)).toHaveLength(6);
+    const brief = screen.getByTestId('signal-gap-summary');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of Object.values(LABELS)) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenFieldCount('6 empty fields are hidden.');
   });
 
   it('keeps a missing bucket field unknown rather than silently measuring zero', () => {
@@ -183,24 +238,33 @@ describe('SignalGapKpis — resilience + formatting', () => {
 
     expect(card(LABELS.total).getByText('5')).toBeInTheDocument();
     expect(card(LABELS.active).getByText('2')).toBeInTheDocument();
-    expect(card(LABELS.aging).getByText(DASH)).toBeInTheDocument();
-    expect(card(LABELS.never).getByText(DASH)).toBeInTheDocument();
+    const brief = screen.getByTestId('signal-gap-summary');
+    for (const label of [LABELS.aging, LABELS.stale, LABELS.never]) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenFieldCount('3 empty fields are hidden.');
   });
 
   it('marks NaN freshness invalid instead of reporting 0%', () => {
     renderKpis({ freshnessPct: Number.NaN });
 
-    expect(card(LABELS.freshness).getByText(DASH)).toBeInTheDocument();
-    expect(screen.getByText(LABELS.freshness).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(lastMetricStates()).toEqual(['value', 'value', 'value', 'value', 'value', 'invalid']);
+    const brief = screen.getByTestId('signal-gap-summary');
+    assertOperationalMetricUnavailable(brief, LABELS.freshness);
+    expectHiddenFieldCount('1 empty field is hidden.');
     expect(screen.queryByText('NaN%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
   });
 
   it('keeps undefined freshness missing instead of reporting 0%', () => {
     renderKpis({ freshnessPct: undefined as unknown as number });
 
-    expect(card(LABELS.freshness).getByText(DASH)).toBeInTheDocument();
-    expect(screen.getByText(LABELS.freshness).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    expect(lastMetricStates()).toEqual(['value', 'value', 'value', 'value', 'value', 'missing']);
+    const brief = screen.getByTestId('signal-gap-summary');
+    assertOperationalMetricUnavailable(brief, LABELS.freshness);
+    expectHiddenFieldCount('1 empty field is hidden.');
     expect(screen.queryByText('undefined%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0%')).not.toBeInTheDocument();
   });
 });
 

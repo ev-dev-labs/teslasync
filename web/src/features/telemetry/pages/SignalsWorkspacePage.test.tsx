@@ -22,6 +22,7 @@
  * test-setup already stubs `useSettings` and `useTimezone`.
  */
 
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -64,8 +65,20 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        let template = typeof fallback === 'string' ? fallback : key;
+        // Mirror the global mock's plural selection and interpolation so
+        // counted sentences resolve exactly as production i18next renders.
+        if (options && typeof options.count === 'number') {
+          const plural = options.count === 1 ? options.defaultValue_one : options.defaultValue_other;
+          if (typeof plural === 'string') template = plural;
+        }
+        if (options) {
+          template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
+            options[name] != null ? String(options[name]) : `{{${name}}}`);
+        }
+        return template;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -168,6 +181,30 @@ function statValue(label: string): string {
   return valueRow?.textContent?.trim() ?? '';
 }
 
+function expectDrawerGroupText(testId: string, label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId(testId);
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function expectHiddenFieldCount(testId: string, expected: string) {
+  const brief = screen.getByTestId(testId);
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   h.vehicle.vehicleId = 1;
   h.vehicle.vehicles = [VEHICLE];
@@ -221,8 +258,11 @@ describe('SignalsWorkspacePage — default historical mode', () => {
     h.diff.error = new Error('diff unavailable');
     renderPage('/signals');
     fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
-    expect(statValue('Changed signals')).toBe('—');
-    expect(statValue('Visible after filter')).toBe('—');
+    const summary = screen.getByTestId('signals-diff-summary');
+    for (const label of ['Changed signals', 'Visible after filter']) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount('signals-diff-summary', '2 empty fields are hidden.');
     expect(screen.queryByText('No changes between snapshots')).toBeNull();
     expect(screen.queryByTestId('diff-table')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
@@ -235,7 +275,8 @@ describe('SignalsWorkspacePage — default historical mode', () => {
     renderPage('/signals');
     fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
     expect(statValue('Changed signals')).toBe('1');
-    expect(screen.getByTestId('signals-diff-summary')).toHaveTextContent('Showing retained measurements');
+    expect(screen.getByTestId('signals-diff-summary')).not.toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(screen.getByTestId('signals-diff-summary'), 'Showing retained measurements');
     expect(screen.getByTestId('diff-table')).toHaveAttribute('data-rows', '1');
     expect(screen.getByTestId('compare-controls')).toBeInTheDocument();
     expect(screen.queryByText(/Failed to load data/)).toBeNull();
@@ -252,8 +293,10 @@ describe('SignalsWorkspacePage — default historical mode', () => {
     expect(statValue('Mode')).toBe('Historical');
     // Only the `signal:`-prefixed pin counts toward pinned signals.
     expect(statValue('Pinned signals')).toBe('1');
-    // Not live → live rate collapses to the em-dash placeholder.
-    expect(statValue('Live rate')).toBe('—');
+    // Not live → the live-rate tile is omitted with a counted explanation.
+    const workspace = screen.getByTestId('signals-workspace-summary');
+    assertOperationalMetricUnavailable(workspace, 'Live rate');
+    expectHiddenFieldCount('signals-workspace-summary', '1 empty field is hidden.');
 
     expect(screen.getByText('Pick signals and run a query')).toBeInTheDocument();
     // Neither the live tail nor the history table shows until the user acts.
@@ -267,16 +310,18 @@ describe('SignalsWorkspacePage — live mode', () => {
     h.live.connected = false;
     h.live.tailRate = 0;
     renderPage('/signals?signals=battery_level');
-    expect(statValue('Live rate')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByTestId('signals-workspace-summary'), 'Live rate');
+    expectHiddenFieldCount('signals-workspace-summary', '1 empty field is hidden.');
     fireEvent.click(screen.getByRole('button', { name: 'Live' }));
     const summary = screen.getByTestId('signals-workspace-summary');
     const rate = within(summary).getByText('Live rate').closest('[data-operational-metric]');
     expect(rate).toHaveAttribute('data-value-state', 'value');
     expect(rate?.querySelector('[data-operational-value]')).toHaveTextContent('0 /s');
-    expect(rate).toHaveTextContent('Last-second SSE event count · Disconnected');
+    expect(rate).not.toHaveTextContent('Last-second SSE event count · Disconnected');
+    expectDrawerGroupText('signals-workspace-summary', 'Live rate', 'Last-second SSE event count · Disconnected');
     fireEvent.click(screen.getByRole('button', { name: 'Stop live' }));
     expect(statValue('Mode')).toBe('Historical');
-    expect(statValue('Live rate')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByTestId('signals-workspace-summary'), 'Live rate');
     expect(screen.queryByTestId('live-tail')).toBeNull();
   });
 
@@ -339,7 +384,9 @@ describe('SignalsWorkspacePage — compare mode', () => {
     };
     h.pinned.data = [{ item_id: 'signal:vehicle_speed' }];
     const { container } = renderPage('/signals?signals=battery_level,vehicle_speed&a=2026-10-01T00:00:00&b=2026-10-01T01:00:00&q=battery');
-    expect(screen.getByTestId('signals-workspace-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(screen.getByTestId('signals-workspace-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    assertOperationalMetricUnavailable(screen.getByTestId('signals-workspace-summary'), 'Live rate');
+    expectHiddenFieldCount('signals-workspace-summary', '1 empty field is hidden.');
     expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
     const summary = screen.getByTestId('signals-diff-summary');
@@ -400,7 +447,11 @@ describe('SignalsWorkspacePage — compare mode', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Compare' }));
 
-    expect(statValue('Changed signals')).toBe('—');
+    const summary = screen.getByTestId('signals-diff-summary');
+    for (const label of ['Changed signals', 'Visible after filter']) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount('signals-diff-summary', '2 empty fields are hidden.');
     expect(screen.queryByTestId('diff-table')).toBeNull();
     expect(screen.getByTestId('compare-controls')).toBeInTheDocument();
   });

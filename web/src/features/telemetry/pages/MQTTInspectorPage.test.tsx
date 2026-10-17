@@ -85,6 +85,7 @@ import { camelCaseKeys } from '@/lib/resilience';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import MQTTInspectorPage from './MQTTInspectorPage';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 const mockUseMQTTStatus = useMQTTStatus as unknown as ReturnType<typeof vi.fn>;
 
@@ -176,6 +177,19 @@ function renderPage() {
   return { ui, ...result, rerenderPage: () => result.rerender(tree()) };
 }
 
+const MQTT_LABELS = ['Streaming vehicles', 'Total signals', 'Total batches', 'Signals / sec'];
+
+function expectHiddenFieldCount(summary: HTMLElement, expected: string) {
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   mockUseMQTTStatus.mockReset();
   translationFixture.messages = {};
@@ -210,8 +224,10 @@ describe('MQTTInspectorPage — connected happy path', () => {
     expect(summary).toHaveAttribute('data-operational-brief');
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(within(summary).getByText('Signals / sec').closest('[data-operational-metric]')).toHaveTextContent('Signals / sec');
-    expect(summary).toHaveTextContent('Latest broker status snapshot');
-    expect(summary).toHaveTextContent('not the throughput chart’s per-poll deltas');
+    expect(summary).not.toHaveTextContent('Latest broker status snapshot');
+    expect(summary).not.toHaveTextContent('not the throughput chart’s per-poll deltas');
+    assertOperationalBriefDisclosure(summary, 'Latest broker status snapshot');
+    assertOperationalBriefDisclosure(summary, 'not the throughput chart’s per-poll deltas', { region: 'drawer', contains: true });
     expect(container.querySelector('[data-role="metric-card"]')).toBeNull();
     expect(container.querySelector('[data-stat-strip]')).toBeNull();
     expect(screen.getAllByText('Signal throughput').length).toBeGreaterThanOrEqual(1);
@@ -262,8 +278,15 @@ describe('MQTTInspectorPage — loading state', () => {
     setQuery({ data: undefined, isLoading: true });
     renderPage();
 
-    // All four MetricCards render the em-dash placeholder while loading.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    // While loading, the brief omits all four tiles and discloses the pending snapshot in the drawer.
+    const summary = screen.getByTestId('mqtt-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(summary).toHaveTextContent('No metric values are available yet.');
+    for (const label of MQTT_LABELS) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount(summary, '4 empty fields are hidden.');
+    assertOperationalBriefDisclosure(summary, 'Loading');
 
     // No snapshot is not evidence of a disconnected broker.
     expect(screen.getByText('Unknown')).toBeInTheDocument();
@@ -280,7 +303,8 @@ describe('MQTTInspectorPage — error state', () => {
     setQuery({ data: status, error: new Error('refresh unavailable') });
     renderPage();
     const summary = screen.getByTestId('mqtt-summary');
-    expect(summary).toHaveTextContent('Showing retained measurements');
+    expect(summary).not.toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(summary, 'Showing retained measurements');
     expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
     expect(screen.getByText('12,445')).toBeInTheDocument();
     expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
@@ -318,13 +342,21 @@ describe('MQTTInspectorPage — connected but empty', () => {
   it('distinguishes absent status from an observed empty broker snapshot', () => {
     setQuery({ data: undefined });
     const { unmount } = renderPage();
-    expect(screen.getByTestId('mqtt-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    const absentSummary = screen.getByTestId('mqtt-summary');
+    expect(absentSummary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(absentSummary).toHaveTextContent('No metric values are available yet.');
+    for (const label of MQTT_LABELS) {
+      assertOperationalMetricUnavailable(absentSummary, label);
+    }
+    expectHiddenFieldCount(absentSummary, '4 empty fields are hidden.');
+    assertOperationalBriefDisclosure(absentSummary, 'Broker snapshot unavailable');
     unmount();
     setQuery({ data: makeStatus({ vehicles: [] }) });
     renderPage();
     const summary = screen.getByTestId('mqtt-summary');
     expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
     expect(summary.querySelector('[data-value-state="missing"]')).toBeNull();
+    assertOperationalBriefDisclosure(summary, 'Broker snapshot available');
   });
 
   it('renders topic + vehicle empty states without a stale badge', () => {
@@ -527,7 +559,13 @@ describe('MQTTInspectorPage — contract adoption', () => {
     for (const title of ['Signal throughput', 'Connection', 'Vehicle breakdown']) {
       expect(screen.getAllByText(title).length).toBeGreaterThanOrEqual(1);
     }
-    expect(screen.getByTestId('mqtt-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    const summary = screen.getByTestId('mqtt-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(summary).toHaveTextContent('No metric values are available yet.');
+    for (const label of MQTT_LABELS) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount(summary, '4 empty fields are hidden.');
   });
 
   it('disables fatal-source refresh during an in-flight retry', () => {
@@ -561,7 +599,7 @@ describe('MQTTInspectorPage — contract adoption', () => {
     setQuery({ data: status, fetchStatus: 'paused' });
     renderPage();
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
-    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(screen.getByTestId('mqtt-summary'), 'Showing retained measurements');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
     const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
@@ -809,8 +847,9 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
     const incomplete = { ...vehicles[1], [field]: undefined };
     setQuery({ data: makeStatus({ vehicles: [vehicles[0], incomplete] }) });
     renderPage();
-    expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
-    expect(metric(label)).toHaveTextContent('—');
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalMetricUnavailable(summary, label);
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
     expect(metric('Streaming vehicles')).toHaveAttribute('data-value-state', 'value');
     for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
     const notice = screen.getByTestId('mqtt-partial-measurements');
@@ -818,8 +857,8 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
     expect(within(notice).getByText(label)).toBeInTheDocument();
     expect(within(notice).getByText('Unknown')).toBeInTheDocument();
     for (const name of known) expect(within(notice).queryByText(name)).toBeNull();
-    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Partial data');
-    expect(screen.getByTestId('mqtt-summary')).not.toHaveTextContent('Broker snapshot available');
+    assertOperationalBriefDisclosure(summary, 'Partial data');
+    assertOperationalBriefDisclosure(summary, 'Broker snapshot available', { absent: true });
     expect(screen.getByText('Connected')).toBeInTheDocument();
     expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
@@ -850,6 +889,9 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
           if (error) request.mockRejectedValueOnce(error);
           else request.mockResolvedValue(camelCaseKeys(payload));
           await act(async () => { await query?.refetch(); });
+          // The query cache notification lands after the refetch promise
+          // resolves; flush it so the page reflects the new receipt.
+          await act(async () => {});
         },
       };
     }
@@ -873,8 +915,9 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
       const page = await mountRawStatus(raw);
       expect(page.request.mock.calls[0][0]).toBe('/telemetry');
       expect(page.request.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
-      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
-      expect(metric(label)).toHaveTextContent('—');
+      const summary = screen.getByTestId('mqtt-summary');
+      assertOperationalMetricUnavailable(summary, label);
+      expectHiddenFieldCount(summary, '1 empty field is hidden.');
       expect(metric('Streaming vehicles')).toHaveTextContent('2');
       for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
       expect(screen.getByTestId('mqtt-partial-measurements')).toHaveTextContent(label);
@@ -883,8 +926,9 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
       expect(screen.getByText('1m')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
       await page.refresh(raw, new Error('Q01 transport refresh unavailable'));
-      expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Showing retained measurements');
-      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
+      await waitFor(() => expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument());
+      assertOperationalBriefDisclosure(screen.getByTestId('mqtt-summary'), 'Showing retained measurements');
+      assertOperationalMetricUnavailable(screen.getByTestId('mqtt-summary'), label);
       for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
       expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
       expect(screen.getByText('Disconnected')).toBeInTheDocument();
@@ -895,14 +939,18 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
       { id: 'unsupported', vehicles: 'oops' },
     ])('keeps every aggregate unknown for a raw $id container and recovers observed emptiness', async ({ vehicles }) => {
       const page = await mountRawStatus({ connected: true, broker: 'fixture-broker', vehicles });
-      for (const label of ['Streaming vehicles', 'Total signals', 'Total batches', 'Signals / sec']) {
-        expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
-        expect(metric(label)).toHaveTextContent('—');
+      const summary = screen.getByTestId('mqtt-summary');
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+      expect(summary).toHaveTextContent('No metric values are available yet.');
+      for (const label of MQTT_LABELS) {
+        assertOperationalMetricUnavailable(summary, label);
       }
-      expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Partial data');
+      expectHiddenFieldCount(summary, '4 empty fields are hidden.');
+      assertOperationalBriefDisclosure(summary, 'Partial data');
       expect(screen.getByText('Connected')).toBeInTheDocument();
       expect(screen.getByText('fixture-broker')).toBeInTheDocument();
       await page.refresh({ connected: true, vehicles: [] });
+      await waitFor(() => expect(metric('Streaming vehicles')).toHaveTextContent('0'));
       for (const label of ['Streaming vehicles', 'Total signals', 'Total batches', 'Signals / sec']) {
         expect(metric(label)).toHaveAttribute('data-value-state', 'value');
         expect(metric(label)).toHaveTextContent('0');
@@ -921,13 +969,13 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
       await page.refresh(missing === 'missing count'
         ? { connected: true, vehicles: [{ vin: 'RAW-A', batch_count: 0, signals_per_second: 0 }] }
         : { connected: true });
-      expect(rows()).toEqual([['5', '—']]);
+      await waitFor(() => expect(rows()).toEqual([['5', '—']]));
       at += 5_000;
       await page.refresh(raw(20));
-      expect(rows()).toEqual([['5', '—'], ['5', '—']]);
+      await waitFor(() => expect(rows()).toEqual([['5', '—'], ['5', '—']]));
       at += 5_000;
       await page.refresh(raw(23));
-      expect(rows()).toEqual([['5', '—'], ['5', '—'], ['5', '3']]);
+      await waitFor(() => expect(rows()).toEqual([['5', '—'], ['5', '—'], ['5', '3']]));
       expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
     });
   });
@@ -942,7 +990,9 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
       expect(metric(label)).toHaveAttribute('data-value-state', 'value');
       expect(metric(label)).toHaveTextContent('0');
     }
-    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'missing');
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalMetricUnavailable(summary, 'Signals / sec');
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
     setQuery({ data: makeStatus({ vehicles: [
       { ...incomplete.vehicles![0], signalsPerSecond: 0 },
     ] }) });
@@ -950,7 +1000,7 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
     expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Signals / sec')).toHaveTextContent('0');
     expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
-    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Broker snapshot available');
+    assertOperationalBriefDisclosure(screen.getByTestId('mqtt-summary'), 'Broker snapshot available');
   });
 
   it.each([
@@ -966,8 +1016,10 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
     const { rerenderPage } = renderPage();
     setQuery({ data: status, dataUpdatedAt: at, error, fetchStatus });
     rerenderPage();
-    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Showing retained measurements');
-    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'missing');
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalBriefDisclosure(summary, 'Showing retained measurements');
+    assertOperationalMetricUnavailable(summary, 'Signals / sec');
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
     expect(metric('Total signals')).toHaveTextContent('12,445');
     expect(metric('Total batches')).toHaveTextContent('683');
     expect(screen.getByTestId('mqtt-partial-measurements')).toHaveTextContent('Signals / sec');
@@ -994,7 +1046,9 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
       setQuery({ data: snapshot(10 + index * 5), dataUpdatedAt: at + index * 5_000 });
       rerenderPage();
     }
-    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'missing');
+    const summary = screen.getByTestId('mqtt-summary');
+    assertOperationalMetricUnavailable(summary, 'Signals / sec');
+    expectHiddenFieldCount(summary, '1 empty field is hidden.');
     const history = screen.getByRole('table', { name: 'Signal throughput — data table' });
     const intervals = within(history).getAllByRole('row').slice(1).map(row =>
       within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent));
@@ -1019,11 +1073,12 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
     ] });
     setQuery({ data: status });
     renderPage();
+    const summary = screen.getByTestId('mqtt-summary');
     for (const label of ['Total signals', 'Total batches', 'Signals / sec']) {
-      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
-      expect(metric(label)).toHaveTextContent('—');
+      assertOperationalMetricUnavailable(summary, label);
       expect(within(screen.getByTestId('mqtt-partial-measurements')).getByText(label)).toBeInTheDocument();
     }
+    expectHiddenFieldCount(summary, '3 empty fields are hidden.');
     expect(metric('Streaming vehicles')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByText('Connected')).toBeInTheDocument();
   });

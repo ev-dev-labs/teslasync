@@ -26,7 +26,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import './operationalbrief-all/metricPreferencesTestSetup';
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion via <FadeIn>).
@@ -58,6 +59,12 @@ vi.mock('react-i18next', async () => {
         } else if (arg2 && typeof arg2 === 'object') {
           options = arg2 as Record<string, unknown>;
           if (typeof options.defaultValue === 'string') template = options.defaultValue;
+        }
+        // Mirror the global mock's plural selection so counted sentences use
+        // the same singular/plural defaults production i18next resolves.
+        if (options && typeof options.count === 'number') {
+          const plural = options.count === 1 ? options.defaultValue_one : options.defaultValue_other;
+          if (typeof plural === 'string') template = plural;
         }
         if (options) {
           template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
@@ -110,6 +117,30 @@ function metricValue(label: string): string {
     ?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId('signal-log-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('signal-log-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 /** ISO string `seconds` after a fixed epoch base. */
 const BASE = '2024-01-01T00:00:00.000Z';
 function plus(seconds: number): string {
@@ -119,10 +150,11 @@ function plus(seconds: number): string {
 describe('SignalLogKpiBand', () => {
   it('shows unknown result counts on unavailable history while keeping selected-signal scope known', () => {
     render(<SignalLogKpiBand summary={makeSummary({ signalsSelected: 3 })} unavailable />);
-    expect(metricValue('Total records')).toBe('—');
-    expect(metricValue('Numeric points')).toBe('—');
-    expect(metricValue('Text points')).toBe('—');
-    expect(metricValue('Boolean points')).toBe('—');
+    const brief = screen.getByTestId('signal-log-summary');
+    for (const label of ['Total records', 'Numeric points', 'Text points', 'Boolean points', 'Time span']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenFieldCount('5 empty fields are hidden.');
     expect(metricValue('Signals')).toBe('3');
     expect(screen.queryByText('0 with data')).toBeNull();
   });
@@ -153,14 +185,17 @@ describe('SignalLogKpiBand', () => {
   it('renders all six honest-zero placeholders before any query runs', () => {
     render(<SignalLogKpiBand summary={makeSummary()} />);
 
-    for (const label of LABELS) {
+    for (const label of LABELS.slice(0, 5)) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(metricValue('Total records')).toBe('0');
     expect(metricValue('Numeric points')).toBe('0');
-    expect(metricValue('Time span')).toBe('—');
+    const brief = screen.getByTestId('signal-log-summary');
+    assertOperationalMetricUnavailable(brief, 'Time span');
+    expectHiddenFieldCount('1 empty field is hidden.');
     // subtitle: "{{count}} with data" with distinctSignals = 0.
-    expect(screen.getByText('0 with data')).toBeInTheDocument();
+    expect(screen.queryByText('0 with data')).toBeNull();
+    expectDrawerGroupText('Signals', '0 with data');
   });
 
   it('formats populated counters with locale grouping and interpolates the subtitle', () => {
@@ -185,7 +220,8 @@ describe('SignalLogKpiBand', () => {
     expect(metricValue('Text points')).toBe('1,500');
     expect(metricValue('Boolean points')).toBe('1,000');
     expect(metricValue('Time span')).toBe('2h 30m');
-    expect(screen.getByText('6 with data')).toBeInTheDocument();
+    expect(screen.queryByText('6 with data')).toBeNull();
+    expectDrawerGroupText('Signals', '6 with data');
   });
 
   it('exposes the region and marks every tile icon as decorative (aria-hidden)', () => {
@@ -194,8 +230,9 @@ describe('SignalLogKpiBand', () => {
     );
 
     expect(screen.getByRole('region', { name: 'Query summary' })).toBeInTheDocument();
-    // Six lucide icons, one per tile, all hidden from the a11y tree.
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    // Five value tiles (Time span is unknown without earliest/latest); the only
+    // icon is the decorative Review-details glyph, hidden from the a11y tree.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
     expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1);
   });
 
@@ -207,9 +244,13 @@ describe('SignalLogKpiBand', () => {
       />,
     );
 
-    expect(screen.getByText('Total records')).toBeInTheDocument();
-    expect(metricValue('Total records')).toBe('—');
-    expect(metricValue('Time span')).toBe('—');
+    const brief = screen.getByTestId('signal-log-summary');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(brief).toHaveTextContent('No metric values are available yet.');
+    for (const label of LABELS) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenFieldCount('6 empty fields are hidden.');
     expect(screen.queryByText('0 with data')).toBeNull();
   });
 
@@ -246,7 +287,13 @@ describe('SignalLogKpiBand', () => {
   for (const [name, earliest, latest, expected] of spanCases) {
     it(`formats the time span for ${name}`, () => {
       render(<SignalLogKpiBand summary={makeSummary({ earliest, latest })} />);
-      expect(metricValue('Time span')).toBe(expected);
+      if (expected === '—') {
+        const brief = screen.getByTestId('signal-log-summary');
+        assertOperationalMetricUnavailable(brief, 'Time span');
+        expectHiddenFieldCount('1 empty field is hidden.');
+      } else {
+        expect(metricValue('Time span')).toBe(expected);
+      }
     });
   }
 });

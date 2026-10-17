@@ -23,9 +23,9 @@
  * OperationalBrief render for real; only preference providers are isolated.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import './operationalbrief-all/metricPreferencesTestSetup';
 
@@ -35,8 +35,20 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        let template = typeof fallback === 'string' ? fallback : key;
+        // Mirror the global mock's plural selection and interpolation so
+        // counted sentences resolve exactly as production i18next renders.
+        if (options && typeof options.count === 'number') {
+          const plural = options.count === 1 ? options.defaultValue_one : options.defaultValue_other;
+          if (typeof plural === 'string') template = plural;
+        }
+        if (options) {
+          template = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, name: string) =>
+            options[name] != null ? String(options[name]) : `{{${name}}}`);
+        }
+        return template;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -68,18 +80,44 @@ function renderBand(overrides: Partial<LiveMonitorKpiBandProps> = {}) {
   return render(<LiveMonitorKpiBand {...props} />);
 }
 
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId('live-monitor-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('live-monitor-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 it('reacts to live precision and locale changes without decimalizing counts', () => {
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
   const view = renderBand({ bufferCount: 1234, bufferMax: 2000, uniqueSignals: 1001 });
-  expect(screen.getByText('/ 2,000 · 61.70%')).toBeInTheDocument();
+  expect(screen.queryByText('/ 2,000 · 61.70%')).toBeNull();
+  expectDrawerGroupText('Buffer size', '/ 2,000 · 61.70%');
   expect(screen.getByText('1,234')).toBeInTheDocument();
   try {
     act(() => {
       setGlobalPrecision(3);
       setGlobalLocale('de-DE');
     });
-    expect(screen.getByText('/ 2.000 · 61,700%')).toBeInTheDocument();
+    expect(screen.queryByText('/ 2.000 · 61,700%')).toBeNull();
+    expectDrawerGroupText('Buffer size', '/ 2.000 · 61,700%');
     expect(screen.getByText('1.234')).toBeInTheDocument();
     expect(screen.getByText('1.001')).toBeInTheDocument();
   } finally {
@@ -125,7 +163,8 @@ describe('LiveMonitorKpiBand — layout & accessibility', () => {
     const { container } = renderBand({ connected: false, bufferCount: 123, uniqueSignals: 21 });
     const grid = container.querySelector('[data-operational-brief] [role="list"]');
     expect(grid).not.toBeNull();
-    expect(grid).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3');
+    expect(grid).toHaveClass('flex', 'flex-wrap');
+    expect(grid).toHaveAttribute('data-columns', '3');
     expectAllSixLabels();
     expect(screen.getByText('123')).toBeInTheDocument();
     expect(screen.getByText('21')).toBeInTheDocument();
@@ -139,7 +178,8 @@ describe('LiveMonitorKpiBand — connection state', () => {
   it('shows connected transport status without inventing a health glyph', () => {
     const { container } = renderBand({ connected: true });
 
-    expect(screen.getAllByText('Connected')).toHaveLength(2);
+    expect(screen.getAllByText('Connected')).toHaveLength(1);
+    assertOperationalBriefDisclosure(screen.getByTestId('live-monitor-summary'), 'Connected');
     expect(screen.queryByText('Disconnected')).toBeNull();
     // The "on" glyph is present; the "off" glyph is not.
     expect(container.querySelector('[data-operational-metric="connection"]')).toHaveAttribute('data-value-state', 'value');
@@ -180,9 +220,8 @@ describe('LiveMonitorKpiBand — value surfacing', () => {
     renderBand({ bufferCount: 50, bufferMax: 200 });
 
     // 50 / 200 = 25%.
-    expect(
-      screen.getByText(bufferSubtitle('200', '25.00%')),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(bufferSubtitle('200', '25.00%'))).toBeNull();
+    expectDrawerGroupText('Buffer size', bufferSubtitle('200', '25.00%'));
   });
 });
 
@@ -193,18 +232,19 @@ describe('LiveMonitorKpiBand — buffer fill clamping', () => {
     renderBand({ bufferCount: 500, bufferMax: 200 });
 
     expect(screen.getByText('500')).toBeInTheDocument(); // raw count preserved
-    expect(
-      screen.getByText(bufferSubtitle('200', '100.00%')),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(bufferSubtitle('200', '100.00%'))).toBeNull();
+    expectDrawerGroupText('Buffer size', bufferSubtitle('200', '100.00%'));
   });
 
   it('floors the fill at 0% for a negative count (never a negative percent)', () => {
-    renderBand({ bufferCount: -10, bufferMax: 200 });
+    const { container } = renderBand({ bufferCount: -10, bufferMax: 200 });
 
-    // The raw invalid count is retained by the bridge, never reported as a measured negative count.
-    expect(screen.getByText('Buffer size').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
+    // The raw invalid count is omitted, never reported as a measured negative count.
+    expect(container.querySelector('[data-operational-metric="buffer"]')).toBeNull();
+    const brief = screen.getByTestId('live-monitor-summary');
+    assertOperationalMetricUnavailable(brief, 'Buffer size');
+    expectHiddenFieldCount('1 empty field is hidden.');
     expect(screen.queryByText('-10')).toBeNull();
-    expect(screen.getByText(bufferSubtitle('200', '0.00%'))).toBeInTheDocument();
     // The pre-hardening "-5%" must never surface.
     expect(screen.queryByText(bufferSubtitle('200', '-5.00%'))).toBeNull();
   });
@@ -214,7 +254,8 @@ describe('LiveMonitorKpiBand — buffer fill clamping', () => {
 
     expect(screen.getByText('3')).toBeInTheDocument();
     // 3 / 1 → clamped to 100%, and the capacity reads "1", never "0".
-    expect(screen.getByText(bufferSubtitle('1', '100.00%'))).toBeInTheDocument();
+    expect(screen.queryByText(bufferSubtitle('1', '100.00%'))).toBeNull();
+    expectDrawerGroupText('Buffer size', bufferSubtitle('1', '100.00%'));
   });
 });
 
@@ -237,14 +278,19 @@ describe('LiveMonitorKpiBand — null-safety', () => {
     // the missing fields back in from its defaults and defeat the guard test.
     render(<LiveMonitorKpiBand {...partial} />);
 
-    expectAllSixLabels();
-    // rate, buffer count and unique signals each collapse to "0".
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getByText('Connection')).toBeInTheDocument();
+    expect(screen.getByText('Numeric')).toBeInTheDocument();
+    expect(screen.getByText('Categorical')).toBeInTheDocument();
+    const brief = screen.getByTestId('live-monitor-summary');
+    for (const label of ['Signals / sec', 'Buffer size', 'Unique signals']) {
+      assertOperationalMetricUnavailable(brief, label);
+    }
+    expectHiddenFieldCount('3 empty fields are hidden.');
     // Surviving fields keep their values.
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    // The fill is a finite 0%, proving the NaN guard on the division.
-    expect(screen.getByText(bufferSubtitle('100', '0.00%'))).toBeInTheDocument();
+    // The omitted buffer tile keeps its finite fill out of the DOM entirely.
+    expect(screen.queryByText(bufferSubtitle('100', '0.00%'))).toBeNull();
     expect(screen.queryByText(/NaN/)).toBeNull();
   });
 });

@@ -96,7 +96,7 @@ describe('SignalHistoryTable', () => {
     const { container } = renderTable({ rows: [row], selectedSignals: [signal] });
     expect(screen.getByText(signal)).toHaveClass('[overflow-wrap:anywhere]');
     expect(screen.getByText(value.trim())).toHaveClass('[overflow-wrap:anywhere]');
-    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Expand row/ }));
     expect(container.querySelector('pre')?.textContent).toBe(JSON.stringify(row, null, 2));
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
@@ -115,7 +115,7 @@ describe('SignalHistoryTable', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     try {
       const { container } = renderTable({ rows: [row] });
-      fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Expand row/ }));
       expect(container.querySelector('pre')?.textContent).toBe(JSON.stringify(row, null, 2));
       fireEvent.click(within(container.querySelector('[data-expanded-content="true"]') as HTMLElement).getByRole('button', { name: /Copy/i }));
       await waitFor(() => expect(writeText).toHaveBeenCalledWith(JSON.stringify(row, null, 2)));
@@ -221,7 +221,7 @@ describe('SignalHistoryTable', () => {
 
     expect(container.querySelectorAll('[data-expanded-content="true"]')).toHaveLength(0);
 
-    const expandButtons = screen.getAllByRole('button', { name: 'Expand row' });
+    const expandButtons = screen.getAllByRole('button', { name: /^Expand row/ });
     expect(expandButtons).toHaveLength(2);
 
     fireEvent.click(expandButtons[0]);
@@ -235,7 +235,7 @@ describe('SignalHistoryTable', () => {
 
   it('omits the row-expansion affordance when expandable is false', () => {
     renderTable({ expandable: false, rows: [numRow()], totalRows: 1 });
-    expect(screen.queryByRole('button', { name: 'Expand row' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Expand row/ })).toBeNull();
     // The table still renders its data.
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('vehicle_speed')).toBeInTheDocument();
@@ -355,7 +355,7 @@ describe('SignalHistoryTable', () => {
     expect(screen.queryByText('No signal samples')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Expand row/ }));
     expect(container.querySelector('pre')?.textContent).toBe(JSON.stringify(row, null, 2));
   });
 });

@@ -15,6 +15,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
@@ -110,6 +111,18 @@ function signalNames(): string[] {
   return Array.from(document.querySelectorAll('code')).map((c) => c.textContent ?? '');
 }
 
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('signal-catalog-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   h.gaps.data = sampleData();
   h.gaps.isLoading = false;
@@ -175,7 +188,12 @@ describe('SignalCatalogPanel — summary + rows', () => {
     h.gaps.error = new Error('catalog unavailable');
     renderPanel({ title: 'Catalog' });
     expect(screen.getByRole('heading', { name: 'Catalog' })).toBeInTheDocument();
-    expect(statValue('Total signals')).toBe('—');
+    const summary = screen.getByTestId('signal-catalog-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Total signals', 'Active (<30s)', 'Stale (>5min)', 'Never received']) {
+      assertOperationalMetricUnavailable(summary, label);
+    }
+    expectHiddenFieldCount('4 empty fields are hidden.');
     expect(screen.queryByText('No signal data available')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
     expect(h.gaps.refetch).toHaveBeenCalledTimes(1);

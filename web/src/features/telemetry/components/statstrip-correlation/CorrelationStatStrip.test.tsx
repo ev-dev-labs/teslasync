@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -42,6 +42,22 @@ function setup(overrides: Partial<Parameters<typeof CorrelationStatStrip>[0]> = 
     onRetryA={vi.fn()} onRetryB={vi.fn()} {...overrides} />, { wrapper: MemoryRouter });
 }
 
+function summary() {
+  return screen.getByTestId('signal-correlation-summary');
+}
+
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = summary();
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 describe('Correlation canonical summary preservation', () => {
   it.each([
     { zeroLagR: null, zeroLagReason: 'insufficient' as const },
@@ -53,11 +69,12 @@ describe('Correlation canonical summary preservation', () => {
     setGlobalPrecision(4);
     const { container } = setup({ result: { ...result, ...unavailable } });
     const tiles = [...container.querySelectorAll('[data-operational-metric]')];
-    expect(tiles[0]).toHaveTextContent('at zero lag: —');
-    expect(tiles[0]).not.toHaveTextContent('at zero lag: 0');
+    expect(tiles[0]).not.toHaveTextContent('at zero lag:');
+    expectDrawerGroupText('Peak correlation', 'at zero lag: —');
     expect(tiles[0]?.querySelector('[data-operational-value]')).toHaveTextContent('-0,8123');
-    expect(tiles[1]).toHaveTextContent('-120 s');
-    expect(tiles[1]).toHaveTextContent('Cabin temperature leads');
+    expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent('-120 s');
+    expect(tiles[1]).not.toHaveTextContent('Cabin temperature leads');
+    expectDrawerGroupText('Best lag', 'Cabin temperature leads');
   });
 
   it.each([0, 0.123456, -0.123456])('renders valid zero-lag coefficients without replacing them with unknown (%s)', zeroLagR => {
@@ -65,8 +82,8 @@ describe('Correlation canonical summary preservation', () => {
     setGlobalPrecision(4);
     const { container } = setup({ result: { ...result, zeroLagR, zeroLagReason: null } });
     const peak = container.querySelector('[data-operational-metric="peak-r"]');
-    expect(peak).toHaveTextContent(`at zero lag: ${zeroLagR === 0 ? '0' : zeroLagR > 0 ? '0,1235' : '-0,1235'}`);
-    expect(peak).not.toHaveTextContent('at zero lag: —');
+    expect(peak).not.toHaveTextContent('at zero lag:');
+    expectDrawerGroupText('Peak correlation', `at zero lag: ${zeroLagR === 0 ? '0' : zeroLagR > 0 ? '0,1235' : '-0,1235'}`);
   });
 
   it('preserves a positive fractional peak and signal A lead orientation', () => {
@@ -81,7 +98,8 @@ describe('Correlation canonical summary preservation', () => {
     expect(container.querySelector('[data-operational-metric="best-lag"]'))
       .toHaveTextContent('120 s');
     expect(container.querySelector('[data-operational-metric="best-lag"]'))
-      .toHaveTextContent('HVAC power leads');
+      .not.toHaveTextContent('HVAC power leads');
+    expectDrawerGroupText('Best lag', 'HVAC power leads');
   });
 
   it('renders the actual OperationalBrief with four evidence metrics and original overlapping-history scope', () => {
@@ -92,7 +110,8 @@ describe('Correlation canonical summary preservation', () => {
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(container.querySelectorAll('[data-stat-strip]')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
-    expect(container).toHaveTextContent('Last 24 hours requested; overlapping samples only');
+    expect(container).not.toHaveTextContent('Last 24 hours requested; overlapping samples only');
+    assertOperationalBriefDisclosure(summary(), 'Last 24 hours requested; overlapping samples only');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const details = screen.getByRole('dialog', { name: 'Correlation metrics details' });
     expect(within(details).getByText('Peak correlation')).toBeInTheDocument();
@@ -116,14 +135,18 @@ describe('Correlation canonical summary preservation', () => {
     expect(tiles.map(tile => tile.getAttribute('data-operational-metric'))).toEqual(['peak-r', 'best-lag', 'significance', 'effective-n']);
     expect(tiles.map(tile => tile.querySelector('[data-operational-value]')?.textContent))
       .toEqual(['-0,8123', '-120 s', 'Real', '42']);
-    expect(tiles[0]).toHaveTextContent('at zero lag: 0,1235');
+    expect(tiles[0]).not.toHaveTextContent('at zero lag:');
+    expectDrawerGroupText('Peak correlation', 'at zero lag: 0,1235');
     expect(tiles[0]?.querySelector('[data-operational-value]')).not.toHaveTextContent('%');
     expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent(/^-120 s$/);
-    expect(tiles[1]).toHaveTextContent('Cabin temperature leads');
-    expect(tiles[2]).toHaveTextContent('needs |r| > 0,3012');
-    expect(tiles[3]).toHaveTextContent('from 1.111 overlapping resampled pairs');
-    expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('Last 24 hours requested; overlapping samples only');
-    expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('exact request bounds are not supplied');
+    expect(tiles[1]).not.toHaveTextContent('Cabin temperature leads');
+    expectDrawerGroupText('Best lag', 'Cabin temperature leads');
+    expect(tiles[2]).not.toHaveTextContent('needs |r|');
+    expectDrawerGroupText('Significance', 'needs |r| > 0,3012');
+    expect(tiles[3]).not.toHaveTextContent('from 1.111 overlapping resampled pairs');
+    expectDrawerGroupText('Effective samples', 'from 1.111 overlapping resampled pairs');
+    assertOperationalBriefDisclosure(summary(), 'Last 24 hours requested; overlapping samples only');
+    assertOperationalBriefDisclosure(summary(), 'exact request bounds are not supplied', { region: 'drawer', contains: true });
     expect(frozen.bestR).toBe(-0.812345);
     expect(frozen.bestLagS).toBe(-120);
     expect(frozen.effectiveN).toBe(42.49);
@@ -131,16 +154,19 @@ describe('Correlation canonical summary preservation', () => {
 
   it('does not invent zero raw samples when result is null; true zeros remain valid', () => {
     const { container, rerender } = setup({ result: null });
-    expect([...container.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-value-state')))
-      .toEqual(['missing', 'missing', 'missing', 'missing']);
-    expect(container).toHaveTextContent('from — overlapping resampled pairs');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(container).toHaveTextContent('No metric values are available yet.');
+    for (const label of ['Peak correlation', 'Best lag', 'Significance', 'Effective samples']) {
+      assertOperationalMetricUnavailable(summary(), label);
+    }
     expect(container).not.toHaveTextContent('from 0 overlapping resampled pairs');
     rerender(<CorrelationStatStrip result={{ ...result, bestR: 0, zeroLagR: 0, bestLagS: 0, bestN: 0,
       effectiveN: 0, significant: false }} leadLabel="Simultaneous" loading={false} retained={false}
       errorA={null} errorB={null} onRetryA={vi.fn()} onRetryB={vi.fn()} />);
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
     expect(container).toHaveTextContent('Noise');
-    expect(container).toHaveTextContent('from 0 overlapping resampled pairs');
+    expect(container).not.toHaveTextContent('from 0 overlapping resampled pairs');
+    expectDrawerGroupText('Effective samples', 'from 0 overlapping resampled pairs');
   });
 
   it('discloses original counts only when supplied, without inferring them from grid coverage', () => {
@@ -148,14 +174,25 @@ describe('Correlation canonical summary preservation', () => {
     const { container } = setup();
     expect(container).not.toHaveTextContent('Signal A:');
     expect(container).not.toHaveTextContent('Signal B:');
+    expectDrawerGroupText('Effective samples', 'from 1,111 overlapping resampled pairs');
     cleanup();
     const supplied = setup({ result: { ...result, sourceCountA: 20, validCountA: 12,
       sourceCountB: 15, validCountB: 10 } }).container;
-    expect(supplied).toHaveTextContent('from 1,111 overlapping resampled pairs');
-    expect(supplied).toHaveTextContent('Signal A: 20 source records');
-    expect(supplied).toHaveTextContent('Signal A: 12 valid timestamp-deduplicated measurements');
-    expect(supplied).toHaveTextContent('Signal B: 15 source records');
-    expect(supplied).toHaveTextContent('Signal B: 10 valid timestamp-deduplicated measurements');
+    expect(supplied).not.toHaveTextContent('from 1,111 overlapping resampled pairs');
+    const brief = summary();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    try {
+      const group = within(details).getByRole('group', { name: 'Effective samples' });
+      expect(group).toHaveTextContent('from 1,111 overlapping resampled pairs');
+      expect(group).toHaveTextContent('Signal A: 20 source records');
+      expect(group).toHaveTextContent('Signal A: 12 valid timestamp-deduplicated measurements');
+      expect(group).toHaveTextContent('Signal B: 15 source records');
+      expect(group).toHaveTextContent('Signal B: 10 valid timestamp-deduplicated measurements');
+    } finally {
+      fireEvent.keyDown(details, { key: 'Escape' });
+    }
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it.each([undefined, Number.NaN, Number.POSITIVE_INFINITY, -1, 1.5])(
@@ -163,14 +200,16 @@ describe('Correlation canonical summary preservation', () => {
       const { container } = setup({ result: { ...result, sourceCountA: count,
         validCountA: count, sourceCountB: 0, validCountB: 0 } });
       expect(container).not.toHaveTextContent('Signal A:');
-      expect(container).toHaveTextContent('Signal B: 0 source records');
-      expect(container).toHaveTextContent('Signal B: 0 valid timestamp-deduplicated measurements');
+      expect(container).not.toHaveTextContent('Signal B:');
+      expectDrawerGroupText('Effective samples', 'Signal B: 0 source records');
+      expectDrawerGroupText('Effective samples', 'Signal B: 0 valid timestamp-deduplicated measurements');
     },
   );
 
   it.each([Number.NaN, Number.POSITIVE_INFINITY])('does not display invalid pair counts as measured zero (%s)', bestN => {
     const { container } = setup({ result: { ...result, bestN } });
-    expect(container).toHaveTextContent('from — overlapping resampled pairs');
+    expect(container).not.toHaveTextContent('from — overlapping resampled pairs');
+    expectDrawerGroupText('Effective samples', 'from — overlapping resampled pairs');
     expect(container).not.toHaveTextContent('from 0 overlapping resampled pairs');
   });
 
@@ -181,7 +220,8 @@ describe('Correlation canonical summary preservation', () => {
       errorA: new Error('A unavailable'), errorB: new Error('B unavailable'),
       onRetryA: retryA, onRetryB: retryB });
     assertOperationalBriefDisclosure(screen.getByTestId('signal-correlation-summary'), 'Retained source data', { contains: true });
-    expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('Showing retained measurements');
+    expect(screen.getByTestId('signal-correlation-summary')).not.toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(screen.getByTestId('signal-correlation-summary'), 'Showing retained measurements');
     expect(screen.getByTestId('signal-correlation-summary')).not.toHaveAttribute('aria-busy', 'true');
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
     const retries = screen.getAllByRole('button', { name: 'Retry' });
@@ -195,9 +235,13 @@ describe('Correlation canonical summary preservation', () => {
   it('keeps the canonical four tiles in initial loading without leaking computed values', () => {
     const { container } = setup({ result: null, loading: true });
     expect(screen.getByTestId('signal-correlation-summary')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('Loading sources');
-    expect([...container.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-value-state')))
-      .toEqual(['missing', 'missing', 'missing', 'missing']);
+    expect(screen.getByTestId('signal-correlation-summary')).not.toHaveTextContent('Loading sources');
+    assertOperationalBriefDisclosure(screen.getByTestId('signal-correlation-summary'), 'Loading sources');
+    const tiles = [...container.querySelectorAll('[data-operational-metric]')];
+    expect(tiles).toHaveLength(4);
+    for (const tile of tiles) {
+      expect(tile.querySelector('[aria-busy="true"]')).not.toBeNull();
+    }
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 });

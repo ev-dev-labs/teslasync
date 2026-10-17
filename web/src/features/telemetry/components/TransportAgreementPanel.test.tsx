@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { TransportAgreementResponse } from '@/api/types';
@@ -9,8 +10,16 @@ import { TransportAgreementPanel, transportAgreementWindowHours } from './Transp
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, options?: Record<string, unknown>) =>
-      fallback.replace(/{{(\w+)}}/g, (_match, name: string) => String(options?.[name] ?? '')),
+    t: (_key: string, fallback: string, options?: Record<string, unknown>) => {
+      // Mirror the global mock's plural selection so counted sentences use
+      // the same singular/plural defaults production i18next resolves.
+      let template = fallback;
+      if (options && typeof options.count === 'number') {
+        const plural = options.count === 1 ? options.defaultValue_one : options.defaultValue_other;
+        if (typeof plural === 'string') template = plural;
+      }
+      return template.replace(/{{(\w+)}}/g, (_match, name: string) => String(options?.[name] ?? ''));
+    },
   }),
 }));
 
@@ -19,6 +28,30 @@ vi.mock('@/api/hooks/useSignals', () => ({
 }));
 
 const mockUseTransportAgreement = vi.mocked(useTransportAgreement);
+
+function expectDrawerGroupText(label: string, expected: string | RegExp) {
+  const brief = screen.getByTestId('transport-agreement-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog');
+  try {
+    expect(within(details).getByRole('group', { name: label })).toHaveTextContent(expected);
+  } finally {
+    fireEvent.keyDown(details, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
+function expectHiddenFieldCount(expected: string) {
+  const brief = screen.getByTestId('transport-agreement-summary');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
 
 function response(
   overrides: Partial<TransportAgreementResponse> = {},
@@ -81,7 +114,8 @@ describe('TransportAgreementPanel', () => {
     expect(screen.getAllByText('99.50%').length).toBeGreaterThan(0);
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
-    expect(screen.getByText('Producer time only; receipt fallbacks excluded')).toBeInTheDocument();
+    expect(screen.queryByText('Producer time only; receipt fallbacks excluded')).toBeNull();
+    expectDrawerGroupText('Agreement', 'Producer time only; receipt fallbacks excluded');
   });
 
   it('does not turn missing overlap into zero percent', () => {
@@ -111,7 +145,9 @@ describe('TransportAgreementPanel', () => {
     );
 
     expect(screen.getByText('Not enough overlapping evidence')).toBeInTheDocument();
-    expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
+    const brief = screen.getByTestId('transport-agreement-summary');
+    assertOperationalMetricUnavailable(brief, 'Agreement');
+    expectHiddenFieldCount('1 empty field is hidden.');
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
   });
 
@@ -138,7 +174,8 @@ describe('TransportAgreementPanel', () => {
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
     expect(screen.getAllByText('99.50%').length).toBeGreaterThan(0);
-    expect(screen.getByText('Producer time only; receipt fallbacks excluded')).toBeInTheDocument();
+    expect(screen.queryByText('Producer time only; receipt fallbacks excluded')).toBeNull();
+    expectDrawerGroupText('Agreement', 'Producer time only; receipt fallbacks excluded');
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(mockUseTransportAgreement.mock.calls.at(-1)).toEqual([

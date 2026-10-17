@@ -104,31 +104,31 @@ interface AnalysisCase {
   Page: ComponentType;
   testId: string;
   signalLabel: string;
-  hours: number;
+  scopeText: string;
   expectedRaw: () => readonly unknown[];
 }
 const cases: readonly AnalysisCase[] = [
-  { Page: SignalTrendPage, testId: 'signal-trend-summary', signalLabel: 'Signal', hours: 168,
+  { Page: SignalTrendPage, testId: 'signal-trend-summary', signalLabel: 'Signal', scopeText: '168h requested',
     expectedRaw: () => {
       const result = summarizeSignalTrend(samples);
       return [result.slopePerDay, result.mannKendall?.significant ? 'Real' : 'Not significant', result.residualSpread, result.samples];
     } },
-  { Page: SignalChangePointsPage, testId: 'signal-change-points-summary', signalLabel: 'Signal', hours: 72,
+  { Page: SignalChangePointsPage, testId: 'signal-change-points-summary', signalLabel: 'Signal', scopeText: '168,00000h requested',
     expectedRaw: () => {
       const result = summarizeSignalChangePoints(samples);
       return [result.changePoints.length, result.biggestChange?.magnitude, result.segments.length, result.samples];
     } },
-  { Page: SignalEntropyPage, testId: 'signal-entropy-summary', signalLabel: 'Signal', hours: 48,
+  { Page: SignalEntropyPage, testId: 'signal-entropy-summary', signalLabel: 'Signal', scopeText: '48h requested',
     expectedRaw: () => {
       const result = summarizeSignalEntropy(samples);
       return [result.entropyBits, result.effectiveStates, result.dominantBinFraction * 100, result.changeRate * 100];
     } },
-  { Page: SignalDeadbandPage, testId: 'signal-deadband-summary', signalLabel: 'Numeric signal', hours: 24,
+  { Page: SignalDeadbandPage, testId: 'signal-deadband-summary', signalLabel: 'Numeric signal', scopeText: '48h requested',
     expectedRaw: () => {
       const result = analyzeSignalDeadband(samples)!;
       return [result.noiseThreshold, result.redundantEmissionRatio * 100, result.recommended.threshold, result.recommended.reduction * 100];
     } },
-  { Page: SignalMutualInformationPage, testId: 'signal-mutual-information-summary', signalLabel: 'Signal A', hours: 24,
+  { Page: SignalMutualInformationPage, testId: 'signal-mutual-information-summary', signalLabel: 'Signal A', scopeText: '24h requested',
     expectedRaw: () => {
       const result = analyzeSignalMutualInformation(samples, samples)!;
       return [result.alignedCount, result.mutualInformation, result.normalizedMutualInformation * 100, result.significant ? 'Detected' : 'Null-like'];
@@ -151,9 +151,9 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
     const call = vi.mocked(useOperationalMetrics).mock.calls
       .map(args => args[0]).reverse().find(metrics => metrics.length === 4 && metrics[0]?.rawValue === expected[0]);
     expect(call?.map(metric => metric.rawValue)).toEqual(expected);
-    expect(brief).toHaveTextContent(`${testCase.hours}h requested`);
-    expect(brief).toHaveTextContent('not guaranteed full-window coverage');
-    expect(brief).toHaveTextContent(`NumericSignal source bounds: ${samples[0]!.ts} → ${samples.at(-1)!.ts}`);
+    expect(brief).not.toHaveTextContent(testCase.scopeText);
+    expect(brief).not.toHaveTextContent('not guaranteed full-window coverage');
+    expect(brief).not.toHaveTextContent(`NumericSignal source bounds: ${samples[0]!.ts} → ${samples.at(-1)!.ts}`);
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(container.querySelectorAll('[data-role="metric-card"]')).toHaveLength(0);
     const values = [...brief.querySelectorAll('[data-operational-value]')];
@@ -161,19 +161,30 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
       expect(values[0]).toHaveTextContent('-');
       expect(values[0]).toHaveTextContent('/day');
       expect(values[0]).toHaveTextContent(',');
-      expect(brief).toHaveTextContent('/hour');
-      expect(brief).toHaveTextContent('tau');
+      expect(brief).not.toHaveTextContent('/hour');
+      expect(brief).not.toHaveTextContent('tau');
     }
     if (testCase.Page === SignalEntropyPage) expect(values[0]).toHaveTextContent('bits');
     if (testCase.Page === SignalMutualInformationPage) {
-      expect(brief).toHaveTextContent('robust cadence');
-      expect(brief).toHaveTextContent('95% null threshold');
+      expect(brief).not.toHaveTextContent('robust cadence');
+      expect(brief).not.toHaveTextContent('95% null threshold');
     }
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     for (const metric of call ?? []) expect(within(drawer).getByText(metric.label!)).toBeInTheDocument();
     expect(drawer).toHaveTextContent(testCase.Page === SignalMutualInformationPage
       ? 'Two independently queried signal histories' : 'Selected signal history');
+    expect(drawer).toHaveTextContent(testCase.scopeText);
+    expect(drawer).toHaveTextContent('not guaranteed full-window coverage');
+    expect(drawer).toHaveTextContent(`NumericSignal source bounds: ${samples[0]!.ts} → ${samples.at(-1)!.ts}`);
+    if (testCase.Page === SignalTrendPage) {
+      expect(drawer).toHaveTextContent('/hour');
+      expect(drawer).toHaveTextContent('tau');
+    }
+    if (testCase.Page === SignalMutualInformationPage) {
+      expect(drawer).toHaveTextContent('robust cadence');
+      expect(drawer).toHaveTextContent('95% null threshold');
+    }
     expect(drawer).toHaveTextContent(samples[0]!.ts);
     expect(samples[1]!.value).toBe(50 - 0.1234567);
   });
@@ -204,7 +215,8 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
     assertOperationalBriefDisclosure(brief, 'Retained source data', { contains: true });
     expect(brief).not.toHaveAttribute('aria-busy', 'true');
     expect([...brief.querySelectorAll('[data-operational-value]')].map(value => value.textContent)).toEqual(before);
-    expect(brief).toHaveTextContent(`${samples[0]!.ts} → ${samples.at(-1)!.ts}`);
+    expect(brief).not.toHaveTextContent(`${samples[0]!.ts} → ${samples.at(-1)!.ts}`);
+    assertOperationalBriefDisclosure(brief, `${samples[0]!.ts} → ${samples.at(-1)!.ts}`, { contains: true });
     expect(screen.getByRole('combobox', { name: testCase.signalLabel })).toBeEnabled();
     expect([...view.container.querySelectorAll('[data-chart-state="ready"]')]).toEqual(charts);
   });

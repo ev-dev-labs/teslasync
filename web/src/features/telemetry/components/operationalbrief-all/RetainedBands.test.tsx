@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -13,7 +13,13 @@ import { TransportAgreementMetrics } from '../TransportAgreementMetrics';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
   t: (key: string, fallback?: unknown, variables?: Record<string, unknown>) => {
-    const text = typeof fallback === 'string' ? fallback : key;
+    // Mirror the global mock's plural selection so counted sentences use
+    // the same singular/plural defaults production i18next resolves.
+    let text = typeof fallback === 'string' ? fallback : key;
+    if (variables && typeof variables.count === 'number') {
+      const plural = variables.count === 1 ? variables.defaultValue_one : variables.defaultValue_other;
+      if (typeof plural === 'string') text = plural;
+    }
     return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(variables?.[name] ?? `{{${name}}}`));
   },
   i18n: { language: 'en' },
@@ -26,6 +32,18 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 function review(testId: string) {
   fireEvent.click(within(screen.getByTestId(testId)).getByRole('button', { name: 'Review details' }));
   return screen.getByRole('dialog');
+}
+
+function expectHiddenFieldCount(testId: string, expected: string) {
+  const brief = screen.getByTestId(testId);
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const drawer = screen.getByRole('dialog');
+  try {
+    expect(within(drawer).getByText(expected)).toBeInTheDocument();
+  } finally {
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+  }
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 describe('Retained telemetry bands and actual Review drawer', () => {
@@ -50,7 +68,8 @@ describe('Retained telemetry bands and actual Review drawer', () => {
     ]} rate={0.1234567} bufferMax={500} onPauseToggle={pause} onClear={clear} /></MemoryRouter>);
     fireEvent.change(screen.getByLabelText('Filter signals'), { target: { value: 'BATTERY' } });
     const brief = screen.getByTestId('live-tail-summary');
-    expect(brief).toHaveTextContent('Tail paused');
+    expect(brief).not.toHaveTextContent('Tail paused');
+    assertOperationalBriefDisclosure(brief, 'Tail paused');
     expect(brief.querySelector('[data-operational-metric="rate"] [data-operational-value]')).toHaveTextContent('0.1234567');
     expect(brief.querySelector('[data-operational-metric="filtered"] [data-operational-value]')).toHaveTextContent('1');
     expect(screen.getByText('80.123456')).toBeInTheDocument();
@@ -73,7 +92,8 @@ describe('Retained telemetry bands and actual Review drawer', () => {
     const brief = screen.getByTestId('signal-log-summary');
     expect(brief).not.toHaveAttribute('aria-busy', 'true');
     assertOperationalBriefDisclosure(brief, 'Retained source data', { contains: true });
-    expect(brief).toHaveTextContent('2026-01-05T00:00:00Z');
+    expect(brief).not.toHaveTextContent('2026-01-05T00:00:00Z');
+    assertOperationalBriefDisclosure(brief, '2026-01-05T00:00:00Z', { contains: true });
     expect(vi.mocked(useOperationalMetrics).mock.lastCall?.[0].map(metric => metric.rawValue))
       .toEqual([1250, 3, 1000, 200, 50, 5400]);
     const drawer = review('signal-log-summary');
@@ -110,15 +130,21 @@ describe('Retained telemetry bands and actual Review drawer', () => {
     expect(vi.mocked(useOperationalMetrics).mock.lastCall?.[0].map(metric => metric.rawValue))
       .toEqual([null, 0, 0, 5]);
     const brief = screen.getByTestId('transport-agreement-summary');
-    expect(brief.querySelector('[data-operational-metric="agreement"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(brief.querySelector('[data-operational-metric="agreement"]')).toBeNull();
+    assertOperationalMetricUnavailable(brief, 'Agreement');
+    expectHiddenFieldCount('transport-agreement-summary', '1 empty field is hidden.');
     expect(brief.querySelector('[data-operational-metric="pairs"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief).toHaveTextContent('Audit generated: 2026-01-02T00:01:00Z');
+    expect(brief).not.toHaveTextContent('Audit generated: 2026-01-02T00:01:00Z');
     expect(screen.getByText('Partial evidence window')).toBeInTheDocument();
     expect(screen.getByText('Excluded malformed typed rows: 1.')).toBeInTheDocument();
     const drawer = review('transport-agreement-summary');
-    expect(drawer).toHaveTextContent('N/A');
+    expect(drawer).toHaveTextContent('Audit generated: 2026-01-02T00:01:00Z');
+    expect(drawer).toHaveTextContent('1 empty field is hidden.');
     expect(drawer).toHaveTextContent('Within 2 seconds');
-    expect(drawer).toHaveTextContent('Producer time only; receipt fallbacks excluded');
+    // The unknown Agreement tile withholds its description with it; producer
+    // time stays disclosed through the measured evidence groups instead.
+    expect(drawer).not.toHaveTextContent('Producer time only; receipt fallbacks excluded');
+    expect(drawer).toHaveTextContent('bounded producer-time evidence window');
     expect(drawer).toHaveTextContent('do not prove full-window agreement');
     expect(evidence.agreement_pct).toBeNull();
     expect(evidence.from).toBe('2026-01-01T00:00:00Z');
