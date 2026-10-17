@@ -6,6 +6,7 @@ import { deriveDataState } from '@/api/dataState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { FleetKpis } from './FleetKpis';
 
 vi.mock('react-i18next', () => ({
@@ -106,7 +107,7 @@ describe('FleetKpis real OperationalBrief and raw metric bridge', () => {
     expect(result.current[3]).toMatchObject({ valueState: 'invalid', value: '—' });
   });
 
-  it('preserves all original count operands, percent precision and independent source context', () => {
+  it('preserves all original count operands, percent precision and independent source context', async () => {
     const input = props();
     const original = JSON.stringify(input);
     renderSummary(input);
@@ -117,16 +118,20 @@ describe('FleetKpis real OperationalBrief and raw metric bridge', () => {
     for (const key of ['reservations', 'assignments', 'work-orders']) {
       expect(metric(key)).toHaveAttribute('data-value-state', 'value');
       expect(metric(key).querySelector('[data-operational-value]')).toHaveTextContent('1');
-      expect(metric(key)).toHaveTextContent('1 loaded of 1 source records; offset 0, limit 100');
-      expect(metric(key)).toHaveTextContent('Operational lists are not date-filtered.');
     }
-    expect(metric('assignments')).toHaveTextContent('not a count of assignments active at this instant');
     expect(metric('forecast').querySelector('[data-operational-value]')).toHaveTextContent('20.3%');
-    expect(metric('forecast')).toHaveTextContent('14-day fleet average');
-    expect(metric('forecast')).toHaveTextContent(formatDateTime(input.forecastSource?.from));
-    expect(metric('forecast')).toHaveTextContent(formatDateTime(input.forecastSource?.to));
-    expect(metric('forecast')).toHaveTextContent('1 returned vehicle-day points');
-    expect(brief).toHaveTextContent('Fleet-wide · Loaded operational records');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Operational record summary details' });
+    expect(drawer).toHaveTextContent('1 loaded of 1 source records; offset 0, limit 100');
+    expect(drawer).toHaveTextContent('Operational lists are not date-filtered.');
+    expect(drawer).toHaveTextContent('not a count of assignments active at this instant');
+    expect(drawer).toHaveTextContent('14-day fleet average');
+    expect(drawer).toHaveTextContent(formatDateTime(input.forecastSource?.from));
+    expect(drawer).toHaveTextContent(formatDateTime(input.forecastSource?.to));
+    expect(drawer).toHaveTextContent('1 returned vehicle-day points');
+    expect(drawer).toHaveTextContent('Fleet-wide · Loaded operational records');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(JSON.stringify(input)).toBe(original);
   });
 
@@ -167,13 +172,13 @@ describe('FleetKpis real OperationalBrief and raw metric bridge', () => {
       workOrders: { ...listCoverage, total: 0 },
     };
     renderSummary(input);
+    const brief = screen.getByTestId('fleet-operations-summary');
     for (const key of ['reservations', 'assignments', 'work-orders']) {
       expect(metric(key)).toHaveAttribute('data-value-state', 'value');
       expect(metric(key).querySelector('[data-operational-value]')).toHaveTextContent('0');
     }
-    expect(metric('forecast')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('forecast').querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(screen.getByTestId('fleet-operations-summary')).toHaveTextContent('Partial source coverage');
+    assertOperationalMetricUnavailable(brief, 'Forecast utilization');
+    assertOperationalBriefDisclosure(brief, 'Partial source coverage');
   });
 
   it('does not turn an unavailable reservation source into zero or blank independent sources', () => {
@@ -183,14 +188,14 @@ describe('FleetKpis real OperationalBrief and raw metric bridge', () => {
     input.sources.reservations = deriveDataState({ error: new Error('Reservations unavailable') });
     input.coverage.reservations = undefined;
     renderSummary(input);
-    expect(metric('reservations')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('reservations')).toHaveTextContent('Source unavailable');
-    expect(metric('reservations')).toHaveTextContent('List coverage unavailable');
+    const brief = screen.getByTestId('fleet-operations-summary');
+    assertOperationalMetricUnavailable(brief, 'Active reservations');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
     expect(metric('assignments')).toHaveAttribute('data-value-state', 'value');
     expect(metric('forecast').querySelector('[data-operational-value]')).toHaveTextContent('20.3%');
   });
 
-  it('retains measured values and identifies paused and failed-refresh snapshots', () => {
+  it('retains measured values and identifies paused and failed-refresh snapshots', async () => {
     const input = props();
     input.sources.assignments = deriveDataState({
       data: {}, dataUpdatedAt: receivedAt, error: new Error('Refresh failed'),
@@ -199,20 +204,30 @@ describe('FleetKpis real OperationalBrief and raw metric bridge', () => {
       data: {}, dataUpdatedAt: receivedAt, fetchStatus: 'paused',
     });
     renderSummary(input);
+    const brief = screen.getByTestId('fleet-operations-summary');
     expect(metric('assignments').querySelector('[data-operational-value]')).toHaveTextContent('1');
-    expect(metric('assignments')).toHaveTextContent('Retained source data');
-    expect(metric('assignments')).toHaveTextContent(formatDateTime(new Date(receivedAt)));
-    expect(metric('forecast')).toHaveTextContent('Refresh paused');
     expect(metric('forecast').querySelector('[data-operational-value]')).toHaveTextContent('20.3%');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Operational record summary details' });
+    expect(drawer).toHaveTextContent('Retained source data');
+    expect(drawer).toHaveTextContent(formatDateTime(new Date(receivedAt)));
+    expect(drawer).toHaveTextContent('Refresh paused');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('explicitly distinguishes partial loaded records from source-wide totals', () => {
+  it('explicitly distinguishes partial loaded records from source-wide totals', async () => {
     const input = props();
     input.coverage.reservations = { total: 101, limit: 100, offset: 100 };
     renderSummary(input);
+    const brief = screen.getByTestId('fleet-operations-summary');
     expect(metric('reservations').querySelector('[data-operational-value]')).toHaveTextContent('1');
-    expect(metric('reservations')).toHaveTextContent('1 loaded of 101 source records; offset 100, limit 100');
-    expect(screen.getByTestId('fleet-operations-summary')).toHaveTextContent('Partial source coverage');
+    assertOperationalBriefDisclosure(brief, 'Partial source coverage');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Operational record summary details' });
+    expect(drawer).toHaveTextContent('1 loaded of 101 source records; offset 100, limit 100');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('uses a busy loading root only before any source measurements are available', () => {
@@ -231,18 +246,23 @@ describe('FleetKpis real OperationalBrief and raw metric bridge', () => {
     input.sources.assignments = loaded();
     view.rerender(<MemoryRouter><FleetKpis {...input} /></MemoryRouter>);
     expect(metric('assignments').querySelector('[data-operational-value]')).toHaveTextContent('1');
-    expect(metric('reservations')).toHaveAttribute('data-value-state', 'missing');
-    expect(brief).toHaveTextContent('Refreshing source data');
+    const settled = screen.getByTestId('fleet-operations-summary');
+    assertOperationalMetricUnavailable(settled, 'Active reservations');
+    assertOperationalBriefDisclosure(settled, 'Refreshing source data');
   });
 
   it('keeps a non-finite source forecast invalid instead of fabricating utilization or health', () => {
     const input = props();
     input.forecast = [{ ...input.forecast[0]!, expected_utilization_pct: Number.NaN }];
     renderSummary(input);
-    expect(metric('forecast')).toHaveAttribute('data-value-state', 'invalid');
-    expect(metric('forecast').querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(metric('forecast')).toHaveTextContent('Expected a finite numeric measurement');
-    expect(screen.getByTestId('fleet-operations-summary')).toHaveTextContent('Partial source coverage');
+    const brief = screen.getByTestId('fleet-operations-summary');
+    assertOperationalMetricUnavailable(brief, 'Forecast utilization');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+    const { result } = renderHook(() => useOperationalMetrics([
+      { metricId: 'percent', occurrenceId: 'forecast', rawValue: Number.NaN, label: 'Forecast utilization' },
+    ]));
+    expect(result.current[0]).toMatchObject({ valueState: 'invalid', value: '—' });
+    assertOperationalBriefDisclosure(brief, 'Partial source coverage');
     expect(screen.queryByText('On track')).not.toBeInTheDocument();
   });
 

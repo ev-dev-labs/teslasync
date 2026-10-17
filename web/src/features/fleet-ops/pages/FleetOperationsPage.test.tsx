@@ -428,7 +428,7 @@ describe('FleetOperationsPage', () => {
     sectionState.sources.workOrders = { empty: true };
     rerenderPage();
     expect(within(card).getAllByText('0')).toHaveLength(2);
-    expect(within(card).getByText('Maintenance cost: —')).toBeInTheDocument();
+    expect(within(card).getByText(/Maintenance cost/)).toHaveTextContent('Maintenance cost: — · Work orders: 0/0');
   });
 
   it('renders authoritative zero forecast and maintenance values without marking them empty', () => {
@@ -440,7 +440,7 @@ describe('FleetOperationsPage', () => {
     const table = within(forecast).getByRole('table', { hidden: true });
     const rows = within(table).getAllByRole('row', { hidden: true });
     expect(rows[1]).toHaveTextContent('0');
-    expect(within(sectionCard('Cost-center allocation')).getByText('Maintenance cost: $0.00')).toBeInTheDocument();
+    expect(within(sectionCard('Cost-center allocation')).getByText(/Maintenance cost/)).toHaveTextContent('Maintenance cost: $0.00 · Work orders: 1/1');
     expect(screen.getByTestId('fleet-operations-summary').querySelector('[data-operational-metric="forecast"]'))
       .toHaveAttribute('data-value-state', 'value');
   });
@@ -477,7 +477,7 @@ describe('FleetOperationsPage', () => {
     expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New reservation' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeEnabled();
-    expect(screen.getByTestId('fleet-operations-summary')).toHaveTextContent('Fleet-wide');
+    assertOperationalBriefDisclosure(screen.getByTestId('fleet-operations-summary'), 'Fleet-wide · Loaded operational records');
     expect(mutate).not.toHaveBeenCalled();
   });
 
@@ -569,9 +569,10 @@ describe('FleetOperationsPage', () => {
     expect(forecastMetric).toHaveAttribute('data-value-state', 'value');
     expect(forecastMetric?.querySelector('[data-operational-value]')).toHaveTextContent('20');
     fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
-    for (const action of ['Save as PNG', 'Save as SVG', 'Copy image to clipboard']) {
+    for (const action of ['Save as PNG', 'Copy image to clipboard']) {
       expect(screen.getByRole('menuitem', { name: action })).toBeEnabled();
     }
+    expect(screen.queryByRole('menuitem', { name: 'Save as SVG' })).not.toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeInTheDocument();
     expect(mutate).not.toHaveBeenCalled();
@@ -588,19 +589,19 @@ describe('FleetOperationsPage', () => {
     for (const column of ['Reference', 'Ends', 'Reservation', 'Max power']) {
       expect(screen.queryByRole('button', { name: `${column} filter` })).not.toBeInTheDocument();
     }
-    expect(screen.getByText('Fleet drivers')).toBeInTheDocument();
-    expect(screen.getByText('Charging policy matrix')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet drivers' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging policy matrix' })).toBeInTheDocument();
   });
 
   it('renders every operational panel and opens the reservation workflow', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Fleet operations' })).toBeInTheDocument();
-    expect(screen.getByText('Reservation calendar')).toBeInTheDocument();
-    expect(screen.getByText('Fleet drivers')).toBeInTheDocument();
-    expect(screen.getByText('Assignment roster')).toBeInTheDocument();
-    expect(screen.getByText('Cost-center allocation')).toBeInTheDocument();
-    expect(screen.getByText('Charging policy matrix')).toBeInTheDocument();
-    expect(screen.getByText('Maintenance work-order board')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Reservation calendar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet drivers' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Assignment roster' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cost-center allocation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging policy matrix' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Maintenance work-order board' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Utilization forecast' })).toBeInTheDocument();
     expect(screen.getAllByText('Pool Y').length).toBeGreaterThan(0);
     const reservation = screen.getByRole('button', { name: 'New reservation' });
@@ -616,10 +617,10 @@ describe('FleetOperationsPage', () => {
     renderPage();
     const brief = screen.getByTestId('fleet-operations-summary');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief).toHaveTextContent('Fleet-wide · Loaded operational records');
-    expect(brief).toHaveTextContent('1 loaded of 1 source records; offset 0, limit 100');
+    assertOperationalBriefDisclosure(brief, 'Fleet-wide · Loaded operational records');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = await screen.findByRole('dialog', { name: 'Operational record summary details' });
+    expect(drawer).toHaveTextContent('1 loaded of 1 source records; offset 0, limit 100');
     expect(drawer).toHaveTextContent('Requested or confirmed reservations in the loaded records.');
     expect(drawer).toHaveTextContent('not a count of assignments active at this instant');
     expect(drawer).toHaveTextContent('Forecast limitations: Moderate history.');

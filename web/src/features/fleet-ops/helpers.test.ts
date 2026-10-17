@@ -23,6 +23,25 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicle: { timezone: 'Asia/Tokyo' } }),
 }));
 
+// The global setup mock of `@/lib/timezone` drops the vehicle tz ("no
+// vehicle is selected in bare renders"), which makes vehicle-mode dates
+// untestable. This file selects a vehicle with a timezone, so override with
+// a faithful resolution (identical whenever the mock vehicle has no tz).
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  const { useSettings } = await import('@/hooks/useSettings');
+  const { useSelectedVehicle } = await import('@/hooks/useSelectedVehicle');
+  return {
+    ...actual,
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') => {
+      const settings = (useSettings() as { settings?: { timezone_user?: string | null } } | undefined)?.settings;
+      const { vehicle } = useSelectedVehicle() as { vehicle?: { timezone?: string | null } | null };
+      const userTz = settings?.timezone_user?.trim() ? settings.timezone_user : 'UTC';
+      return actual.resolveTimezone(mode, vehicle?.timezone ?? undefined, userTz);
+    },
+  };
+});
+
 afterEach(() => {
   setGlobalLocale('en-US');
   setGlobalPrecision(2);

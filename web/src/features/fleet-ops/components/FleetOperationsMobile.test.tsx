@@ -39,19 +39,19 @@ const callbacks = {
 };
 const common = { ...callbacks, loading: false, error: null, enableValueFilters: true };
 const cases = [
-  { name: 'drivers', id: 'fleet-ops:drivers', item: driver,
+  { name: 'drivers', id: 'fleet-ops:drivers', table: 'Fleet drivers', item: driver,
     element: <DriverRoster {...common} items={[driver]} />,
     fields: ['Driver', 'Reference', 'Status', 'Guardrails', 'Actions'],
     value: '0% · 22:00–06:00', edit: 'Edit Fleet driver', remove: 'Delete Fleet driver' },
-  { name: 'assignments', id: 'fleet-ops:assignments', item: assignment,
+  { name: 'assignments', id: 'fleet-ops:assignments', table: 'Assignment roster', item: assignment,
     element: <AssignmentRoster {...common} items={[assignment]} />,
     fields: ['Driver', 'Vehicle', 'Starts', 'Ends', 'Actions'],
     value: 'Ongoing', edit: 'Edit assignment for Fleet driver', remove: 'Delete assignment for Fleet driver' },
-  { name: 'reservations', id: 'fleet-ops:reservations', item: reservation,
+  { name: 'reservations', id: 'fleet-ops:reservations', table: 'Reservation calendar', item: reservation,
     element: <ReservationPanel {...common} items={[reservation]} />,
     fields: ['Reservation', 'Vehicle', 'Driver', 'Period', 'Status', 'Actions'],
     value: 'Confirmed', edit: 'Edit Depot run', remove: 'Delete Depot run' },
-  { name: 'policies', id: 'fleet-ops:charging-policies', item: policy,
+  { name: 'policies', id: 'fleet-ops:charging-policies', table: 'Charging policy matrix', item: policy,
     element: <ChargingPolicyMatrix {...common} items={[policy]} />,
     fields: ['Vehicle', 'Policy', 'Target SoC', 'Max power', 'Allowed windows', 'State', 'Actions'],
     value: 'Mon 00:00–06:00', edit: 'Edit Depot nights', remove: 'Delete Depot nights' },
@@ -84,7 +84,7 @@ describe.each(['light', 'dark'])('fleet operations mobile integration (%s)', (th
     document.documentElement.setAttribute('data-mode', theme);
     const user = userEvent.setup();
     const view = render(entry.element);
-    expect(screen.getByRole('table', { name: entry.id })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: entry.table })).toBeInTheDocument();
     resize(375);
     const mobile = view.container.querySelector<HTMLElement>('[data-mobile-table]');
     expect(mobile).not.toBeNull();
@@ -113,12 +113,12 @@ describe.each(['light', 'dark'])('fleet operations mobile integration (%s)', (th
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(quickView).toHaveFocus();
-    await user.click(scope.getByRole('button', { name: 'Export list' }));
+    await user.click(screen.getByRole('button', { name: 'Export list' }));
     await user.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
     await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
     expect(vi.mocked(downloadJSON).mock.calls[0]?.[1]).toHaveLength(1);
     resize(1440);
-    const table = screen.getByRole('table', { name: entry.id });
+    const table = screen.getByRole('table', { name: entry.table });
     for (const field of entry.fields) expect(within(table).getByRole('columnheader', { name: new RegExp(field) })).toBeInTheDocument();
     expect(view.container.querySelector('[data-mobile-table]')).not.toBeInTheDocument();
   });

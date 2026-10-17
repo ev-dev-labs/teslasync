@@ -85,7 +85,6 @@ describe('actual fleet forecast complete data and existing export actions', () =
 
     for (const [label, handler] of [
       ['Save as PNG', capture.png],
-      ['Save as SVG', capture.svg],
       ['Copy image to clipboard', capture.copy],
     ] as const) {
       fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
@@ -94,6 +93,11 @@ describe('actual fleet forecast complete data and existing export actions', () =
       await waitFor(() => expect(screen.getByRole('button', { name: 'Export chart' })).toBeEnabled());
       expect(within(table).getAllByRole('row', { hidden: true })).toHaveLength(15);
     }
+    fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+    expect(screen.getByRole('menuitem', { name: 'Save as PNG' })).toBeEnabled();
+    expect(screen.queryByRole('menuitem', { name: 'Save as SVG' })).not.toBeInTheDocument();
+    expect(capture.svg).not.toHaveBeenCalled();
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(JSON.stringify(forecast)).toBe(original);
   });
 });
