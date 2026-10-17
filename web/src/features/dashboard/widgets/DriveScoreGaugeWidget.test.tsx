@@ -63,6 +63,7 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 }));
 
 import DriveScoreGaugeWidget, { scoreColor } from './DriveScoreGaugeWidget';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { useDriveScore } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { DriveScore } from '@/types/driving';
@@ -142,10 +143,12 @@ it('keeps three real weekly score operands and their drive population alongside 
   mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ efficiency: 0, smoothness: undefined }) }));
   const { container } = renderWidget(TALL);
   const brief = screen.getByTestId('dashboard-drive-score-factors-brief');
-  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
-  expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+  // The missing smoothness reading is omitted from the face (no missing tile)
+  // and explained in the drawer; the measured zero stays numeric.
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
+  assertOperationalMetricUnavailable(brief, 'Smoothness');
   expect(brief).toHaveTextContent('0.00');
-  expect(brief).toHaveTextContent('weekly scoring response for 12 drives');
+  assertOperationalBriefDisclosure(brief, 'weekly scoring response for 12 drives', { contains: true });
   expect(container.querySelector('[role="meter"]')).not.toBeNull();
   expect(screen.getAllByText('Efficiency')).toHaveLength(2);
 });
@@ -342,7 +345,9 @@ describe('DriveScoreGaugeWidget refresh', () => {
     expect(screen.getByText('87.00')).toBeInTheDocument();
     expect(screen.getAllByText('Efficiency')).toHaveLength(2);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    // The shell hides the warning's own retry when the header freshness dot
+    // offers one; the working retry is the header control.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -350,7 +355,12 @@ describe('DriveScoreGaugeWidget refresh', () => {
     mockUseDriveScore.mockReturnValue(qr({ data: makeScore({ overall: 0, efficiency: undefined, smoothness: 0 }) }));
     renderWidget(STANDARD);
     expect(screen.getAllByText('0.00')).toHaveLength(2);
-    expect(screen.getByText('—')).toBeInTheDocument();
+    // The missing efficiency reading is omitted from the face (no em-dash
+    // tile) and explained in the drawer instead of invented as zero.
+    assertOperationalMetricUnavailable(
+      screen.getByTestId('dashboard-drive-score-factors-brief'),
+      'Efficiency',
+    );
     expect(screen.queryByText('No score yet')).not.toBeInTheDocument();
   });
 

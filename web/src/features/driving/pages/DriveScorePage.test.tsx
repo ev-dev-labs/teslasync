@@ -38,6 +38,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ToastProvider } from '@/components/feedback/Toast';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import type { Drive } from '@/types/driving';
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
@@ -602,8 +603,14 @@ describe('DriveScorePage', () => {
     expect(screen.queryByText(/loading is deferred/)).not.toBeInTheDocument();
     expect(screen.queryByRole('status', { name: 'Loading drive' })).not.toBeInTheDocument();
 
-    // The KPI band still renders its labels (never hidden), and no insight leaks.
-    expect(screen.getByText('Avg Score')).toBeInTheDocument();
+    // The KPI band keeps its measured zero drive count on the face; the three
+    // unknown metrics are omitted with a counted drawer explanation, and no
+    // insight leaks.
+    const kpis = screen.getByRole('region', { name: 'Key metrics' });
+    expect(within(kpis).getByText('Total Drives')).toBeInTheDocument();
+    for (const label of ['Avg Score', 'Best Score', 'Avg Efficiency']) {
+      assertOperationalMetricUnavailable(kpis, label);
+    }
     expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Local heuristic: low recorded energy per distance contributes to the efficiency score.'),
@@ -783,8 +790,13 @@ describe('DriveScorePage', () => {
     h.drives = makeQuery({ data: [] });
     h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
     renderPage();
-    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
-    expect(kpis.getAllByText('—')).toHaveLength(3);
+    const kpis = screen.getByRole('region', { name: 'Key metrics' });
+    // Measured zero drive count stays on the face; unknown locals are omitted
+    // (never zeroed) with a counted drawer explanation.
+    expect(within(kpis).getByText('Total Drives')).toBeInTheDocument();
+    for (const label of ['Avg Score', 'Best Score', 'Avg Efficiency']) {
+      assertOperationalMetricUnavailable(kpis, label);
+    }
     expect(screen.getByRole('meter', { name: 'Efficiency' })).toHaveAttribute('aria-valuenow', '34');
     expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
   });
@@ -793,8 +805,14 @@ describe('DriveScorePage', () => {
     h.drives = makeQuery({ data: null });
     h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
     renderPage();
-    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
-    expect(kpis.getAllByText('—')).toHaveLength(4);
+    const kpis = screen.getByRole('region', { name: 'Key metrics' });
+    // All-unknown band: explanatory face state with label chips, no invented
+    // zeros, and a counted drawer explanation per missing metric.
+    expect(within(kpis).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Avg Score', 'Best Score', 'Total Drives', 'Avg Efficiency']) {
+      expect(within(kpis).getByText(label)).toBeInTheDocument();
+      assertOperationalMetricUnavailable(kpis, label);
+    }
     expect(screen.getByText('— drives in period')).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '88');
   });

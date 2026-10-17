@@ -40,6 +40,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 import { inputPreferences } from '@/test/inputPreferences';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 // jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
@@ -141,8 +142,9 @@ it('keeps measured zero fleet consumption separate from the unavailable derived 
   const brief = screen.getByTestId('dashboard-drive-consumption-brief');
   expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
   expect(brief).toHaveTextContent('0.00 Wh/km');
-  expect(brief).toHaveTextContent('Fleet-wide');
-  expect(brief).toHaveTextContent('requested seven-day analytics window');
+  // Scope copy moved off the face into the drawer header.
+  assertOperationalBriefDisclosure(brief, 'Fleet-wide', { contains: true });
+  assertOperationalBriefDisclosure(brief, 'requested seven-day analytics window', { contains: true });
   expect(screen.getByText('No drive score yet')).toBeInTheDocument();
 });
 
