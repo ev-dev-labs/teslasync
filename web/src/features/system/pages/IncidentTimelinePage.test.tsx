@@ -281,8 +281,9 @@ describe('IncidentTimelinePage', () => {
     renderAt();
 
     // A generic (non-ApiError) failure lands on the network/unknown branch
-    // with an actionable Retry CTA wired to refetch().
-    const retry = screen.getByRole('button', { name: /Retry/i });
+    // with an actionable Retry CTA wired to refetch(). Scope to the error
+    // alert: the unavailable panel shells carry their own Retry actions.
+    const retry = within(screen.getByRole('alert')).getByRole('button', { name: /Retry/i });
     expect(retry).toBeInTheDocument();
     fireEvent.click(retry);
     expect(refetch).toHaveBeenCalledTimes(1);

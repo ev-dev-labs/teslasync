@@ -15,6 +15,8 @@ interface FSMHealthPanelProps {
   /** Query trust is separate from the bounded rows used by these heuristics. */
   sourceState?: DataState<unknown>;
   isLoading?: boolean;
+  /** Suppress the panel's own stale-refresh warning when the owner already renders one for this source. */
+  hideStaleWarning?: boolean;
 }
 
 interface HealthAlert {
@@ -34,7 +36,7 @@ function parseTs(ts: string): number {
   return new Date(ts).getTime();
 }
 
-export function FSMHealthPanel({ transitions, sourceState, isLoading = false }: FSMHealthPanelProps) {
+export function FSMHealthPanel({ transitions, sourceState, isLoading = false, hideStaleWarning = false }: FSMHealthPanelProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
@@ -127,7 +129,7 @@ export function FSMHealthPanel({ transitions, sourceState, isLoading = false }: 
   return (
     <GlassPanel className="p-4 space-y-3" data-testid="fsm-health-panel">
       <PanelTitle as="h2">{t('fsm.health.title', 'FSM health')}</PanelTitle>
-      {sourceState && <StaleRefreshWarning state={sourceState} />}
+      {sourceState && !hideStaleWarning && <StaleRefreshWarning state={sourceState} />}
       <Text as="p" variant="bodySm" role="status">{evidenceMessage}</Text>
       {hasRows && hasValidTimestamps && alerts.length === 0 && (
         <Text as="p" variant="bodySm" role="status" data-testid="fsm-health-all-clear">

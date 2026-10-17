@@ -52,11 +52,22 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown) => {
-        if (typeof fallbackOrOpts === 'string') return fallbackOrOpts;
+      t: (key: string, fallbackOrOpts?: unknown, maybeOpts?: unknown) => {
+        const interpolate = (base: string, opts?: Record<string, unknown>) => {
+          if (!opts) return base;
+          let s = base;
+          for (const [k, v] of Object.entries(opts)) {
+            if (k === 'defaultValue') continue;
+            s = s.split(`{{${k}}}`).join(String(v));
+          }
+          return s;
+        };
+        if (typeof fallbackOrOpts === 'string') {
+          return interpolate(fallbackOrOpts, maybeOpts as Record<string, unknown> | undefined);
+        }
         if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
           const o = fallbackOrOpts as Record<string, unknown>;
-          if (typeof o.defaultValue === 'string') return o.defaultValue;
+          if (typeof o.defaultValue === 'string') return interpolate(o.defaultValue, o);
         }
         return key;
       },
@@ -68,6 +79,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client';
 import { ApiError } from '@/lib/resilience';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import MyActivityPage from './MyActivityPage';
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
@@ -211,10 +223,14 @@ describe('MyActivityPage — Project Apex elevation', () => {
       expect(within(panel as HTMLElement).getByText('Unknown')).toBeInTheDocument();
       expect(panel!.querySelector('[aria-busy="true"]')).toBeNull();
     }
-    expect(screen.getByRole('region', { name: 'Activity summary' })).not.toHaveAttribute('aria-busy', 'true');
+    const summary = screen.getByRole('region', { name: 'Activity summary' });
+    expect(summary).not.toHaveAttribute('aria-busy', 'true');
+    // Unknown metrics are omitted from the face; the drawer counts all five.
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument();
     for (const label of ['Total actions', 'Active days', 'Action types', 'Entities touched', 'Last active']) {
-      expect(within(kpiCard(label)).getByText('—')).toBeInTheDocument();
-      expect(within(kpiCard(label)).queryByText('0')).not.toBeInTheDocument();
+      assertOperationalMetricUnavailable(summary, label);
+      expect(within(summary).queryByText('0')).not.toBeInTheDocument();
     }
     expect(screen.queryByText(/no (recent )?activity|no actions|no categories/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/offline|service unavailable|server error/i)).not.toBeInTheDocument();
@@ -226,7 +242,9 @@ describe('MyActivityPage — Project Apex elevation', () => {
     } else {
       fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     }
-    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+    // Metrics mount on the face only once measured values resolve.
+    expect(await within(summary).findByText('6')).toBeInTheDocument();
+    expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
     expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
     expect(screen.queryByText('Pending')).not.toBeInTheDocument();
@@ -338,7 +356,12 @@ describe('MyActivityPage — Project Apex elevation', () => {
 
     // KPI band still renders (not a skeleton) with an explicit zero total.
     expect(within(kpiCard('Total actions')).getByText('0')).toBeInTheDocument();
-    expect(within(kpiCard('Last active')).getByText('—')).toBeInTheDocument();
+    // With no activity, Last active is unknown — omitted from the face and
+    // counted in the drawer rather than fabricated.
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Activity summary' }),
+      'Last active',
+    );
   });
 
   it('surfaces the feature-disabled notice on a 503 and suppresses the sections', async () => {
@@ -514,10 +537,13 @@ describe('MyActivityPage — Project Apex elevation', () => {
     renderPage();
     await screen.findAllByText('Server error');
 
+    const summary = screen.getByRole('region', { name: 'Activity summary' });
+    // Unavailable metrics are omitted from the face (never zero-filled);
+    // the drawer counts each unknown field.
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     for (const label of ['Total actions', 'Active days', 'Action types', 'Entities touched']) {
-      const metric = kpiCard(label);
-      expect(within(metric).queryByText('0')).not.toBeInTheDocument();
-      expect(within(metric).getByText('—')).toBeInTheDocument();
+      assertOperationalMetricUnavailable(summary, label);
+      expect(within(summary).queryByText('0')).not.toBeInTheDocument();
     }
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();

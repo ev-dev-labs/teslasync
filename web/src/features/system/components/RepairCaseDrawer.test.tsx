@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { dataRepairKeys, type RepairCase, type RepairCaseDetailResponse } from '@/api/hooks/useDataRepair';
+import { ToastProvider } from '@/components/feedback/Toast';
 import english from '@/i18n/en.json';
 import { RepairCaseDrawer } from './RepairCaseDrawer';
 
@@ -75,9 +76,11 @@ function renderDrawer(confidence: RepairCase['confidence'], canWrite = true, loc
   render(
     <I18nextProvider i18n={i18n}>
       <QueryClientProvider client={client}>
-        <MemoryRouter>
-          <RepairCaseDrawer caseId={7} onClose={onClose} canWrite={canWrite} writeBlockReason="Read-only scope" />
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter>
+            <RepairCaseDrawer caseId={7} onClose={onClose} canWrite={canWrite} writeBlockReason="Read-only scope" />
+          </MemoryRouter>
+        </ToastProvider>
       </QueryClientProvider>
     </I18nextProvider>,
   );

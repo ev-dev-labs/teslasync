@@ -552,7 +552,7 @@ describe('ChatbotPage — scaffolding, a11y, empty state', () => {
 
     const history = screen.getByRole('button', { name: 'History' });
     expect(history).toHaveAttribute('aria-pressed', 'false');
-    expect(history).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    expect(history).toHaveClass('h-9', 'w-9');
     expect(history.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(box).toHaveClass('min-h-11', 'max-h-40', 'resize-none');
 
@@ -815,16 +815,16 @@ describe('ChatbotPage — AI-on streaming path', () => {
 
     renderPage();
     await typeAndEnter('Inspect this test-only question');
-    const planning = await screen.findByText('Helix is planning the investigation…');
-    const waiting = planning.parentElement?.parentElement;
-    const iconBox = planning.parentElement?.previousElementSibling;
+    const waitingCopy = await screen.findByText('Helix is processing your request…');
+    const waiting = waitingCopy.parentElement?.parentElement;
+    const iconBox = waitingCopy.parentElement?.previousElementSibling;
     expect(iconBox).toHaveClass(
       'bg-[var(--surface-2)]',
       'text-[var(--text-secondary)]',
       'ring-[var(--border-default)]',
     );
     expect(iconBox?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-    expect(planning).toHaveClass('text-sm', 'text-[var(--text-secondary)]');
+    expect(waitingCopy).toHaveClass('text-sm', 'text-[var(--text-secondary)]');
     expect(waiting?.querySelector('[class*="gradient"], [class*="animate-"], [style*="animation"]')).toBeNull();
     const stop = screen.getByRole('button', { name: 'Stop streaming' });
     expect(stop).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10');
@@ -835,14 +835,16 @@ describe('ChatbotPage — AI-on streaming path', () => {
         id: 'test-tool', name: 'query_vehicle_count', arguments: {},
       })));
     });
-    expect(await screen.findByText('Helix is grounding the answer in TeslaSync evidence…')).toBeInTheDocument();
+    // A single static waiting line covers planning + grounding: it persists
+    // while tools run and clears on the first text delta.
+    expect(await screen.findByText('Helix is processing your request…')).toBeInTheDocument();
     expect(lastAssistantRow()).toHaveTextContent('query_vehicle_count:running');
 
     await act(async () => {
       controller.enqueue(new TextEncoder().encode(sseFrame('delta', { text: 'Test-only partial answer' })));
     });
     await screen.findByText('Test-only partial answer');
-    expect(screen.queryByText('Helix is grounding the answer in TeslaSync evidence…')).toBeNull();
+    expect(screen.queryByText('Helix is processing your request…')).toBeNull();
     await act(async () => {
       if (escape) fireEvent.keyDown(window, { key: 'Escape' });
       else fireEvent.click(stop);

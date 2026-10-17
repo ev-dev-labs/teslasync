@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { formatTime } from '@/lib/dateFormat';
@@ -13,10 +13,27 @@ vi.mock('@/hooks/useDateFormat', () => ({
 // Deterministic i18n: return the inline English fallback so accessible
 // names / labels are stable regardless of the (uninitialised) i18n store.
 // This mock is shared by every descendant (CopyButton, Avatar, Textarea…).
+// String-form calls echo the fallback; object-form calls (the evidence
+// trail's counted summaries) resolve defaultValue/defaultValue_one the way
+// i18next does and interpolate {{var}} options.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : key,
+    t: (key: string, fallback?: unknown) => {
+      if (typeof fallback === 'string') return fallback;
+      if (fallback && typeof fallback === 'object') {
+        const o = fallback as Record<string, unknown>;
+        const template =
+          o.count === 1 && typeof o.defaultValue_one === 'string'
+            ? o.defaultValue_one
+            : typeof o.defaultValue === 'string'
+              ? o.defaultValue
+              : key;
+        return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
+          o[name] != null ? String(o[name]) : `{{${name}}}`,
+        );
+      }
+      return key;
+    },
     i18n: { language: 'en', changeLanguage: () => Promise.resolve() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => children,
@@ -106,9 +123,16 @@ describe('ChatMessageItem', () => {
     );
 
     const trail = screen.getByTestId('helix-evidence-trail');
-    expect(trail).toHaveTextContent('Vehicle count');
-    expect(trail).toHaveTextContent('Alerts recent');
-    expect(trail).toHaveTextContent('52 tokens');
+    // Tool rows render the raw tool name plus its outcome word; only the
+    // battery/location allowlist is localized, so these two stay verbatim.
+    expect(within(trail).getByText('query_vehicle_count')).toBeInTheDocument();
+    expect(within(trail).getByText('successful')).toBeInTheDocument();
+    expect(within(trail).getByText('query_alerts_recent')).toBeInTheDocument();
+    expect(within(trail).getByText('Unavailable')).toBeInTheDocument();
+    // Done-state footer: counted success/unavailable/token summaries.
+    expect(trail).toHaveTextContent('1 tool completed successfully.');
+    expect(trail).toHaveTextContent('1 tool was unavailable.');
+    expect(trail).toHaveTextContent('52 tokens used.');
   });
 
   it('shows the timestamp only on the last message in a group', () => {

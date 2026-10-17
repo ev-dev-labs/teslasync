@@ -84,9 +84,32 @@ vi.mock('@/api/hooks/useTeslaPhysics', () => ({
 }));
 
 import OutageAutobiographyPage from './OutageAutobiographyPage';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 
 function renderPage() {
   return render(<MemoryRouter><OutageAutobiographyPage /></MemoryRouter>);
+}
+
+/** The page's single OperationalBrief, resolved via its unique title. */
+function brief(): HTMLElement {
+  const el = screen
+    .getByRole('heading', { name: 'Catch-up after MQTT or carbon loss' })
+    .closest('[data-operational-brief]');
+  if (!(el instanceof HTMLElement)) throw new Error('Outage brief not found');
+  return el;
+}
+
+function drawerGroup(label: string): HTMLElement {
+  fireEvent.click(within(brief()).getByRole('button', { name: 'Review details' }));
+  return within(screen.getByRole('dialog')).getByRole('group', { name: label });
+}
+
+function closeDrawer() {
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 describe('OutageAutobiographyPage', () => {
@@ -102,9 +125,12 @@ describe('OutageAutobiographyPage', () => {
   it('treats unknown MQTT as unknown and keeps replay/event-time honesty', () => {
     renderPage();
     expect(screen.getByText('Outage autobiography')).toBeInTheDocument();
-    expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
+    // Unknown MQTT is omitted from the face and counted in the drawer.
+    assertOperationalMetricUnavailable(brief(), 'MQTT connection');
     expect(screen.getByText('Replay keeps event time')).toBeInTheDocument();
-    expect(screen.getByText(/gap is not a measured zero/i)).toBeInTheDocument();
+    // Scope moved off the face into the drawer header.
+    expect(screen.queryByText(/gap is not a measured zero/i)).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief(), 'a gap is not a measured zero', { contains: true });
     expect(screen.queryByText('MQTT not connected')).not.toBeInTheDocument();
   });
 
@@ -117,7 +143,7 @@ describe('OutageAutobiographyPage', () => {
       refetch: retry,
     });
     renderPage();
-    expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief(), 'MQTT connection');
     expect(screen.getByText(outage.notes[0])).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Session certificate' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
@@ -184,7 +210,11 @@ describe('OutageAutobiographyPage contract states', () => {
     sources.outage.mockReturnValue({ ...queryStub(outage), fetchStatus: 'paused' as const });
     sources.certificate.mockReturnValue({ ...queryStub(certificate), fetchStatus: 'paused' as const });
     renderPage();
-    expect(screen.getByText('Retained source · Connection paused; source freshness is not confirmed.')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(
+      brief(),
+      'Retained source · Connection paused; source freshness is not confirmed.',
+      { contains: true },
+    );
     expect(screen.getByText(outage.notes[0])).toBeInTheDocument();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
@@ -231,7 +261,9 @@ describe('OutageAutobiographyPage contract states', () => {
     renderPage();
     expect(screen.getByText(connected ? 'MQTT connected' : 'MQTT not connected')).toBeInTheDocument();
     expect(screen.queryByText('MQTT state unknown')).not.toBeInTheDocument();
-    expect(screen.getByText('Gap 0 min')).toBeInTheDocument();
+    // The gap count moved off the face into the drawer's Telemetry gap group.
+    expect(drawerGroup('Telemetry gap')).toHaveTextContent('Gap 0.00 min');
+    closeDrawer();
   });
 
   it('exports the original certificate payload and retains a wrapping mobile action', () => {
@@ -248,7 +280,9 @@ describe('OutageAutobiographyPage contract states', () => {
   it('retains display-time formatting and original event timestamps', () => {
     renderPage();
     expect(screen.getAllByText(formatDateTime(outage.last_telemetry_at!)).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Original event time; a missing timestamp does not imply zero traffic/)).toBeInTheDocument();
+    // Timestamp context moved off the face into the Last telemetry group.
+    expect(drawerGroup('Last telemetry')).toHaveTextContent('Original event time; a missing timestamp does not imply zero traffic.');
+    closeDrawer();
     expect(screen.getByText(outage.notes[0])).toBeInTheDocument();
     expect(outage.gap_s).toBe(600);
     expect(certificate.integrity_sha256).toBe('abc');

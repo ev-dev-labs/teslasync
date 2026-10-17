@@ -1,8 +1,21 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi } from 'vitest'
 
 import { BackgroundWorkersCard } from '../BackgroundWorkersCard'
+
+/** Open the brief's Review-details drawer and return the dialog for group assertions. */
+function openDrawer(container: HTMLElement) {
+  const brief = container.querySelector('[data-operational-brief]')
+  if (!brief) throw new Error('Missing operational brief')
+  fireEvent.click(within(brief as HTMLElement).getByRole('button', { name: 'Review details' }))
+  return screen.getByRole('dialog')
+}
+
+function closeDrawer() {
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
 import type { WorkersHealth, WorkerStatus } from '@/api/types'
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
@@ -49,7 +62,7 @@ describe('BackgroundWorkersCard', () => {
       makeInstance({ name: 'export-worker', host: 'http://export-worker:8082/healthz' }),
       makeInstance({ name: 'automation-worker', host: 'http://automation-worker:8083/healthz' }),
     ])
-    harness(<BackgroundWorkersCard health={health} />)
+    const { container } = harness(<BackgroundWorkersCard health={health} />)
 
     expect(screen.getByText('notification-worker')).toBeInTheDocument()
     expect(screen.getByText('export-worker')).toBeInTheDocument()
@@ -60,9 +73,14 @@ describe('BackgroundWorkersCard', () => {
     expect(labels.length).toBe(3)
 
     // Top-line summary uses unique phrasing ("of N types" / "of N instances")
-    // so it doesn't collide with the per-group "X / Y healthy" chips.
-    expect(screen.getByText('3 of 3 types')).toBeInTheDocument()
-    expect(screen.getByText('3 of 3 instances')).toBeInTheDocument()
+    // so it doesn't collide with the per-group "X / Y healthy" chips. The
+    // face carries the count values; the phrasing lives in the drawer groups.
+    expect(container.querySelector('[data-operational-metric="types"]')).toHaveTextContent('3/3')
+    expect(container.querySelector('[data-operational-metric="instances"]')).toHaveTextContent('3/3')
+    const dialog = openDrawer(container)
+    expect(within(dialog).getByRole('group', { name: 'Worker types' })).toHaveTextContent('3 of 3 types')
+    expect(within(dialog).getByRole('group', { name: 'Instances' })).toHaveTextContent('3 of 3 instances')
+    closeDrawer()
 
     // Hosts are rendered short (no http:// prefix and no /healthz suffix)
     expect(screen.getByText('notification-worker:8081')).toBeInTheDocument()
@@ -81,7 +99,7 @@ describe('BackgroundWorkersCard', () => {
       makeInstance({ name: 'export-worker', host: 'http://export-worker:8082/healthz' }),
       makeInstance({ name: 'automation-worker', host: 'http://automation-worker:8083/healthz' }),
     ])
-    harness(<BackgroundWorkersCard health={health} />)
+    const { container } = harness(<BackgroundWorkersCard health={health} />)
 
     // Each replica's host renders as a separate row
     expect(screen.getByText('nw-1:8081')).toBeInTheDocument()
@@ -95,12 +113,18 @@ describe('BackgroundWorkersCard', () => {
     // top-line summary uses different phrasing so this match is unique.
     expect(screen.getByText('3 / 3 healthy')).toBeInTheDocument()
 
-    // Top-line summary uses the unique phrasing
-    expect(screen.getByText('5 of 5 instances')).toBeInTheDocument()
-    expect(screen.getByText('3 of 3 types')).toBeInTheDocument()
+    // Top-line summary uses the unique phrasing. The face carries the count
+    // values; the phrasing lives in the drawer groups.
+    expect(container.querySelector('[data-operational-metric="instances"]')).toHaveTextContent('5/5')
+    expect(container.querySelector('[data-operational-metric="types"]')).toHaveTextContent('3/3')
+    expect(container.querySelector('[data-operational-metric="replicated"]')).toHaveTextContent('1/3')
+    const dialog = openDrawer(container)
+    expect(within(dialog).getByRole('group', { name: 'Instances' })).toHaveTextContent('5 of 5 instances')
+    expect(within(dialog).getByRole('group', { name: 'Worker types' })).toHaveTextContent('3 of 3 types')
 
     // Top-line "Replicated" badge counts the multi-instance groups
-    expect(screen.getByText(/1 of 3 type/)).toBeInTheDocument()
+    expect(within(dialog).getByRole('group', { name: 'Replicated' })).toHaveTextContent(/1 of 3 type/)
+    closeDrawer()
 
     // The scale callout is hidden once at least one group is replicated
     expect(screen.queryByText(/Running multiple instances of a worker/i)).not.toBeInTheDocument()

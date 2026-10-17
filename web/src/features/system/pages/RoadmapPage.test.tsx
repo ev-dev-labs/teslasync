@@ -87,6 +87,7 @@ const { translationKeys } = vi.hoisted(() => ({ translationKeys: [] as string[] 
 
 import RoadmapPage from './RoadmapPage';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 
 function renderPage() {
   return render(
@@ -139,7 +140,12 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Roadmap' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')).toBeInTheDocument();
+    // The direction-of-travel note is the brief description: face shows live
+    // values only, so it is disclosed via the Review details drawer.
+    assertOperationalBriefDisclosure(
+      screen.getByRole('region', { name: 'Roadmap overview' }),
+      'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.',
+    );
     expect(
       screen.getByText(
         "What's been built, What's in progress, and What's coming next",
@@ -386,7 +392,11 @@ describe('RoadmapPage — restrained adoption and preserved evidence', () => {
     expect(counts).toEqual([70, 4, 8, 16]);
     expect(counts.reduce((total, count) => total + count, 0)).toBe(98);
     expect(phase('Completed').getByText('Bundled roadmap entries, not live deployment or release telemetry.')).toBeInTheDocument();
-    expect(kpi().getByText('Source observation time not supplied')).toBeInTheDocument();
+    // Freshness moved off the brief face into the Review details drawer header.
+    assertOperationalBriefDisclosure(
+      screen.getByRole('region', { name: 'Roadmap overview' }),
+      'Source observation time not supplied',
+    );
   });
 
   it('routes all original first-five entry strings through stable localization identities', () => {

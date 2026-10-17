@@ -56,7 +56,24 @@ vi.mock('@/api/client', () => ({
   request: (...args: unknown[]) => requestMock(...args),
 }))
 
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions'
 import { SLOTrackingCard } from '../SLOTrackingCard'
+
+/** Open the brief's Review-details drawer and return the dialog for group assertions. */
+function openDrawer(container: HTMLElement) {
+  const brief = container.querySelector('[data-operational-brief]')
+  if (!brief) throw new Error('Missing operational brief')
+  fireEvent.click(within(brief as HTMLElement).getByRole('button', { name: 'Review details' }))
+  return screen.getByRole('dialog')
+}
+
+function closeDrawer() {
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+}
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
   useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
@@ -140,10 +157,16 @@ describe('SLOTrackingCard — data states', () => {
     const { container } = renderCard()
 
     expect(await screen.findByText('99.98%')).toBeInTheDocument()
-    expect(container.textContent).toContain('Last 30 days')
-    expect(container.textContent).toContain('5 / 6 components healthy')
+    // The face carries live values only; the count pair renders as a value.
+    expect(container.querySelector('[data-operational-metric="healthy-components"]')).toHaveTextContent('5/6')
     // A healthy figure at or above target is painted green, not red/amber.
     expect(screen.getByText('99.98%')).toHaveClass('text-[var(--semantic-success)]')
+    // Scope and the spelled-out count sentence moved into the drawer.
+    assertOperationalBriefDisclosure(container, 'Last 30 days')
+    const dialog = openDrawer(container)
+    expect(within(dialog).getByRole('group', { name: 'Healthy components' }))
+      .toHaveTextContent('5 / 6 components healthy')
+    closeDrawer()
   })
 
   it('surfaces an alert when the request fails', async () => {
@@ -161,11 +184,11 @@ describe('SLOTrackingCard — finite-percentage guard (bug fix)', () => {
     const { container } = renderCard()
 
     // Wait for the query to settle (counts render once data arrives).
-    await waitFor(() => expect(container.textContent).toContain('3 / 4 components healthy'))
-    const value = container.querySelector('[data-operational-metric="uptime"]')
-    expect(value).toHaveTextContent('—')
-    expect(value).not.toHaveTextContent('0.00%')
-    expect(value).toHaveAttribute('data-value-state', 'missing')
+    await screen.findByText('3/4')
+    // The unknown reading is omitted from the face — never a misleading 0.00%.
+    expect(container.textContent).not.toContain('0.00%')
+    expect(container.querySelector('[data-operational-metric="uptime"]')).toBeNull()
+    assertOperationalMetricUnavailable(container, 'Historical uptime')
   })
 
   it('renders "—" when uptime_percent is missing (null) from the payload', async () => {
@@ -174,8 +197,10 @@ describe('SLOTrackingCard — finite-percentage guard (bug fix)', () => {
     )
     const { container } = renderCard()
 
-    await waitFor(() => expect(container.textContent).toContain('2 / 2 components healthy'))
-    expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent('—')
+    await screen.findByText('2/2')
+    expect(container.querySelector('[data-operational-metric="uptime"]')).toBeNull()
+    expect(container.querySelector('[aria-live="polite"]')).not.toHaveTextContent('0.00%')
+    assertOperationalMetricUnavailable(container, 'Historical uptime')
   })
 
   it('falls back to em-dashes for non-finite component counts', async () => {
@@ -189,7 +214,9 @@ describe('SLOTrackingCard — finite-percentage guard (bug fix)', () => {
     const { container } = renderCard()
 
     await waitFor(() => expect(screen.getByText('100.00%')).toBeInTheDocument())
-    expect(container.textContent).toContain('— / — components healthy')
+    // Unknown counts are omitted from the face and counted in the drawer.
+    expect(container.querySelector('[data-operational-metric="healthy-components"]')).toBeNull()
+    assertOperationalMetricUnavailable(container, 'Healthy components')
   })
 })
 
@@ -263,7 +290,7 @@ describe('SLOTrackingCard — window selector', () => {
 
   it('retains historical readings and target controls when the same window refresh fails', async () => {
     requestMock.mockResolvedValue(makePayload({ healthy_count: 5 }))
-    const { client } = renderCard()
+    const { client, container } = renderCard()
     await screen.findByText('99.98%')
     requestMock.mockRejectedValue(new Error('refresh failed'))
     await act(async () => {
@@ -271,7 +298,11 @@ describe('SLOTrackingCard — window selector', () => {
     })
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
     expect(screen.getByText('99.98%')).toBeInTheDocument()
-    expect(screen.getByText(/5 \/ 6 components healthy/)).toBeInTheDocument()
+    expect(screen.getByText('5/6')).toBeInTheDocument()
+    const dialog = openDrawer(container)
+    expect(within(dialog).getByRole('group', { name: 'Healthy components' }))
+      .toHaveTextContent('5 / 6 components healthy')
+    closeDrawer()
     expect(screen.getByRole('button', { name: 'Edit' })).toBeEnabled()
     expect(screen.getByRole('tabpanel', { name: '30d · Last 30 days' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -281,12 +312,12 @@ describe('SLOTrackingCard — window selector', () => {
 describe('SLOTrackingCard — historical-source caveat', () => {
   it('shows the default snapshot caveat when the source is not a real series', async () => {
     requestMock.mockResolvedValue(makePayload({ historical_source: 'snapshot' }))
-    renderCard()
+    const { container } = renderCard()
 
     const note = await screen.findByRole('note')
     expect(note).toHaveTextContent(/heartbeat history backend/i)
     expect(screen.queryByText('99.98%')).not.toBeInTheDocument()
-    expect(screen.getByText(/Current component health/)).toBeInTheDocument()
+    assertOperationalBriefDisclosure(container, 'Current component health')
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
   })
@@ -396,7 +427,11 @@ describe('SLOTrackingCard — accessibility', () => {
     const note = await screen.findByRole('note')
     expect(screen.queryByText('99.98%')).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
-    expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent('—')
+    // The polite live region carries the face values; the unknown uptime is
+    // omitted from the face and counted in the drawer instead of "—".
+    expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent('6/6')
+    expect(container.querySelector('[data-operational-metric="uptime"]')).toBeNull()
+    assertOperationalMetricUnavailable(container, 'Historical uptime')
 
     // Both the header Target glyph and the caveat Info glyph are decorative.
     const header = screen.getByRole('heading', { name: 'Uptime & SLO' }).parentElement

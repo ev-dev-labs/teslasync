@@ -28,7 +28,10 @@
  * suite) so the page runs end-to-end without a network. i18n is stubbed to
  * return the English `defaultValue` with `{{var}}` interpolation.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -565,7 +568,8 @@ describe('DBHealthPage — hardening', () => {
       data: migration({ dirty: undefined }),
     }));
     renderPage();
-    expect(metricValue('Total rows')).toBe('—');
+    // Unknown metrics are omitted from the face; the drawer counts them.
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-0'), 'Total rows');
     expect(screen.queryByText('Clean')).toBeNull();
     expect(within(tablesGrid()).getAllByText('—').length).toBeGreaterThan(0);
   });
@@ -583,7 +587,7 @@ describe('DBHealthPage — hardening', () => {
     expect(bar).not.toHaveAttribute('aria-valuenow');
     expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
     expect(bar.querySelector('[data-metric-fill]')).toBeNull();
-    expect(metricValue('Pool usage')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-2'), 'Pool usage');
   });
 
   it('flips the usage bar to the danger color once the pool is ≥80% busy', () => {
@@ -606,12 +610,12 @@ describe('DBHealthPage — hardening', () => {
       }));
       const { container } = renderPage();
       expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-      expect(screen.getByTestId('db-health-summary-0')).toHaveTextContent('Source loaded');
+      assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-0'), 'Source loaded', { contains: true });
       assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Retained source', { contains: true });
-      expect(screen.getByTestId('db-health-summary-2')).toHaveTextContent('Source loaded');
+      assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-2'), 'Source loaded', { contains: true });
       expect(metricValue('Migration')).toBe('185');
       expect(metricValue('Total DB size')).toBe('360.00 MB');
-      expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Migration status snapshot');
+      assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Migration status snapshot', { contains: true });
     });
     it('retains table details, migration evidence and pool metrics after refresh errors', () => {
       mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats(), isError: true, error: new Error('stats refresh') }));
@@ -658,10 +662,17 @@ describe('DBHealthPage — hardening', () => {
     // `version` (190) wins over the `currentVersion` (999) fallback.
     expect(metricValue('Migration')).toBe('190');
     expect(screen.queryByText('999')).toBeNull();
-    // Dirty status + pending count both surface.
-    expect(screen.getAllByText('Dirty').length).toBeGreaterThanOrEqual(1);
+    // Dirty status + pending count both surface (the badge context lives in
+    // the drawer group now; the panel keeps its own Pending row).
     expect(screen.getByText('Pending')).toBeInTheDocument();
-    expect(kpiRegion().getByText('Dirty')).toBeInTheDocument();
+    expect(kpiRegion().queryByText('Dirty')).toBeNull();
+    const migrationBrief = screen.getByTestId('db-health-summary-1');
+    fireEvent.click(within(migrationBrief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    const group = within(dialog).getByRole('group', { name: 'Migration' });
+    expect(within(group).getByText('Dirty')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('formats byte sizes across the KB / GB boundaries and dashes zero-byte tables', () => {
@@ -703,7 +714,7 @@ describe('DBHealthPage — hardening', () => {
     expect(names).toEqual(['mid_charging', 'alpha_drives', 'zebra_events']);
     fireEvent.click(screen.getByRole('button', { name: 'Rows' }));
     expect(firstBodyRowName()).toBe('zebra_events');
-    expect(metricValue('Large tables')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByTestId('db-health-summary-0'), 'Large tables');
   });
 
   it('retains full table identities in chart alternatives and names the persistent detail table', () => {

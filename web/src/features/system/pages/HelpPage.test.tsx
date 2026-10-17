@@ -328,9 +328,14 @@ describe('HelpPage', () => {
   });
 
   it('keeps the assistant hidden and the baseline intact while the settings query is still loading (undefined settings)', () => {
-    // Fail-closed: an unresolved /settings query yields no `settings`, so
-    // useAiEnabled returns false and the assistant must not leak.
-    mockUseSettings.mockReturnValue({ settings: undefined });
+    // Fail-closed: an unresolved /settings query yields no AI fields, so
+    // useAiEnabled returns false and the assistant must not leak. The mock
+    // keeps `settings` defined because production useSettings always falls
+    // back to defaults (never undefined) — only the AI verdict is pending.
+    mockUseSettings.mockReturnValue({
+      settings: { ...baseSettings },
+      settingsUnavailable: true,
+    });
 
     renderHelp();
 

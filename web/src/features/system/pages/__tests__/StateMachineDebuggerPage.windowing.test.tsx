@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
@@ -115,7 +115,8 @@ vi.mock('@/api/hooks/useAdmin', () => ({
   }),
 }));
 
-vi.mock('@/api/hooks/useVehicles', () => ({
+vi.mock('@/api/hooks/useVehicles', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/hooks/useVehicles')>()),
   useVehicles: () => ({
     data: [{ id: 1, display_name: 'Tessie', vin: 'VIN123' }],
     isLoading: false,
@@ -169,7 +170,7 @@ describe('StateMachineDebuggerPage — windowing reconciliation (Phase 45 / Prom
     stateRef.current = null;
   });
 
-  it('reads "0 in window · 23 in 24 h" when 23 transitions exist outside the 10-min window', () => {
+  it('reads "0 in window · 23 in filtered buffer · 23 loaded · 23 matching" when 23 transitions exist outside the 10-min window', () => {
     transitionsRef.current = Array.from({ length: 23 }, (_, i) =>
       makeTransition({
         id: 100 + i,
@@ -180,7 +181,7 @@ describe('StateMachineDebuggerPage — windowing reconciliation (Phase 45 / Prom
     renderPage();
 
     const counter = screen.getByTestId('live-controls-counter');
-    expect(counter.textContent).toContain('0 in window · 23 in 24 h');
+    expect(counter.textContent).toContain('0 in window · 23 in filtered buffer · 23 loaded · 23 matching');
 
     const empty = screen.getByTestId('state-timeline-empty');
     expect(empty).toBeInTheDocument();
@@ -218,7 +219,7 @@ describe('StateMachineDebuggerPage — windowing reconciliation (Phase 45 / Prom
     expect(screen.queryByTestId('snapshot-inspector-outside-window')).toBeNull();
   });
 
-  it('renders the legacy "{{n}} buffered" copy when in-window equals total (steady state)', () => {
+  it('renders consistent scoped counts when in-window equals total (steady state)', () => {
     transitionsRef.current = Array.from({ length: 5 }, (_, i) =>
       makeTransition({
         id: 200 + i,
@@ -229,7 +230,6 @@ describe('StateMachineDebuggerPage — windowing reconciliation (Phase 45 / Prom
     renderPage();
 
     const counter = screen.getByTestId('live-controls-counter');
-    expect(counter.textContent).toContain('5 buffered');
-    expect(within(counter).queryByText(/in window/)).toBeNull();
+    expect(counter.textContent).toContain('5 in window · 5 in filtered buffer · 5 loaded · 5 matching');
   });
 });

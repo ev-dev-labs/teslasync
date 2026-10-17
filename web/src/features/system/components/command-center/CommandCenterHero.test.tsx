@@ -4,6 +4,10 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState } from '@/api/dataState';
 import type { VehicleStateReadings } from '@/api/types';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import { CommandCenterHero } from './CommandCenterHero';
 
 vi.mock('react-i18next', async importOriginal => ({
@@ -76,10 +80,12 @@ describe('CommandCenterHero source truth', () => {
   });
 
   it('keeps omitted query metadata unresolved instead of inventing empty or offline', () => {
-    mount();
+    const { container } = mount();
     expectShell();
     expectNoEmptyOrOffline();
-    expect(screen.getByText('Pending · Unknown')).toBeInTheDocument();
+    // The combined status moved off the face into the drawer's status badge.
+    assertOperationalBriefDisclosure(container, 'Pending · Unknown');
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(screen.getByTestId('command-center-hero')).toHaveAttribute('data-source-status', 'initial');
     expect(screen.getByTestId('command-center-hero')).toHaveAttribute('data-source-provenance', 'unknown');
   });
@@ -93,12 +99,14 @@ describe('CommandCenterHero source truth', () => {
   });
 
   it('shows empty telemetry only after a resolved source and preserves the review action', () => {
-    mount({ dataState: deriveDataState({ data: null, isSuccess: true }, {
+    const { container } = mount({ dataState: deriveDataState({ data: null, isSuccess: true }, {
       provenance: 'live', unavailable: true,
     }) });
     expectShell();
     expect(screen.getByText('Live state unavailable')).toBeInTheDocument();
-    expect(screen.getByText('No source data · Unknown')).toBeInTheDocument();
+    // The combined status moved off the face into the drawer's status badge;
+    // opening it also proves the review action still works.
+    assertOperationalBriefDisclosure(container, 'No source data · Unknown');
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getByTestId('command-center-hero')).toHaveAttribute('data-source-status', 'unavailable');
   });
@@ -110,8 +118,14 @@ describe('CommandCenterHero source truth', () => {
     }) });
     expectShell();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
-    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    // Unknown metrics are omitted from the face (never zero/placeholder tiles);
+    // the drawer counts them hidden instead.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Battery', 'Estimated range', 'Cabin', 'Access state']) {
+      assertOperationalMetricUnavailable(container, label);
+    }
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
     expect(refetch).toHaveBeenCalledOnce();
     expectNoEmptyOrOffline();
   });
@@ -164,11 +178,17 @@ describe('CommandCenterHero source truth', () => {
       ...readings, battery_level: null, rated_range: null, inside_temp: null, is_locked: null,
     } });
     expectShell();
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    // Unknown metrics are omitted from the face (never zero/placeholder tiles);
+    // the drawer counts them hidden instead.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    for (const label of ['Battery', 'Estimated range', 'Cabin', 'Access state']) {
+      assertOperationalMetricUnavailable(container, label);
+    }
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('Locked')).not.toBeInTheDocument();
     expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
     expect(screen.getAllByText('No verified signal time').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(container, 'No verified signal time');
   });
 
   it('uses static semantic cues for genuinely verified online state without decoration or pulse', () => {

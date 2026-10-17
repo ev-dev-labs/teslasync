@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { cn } from '@/lib/cn';
 import { getStateColor } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
@@ -51,6 +52,12 @@ export interface StateTimelineProps {
   /** Switch to Freeze mode and select `lastTransition`. */
   onJumpToLast?: () => void;
   className?: string;
+}
+
+function presetLabel(min: number, t: TFunction): string {
+  if (min < 60) return t('debugger.window.minutes', '{{n}} min', { n: min });
+  if (min < 1440) return t('debugger.window.hours', '{{n}} h', { n: Math.round(min / 60) });
+  return t('debugger.window.day', '24 h');
 }
 
 export function StateTimeline({
@@ -124,7 +131,7 @@ export function StateTimeline({
                 data-testid="state-timeline-widen"
               >
                 {t('debugger.timeline.widenTo', 'Widen window to {{label}}', {
-                  label: formatDurationMsCompact(widerPreset! * 60_000),
+                  label: presetLabel(widerPreset!, t),
                 })}
               </Button>
             ) : null}

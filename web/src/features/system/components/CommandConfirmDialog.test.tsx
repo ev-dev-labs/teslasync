@@ -26,6 +26,13 @@ import { CommandConfirmDialog } from './CommandConfirmDialog';
 import { Icons } from '@/lib/icons';
 import type { CommandDef } from '../commands';
 
+// This file exercises the real i18n instance (per the header contract), so it
+// opts out of the global react-i18next fallback-echo mock: without the real
+// hook the component never subscribes to `languageChanged` and the locale
+// switch in the localization test cannot re-render. English assertions are
+// unaffected — the shipped catalog values equal these fallbacks.
+vi.unmock('react-i18next');
+
 function makeDef(overrides: Partial<CommandDef> = {}): CommandDef {
   return {
     id: 'wipe-data',

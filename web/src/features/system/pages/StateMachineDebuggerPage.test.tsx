@@ -219,6 +219,18 @@ function UrlEvidence() {
   return <output aria-label="URL evidence">{location.search}</output>;
 }
 
+/** Open the FSM summary drawer and resolve a per-metric group by label. */
+function drawerGroup(label: string): HTMLElement {
+  const band = screen.getByRole('region', { name: 'FSM summary metrics' });
+  fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+  return within(screen.getByRole('dialog')).getByRole('group', { name: label });
+}
+
+function closeDrawer() {
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 function renderPage(entry = '/system/fsm') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const page = (
@@ -478,19 +490,22 @@ describe('StateMachineDebuggerPage — query branches', () => {
     renderPage();
 
     expect(screen.getByText('Transitions (Page)')).toBeInTheDocument();
-    expect(screen.getByText('0 / 0')).toBeInTheDocument();
+    // The page/total count moved off the face into the drawer's metric group.
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('0 / 0');
+    closeDrawer();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(
       within(screen.getByRole('region', { name: 'FSM summary metrics' })).queryByRole('button', { name: 'Retry' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('Transition log')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Transition log' })).toBeInTheDocument();
   });
 
   it('renders honest zeros and empty states (no retries) when the queries succeed empty', () => {
     renderPage();
 
     expect(screen.getByText('Transitions (Page)')).toBeInTheDocument();
-    expect(screen.getByText('0 / 0')).toBeInTheDocument();
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('0 / 0');
+    closeDrawer();
     expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
     expect(screen.getByText(/No transitions in the loaded result/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
@@ -577,7 +592,8 @@ describe('StateMachineDebuggerPage — shared presentation and preservation', ()
   it('does not declare the matching range empty when only the loaded page is empty', () => {
     mockTrans.mockReturnValue(makeQuery({ data: { data: [], total: 233 } }));
     renderPage();
-    expect(screen.getByText('0 / 233')).toBeInTheDocument();
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('0 / 233');
+    closeDrawer();
     expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
       '0 in window · 0 in filtered buffer · 0 loaded · 233 matching',
     );
@@ -599,7 +615,8 @@ describe('StateMachineDebuggerPage — shared presentation and preservation', ()
     expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
       '0 in window · 0 in filtered buffer · 1 loaded · 233 matching',
     );
-    expect(screen.getByText('1 / 233')).toBeInTheDocument();
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('1 / 233');
+    closeDrawer();
     expect(screen.getByRole('button', { name: 'View detail' })).toBeInTheDocument();
     expect(screen.getAllByText('Loaded transition page only').length).toBeGreaterThanOrEqual(4);
   });

@@ -104,7 +104,7 @@ export default function OutageAutobiographyPage() {
             errorMessage={t('system.outage.loadError', 'Unable to load outage evidence.')}
             emptyContent={outageEmptyContext ? <EmptyState message={outageEmptyContext}
               actionTo={vehiclePrerequisite ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
-              action={!vehiclePrerequisite ? { label: t('common.retry', 'Retry'), onClick: () => { void outageQuery.refetch(); } } : undefined} /> : undefined}
+              action={!vehiclePrerequisite && !state.isRefreshBlocked ? { label: t('common.retry', 'Retry'), onClick: () => { void outageQuery.refetch(); } } : undefined} /> : undefined}
             error={state.fatalError}
             errorRecovery={{ onRetry: () => { void outageQuery.refetch(); } }}
           >
@@ -141,7 +141,7 @@ export default function OutageAutobiographyPage() {
             errorMessage={t('system.outage.certificateError', 'Unable to load the session certificate.')}
             emptyContent={certificateEmptyContext ? <EmptyState message={certificateEmptyContext}
               actionTo={vehiclePrerequisite ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
-              action={!vehiclePrerequisite ? { label: t('common.retry', 'Retry'), onClick: () => { void certificateQuery.refetch(); } } : undefined} /> : undefined}
+              action={!vehiclePrerequisite && !certificateState.isRefreshBlocked ? { label: t('common.retry', 'Retry'), onClick: () => { void certificateQuery.refetch(); } } : undefined} /> : undefined}
           >
             <Text as="p" variant="bodySm">
               {t('system.outage.certificateReady', 'The session certificate is available for download with its original evidence intact.')}

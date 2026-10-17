@@ -49,6 +49,11 @@ import { useCommandReliabilityHistory } from '@/api/hooks/useCommands';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { downloadCSV } from '@/lib/csvExport';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
+import { MockResizeObserver } from '@/test/setup';
 import CommandReliabilityPage from './CommandReliabilityPage';
 
 const mockHistory = useCommandReliabilityHistory as unknown as ReturnType<typeof vi.fn>;
@@ -108,7 +113,32 @@ beforeEach(() => {
 afterEach(() => {
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
+  vi.unstubAllGlobals();
 });
+
+/**
+ * jsdom has no layout engine, so Recharts' ResponsiveContainer measures 0×0
+ * and renders no plot — which also hides the "Save as SVG" export item (the
+ * menu only offers SVG when a capture-eligible plot exists). Give observed
+ * elements a real size so the genuine chart renders, mirroring the
+ * PackCapacityModernization convention.
+ */
+function stubLayoutSize(width = 800, height = 400) {
+  class SizedObserver extends MockResizeObserver {
+    override observe(target: Element): void {
+      Object.defineProperty(target, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({
+          width, height, top: 0, left: 0, right: width, bottom: height,
+          x: 0, y: 0, toJSON: () => ({}),
+        }),
+      });
+      super.observe(target);
+      this.trigger(target);
+    }
+  }
+  vi.stubGlobal('ResizeObserver', SizedObserver);
+}
 
 describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
   it('preserves the zero-attempt record and every original caption and section', () => {
@@ -116,18 +146,22 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
     expect(band().querySelector('[data-operational-brief]')).toBeInTheDocument();
     expect(band().querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(stat('Overall success').querySelector('[data-operational-value]')).toHaveTextContent('0%');
-    expect(stat('Overall success')).toHaveTextContent('0 attempts');
-    expect(stat('Unreliable commands')).toHaveTextContent('Nothing failing');
-    expect(stat('Distinct intents')).toHaveTextContent('after collapsing retry storms');
-    expect(stat('Retry storms')).toHaveTextContent('you pressed it again, and again');
+    // Metric context moved off the face into the drawer's per-metric groups.
+    expect(stat('Overall success')).not.toHaveTextContent('0 attempts');
+    expect(stat('Unreliable commands')).not.toHaveTextContent('Nothing failing');
     expect(band().querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(4);
     expect(screen.getByRole('heading', { name: 'Command breakdown' })).toBeInTheDocument();
     expect(screen.getByText('No remote commands have been issued yet, so there is no reliability record to grade.')).toBeInTheDocument();
     expect(screen.getByText('No commands recorded yet.')).toBeInTheDocument();
     expect(mockHistory).toHaveBeenCalledWith(7, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z');
     fireEvent.click(within(band()).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('after collapsing retry storms')).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog')).getByText('you pressed it again, and again')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Overall success' })).toHaveTextContent('0 attempts');
+    expect(within(dialog).getByRole('group', { name: 'Unreliable commands' })).toHaveTextContent('Nothing failing');
+    expect(within(dialog).getByRole('group', { name: 'Distinct intents' })).toHaveTextContent('after collapsing retry storms');
+    expect(within(dialog).getByRole('group', { name: 'Retry storms' })).toHaveTextContent('you pressed it again, and again');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   describe('CommandReliabilityPage source trust and complete chart evidence', () => {
@@ -148,11 +182,19 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
     it('keeps an initially paused read unknown rather than claiming no records', () => {
       mockHistory.mockReturnValue(query(undefined, { isPending: true, fetchStatus: 'paused' }));
       renderPage();
-      expect(screen.getAllByText('Command outcomes unavailable')).toHaveLength(3);
+      // The brief's status moved into the drawer header; the two chart/detail
+      // sections still name the outage on the face.
+      expect(screen.getAllByText('Command outcomes unavailable')).toHaveLength(2);
+      assertOperationalBriefDisclosure(band(), 'Command outcomes unavailable');
       expect(screen.queryByText('No attempts recorded')).not.toBeInTheDocument();
       expect(screen.queryByText('No commands recorded yet.')).not.toBeInTheDocument();
       expect(screen.queryByText('No remote commands have been issued yet, so there is no reliability record to grade.')).not.toBeInTheDocument();
-      expect(band().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+      // Unknown metrics are omitted from the face; the drawer counts all four.
+      expect(band().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+      expect(within(band()).getByText('No metric values are available yet.')).toBeInTheDocument();
+      for (const label of ['Overall success', 'Unreliable commands', 'Distinct intents', 'Retry storms']) {
+        assertOperationalMetricUnavailable(band(), label);
+      }
       expect(screen.queryByText('Nothing failing')).not.toBeInTheDocument();
     });
 
@@ -162,7 +204,7 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
       mockHistory.mockReturnValue(query(data, { fetchStatus: 'paused', isPending: false }));
       renderPage();
       expect(stat('Overall success')).toHaveTextContent('40%');
-      expect(within(band()).getByText('Data may be stale')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(band(), 'Data may be stale');
       expect(within(screen.getByRole('table')).getByText('Lock')).toBeInTheDocument();
       expect(within(screen.getByRole('table')).getByText('Honk horn')).toBeInTheDocument();
       expect(screen.getByText('2 ok · 3 failed')).toBeInTheDocument();
@@ -174,6 +216,7 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
         { id: 41, vehicle_id: 7, command: 'command_prefix_shares_twenty_four_chars_alpha', params: '', status: 'failed', error: '', created_at: '2026-01-15T12:00:00Z' },
         { id: 42, vehicle_id: 7, command: 'command_prefix_shares_twenty_four_chars_beta', params: '', status: 'success', error: '', created_at: '2026-01-15T12:01:00Z' },
       ]));
+      stubLayoutSize();
       renderPage();
       const table = screen.getByRole('table');
       expect(within(table).getByText('Command prefix shares twenty four chars alpha')).toBeInTheDocument();
@@ -325,8 +368,9 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
         renderPage();
         const date = screen.getByText('Last used').nextElementSibling;
         expect(date).toHaveTextContent('Jan 14');
-        expect(band()).toHaveTextContent('Dec 31, 2025');
-        expect(band()).toHaveTextContent('Jan 14, 2026');
+        // The range scope moved off the face into the drawer header.
+        assertOperationalBriefDisclosure(band(), 'Dec 31, 2025', { contains: true });
+        assertOperationalBriefDisclosure(band(), 'Jan 14, 2026', { contains: true });
         expect(mockHistory).toHaveBeenCalledWith(7, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z');
       } finally {
         zone.mockRestore();
@@ -338,11 +382,18 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
     mockHistory.mockReturnValue(query(commands()));
     renderPage();
     expect(stat('Overall success').querySelector('[data-operational-value]')).toHaveTextContent('40%');
-    expect(stat('Overall success')).toHaveTextContent('6 attempts');
     expect(stat('Unreliable commands').querySelector('[data-operational-value]')).toHaveTextContent('1');
-    expect(stat('Unreliable commands')).toHaveTextContent('Lock');
     expect(stat('Distinct intents').querySelector('[data-operational-value]')).toHaveTextContent('2');
     expect(stat('Retry storms').querySelector('[data-operational-value]')).toHaveTextContent('1');
+    // Attempt counts and the worst-command identity moved off the face into
+    // the drawer's per-metric groups.
+    expect(stat('Overall success')).not.toHaveTextContent('6 attempts');
+    fireEvent.click(within(band()).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Overall success' })).toHaveTextContent('6 attempts');
+    expect(within(dialog).getByRole('group', { name: 'Unreliable commands' })).toHaveTextContent('Lock');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Confidence-weighted success' })).toBeInTheDocument();
     expect(screen.getByText('2 ok · 3 failed')).toBeInTheDocument();
     expect(screen.getByText('5 · 1 retried')).toBeInTheDocument();
@@ -367,8 +418,13 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
     const refetch = vi.fn();
     mockHistory.mockReturnValue(query(commands(), { error: new Error('refresh failed'), refetch }));
     renderPage();
-    expect(within(band()).getByText('Data may be stale')).toBeInTheDocument();
-    expect(stat('Overall success')).toHaveTextContent('6 attempts');
+    expect(stat('Overall success').querySelector('[data-operational-value]')).toHaveTextContent('40%');
+    assertOperationalBriefDisclosure(band(), 'Data may be stale');
+    fireEvent.click(within(band()).getByRole('button', { name: 'Review details' }));
+    const staleDialog = screen.getByRole('dialog');
+    expect(within(staleDialog).getByRole('group', { name: 'Overall success' })).toHaveTextContent('6 attempts');
+    fireEvent.keyDown(staleDialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledOnce();

@@ -116,7 +116,10 @@ describe('ChatWelcome — restrained surface', () => {
       'p-6',
     )
     expect(surface?.children).toHaveLength(1)
-    expect(container.querySelectorAll('[class*="bg-[var(--surface-2)]"]')).toHaveLength(1)
+    // Token match (~=), not substring (*=): the four chip buttons carry a
+    // `disabled:bg-[var(--surface-2)]` token from the shared Button, which is
+    // not an applied surface. Exactly one element wears the real token.
+    expect(container.querySelectorAll('[class~="bg-[var(--surface-2)]"]')).toHaveLength(1)
   })
 
   it('adds no halo, gradient, shadow or decorative motion around the welcome mark', () => {

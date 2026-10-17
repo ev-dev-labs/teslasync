@@ -81,6 +81,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import StatusApiDocsPage from './StatusApiDocsPage'
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions'
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
   useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
@@ -353,7 +354,11 @@ describe('StatusApiDocsPage — restrained adoption & complete contract retentio
     for (const name of ['API surface summary', 'Overview', 'Designed for', 'Endpoints']) {
       expect(screen.getByRole('region', { name })).toBeInTheDocument()
     }
-    expect(screen.getByText('Bundled documentation, not a runtime availability probe.')).toBeInTheDocument()
+    // Scope moved off the brief face into the Review details drawer header.
+    assertOperationalBriefDisclosure(
+      screen.getByRole('region', { name: 'API surface summary' }),
+      'Bundled documentation, not a runtime availability probe.',
+    )
     expect(screen.getByRole('link', { name: /Open an issue/i })).toBeInTheDocument()
     expect(fetchSpy).not.toHaveBeenCalled()
   })

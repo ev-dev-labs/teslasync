@@ -34,7 +34,10 @@
  * used only for native keyboard activation; URL/filter events use `fireEvent`.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -408,7 +411,14 @@ describe('SearchPage', () => {
     // Drives (3) beats Vehicles (2) even though Vehicles sorts first.
     const top = metricCard('Top match');
     expect(top).toHaveTextContent('Drives');
-    expect(top).toHaveTextContent('3 results');
+    // The group count moved off the face into the drawer's Top match group.
+    expect(top).not.toHaveTextContent('3 results');
+    const summary = screen.getByRole('region', { name: 'Search summary' });
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('group', { name: 'Top match' })).toHaveTextContent('3 results');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders the No-results state and a zeroed KPI band on an empty hit set', async () => {
@@ -419,9 +429,14 @@ describe('SearchPage', () => {
     expect(await screen.findByText('No results')).toBeInTheDocument();
     expect(screen.getByText(/No matches for "zzz"/)).toBeInTheDocument();
 
-    // The KPI band still renders (never gated) with zeroed derivations.
+    // The KPI band still renders (never gated) with zeroed derivations; with
+    // no groups, Top match is unknown — omitted from the face, counted in
+    // the drawer.
     expect(metricCard('Total results')).toHaveTextContent('0');
-    expect(metricCard('Top match')).toHaveTextContent('—');
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'Search summary' }),
+      'Top match',
+    );
   });
 
   it('shows the QueryError banner on a failed fetch and re-issues on Retry', async () => {
@@ -616,8 +631,9 @@ describe('SearchPage restrained migration', () => {
 
     expect(screen.getByRole('link', { name: 'Open vehicle-title-11' })).toBeInTheDocument();
     const summary = screen.getByRole('region', { name: 'Search summary' });
-    expect(summary).toHaveTextContent('for “model”');
-    expect(summary).not.toHaveTextContent('for “roadster”');
+    // The retained-query scope moved off the face into the drawer header.
+    assertOperationalBriefDisclosure(summary, 'for “model”', { contains: true });
+    assertOperationalBriefDisclosure(summary, 'for “roadster”', { contains: true, absent: true });
     assertOperationalBriefDisclosure(summary, 'Retained source', { contains: true });
   });
 
@@ -659,7 +675,11 @@ describe('SearchPage restrained migration', () => {
       await waitFor(() => expect(mockedRequest.mock.calls.length).toBe(2));
       expect(screen.getByText(/No matches for "model"/)).toBeInTheDocument();
       expect(screen.queryByText(/No matches for "roadster"/)).not.toBeInTheDocument();
-      expect(screen.getByRole('region', { name: 'Search summary' })).toHaveTextContent('for “model” · result types: Drives');
+      assertOperationalBriefDisclosure(
+        screen.getByRole('region', { name: 'Search summary' }),
+        'for “model” · result types: Drives',
+        { contains: true },
+      );
       expect(metricCard('Total results')).toHaveTextContent('0');
     });
 
@@ -712,8 +732,9 @@ describe('SearchPage restrained migration', () => {
       fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'roadster' } });
       await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => String(path).includes('q=roadster'))).toBe(true));
       const summary = screen.getByRole('region', { name: 'Search summary' });
-      expect(summary).toHaveTextContent('for “model” · result types: Drives');
-      expect(summary).not.toHaveTextContent('result types: Drives, Vehicles');
+      // The retained scope moved off the face into the drawer header.
+      assertOperationalBriefDisclosure(summary, 'for “model” · result types: Drives', { contains: true });
+      assertOperationalBriefDisclosure(summary, 'result types: Drives, Vehicles', { contains: true, absent: true });
       assertOperationalBriefDisclosure(summary, 'Retained source', { contains: true });
       expect(screen.getByText('Requested: “roadster” · types: Drives, Vehicles')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Open retained drive' })).toHaveAttribute('href', '/drive/21');
@@ -728,7 +749,11 @@ describe('SearchPage restrained migration', () => {
       installSearch({ pending: true });
       fireEvent.click(screen.getByRole('button', { name: 'Vehicles' }));
       await waitFor(() => expect(mockedRequest.mock.calls.length).toBe(2));
-      expect(screen.getByRole('region', { name: 'Search summary' })).toHaveTextContent('result types: All types shown');
+      assertOperationalBriefDisclosure(
+        screen.getByRole('region', { name: 'Search summary' }),
+        'result types: All types shown',
+        { contains: true },
+      );
       expect(screen.getByText('Requested: “model” · types: Vehicles')).toBeInTheDocument();
     });
 
@@ -796,11 +821,14 @@ describe('SearchPage restrained migration', () => {
       expect(explanation).toHaveTextContent('Search request paused');
       expect(explanation).toHaveTextContent('No response has been received, so result counts are unknown.');
       expect(explanation).not.toHaveTextContent(/offline|failed/i);
-      const total = metricCard('Total results');
-      expect(total).toHaveAttribute('data-value-state', 'missing');
-      expect(total.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
-      expect(metricCard('Categories')).toHaveAttribute('data-value-state', 'missing');
-      expect(metricCard('Top match')).toHaveTextContent('Unknown');
+      const summary = screen.getByRole('region', { name: 'Search summary' });
+      // Response-derived counts are unknown — omitted from the face and
+      // counted in the drawer — while the requested facet scope (client-side)
+      // stays visible.
+      expect(metricCard('Active filters')).toHaveTextContent('1');
+      for (const label of ['Total results', 'Categories', 'Top match']) {
+        assertOperationalMetricUnavailable(summary, label);
+      }
       expect(screen.queryByText('No results')).not.toBeInTheDocument();
       expect(screen.queryByText('Updating…')).not.toBeInTheDocument();
       expect(screen.getByRole('searchbox', { name: 'Search query' })).toHaveValue('model');

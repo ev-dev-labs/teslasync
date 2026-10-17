@@ -33,6 +33,7 @@ import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { ReactNode } from 'react';
 import type { FSMTransition } from '@/types/fsm';
 import { formatDurationMsCompact } from '@/lib/dateFormat';
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 
 // ── Mutable per-test fixture (referenced inside hoisted vi.mock factories) ──
 const mockStore = {
@@ -92,16 +93,25 @@ vi.mock('react-i18next', () => ({
 
 // ── framer-motion: strip animation props, render children synchronously ──
 vi.mock('framer-motion', () => {
+  // Cache one component per tag: returning a fresh component on every access
+  // changes the element type each render, which unmounts/remounts every
+  // motion subtree on every state update and strands node references.
+  const motionCache = new Map<string | symbol, unknown>();
   const motionProxy: Record<string, unknown> = new Proxy(
     {},
     {
-      get: () => ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
-        const safeRest: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(rest)) {
-          if (['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'variants'].includes(k)) continue;
-          safeRest[k] = v;
+      get: (_target, tag: string) => {
+        if (!motionCache.has(tag)) {
+          motionCache.set(tag, ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+            const safeRest: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(rest)) {
+              if (['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'variants'].includes(k)) continue;
+              safeRest[k] = v;
+            }
+            return <div {...(safeRest as Record<string, unknown>)}>{children}</div>;
+          });
         }
-        return <div {...(safeRest as Record<string, unknown>)}>{children}</div>;
+        return motionCache.get(tag);
       },
     },
   );
@@ -218,6 +228,18 @@ function kpiCard(label: string): HTMLElement {
   return card as HTMLElement;
 }
 
+/** Open the FSM summary drawer and resolve a per-metric group by label. */
+function drawerGroup(label: string): HTMLElement {
+  const band = screen.getByRole('region', { name: 'FSM summary metrics' });
+  fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+  return within(screen.getByRole('dialog')).getByRole('group', { name: label });
+}
+
+function closeDrawer() {
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+}
+
 beforeEach(() => {
   mockStore.transitions = [];
   mockStore.total = 0;
@@ -247,7 +269,9 @@ describe('StateMachineDebuggerPage — exact chart range', () => {
       transitions: [{ ...mockStore.transitions[0], fsm_name: 'driving' }],
     });
     expect(mockStore.timelineProps?.transitions).toHaveLength(1);
-    expect(within(kpiCard('Transitions (Page)')).getByText('1 / 200')).toBeInTheDocument();
+    // The page/total count moved off the face into the drawer's metric group.
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('1 / 200');
+    closeDrawer();
     expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
       '0 in window · 1 in filtered buffer · 1 loaded · 200 matching',
     );
@@ -270,7 +294,8 @@ describe('StateMachineDebuggerPage — KPI band', () => {
 
     renderPage();
 
-    expect(within(kpiCard('Transitions (Page)')).getByText('3 / 233')).toBeInTheDocument();
+    expect(drawerGroup('Transitions (Page)')).toHaveTextContent('3 / 233');
+    closeDrawer();
     expect(within(kpiCard('Total transitions')).getByText('233')).toBeInTheDocument();
     expect(within(kpiCard('Flap warnings')).getByText('3')).toBeInTheDocument();
     expect(within(kpiCard('Current state')).getByText('driving')).toBeInTheDocument();
@@ -281,7 +306,12 @@ describe('StateMachineDebuggerPage — KPI band', () => {
 
     renderPage();
 
-    expect(within(kpiCard('Current state')).getByText('—')).toBeInTheDocument();
+    // Unknown current state is omitted from the face and counted in the
+    // drawer rather than rendered as a placeholder value.
+    assertOperationalMetricUnavailable(
+      screen.getByRole('region', { name: 'FSM summary metrics' }),
+      'Current state',
+    );
   });
 
   it('distinguishes the current-state metric from the populated unconfirmed snapshot heading', () => {
@@ -411,7 +441,9 @@ describe('StateMachineDebuggerPage — transition log', () => {
 
     renderPage();
 
-    expect(screen.getByText('Transition log')).toBeInTheDocument();
+    // The table carries its own screen-reader caption, so target the visible
+    // section heading (which also shows the matching total).
+    expect(screen.getByRole('heading', { name: 'Transition log2 total' })).toBeInTheDocument();
     expect(screen.getByText('speed_changed')).toBeInTheDocument();
     expect(screen.getByText('gear_changed')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'View detail' })).toHaveLength(2);

@@ -18,6 +18,10 @@ import { ToastProvider } from '@/components/feedback';
 import { commandKeys, type CommandLogEntry } from '@/api/hooks/useCommands';
 import { vehicleKeys } from '@/api/hooks/useVehicles';
 import { telemetryKeys, type VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import type { Vehicle, VehicleState } from '../commands';
 import {
   CATEGORY_META,
@@ -304,12 +308,22 @@ describe('VehicleCommandCenter — summary and readiness', () => {
 
     renderCenter(makeVehicle({ state: 'charging', updated_at: veryOld }));
 
-    expect(await within(screen.getByTestId('command-center-hero')).findByText('Last known: Charging')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Vehicle state' })).getByText('No verified signal time')).toBeInTheDocument();
+    const hero = screen.getByTestId('command-center-hero');
+    expect(await within(hero).findByText('Last known: Charging')).toBeInTheDocument();
+    // The status pill renders from props immediately, but the brief face shows
+    // skeletons until the live state query resolves — wait for a real value.
+    expect(await within(hero).findByText('85.00%', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    // Freshness moved off the brief face into the drawer header; the hero
+    // caption keeps the honest unknown, never an invented signal time.
+    assertOperationalBriefDisclosure(hero, 'No verified signal time');
+    expect(within(hero).getByText('No verified signal time')).toBeInTheDocument();
     expect(screen.queryByText('3653h ago')).not.toBeInTheDocument();
     expect(await screen.findByText('Delivery uncertain')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Command readiness' })).getByText('Motion unknown', { selector: '[data-operational-metric="motion"][data-value-state="missing"] [data-operational-value]' })).toBeInTheDocument();
-    expect(screen.getByTestId('command-readiness')).toHaveTextContent('Unknown');
+    const readiness = screen.getByRole('region', { name: 'Command readiness' });
+    // Unknown motion is omitted from the face (never invented); the drawer counts it hidden.
+    assertOperationalMetricUnavailable(readiness, 'Motion context');
+    // Telemetry freshness moved off the face into the drawer header.
+    assertOperationalBriefDisclosure(readiness, 'Unknown');
   });
 
   it('uses a verified signal observation for current status and readiness', async () => {

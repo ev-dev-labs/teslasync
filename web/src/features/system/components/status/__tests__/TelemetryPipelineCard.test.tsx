@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -222,7 +222,7 @@ describe('TelemetryPipelineCard', () => {
         },
       },
     }
-    harness(
+    const { container } = harness(
       <TelemetryPipelineCard
         vehicles={vehicles}
         positionCount={12366}
@@ -233,7 +233,16 @@ describe('TelemetryPipelineCard', () => {
       />,
     )
 
-    expect(screen.getByText('1 connected')).toBeInTheDocument()
+    // The face carries the connected count value; the spelled-out sentence
+    // lives in the fleet brief's drawer group.
+    expect(container.querySelector('[data-operational-metric="vehicles"] [data-operational-value]')).toHaveTextContent('1')
+    const fleetBrief = container.querySelector('[data-operational-metric="vehicles"]')?.closest('[data-operational-brief]')
+    if (!(fleetBrief instanceof HTMLElement)) throw new Error('Missing fleet brief')
+    fireEvent.click(within(fleetBrief).getByRole('button', { name: 'Review details' }))
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('group', { name: 'Vehicles' })).toHaveTextContent('1 connected')
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByText('12,366')).toBeInTheDocument()
     expect(screen.getByText('97,611')).toBeInTheDocument()
     expect(screen.getByText('Daily Driver')).toBeInTheDocument()

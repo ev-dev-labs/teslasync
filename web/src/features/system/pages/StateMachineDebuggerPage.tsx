@@ -174,7 +174,7 @@ export default function StateMachineDebuggerPage() {
       data-transition-pending
       className={cn('space-y-2', transTrust.isRefreshBlocked && '[&_.animate-pulse]:animate-none')}
     >
-      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} height={height} />)}
+      {Array.from({ length: rows }, (_, i) => <Skeleton key={i} height={height} className="animate-pulse motion-reduce:animate-none" />)}
     </div>
   );
 
@@ -688,7 +688,7 @@ export default function StateMachineDebuggerPage() {
         ) : transError ? (
           <QueryError error={transError} onRetry={() => refetchTrans()} />
         ) : (
-          <FSMHealthPanel transitions={transitions} />
+          <FSMHealthPanel transitions={transitions} sourceState={transTrust} hideStaleWarning />
         )}
       </FadeIn>
 
@@ -721,15 +721,17 @@ export default function StateMachineDebuggerPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
           <GlassPanel className="p-4 sm:p-6 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-1">
-              {stateTitle}
+            {/* The help tooltip sits beside the heading (not inside it) so its
+                content does not bleed into the heading's accessible name. */}
+            <div className="mb-3 flex items-center gap-1">
+              <PanelTitle>{stateTitle}</PanelTitle>
               <HelpTooltip
                 size="xs"
                 i18nKey="help.fsm.liveState"
                 defaultValue="The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
                 ariaLabel={t('help.fsm.liveStateAria', { defaultValue: 'More info about FSM live state' })}
               />
-            </PanelTitle>
+            </div>
             {stateLoading ? (
               <Skeleton height={80} />
             ) : stateError ? (

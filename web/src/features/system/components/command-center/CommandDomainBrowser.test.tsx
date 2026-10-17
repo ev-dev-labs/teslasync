@@ -200,8 +200,11 @@ describe('CommandDomainBrowser ordinary button contract (F10)', () => {
       const definitionsInCategory = definitions.filter((definition) =>
         definition.category === category,
       );
+      // CollapsibleCommandGroup renders the count in an adjacent span with no
+      // intervening whitespace, so the accessible name has no space before
+      // the count (e.g. "Security & access(15)").
       const button = within(region).getByRole('button', {
-        name: `${CATEGORY_META[category].fallback} (${definitionsInCategory.length})`,
+        name: `${CATEGORY_META[category].fallback}(${definitionsInCategory.length})`,
       });
       expect(button).toHaveAttribute('aria-expanded', String(index === 0));
       if (index !== 0) fireEvent.click(button);

@@ -7,11 +7,20 @@ import type { CommandDef, VehicleState } from '../commands';
 
 // Deterministic i18n: echo the provided fallback so text/label assertions do
 // not depend on the runtime translation catalogue (mirrors the repo's
-// CommandTile / CollapsibleCommandGroup test convention).
+// CommandTile / CollapsibleCommandGroup test convention). Fallback templates
+// with {{vars}} are interpolated from the options bag, matching the global
+// setup mock, so the tile's `Last known: {{status}}` copy resolves.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : _key,
+    t: (_key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+      const template = typeof fallback === 'string' ? fallback : _key;
+      if (!options || typeof options !== 'object') return template;
+      let out = template;
+      for (const [k, v] of Object.entries(options)) {
+        out = out.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
+      }
+      return out;
+    },
   }),
 }));
 

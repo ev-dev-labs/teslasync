@@ -39,8 +39,23 @@ vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   return {
     ...actual,
-    Area: (props: ComponentProps<typeof actual.Area>) =>
-      <actual.Area {...props} isAnimationActive={false} />,
+    // Recharts matches graphical children by displayName, resolves axis ids
+    // from `type.defaultProps`, and only formats items whose type carries
+    // `getComposedData`; the animation-disabling wrapper must mirror all
+    // three of the real Area's statics. Without defaultProps the Y-axis
+    // domain computation crashes on `item.type.defaultProps['yAxisId']`
+    // (recharts 2.15 reads it without the optional chaining used elsewhere),
+    // and without getComposedData no `.recharts-area` is rendered at all.
+    Area: Object.assign(
+      (props: ComponentProps<typeof actual.Area>) => (
+        <actual.Area {...props} isAnimationActive={false} />
+      ),
+      {
+        displayName: 'Area',
+        defaultProps: actual.Area.defaultProps,
+        getComposedData: (actual.Area as unknown as { getComposedData: unknown }).getComposedData,
+      },
+    ),
     ResponsiveContainer: ({ children }: { children: ReactElement<{ width?: number; height?: number }> }) =>
       cloneElement(children, { width: 800, height: 220 }),
   };

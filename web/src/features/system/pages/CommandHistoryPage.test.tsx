@@ -104,6 +104,10 @@ vi.mock('react-i18next', async () => {
 });
 
 import CommandHistoryPage from './CommandHistoryPage';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import { ApiError } from '@/lib/resilience';
@@ -287,11 +291,18 @@ describe('CommandHistoryPage — happy path', () => {
     expect(rate.querySelector('[data-operational-value]')).toHaveTextContent('60.00%');
     expect(within(band).getByText('2')).toBeInTheDocument(); // failed
     expect(within(band).getByText('Lock')).toBeInTheDocument(); // most-used, i18n-resolved
-    expect(within(band).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
-    const last = within(band).getByText('Last sent').closest('[data-operational-metric]') as HTMLElement;
-    expect(last).toHaveTextContent(new Date(RECENT).getUTCFullYear().toString());
+    // Metric context moved off the face into the drawer's per-metric groups;
+    // the face keeps live values only.
+    expect(within(band).queryByText('Last 24 hours within the selected window')).not.toBeInTheDocument();
+    expect(band.querySelector('[data-operational-metric="lastSent"] [data-operational-value]')).toBeInTheDocument();
     fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    const rolling = within(dialog).getByRole('group', { name: 'Commands (24h)' });
+    expect(within(rolling).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    expect(within(dialog).getByRole('group', { name: 'Last sent' }))
+      .toHaveTextContent(new Date(RECENT).getUTCFullYear().toString());
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders all four analytics/detail panels with data (never their empty states)', async () => {
@@ -393,7 +404,12 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     expect(screen.getAllByText('Select a vehicle to view command activity')).toHaveLength(3);
     // The command feed is gated off — enabled:!!vehicleId — so it never fires.
     expect(historyCalls().length).toBe(0);
-    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    // Unknown metrics are omitted from the face; the drawer counts all six.
+    expect(kpiBand().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(kpiBand()).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Total commands', 'Commands (24h)', 'Success rate', 'Failed', 'Most used', 'Last sent']) {
+      assertOperationalMetricUnavailable(kpiBand(), label);
+    }
     expect(within(kpiBand()).queryByText('0')).not.toBeInTheDocument();
   });
 
@@ -405,13 +421,20 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     await act(async () => { await client.invalidateQueries(); });
 
     await waitFor(() =>
-      expect(within(kpiBand()).getByText('Data may be stale')).toBeInTheDocument(),
+      expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0),
     );
+    // Status + scope moved off the face into the drawer header; values stay.
+    assertOperationalBriefDisclosure(kpiBand(), 'Data may be stale');
     expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
     expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
-    expect(within(kpiBand()).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    expect(within(kpiBand()).queryByText('Last 24 hours within the selected window')).not.toBeInTheDocument();
+    fireEvent.click(within(kpiBand()).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    const rolling = within(dialog).getByRole('group', { name: 'Commands (24h)' });
+    expect(within(rolling).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(within(timelinePanel()).getByText('Wake up')).toBeInTheDocument();
-    expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
   });
 });
 
@@ -635,7 +658,12 @@ describe('CommandHistoryPage — restrained presentation and trust', () => {
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
     expect(screen.queryByText('No commands match the current filters')).not.toBeInTheDocument();
     expect(screen.queryByText('0 commands')).not.toBeInTheDocument();
-    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    // Unknown metrics are omitted from the face; the drawer counts all six.
+    expect(kpiBand().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(kpiBand()).getByText('No metric values are available yet.')).toBeInTheDocument();
+    for (const label of ['Total commands', 'Commands (24h)', 'Success rate', 'Failed', 'Most used', 'Last sent']) {
+      assertOperationalMetricUnavailable(kpiBand(), label);
+    }
     expect(within(kpiBand()).queryByText('0')).not.toBeInTheDocument();
   });
 

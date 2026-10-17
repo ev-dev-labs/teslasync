@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createInstance } from 'i18next';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import type { FSMTransition } from '@/types/fsm';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { computeFlapIds } from '../FSMHealthPanel';
@@ -51,12 +55,21 @@ describe('FSM shared OperationalBrief', () => {
       stateQuery={{ data: {}, dataUpdatedAt: liveAt }} currentState="parked"
       period={period} onRetry={vi.fn()} /></MemoryRouter>);
     const opts = { locale: 'de-DE', tz: 'Asia/Tokyo' };
-    expect(screen.getByTestId('fsm-summary')).toHaveTextContent(formatDateTime(new Date(historyAt), opts));
-    expect(screen.getByTestId('fsm-summary')).toHaveTextContent(formatDateTime(new Date(liveAt), opts));
+    const historyStamp = formatDateTime(new Date(historyAt), opts);
+    const liveStamp = formatDateTime(new Date(liveAt), opts);
+    // Freshness moved off the face into the drawer header — the face keeps
+    // labels and values only.
+    const strip = screen.getByTestId('fsm-summary');
+    expect(strip).not.toHaveTextContent(historyStamp);
+    expect(strip).not.toHaveTextContent(liveStamp);
+    assertOperationalBriefDisclosure(strip, historyStamp, { contains: true });
+    assertOperationalBriefDisclosure(strip, liveStamp, { contains: true });
     rerender(<MemoryRouter><FSMOperationalBrief transitions={{ data: { data: [] }, dataUpdatedAt: NaN }}
       stateQuery={{ data: {} }} currentState={null} period={period} onRetry={vi.fn()} /></MemoryRouter>);
-    expect(screen.getByTestId('fsm-summary')).toHaveTextContent('Fetch time not supplied');
-    expect(screen.getByTestId('fsm-summary')).not.toHaveTextContent('Invalid Date');
+    const restrip = screen.getByTestId('fsm-summary');
+    assertOperationalBriefDisclosure(restrip, 'Fetch time not supplied', { contains: true });
+    assertOperationalBriefDisclosure(restrip, 'Invalid Date', { contains: true, absent: true });
+    expect(restrip).not.toHaveTextContent('Invalid Date');
   });
   it('retains numeric page versus total, detector-backed flaps and textual current state', () => {
     const rows = Array.from({ length: 7 }, (_, index): FSMTransition => ({
@@ -87,14 +100,29 @@ describe('FSM shared OperationalBrief', () => {
     const strip = screen.getByTestId('fsm-summary');
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(strip).toHaveAttribute('data-operational-brief');
-    expect(strip).toHaveTextContent('[2026-10-01T00:00:00Z, 2026-10-03T00:00:00Z)');
-    expect(screen.getByText('0 / 73')).toBeInTheDocument();
+    // The explicit selected range moved off the face into the drawer header...
+    expect(strip).not.toHaveTextContent('[2026-10-01T00:00:00Z, 2026-10-03T00:00:00Z)');
+    assertOperationalBriefDisclosure(strip, '[2026-10-01T00:00:00Z, 2026-10-03T00:00:00Z)', { contains: true });
+    // ...and the page-versus-total context into the drawer's per-metric group.
+    expect(screen.queryByText('0 / 73')).not.toBeInTheDocument();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByRole('group', { name: 'Transitions (Page)' })).toHaveTextContent('0 / 73');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(strip.querySelector('[data-operational-metric="state"] [data-operational-value]')).toHaveTextContent('parked');
     rerender(<MemoryRouter><FSMOperationalBrief transitions={{ error: new Error('history unavailable') }}
       stateQuery={{ data: {}, error: new Error('live refresh failed') }} currentState="parked"
       period={period} onRetry={retry} /></MemoryRouter>);
     expect(strip.closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
-    expect(strip.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    // Unknown page, total and flaps are omitted from the face (never
+    // missing-state tiles); the drawer carries the counted explanation while
+    // the independently sourced live state stays visible.
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(strip.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    assertOperationalMetricUnavailable(strip, 'Transitions (Page)');
+    assertOperationalMetricUnavailable(strip, 'Total transitions');
+    assertOperationalMetricUnavailable(strip, 'Flap warnings');
     expect(strip.querySelector('[data-operational-metric="state"]')).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();

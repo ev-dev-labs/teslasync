@@ -240,7 +240,7 @@ describe('Tesla usage selected history', () => {
   it('shows old observed history, four priced categories, and switches bucket selection', () => {
     useHistory.mockReturnValue({ data: { points: [point], total: { ...point } }, isLoading: false, error: null, refetch: vi.fn() })
     render(<TeslaApiUsageHistory />)
-    expect(screen.getByText(/Local observations only, not a Tesla invoice/)).toBeInTheDocument()
+    assertOperationalBriefDisclosure(document.body, 'Local observations only, not a Tesla invoice', { contains: true })
     fireEvent.click(screen.getByRole('button', { name: 'Older range' }))
     expect(useHistory).toHaveBeenLastCalledWith('2024-01-01T00:00:00.000Z', '2024-01-08T00:00:00.000Z', 'day', true)
     expect(screen.getByTestId('breakdown')).toHaveTextContent('Streaming signals: 150,000 · $1.0000')
