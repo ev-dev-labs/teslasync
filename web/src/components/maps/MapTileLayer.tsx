@@ -74,8 +74,14 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
   }
 
   const t = tiles[effectiveStyle] || tiles.dark
+  // react-leaflet updates only url/opacity/zIndex on a mounted TileLayer —
+  // the dark-mode CSS filter (className) applies at construction only. Key
+  // the layer on provider + effective style so a style switch always mounts
+  // a fresh layer and the selected option matches the tiles shown.
+  const layerKey = `${mapConfig?.provider ?? 'free'}:${effectiveStyle}`
   return (
     <TileLayer
+      key={layerKey}
       url={t.url}
       attribution={t.attribution}
       // CARTO's former anonymous dark tiles now return an API-key watermark.

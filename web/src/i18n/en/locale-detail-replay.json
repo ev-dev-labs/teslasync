@@ -80,6 +80,7 @@
       "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The trip statistics, speed, and elevation timeline above the scrubber are unaffected."
     },
     "currentStats": "Current position stats",
+    "sources": "Sources",
     "stat": {
       "speed": "Speed",
       "power": "Power",

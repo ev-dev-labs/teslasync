@@ -1,13 +1,13 @@
-import { useMemo, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useEffect, useRef, useCallback, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Gauge, Battery, Zap, Mountain, Thermometer,
-  Navigation, MapPin, RefreshCw,
+  Navigation, MapPin, RefreshCw, Info,
 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
-import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, PanelTitle, Text, IconButton, Drawer } from '@/components/ui';
 import {
   PlaybackControls,
   type TimelineMarker,
@@ -26,6 +26,7 @@ import {
   formatPower,
 } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useTripReplay } from '@/hooks/useTripReplay';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { haversineDistance } from '@/lib/geo';
@@ -122,6 +123,8 @@ export default function TripReplayPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   usePageTitle(t('replay.title', 'Trip Replay'));
+  const { formatDateTime } = useDateFormat();
+  const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const driveQuery = useDrive(id ?? '');
   const { data: drive } = driveQuery;
@@ -549,7 +552,7 @@ export default function TripReplayPage() {
               className="flex flex-col overflow-hidden"
             >
               <div className="contents lg:order-first lg:grid lg:min-w-0 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
-              <div className="order-first min-w-0 h-[320px] sm:h-[380px] lg:order-none lg:h-[440px]">
+              <div className="order-first h-[55vh] min-w-0 lg:order-none lg:h-auto lg:min-h-[440px]">
                 {positions.length > 0 ? <TripReplayMap
                   positions={positions}
                   currentIndex={replay.currentIndex}
@@ -567,12 +570,15 @@ export default function TripReplayPage() {
                 )}
               </div>
               <div className="order-last flex min-w-0 flex-col border-t border-[var(--border-subtle)] p-3 lg:order-none lg:border-t-0 lg:border-s sm:p-4" data-testid="replay-current-stats">
-                <PanelTitle className="px-3 pb-2 sm:px-4">
-                  {t('replay.currentStats', 'Current Position Stats')}
-                </PanelTitle>
+                <div className="flex min-w-0 items-center gap-2 px-3 pb-2 sm:px-4">
+                  <PanelTitle className="mb-0 min-w-0 flex-1">
+                    {t('replay.currentStats', 'Current Position Stats')}
+                  </PanelTitle>
+                  <IconButton icon={<Info className="h-4 w-4" aria-hidden="true" />} label={t('replay.sources', 'Sources')} onClick={() => setSourcesOpen(true)} />
+                </div>
                 <Text variant="caption" className="px-3 pb-2 sm:px-4 [overflow-wrap:anywhere]">
                   {t('common.timestamp', 'Timestamp')}: {cp && Number.isFinite(new Date(cp.timestamp).getTime())
-                    ? <time dateTime={cp.timestamp}>{new Date(cp.timestamp).toISOString()}</time>
+                    ? <time dateTime={cp.timestamp}>{formatDateTime(cp.timestamp)}</time>
                     : t('common.unknown', 'Unknown')}
                 </Text>
                 <div className="grid flex-1 grid-cols-2 sm:grid-cols-3 lg:grid-cols-2">
@@ -631,7 +637,8 @@ export default function TripReplayPage() {
                     icon={<Thermometer className="h-4 w-4" />}
                   />
                 </div>
-                <dl className="grid gap-2 border-t border-[var(--border-subtle)] px-3 pt-3 sm:px-4">
+                <Drawer open={sourcesOpen} onClose={() => setSourcesOpen(false)} title={t('replay.sources', 'Sources')}>
+                <dl className="grid gap-2">
                   {quantitySources.map(([quantity, label]) => {
                     const sourceTs = positions[replay.currentIndex]?.sourceTimestamps[quantity] ?? null;
                     const origin = positions[replay.currentIndex]?.sourceOrigins[quantity] ?? 'unknown';
@@ -663,7 +670,7 @@ export default function TripReplayPage() {
                         </Text>
                         <Text as="dd" variant="caption" className="[overflow-wrap:anywhere]">
                           {t('common.timestamp', 'Timestamp')}: {sourceTs != null
-                            ? <time dateTime={new Date(sourceTs).toISOString()}>{new Date(sourceTs).toISOString()}</time>
+                            ? <time dateTime={new Date(sourceTs).toISOString()}>{formatDateTime(new Date(sourceTs).toISOString())}</time>
                             : t('common.unknown', 'Unknown')}
                           {' · '}{t('statistics.age', 'Age')}: {age}
                         </Text>
@@ -671,6 +678,7 @@ export default function TripReplayPage() {
                     );
                   })}
                 </dl>
+                </Drawer>
               </div>
               </div>
 

@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
@@ -29,9 +29,13 @@ vi.mock('@/components/layout', () => ({
   PageLayout: ({ children, secondaryActions }: { children: ReactNode; secondaryActions: ReactNode }) =>
     <main>{secondaryActions}{children}</main>,
 }));
-vi.mock('@/components/motion', () => ({
-  FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
-}));
+vi.mock('@/components/motion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/motion')>();
+  return {
+    ...actual,
+    FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
+  };
+});
 vi.mock('@/features/trips/components/TripReplayMap', () => ({
   TripReplayMap: (props: TripReplayMapProps) => {
     captured.map = props;
@@ -146,6 +150,10 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(screen.getByTestId('replay-summary-source')).toHaveAttribute('data-provenance', 'live');
     expect(screen.getByTestId('replay-route-source')).toHaveAttribute('data-provenance', 'historical');
     expect(screen.getByTestId('replay-derived-source')).toHaveAttribute('data-provenance', 'inferred');
+    // Per-field sources live in the Sources drawer, off the panel face.
+    expect(screen.queryByTestId('replay-source-speed')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
+    expect(screen.getByRole('dialog', { name: 'Sources' })).toBeInTheDocument();
     expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Source: Position · Historical');
     expect(screen.getByTestId('replay-source-batteryLevel')).toHaveTextContent('Source: Position · Historical');
     expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Source: Telemetry · Estimated');
@@ -162,6 +170,7 @@ describe('TripReplayPage local modernization regressions', () => {
     currentDrive.endTs = null;
     mount();
     expect(screen.getByTestId('replay-summary-source')).toHaveAttribute('data-provenance', 'unknown');
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
     expect(screen.getByTestId('replay-source-speed')).toHaveAttribute('data-provenance', 'historical');
   });
 
@@ -195,8 +204,19 @@ describe('TripReplayPage local modernization regressions', () => {
       tirePressureFl: null, tirePressureFr: null, tirePressureRl: null, tirePressureRr: null,
     }];
     mount();
-    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Timestamp: 2024-01-01T00:00:00.000Z · Age: 0.00 s');
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2023-12-31T23:55:00.000Z · Age: 300.00 s');
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
+    const drawer = screen.getByRole('dialog', { name: 'Sources' });
+    // Source instants render through the app date formatter (never raw ISO);
+    // the machine-readable instant stays on the <time dateTime>.
+    const speedTime = within(drawer).getByTestId('replay-source-speed').querySelector('time');
+    expect(speedTime).toHaveAttribute('dateTime', '2024-01-01T00:00:00.000Z');
+    expect(speedTime?.textContent).toMatch(/2024/);
+    expect(speedTime?.textContent).not.toBe('2024-01-01T00:00:00.000Z');
+    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Age: 0.00 s');
+    const powerTime = within(drawer).getByTestId('replay-source-power').querySelector('time');
+    expect(powerTime).toHaveAttribute('dateTime', '2023-12-31T23:55:00.000Z');
+    expect(powerTime?.textContent).not.toBe('2023-12-31T23:55:00.000Z');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: 300.00 s');
     expect(screen.getByTestId('replay-source-elevation')).toHaveTextContent('Age: 300.00 s');
     expect(screen.getByTestId('replay-source-ratedRange')).toHaveTextContent('Age: 0.00 s');
     expect(screen.getByTestId('replay-source-ratedRange')).not.toHaveTextContent('Unknown');
@@ -204,7 +224,18 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(screen.getByTestId('replay-source-outsideTemp')).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
     expect(captured.map?.positions[0].power).toBe(1500);
     act(() => captured.map?.onSeekToIndex(1));
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:01:00.000Z · Age: 0.00 s');
+    const powerTimeAfterSeek = within(drawer).getByTestId('replay-source-power').querySelector('time');
+    expect(powerTimeAfterSeek).toHaveAttribute('dateTime', '2024-01-01T00:01:00.000Z');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: 0.00 s');
+  });
+
+  it('formats the panel-face timestamp through the app date formatter', () => {
+    mount();
+    const panel = screen.getByTestId('replay-current-stats');
+    const time = within(panel).getByText((_, element) => element?.tagName === 'TIME');
+    expect(time).toHaveAttribute('dateTime', '2024-01-01T00:00:00.000Z');
+    expect(time.textContent).toMatch(/2024/);
+    expect(time.textContent).not.toBe('2024-01-01T00:00:00.000Z');
   });
 
   it('retains the existing later-row tie break and reveals future telemetry as negative age', () => {
@@ -219,7 +250,10 @@ describe('TripReplayPage local modernization regressions', () => {
     }));
     mount();
     expect(captured.map?.positions[0].power).toBe(10000);
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:00:10.000Z · Age: -10.00 s');
+    fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
+    const powerTime = screen.getByTestId('replay-source-power').querySelector('time');
+    expect(powerTime).toHaveAttribute('dateTime', '2024-01-01T00:00:10.000Z');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: -10.00 s');
   });
 
   it('rejects missing, nonfinite and out-of-bounds coordinates without fabricating a route', () => {

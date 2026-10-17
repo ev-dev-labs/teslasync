@@ -1757,6 +1757,7 @@
     },
     "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
     "refresh": "Refresh replay data",
+    "sources": "Sources",
     "stat": {
       "battery": "Battery",
       "elevation": "Elevation",
