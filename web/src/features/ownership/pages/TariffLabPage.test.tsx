@@ -8,7 +8,7 @@
  * render for real.
  */
 
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
@@ -40,6 +40,16 @@ vi.mock('@/components/charts', async () => {
     },
   };
 });
+
+vi.mock('@/components/motion', () => ({
+  FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({ children, ...rest }: Record<string, unknown> & { children?: ReactNode }) => {
+      const { initial: _i, animate: _a, exit: _e, transition: _t, ...dom } = rest;
+      return <div {...dom}>{children}</div>;
+    },
+  },
+}));
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -229,12 +239,13 @@ describe('TariffLabPage — publication retention', () => {
       }));
   }
 
+
   describe('real mutation transitions', () => {
     it.each(['success', 'error'] as const)('retains SI economics, source bounds and submitted assumptions through pending and %s', async outcome => {
       const replay = realReplay();
       renderPage();
       const run = screen.getByRole('button', { name: 'Replay load against plans' });
-      expect(card('Arbitrage summary')).toHaveTextContent('Not computed');
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Not computed', { contains: true });
       const selectedRow = screen.getByText('Flat Saver').closest('tr');
       if (selectedRow == null) throw new Error('Missing selectable tariff row');
       fireEvent.click(within(selectedRow).getByRole('switch'));
@@ -254,7 +265,8 @@ describe('TariffLabPage — publication retention', () => {
         }],
       });
       act(() => replay.requests[0].resolve(original));
-      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      await waitFor(() => expect(replayValues().find(m => m.id === 'observed')?.value).toBeDefined());
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Source returned', { contains: true });
       const values = replayValues();
       const economics = within(card('Ranked plan economics')).getByRole('table').textContent;
       const bands = card('Where your energy actually landed').textContent;
@@ -264,30 +276,34 @@ describe('TariffLabPage — publication retention', () => {
       fireEvent.change(screen.getByRole('spinbutton', { name: 'Switching fee (minor units)' }), { target: { value: '456' } });
       fireEvent.click(run);
       await waitFor(() => expect(replay.requests).toHaveLength(2));
-      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Refreshing source'));
+      await waitFor(() => expect(run).toBeDisabled());
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Refreshing source', { contains: true });
       expect(run).toBeDisabled();
       expect(replayValues()).toEqual(values);
       expect(within(card('Ranked plan economics')).getByRole('table').textContent).toBe(economics);
-      for (const title of ['Arbitrage summary', 'Annualised cost by plan', 'Ranked plan economics', 'Where your energy actually landed', 'Evidence, quality, and limitations']) {
-        expect(within(card(title)).getByRole('status')).toHaveTextContent('Previously loaded data remains visible.');
-      }
+      // No face retained-notices during a plain refresh: the shared data-state
+      // contract reports refreshing-with-data as `ok` + `isRefreshing` (never
+      // `stale`), so OwnershipPanel stays quiet. The refresh state is pinned
+      // via the drawer status above; retained values via the assertions here.
       expect(card('Where your energy actually landed').textContent).toBe(bands);
       expect(card('Evidence, quality, and limitations')).toHaveTextContent('Original replay provenance');
       expect(card('Evidence, quality, and limitations')).toHaveTextContent('Only recorded vehicle charging load is included.');
-      expect(card('Arbitrage summary')).toHaveTextContent('vehicle #7, 90 days, shiftable 35%');
-      expect(card('Arbitrage summary')).toHaveTextContent('switching fee 123 minor units, tariff IDs 2');
-      expect(card('Arbitrage summary')).not.toHaveTextContent('180 days, shiftable 55%');
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'vehicle #7, 90 days, shiftable 35%', { contains: true });
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'switching fee 123 minor units, tariff IDs 2', { contains: true });
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), '180 days, shiftable 55%', { absent: true, contains: true });
       fireEvent.click(within(card('Arbitrage summary')).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog');
       expect(drawer).toHaveTextContent('Submitted replay: vehicle #7, 90 days, shiftable 35%');
       expect(drawer).toHaveTextContent('switching fee 123 minor units, tariff IDs 2');
       expect(drawer).toHaveTextContent('Recorded bounds');
       expect(drawer).toHaveTextContent('Replay Nights');
-      fireEvent.keyDown(document, { key: 'Escape' });
+      fireEvent.keyDown(drawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
       if (outcome === 'error') {
         act(() => replay.requests[1].reject(new Error('replay unavailable')));
-        await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Retained source'));
+        await waitFor(() => expect(within(card('Ranked plan economics')).getByRole('status')).toHaveTextContent('Previously loaded data remains visible.'));
+        assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Retained source', { contains: true });
         expect(screen.getByText('replay unavailable')).toBeVisible();
         expect(replayValues()).toEqual(values);
         expect(within(card('Ranked plan economics')).getByRole('table').textContent).toBe(economics);
@@ -301,10 +317,11 @@ describe('TariffLabPage — publication retention', () => {
         window: { from: '2026-04-01T00:00:00Z', to: '2026-10-01T00:00:00Z', days: 180 },
         results: [makeResult({ name: 'Replacement Replay' })],
       })));
-      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      await waitFor(() => expect(run).toBeEnabled());
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Source returned', { contains: true });
       expect(screen.queryByText(/The latest values are temporarily unavailable/)).not.toBeInTheDocument();
-      expect(card('Arbitrage summary')).toHaveTextContent('vehicle #7, 180 days, shiftable 55%');
-      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveAttribute('data-value-state', 'missing');
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'vehicle #7, 180 days, shiftable 55%', { contains: true });
+      assertOperationalMetricUnavailable(card('Arbitrage summary'), 'Best-case annual saving');
       expect(summaryMetric('Arbitrage summary', 'observed')).toHaveTextContent('42');
       expect(card('Ranked plan economics')).toHaveTextContent('Replacement Replay');
       expect(replay.submitted[0]).toEqual({
@@ -320,7 +337,8 @@ describe('TariffLabPage — publication retention', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
       await waitFor(() => expect(replay.requests).toHaveLength(1));
       act(() => replay.requests[0].resolve(makeSimulation()));
-      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      await waitFor(() => expect(replayValues().find(m => m.id === 'observed')?.value).toBeDefined());
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Source returned', { contains: true });
       fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
       await waitFor(() => expect(replay.requests).toHaveLength(2));
       fireEvent.click(within(card('Arbitrage summary')).getByRole('button', { name: 'Review details' }));
@@ -328,14 +346,15 @@ describe('TariffLabPage — publication retention', () => {
       const selection = { vehicleId: 8, vehicle: null, vehicles: [], setVehicleId: vi.fn() };
       vi.mocked(useSelectedVehicle).mockReturnValue(selection);
       view.rerender(<TariffLabPage />);
-      expect(card('Arbitrage summary')).toHaveTextContent('Not computed');
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Not computed', { contains: true });
       expect(replayValues().every(metric => metric.state === 'missing')).toBe(true);
       expect(drawer).not.toBeInTheDocument();
       fireEvent.click(within(card('Arbitrage summary')).getByRole('button', { name: 'Review details' }));
       const currentDrawer = screen.getByRole('dialog');
       expect(currentDrawer).not.toHaveTextContent('Submitted replay: vehicle #7');
       expect(currentDrawer).not.toHaveTextContent('Replay Nights');
-      fireEvent.keyDown(document, { key: 'Escape' });
+      fireEvent.keyDown(currentDrawer, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       vi.mocked(useSelectedVehicle).mockReturnValue({ ...selection, vehicleId: 7 });
       view.rerender(<TariffLabPage />);
       await act(async () => {
@@ -343,12 +362,12 @@ describe('TariffLabPage — publication retention', () => {
         else replay.requests[1].reject(new Error('old vehicle replay failed'));
         await replay.requests[1].promise.catch(() => undefined);
       });
-      expect(card('Arbitrage summary')).toHaveTextContent('Not computed');
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Not computed', { contains: true });
       expect(card('Ranked plan economics')).not.toHaveTextContent('Replay Nights');
       expect(screen.queryByText('old vehicle replay failed')).not.toBeInTheDocument();
       vi.mocked(useSelectedVehicle).mockReturnValue({ ...selection, vehicleId: null });
       view.rerender(<TariffLabPage />);
-      expect(card('Arbitrage summary')).toHaveTextContent('Selection required');
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Selection required', { contains: true });
       expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeDisabled();
     });
 
@@ -358,13 +377,13 @@ describe('TariffLabPage — publication retention', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
       await waitFor(() => expect(replay.requests).toHaveLength(1));
       act(() => replay.requests[0].resolve(makeSimulation({ max_saving_minor: 0, results: null })));
-      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source returned'));
+      await waitFor(() => expect(replayValues().find(m => m.id === 'observed')?.value).toBeDefined());
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Source returned', { contains: true });
       fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
       fireEvent.change(screen.getByRole('textbox', { name: 'ISO currency code required' }), { target: { value: 'JPY' } });
-      expect(summaryMetric('Arbitrage summary', 'saving')).not.toHaveTextContent('$0.00');
-      expect(summaryMetric('Arbitrage summary', 'saving')).not.toHaveTextContent('¥');
-      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveTextContent('—');
-      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveAttribute('data-value-state', 'missing');
+      // Unknown saving stays off the brief face (never $0.00, never relabelled
+      // with the draft currency); the drawer records it as a hidden field.
+      assertOperationalMetricUnavailable(card('Arbitrage summary'), 'Best-case annual saving');
       await waitFor(() => expect(screen.getByRole('textbox', { name: 'Plan name required' })).toBeVisible());
     });
 
@@ -374,7 +393,8 @@ describe('TariffLabPage — publication retention', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
       await waitFor(() => expect(replay.requests).toHaveLength(1));
       act(() => replay.requests[0].reject(new Error('initial replay unavailable')));
-      await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source unavailable'));
+      await waitFor(() => expect(replayValues()).toHaveLength(0));
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Source unavailable', { contains: true });
       assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Retained source', { absent: true, contains: true });
       expect(replayValues().every(metric => metric.state === 'missing')).toBe(true);
       expect(screen.getByText('initial replay unavailable')).toBeVisible();
@@ -416,7 +436,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
       vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn(),
     });
     renderPage();
-    expect(card('Arbitrage summary')).toHaveTextContent('Selection required');
+    assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Selection required', { contains: true });
     expect(card('Arbitrage summary')).toHaveTextContent('Run a replay to see how much your plan choice is worth.');
     expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeDisabled();
     expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
@@ -444,7 +464,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
       }
       expect(card(title).querySelector('[data-empty-state]')).toBeNull();
     }
-    expect(card('Arbitrage summary')).toHaveTextContent(paused ? 'Source paused' : 'Loading source');
+    assertOperationalBriefDisclosure(card('Arbitrage summary'), paused ? 'Source paused' : 'Loading source', { contains: true });
     expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
     expect(screen.queryByText('No plan produced a priced result — check that your plans have at least one price band.')).not.toBeInTheDocument();
     expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
@@ -460,14 +480,17 @@ describe('TariffLabPage — confirm-gated delete', () => {
       }),
     });
     renderPage();
-    expect(card('Arbitrage summary')).toHaveTextContent('Source returned');
+    assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Source returned', { contains: true });
     for (const id of ['observed', 'plans', 'shift']) {
       expect(summaryMetric('Arbitrage summary', id)).toHaveAttribute('data-value-state', 'value');
       expect(summaryMetric('Arbitrage summary', id)).toHaveTextContent('0');
     }
     for (const title of ['Annualised cost by plan', 'Ranked plan economics', 'Where your energy actually landed']) {
       expect(card(title).querySelector('[data-empty-state]')).not.toBeNull();
-      expect(within(card(title)).queryByRole('status')).not.toBeInTheDocument();
+      // EmptyState itself carries role="status"; only stray (non-empty-state)
+      // notices would indicate a retained/stale leak.
+      const stray = within(card(title)).queryAllByRole('status').filter(el => el.closest('[data-empty-state]') == null);
+      expect(stray).toHaveLength(0);
     }
     expect(card('Evidence, quality, and limitations')).toHaveTextContent('No supporting evidence was returned.');
     expect(within(card('Your rate plan library')).getByText('EV Nights')).toBeVisible();
@@ -476,13 +499,21 @@ describe('TariffLabPage — confirm-gated delete', () => {
   it('uses the real replay brief without promoting an unknown saving to zero or running another replay', () => {
     mockSimulate.mockReturnValue({ ...makeMutation(), data: makeSimulation() });
     renderPage();
-    expectOperationalBand('Arbitrage summary', ['saving', 'observed', 'plans', 'shift']);
-    expect(summaryMetric('Arbitrage summary', 'saving')).toHaveAttribute('data-value-state', 'missing');
-    expect(summaryMetric('Arbitrage summary', 'observed')).toHaveTextContent('8 sessions');
+    expectOperationalBand('Arbitrage summary', ['observed', 'plans', 'shift']);
+    assertOperationalMetricUnavailable(card('Arbitrage summary'), 'Best-case annual saving');
     expect(summaryMetric('Arbitrage summary', 'plans')).toHaveAttribute('data-value-state', 'value');
     expect(summaryMetric('Arbitrage summary', 'shift')).toHaveTextContent(/25(?:\.0+)?%/);
     fireEvent.click(within(card('Arbitrage summary')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Replay Nights');
+    const drawer = screen.getByRole('dialog');
+    // The best-result name is the saving metric's context; unavailable
+    // metrics (unknown saving here) have no drawer group, so the name now
+    // surfaces only in the ranked-results table.
+    expect(within(card('Ranked plan economics')).getByText('Replay Nights')).toBeInTheDocument();
+    // Metric context (session counts, units) moved off the brief face into
+    // the drawer's per-metric groups.
+    expect(within(drawer).getByRole('group', { name: 'Observed energy' })).toHaveTextContent('8 sessions');
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(mockSimulate().mutate).not.toHaveBeenCalled();
   });
 
@@ -514,9 +545,7 @@ describe('TariffLabPage — confirm-gated delete', () => {
     });
     renderPage();
 
-    const saving = within(card('Arbitrage summary')).getByText('Best-case annual saving').parentElement;
-    expect(saving).toHaveTextContent('—');
-    expect(saving).not.toHaveTextContent('$0.00');
+    assertOperationalMetricUnavailable(card('Arbitrage summary'), 'Best-case annual saving');
     const row = within(card('Ranked plan economics')).getByText('Replay Nights').closest('tr');
     expect(row?.textContent?.match(/—/g)).toHaveLength(2);
     expect(screen.queryByText('No plan produced a priced result — check that your plans have at least one price band.')).not.toBeInTheDocument();
@@ -801,14 +830,16 @@ describe('TariffLabPage — supplied monetary values', () => {
       throw new Error('Missing shared chart tooltip');
     }
     const payload = [{ name: 'Annual cost', value, payload: { currency } }];
-    render(cloneElement(tooltip.content, {
+    // ChartTooltip renders inline, so scope to the cloned render: the page
+    // itself also renders tooltips after the icon-button conversion.
+    const probe = render(cloneElement(tooltip.content, {
       active: true,
       label: 'Denomination regression',
       formatter: tooltip.formatter,
       payload,
     }));
-    expect(screen.getByRole('tooltip')).toHaveTextContent(expected);
-    expect(screen.getByRole('tooltip')).toHaveTextContent(currency ? `Annual cost (${currency})` : 'Annual cost');
+    expect(within(probe.container).getByRole('tooltip')).toHaveTextContent(expected);
+    expect(within(probe.container).getByRole('tooltip')).toHaveTextContent(currency ? `Annual cost (${currency})` : 'Annual cost');
     expect(resultCell('Denomination regression', 'Annualised cost')).toHaveTextContent(expected);
   });
 
@@ -867,8 +898,7 @@ describe('TariffLabPage — supplied monetary values', () => {
 
       expect(resultCell('Replay Nights', 'Load-shift upside')).toHaveTextContent(/^—$/);
       expect(resultCell('Replay Nights', 'vs current')).toHaveTextContent(/^—$/);
-      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveTextContent('—');
-      expect(summaryMetric('Arbitrage summary', 'saving')).not.toHaveTextContent('$0.00');
+      assertOperationalMetricUnavailable(card('Arbitrage summary'), 'Best-case annual saving');
       const row = within(card('Your rate plan library')).getByText('EV Nights').closest('tr');
       expect(row).not.toHaveTextContent('/kW');
     },
@@ -967,9 +997,13 @@ describe('TariffLabPage — restrained page adoption', () => {
           expect(within(detail).getByText(label)).toBeVisible();
         }
         expect(detail).toHaveTextContent('GridCo');
-        expect(within(detail).getByRole('button', { name: 'Remove' })).toHaveClass('min-h-11', 'min-w-11');
-        fireEvent.click(within(detail).getByRole('button', { name: 'Close' }));
-        const actions = plan.closest('[data-row-key]')?.parentElement?.parentElement;
+        expect(within(detail).getByRole('button', { name: 'Remove' })).toHaveClass('h-9', 'w-9');
+        // The detail modal renders both a header dismiss and a footer Close.
+        fireEvent.click(within(detail).getAllByRole('button', { name: 'Close' })[0]);
+        // Row actions render in a [data-mobile-row-actions] sibling of the row
+        // itself (both under the row's flex column), not inside the row.
+        const rowContainer = plan.closest('[data-row-key]')?.parentElement?.parentElement?.parentElement;
+        const actions = rowContainer instanceof HTMLElement ? rowContainer.querySelector('[data-mobile-row-actions]') : null;
         if (!(actions instanceof HTMLElement)) throw new Error('Missing mobile plan actions');
         fireEvent.click(within(actions).getByRole('button', { name: 'Remove' }));
         expect(mutate).not.toHaveBeenCalled();
@@ -996,7 +1030,8 @@ describe('TariffLabPage — restrained page adoption', () => {
         }
         expect(detail).toHaveTextContent('#1');
         expect(detail).toHaveTextContent('$150.35');
-        fireEvent.click(within(detail).getByRole('button', { name: 'Close' }));
+        // The detail modal renders both a header dismiss and a footer Close.
+        fireEvent.click(within(detail).getAllByRole('button', { name: 'Close' })[0]);
         resize(1440);
         expect(within(economics).getAllByRole('columnheader')).toHaveLength(9);
       });
