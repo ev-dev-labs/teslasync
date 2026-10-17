@@ -223,7 +223,7 @@ describe('SleepEfficiencyWidget states', () => {
     expect(screen.getByText('92.00')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).toBeNull();
     sleepRequest(makeData());
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull());
   });
 

@@ -93,8 +93,9 @@ describe('SafetyFeaturesWidget unknown and retained readings', () => {
     renderWidget(<SafetyFeaturesWidget size={size} />);
     if (size.cols === 1) expect(screen.getByText('8')).toBeInTheDocument();
     else expect(screen.getByText('Forward collision warning')).toBeInTheDocument();
-    const warning = screen.getByTestId('stale-refresh-warning');
-    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

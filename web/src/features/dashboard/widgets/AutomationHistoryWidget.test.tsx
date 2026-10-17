@@ -416,9 +416,10 @@ describe('AutomationHistoryWidget — compact layout', () => {
     it('retains the history and retries a failed background refresh', () => {
       const q = setQuery({ isError: true, data: makeResponse([makeHistory()]) });
       renderWidget();
-      const warning = screen.getByTestId('stale-refresh-warning');
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
       expect(screen.getByText('Nightly Charge')).toBeInTheDocument();
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(q.refetch).toHaveBeenCalledTimes(1);
     });
 

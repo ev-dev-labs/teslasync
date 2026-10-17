@@ -232,7 +232,9 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
     lifetimeMock.mockReturnValue(makeLifetimeQuery([MARCH], { isError: true, refetch }));
     renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
     expect(screen.getByText('March')).toBeInTheDocument();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh', exact: true }));
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetch).toHaveBeenCalledOnce();
   });
 

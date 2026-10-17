@@ -152,7 +152,9 @@ describe('SoftwareUpdateHistoryWidget trust and recovery', () => {
     softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate()], { isError: true, refetch }));
     renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />);
     expect(screen.getByText('2024.44.25')).toBeInTheDocument();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh', exact: true }));
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetch).toHaveBeenCalledOnce();
   });
 

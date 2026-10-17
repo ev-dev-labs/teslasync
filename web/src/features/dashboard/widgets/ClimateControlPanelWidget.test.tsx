@@ -33,7 +33,7 @@
  * hooks are stubbed so the freshness chip renders without a Settings provider.
  * A `<MemoryRouter>` wraps every render because `EmptyState` renders a `<Link>`.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -221,9 +221,10 @@ describe('ClimateControlPanelWidget — source brief', () => {
       '0°C', '-10°C', '0', 'Off',
     ]);
     assertOperationalBriefDisclosure(brief, 'Source available', { contains: true });
-    expect(brief).toHaveTextContent('Vehicle 7');
-    expect(brief).toHaveTextContent('continuous recording coverage is not established');
-    expect(brief).toHaveTextContent('not a velocity measurement');
+    assertOperationalBriefDisclosure(brief, 'Vehicle 7', { contains: true });
+    assertOperationalBriefDisclosure(brief, 'continuous recording coverage is not established', { contains: true });
+    // The fan-level explanation lives in the drawer metric group, not on the value-only face.
+    assertOperationalBriefDisclosure(brief, 'not a velocity measurement', { contains: true, region: 'drawer' });
     expect(screen.getByText('HVAC on')).toBeInTheDocument();
     expect(screen.getByText('Defrost')).toBeInTheDocument();
     expect(screen.getByText('Bat heater')).toBeInTheDocument();
@@ -242,12 +243,13 @@ describe('ClimateControlPanelWidget — source brief', () => {
     renderWidget(FULL);
 
     const brief = screen.getByTestId('dashboard-climate-panel-brief');
-    const cells = within(brief).getAllByRole('listitem');
-    expect(cells).toHaveLength(4);
-    expect(cells.map(cell => cell.getAttribute('data-value-state'))).toEqual(['missing', 'invalid', 'invalid', 'invalid']);
-    expect(cells.map(cell => cell.querySelector('[data-operational-value]')?.textContent)).toEqual(['—', '—', '—', '—']);
-    expect(cells[0]).toHaveTextContent('No measurement supplied');
-    expect(cells[1]).toHaveTextContent('Expected a finite numeric measurement');
+    // Every operand is unknown, so the face shows the shared empty-metrics
+    // state and the drawer counts the four hidden fields.
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Cabin');
+    assertOperationalMetricUnavailable(brief, 'Outside');
+    assertOperationalMetricUnavailable(brief, 'Fan speed');
+    assertOperationalMetricUnavailable(brief, 'Wheel heat');
     expect(screen.getByText('HVAC unknown')).toBeInTheDocument();
     expect(screen.queryByText('HVAC off')).toBeNull();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
@@ -263,15 +265,22 @@ describe('ClimateControlPanelWidget — source brief', () => {
 
     const brief = screen.getByTestId('dashboard-climate-panel-brief');
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
-    expect(brief).toHaveTextContent('Retained readings');
-    expect(brief.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
+    assertOperationalBriefDisclosure(brief, 'Retained readings', { contains: true });
+    // Provenance freshness moved to the drawer header alongside the status.
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('0°C')).toBeInTheDocument();
     expect(screen.getByText('1/3')).toBeInTheDocument();
     expect(screen.getByText('Defrost')).toBeInTheDocument();
     expect(screen.getByText('Bat heater')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(query.refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -363,8 +372,11 @@ describe('ClimateControlPanelWidget — temperature display', () => {
     setQuery({ data: makeClimate({ inside_temp: null, outside_temp: null }) });
     renderWidget(FULL);
 
-    // Cabin + Outside cells both fall back.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    // Cabin + Outside cells are omitted from the value-only face and counted as hidden.
+    const brief = screen.getByTestId('dashboard-climate-panel-brief');
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Cabin');
+    assertOperationalMetricUnavailable(brief, 'Outside');
   });
 });
 

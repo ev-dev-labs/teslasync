@@ -315,8 +315,9 @@ describe('AlertFeedWidget — refresh wiring', () => {
     mockAlerts.mockReturnValue(qr({ data: ALERTS, error: new Error('refresh failed'), isError: true, refetch }));
     renderWidget(WIDE);
     expect(screen.getByRole('link', { name: /Battery critically low/ })).toHaveAttribute('href', expect.stringContaining('signal=BatteryLevel'));
-    const warning = screen.getByTestId('stale-refresh-warning');
-    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Can't reach server")).toBeNull();
   });

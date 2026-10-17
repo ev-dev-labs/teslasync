@@ -415,7 +415,7 @@ describe('ClimateHistoryWidget — refresh', () => {
     await screen.findByTestId('stale-refresh-warning');
     expect(screen.getByTestId('area-chart')).toBeInTheDocument();
     expect(screen.getByText('20.00')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull());
     expect(mockedRequest).toHaveBeenCalledTimes(3);
   });

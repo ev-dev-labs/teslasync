@@ -412,7 +412,7 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
     expect(document.querySelector('[data-data-state="stale"]')).not.toBeNull();
     expect(content.getByText(size.cols === 1 ? '$17.50' : 'Fremont Supercharger')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull());
     expect(mockedRequest).toHaveBeenCalledTimes(3);
   });

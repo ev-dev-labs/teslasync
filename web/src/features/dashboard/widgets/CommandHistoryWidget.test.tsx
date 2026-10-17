@@ -375,7 +375,8 @@ describe('CommandHistoryWidget vehicle resolution', () => {
       expect(screen.getByText('Wake up')).toBeInTheDocument();
       const warning = screen.getByTestId('stale-refresh-warning');
       expect(warning).toHaveTextContent('Previously loaded data remains visible');
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(refetch).toHaveBeenCalledTimes(1);
       if (size.cols > 1) expect(screen.getByText('Failed · Vehicle unavailable')).toBeInTheDocument();
     });

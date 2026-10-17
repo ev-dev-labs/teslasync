@@ -402,7 +402,8 @@ describe('DigitalTwinMiniWidget — discovery trust regressions', () => {
     expect(warning).toHaveAttribute('aria-live', 'polite');
     expect(warning).toHaveAttribute('data-data-state', 'stale');
     expect(warning).toHaveTextContent('Previously loaded data remains visible');
-    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(queries.vehicles.refetch).toHaveBeenCalledOnce();
 
     queries.vehicles.isError = false;

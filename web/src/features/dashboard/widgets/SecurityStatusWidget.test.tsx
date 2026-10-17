@@ -195,7 +195,9 @@ describe('SecurityStatusWidget', () => {
     expect(screen.getByText('Windows')).toBeInTheDocument();
     expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+        expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetch).toHaveBeenCalledOnce();
   });
 

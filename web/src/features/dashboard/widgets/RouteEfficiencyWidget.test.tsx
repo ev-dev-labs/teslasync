@@ -411,7 +411,7 @@ describe('RouteEfficiencyWidget refresh', () => {
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByText('Home → Work')).toBeInTheDocument();
     const before = routeEffCalls().length;
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i })); // shell hides the warning retry; recovery is the freshness dot
     await waitFor(() => expect(routeEffCalls().length).toBe(before + 1));
   });
 

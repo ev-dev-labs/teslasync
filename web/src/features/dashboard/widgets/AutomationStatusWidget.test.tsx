@@ -333,8 +333,9 @@ describe('AutomationStatusWidget — full view', () => {
         refetch,
       }));
       expect(screen.getByRole('switch', { name: 'Toggle Retained automation' })).toBeInTheDocument();
-      const warning = screen.getByTestId('stale-refresh-warning');
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      // The shell hides the warning retry when the freshness control exists; recovery is the freshness dot.
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       expect(refetch).toHaveBeenCalledTimes(1);
       expect(screen.queryByText("Can't reach server")).toBeNull();
     });
