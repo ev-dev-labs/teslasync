@@ -393,7 +393,7 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     const refetch = vi.fn();
     latest(snapshot, { refetch });
     mountPage();
-    fireEvent.click(screen.getByText('Refresh'));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(useClimate).toHaveBeenCalledWith(String(42));
     expect(useClimateHistory).toHaveBeenCalledWith('42', expect.objectContaining({
