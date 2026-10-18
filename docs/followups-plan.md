@@ -502,3 +502,13 @@ Fixes (each verified locally under CI conditions before push):
    Ran `go run ./cmd/slogen generate recording/alerts/dashboards`,
    committed the 4 generator outputs. Freshness gate locally green
    (11/11, 279 paths byte-identical).
+3. Quality/route-registry `e2e:list` FAIL→0: three stacked load errors,
+   all reproduced locally. (a) advanced-intelligence.smoke.spec: the
+   (320,light)+(1440,dark) test loop nested inside the outer
+   theme×width loops, declaring 10 titles 4× each — moved the block
+   to top level (git diff -w empty: pure move). (b) resilience.ts
+   touched window/navigator at module scope — guarded (Node-safe,
+   browser-neutral) + node-env regression test. (c) ThemeProvider
+   read localStorage at module scope — defaults fallback. Full
+   `playwright test --list`: 1764 tests/86 files, exit 0; affected
+   suites 32/32; tsc/eslint clean.

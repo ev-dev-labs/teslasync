@@ -199,125 +199,6 @@ for (const theme of ['light', 'dark'] as const) {
         await expectNoRuntimeFailures(diagnostics);
       });
     }
-
-    for (const [width, theme] of [[320, 'light'], [1440, 'dark']] as const) {
-      for (const subject of simulations) {
-        test(`${subject.name} keeps its published result during a second real calculation at ${width}px ${theme}`, async ({ page }) => {
-          const diagnostics = monitorPage(page);
-          const variant = subject.variants[1];
-          let calls = 0;
-          let release!: () => void;
-          const recalculation = new Promise<void>(resolve => { release = resolve; });
-          await page.setViewportSize({ width, height: 1000 });
-          await seedBrowserState(page, theme, subject.route);
-          const mocks = await installApiMocks(page, 'populated', theme);
-          expect(mocks).not.toBeNull();
-          if (subject.name === 'resilience') await stormSources(page, mocks);
-          await page.route(`**/api/v1${subject.endpoint}`, async route => {
-            expect(route.request().method()).toBe('POST');
-            expect(route.request().postDataJSON()).toMatchObject(subject.request);
-            calls += 1;
-            if (calls === 2) await recalculation;
-            await fulfillApiFixture(route, mocks, { json: variant.response });
-          });
-          await page.goto(subject.route);
-          await waitForHarnessReady(page, mocks);
-          const brief = page.getByTestId(subject.briefId);
-          const run = page.getByRole('button', { name: subject.button, exact: true });
-          await run.click();
-          await expect.poll(() => calls).toBe(1);
-          await waitForHarnessReady(page, mocks);
-          await assertMetrics(brief, variant.metrics);
-          await run.click();
-          await expect.poll(() => calls).toBe(2);
-          try {
-            await expect(run).toBeDisabled();
-            await expect(brief).toContainText('Updating result');
-            await assertMetrics(brief, variant.metrics);
-            await reviewSource(page, brief, subject.title, subject.source, variant.response.limitations);
-          } finally {
-            // Drain only the held response; assertion failures are never swallowed.
-            release();
-          }
-          await waitForHarnessReady(page, mocks);
-          await assertMetrics(brief, variant.metrics);
-          await expect(run).toBeEnabled();
-          await expectNoHorizontalOverflow(page);
-          await assertMockApiComplete(page, mocks);
-          await expectNoRuntimeFailures(diagnostics);
-        });
-      }
-
-      test(`federated retains the published budget through real round invalidation and Retry at ${width}px ${theme}`, async ({ page }) => {
-        const diagnostics = monitorPage(page);
-        const routePath = '/intelligence/federated-learning';
-        const endpoint = '/api/v1/advanced-intelligence/federated-learning/model-cards';
-        let phase: 'initial' | 'failed-refresh' | 'recovery' = 'initial';
-        let rounds = 0;
-        await page.setViewportSize({ width, height: 1000 });
-        await seedBrowserState(page, theme, routePath);
-        const mocks = await installApiMocks(page, 'populated', theme);
-        expect(mocks).not.toBeNull();
-        await page.route(`**${endpoint}?*`, async route => {
-          expect(route.request().method()).toBe('GET');
-          expect(new URL(route.request().url()).search).toBe('?vehicle_id=7&limit=12&offset=0');
-          await fulfillApiFixture(route, mocks, phase === 'failed-refresh'
-            ? { status: 422, json: { error: 'Synthetic model-card refresh unavailable' } }
-            : { json: federated });
-        });
-        await page.route('**/api/v1/advanced-intelligence/federated-learning/rounds', async route => {
-          expect(route.request().method()).toBe('POST');
-          expect(route.request().postDataJSON()).toEqual({
-            vehicle_id: 7, model_name: federated.items[0].model_name,
-            model_version: federated.items[0].model_version, task: federated.items[0].task,
-            epsilon: 0.1, epsilon_budget: 2, expected_version: 8, confirmed: true,
-          });
-          rounds += 1;
-          phase = 'failed-refresh';
-          await fulfillApiFixture(route, mocks, { json: insufficientRound });
-        });
-        await page.goto(routePath);
-        await waitForHarnessReady(page, mocks);
-        const brief = page.getByTestId('advanced-intelligence-federated-brief');
-        const metrics: readonly MetricExpectation[] = [
-          { key: 'epsilon-budget', text: '2.00', state: 'value' },
-          { key: 'epsilon-spent', text: '1.50', state: 'value' },
-          { key: 'epsilon-remaining', text: '0.50', state: 'value' },
-        ];
-        await assertMetrics(brief, metrics);
-        await page.getByRole('button', { name: 'Use for next local round', exact: true }).click();
-        await page.getByRole('button', { name: 'Review privacy spend', exact: true }).click();
-        const confirmation = page.getByRole('dialog', { name: 'Confirm local privacy spend', exact: true });
-        await expect(confirmation).toContainText('0.1 epsilon');
-        expect(rounds).toBe(0);
-        await confirmation.getByRole('button', { name: 'Start local round', exact: true }).click();
-        await expect.poll(() => rounds).toBe(1);
-        await expect(confirmation).not.toBeVisible();
-        await expect(brief).toContainText('Retained result', { timeout: 20000 });
-        await assertMetrics(brief, metrics);
-        await reviewSource(page, brief, 'Subject privacy budget', 'Local subject privacy accounting',
-          federated.items.flatMap(card => card.limitations));
-        await expect(page.getByText('Previously loaded data remains visible while affected sources recover.', { exact: true }).first()).toBeVisible();
-        phase = 'recovery';
-        await page.getByRole('button', { name: 'Retry', exact: true }).first().click();
-        await expect(brief).toContainText('Limited evidence');
-        await waitForHarnessReady(page, mocks);
-        await assertMetrics(brief, metrics);
-        expect(rounds).toBe(1);
-        await expectThemeApplied(page, theme);
-        await expectNoHorizontalOverflow(page);
-        await assertMockApiComplete(page, mocks);
-        // This scenario intentionally returns 422; require those failures to be only the exact refresh source.
-        expect(diagnostics.failedDataRequests.length).toBeGreaterThan(0);
-        expect(diagnostics.failedDataRequests.every(message => message.startsWith('422 ')
-          && new URL(message.slice(message.indexOf('http'))).pathname === endpoint)).toBe(true);
-        expect(diagnostics.pageErrors).toEqual([]);
-        expect(diagnostics.brokenResources).toEqual([]);
-        expect(diagnostics.consoleErrors.every(message =>
-          /^Failed to load resource: the server responded with a status of 422\b/.test(message))).toBe(true);
-      });
-    }
-
     test(`component probability remains per-entity, not a new summary score at ${width}px ${theme}`, async ({ page }) => {
       const diagnostics = monitorPage(page);
       const path = '/intelligence/component-survival';
@@ -357,4 +238,122 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoRuntimeFailures(diagnostics);
     });
   }
+}
+
+for (const [width, theme] of [[320, 'light'], [1440, 'dark']] as const) {
+  for (const subject of simulations) {
+    test(`${subject.name} keeps its published result during a second real calculation at ${width}px ${theme}`, async ({ page }) => {
+      const diagnostics = monitorPage(page);
+      const variant = subject.variants[1];
+      let calls = 0;
+      let release!: () => void;
+      const recalculation = new Promise<void>(resolve => { release = resolve; });
+      await page.setViewportSize({ width, height: 1000 });
+      await seedBrowserState(page, theme, subject.route);
+      const mocks = await installApiMocks(page, 'populated', theme);
+      expect(mocks).not.toBeNull();
+      if (subject.name === 'resilience') await stormSources(page, mocks);
+      await page.route(`**/api/v1${subject.endpoint}`, async route => {
+        expect(route.request().method()).toBe('POST');
+        expect(route.request().postDataJSON()).toMatchObject(subject.request);
+        calls += 1;
+        if (calls === 2) await recalculation;
+        await fulfillApiFixture(route, mocks, { json: variant.response });
+      });
+      await page.goto(subject.route);
+      await waitForHarnessReady(page, mocks);
+      const brief = page.getByTestId(subject.briefId);
+      const run = page.getByRole('button', { name: subject.button, exact: true });
+      await run.click();
+      await expect.poll(() => calls).toBe(1);
+      await waitForHarnessReady(page, mocks);
+      await assertMetrics(brief, variant.metrics);
+      await run.click();
+      await expect.poll(() => calls).toBe(2);
+      try {
+        await expect(run).toBeDisabled();
+        await expect(brief).toContainText('Updating result');
+        await assertMetrics(brief, variant.metrics);
+        await reviewSource(page, brief, subject.title, subject.source, variant.response.limitations);
+      } finally {
+        // Drain only the held response; assertion failures are never swallowed.
+        release();
+      }
+      await waitForHarnessReady(page, mocks);
+      await assertMetrics(brief, variant.metrics);
+      await expect(run).toBeEnabled();
+      await expectNoHorizontalOverflow(page);
+      await assertMockApiComplete(page, mocks);
+      await expectNoRuntimeFailures(diagnostics);
+    });
+  }
+
+  test(`federated retains the published budget through real round invalidation and Retry at ${width}px ${theme}`, async ({ page }) => {
+    const diagnostics = monitorPage(page);
+    const routePath = '/intelligence/federated-learning';
+    const endpoint = '/api/v1/advanced-intelligence/federated-learning/model-cards';
+    let phase: 'initial' | 'failed-refresh' | 'recovery' = 'initial';
+    let rounds = 0;
+    await page.setViewportSize({ width, height: 1000 });
+    await seedBrowserState(page, theme, routePath);
+    const mocks = await installApiMocks(page, 'populated', theme);
+    expect(mocks).not.toBeNull();
+    await page.route(`**${endpoint}?*`, async route => {
+      expect(route.request().method()).toBe('GET');
+      expect(new URL(route.request().url()).search).toBe('?vehicle_id=7&limit=12&offset=0');
+      await fulfillApiFixture(route, mocks, phase === 'failed-refresh'
+        ? { status: 422, json: { error: 'Synthetic model-card refresh unavailable' } }
+        : { json: federated });
+    });
+    await page.route('**/api/v1/advanced-intelligence/federated-learning/rounds', async route => {
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().postDataJSON()).toEqual({
+        vehicle_id: 7, model_name: federated.items[0].model_name,
+        model_version: federated.items[0].model_version, task: federated.items[0].task,
+        epsilon: 0.1, epsilon_budget: 2, expected_version: 8, confirmed: true,
+      });
+      rounds += 1;
+      phase = 'failed-refresh';
+      await fulfillApiFixture(route, mocks, { json: insufficientRound });
+    });
+    await page.goto(routePath);
+    await waitForHarnessReady(page, mocks);
+    const brief = page.getByTestId('advanced-intelligence-federated-brief');
+    const metrics: readonly MetricExpectation[] = [
+      { key: 'epsilon-budget', text: '2.00', state: 'value' },
+      { key: 'epsilon-spent', text: '1.50', state: 'value' },
+      { key: 'epsilon-remaining', text: '0.50', state: 'value' },
+    ];
+    await assertMetrics(brief, metrics);
+    await page.getByRole('button', { name: 'Use for next local round', exact: true }).click();
+    await page.getByRole('button', { name: 'Review privacy spend', exact: true }).click();
+    const confirmation = page.getByRole('dialog', { name: 'Confirm local privacy spend', exact: true });
+    await expect(confirmation).toContainText('0.1 epsilon');
+    expect(rounds).toBe(0);
+    await confirmation.getByRole('button', { name: 'Start local round', exact: true }).click();
+    await expect.poll(() => rounds).toBe(1);
+    await expect(confirmation).not.toBeVisible();
+    await expect(brief).toContainText('Retained result', { timeout: 20000 });
+    await assertMetrics(brief, metrics);
+    await reviewSource(page, brief, 'Subject privacy budget', 'Local subject privacy accounting',
+      federated.items.flatMap(card => card.limitations));
+    await expect(page.getByText('Previously loaded data remains visible while affected sources recover.', { exact: true }).first()).toBeVisible();
+    phase = 'recovery';
+    await page.getByRole('button', { name: 'Retry', exact: true }).first().click();
+    await expect(brief).toContainText('Limited evidence');
+    await waitForHarnessReady(page, mocks);
+    await assertMetrics(brief, metrics);
+    expect(rounds).toBe(1);
+    await expectThemeApplied(page, theme);
+    await expectNoHorizontalOverflow(page);
+    await assertMockApiComplete(page, mocks);
+    // This scenario intentionally returns 422; require those failures to be only the exact refresh source.
+    expect(diagnostics.failedDataRequests.length).toBeGreaterThan(0);
+    expect(diagnostics.failedDataRequests.every(message => message.startsWith('422 ')
+      && new URL(message.slice(message.indexOf('http'))).pathname === endpoint)).toBe(true);
+    expect(diagnostics.pageErrors).toEqual([]);
+    expect(diagnostics.brokenResources).toEqual([]);
+    expect(diagnostics.consoleErrors.every(message =>
+      /^Failed to load resource: the server responded with a status of 422\b/.test(message))).toBe(true);
+  });
 }

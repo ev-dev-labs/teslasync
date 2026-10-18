@@ -65,7 +65,7 @@ export function getApiBase(): string {
 
 // --- Offline Detection ---
 
-let _status: RequestStatus = navigator.onLine ? 'online' : 'offline'
+let _status: RequestStatus = typeof navigator === 'undefined' || navigator.onLine ? 'online' : 'offline'
 const _listeners = new Set<(s: RequestStatus) => void>()
 
 function setStatus(s: RequestStatus) {
@@ -74,8 +74,12 @@ function setStatus(s: RequestStatus) {
   _listeners.forEach(fn => fn(s))
 }
 
-window.addEventListener('online', () => setStatus('online'))
-window.addEventListener('offline', () => setStatus('offline'))
+// Playwright loads app modules in Node (no window); SSR likewise. Keep the
+// import side-effect free outside the DOM.
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => setStatus('online'))
+  window.addEventListener('offline', () => setStatus('offline'))
+}
 
 /** Returns the current network connection status ('online' | 'offline'). */
 export function getConnectionStatus(): RequestStatus { return _status }

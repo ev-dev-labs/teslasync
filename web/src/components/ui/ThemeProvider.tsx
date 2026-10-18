@@ -138,6 +138,11 @@ const defaultCustomPrimary = '#00b4d8'
 const defaultCustomAccent = '#e63946'
 
 function loadCustomColors(): { primary: string; accent: string } {
+  // Module scope runs in Node during Playwright collection (and SSR): fall
+  // back to defaults when there is no DOM storage.
+  if (typeof localStorage === 'undefined') {
+    return { primary: defaultCustomPrimary, accent: defaultCustomAccent }
+  }
   const p = localStorage.getItem('teslasync-custom-primary') || defaultCustomPrimary
   const a = localStorage.getItem('teslasync-custom-accent') || defaultCustomAccent
   return { primary: p, accent: a }
