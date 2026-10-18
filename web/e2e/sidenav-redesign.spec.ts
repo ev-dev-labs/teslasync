@@ -51,6 +51,7 @@ for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 7
       await expect(rail).toBeVisible()
       expect((await rail.boundingBox())!.width).toBe(76)
       if (width < 1280) {
+        await rail.getByRole('button', { name: 'Home', exact: true }).click()
         await expect(page.getByRole('dialog')).toBeVisible()
         expect((await page.getByRole('dialog').boundingBox())!.x).toBe(76)
         await shot('tablet-drawer')
@@ -113,6 +114,9 @@ for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 7
         const statusBox = (await status.boundingBox())!
         expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(tabBox.y + 1)
         expect(tabBox.height).toBeGreaterThanOrEqual(56)
+        const iconBox = (await tabs.getByRole('button', { name: 'Charging', exact: true }).locator('svg').boundingBox())!
+        expect(iconBox.width).toBe(22)
+        expect(iconBox.height).toBe(22)
         await expect(status).toHaveAccessibleName(/^Status(?:\.|$)/)
         await expect(status.locator('.lucide-activity')).toBeVisible()
         await shot('tabs-status')
@@ -132,6 +136,7 @@ for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 7
         await expect(more.getByRole('button', { name: 'Battery', exact: true })).toHaveAttribute('aria-current', 'true')
         await shot('more-current-section')
       } else {
+        if (width === 768) await page.getByTestId('command-deck-rail').getByRole('button', { name: 'Charging', exact: true }).click()
         const panel = page.getByTestId('atlas-panel-secondary')
         const row = panel.locator('.sidenav-page-row > a').first()
         const height = (await row.boundingBox())!.height

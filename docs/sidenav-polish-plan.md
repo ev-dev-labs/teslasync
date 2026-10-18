@@ -32,3 +32,8 @@
 - Edge channel msedge, real touch contexts at 375/414/768, mouse at 1280/1920. Existing redesign interactions and reload checks retained; added density/hover/status/More checks and light/dark screenshots.
 - Extended existing route guard to 414px with the same measurements and thresholds. Requested routes: /, /charging, /battery, /settings, /live.
 - Trio suites: 7,672 passed, 0 failed (3 files).
+
+## Visual review correction
+- Phone screenshots exposed the shared Button's fixed height compressing SVGs despite the tab bar's reserved height. Set tab height to fill the bar, minimum 60px, 14px caption line height, and non-shrinking 22px icons. Added real SVG bounding-box assertions.
+- The fetched base defaults tablet panels closed on a fresh visit; Edge checks explicitly open the section before measuring the drawer, preserving that existing behavior.
+- Full lint including audits passed. The first build was intentionally stopped before bundling while correcting the observed phone sizing; final build will run after the correction commit.
