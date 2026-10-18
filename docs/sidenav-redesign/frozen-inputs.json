@@ -1,0 +1,20 @@
+[
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "workingTree": "9758baba33a745a5d277560f1a55e0c901abeffc37a72016fb8e630cf5fe5342",
+    "staged": "9758baba33a745a5d277560f1a55e0c901abeffc37a72016fb8e630cf5fe5342",
+    "checkpoint": "9758baba33a745a5d277560f1a55e0c901abeffc37a72016fb8e630cf5fe5342"
+  },
+  {
+    "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
+    "workingTree": "8655e0996ff7d1553f30ea80ba34bf15f602e317323dea2641d5657e9efc239f",
+    "staged": "8655e0996ff7d1553f30ea80ba34bf15f602e317323dea2641d5657e9efc239f",
+    "checkpoint": "8655e0996ff7d1553f30ea80ba34bf15f602e317323dea2641d5657e9efc239f"
+  },
+  {
+    "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
+    "workingTree": "3246da0d25676169e73f4cda53bfead5fb1afc573d7dfdb250f66bdfe0ca225c",
+    "staged": "3246da0d25676169e73f4cda53bfead5fb1afc573d7dfdb250f66bdfe0ca225c",
+    "checkpoint": "3246da0d25676169e73f4cda53bfead5fb1afc573d7dfdb250f66bdfe0ca225c"
+  }
+]

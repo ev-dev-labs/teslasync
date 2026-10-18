@@ -246,7 +246,7 @@ export function DataSourceNotice({
     >
       <div className="space-y-3">
         <Text as="p" variant="bodySm">{message ?? defaultMessage}</Text>
-        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 14rem), 1fr))' }}>
           {resolved.map((source) => {
             const config = statusConfig[source.status];
             return (
@@ -266,7 +266,7 @@ export function DataSourceNotice({
                     variant="ghost"
                     size="sm"
                     wrapLabel
-                    className="min-h-11 md:min-h-9"
+                    className="min-h-11 w-full min-w-0 md:min-h-9"
                     aria-label={`${retryText}: ${source.label}`}
                     onClick={() => { void source.query.refetch?.(); }}
                   >
@@ -283,7 +283,7 @@ export function DataSourceNotice({
             variant="ghost"
             size="sm"
             wrapLabel
-            className="min-h-11 md:min-h-9"
+            className="min-h-11 w-full min-w-0 md:min-h-9"
             onClick={handleRetry}
             icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />}
           >

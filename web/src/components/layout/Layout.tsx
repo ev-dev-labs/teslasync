@@ -1,5 +1,4 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { PrefetchNavLink } from './PrefetchLink'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
@@ -33,9 +32,7 @@ import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
-import { BottomTabBar } from './BottomTabBar'
-import { activateShellOverlayGuard, focusShellOverlayEntry, getShellFocusableElements, isShellPortalActive } from './shellFocusTrap'
+import { RouteTransition } from '@/components/motion/runtime'
 import {
   findMostSpecificNavEntry,
   isExclusiveActivePath,
@@ -49,13 +46,11 @@ import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { DemoDataNotice, RuntimeHealthBanner, Skeleton } from '@/components/feedback/runtime'
 import {
   Button,
-  CommandPaletteTrigger,
   Logo,
 } from '@/components/ui/runtime'
 import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
-import { VehiclePicker } from './VehiclePicker'
 import { CommandPaletteHost } from './CommandPaletteHost'
 import { NotificationBellPopover } from './NotificationBellPopover'
 import { request } from '@/api/client'
@@ -64,6 +59,7 @@ import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
 import { useNavigationPins } from '@/api/hooks/useNavigationPins'
+import { getRecentPages, subscribeRecentPages } from '@/lib/recentPages'
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles'
 import { deriveVehicleStatus, type Alert } from '@/api/types'
 import { useSelectedVehicleStore } from '@/store/selectedVehicle'
@@ -135,10 +131,6 @@ const WorkspaceHeader = lazy(async () => {
   return { default: module.WorkspaceHeader }
 })
 
-const WorkspaceContextControl = lazy(async () => {
-  const module = await import('./WorkspaceContextControl')
-  return { default: module.WorkspaceContextControl }
-})
 
 const TourOverlay = lazy(async () => {
   const module = await import('../feedback/TourOverlay')
@@ -592,8 +584,10 @@ export function reconcileNavPaths(paths: readonly string[]): string[] {
 function ThemeQuickSwitcher({
   className,
   placement = 'right',
+  onOpen,
 }: {
   className?: string
+  onOpen?: () => void
   /**
    * Which side of the trigger to anchor the popover to. The popover
    * grows AWAY from the anchored side, so use 'left' when the trigger
@@ -614,7 +608,7 @@ function ThemeQuickSwitcher({
   // backdrop-filter, and the main content area (`relative z-10`) sits
   // above it — without a portal the popover renders BEHIND dashboard
   // content that overflows into its area.
-  const [coords, setCoords] = useState<{ top: number; left?: number; right?: number } | null>(null)
+  const [coords, setCoords] = useState<{ top: number; bottom?: number; left?: number; right?: number } | null>(null)
 
   // Outside-click + Escape dismissal — same pattern as SavedViewMenu.
   useEffect(() => {
@@ -645,10 +639,12 @@ function ThemeQuickSwitcher({
 
   // Cross-component opener — wired by the command palette + first-run banner.
   useEffect(() => {
+    // The header owns global open requests; the footer picker is trigger-owned.
+    if (placement === 'left') return
     const handler = () => setOpen(true)
     window.addEventListener('open-theme-popover', handler)
     return () => window.removeEventListener('open-theme-popover', handler)
-  }, [])
+  }, [placement])
 
   // Recompute popover coordinates whenever it opens or the viewport
   // changes (resize, scroll). Uses capture-phase scroll so nested
@@ -663,10 +659,13 @@ function ThemeQuickSwitcher({
       if (!el) return
       const rect = el.getBoundingClientRect()
       const top = rect.bottom + 8 // matches the previous mt-2 spacing
+      const vertical = rect.top > window.innerHeight / 2
+        ? { bottom: window.innerHeight - rect.top + 8 }
+        : {}
       if (placement === 'left') {
-        setCoords({ top, left: rect.left })
+        setCoords({ top, ...vertical, left: rect.left })
       } else {
-        setCoords({ top, right: window.innerWidth - rect.right })
+        setCoords({ top, ...vertical, right: window.innerWidth - rect.right })
       }
     }
     update()
@@ -687,7 +686,7 @@ function ThemeQuickSwitcher({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t('theme.openPicker', 'Open theme picker')}
-        onClick={() => setOpen(v => !v)}
+        onClick={() => { if (!open) onOpen?.(); setOpen(v => !v) }}
         className="h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
@@ -716,9 +715,7 @@ export default function Layout() {
   const presentation = usePresentationMode()
   const { preferences: productPreferences } = useProductPreferences()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const sidebarRef = useRef<HTMLElement>(null)
   const sidebarTriggerRef = useRef<HTMLButtonElement>(null)
-  const sidebarCloseRef = useRef<HTMLButtonElement>(null)
   const mobileHeaderRef = useRef<HTMLElement>(null)
   const mobileHeaderSpacerRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -737,27 +734,9 @@ export default function Layout() {
       spacer.style.removeProperty('height')
     }
   }, [sidebarOpen, presentation.mode])
-  // Command Deck rail collapse. Host-owned (not deck-owned) because the
-  // aside width derives from it. Persisted per browser.
-  const [deckRailCollapsed, setDeckRailCollapsed] = useState(() => {
-    try {
-      return window.localStorage.getItem('teslasync-deck-rail-collapsed') === '1'
-    } catch {
-      return false
-    }
-  })
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('teslasync-deck-rail-collapsed', deckRailCollapsed ? '1' : '0')
-    } catch {
-      // Storage may be disabled; the toggle still works for the session.
-    }
-  }, [deckRailCollapsed])
-  // Secondary panel open state and icon-width preference both persist so a
-  // reload restores the navigation exactly as the user left it.
   const [deckPanelOpen, setDeckPanelOpen] = useState(() => {
     try {
-      return window.localStorage.getItem('teslasync-deck-panel-open') === '1'
+      return window.localStorage.getItem('teslasync-deck-panel-open') !== '0'
     } catch {
       return false
     }
@@ -769,23 +748,11 @@ export default function Layout() {
       // The panel still opens and closes for the session.
     }
   }, [deckPanelOpen])
-  const [deckPanelCollapsed, setDeckPanelCollapsed] = useState(() => {
-    try {
-      return window.localStorage.getItem('teslasync-deck-panel-collapsed') === '1'
-    } catch {
-      return false
-    }
-  })
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('teslasync-deck-panel-collapsed', deckPanelCollapsed ? '1' : '0')
-    } catch {
-      // The panel remains usable when storage is unavailable.
-    }
-  }, [deckPanelCollapsed])
   const [recentNavPaths, setRecentNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getRecentNavPaths()),
   )
+  const [recentPagePaths, setRecentPagePaths] = useState(() => getRecentPages().map(page => page.path))
+  useEffect(() => subscribeRecentPages(() => setRecentPagePaths(getRecentPages().map(page => page.path))), [])
   const [pinnedNavPaths, setPinnedNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getPinnedNavPaths()),
   )
@@ -798,51 +765,6 @@ export default function Layout() {
   useEffect(() => {
     setSidebarOpen(false)
   }, [location.pathname])
-  const wasSidebarOpen = useRef(false)
-  useEffect(() => {
-    const shouldRestoreFocus = wasSidebarOpen.current && !sidebarOpen
-    wasSidebarOpen.current = sidebarOpen
-    if (!shouldRestoreFocus) return
-    const frame = requestAnimationFrame(() => {
-      if (document.activeElement?.closest(
-        '[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]',
-      )) return
-      const target = window.matchMedia('(min-width: 1280px)').matches
-        ? getShellFocusableElements(sidebarRef.current)[0]
-        : sidebarTriggerRef.current
-      target?.focus()
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [sidebarOpen])
-  useEffect(() => {
-    if (!sidebarOpen) return
-    const desktopMedia = window.matchMedia('(min-width: 1280px)')
-    if (presentation.mode !== 'standard' || desktopMedia.matches) {
-      setSidebarOpen(false)
-      return
-    }
-    const releaseGuard = activateShellOverlayGuard({
-      focusContainer: sidebarRef.current,
-      isOwnRoot: (element) => element.hasAttribute('data-sidebar-backdrop'),
-    })
-    const cancelEntry = focusShellOverlayEntry(sidebarRef.current, () => sidebarCloseRef.current)
-    const onViewportChange = () => {
-      if (desktopMedia.matches) setSidebarOpen(false)
-    }
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return
-      if (isShellPortalActive(sidebarRef.current, document.activeElement)) return
-      setSidebarOpen(false)
-    }
-    document.addEventListener('keydown', onEscape)
-    desktopMedia.addEventListener('change', onViewportChange)
-    return () => {
-      cancelEntry()
-      desktopMedia.removeEventListener('change', onViewportChange)
-      document.removeEventListener('keydown', onEscape)
-      releaseGuard()
-    }
-  }, [sidebarOpen, presentation.mode])
   const workspaceScope = useMemo(
     () => getWorkspaceRouteScope(location.pathname),
     [location.pathname],
@@ -1140,7 +1062,7 @@ export default function Layout() {
     [pinnedNavPaths, vehicleCount, isForwardAuth],
   )
   const recentNavItems = useMemo(() =>
-    recentNavPaths
+    [...new Set([...recentPagePaths, ...recentNavPaths])]
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
@@ -1150,7 +1072,7 @@ export default function Layout() {
       // here just adds visual noise and a confusing two-column "active"
       // indicator. Quick-jump rows for *other* recent pages remain.
       .filter(item => !isExclusiveActivePath(location.pathname, item.to, NAV_CATALOG_PATHS)),
-    [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
+    [recentPagePaths, recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
   )
 
   const pinnedNavSet = useMemo(() => new Set(pinnedNavPaths), [pinnedNavPaths])
@@ -1327,120 +1249,15 @@ export default function Layout() {
       <div
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
-        style={{ '--shell-sidebar-width': `${(deckRailCollapsed ? 76 : 240) + (deckPanelOpen ? (deckPanelCollapsed ? 76 : 320) : 0)}px` } as React.CSSProperties}
+        style={{ '--shell-sidebar-width': `${76 + (deckPanelOpen ? 272 : 0)}px` } as React.CSSProperties}
       >
       {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
           `useAnnouncer()` without rendering its own hidden region. */}
       <AnnouncerRegion />
 
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {presentation.mode === 'standard' && sidebarOpen && (
-          <motion.div
-            data-sidebar-backdrop
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            // Not migrated to <Modal>.
-            // Rationale: drawer scrim — pure backdrop with no content. Pairs
-            // with the <nav> sidebar (drawer pattern), not a dialog. New
-            // interactive dialogs MUST use <Modal>.
-            // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] xl:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Sidebar */}
-      <nav
-        ref={sidebarRef}
-        role="navigation"
-        aria-label={t('a11y.primaryNav', 'Primary')}
-        data-tour="sidebar"
-        data-role="sidebar"
-        data-sidebar-open={sidebarOpen}
-        className={cn(
-          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform duration-normal ease-out xl:top-0 xl:relative xl:z-20 xl:w-[var(--shell-sidebar-width)] xl:shrink-0 xl:translate-x-0',
-          // The deck breathes its width as the rail collapses and the
-          // secondary panel docks. Reduced motion snaps the width while
-          // preserving the drawer slide.
-          'transition-[transform,width] xl:duration-normal xl:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-transform',
-          'flex flex-col border-r border-[var(--border-default)] bg-[var(--nav-rail-bg)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
-          presentation.mode !== 'standard' && 'hidden',
-          sidebarOpen ? 'top-0 translate-x-0 visible' : 'top-14 -translate-x-full invisible xl:visible',
-          // Reserve space for the fixed footer StatusBar
-          // so the bottom "Take a tour / Report bug" row never slides under
-          // it. Mobile open-state already overlays StatusBar (sidebar z-66 >
-          // StatusBar z-55), so the reservation only matters on desktop where
-          // the sidebar is `xl:static` and shares layout space with <main>.
-          statusBarPrefs.enabled && 'xl:pb-7'
-        )}
-      >
-        {/* Mobile sidebar brand. Build version intentionally not rendered
-            here; canonical provenance lives in the footer <VersionSegment>.
-            Keep inherited visibility synchronous despite the universal
-            reduced-motion transition duration. */}
-        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] shrink-0 transition-none xl:hidden">
-          <PrefetchNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
-            <Logo size={32} showWordmark className={cn(MOBILE_BRAND_CONTAINMENT, 'flex-1')} />
-          </PrefetchNavLink>
-          <Button
-            ref={sidebarCloseRef}
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label={t('nav.closeSidebar', 'Close sidebar')}
-            aria-expanded={sidebarOpen}
-            onClick={() => setSidebarOpen(false)}
-            className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
-          >
-            <Icons.close className="h-5 w-5" />
-          </Button>
-        </div>
-
-        {/* Desktop brand stays visible above the rail search. */}
-        <div className={cn(
-          'hidden h-workspace-header shrink-0 items-center border-b border-[var(--border-default)] xl:flex',
-          deckRailCollapsed ? 'justify-center px-2' : 'px-5',
-        )}
-        >
-          <PrefetchNavLink
-            to="/"
-            className={cn(
-              'flex min-w-0 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90',
-              !deckRailCollapsed && 'flex-1',
-            )}
-            onClick={() => setSidebarOpen(false)}
-          >
-            <Logo size={32} showWordmark={!deckRailCollapsed} />
-          </PrefetchNavLink>
-        </div>
-
-        {/* Mobile drawer global search. */}
-        <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
-          <CommandPaletteTrigger />
-        </div>
-
-        {/* Mobile drawer owns the same route-aware context controls as the
-            desktop header; the footer remains informational only. */}
-        {workspaceScope.vehicle && (
-          <VehiclePicker hideWhenSingle={false} className="xl:hidden" />
-        )}
-        {workspaceScope.range && (
-          <div role="group" aria-label={t('workspace.analysis.title', 'View settings')} className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
-            <Suspense fallback={null}>
-              <WorkspaceContextControl
-                className="w-full max-w-none"
-                listenForCommands={false}
-              />
-            </Suspense>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <Suspense fallback={<Skeleton className="mx-3 h-64" />}>
+      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-role="sidebar" data-tour="sidebar" className="sidenav-host">
+        <Suspense fallback={<div className="sidenav-loading" />} >
           <CommandDeck
             sections={groupedSidebarSections}
             pinnedItems={pinnedNavItems}
@@ -1458,34 +1275,20 @@ export default function Layout() {
             staleCount={staleCount}
             vehicleId={suggestionVehicleId > 0 ? String(suggestionVehicleId) : undefined}
             collections={visibleCollections}
-            railCollapsed={deckRailCollapsed}
-            onToggleRailCollapsed={() => setDeckRailCollapsed(prev => !prev)}
             panelOpen={deckPanelOpen}
             onPanelOpenChange={setDeckPanelOpen}
-            panelCollapsed={deckPanelCollapsed}
-            onTogglePanelCollapsed={() => {
-              const collapsed = !deckPanelCollapsed
-              setDeckPanelCollapsed(collapsed)
-              if (collapsed) setDeckRailCollapsed(true)
-            }}
+            appearanceControl={<ThemeQuickSwitcher placement="left" onOpen={() => {
+              if (window.innerWidth < 1280) { setDeckPanelOpen(false); setSidebarOpen(false) }
+            }} />}
+            mobileBrowseOpen={sidebarOpen}
             activeSectionTitle={activeSectionTitle}
           />
         </Suspense>
-
-        {/* Sidebar footer note:
-            "Press ? for shortcuts · Take a tour · Report bug" was moved to
-            the global StatusBar (`HelpSegment`) so the sidebar bottom is no
-            longer reserved for ambient help affordances. The previous
-            "Update available" banner, "Live vehicle mini-status", and
-            "Connection / vehicles / uptime" panels were already removed
-            because their info is surfaced in the StatusBar (VersionSegment
-            shows the update dot + uptime, ConnectionSegment shows API
-            status, ActiveVehicleSegment shows the active vehicle). */}
-      </nav>
+      </nav>}
 
       {/* Mobile top bar */}
       {presentation.mode === 'standard' && !sidebarOpen && (
-        <header ref={mobileHeaderRef} data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
+        <header ref={mobileHeaderRef} data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] md:start-[76px] flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
           <Button
             ref={sidebarTriggerRef}
             onClick={() => setSidebarOpen(true)}
@@ -1587,8 +1390,6 @@ export default function Layout() {
 
       {presentation.mode === 'standard' && <div id="helix-dock-slot" className="hidden xl:contents" />}
 
-      {/* Mobile bottom tab bar */}
-      {presentation.mode === 'standard' && <BottomTabBar />}
 
       {/* Footer status bar — always-on health/version
           surface pinned to the bottom of the viewport. Hides itself when the

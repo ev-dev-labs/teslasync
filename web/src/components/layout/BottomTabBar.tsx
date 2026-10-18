@@ -1,94 +1,22 @@
-import { PrefetchLink } from './PrefetchLink';
-import { useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/cn';
-import type { LucideIcon } from 'lucide-react';
-import { navRouteIcons } from '@/lib/navRouteIcons';
-import { Icon } from '../ui/Icon';
-import { Text } from '../ui/Typography';
-import { typography } from '@/lib/tokens';
-
-interface Tab {
-  path: string;
-  icon: LucideIcon;
-  i18nKey: string;
-  fallback: string;
-}
-
-/**
- * Top-5 most-trafficked routes per MOBILE_GUIDELINES.md, plus a More tab.
- * Mirrors the navigation a Tesla owner reaches for from their phone:
- * Dashboard → Drives → Charging → Battery → Map → More. More opens the
- * Explore catalogue (search + per-section bands) so the ~200 pages outside
- * the bar stay reachable without opening the full sidebar drawer.
- */
-const TABS: Tab[] = [
-  { path: '/',         icon: navRouteIcons['/'],         i18nKey: 'nav.mobileHome',     fallback: 'Home' },
-  { path: '/drives',   icon: navRouteIcons['/drives'],   i18nKey: 'nav.mobileDrives',   fallback: 'Drives' },
-  { path: '/charging', icon: navRouteIcons['/charging'], i18nKey: 'nav.mobileCharging', fallback: 'Charging' },
-  { path: '/battery',  icon: navRouteIcons['/battery'],  i18nKey: 'nav.mobileBattery',  fallback: 'Battery' },
-  { path: '/live',     icon: navRouteIcons['/live'],     i18nKey: 'nav.mobileMap',      fallback: 'Map' },
-  { path: '/explore',  icon: navRouteIcons['/explore'],  i18nKey: 'nav.mobileMore',     fallback: 'More' },
-];
-
-const FOCUSED_TAB_SCROLL_OPTIONS = {
-  behavior: 'instant',
-  block: 'nearest',
-  inline: 'nearest',
-  container: 'nearest',
-} as const;
-
-/** Paths shown in the bottom tab bar — used to de-emphasize sidebar duplicates on mobile */
-export const BOTTOM_TAB_PATHS = new Set(TABS.map(t => t.path));
-
-export function BottomTabBar() {
-  const location = useLocation();
-  const { t } = useTranslation();
-
-  return (
-    <nav
-      aria-label={t('nav.quickNav', 'Quick navigation')}
-      data-role="bottom-tab-bar"
-      className="fixed inset-x-0 bottom-0 z-50 xl:hidden
-        flex h-[var(--shell-tab-bar-height)] items-center overflow-x-auto border-t border-[var(--border-default)]
-        bg-[var(--surface-1)] px-2 shadow-e2
-        safe-bottom forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]"
-    >
-      {TABS.map(tab => {
-        const isActive = tab.path === '/'
-          ? location.pathname === '/'
-          : location.pathname === tab.path || location.pathname.startsWith(tab.path + '/');
-        // Resolve once so the anchor's accessible name (aria-label) and the
-        // visible caption can never drift apart — WCAG 2.5.3 (Label in Name).
-        const label = t(tab.i18nKey, tab.fallback);
-
-        return (
-          <PrefetchLink
-            key={tab.path}
-            to={tab.path}
-            aria-label={label}
-            aria-current={isActive ? 'page' : undefined}
-            onFocus={event => event.currentTarget.scrollIntoView?.(FOCUSED_TAB_SCROLL_OPTIONS)}
-            className={cn(
-              'relative flex min-h-11 min-w-12 flex-1 basis-auto shrink-0 flex-col items-center justify-center gap-1 rounded-shape-sm px-2 py-1',
-              'transition-colors duration-fast motion-reduce:transition-none',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)] forced-colors:focus-visible:outline forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-[Highlight]',
-              isActive
-                ? cn(typography.weight.semibold, typography.color.primary, 'bg-[var(--surface-2)] ring-1 ring-inset ring-[var(--border-strong)] forced-colors:border forced-colors:border-[Highlight]')
-                : cn(typography.weight.medium, typography.color.secondary, 'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] active:bg-[var(--surface-2)]')
-            )}
-          >
-            <Icon icon={tab.icon} size="lg" aria-hidden={true} strokeWidth={2} />
-            <Text size="sm" className="whitespace-nowrap">{label}</Text>
-            {isActive && (
-              <span
-                aria-hidden="true"
-                className="absolute bottom-0 h-0.5 w-6 rounded-full bg-[var(--text-secondary)] forced-colors:bg-[Highlight]"
-              />
-            )}
-          </PrefetchLink>
-        );
-      })}
-    </nav>
-  );
+import { useTranslation } from 'react-i18next'
+import { Icons } from '@/lib/icons'
+import { Button } from '@/components/ui/runtime'
+import { cn } from '@/lib/cn'
+export const BOTTOM_TAB_PATHS = new Set(['/', '/vehicles', '/drives', '/charging', '/explore'])
+export function BottomTabBar({ activeSection = 'Home', onChoose = () => undefined }: { activeSection?: string; onChoose?: (section: string | null) => void }) {
+  const { t } = useTranslation()
+  const tabs = [
+    { section: 'Home', label: t('nav.mobileHome', 'Home'), icon: Icons.home },
+    { section: 'Vehicles', label: t('nav.sidenav.mobileVehicles', 'Vehicles'), icon: Icons.vehicle },
+    { section: 'Driving', label: t('nav.sidenav.mobileDriving', 'Driving'), icon: Icons.drive },
+    { section: 'Charging', label: t('nav.mobileCharging', 'Charging'), icon: Icons.charging },
+    { section: null, label: t('nav.mobileMore', 'More'), icon: Icons.layoutGrid },
+  ]
+  const primary = tabs.some(tab => tab.section === activeSection)
+  return <nav aria-label={t('nav.quickNav', 'Quick navigation')} data-role="bottom-tab-bar" className="sidenav-phone-tabs safe-bottom">
+    {tabs.map(({ section, label, icon: Icon }) => <Button key={label} variant="ghost" type="button" aria-label={label}
+      aria-current={(section === activeSection || (section === null && !primary)) ? 'true' : undefined}
+      className={cn('sidenav-phone-tab', (section === activeSection || (section === null && !primary)) && 'is-selected')}
+      onClick={() => onChoose(section)}><Icon className="h-5 w-5" aria-hidden /><span>{label}</span></Button>)}
+  </nav>
 }

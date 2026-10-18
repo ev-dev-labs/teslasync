@@ -1,5 +1,6 @@
 {
   "canonical": [
+    "web/src/components/layout/sidebar/AtlasPanel.tsx",
     "web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx",
     "web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx",
     "web/src/features/admin/components/devtools/FleetApiSection.tsx",
@@ -73,6 +74,11 @@
     "web/src/features/telemetry/pages/SignalCorrelationPage.tsx"
   ],
   "sources": [
+    {
+      "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
+      "calls": 30,
+      "sha256": "8655e0996ff7d1553f30ea80ba34bf15f602e317323dea2641d5657e9efc239f"
+    },
     {
       "file": "web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx",
       "calls": 31,

@@ -408,7 +408,7 @@ export function checkpointSources(catalog, files) {
   const existing = fs.existsSync(target) ? JSON.parse(fs.readFileSync(target, 'utf8')) : [];
   const merged = new Map(existing.map(row => [row.file, row]));
   for (const result of verification) merged.set(result.file, { file: result.file, calls: result.calls, sha256: digest(fs.readFileSync(path.resolve(repo, result.file))),
-    ...(['web/src/components/layout/Layout.tsx', 'web/src/components/ui/CommandPalette.tsx', 'web/src/features/system/components/help-index/HelpSearch.tsx'].includes(result.file)
+    ...(['web/src/components/layout/Layout.tsx', 'web/src/components/layout/sidebar/AtlasPanel.tsx', 'web/src/components/ui/CommandPalette.tsx', 'web/src/features/system/components/help-index/HelpSearch.tsx'].includes(result.file)
       ? { dependencies: registryDependencies.map(file => ({ file, sha256: digest(fs.readFileSync(path.resolve(repo, file))) })) } : {}) });
   fs.writeFileSync(target, JSON.stringify([...merged.values()].sort((a, b) => a.file.localeCompare(b.file, 'en')), null, 2) + '\n');
   console.log('Verified and checkpointed ' + verification.length + ' source files');
