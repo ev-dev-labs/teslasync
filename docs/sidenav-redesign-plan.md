@@ -337,3 +337,11 @@ The complete Edge layout/gallery matrix passed **20/20**, with all **24 route/wi
 Completed the accessibility convention repairs without suppressions: account Escape handlers live on the interactive summary/links, and the offline-pin description uses VisuallyHidden. The rail also scrolls its selected section into view on route changes within the same section; the existing route-change unit case now checks this. Regenerated AtlasPanel fingerprints through the checked source/combined generators after the shared-primitive change. New navigation/data-source/trio tests remain **7,749 passed / 0 failed / 0 skipped**.
 
 All 24 screenshots and the screenshot index are ready. The port-3100 server is stopped and no listener remains. Its generated cache and intermediate reports are retained in the ignored, worktree-local `.sidenav-vite-cache/` folder outside the source lint scan; they are not committed. No source/test exclusions were added to ESLint. The full production build and lint pipelines are being rerun for this final source state. The three Muse-owned plan/progress files have no diff from the branch baseline.
+
+## Step 7 action classification and reproducible fingerprints
+
+Clarified the reversible bookmark action with the existing Unpin label. The action-audit finding itself was the clear-filter control; its standard `not-destructive` source annotation states that only transient query text is reset, matching the repo's existing filter controls. Audit code and tests are unchanged. Focused freshness-actions audit: **8 tests passed, zero findings**.
+
+Normalized owned source files to LF before regenerating frozen source/combined checkpoints, so their byte hashes match committed Git blobs on a fresh checkout. The build that crossed a commit correctly failed the PWA SHA-identity gate (worker embedded 0b20b9726c while HEAD had advanced to 5421d5349b); the final build will run with HEAD held fixed. No PWA checks were changed.
+
+Workflow limitation: the preview service stayed up for about 32 minutes across browser iterations, exceeding the 20-minute command cap before its final stop. It is stopped now. Verification commands themselves stayed under 20 minutes. This overrun is recorded rather than treated as compliance with the cap.

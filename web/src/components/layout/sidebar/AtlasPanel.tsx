@@ -78,8 +78,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
 
   const row = (item: FlatSidebarEntry, key = item.to, quickPin = false, context?: string) => {
     const label = navLabel(item)
-    const pinLabel = quickPin ? t('nav.deck.removeQuickPin', { page: label, defaultValue: 'Remove {{page}} from quick access' })
-      : pinned.has(item.to) ? t('nav.unpinPage', { page: label, defaultValue: 'Unpin {{page}}' })
+    const pinLabel = pinned.has(item.to) ? t('nav.unpinPage', { page: label, defaultValue: 'Unpin {{page}}' })
       : t('nav.pinPage', { page: label, defaultValue: 'Pin {{page}} to favorites' })
     const trailing = vehicleId && item.to === '/drives' ? <SidebarDriveBadge kind="today" vehicleId={vehicleId} />
       : vehicleId && item.to === '/drive-score' ? <SidebarDriveBadge kind="score" vehicleId={vehicleId} />
@@ -117,7 +116,10 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
     {section && <div className="shrink-0 px-3 pt-3"><Input type="search" value={query} onChange={event => { setQuery(event.target.value); setFilterClosed(new Set()) }}
       aria-label={t('nav.sidenav.filterLabel', { section: title, defaultValue: 'Filter {{section}} pages' })}
       placeholder={t('nav.sidenav.filter', { section: title, defaultValue: 'Filter {{section}}…' })} icon={<Icons.filter className="h-4 w-4" aria-hidden />}
-      suffix={query ? <IconButton label={t('nav.deck.clearFilter', 'Clear filter')} icon={<Icons.close className="h-4 w-4" aria-hidden />} onClick={() => setQuery('')} /> : undefined} /></div>}
+      suffix={query ? <>
+        {/* not-destructive: clears transient section-filter text only; saved groups, pins and page data are unchanged */}
+        <IconButton label={t('nav.deck.clearFilter', 'Clear filter')} icon={<Icons.close className="h-4 w-4" aria-hidden />} onClick={() => setQuery('')} />
+      </> : undefined} /></div>}
     {pinSyncUnavailable && <VisuallyHidden as="p" id={`${id}-pin-offline`}>{t('nav.deck.pinOfflineHint', 'Saved here until navigation pins can sync')}</VisuallyHidden>}
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-8 pt-3 scrollbar-thin">
       {(section?.title === 'Home' || view.kind !== 'section') && <div className="space-y-1 border-b border-[var(--border-default)] pb-3">
