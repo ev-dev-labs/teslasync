@@ -25,7 +25,7 @@ import {
   cleanup,
   act,
 } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // ── Shared, hoisted mutable state + spies ─────────────────────────────
@@ -446,7 +446,7 @@ function LocationProbe() {
   return <div data-testid="loc">{`${loc.pathname}${loc.hash}`}</div>
 }
 
-function renderLayout(route = '/', opts: { defaultPins?: boolean } = {}) {
+function renderLayout(route = '/', opts: { defaultPins?: boolean; probe?: React.ReactNode } = {}) {
   // The default pinned rail duplicates section links (e.g. "My Vehicles"),
   // which breaks unique-name queries. Seed an empty pinned list so section
   // links stay unique; tests that need the shipped defaults opt back in.
@@ -459,8 +459,31 @@ function renderLayout(route = '/', opts: { defaultPins?: boolean } = {}) {
       <MemoryRouter initialEntries={[route]}>
         <Layout />
         <LocationProbe />
+        {opts.probe}
       </MemoryRouter>
     </QueryClientProvider>,
+  )
+}
+
+// The mobile drawer is deck-owned since the sidenav redesign: Layout owns the
+// trigger + appbar visibility and hands the open state to the deck through
+// `mobileBrowseOpen`, while every close path (item select, backdrop, sheet
+// dismiss, Escape) funnels back through the deck's `onItemSelect`. These
+// helpers read that seam contract from the mocked CommandDeck.
+const deckProps = () =>
+  H.sidebarProps.unified as unknown as {
+    mobileBrowseOpen?: boolean
+    panelOpen: boolean
+    onItemSelect: () => void
+    onPanelOpenChange: (open: boolean) => void
+  }
+
+function GoToDrives() {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate('/drives')}>
+      go to drives
+    </button>
   )
 }
 
@@ -613,61 +636,70 @@ describe('Layout — unified sidebar wiring', () => {
     expect(screen.getAllByTestId('reauth-root')).toHaveLength(1)
   })
 
-  it('sizes the Command Deck rail to 240px expanded, 76px collapsed, with no resize handle', async () => {
+  it('sizes the Command Deck rail to 348px expanded, 76px collapsed, with no resize handle', async () => {
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    // The panel is open by default (no stored preference): 76px rail + 272px panel.
     expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
-      '--shell-sidebar-width': '240px',
+      '--shell-sidebar-width': '348px',
+    })
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
+    act(() => unifiedProps().onPanelOpenChange(false))
+    expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
+      '--shell-sidebar-width': '76px',
     })
     expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
     first.unmount()
 
-    localStorage.setItem('teslasync-deck-rail-collapsed', '1')
+    localStorage.setItem('teslasync-deck-panel-open', '0')
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
     expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
       '--shell-sidebar-width': '76px',
     })
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
   })
 
   it('restores the secondary panel open state after a reload', async () => {
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
-    expect(unifiedProps().panelOpen).toBe(false)
-    act(() => unifiedProps().onPanelOpenChange(true))
-    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
+    // Open is the default: first paint shows the panel until the user closes it.
+    expect(unifiedProps().panelOpen).toBe(true)
+    act(() => unifiedProps().onPanelOpenChange(false))
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('0')
     first.unmount()
 
     const second = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
-    expect(unifiedProps().panelOpen).toBe(true)
-    act(() => unifiedProps().onPanelOpenChange(false))
-    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('0')
+    expect(unifiedProps().panelOpen).toBe(false)
+    act(() => unifiedProps().onPanelOpenChange(true))
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
     second.unmount()
 
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
-    expect(unifiedProps().panelOpen).toBe(false)
+    expect(unifiedProps().panelOpen).toBe(true)
   })
 
-  it('shrinks the docked secondary rail to icons and persists that width preference', async () => {
+  it('maps the docked secondary panel width to its open state and persists that preference', async () => {
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
-    act(() => unifiedProps().onPanelOpenChange(true))
     const shell = screen.getByTestId('command-deck').closest('[data-presentation-mode]')
-    expect(shell).toHaveStyle({ '--shell-sidebar-width': '560px' })
-    act(() => unifiedProps().onTogglePanelCollapsed())
-    expect(shell).toHaveStyle({ '--shell-sidebar-width': '152px' })
-    expect(localStorage.getItem('teslasync-deck-panel-collapsed')).toBe('1')
-    expect(localStorage.getItem('teslasync-deck-rail-collapsed')).toBe('1')
-    act(() => unifiedProps().onTogglePanelCollapsed())
-    expect(shell).toHaveStyle({ '--shell-sidebar-width': '396px' })
-    act(() => unifiedProps().onTogglePanelCollapsed())
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '348px' })
+    act(() => unifiedProps().onPanelOpenChange(false))
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '76px' })
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('0')
+    act(() => unifiedProps().onPanelOpenChange(true))
+    expect(shell).toHaveStyle({ '--shell-sidebar-width': '348px' })
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
     first.unmount()
 
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
-    expect(unifiedProps().panelCollapsed).toBe(true)
+    expect(unifiedProps().panelOpen).toBe(true)
+    expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
+      '--shell-sidebar-width': '348px',
+    })
   })
 
   it('feeds the unified sidebar the complete catalog as its search corpus', () => {
@@ -876,32 +908,32 @@ describe('Layout — global page chrome', () => {
     ).toHaveAttribute('data-variant', 'page')
   })
 
-  it('keeps desktop scope in the command header and mobile scope in the drawer', () => {
+  it('keeps vehicle scope as a single desktop instance in the command header', () => {
     renderLayout('/')
     const pickers = screen.getAllByTestId('vehicle-picker')
-    expect(pickers).toHaveLength(2)
-    expect(pickers.filter(picker => picker.classList.contains('xl:hidden'))).toHaveLength(1)
+    // The redesign removed the mobile-drawer duplicate: exactly one instance,
+    // owned by the desktop command header (which hides itself below xl).
+    expect(pickers).toHaveLength(1)
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
+    expect(workspaceHeader).toContainElement(pickers[0])
     expect(within(workspaceHeader as HTMLElement).getByTestId('vehicle-picker')).not.toHaveClass(
       'xl:hidden',
     )
+    expect(workspaceHeader).toHaveClass('hidden', 'xl:grid')
   })
 
-  it('renders exactly one analysis-window control per breakpoint on a range-owning route', () => {
+  it('renders a single analysis-window control in the command header on a range-owning route', () => {
     renderLayout('/drives')
     const controls = screen.getAllByTestId('workspace-context-control')
-    // One desktop instance in the workspace header, one mobile instance in
-    // the drawer — never two competing controls at the same breakpoint.
-    expect(controls).toHaveLength(2)
+    // One desktop instance in the workspace header — never a competing
+    // mobile duplicate (the drawer no longer hosts scope controls).
+    expect(controls).toHaveLength(1)
 
     const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
     expect(
       within(workspaceHeader as HTMLElement).getAllByTestId('workspace-context-control'),
     ).toHaveLength(1)
-    const drawerControls = controls.filter((control) =>
-      control.closest('.xl\\:hidden'),
-    )
-    expect(drawerControls).toHaveLength(1)
+    expect(controls[0].closest('.xl\\:hidden')).toBeNull()
   })
 
   it('hides the analysis-window control entirely on routes that do not consume it', () => {
@@ -949,7 +981,9 @@ describe('Layout — global page chrome', () => {
     )
     expect(document.querySelector('[data-role="workspace-header"]')).toBeNull()
     expect(screen.queryByTestId('status-bar')).toBeNull()
-    expect(container.querySelector('nav[data-role="sidebar"]')).toHaveClass('hidden')
+    // The sidebar is unmounted (not merely hidden) outside standard mode.
+    expect(container.querySelector('nav[data-role="sidebar"]')).toBeNull()
+    expect(screen.queryByRole('navigation', { name: 'Primary' })).toBeNull()
     expect(container.querySelector('[data-role="page-viewport"]')).toHaveClass(
       'max-w-[1600px]',
     )
@@ -1132,7 +1166,7 @@ describe('Layout — mobile drawer', () => {
 
   it.each([
     ['ltr', 1], ['rtl', 1], ['ltr', 2], ['rtl', 2],
-  ])('contains both mobile wordmarks without shrinking controls (%s, scale %s)', (direction, scale) => {
+  ])('contains the mobile wordmark without shrinking controls (%s, scale %s)', (direction, scale) => {
     document.documentElement.setAttribute('dir', String(direction))
     const previousFontSize = document.documentElement.style.fontSize
     document.documentElement.style.fontSize = `${Number(scale) * 16}px`
@@ -1156,23 +1190,19 @@ describe('Layout — mobile drawer', () => {
 
       fireEvent.click(menu)
 
-      const aside = screen.getByRole('navigation', { name: 'Primary' })
-      const close = screen.getByRole('button', { name: 'Close sidebar' })
-      const row = close.parentElement!
-      const brand = within(row).getByRole('link', { name: 'TeslaSync' })
-      const drawerWordmark = within(brand).getByText('TeslaSync')
-      expect(drawerWordmark.parentElement).toHaveClass('min-w-0', 'max-w-full', 'flex-1', '[&>span]:min-w-0', '[&>span]:truncate')
-      expect(drawerWordmark).toHaveTextContent(/^TeslaSync$/)
-      expect(brand).toHaveClass('min-w-0', 'flex-1')
-      expect(brand).not.toHaveClass('overflow-hidden')
-      expect(row).toHaveClass('gap-2', 'transition-none', 'xl:hidden')
-      expect(row).not.toHaveClass('overflow-hidden')
-      expect(close).toHaveClass('h-11', 'w-11', 'shrink-0')
-      expect(close).toHaveFocus()
-      expect(aside).toHaveClass('transition-[transform,width]', 'motion-reduce:transition-transform')
-      const desktopBrand = row.nextElementSibling!
-      expect(within(desktopBrand as HTMLElement).getByRole('link', { name: 'TeslaSync' })).toBeInTheDocument()
-      expect(within(desktopBrand as HTMLElement).getByText('TeslaSync').parentElement).not.toHaveClass('[&>span]:truncate')
+      // The drawer chrome is deck-owned now: Layout hands the open state to
+      // the deck and unmounts the appbar (drawer brand/close/wordmark are
+      // covered by the deck scope).
+      expect(deckProps().mobileBrowseOpen).toBe(true)
+      expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+      expect(screen.getByRole('navigation', { name: 'Primary' })).toHaveClass('sidenav-host')
+
+      act(() => {
+        deckProps().onItemSelect()
+      })
+      expect(deckProps().mobileBrowseOpen).toBe(false)
+      expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
+      expect(within(screen.getByRole('banner', { name: 'Site header' })).getByText('TeslaSync')).toBeVisible()
     } finally {
       document.documentElement.removeAttribute('dir')
       document.documentElement.style.fontSize = previousFontSize
@@ -1200,9 +1230,14 @@ describe('Layout — mobile drawer', () => {
       expect(spacer.style.height).toBe('196px')
       expect(spacer).toHaveClass('shrink-0', 'xl:hidden')
       fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+      expect(deckProps().mobileBrowseOpen).toBe(true)
       expect(disconnect).toHaveBeenCalledTimes(1)
       expect(spacer.style.height).toBe('')
-      fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+      expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+      act(() => {
+        deckProps().onItemSelect()
+      })
+      expect(deckProps().mobileBrowseOpen).toBe(false)
       expect(observe).toHaveBeenCalledTimes(2)
       expect(observe).toHaveBeenLastCalledWith(screen.getByRole('banner', { name: 'Site header' }))
     } finally {
@@ -1210,141 +1245,136 @@ describe('Layout — mobile drawer', () => {
     }
   })
 
-  it.each([false, true])('does not transition the close row inherited visibility (reduced motion: %s)', reduced => {
+  it.each([false, true])('leaves drawer motion to the deck host CSS in either state (reduced motion: %s)', reduced => {
+    window.matchMedia = vi.fn().mockImplementation((q: string) => ({
+      matches: reduced && q === '(prefers-reduced-motion: reduce)',
+      media: q,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })
-    const close = screen.getByRole('button', { name: 'Close sidebar' })
-    const row = close.parentElement!
     const trigger = screen.getByRole('button', { name: 'Open sidebar' })
-    const css = document.createElement('style')
-    // Model the CSS initial transition property and the existing utility /
-    // reduced-motion declarations; jsdom does not execute native transitions.
-    css.textContent = `
-      * { transition-property: all; transition-duration: ${reduced ? '0.01ms' : '0s'} !important; }
-      .transition-none { transition-property: none; }
-      [class~="transition-[transform,width]"] { transition-property: transform, width; }
-      .invisible { visibility: hidden; }
-      .visible { visibility: visible; }
-    `
-    document.head.append(css)
-    try {
-      expect(row).toHaveClass('transition-none', 'xl:hidden')
-      expect(row).not.toHaveClass('visible')
-      expect(row).not.toHaveClass('invisible')
-      expect(getComputedStyle(row).transitionProperty).toBe('none')
-      expect(getComputedStyle(row).transitionDuration).toBe(reduced ? '0.01ms' : '0s')
-      expect(getComputedStyle(close).visibility).toBe('hidden')
-      expect(aside).toHaveClass('transition-[transform,width]', 'motion-reduce:transition-transform', 'duration-normal')
-      expect(getComputedStyle(aside).transitionProperty).toBe('transform, width')
 
-      fireEvent.click(trigger)
+    // The sidebar host carries no motion classes of its own: slide/fade
+    // motion (reduced-motion included) lives in sidenav.css + the deck
+    // Modal, so the preference never changes Layout's output.
+    expect(aside).toHaveClass('sidenav-host')
+    expect(aside).not.toHaveAttribute('data-sidebar-open')
+    expect(aside.className).not.toContain('transition')
+    expect(aside.className).not.toContain('translate-')
+    expect(aside.className).not.toContain('visible')
+    expect(deckProps().mobileBrowseOpen).toBe(false)
 
-      expect(aside).toHaveAttribute('data-sidebar-open', 'true')
-      expect(aside).toHaveClass('visible', 'translate-x-0', 'transition-[transform,width]', 'motion-reduce:transition-transform')
-      expect(close.parentElement).toBe(row)
-      expect(getComputedStyle(row).transitionProperty).toBe('none')
-      expect(getComputedStyle(row).visibility).toBe('visible')
-      expect(getComputedStyle(close).visibility).toBe('visible')
-      expect(close).toHaveFocus()
-      expect(close).toHaveClass('h-11', 'w-11')
-    } finally {
-      css.remove()
-    }
-  })
+    fireEvent.click(trigger)
 
-  it('repairs a rejected native entry at the committed layout frame without a polling timer', async () => {
-    renderLayout('/')
-    const close = screen.getByRole('button', { name: 'Close sidebar' })
-    const nativeFocus = close.focus.bind(close)
-    const focus = vi.spyOn(close, 'focus').mockImplementationOnce(() => {}).mockImplementation(nativeFocus)
-    let frame: FrameRequestCallback | undefined
-    window.requestAnimationFrame = vi.fn(callback => {
-      frame = callback
-      return 73
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    expect(document.body).toHaveFocus()
-    expect(screen.getByRole('navigation', { name: 'Primary' })).toHaveAttribute('data-sidebar-open', 'true')
-    act(() => frame?.(0))
-    expect(close).toHaveFocus()
-    expect(focus).toHaveBeenCalledTimes(2)
-    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
-    focus.mockRestore()
-  })
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // Opening changes deck props, never host classes.
+    expect(aside).toHaveClass('sidenav-host')
+    expect(aside.className).not.toContain('transition')
+    expect(aside.className).not.toContain('translate-')
+    expect(aside.className).not.toContain('visible')
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
 
-  it('cancels rejected-entry repair when the drawer closes before its layout frame', () => {
-    renderLayout('/')
-    const close = screen.getByRole('button', { name: 'Close sidebar' })
-    const focus = vi.spyOn(close, 'focus').mockImplementation(() => {})
-    window.requestAnimationFrame = vi.fn(() => 74)
-    window.cancelAnimationFrame = vi.fn()
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    expect(focus).toHaveBeenCalledTimes(1)
-    fireEvent.click(close)
-    expect(window.cancelAnimationFrame).toHaveBeenCalledWith(74)
-    focus.mockRestore()
-  })
-
-  it('contains keyboard focus and hides the background while keeping the backdrop usable', async () => {
-    renderLayout('/')
-    const aside = screen.getByRole('navigation', { name: 'Primary' })
-    const main = screen.getByRole('main')
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    const lastLink = await within(aside).findByRole('link', { name: 'Current page' })
-    const firstLink = aside.querySelector<HTMLAnchorElement>('a[href="/"]')
-    expect(firstLink).not.toBeNull()
-
-    lastLink.focus()
-    fireEvent.keyDown(lastLink, { key: 'Tab' })
-    expect(firstLink).toHaveFocus()
-    fireEvent.keyDown(firstLink!, { key: 'Tab', shiftKey: true })
-    expect(lastLink).toHaveFocus()
-    expect(main.closest('[inert]')).not.toBeNull()
-    expect(screen.queryByRole('main')).toBeNull()
-
-    const backdrop = aside.previousElementSibling
-    expect(backdrop).not.toBeNull()
-    expect(backdrop).not.toHaveAttribute('inert')
-    fireEvent.click(backdrop!)
-    await waitFor(() => expect(main.closest('[inert]')).toBeNull())
-    expect(screen.getByRole('main')).toBe(main)
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
-  })
-
-  it('releases the mobile overlay guard when the desktop breakpoint becomes active', async () => {
-    const desktopMedia = window.matchMedia('(min-width: 1280px)')
-    vi.mocked(window.matchMedia).mockReturnValue(desktopMedia)
-    const listen = vi.spyOn(desktopMedia, 'addEventListener')
-    const unlisten = vi.spyOn(desktopMedia, 'removeEventListener')
-    renderLayout('/')
-    const aside = screen.getByRole('navigation', { name: 'Primary' })
-    const main = screen.getByRole('main')
-    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    await waitFor(() => expect(main.closest('[inert]')).not.toBeNull())
-    const listener = listen.mock.calls.find(([type]) => type === 'change')?.[1]
-    expect(typeof listener).toBe('function')
-
-    Object.defineProperty(desktopMedia, 'matches', { value: true, configurable: true })
     act(() => {
-      if (typeof listener === 'function') listener(new Event('change'))
+      deckProps().onItemSelect()
     })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(aside).toHaveClass('sidenav-host')
+    expect(aside.className).not.toContain('transition')
+  })
 
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+  it('moves no focus and schedules no frame on drawer open or close (focus is deck-owned)', () => {
+    renderLayout('/')
+    const frames = vi.fn((_callback: FrameRequestCallback) => 73)
+    window.requestAnimationFrame = frames as unknown as typeof window.requestAnimationFrame
+    const callsBefore = frames.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // The appbar (and trigger) unmounts; Layout moves focus nowhere itself —
+    // the deck Modal owns entry focus.
+    expect(document.body).toHaveFocus()
+    expect(frames.mock.calls.length).toBe(callsBefore)
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(document.body).toHaveFocus()
+    expect(frames.mock.calls.length).toBe(callsBefore)
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it('schedules no repair frame when the drawer closes immediately after opening', () => {
+    renderLayout('/')
+    const frames = vi.fn((_callback: FrameRequestCallback) => 74)
+    const cancels = vi.fn()
+    window.requestAnimationFrame = frames as unknown as typeof window.requestAnimationFrame
+    window.cancelAnimationFrame = cancels as unknown as typeof window.cancelAnimationFrame
+    const callsBefore = frames.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    // No focus-repair machinery remains in Layout: no frames, no cancels.
+    expect(frames.mock.calls.length).toBe(callsBefore)
+    expect(cancels).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it('delegates the overlay guard to the deck: Layout inerts nothing and renders no backdrop', async () => {
+    renderLayout('/')
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // Layout neither traps focus nor hides the background — the deck Modal
+    // owns the guard (focus trap, inert background, backdrop → onItemSelect).
     expect(main.closest('[inert]')).toBeNull()
     expect(screen.getByRole('main')).toBe(main)
-    expect(unlisten).toHaveBeenCalledWith('change', listener)
+    expect(document.querySelector('[data-sidebar-backdrop]')).toBeNull()
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
+    expect(main.closest('[inert]')).toBeNull()
   })
 
-  it('provides a 44px mobile drawer close target', async () => {
-    renderLayout('/')
+  it('closes the drawer when the route changes', async () => {
+    renderLayout('/trips', { probe: <GoToDrives /> })
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    expect(await screen.findByRole('button', { name: 'Close sidebar' })).toHaveClass('h-11', 'w-11')
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+
+    // Navigation supersedes the overlay even without deck cooperation.
+    fireEvent.click(screen.getByRole('button', { name: 'go to drives' }))
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByTestId('loc')).toHaveTextContent('/drives')
+    expect(screen.getByRole('banner', { name: 'Site header' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
   })
 
-  it('does not restore the drawer trigger over a newly focused portaled modal', async () => {
+  it('provides a 44px mobile drawer trigger target', () => {
     renderLayout('/')
-    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const trigger = screen.getByRole('button', { name: 'Open sidebar' })
+    expect(trigger).toHaveClass('h-11', 'w-11')
+    fireEvent.click(trigger)
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // The drawer's own close control (44px "Close" + "Hide panel") is
+    // Modal/deck-owned; Layout hands off and unmounts the appbar.
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
+  })
+
+  it('does not move focus when the drawer closes over a newly focused portaled modal', async () => {
+    renderLayout('/')
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
     const dialog = document.createElement('div')
     dialog.setAttribute('role', 'dialog')
     dialog.setAttribute('aria-modal', 'true')
@@ -1354,8 +1384,10 @@ describe('Layout — mobile drawer', () => {
     document.body.append(dialog)
     try {
       action.focus()
-      fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
-      await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+      act(() => {
+        deckProps().onItemSelect()
+      })
+      await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
       await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
       expect(action).toHaveFocus()
     } finally {
@@ -1366,63 +1398,69 @@ describe('Layout — mobile drawer', () => {
   it('opens and closes the sidebar drawer from the mobile header controls', async () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })
-    expect(aside).toHaveAttribute('data-sidebar-open', 'false')
-    expect(aside.firstElementChild?.className).toContain('safe-area-inset-top')
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(aside).not.toHaveAttribute('data-sidebar-open')
     expect(screen.getByRole('banner', { name: 'Site header' }).className).toContain('safe-area-inset-top')
+    expect(document.querySelector('[data-role="appbar-spacer"]')?.className).toContain('safe-area-inset-top')
 
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
-    expect(aside.className).toContain('visible')
-    expect(screen.getByRole('button', { name: 'Close sidebar' })).toHaveFocus()
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(true))
+    expect(screen.queryByRole('banner', { name: 'Site header' })).toBeNull()
 
+    // Escape is deck-Modal-owned: Layout neither closes nor re-opens on it.
     fireEvent.keyDown(document, { key: 'Escape' })
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
-    expect(aside.className).toContain('invisible xl:visible')
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
-  })
+    expect(deckProps().mobileBrowseOpen).toBe(true)
 
-  it('restores the mobile trigger after close, logo navigation, a deck shortcut, and backdrop click', async () => {
-    renderLayout('/')
-    const trigger = () => screen.getByRole('button', { name: 'Open sidebar' })
-    const aside = screen.getByRole('navigation', { name: 'Primary' })
-    fireEvent.click(trigger())
-    fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
-    await waitFor(() => expect(trigger()).toHaveFocus())
-
-    fireEvent.click(trigger())
-    const mobileLogo = aside.querySelector('a[href="/"]')
-    expect(mobileLogo).not.toBeNull()
-    fireEvent.click(mobileLogo!)
-    await waitFor(() => expect(trigger()).toHaveFocus())
-
-    fireEvent.click(trigger())
     act(() => {
-      (H.sidebarProps.unified as { onItemSelect: () => void }).onItemSelect()
+      deckProps().onItemSelect()
     })
-    await waitFor(() => expect(trigger()).toHaveFocus())
-
-    fireEvent.click(trigger())
-    const backdrop = aside.previousElementSibling
-    expect(backdrop).not.toBeNull()
-    fireEvent.click(backdrop!)
-    await waitFor(() => expect(trigger()).toHaveFocus())
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
   })
 
-  it('keeps the drawer open when a nested control consumes Escape', async () => {
+  it('returns the mobile trigger after deck close and after navigation', async () => {
+    renderLayout('/trips', { probe: <GoToDrives /> })
+    const trigger = () => screen.getByRole('button', { name: 'Open sidebar' })
+    // Deck-initiated close (item select, backdrop, sheet dismiss) funnels
+    // through onItemSelect and restores the appbar trigger…
+    fireEvent.click(trigger())
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(trigger()).toBeInTheDocument()
+
+    // …and a route change closes the drawer even without deck cooperation.
+    fireEvent.click(trigger())
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'go to drives' }))
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
+    expect(screen.getByTestId('loc')).toHaveTextContent('/drives')
+    expect(trigger()).toBeInTheDocument()
+  })
+
+  it('ignores Escape for drawer state in every consumption state (deck-owned)', async () => {
     renderLayout('/')
-    const aside = screen.getByRole('navigation', { name: 'Primary' })
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'true'))
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(true))
 
-    const closeButton = screen.getByRole('button', { name: 'Close sidebar' })
+    // A nested control consuming Escape…
+    const main = screen.getByRole('main')
     const consumeEscape = (event: KeyboardEvent) => event.preventDefault()
-    closeButton.addEventListener('keydown', consumeEscape)
-    fireEvent.keyDown(closeButton, { key: 'Escape' })
-    expect(aside).toHaveAttribute('data-sidebar-open', 'true')
+    main.addEventListener('keydown', consumeEscape)
+    fireEvent.keyDown(main, { key: 'Escape' })
+    expect(deckProps().mobileBrowseOpen).toBe(true)
 
-    closeButton.removeEventListener('keydown', consumeEscape)
+    // …and an unconsumed document-level Escape both leave Layout state alone.
+    main.removeEventListener('keydown', consumeEscape)
     fireEvent.keyDown(document, { key: 'Escape' })
-    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    await waitFor(() => expect(deckProps().mobileBrowseOpen).toBe(false))
   })
 })
 
@@ -1463,7 +1501,13 @@ describe('Layout — ThemeQuickSwitcher', () => {
     const navigation = screen.getByRole('navigation', { name: 'Primary' })
     expect(navigation.tagName).toBe('NAV')
     expect(navigation).toHaveAttribute('data-role', 'sidebar')
-    expect(navigation).toHaveAttribute('data-sidebar-open', 'false')
+    expect(navigation).not.toHaveAttribute('data-sidebar-open')
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    const panelOpen = deckProps().panelOpen
+    // Opening the theme picker changes no sidebar state.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open theme picker' })[0])
+    expect(deckProps().mobileBrowseOpen).toBe(false)
+    expect(deckProps().panelOpen).toBe(panelOpen)
   })
 
   it('moves keyboard focus into the mounted picker and restores its visible trigger on Escape', async () => {
@@ -1905,13 +1949,18 @@ describe('Layout — restrained host chrome and shared offsets', () => {
     )
   })
 
-  it('keeps the clickable drawer scrim theme-neutral without blur', () => {
+  it('renders no Layout-owned drawer scrim: the overlay backdrop is deck-Modal-owned', () => {
     const { container } = renderLayout('/')
+    expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
-    const scrim = container.querySelector('[data-sidebar-backdrop]')
-    expect(scrim).toHaveClass('bg-[var(--surface-overlay)]', 'xl:hidden')
-    expect(scrim).not.toHaveClass('backdrop-blur-sm', 'bg-[var(--bg-app)]')
-    fireEvent.click(scrim as HTMLElement)
+    expect(deckProps().mobileBrowseOpen).toBe(true)
+    // Still no Layout scrim while open — the deck Modal renders the
+    // theme-neutral `bg-[var(--surface-overlay)]` backdrop (see Modal.tsx).
+    expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
+    act(() => {
+      deckProps().onItemSelect()
+    })
+    expect(deckProps().mobileBrowseOpen).toBe(false)
     expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
   })
