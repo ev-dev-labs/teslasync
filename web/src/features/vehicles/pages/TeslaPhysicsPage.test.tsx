@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { lazyBindings, sharedLoaderSpecifiers } from '@/__tests__/lazyRoutes.parse';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -148,6 +148,15 @@ function reviewBrief(testId: string) {
 }
 
 describe('Tesla Physics consolidated workbench', () => {
+  // Warm the 15 lazy section chunks once: first navigation to a section pays a
+  // dynamic-import cost that can exceed the 1s findBy timeout under full-suite
+  // load, flaking whichever test touches a section first. Warming moves that
+  // cost out of every timed path without touching any assertion.
+  beforeAll(async () => {
+    const sectionLoaders = import.meta.glob('../components/tesla-physics/Physics*Section.tsx');
+    expect(Object.keys(sectionLoaders)).toHaveLength(features.length);
+    await Promise.all(Object.values(sectionLoaders).map((load) => load()));
+  });
   beforeEach(() => {
     Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
     Object.assign(queryState, { error: null, missing: false, loading: false, paused: false });
