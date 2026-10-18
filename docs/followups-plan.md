@@ -257,7 +257,14 @@ on branches `fix/step5-{a..h}`, node_modules junctions, `--maxWorkers=2`):
 - G hooks pre-existing 31: useDLQ 11 + useGuard 8 + 11 files ×1–2.
 - H misc 15 + flake hardening: admin 5 + StatusHero 5 + TestWatchFace 2 + AIDigest 1 + AIQuietHours 1 + DataTable 1 + ChargingForensics isolation proof.
 
-Results: TBD (children running).
+Results:
+- B integrated (`23e4741d02`): Layout 24 + BottomTabBar 21 migrated to the redesigned
+  sidenav contract, test-only, 122/122 green, expects up 401→420, no skips/deletes.
+- E integrated (`c6a26b002d`): ChargeAdvisorPage live-window overwrite now sanitized
+  with exported `validSoc` (+ regression tests); 5 fixed (invalid-percentage NaN/±Inf/
+  out-of-range), 9 scenario-gate failures remain BLOCKED (coverageEstablished via
+  coveredLocalDates, no caller provides it — owner decision).
+- A, C, D, F, G, H running.
 
 ## 6. Phase 6 items (284 failed)
 

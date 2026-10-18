@@ -108,3 +108,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 06:30 UTC - step 5 launched: 8 children on worktrees step5a-h
 - Inventory: 56859/167 in 35 files (0 new vs baseline; +27 new passing from steps 2-4).
 - Children: A CommandDeck 35, B Layout+Tabs 45, C i18n 11, D shell/lib 8, E battery 14, F telemetry/trips 8, G hooks 31, H misc 15 + flake.
+
+## 2026-10-18 06:45 UTC - step 5 partial: B + E integrated (50 resolved, 9 blocked)
+- B: 45 shell tests migrated, 122/122, pushed 23e4741d02. E: 5 battery fixed via validSoc sanitization, 9 scenario-gate blocked (owner decision), pushed c6a26b002d.
+- Worktrees step5b/step5e removed. A, C, D, F, G, H still running.
