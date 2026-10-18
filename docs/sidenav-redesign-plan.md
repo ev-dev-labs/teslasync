@@ -306,3 +306,24 @@ Expanded tests cover Home hub reachability, unpinning without losing canonical r
 ### Blocked legacy test compatibility (tests preserved)
 
 The unchanged BottomTabBar.test.tsx and CommandDeck.test.tsx return **4 passed / 56 failed**. Exact examples: `Unable to find an accessible element with the role "link" and name "Home"` (new phone tabs open sheets as buttons), `expected 5 to be 6` (requested five tabs replace six links), and missing rail button `Suggested` (requested Home-panel placement). Other failures demand resizable/icon-only secondary columns and the old mobile drill levels, which the redesign explicitly removes. These tests were not deleted, skipped, rewritten or weakened. Their old interaction contract conflicts with the requested design; the new 42-check navigation suite exercises the replacement contract and the 199-destination coverage inventory. This remains an explicitly reported compatibility limitation, not a passing gate.
+
+## Utility coverage contract
+
+| Existing option | Preserved destination or action |
+| --- | --- |
+| Suggested | Home panel → Suggested feed (same suggestions/pin actions) |
+| Saved | Home panel → Saved pages (same pin storage/sync) |
+| All pages | `/explore` |
+| Alerts | `/notifications/inbox`, same unread count |
+| Display | Existing ThemeQuickSwitcher appearance menu; fallback `/settings#appearance` |
+| Collapse | Hide panel / re-press selected rail section; saved open/closed state |
+| Account | Same Account collection destinations, expanded in avatar menu |
+| Filter | Existing token/group matching, scoped to selected section |
+
+Primary section ordering and every original route are checked against the frozen JSON inventory, in addition to rendering all 22 section panels. Existing shared width tokens remain because cn/token tests still consume their public API; obsolete two-column rendering and collapse styles were removed from navigation.
+
+## Step 4 overlay interaction review
+
+Verified and fixed tablet Escape after section selection leaves focus on the rail; handling now closes only the topmost navigation drawer and respects nested dialogs. Scoped the shared Modal centering wrapper to pointer-events:none for navigation sheets/drawers, with pointer events restored on the panel itself, so real backdrop clicks close them. Focused Edge cases at 375px and 768px pass with outside-click, navigation closure and reload assertions. Rail tooltips now fill the rail item width, keeping icons/labels centered at 38px; native full-name titles provide a clipping-safe fallback.
+
+Final standalone tsc --noEmit: PASS. Latest targeted unit run: 42/42 navigation checks PASS. Combined new navigation, data-source and trio run: 7,749/7,749 PASS (42 navigation + 35 data-source + 7,672 i18n). No code changes remain planned; final Edge screenshots, full lint after removing the isolated development cache, and production build are in progress.

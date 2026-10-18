@@ -82,6 +82,19 @@ export function CommandDeck(props: CommandDeckProps) {
   useEffect(() => {
     try { localStorage.setItem(VIEW_KEY, JSON.stringify({ kind: 'section', title })) } catch { /* Private storage is optional. */ }
   }, [title])
+  useEffect(() => {
+    if (viewport !== 'tablet' || !panelOpen) return
+    // The rail stays interactive beside the drawer, so Escape must also work
+    // when focus is on its selected section rather than inside the modal.
+    const escape = (event: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]')
+      if (event.key !== 'Escape' || event.defaultPrevented || !dialogs[dialogs.length - 1]?.classList.contains('sidenav-tablet-panel')) return
+      onPanelOpenChange(false)
+      onItemSelect?.()
+    }
+    document.addEventListener('keydown', escape)
+    return () => document.removeEventListener('keydown', escape)
+  }, [viewport, panelOpen, onPanelOpenChange, onItemSelect])
   const close = () => {
     onPanelOpenChange(false); setPhoneSheet(null); onItemSelect?.()
     if (viewport === 'desktop') requestAnimationFrame(() => railItems.current.get(title)?.focus())

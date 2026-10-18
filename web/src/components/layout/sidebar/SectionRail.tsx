@@ -71,7 +71,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
           const Icon = SIDEBAR_SECTION_ICONS[section.title] ?? section.items[0]?.icon ?? Icons.home
           return <Tooltip key={section.title} content={label} side="right">
             <Button ref={element => { buttons.current[index] = element; itemRef?.(`section:${section.title}`, element) }}
-              type="button" variant="ghost" aria-label={label} aria-current={selected === section.title ? 'true' : undefined}
+              type="button" variant="ghost" title={label} aria-label={label} aria-current={selected === section.title ? 'true' : undefined}
               aria-expanded={selected === section.title && panelOpen} tabIndex={focusTitle === section.title ? 0 : -1}
               className={cn('sidenav-rail-item', selected === section.title && 'is-selected')}
               onFocus={() => setFocusTitle(section.title)}
