@@ -45,7 +45,7 @@ test('removed, nonexported, malformed, and shortened palettes fail closed', () =
     paletteFixture(distinct).replace('export const CHART_COLORS_NEON', 'const CHART_COLORS_NEON'),
     paletteFixture(distinct).replace('"#000000"', '"not-a-color"'),
     paletteFixture(distinct.slice(0, 7)),
-    paletteFixture(distinct).replace('[', 'getPalette(['),
+    paletteFixture(distinct).replace(/\[/, 'getPalette(['),
     paletteFixture(distinct).replace(' as const', ' as const; export const CHART_COLORS_CB_SAFE = []'),
   ];
   for (const source of fixtures) {
