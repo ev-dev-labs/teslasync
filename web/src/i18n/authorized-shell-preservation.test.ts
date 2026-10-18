@@ -12,31 +12,31 @@ describe('exact accepted shell inverse, independent of recovery test registratio
   it('reconstructs the actual Layout canonical predecessor without changing shipping source', () => {
     const file = 'web/src/components/layout/Layout.tsx'
     const current = currentSource(file)
-    expect(hash(current)).toBe('2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1')
+    expect(hash(current)).toBe('c5e63cbe8df9664889a73c85bb5f39d3e7cc644cc45dcdf4f1d3a589dafedec7')
     expect(hash(restoreAcceptedShellSource(file, current)))
-      .toBe('3afab237f538c2e32c1df4f1c45ae0fc166f227c6a26918e18b55cec15dae150')
+      .toBe('8eb9026972d5c49dd42537182ad5d4cfaf43f6b38eb2a2c7e943433758526e63')
     expect(currentSource(file)).toBe(current)
   })
 
   it('reconstructs the palette predecessor before the separately pinned canonical translator inverse', () => {
     const file = 'web/src/components/ui/CommandPalette.tsx'
     const current = currentSource(file)
-    expect(hash(current)).toBe('62821e61be0a22b7b416b93f9c437c4c28a4b8e9339274333d3c71ce690e8456')
+    expect(hash(current)).toBe('02ddb99ff8e9b3f31988790acfc4e342a487d09a8cf466535ab9e6d5fad080be')
     const canonical = restoreAcceptedShellSource(file, current)
-    expect(hash(canonical)).toBe('c157f19b1fa2693b6e7fe1ec3844c090a913c41a66311d1850e3726fa4981522')
+    expect(hash(canonical)).toBe('5341afdc44459ff67b8798d5835e895dd39135685420a4be375d47228fe830f0')
     const actual = "t('palette.clearScope', 'Clear {{scope}} filter', { scope: getScopeMeta(activeScope).label })"
     const original = "t('palette.clearScope', { scope: getScopeMeta(activeScope).label, defaultValue: `Clear ${getScopeMeta(activeScope).label} filter` })"
     expect(canonical.split(actual)).toHaveLength(2)
     expect(canonical).not.toContain(original)
     expect(hash(canonical.replace(actual, original)))
-      .toBe('482f84bdca352ccb17c408886d42f87997b316908890e74ce432dffdeec30444')
+      .toBe('ce372874ba3b2f0c538c97f6f8e99434db584cd41b0d98280265e3ed0cb8c7f5')
     expect(currentSource(file)).toBe(current)
   })
 
   it('reconstructs the actual theme popover canonical predecessor without changing shipping source', () => {
     const file = 'web/src/components/layout/ThemeQuickSwitcherPopover.tsx'
     const current = currentSource(file)
-    expect(hash(current)).toBe('7c315259f3c962675faad01f7f572571652201f48676755e701231c7b8ae1a73')
+    expect(hash(current)).toBe('415fb2970c2a21085cf8aaf8f0bab7f348521f96b4b1dd2d816704a230a66871')
     expect(hash(restoreAcceptedShellSource(file, current)))
       .toBe('c1d44325aed1ecac84db36586a79b7410825bc38d9bc8076940c089407c4731b')
     expect(currentSource(file)).toBe(current)

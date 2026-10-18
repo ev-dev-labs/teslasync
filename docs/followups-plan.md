@@ -541,3 +541,10 @@ Fixes (each verified locally under CI conditions before push):
    (7.9s→0.8s). (c) GDPR refresh-recovery asserted isSuccess
    synchronously — waitFor settled state (same assertions; 10× green
    + green under coverage). Merge had already turned shards 2/5/7 green.
+7. CI Frontend tests C1-C7 shell pins (decision option b): wrote blessed
+   re-pin generator web/scripts/repin-shell-preservation.mts (re-derives
+   stale fragment currents via trio-span diff alignment, merges
+   coalesced regions, drops deleted regions, recomputes all hashes;
+   sentinels/probes fail loudly; idempotent). Layout: re-derived
+   0/5/12/13, dropped 6/7, merged 8-11; palette: re-pin only;
+   theme popover: re-derived 1. Suite 139/139; tsc/eslint clean.
