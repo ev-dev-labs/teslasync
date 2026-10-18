@@ -575,11 +575,24 @@ Fixes (each verified locally under CI conditions before push):
     deckPanelOpen state; shell-preservation fragment 6 re-derived, pins
     recomputed via blessed generator + manual trio-unalignable rederive
     with escaper self-check). Local CLS probe (Playwright+Edge @1350):
-    / /drives /charging /battery ~0.000. /vehicles (0.167) + /analytics
-    (0.168) keep LATE (~2s) error-notice shifts: DataSourceNotice and
-    page notices mount after query settle with no pending placeholder.
-    BLOCKED (over box): any pending box mismatches one outcome (success
-    collapses vs error expands) — needs notice-stability design.
+    / /drives /charging /battery ~0.000. CI run 39169020881 confirms
+    4/6 green; /vehicles CLS=0.1488 + /analytics CLS=0.1496 remain
+    (matches local probe's late-notice windows exactly). Root cause:
+    error notices mount ~2s post-paint after query settle (analytics:
+    DataSourceNotice 0->288px pushes content; vehicles: ~6 notices +
+    panel skeleton->error swaps total +334px).
+    BLOCKED (over 45-min box; needs owner design decision):
+    (i) compact single-row error notices (analytics shift needs
+    <=~100px; vehicles needs all late mounts compacted) — shared
+    notice redesign + unit/visual updates, largest work;
+    (ii) render page notices below content (mount extends page down,
+    ~zero shift) — notice visibility/position design change;
+    (iii) accept the debt: budget bump is FORBIDDEN by task rules
+    (no loosened gates), so this needs an explicit owner override
+    with a follow-up issue. Rejected: pending placeholders (any
+    pending box shifts in either success-collapse or error-expand;
+    delayed placeholders just move the shift earlier); faster settle
+    (network always >=1 frame post-paint; skeleton paints first).
 11. Shard fixes: SI modernization changed QuickStatsPage +
     AnalyticsSummaryWidget rawValue only (t-calls 38/18 unchanged);
     re-checkpointed all 3 files incl. Layout via
