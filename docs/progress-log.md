@@ -81,3 +81,4 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-18 06:30 UTC | trio merged (0 conflicts); trio 7672/0 on merged tree after LF + checkpoint follow-ups | trio-class 5 pre-existing on trio branch; gates green; flags guard 4/4 | none
 2026-10-18 07:00 UTC | suite F 56766/191; wave5 spawned for 111 trio-copy fails (39 files, 4 groups) | 503 fixed exact; 0 regressions outside trio copy | none
 2026-10-18 07:15 UTC | wave5a/b integrated (25+23, folders green) | TripReplay 3 = documented block; worktrees removed | none
+2026-10-18 08:15 UTC | wave5c/d integrated (32+29); FINAL suite G 56877/80 (111 fixed exact, 0 new) | remaining = trio-class 6 + pre-existing 52 + blocks 22; 0 flakes active | none

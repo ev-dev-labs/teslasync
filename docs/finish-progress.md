@@ -412,6 +412,10 @@ Merged `origin/ui/i18n-trio` (9 commits off bca2df7b44, 148 files: catalog + tri
 
 Post-merge suite F: **56,766 passed / 191 failed** (was 56,374/583; fixed-titles diff 503 = 489 trio + 13 trio-class + 1 flake-passed, and 111 new). The 111 new fails / 39 files are trio-copy interactions: trio's deliberate wording changes vs exact-text expectations repaired in waves 3/4 — mopped up as wave 5 (test-only, trio-pinned copy at equal strictness): 5a charging 25/25, 5b driving 23/23 (TripReplay 3 pre-existing block untouched), 5c system 34 (32 fixed + 2 proven flakes untouched: useAlertMessageHelpers 3/3, useGDPRManifest 9/10, empty trio diff), 5d dashadmin 29/29. Report: `web/.runner/gates/vitest-full-20261017f.json` (local only).
 
+### Final suite G, post-wave-5 (2026-10-18)
+
+Full suite alone: **56,877 passed / 80 failed** (was 56,766/191; fixed-titles diff exactly 111, **0 new, 0 regressions**). Red files 31. Remaining: trio-class 6 (copy-owner 3, shell-preservation 2, final-four 1 — pre-existing on the trio branch, trio follow-up), proven pre-existing 52, stable blocks 22 (battery ChargeAdvisor 14, telemetry 5, driving TripReplay 3); both proven flakes passed this run. Test-repair closeout complete: original ~3,800-queue failures resolved across waves 1-5 plus the trio merge. Report: `web/.runner/gates/vitest-full-20261018.json` (local only).
+
 ### Main-agent sequential remainder (2026-10-17)
 
 84 fails / 41 files triaged by per-file UI-range forensics + a branch-base probe worktree (49287b5171, since removed):
