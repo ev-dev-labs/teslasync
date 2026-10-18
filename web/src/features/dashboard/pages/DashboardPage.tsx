@@ -287,10 +287,11 @@ export default function DashboardPage() {
   const [arrangeDropActive, setArrangeDropActive] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [initialTemplateId, setInitialTemplateId] = useState<string | undefined>();
-  const openTemplates = (id?: string) => {
+  const openTemplates = useCallback((id?: string) => {
     setInitialTemplateId(id);
     setShowTemplates(true);
-  };
+  }, []);
+  const openPicker = useCallback(() => setShowPicker(true), []);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importJson, setImportJson] = useState<string | null>(null);
@@ -329,7 +330,7 @@ export default function DashboardPage() {
     const id = window.setTimeout(() => setHintReady(true), CUSTOMIZE_HINT_DELAY_MS);
     return () => window.clearTimeout(id);
   }, [isOnlyDefault, hintDismissed, editMode]);
-  const dismissHint = () => {
+  const dismissHint = useCallback(() => {
     setHintDismissed(true);
     setHintReady(false);
     try {
@@ -337,7 +338,7 @@ export default function DashboardPage() {
     } catch {
       /* quota or disabled storage */
     }
-  };
+  }, []);
   const handlePickerAdd = (widgetIds: string[]) => {
     addWidgets(widgetIds);
     markCustomizeDashboardCompleted();
@@ -356,7 +357,7 @@ export default function DashboardPage() {
     dismissHint();
   };
 
-  const handleDropWidget = (
+  const handleDropWidget = useCallback((
     widgetId: string,
     placement: DropPlacement,
     bp: GridBreakpoint,
@@ -364,7 +365,7 @@ export default function DashboardPage() {
     addWidgetAt(widgetId, placement, bp);
     markCustomizeDashboardCompleted();
     dismissHint();
-  };
+  }, [addWidgetAt, dismissHint]);
 
   /* ——— Kiosk mode ——— */
   const {
@@ -399,8 +400,10 @@ export default function DashboardPage() {
 
   /* ——— Refresh logic ——— */
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [, setTick] = useState(0);
-  useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 60_000); return () => clearInterval(id); }, []);
+  // No page-level clock: age labels (charge ETA, anomaly ages, fleet posture,
+  // freshness dots) subscribe to the shared ticker individually, so ticks
+  // re-render only those labels while the memoised grid and widgets stand
+  // still. (A 60s setTick here used to re-render the entire page.)
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -717,8 +720,8 @@ export default function DashboardPage() {
                   showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
                   onDropWidget={handleDropWidget}
                   getDraggedWidgetId={getDraggedWidgetId}
-                  onAddWidgets={() => setShowPicker(true)}
-                  onBrowseTemplates={() => openTemplates()}
+                  onAddWidgets={openPicker}
+                  onBrowseTemplates={openTemplates}
                 />
               </div>
             </section>

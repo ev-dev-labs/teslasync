@@ -1,4 +1,4 @@
-import { Suspense, useState, useCallback, useMemo, useRef, useEffect, type DragEvent as ReactDragEvent } from 'react';
+import { Suspense, memo, useState, useCallback, useMemo, useRef, useEffect, type DragEvent as ReactDragEvent } from 'react';
 import {
   ResponsiveGridLayout, useContainerWidth, verticalCompactor,
   type Layout as RGLLayoutArray,
@@ -110,7 +110,7 @@ function FullscreenOverlay({
 }
 
 /* ─── Main Grid ─── */
-export function DashboardGrid({
+export const DashboardGrid = memo(function DashboardGrid({
   dashboard,
   editMode,
   onLayoutChange,
@@ -767,4 +767,4 @@ export function DashboardGrid({
       )}
     </>
   );
-}
+});

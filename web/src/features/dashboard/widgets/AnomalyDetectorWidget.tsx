@@ -1,5 +1,6 @@
-import { useMemo, useCallback } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTicker } from '@/hooks/useTicker';
 import type { TFunction } from 'i18next';
 import { AlertTriangle, AlertOctagon, Info } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
@@ -81,7 +82,12 @@ export function maxSeverity(anomalies: { severity: string }[]): string {
   return best;
 }
 
-export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) {
+export default memo(function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) {
+  // Row ages ("5m ago") are embedded in the tip title strings, so the feed
+  // subscribes to the shared ticker as a unit. It renders text rows and no
+  // charts, so a tick costs a trivial feed re-render while heavy widgets
+  // stay untouched.
+  useTicker();
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
@@ -188,4 +194,4 @@ export default function AnomalyDetectorWidget({ vehicleId, size }: WidgetProps) 
       </div>
     </WidgetShell>
   );
-}
+})

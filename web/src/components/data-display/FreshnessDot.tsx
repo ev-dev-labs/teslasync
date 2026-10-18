@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useTicker } from '@/hooks/useTicker';
 import { IconButton } from '@/components/ui/IconButton';
 
 /**
@@ -74,30 +75,6 @@ const STATUS_LABEL = {
   error: { key: 'freshness.error', fallback: 'Error' },
 } as const;
 
-let freshnessTick = 0;
-let freshnessTimer: ReturnType<typeof setInterval> | null = null;
-const freshnessSubscribers = new Set<() => void>();
-
-function subscribeToFreshnessTicker(subscriber: () => void) {
-  freshnessSubscribers.add(subscriber);
-  if (freshnessTimer == null) {
-    freshnessTimer = setInterval(() => {
-      freshnessTick += 1;
-      freshnessSubscribers.forEach((notify) => notify());
-    }, 30_000);
-  }
-  return () => {
-    freshnessSubscribers.delete(subscriber);
-    if (freshnessSubscribers.size === 0 && freshnessTimer != null) {
-      clearInterval(freshnessTimer);
-      freshnessTimer = null;
-    }
-  };
-}
-
-const noTickerSubscription = () => () => undefined;
-const getFreshnessTick = () => freshnessTick;
-
 // Centralize this once the shared
 // `formatRelativeTime` helper in @/lib/dateFormat grows i18n plural support.
 // Today the shared helper returns hardcoded English ("just now", "5m ago"),
@@ -145,11 +122,7 @@ export function FreshnessDot({
   const { reduce } = useMotionPreference();
   const { formatTime } = useDateFormat();
   // All mounted freshness indicators share one clock instead of each owning a timer.
-  useSyncExternalStore(
-    updatedAt ? subscribeToFreshnessTicker : noTickerSubscription,
-    getFreshnessTick,
-    getFreshnessTick,
-  );
+  useTicker(Boolean(updatedAt));
 
   const staleAfterMs = forceStaleAfterMs ?? (
     refreshIntervalMs != null ? refreshIntervalMs * 2 : manual ? 15 * 60_000 : null

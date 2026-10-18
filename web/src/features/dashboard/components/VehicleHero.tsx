@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,6 +13,7 @@ import { LinearGauge, ambientTemperatureGaugeRange } from '@/components/charts';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useTicker } from '@/hooks/useTicker';
 import { useUnits, type UnitFormatter } from '@/hooks/useUnits';
 import { deriveTrustedVehicleStatus } from '@/api/hooks/useVehicles';
 import type {
@@ -57,7 +59,23 @@ function formatReading(value: number | null | undefined, format: (value: number)
   return value != null && Number.isFinite(value) ? format(value) : '—';
 }
 
-export function VehicleHero({
+/**
+ * "Done ~3:45 PM" charge-ETA label. Subscribes to the shared ticker itself so
+ * only this line re-renders as the clock advances — the hero (gauges, charts,
+ * car visual) stays memoised and tick-free.
+ */
+const ChargeDoneAt = memo(function ChargeDoneAt({ etaHours }: { etaHours: number }) {
+  useTicker();
+  const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
+  return (
+    <Text as="p" size="2xs" color="secondary">
+      {t('hero.doneAt', 'Done')} ~{formatTime(new Date(Date.now() + etaHours * 3_600_000))}
+    </Text>
+  );
+});
+
+export const VehicleHero = memo(function VehicleHero({
   vehicle, state: observedState, firmwareVersion,
   toDistanceDisplay, toSpeedDisplay, toTemperatureDisplay,
   distanceUnit, speedUnit, tempUnit,
@@ -67,7 +85,6 @@ export function VehicleHero({
 }: VehicleHeroProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { formatTime } = useDateFormat();
   const { formatPower } = useUnits();
   const state = observedState ?? NO_READINGS;
   /* THE shared precedence: verified charging → verified motion → verified FSM
@@ -212,11 +229,7 @@ export function VehicleHero({
                     <Text as="p" size="sm" weight="bold" color="primary">
                       {hasEta ? `${fmtNumber(etaHours)}h` : '—'}
                     </Text>
-                    {hasEta && (
-                      <Text as="p" size="2xs" color="secondary">
-                        {t('hero.doneAt', 'Done')} ~{formatTime(new Date(Date.now() + etaHours * 3_600_000))}
-                      </Text>
-                    )}
+                    {hasEta && <ChargeDoneAt etaHours={etaHours} />}
                   </div>
                 </div>
               </div>
@@ -264,7 +277,7 @@ export function VehicleHero({
       </div>
     </div>
   );
-}
+});
 
 /* Build context-aware stat cards based on vehicle state */
 interface StatItem { icon: LucideIcon; label: string; value: string; color: string }

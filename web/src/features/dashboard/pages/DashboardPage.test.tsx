@@ -25,6 +25,8 @@
  *  12. KIOSK      — kiosk surface replaces the standard dashboard.
  *  13. URL IMPORT — a `#import=` share hash opens the import modal with the
  *                   decoded payload.
+ *  14. TICKER     — no page-level clock: advancing minutes re-renders neither
+ *                   the page nor the grid (age labels subscribe individually).
  *
  * Network is never hit: every data/dashboard hook is stubbed and all heavy
  * feature child components are replaced with lightweight, interaction-friendly
@@ -120,6 +122,7 @@ const h = vi.hoisted(() => {
     syncPending: false,
     markCompleted: vi.fn(),
     widgetDef: { id: 'w1', name: 'Widget', description: 'desc', category: 'vehicle' } as unknown,
+    gridRenders: 0,
   };
 });
 
@@ -207,7 +210,9 @@ vi.mock('@/components/feedback/LiveStaleDataBanner', () => ({
 
 // ── Heavy feature child components → interaction-friendly stubs ────────
 vi.mock('../components/DashboardGrid', () => ({
-  DashboardGrid: (props: any) => (
+  DashboardGrid: (props: any) => {
+    h.gridRenders += 1;
+    return (
     <div data-testid={props.kioskWidgetOpacity !== undefined ? 'kiosk-grid' : 'dashboard-grid'}>
       <button type="button" data-testid="grid-open-settings" onClick={() => props.onOpenSettings('w-hero')}>
         open settings
@@ -219,7 +224,8 @@ vi.mock('../components/DashboardGrid', () => ({
         browse templates
       </button>
     </div>
-  ),
+    );
+  },
 }));
 vi.mock('../components/WidgetPicker', () => ({
   WidgetPicker: (props: any) => (props.open
@@ -827,5 +833,34 @@ describe('DashboardPage — kiosk deep-link', () => {
     window.history.replaceState({}, '', '/');
     renderPage();
     expect(screen.queryByTestId('kiosk-settings')).toBeNull();
+  });
+});
+
+describe('DashboardPage ticker isolation', () => {
+  it('owns no page-level clock: advancing minutes re-renders neither the page nor the grid', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    try {
+      const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+      h.gridRenders = 0;
+      renderPage();
+      // Let short timers (the 5s customize hint, kiosk rotation) settle first.
+      act(() => {
+        vi.advanceTimersByTime(10_000);
+      });
+      const settled = h.gridRenders;
+      expect(settled).toBeGreaterThan(0);
+      // No 60s page clock may exist: age labels subscribe individually.
+      expect(setIntervalSpy.mock.calls.filter((call) => call[1] === 60_000)).toHaveLength(0);
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+      expect(h.gridRenders).toBe(settled);
+      setIntervalSpy.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

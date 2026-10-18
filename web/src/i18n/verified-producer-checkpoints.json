@@ -505,12 +505,12 @@
   {
     "file": "web/src/features/dashboard/components/VehicleHero.tsx",
     "calls": 40,
-    "sha256": "8c65c937ab0785d0cf708543747cb2942eacc2f6d07602575e21092e610c21d4"
+    "sha256": "12b559a2a60632aa509146c33f4ba18e53a26e17ce9a68ace50d6759f43c353d"
   },
   {
     "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
     "calls": 68,
-    "sha256": "3246da0d25676169e73f4cda53bfead5fb1afc573d7dfdb250f66bdfe0ca225c"
+    "sha256": "3893e4e8844daef75e14fcf86cb5c24babc0f0257832bb7920eb84c460a116e9"
   },
   {
     "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
@@ -525,7 +525,7 @@
   {
     "file": "web/src/features/dashboard/widgets/AnomalyDetectorWidget.tsx",
     "calls": 13,
-    "sha256": "cf8b87f87eb9e6873129fbe5b20ee72263771a8efb198abb479e4ca65c3a5e6e"
+    "sha256": "bc796969612e3617cec068495ace0c03a2bb98e7a1adcd2bc2c8ab0f8283519b"
   },
   {
     "file": "web/src/features/dashboard/widgets/AutomationStatusWidget.tsx",

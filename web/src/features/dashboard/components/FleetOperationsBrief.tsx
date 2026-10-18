@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useTicker } from '@/hooks/useTicker'
 
 import { type FleetServerSummary, type FleetStateEntry } from '@/api/hooks/useVehicles'
 import { statusVariant } from '@/api/types'
@@ -64,7 +65,7 @@ interface FleetOperationsBriefProps {
  *   - the headline is inside an `aria-live="polite"` region so a screen-reader
  *     user hears posture changes without polling the page.
  */
-export function FleetOperationsBrief({
+export const FleetOperationsBrief = memo(function FleetOperationsBrief({
   vehicles,
   selectedVehicle,
   fleetStates,
@@ -73,6 +74,11 @@ export function FleetOperationsBrief({
   isError = false,
 }: FleetOperationsBriefProps) {
   const { t } = useTranslation()
+  // This brief is itself an age-label surface (oldest-reading + scoped ages
+  // recompute from the clock each render). It subscribes to the shared ticker
+  // as a unit: it renders four text metrics and no charts, so a tick costs a
+  // trivial text re-render while heavy widgets stay untouched.
+  useTicker()
 
   const posture = useMemo(
     () => buildFleetPosture(vehicles, fleetStates, Date.now(), summary),
@@ -251,7 +257,7 @@ export function FleetOperationsBrief({
       </div>
     </section>
   )
-}
+})
 
 /** Plain-language reason the scoped vehicle is in the state it is in. */
 function scopeExplanation(
