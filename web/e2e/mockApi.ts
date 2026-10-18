@@ -582,6 +582,11 @@ export function resolveApiFixture(
       : { ...drive, updated_at: observedAt };
     return matched(listFor(scenario, value));
   }
+  if (path.startsWith('/drives/score')) {
+    return matched(scenario === 'empty'
+      ? { overall: 0, efficiency: 0, smoothness: 0, speed_discipline: 0, grade: 'F', total_drives: 0, trend: 'flat' }
+      : { overall: 87, efficiency: 82, smoothness: 90, speed_discipline: 88, grade: 'B', total_drives: 24, trend: 'up' });
+  }
   if (path.startsWith('/charging?') || path === '/charging') {
     const value = scenario === 'partial'
       ? { ...charging, ended_at: null, end_soc_pct: null, avg_power_w: null, live: true }

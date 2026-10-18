@@ -512,3 +512,14 @@ Fixes (each verified locally under CI conditions before push):
    read localStorage at module scope — defaults fallback. Full
    `playwright test --list`: 1764 tests/86 files, exit 0; affected
    suites 32/32; tsc/eslint clean.
+4. Quality/visual snapshots: 4 routes had real pre-capture failures
+   (same in CI): drives page calls GET /drives/score with no mock
+   (added populated/empty fixtures); battery 'State of Health'
+   renamed by redesign (assert 'Pack score'; error text now appears
+   twice → first()); notifications region renamed ('Notification
+   activity' → 'Inbox summary', metric marker → data-operational-value).
+   Regenerated all 49 baselines via the sanctioned --update-snapshots
+   flow on Windows (local Chrome channel — Playwright CDN unreachable
+   for chromium; CI chromium is arbiter, 500px/0.1 tolerance).
+   Full visual suite locally: 49 passed + 41 by-design skips, 0 failed.
+   Note: killed 2 stale node PIDs on :4173 blocking CI-mode rerun.
