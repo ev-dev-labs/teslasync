@@ -277,8 +277,8 @@ const clients: QueryClient[] = [];
 const preferences = getFormatterPreferences();
 let storedRange: string | null;
 const sourceTitles = [
-  'Power vs SOC', 'Session Details', 'Session Comparison',
-  'Charge Rate by Charger Type', 'Charging Speed Trend', 'Time-to-Charge Analysis',
+  'Power vs SOC', 'Session details', 'Session comparison',
+  'Charge rate by charger type', 'Charging speed trend', 'Time-to-charge analysis',
 ];
 
 function sourceCard(title: string) {

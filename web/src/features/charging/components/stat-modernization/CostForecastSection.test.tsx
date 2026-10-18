@@ -74,8 +74,8 @@ describe('CostForecastSection prediction interval', () => {
     expect(JSON.parse(chart.getAttribute('data-export')!)).toEqual(rows);
     expect(JSON.parse(chart.getAttribute('data-columns')!)).toEqual([
       { key: 'month', label: 'Month' },
-      { key: 'actual', label: 'Actual Cost' },
-      { key: 'forecast', label: 'Projected Cost' },
+      { key: 'actual', label: 'Actual cost' },
+      { key: 'forecast', label: 'Projected cost' },
       { key: 'ci_low', label: 'Lower bound' },
       { key: 'ci_high', label: 'Upper bound' },
     ]);

@@ -160,7 +160,7 @@ describe('charger resilience page-local modernization', () => {
     const face = document.getElementById('charger-resilience-metrics')!;
     expect(within(face).getByText('Resilience Score')).toBeInTheDocument();
     expect(within(face).getByText('Effective Site Count')).toBeInTheDocument();
-    expect(screen.getByText('What If the Top Site Disappeared?')).toBeInTheDocument();
+    expect(screen.getByText('What if the Top site disappeared?')).toBeInTheDocument();
     h.contextualHelp = true;
     rerender(
       <QueryClientProvider client={clients[clients.length - 1]!}>
@@ -218,14 +218,14 @@ describe('charger resilience page-local modernization', () => {
     expect(screen.getAllByText(/Session-based fallback, not energy-weighted/).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Energy share unavailable')).toHaveLength(2);
     expect(screen.getByText('Sites')).toBeInTheDocument();
-    expect(screen.getByText('What If the Top Site Disappeared?')).toBeInTheDocument();
+    expect(screen.getByText('What if the Top site disappeared?')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const dialog = screen.getByRole('dialog', { name: 'Charger resilience metrics details' });
     expect(within(dialog).getByText('Session-based fallback, not energy-weighted; diversification uses the observed site count.')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3);
     expect(within(dialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
     expect(h.chart?.data?.map(row => row.share)).toEqual([null, null]);
-    const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
+    const chart = screen.getByRole('figure', { name: 'Energy share by site' });
     for (const row of within(chart).getAllByRole('row').slice(1)) {
       expect(within(row).getAllByRole('cell')[1]).toHaveTextContent('—');
       expect(within(row).getAllByRole('cell')[2]).toHaveTextContent('1');
@@ -239,7 +239,7 @@ describe('charger resilience page-local modernization', () => {
     expect(screen.queryByText('No remaining sites after removing the top site.')).not.toBeInTheDocument();
     expect(screen.getByText('New top site').nextElementSibling).toHaveTextContent('Backup');
     expect(h.formatEnergy).toHaveBeenCalledWith(10);
-    const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
+    const chart = screen.getByRole('figure', { name: 'Energy share by site' });
     expect(within(within(chart).getAllByRole('row')[2]!).getAllByRole('cell')[1]).toHaveTextContent('0.00');
   });
 
@@ -264,16 +264,16 @@ describe('charger resilience page-local modernization', () => {
   it('preserves every scalar row and adds textual top-site identity to the table, export and site detail', () => {
     mountPage();
     const rows = [
-      { site: longSite, share: 80, sessions: 2, dependency: 'Top-Site Dependency' },
+      { site: longSite, share: 80, sessions: 2, dependency: 'Top-site dependency' },
       { site: 'Backup station', share: 20, sessions: 1, dependency: '—' },
     ];
     expect(h.chart?.data).toEqual(rows);
     expect(h.chart?.exportData).toEqual(rows);
-    const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
+    const chart = screen.getByRole('figure', { name: 'Energy share by site' });
     const tableRows = within(chart).getAllByRole('row');
     expect(tableRows).toHaveLength(3);
     expect(within(tableRows[1]!).getAllByRole('cell').map(cell => cell.textContent)).toEqual([
-      longSite, '80.00', '2', 'Top-Site Dependency',
+      longSite, '80.00', '2', 'Top-site dependency',
     ]);
     expect(within(tableRows[2]!).getAllByRole('cell').map(cell => cell.textContent)).toEqual([
       'Backup station', '20.00', '1', '—',
@@ -282,12 +282,12 @@ describe('charger resilience page-local modernization', () => {
     expect(siteRow).toHaveTextContent('Named place');
     expect(siteRow).toHaveTextContent('2 sessions');
     expect(siteRow).toHaveTextContent('80.00%');
-    expect(siteRow).toHaveTextContent('Top-Site Dependency');
+    expect(siteRow).toHaveTextContent('Top-site dependency');
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
     expect(within(chart).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
     fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV' }));
     expect(h.downloadCSV).toHaveBeenCalledWith(expect.any(String),
-      `site,share,sessions,dependency\r\n${longSite},80,2,Top-Site Dependency\r\nBackup station,20,1,—`);
+      `site,share,sessions,dependency\r\n${longSite},80,2,Top-site dependency\r\nBackup station,20,1,—`);
   });
 
   it('localizes fractional shares while keeping counts integral and CSV values scalar', () => {
@@ -298,17 +298,17 @@ describe('charger resilience page-local modernization', () => {
     mountPage();
     expect(h.chart?.dataColumns?.filter(column => column.kind != null).map(column => [column.key, column.kind]))
       .toEqual([['share', 'measurement'], ['sessions', 'count']]);
-    const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
+    const chart = screen.getByRole('figure', { name: 'Energy share by site' });
     const rows = within(chart).getAllByRole('row');
     expect(within(rows[1]!).getAllByRole('cell').map(cell => cell.textContent))
-      .toEqual([longSite, '66,70', '1', 'Top-Site Dependency']);
+      .toEqual([longSite, '66,70', '1', 'Top-site dependency']);
     expect(within(rows[2]!).getAllByRole('cell').map(cell => cell.textContent))
       .toEqual(['Backup station', '33,30', '1', '—']);
     expect(h.chart?.exportData?.map(row => [row.share, row.sessions])).toEqual([[66.7, 1], [33.3, 1]]);
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
     fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV' }));
     expect(h.downloadCSV).toHaveBeenCalledWith(expect.any(String),
-      `site,share,sessions,dependency\r\n${longSite},66.7,1,Top-Site Dependency\r\nBackup station,33.3,1,—`);
+      `site,share,sessions,dependency\r\n${longSite},66.7,1,Top-site dependency\r\nBackup station,33.3,1,—`);
   });
 
   it.each(['refresh-error', 'paused'] as const)('explains retained empty sections with one source recovery for %s', mode => {
@@ -317,7 +317,7 @@ describe('charger resilience page-local modernization', () => {
       isError: mode === 'refresh-error', fetchStatus: mode === 'paused' ? 'paused' : 'idle',
     };
     const { container } = mountPage();
-    expect(screen.getByText('What If the Top Site Disappeared?')).toBeInTheDocument();
+    expect(screen.getByText('What if the Top site disappeared?')).toBeInTheDocument();
     expect(screen.getByText('Sites')).toBeInTheDocument();
     expect(screen.getByText('Not enough data to model a loss scenario yet.')).toBeInTheDocument();
     expect(screen.getAllByText('No charging locations recorded yet.')).toHaveLength(2);

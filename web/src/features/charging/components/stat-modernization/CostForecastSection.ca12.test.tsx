@@ -67,10 +67,10 @@ describe('CostForecastSection restrained chart roles', () => {
     expect(captured.legends).toBe(1);
     expect(captured.series.find(s => s.dataKey === 'actual')).toMatchObject({
       stroke: captured.palette[0], fill: captured.palette[0], fillOpacity: 0.08,
-      name: 'Actual Cost', connectNulls: false,
+      name: 'Actual cost', connectNulls: false,
     });
     expect(captured.series.find(s => s.dataKey === 'forecast')).toMatchObject({
-      stroke: captured.palette[1], strokeDasharray: '8 4', name: 'Projected Cost',
+      stroke: captured.palette[1], strokeDasharray: '8 4', name: 'Projected cost',
       connectNulls: false,
     });
     expect(captured.series.find(s => s.dataKey === 'ci_band')).toMatchObject({

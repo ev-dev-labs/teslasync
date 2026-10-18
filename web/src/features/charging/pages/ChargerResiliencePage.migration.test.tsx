@@ -26,7 +26,7 @@ vi.mock('@/components/motion', async importOriginal => {
   return { ...actual, FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> };
 });
 const longSite = 'Home charging location with the complete specialist label longer than twenty characters';
-const chartTitle = 'Energy Share by Site';
+const chartTitle = 'Energy share by site';
 const chartDescription = 'Bar chart of the percentage of total charging energy delivered at each site';
 function session(id: string, location: string, energy: number): ChargingSession {
   const started = '2026-01-01T00:00:00Z';
@@ -54,7 +54,7 @@ function mountPage() {
 function tiles(container: HTMLElement) { return container.querySelectorAll('[data-operational-metric]'); }
 function assertSections(container: HTMLElement, expectedTiles = 4) {
   expect(tiles(container)).toHaveLength(expectedTiles);
-  for (const label of ['Energy Share by Site', 'What If the Top Site Disappeared?', 'Sites'])
+  for (const label of ['Energy share by site', 'What if the Top site disappeared?', 'Sites'])
     expect(screen.getByText(label)).toBeInTheDocument();
 }
 beforeEach(() => {
@@ -128,7 +128,7 @@ describe('charger resilience canonical migration', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
       const dialog = screen.getByRole('dialog', { name: 'Charger resilience metrics details' });
       expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
-      for (const label of ['Resilience Score', 'Effective Site Count', 'Top-Site Dependency', 'Fallback Coverage']) {
+      for (const label of ['Resilience score', 'Effective site count', 'Top-site dependency', 'Fallback coverage']) {
         expect(within(dialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
       }
     }

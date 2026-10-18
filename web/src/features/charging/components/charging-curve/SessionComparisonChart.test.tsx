@@ -235,7 +235,7 @@ describe('SessionComparisonChart', () => {
     render(<SessionComparisonChart sessions={[dcSession, acSession]} />);
 
     const container = screen.getByTestId('chart-container');
-    expect(container).toHaveAttribute('data-title', 'Session Comparison');
+    expect(container).toHaveAttribute('data-title', 'Session comparison');
     expect(container).toHaveAttribute(
       'data-subtitle',
       'Curves are modeled from session metadata, not sampled charging telemetry.',

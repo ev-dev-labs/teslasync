@@ -360,7 +360,7 @@ describe('CostAnalysisPage', () => {
     expect(screen.getByText('Gas vs Electric Savings Calculator')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Monthly cost breakdown' })).toBeInTheDocument()
     expect(screen.getByText('Electricity Rate Analysis (Time-of-Use)')).toBeInTheDocument()
-    expect(screen.getAllByText('Cost Forecast').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Cost forecast').length).toBeGreaterThan(0)
     expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()
     expect(screen.getByText('Environmental Impact')).toBeInTheDocument()
 
