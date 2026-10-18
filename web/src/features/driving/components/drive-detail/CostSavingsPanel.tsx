@@ -25,7 +25,7 @@ export function CostSavingsPanel({ drive, stats }: { drive: DriveDetail; stats: 
   const savingsPct = gasCost != null && gasCost > 0 && savings != null ? savings / gasCost * 100 : null;
   const costPerUnit = kwh != null ? costPerDistanceUnit(kwh, distanceM) : null;
   const rows = [
-    { id: 'ev', label: t('driveDetail.tripCost', 'Trip cost'), value: kwh != null ? formatEnergyCost(kwh) : '—' },
+    { id: 'ev', label: t('driveDetail.tripCost', 'Trip cost'), value: kwh == null ? '—' : costPerKwh == null ? t('driveDetail.noRateConfigured', 'No rate configured') : formatEnergyCost(kwh) },
     { id: 'per-unit', label: t('driveDetail.costPerUnit', 'Cost / {{unit}}', { unit: unitPrefs.distance }), value: costPerUnit != null ? formatCurrency(costPerUnit) : '—' },
     { id: 'gas', label: t('driveDetail.gasCostEquiv', 'Gas cost (equivalent)'), value: gasCost != null ? formatCurrency(gasCost) : '—' },
     { id: 'savings', label: t('driveDetail.gasSavings', 'Savings vs gas'), value: savings != null ? formatCurrency(savings) : '—' },

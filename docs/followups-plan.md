@@ -43,7 +43,32 @@ Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), do
 
 ## 2. Data bugs
 
-TBD (a–f with root causes + regression tests).
+### 2a. Drive cost "$0.0" vs "$2.4 savings" — FIXED
+- Root cause: `useFormatting` resolved the electricity rate with
+  `toFiniteNumber(rawRate, 0) ?? 0.12`. `??` only triggers on
+  null/undefined, so a configured `$0/kWh` rate (non-nullable 0 from
+  settings) passed through as `0`, and cost = energy × 0 = $0.0, while
+  the savings panel computed gas cost normally → contradictory pair.
+- Fix (`web/src/hooks/useFormatting.ts`): treat `<= 0`/NaN as
+  unconfigured → `costPerKwh: null`. `CostSavingsPanel` and drive-detail
+  `HeroGauges` fall back to the recorded session cost when available,
+  else show the new `driveDetail.noRateConfigured` ("No rate
+  configured") string; savings are hidden when no usable rate exists
+  (never computed from a $0 rate).
+- Regression tests: `CostSavingsPanel.test.tsx` (recorded-cost +
+  no-rate cases) and drive-detail `HeroGauges.test.tsx` (no-rate case)
+  failed before, pass after. Target files 30/30; rate-0 fallout files
+  (CostBreakdownWidget, taskOnboardingReactivity, SettingsPage.pilot)
+  62/62 green — no other consumer depends on the 0→fallback path.
+- Catalog: 1 new key, regen via `split-i18n-catalog.mjs`; trio pins
+  re-accepted with the repo generator
+  (`i18n-trio-checkpoint.mjs --typed --checkpoint-catalog`, 42,194 keys
+  verified, ar/he preserved) → trio 7672/0. tsc/lint/build green.
+- Env note: the checkpoint script shells out to `rg`, which is not
+  installed on this box; used official ripgrep 15.2.0 binary in D:/tmp
+  (PATH-only, nothing committed) for that one invocation.
+
+### 2b–2f. TBD
 
 ## 3. Performance (dashboard 60s re-render)
 

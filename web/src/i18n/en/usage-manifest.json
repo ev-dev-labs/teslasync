@@ -22068,6 +22068,7 @@
       "driveDetail.netConsumption",
       "driveDetail.noAddress",
       "driveDetail.noChartData",
+      "driveDetail.noRateConfigured",
       "driveDetail.noRouteData",
       "driveDetail.noTelemetryBody",
       "driveDetail.noTelemetryTitle",

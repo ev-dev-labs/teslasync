@@ -43,7 +43,7 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true, map }: 
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
-  const { formatEnergyCost, pricingState } = useFormatting();
+  const { costPerKwh, formatEnergyCost, pricingState } = useFormatting();
   const query = useDrivingStats(drive.vehicleId != null ? String(drive.vehicleId) : undefined);
   const state = useDataState(query, { provenance: 'historical' });
   const fleet = state.data;
@@ -119,7 +119,7 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true, map }: 
   const basics: SummaryMetric[] = [
     {
       ...basicMetric('drive-cost', t('driveDetail.report.driveCost', 'Drive cost'), energyWh),
-      formattedValue: energyWh != null ? formatEnergyCost(energyWh / 1000) : undefined,
+      formattedValue: energyWh == null ? undefined : costPerKwh == null ? t('driveDetail.noRateConfigured', 'No rate configured') : formatEnergyCost(energyWh / 1000),
       description: t('driveDetail.report.costSummaryNote', 'Configured-rate estimate, not a charging invoice'),
     },
     ...rows.filter((row) => row.key === 'distance' || row.key === 'duration'),

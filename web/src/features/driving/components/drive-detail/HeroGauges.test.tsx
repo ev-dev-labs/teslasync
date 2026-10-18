@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   refetch: vi.fn(),
   deltas: [] as { current: number; previous: number; comparedTo: string; metric: { direction: string } }[],
   translations: {} as Record<string, string>,
+  rate: 0.12 as number | null,
 }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -34,8 +35,8 @@ vi.mock('@/components/data-display', async () => ({
 }));
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({
-    costPerKwh: 0.12, currencySymbol: '$',
-    formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
+    costPerKwh: state.rate, currencySymbol: '$',
+    formatEnergyCost: (kwh: number) => state.rate == null ? '—' : `$${(kwh * state.rate).toFixed(2)}`,
   }),
 }));
 vi.mock('@/components/motion', async () => ({
@@ -59,7 +60,7 @@ const fleet: DrivingStats = {
 };
 beforeEach(() => {
   state.refetch.mockClear();
-  Object.assign(state, { distance: 'km', speed: 'km/h', data: fleet, error: null, deltas: [], translations: {} });
+  Object.assign(state, { distance: 'km', speed: 'km/h', data: fleet, error: null, deltas: [], translations: {}, rate: 0.12 });
 });
 const reading = (label: string) => screen.getByText(label).closest('[data-overview-metric]')?.textContent;
 const openDetails = () => {
@@ -129,6 +130,12 @@ describe('Drive overview hero and grid', () => {
     expect(reading('Drive cost')).toContain('—');
     expect(reading('Odometer (from → to)')).toContain('—');
     expect(screen.queryByText('$0.00')).toBeNull();
+  });
+
+  it('shows "No rate configured" for drive cost when the rate is missing but energy is known', () => {
+    state.rate = null;
+    render(<HeroGauges drive={driveFixture()} stats={statsFixture()} />);
+    expect(reading('Drive cost')).toContain('No rate configured');
   });
 
   it('calls the ongoing endpoint latest rather than a final end odometer', () => {

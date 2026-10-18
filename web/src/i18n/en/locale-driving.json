@@ -920,6 +920,7 @@
     "netConsumption": "Net consumption",
     "noAddress": "No address data",
     "noChartData": "No telemetry data available",
+    "noRateConfigured": "No rate configured",
     "noRouteData": "No route data available for this drive",
     "noTelemetryBody": "Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.",
     "noTelemetryTitle": "No telemetry recorded for this drive",

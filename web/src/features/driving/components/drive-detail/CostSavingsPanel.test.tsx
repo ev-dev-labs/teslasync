@@ -67,4 +67,13 @@ describe('Configured-rate cost estimates', () => {
     expect(value('Trip cost')).toBe('€1.20');
     expect(value('Gas cost (equivalent)')).toBe('€3.79');
   });
+
+  it('shows "No rate configured" and no savings when the rate is $0, instead of $0.00 cost', () => {
+    Object.assign(settings.current, { base_cost_per_kwh: 0, gas_price_per_unit: 4 });
+    render(<CostSavingsPanel drive={driveFixture({ distanceM: 40233.6, energyUsedWh: 10000 })} stats={statsFixture()} />);
+    expect(value('Trip cost')).toBe('No rate configured');
+    expect(value('Cost / km')).toBe('—');
+    expect(value('Savings vs gas')).toBe('—');
+    expect(value('Savings %')).toBe('—');
+  });
 });

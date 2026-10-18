@@ -41,7 +41,10 @@ export function useFormatting(): UseFormattingResult {
   const { unitPrefs } = useUnits()
 
   const configuredRate = settings.base_cost_per_kwh ?? 0.12
-  const costPerKwh = settingsUnavailable || !Number.isFinite(configuredRate) ? null : configuredRate
+  // A zero/negative rate means "not configured" (the setting is a non-nullable
+  // number, so unset arrives as 0 and `?? 0.12` never triggers). Treat it as
+  // unknown like the gas side does, so costs never render $0.00 from $0/kWh.
+  const costPerKwh = settingsUnavailable || !Number.isFinite(configuredRate) || configuredRate <= 0 ? null : configuredRate
   const currencySymbol = settings.currency_symbol && settings.currency_symbol.trim() ? settings.currency_symbol : '$'
   const userPrecision = normalizePrecision(settings.decimal_precision, 2)
 

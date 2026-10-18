@@ -96,6 +96,7 @@
     "atMpg": "at {{mpg}} MPG",
     "gasSavings": "vs gas savings",
     "savingsPct": "Savings %",
+    "noRateConfigured": "No rate configured",
     "title": "Drive details",
     "debrief": {
       "title": "Post-drive physics",
