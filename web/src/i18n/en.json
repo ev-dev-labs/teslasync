@@ -4833,6 +4833,7 @@
     "preset": {
       "label": "Quick date range",
       "live": "Live",
+      "last6h": "Last 6 hours",
       "last24h": "Last 24 hours",
       "today": "Today",
       "yesterday": "Yesterday",

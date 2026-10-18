@@ -12,6 +12,17 @@ import { BottomTabBar } from '@/components/layout/BottomTabBar';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar, FilterSheet, ComboboxMulti } from '@/components/forms';
 import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMediaQuery';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Stylesheet contract for the merged sidenav shell: vitest stubs `?raw`
+// CSS imports to an empty string, so read the source file directly (the
+// same fs approach WorkspaceHeader.test.tsx uses for tailwind.config.js).
+const sidenavCss = readFileSync(
+  resolve(dirname(fileURLToPath(import.meta.url)), '../components/layout/sidebar/sidenav.css'),
+  'utf8',
+);
 
 /**
  * Mobile responsive smoke test.
@@ -136,14 +147,23 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     const nav = document.querySelector('nav[aria-label]') as HTMLElement | null;
     expect(nav).not.toBeNull();
     expect(nav!.className).toMatch(/safe-bottom/);
-    // Hidden once the full desktop workspace shell takes over.
-    expect(nav!.className).toMatch(/xl:hidden/);
-    // Every tab link must satisfy WCAG 2.5.5 minimum touch-target size.
-    const tabs = nav!.querySelectorAll('a[aria-label]');
+    // The merged sidenav shell hides the phone tab bar with a stylesheet
+    // rule rather than a Tailwind class: sidenav.css drops
+    // `.sidenav-phone-tabs` at the 768px `md` gate where the icon rail
+    // takes over navigation.
+    expect(nav!.className).toMatch(/(?:^|\s)sidenav-phone-tabs(?:\s|$)/);
+    expect(sidenavCss).toMatch(
+      /@media\s*\(min-width:\s*768px\)\s*\{\s*\.sidenav-phone-tabs\s*\{\s*display:\s*none;?\s*\}\s*\}/,
+    );
+    // Every tab button must satisfy WCAG 2.5.5 minimum touch-target size:
+    // `sidenav-phone-tab` floors height at 44px and `flex: 1` spreads the
+    // five tabs across the full viewport width.
+    const tabs = nav!.querySelectorAll('button[aria-label]');
     expect(tabs.length).toBeGreaterThanOrEqual(5);
+    expect(sidenavCss).toMatch(/\.sidenav-phone-tab\s*\{[^}]*min-height:\s*44px/);
+    expect(sidenavCss).toMatch(/\.sidenav-phone-tab\s*\{[^}]*flex:\s*1;/);
     tabs.forEach((tab) => {
-      expect(tab).toHaveClass('min-h-11');
-      expect(tab).toHaveClass('min-w-12');
+      expect(tab).toHaveClass('sidenav-phone-tab');
     });
   });
 

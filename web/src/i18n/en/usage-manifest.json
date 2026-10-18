@@ -4535,6 +4535,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -6120,8 +6121,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "vehicleSelect.aria",
-      "workspace.analysis.presets.6h"
+      "vehicleSelect.aria"
     ],
     "system": [
       "a11y.breadcrumb",
@@ -7818,6 +7818,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -10514,7 +10515,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -11513,6 +11513,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -13825,7 +13826,6 @@
       "webpush.unsupported.pushApi",
       "webpush.unsupported.serverDisabled",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -14535,6 +14535,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -16711,7 +16712,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -18611,6 +18611,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -21111,7 +21112,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "workspace.analysis.range",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
@@ -21821,6 +21821,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -23840,7 +23841,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -25384,6 +25384,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -27644,7 +27645,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.acOther",
       "yearReview.activity",
       "yearReview.aiNarration.badge",
@@ -28409,6 +28409,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -30168,7 +30169,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -30880,6 +30880,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -34257,7 +34258,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -35368,6 +35368,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -36885,7 +36886,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -38593,6 +38593,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -40540,7 +40541,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -41454,6 +41454,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -44907,7 +44908,6 @@
       "widgets.search",
       "widgets.searchLabel",
       "widgets.searchResults",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -46035,6 +46035,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -48251,7 +48252,6 @@
       "watchFaceNL.inputLabel",
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
-      "workspace.analysis.presets.6h",
       "workspaceContext.ranges.1y",
       "workspaceContext.ranges.24h",
       "workspaceContext.ranges.30d",
@@ -50246,6 +50246,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -52783,7 +52784,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -54013,6 +54013,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -56424,7 +56425,6 @@
       "widget.doorWindow.rl",
       "widget.doorWindow.rr",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -57164,6 +57164,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -58809,7 +58810,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -59644,6 +59644,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -61487,7 +61488,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -62193,6 +62193,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -63970,7 +63971,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -70804,6 +70804,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -71996,8 +71997,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "vehicleSelect.aria",
-      "workspace.analysis.presets.6h"
+      "vehicleSelect.aria"
     ],
     "fleet-ops": [
       "a11y.breadcrumb",
@@ -72432,6 +72432,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -73913,8 +73914,7 @@
       "vehicles.emptyMessage",
       "vehicles.emptyTitle",
       "vehicles.loadError",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "home-energy": [
       "a11y.breadcrumb",
@@ -74351,6 +74351,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -75699,8 +75700,7 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "vehicleSelect.aria",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "intelligence-packs": [
       "a11y.breadcrumb",
@@ -76135,6 +76135,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -77498,8 +77499,7 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "vehicleSelect.aria",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "resale-vault": [
       "a11y.breadcrumb",
@@ -81741,6 +81741,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -82962,8 +82963,7 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "vehicleSelect.aria",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "service-intelligence": [
       "a11y.breadcrumb",
@@ -90816,6 +90816,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -91968,8 +91969,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-departure-forecast": [
       "a11y.breadcrumb",
@@ -99337,6 +99337,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -100634,8 +100635,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-drivetrain-health": [
       "a11y.breadcrumb",
@@ -101058,6 +101058,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -102368,8 +102369,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-driving-dynamics": [
       "a11y.breadcrumb",
@@ -102792,6 +102792,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -104153,8 +104154,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-driving-rhythm": [
       "a11y.breadcrumb",
@@ -104577,6 +104577,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -105846,8 +105847,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-efficiency": [
       "a11y.breadcrumb",
@@ -106271,6 +106271,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -107487,8 +107488,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-efficiency-target": [
       "a11y.breadcrumb",
@@ -109577,6 +109577,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -110863,8 +110864,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-fsdinsights": [
       "a11y.breadcrumb",
@@ -111286,6 +111286,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -112696,8 +112697,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-journey-fragmentation": [
       "a11y.breadcrumb",
@@ -114820,6 +114820,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -115995,8 +115996,7 @@
       "transitionArrow.label",
       "upstream.banner",
       "vehiclePicker.aria",
-      "vehiclePicker.fallbackName",
-      "workspace.analysis.presets.6h"
+      "vehiclePicker.fallbackName"
     ],
     "driving-range-buffer": [
       "a11y.breadcrumb",
@@ -116418,6 +116418,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -117747,8 +117748,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-regen-efficiency": [
       "a11y.breadcrumb",
@@ -118170,6 +118170,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -119464,8 +119465,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-route-efficiency": [
       "a11y.breadcrumb",
@@ -120149,6 +120149,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -121612,7 +121613,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
@@ -125350,6 +125350,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -126539,7 +126540,6 @@
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.goToVehicles"
     ],
     "driving-speed-sweet-spot": [
@@ -126963,6 +126963,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -128222,8 +128223,7 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h"
+      "widget.motorPerformance.outsideScale"
     ],
     "driving-trip-planner": [
       "a11y.breadcrumb",
@@ -128924,6 +128924,7 @@
       "date.preset.last1y",
       "date.preset.last24h",
       "date.preset.last30",
+      "date.preset.last6h",
       "date.preset.last7",
       "date.preset.last90",
       "date.preset.lastMonth",
@@ -130525,7 +130526,6 @@
       "watchFaceNL.placeholder",
       "watchFaceNL.title",
       "widget.motorPerformance.outsideScale",
-      "workspace.analysis.presets.6h",
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",

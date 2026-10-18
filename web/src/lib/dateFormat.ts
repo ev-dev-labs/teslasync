@@ -352,9 +352,9 @@ export function formatDurationMsCompact(ms: number | null | undefined): string {
   return `${fmtNumber(ms / 60_000)}m`
 }
 
-/** Millisecond duration with minute/second output for longer jobs: "1m 05s". */
+/** Job duration with minute/second output for longer jobs: "1m 05s". Zero means "no run yet". */
 export function formatDurationMsLong(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
+  if (!isFiniteNumber(ms) || ms <= 0) return FALLBACK
   if (ms < 1000) return `${fmtNumber(ms)}ms`
   const sec = ms / 1000
   if (sec < 60) return `${fmtNumber(sec)}s`

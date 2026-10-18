@@ -159,13 +159,13 @@ describe('Duration — hover title contract', () => {
     expect(span(container)?.hasAttribute('title')).toBe(false);
   });
 
-  it('renders a measured zero long duration with its exact hover title', () => {
-    // Measured-zero contract: the helpers pin formatDurationMsLong(0) to
-    // '0.00ms', so ms=0 is a real zero (not unknown) and renders numerically
-    // WITH the exact "0 ms" hover title.
+  it('omits the title when a variant collapses an out-of-range value to the em dash', () => {
+    // Regression guard: `long` rejects non-positive durations, so ms=0 renders
+    // the em dash. It must render like the empty state — WITHOUT a misleading
+    // "0 ms" hover title.
     const { container } = render(<Duration ms={0} variant="long" />);
-    expect(container.textContent).toBe('0.00ms');
-    expect(span(container)?.getAttribute('title')).toBe('0 ms');
+    expect(container.textContent).toBe(FALLBACK);
+    expect(span(container)?.hasAttribute('title')).toBe(false);
   });
 
   it('omits the title for a negative clock duration collapsed to the em dash', () => {

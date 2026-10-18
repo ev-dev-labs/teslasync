@@ -89,7 +89,7 @@ export const DATE_PRESETS: DatePreset[] = [
   },
   {
     id: '6h',
-    i18nKey: 'workspace.analysis.presets.6h',
+    i18nKey: 'date.preset.last6h',
     fallback: 'Last 6 hours.',
     requiresExplicitSelection: true,
     resolve: (now = new Date(), timeZone?) => ({

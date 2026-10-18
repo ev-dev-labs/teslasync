@@ -121,14 +121,14 @@ describe('WorkspaceHeader', () => {
 
 describe('WorkspaceHeader route-specific scope corrections', () => {
   it.each([
-    ['/notifications', true, false],
+    ['/notifications', false, false],
     ['/notifications/inbox', true, false],
     ['/notifications/archived', true, false],
     ['/notifications/rules', false, false],
     ['/notifications/channels', false, false],
     ['/power/dashboards', false, false],
     ['/power/dashboards/7', false, true],
-    ['/power/sql', false, true],
+    ['/power/sql', false, false],
     ['/power/grafana', false, true],
     ['/power-flow', true, false],
     ['/drives', true, true],

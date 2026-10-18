@@ -43,10 +43,15 @@ describe('elapsed duration validity', () => {
     setGlobalPrecision(2);
     expect(formatDurationMs(0)).toBe('0.00ms');
     expect(formatDurationMsCompact(0)).toBe('0.00ms');
-    expect(formatDurationMsLong(0)).toBe('0.00ms');
     expect(formatDurationSecondsAsMinutes(0)).toBe('0m');
     expect(formatDurationMinutes(0)).toBe('0m');
     expect(formatDurationClock(0)).toBe('0:00');
+  });
+
+  it('treats a zero long duration as "no run yet" rather than measured', () => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+    expect(formatDurationMsLong(0)).toBe('—');
   });
 
   it('preserves fractional measurements and existing unit transitions', () => {

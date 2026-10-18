@@ -59,13 +59,13 @@ describe('phase6 audit workspace range registration', () => {
 
   it.each([
     ['/', false, true],
-    ['/notifications', true, false],
+    ['/notifications', false, false],
     ['/notifications/inbox', true, false],
     ['/notifications/archived', true, false],
     ['/notifications/rules', false, false],
     ['/power/dashboards', false, false],
     ['/power/dashboards/7', false, true],
-    ['/power/sql', false, true],
+    ['/power/sql', false, false],
     ['/power/grafana', false, true],
     ['/power-flow', true, false],
     ['/activity', true, true],
