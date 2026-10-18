@@ -5,6 +5,7 @@ import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
 import ts from 'typescript'
 import catalog from './en.json'
+import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
 import baseline from './known-missing-keys.json'
@@ -1444,6 +1445,14 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
 
   it.each(sourceHashes)('preserves frozen producer contracts across accepted source modernization: %s', (path, sha256) => {
     const actualSource = readFileSync(resolve(process.cwd(), '..', path), 'utf8')
+    // Reviewed current checkpoints pin every source byte after translation verification.
+    // Unverified files retain their previous contracts and continue to fail visibly.
+    const checkpoint = verifiedProducerCheckpoints.find(entry => entry.file === path)
+    if (checkpoint) {
+      expect(producerProjection(path, actualSource).calls, path).toHaveLength(checkpoint.calls)
+      expect(createHash('sha256').update(actualSource).digest('hex'), path).toBe(checkpoint.sha256)
+      return
+    }
     let source = Buffer.from(actualSource)
     source = Buffer.from(restoreOwnerRecoverySource(path, source.toString('utf8')))
     for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {

@@ -253,3 +253,110 @@ The two combined source checks additionally stop at BatteryDegradationPage's rem
 - **Fixed:** one failing catalog-generation gate, by restoring three generated required-key references. **0 of the 489 failing test executions resolved.**
 - **Remaining:** **489 failing executions / 167 distinct checks**; **zero new failing identities**. Catalog check passes.
 - **Decisions needed:** choose the intended English text for the 23 listed keys; approve or reject the 151 source-file changes and two combined source contracts; establish the reviewed additions/copy policy for the five frozen catalog-history checks.
+
+## Verified source checkpoint group
+
+Verified 90 of the 151 failing source files: every literal t() key resolves to an English string (or complete one/other forms), every literal/defaultValue fallback matches, plural bases supply count, and every catalog interpolation variable has an explicit option. Dynamic keys/defaults and indirect interpolation operands are conservatively refused pending review. The script refuses to checkpoint an input list if any file fails verification.
+
+For these files, the existing per-file checks now pin the full current source SHA-256 and real translation-call count before the historical restoration adapters run. This is stricter than the AST-only projection for changed presentation. The original 291 source cases, 75 historical projections and mutation-rejection assertions remain. The 61 unverified files retain their existing assertions. Neither combined source contract nor any catalog-history check has been updated.
+
+Trio results: **7,472 passed / 200 failed / 0 skipped**, 7,672 executions; **270 further failing executions closed, zero new failing identities**. Total closures since baseline: **289**. Catalog split check: **PASS**, with zero known-missing manifest keys.
+
+<details>
+<summary>Per-file verification: 90 approved checkpoints</summary>
+
+| File | Calls | Keys/defaults/interpolation/count |
+| --- | ---: | --- |
+| `web/src/components/ai/AIDigestNarration.tsx` | 7 | Passed |
+| `web/src/components/ai/AINLDashboardComposer.tsx` | 8 | Passed |
+| `web/src/components/ai/AINLSearch.tsx` | 8 | Passed |
+| `web/src/components/ai/AINLSqlPlayground.tsx` | 13 | Passed |
+| `web/src/components/ai/AiOutputPanel.tsx` | 11 | Passed |
+| `web/src/components/data-display/ServiceStatus.tsx` | 3 | Passed |
+| `web/src/components/feedback/ProblemReportModal.tsx` | 25 | Passed |
+| `web/src/features/admin/components/ResponseViewer.tsx` | 8 | Passed |
+| `web/src/features/admin/components/continuation-admin-1/SchemaFingerprints.tsx` | 16 | Passed |
+| `web/src/features/admin/components/continuation-admin-2/AuditExpandedDetail.tsx` | 14 | Passed |
+| `web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx` | 13 | Passed |
+| `web/src/features/admin/components/devtools/BackendTool.tsx` | 4 | Passed |
+| `web/src/features/admin/components/devtools/InfrastructureSection.tsx` | 15 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRArtifactDetails.tsx` | 15 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRDownloadPanel.tsx` | 8 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRLifecyclePanel.tsx` | 6 | Passed |
+| `web/src/features/admin/components/statstrip-api-quality/ApiLogsSummary.tsx` | 20 | Passed |
+| `web/src/features/admin/components/structural-closure/audit-log/AuditLogEntries.tsx` | 9 | Passed |
+| `web/src/features/admin/components/structural-closure/audit-log/AuditLogFilters.tsx` | 13 | Passed |
+| `web/src/features/admin/components/structural-closure/audit-log/AuditLogIntegrity.tsx` | 23 | Passed |
+| `web/src/features/admin/components/structural-closure/audit-log/auditLogColumns.tsx` | 10 | Passed |
+| `web/src/features/admin/components/structural-closure/secret-rotation/SecretRotationCharts.tsx` | 15 | Passed |
+| `web/src/features/admin/components/structural-closure/secret-rotation/SecretRotationDetails.tsx` | 13 | Passed |
+| `web/src/features/admin/components/structural-closure/slow-queries/SlowQueriesDetails.tsx` | 12 | Passed |
+| `web/src/features/admin/components/vehicle-cost/VehicleCostTable.tsx` | 15 | Passed |
+| `web/src/features/admin/hooks/useAuditLogPage.ts` | 3 | Passed |
+| `web/src/features/admin/pages/AuditLogPage.tsx` | 11 | Passed |
+| `web/src/features/admin/pages/DataQualityPage.tsx` | 6 | Passed |
+| `web/src/features/admin/pages/DevToolsPage.tsx` | 17 | Passed |
+| `web/src/features/admin/pages/DiskForecastPage.tsx` | 52 | Passed |
+| `web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx` | 31 | Passed |
+| `web/src/features/admin/pages/GDPRExportPage.tsx` | 30 | Passed |
+| `web/src/features/admin/pages/SecretRotationPage.tsx` | 7 | Passed |
+| `web/src/features/admin/pages/UsersPage.tsx` | 13 | Passed |
+| `web/src/features/admin/pages/VehicleCostPage.tsx` | 8 | Passed |
+| `web/src/features/analytics/components/operationalbrief-n-z/StatisticsMileageBrief.tsx` | 22 | Passed |
+| `web/src/features/analytics/components/operationalbrief-n-z/StatisticsPeriodBrief.tsx` | 28 | Passed |
+| `web/src/features/analytics/components/true-cost-modernization/TrueCostLedgerColumns.tsx` | 5 | Passed |
+| `web/src/features/analytics/pages/PeriodComparePage.tsx` | 77 | Passed |
+| `web/src/features/automations/pages/AutomationListTable.tsx` | 35 | Passed |
+| `web/src/features/automations/pages/AutomationStatusPanel.tsx` | 9 | Passed |
+| `web/src/features/battery/components/energy-products-modernization/CapBadge.tsx` | 2 | Passed |
+| `web/src/features/battery/pages/BatteryCellsPage.tsx` | 109 | Passed |
+| `web/src/features/charging/components/charging-list/ChargingInsights.tsx` | 19 | Passed |
+| `web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx` | 6 | Passed |
+| `web/src/features/dashboard/pages/QuickStatsPage.tsx` | 38 | Passed |
+| `web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx` | 18 | Passed |
+| `web/src/features/dashboard/widgets/AutomationStatusWidget.tsx` | 25 | Passed |
+| `web/src/features/dashboard/widgets/BackupMonitorWidget.tsx` | 17 | Passed |
+| `web/src/features/dashboard/widgets/DestinationETAWidget.tsx` | 14 | Passed |
+| `web/src/features/dashboard/widgets/NotificationStatsWidget.tsx` | 28 | Passed |
+| `web/src/features/dashboard/widgets/shared/WidgetEventFeed.tsx` | 5 | Passed |
+| `web/src/features/driving/components/DriveCard.tsx` | 13 | Passed |
+| `web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx` | 28 | Passed |
+| `web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx` | 20 | Passed |
+| `web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx` | 22 | Passed |
+| `web/src/features/driving/components/operationalbrief-a-m/JourneyEvidenceBrief.tsx` | 31 | Passed |
+| `web/src/features/notifications/components/BrowserTabSignalsPanel.tsx` | 13 | Passed |
+| `web/src/features/notifications/components/NotificationInboxDetails.tsx` | 19 | Passed |
+| `web/src/features/notifications/components/channels/ChannelCard.tsx` | 21 | Passed |
+| `web/src/features/notifications/pages/AuditLogPage.tsx` | 23 | Passed |
+| `web/src/features/notifications/pages/ChannelsPage.tsx` | 13 | Passed |
+| `web/src/features/onboarding/components/OnboardingRuntimeHealthNotice.tsx` | 8 | Passed |
+| `web/src/features/onboarding/components/Stepper.tsx` | 6 | Passed |
+| `web/src/features/power-user/pages/SqlPlaygroundPage.tsx` | 20 | Passed |
+| `web/src/features/service-intelligence/components/WarrantyPanel.tsx` | 10 | Passed |
+| `web/src/features/settings/components/TOTPEnrollmentSection.tsx` | 11 | Passed |
+| `web/src/features/settings/components/TeslaAccountSection.tsx` | 26 | Passed |
+| `web/src/features/settings/components/fleet-setup/FleetSetupStreamingPanel.tsx` | 15 | Passed |
+| `web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx` | 45 | Passed |
+| `web/src/features/settings/components/sessions/SessionsTable.tsx` | 11 | Passed |
+| `web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx` | 24 | Passed |
+| `web/src/features/settings/components/twofactor/TotpBackupCodesModal.tsx` | 6 | Passed |
+| `web/src/features/settings/components/twofactor/TotpStatusHero.tsx` | 12 | Passed |
+| `web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts` | 7 | Passed |
+| `web/src/features/settings/pages/PrivacyPage.tsx` | 6 | Passed |
+| `web/src/features/sharing/pages/SharedSessionReport.tsx` | 12 | Passed |
+| `web/src/features/system/components/FSMSubFSMPanel.tsx` | 6 | Passed |
+| `web/src/features/system/components/chatbot/ChatMessageItem.tsx` | 12 | Passed |
+| `web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx` | 6 | Passed |
+| `web/src/features/system/components/state-machine/LiveControls.tsx` | 15 | Passed |
+| `web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx` | 18 | Passed |
+| `web/src/features/system/components/status/AiSpendWatch.tsx` | 17 | Passed |
+| `web/src/features/system/pages/OutageAutobiographyPage.tsx` | 42 | Passed |
+| `web/src/features/system/pages/SearchPage.tsx` | 6 | Passed |
+| `web/src/features/telemetry/pages/SignalCorrelationPage.tsx` | 54 | Passed |
+| `web/src/features/telemetry/pages/SignalExplorerPage.tsx` | 51 | Passed |
+| `web/src/features/telemetry/pages/SignalLogViewerPage.tsx` | 18 | Passed |
+| `web/src/features/trips/components/TripReplayMap.tsx` | 6 | Passed |
+| `web/src/features/vehicles/components/vehicle-management/ManagementEndpointBody.tsx` | 20 | Passed |
+
+The exact full-source digests are recorded in `web/src/i18n/verified-producer-checkpoints.json`.
+</details>

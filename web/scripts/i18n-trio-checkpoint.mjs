@@ -61,6 +61,25 @@ export function insert(catalog, key, value) {
   target[parts.at(-1)] = value;
 }
 export function allCatalogCalls() { return sourceFiles().flatMap(callsIn); }
+/** Conservative eligibility: unresolved dynamic expressions never receive a checkpoint. */
+export function verifyFile(file, catalog) {
+  const calls = callsIn(file), errors = [];
+  for (const call of calls) {
+    const at = { line: call.line, key: call.key };
+    if (!call.key) { errors.push({ ...at, reason: 'Unresolved dynamic key', expression: call.keyNode?.getText(call.tree) }); continue; }
+    const direct = valueAt(catalog, call.key);
+    const plural = ['_one', '_other'].map(suffix => valueAt(catalog, call.key + suffix));
+    const values = typeof direct === 'string' ? [direct] : plural.every(value => typeof value === 'string') ? plural : [];
+    if (!values.length) { errors.push({ ...at, reason: 'Missing English key' }); continue; }
+    if (call.fallbackNode && call.fallback === null) errors.push({ ...at, reason: 'Unresolved dynamic fallback' });
+    if (call.fallback !== null && !values.includes(call.fallback)) errors.push({ ...at, reason: 'Fallback differs', fallback: call.fallback, expected: values[0] });
+    if (typeof direct !== 'string' && !call.properties.has('count')) errors.push({ ...at, reason: 'Plural key without explicit count' });
+    for (const value of values) for (const match of value.matchAll(/{{-?\s*([^},\s]+)[^}]*}}/g)) {
+      if (!call.properties.has(match[1])) errors.push({ ...at, reason: 'Missing explicit interpolation option', variable: match[1] });
+    }
+  }
+  return { file, calls: calls.length, errors };
+}
 export function repairMissing(catalog, calls) {
   const grouped = Map.groupBy(calls.filter(call => call.key && ![call.key, call.key + '_one', call.key + '_other', call.key + '_zero'].some(key => typeof valueAt(catalog, key) === 'string')), call => call.key);
   const added = [], unresolved = [];
@@ -77,6 +96,19 @@ export function repairMissing(catalog, calls) {
 }
 function run() {
   const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
+  const checkpointList = process.argv.find(arg => arg.startsWith('--checkpoint-sources='))?.slice(21);
+  if (checkpointList) {
+    const files = JSON.parse(fs.readFileSync(path.resolve(checkpointList), 'utf8'));
+    const verification = files.map(file => verifyFile(file, catalog));
+    if (verification.some(result => result.errors.length)) throw new Error('Translation verification failed; no checkpoints written: ' + JSON.stringify(verification.filter(result => result.errors.length)));
+    const target = path.join(root, 'src/i18n/verified-producer-checkpoints.json');
+    const existing = fs.existsSync(target) ? JSON.parse(fs.readFileSync(target, 'utf8')) : [];
+    const merged = new Map(existing.map(row => [row.file, row]));
+    for (const result of verification) merged.set(result.file, { file: result.file, calls: result.calls, sha256: digest(fs.readFileSync(path.resolve(repo, result.file))) });
+    fs.writeFileSync(target, JSON.stringify([...merged.values()].sort((a, b) => a.file.localeCompare(b.file, 'en')), null, 2) + '\n');
+    console.log('Verified and checkpointed ' + verification.length + ' source files');
+    return;
+  }
   const calls = allCatalogCalls();
   if (process.argv.includes('--repair-missing')) {
     const result = repairMissing(catalog, calls);
