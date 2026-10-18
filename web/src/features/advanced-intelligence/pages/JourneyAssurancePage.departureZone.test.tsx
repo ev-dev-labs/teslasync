@@ -1,3 +1,11 @@
+// Pin the worker to the divergent host zone this contract requires. The specs
+// below prove browser-local departure parsing against literal LA instants,
+// so they fail on any host that is not America/Los_Angeles unless the zone
+// is pinned here (AdvancedIntelligencePages/SmartCharge precedent). Each
+// test file runs in its own worker process, so this cannot leak elsewhere;
+// the beforeEach guards verify the pin took effect before every test.
+process.env.TZ = 'America/Los_Angeles';
+
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -17,8 +25,10 @@ vi.unmock('@/lib/timezone');
 
 const scenarioPath = '/api/v1/advanced-intelligence/journey-assurance/scenarios';
 const draft = '2026-01-15T12:00';
-// The runner sets TZ before forking. Literal expected instants prove the
-// browser-local parser rather than deriving expectations with the same parser.
+// Literal expected instants prove the browser-local parser rather than
+// deriving expectations with the same parser. The worker TZ is pinned at the
+// top of this file; the beforeEach guards fail loudly if the pin ever stops
+// taking effect instead of letting every spec below go red ambiguously.
 const submittedInstant = '2026-01-15T20:00:00.000Z';
 const browserZone = 'America/Los_Angeles';
 const entryDescription = `Enter departure in your browser time zone (${browserZone}). Display time zone preferences do not change this entry.`;
