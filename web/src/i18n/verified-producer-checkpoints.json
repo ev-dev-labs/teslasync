@@ -42,7 +42,7 @@
   {
     "file": "web/src/components/layout/Layout.tsx",
     "calls": 14,
-    "sha256": "9758baba33a745a5d277560f1a55e0c901abeffc37a72016fb8e630cf5fe5342",
+    "sha256": "c5e63cbe8df9664889a73c85bb5f39d3e7cc644cc45dcdf4f1d3a589dafedec7",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
@@ -148,6 +148,11 @@
         "sha256": "3198ff236b27cd8993e4bbc14385d5eedc9bc36c52411c9687931382381c8122"
       }
     ]
+  },
+  {
+    "file": "web/src/components/layout/ThemeQuickSwitcherPopover.tsx",
+    "calls": 3,
+    "sha256": "415fb2970c2a21085cf8aaf8f0bab7f348521f96b4b1dd2d816704a230a66871"
   },
   {
     "file": "web/src/components/layout/WorkspaceContextControl.tsx",

@@ -584,8 +584,10 @@ export function reconcileNavPaths(paths: readonly string[]): string[] {
 function ThemeQuickSwitcher({
   className,
   placement = 'right',
+  onOpen,
 }: {
   className?: string
+  onOpen?: () => void
   /**
    * Which side of the trigger to anchor the popover to. The popover
    * grows AWAY from the anchored side, so use 'left' when the trigger
@@ -606,7 +608,7 @@ function ThemeQuickSwitcher({
   // backdrop-filter, and the main content area (`relative z-10`) sits
   // above it — without a portal the popover renders BEHIND dashboard
   // content that overflows into its area.
-  const [coords, setCoords] = useState<{ top: number; left?: number; right?: number } | null>(null)
+  const [coords, setCoords] = useState<{ top: number; bottom?: number; left?: number; right?: number } | null>(null)
 
   // Outside-click + Escape dismissal — same pattern as SavedViewMenu.
   useEffect(() => {
@@ -637,10 +639,12 @@ function ThemeQuickSwitcher({
 
   // Cross-component opener — wired by the command palette + first-run banner.
   useEffect(() => {
+    // The header owns global open requests; the footer picker is trigger-owned.
+    if (placement === 'left') return
     const handler = () => setOpen(true)
     window.addEventListener('open-theme-popover', handler)
     return () => window.removeEventListener('open-theme-popover', handler)
-  }, [])
+  }, [placement])
 
   // Recompute popover coordinates whenever it opens or the viewport
   // changes (resize, scroll). Uses capture-phase scroll so nested
@@ -655,10 +659,13 @@ function ThemeQuickSwitcher({
       if (!el) return
       const rect = el.getBoundingClientRect()
       const top = rect.bottom + 8 // matches the previous mt-2 spacing
+      const vertical = rect.top > window.innerHeight / 2
+        ? { bottom: window.innerHeight - rect.top + 8 }
+        : {}
       if (placement === 'left') {
-        setCoords({ top, left: rect.left })
+        setCoords({ top, ...vertical, left: rect.left })
       } else {
-        setCoords({ top, right: window.innerWidth - rect.right })
+        setCoords({ top, ...vertical, right: window.innerWidth - rect.right })
       }
     }
     update()
@@ -679,7 +686,7 @@ function ThemeQuickSwitcher({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t('theme.openPicker', 'Open theme picker')}
-        onClick={() => setOpen(v => !v)}
+        onClick={() => { if (!open) onOpen?.(); setOpen(v => !v) }}
         className="h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
@@ -1270,7 +1277,9 @@ export default function Layout() {
             collections={visibleCollections}
             panelOpen={deckPanelOpen}
             onPanelOpenChange={setDeckPanelOpen}
-            appearanceControl={<ThemeQuickSwitcher placement="left" />}
+            appearanceControl={<ThemeQuickSwitcher placement="left" onOpen={() => {
+              if (window.innerWidth < 1280) { setDeckPanelOpen(false); setSidebarOpen(false) }
+            }} />}
             mobileBrowseOpen={sidebarOpen}
             activeSectionTitle={activeSectionTitle}
           />

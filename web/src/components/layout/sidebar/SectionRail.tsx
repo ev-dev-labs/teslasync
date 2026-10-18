@@ -22,6 +22,7 @@ export interface SectionRailProps {
   alertCount: number
   appearanceControl?: ReactNode
   onItemSelect?: () => void
+  onUtilityActivate?: () => void
   itemRef?: (key: string, el: HTMLButtonElement | null) => void
   // Retained for callers of the shared rail API.
   collapsed?: boolean
@@ -34,7 +35,7 @@ export interface SectionRailProps {
 export function selectionKey(selection: DeckSelection) {
   return selection.kind === 'section' ? `section:${selection.title}` : selection.kind
 }
-export function SectionRail({ sections, selection, onSelect, navSectionTitle, navLabel, panelOpen, pathname, alertCount, appearanceControl, onItemSelect, itemRef, collections = [] }: SectionRailProps) {
+export function SectionRail({ sections, selection, onSelect, navSectionTitle, navLabel, panelOpen, pathname, alertCount, appearanceControl, onItemSelect, onUtilityActivate, itemRef, collections = [] }: SectionRailProps) {
   const { t } = useTranslation()
   const shortLabels: Record<string, string> = {
     'Advanced intelligence': t('nav.sidenav.shortAdvanced', 'Advanced'),
@@ -96,16 +97,16 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
     </div>
     <div className="sidenav-utilities">
       <Tooltip content={t('nav.deck.alerts', 'Alerts')} side="right">
-        <PrefetchNavLink to="/notifications/inbox" onClick={onItemSelect} className="sidenav-utility" aria-label={t('nav.deck.alerts', 'Alerts')}>
+        <PrefetchNavLink to="/notifications/inbox" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} className="sidenav-utility" aria-label={t('nav.deck.alerts', 'Alerts')}>
           <Icons.notificationsActive className="h-5 w-5" aria-hidden />
           {alertCount > 0 && <span className="sidenav-alert-count" aria-label={t('nav.deck.alertCount', { count: alertCount, defaultValue: '{{count}} unread alerts' })}>{alertCount > 99 ? '99+' : alertCount}</span>}
         </PrefetchNavLink>
       </Tooltip>
       <Tooltip content={t('nav.deck.display', 'Display')} side="right">
-        <div className="sidenav-utility">{appearanceControl ?? <PrefetchNavLink to="/settings#appearance" aria-label={t('nav.deck.display', 'Display')}><Icons.palette className="h-5 w-5" aria-hidden /></PrefetchNavLink>}</div>
+        <div className="sidenav-utility">{appearanceControl ?? <PrefetchNavLink to="/settings#appearance" onClick={() => { onUtilityActivate?.(); onItemSelect?.() }} aria-label={t('nav.deck.display', 'Display')}><Icons.palette className="h-5 w-5" aria-hidden /></PrefetchNavLink>}</div>
       </Tooltip>
       <details className="sidenav-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
-        <summary className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')} onKeyDown={event => {
+        <summary className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')} onClick={onUtilityActivate} onKeyDown={event => {
           const account = event.currentTarget.closest('details')
           if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false }
         }}><Avatar size="sm" /></summary>

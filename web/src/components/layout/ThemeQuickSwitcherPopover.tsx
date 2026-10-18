@@ -13,7 +13,7 @@ const ThemePicker = lazy(async () => {
 })
 
 interface ThemeQuickSwitcherPopoverProps {
-  coords: { top: number; left?: number; right?: number }
+  coords: { top: number; bottom?: number; left?: number; right?: number }
   popoverRef: RefObject<HTMLDivElement>
   triggerRef: RefObject<HTMLButtonElement>
   onClose: () => void
@@ -77,8 +77,8 @@ export function ThemeQuickSwitcherPopover({
       tabIndex={-1}
       aria-label={t('theme.openPicker', 'Open theme picker')}
       style={{
-        top: coords.top,
-        maxHeight: `max(0px, calc(100dvh - ${coords.top}px - 0.5rem - env(safe-area-inset-bottom, 0px)))`,
+        ...(coords.bottom === undefined ? { top: coords.top } : { bottom: coords.bottom }),
+        maxHeight: `max(0px, calc(100dvh - ${coords.bottom ?? coords.top}px - 0.5rem - env(safe-area-inset-bottom, 0px)))`,
         ...(coords.left !== undefined ? { left: coords.left } : {}),
         ...(coords.right !== undefined ? { right: coords.right } : {}),
       }}

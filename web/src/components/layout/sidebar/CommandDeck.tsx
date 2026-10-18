@@ -113,6 +113,7 @@ export function CommandDeck(props: CommandDeckProps) {
   return <div data-role="command-deck" className="sidenav-deck">
     {viewport !== 'phone' && <>
       <div data-testid="command-deck-rail" className="sidenav-rail-column"><SectionRail {...props} sections={sections} navSectionTitle={sectionLabel} alertCount={props.alertCount ?? 0}
+        onUtilityActivate={() => { if (viewport === 'tablet') { onPanelOpenChange(false); onItemSelect?.() } }}
         itemRef={(key, element) => { const name = key.replace(/^section:/, ''); if (element) railItems.current.set(name, element); else railItems.current.delete(name) }}
         selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelOpen} /></div>
       {viewport === 'desktop' && panelOpen && <div data-testid="command-deck-secondary" className="sidenav-context-column">{panel}</div>}

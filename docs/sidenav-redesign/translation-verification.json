@@ -5,6 +5,11 @@
     "errors": []
   },
   {
+    "file": "web/src/components/layout/ThemeQuickSwitcherPopover.tsx",
+    "calls": 3,
+    "errors": []
+  },
+  {
     "file": "web/src/components/layout/BottomTabBar.tsx",
     "calls": 6,
     "errors": []

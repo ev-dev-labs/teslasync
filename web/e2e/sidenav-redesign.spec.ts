@@ -92,3 +92,38 @@ for (const theme of ['dark', 'light'] as const) for (const width of [375, 768, 1
     }
   })
 }
+
+for (const width of [768, 1280]) {
+  test(`footer utilities at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedBrowserState(page, 'dark', '/')
+    const api = await installApiMocks(page, 'populated', 'dark')
+    await page.goto('/')
+    await waitForHarnessReady(page, api)
+    const rail = page.getByTestId('command-deck-rail')
+    const trigger = rail.getByRole('button', { name: 'Open theme picker', exact: true })
+    const anchor = (await trigger.boundingBox())!
+    await trigger.click()
+    const picker = page.getByRole('dialog', { name: 'Open theme picker', exact: true })
+    await expect(picker).toBeVisible()
+    await expect.poll(() => picker.locator('button').count()).toBeGreaterThan(3)
+    const box = (await picker.boundingBox())!
+    expect(box.height).toBeGreaterThan(200)
+    expect(box.y).toBeGreaterThanOrEqual(0)
+    expect(box.y + box.height).toBeLessThanOrEqual(anchor.y)
+    if (width === 768) await expect(page.locator('.sidenav-tablet-panel')).toHaveCount(0)
+    await page.screenshot({ path: `../docs/sidenav-redesign/utilities/dark-${width}-display.png`, animations: 'disabled' })
+    await page.keyboard.press('Escape')
+    await expect(picker).toHaveCount(0)
+    if (width === 768) await rail.getByRole('button', { name: 'Home', exact: true }).click()
+    await rail.locator('summary[aria-label="Account"]').click()
+    if (width === 768) await expect(page.locator('.sidenav-tablet-panel')).toHaveCount(0)
+    const account = rail.locator('details[open]')
+    await expect(account.locator('a[href="/account/privacy"]')).toBeVisible()
+    await account.locator('a[href="/account/privacy"]').focus()
+    await page.keyboard.press('Escape')
+    await expect(rail.locator('details[open]')).toHaveCount(0)
+    await rail.getByRole('link', { name: 'Alerts', exact: true }).click()
+    await expect(page).toHaveURL(/\/notifications\/inbox$/)
+  })
+}
