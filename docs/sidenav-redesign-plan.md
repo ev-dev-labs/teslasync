@@ -10,8 +10,8 @@ The current shell mounts CommandDeck → SectionRail and AtlasPanel. Canonical p
 
 - [x] Isolated worktree and linked dependencies; inventory recorded before changing UI.
 - [x] Responsive rail, contextual panel, phone sheets and persisted state.
-- [ ] Translation audit and generated catalog/fingerprints.
-- [ ] Unit/coverage tests and Edge layout guard/screenshots.
+- [x] Translation audit and generated catalog/fingerprints.
+- [x] Unit/coverage tests and Edge layout guard/screenshots.
 - [ ] Gates, final results, stop server and push.
 
 ## Decisions
@@ -331,3 +331,9 @@ Final standalone tsc --noEmit: PASS. Latest targeted unit run: 42/42 navigation 
 ## Step 5 final filter behavior
 
 The complete Edge layout/gallery matrix passed **20/20**, with all **24 route/width measurements passing** and 24 final light/dark screenshots captured. Restored the existing filter interaction detail: matching groups can be collapsed during filtering, while those temporary changes do not overwrite saved group collapse state. Both the unit filter case and desktop browser cases now assert this. Regenerated AtlasPanel source and combined fingerprints only after its complete translation audit passed again. Final interaction rerun and gates follow below.
+
+## Step 6 accessibility and final gate preparation
+
+Completed the accessibility convention repairs without suppressions: account Escape handlers live on the interactive summary/links, and the offline-pin description uses VisuallyHidden. The rail also scrolls its selected section into view on route changes within the same section; the existing route-change unit case now checks this. Regenerated AtlasPanel fingerprints through the checked source/combined generators after the shared-primitive change. New navigation/data-source/trio tests remain **7,749 passed / 0 failed / 0 skipped**.
+
+All 24 screenshots and the screenshot index are ready. The port-3100 server is stopped and no listener remains. Its generated cache and intermediate reports are retained in the ignored, worktree-local `.sidenav-vite-cache/` folder outside the source lint scan; they are not committed. No source/test exclusions were added to ESLint. The full production build and lint pipelines are being rerun for this final source state. The three Muse-owned plan/progress files have no diff from the branch baseline.

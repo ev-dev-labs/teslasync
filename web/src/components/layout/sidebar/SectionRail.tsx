@@ -18,6 +18,7 @@ export interface SectionRailProps {
   navLabel?: (item: { label: string; labelKey: string }) => string
   navSectionTitle: (section: { title: string; titleKey?: string }) => string
   panelOpen?: boolean
+  pathname?: string
   alertCount: number
   appearanceControl?: ReactNode
   onItemSelect?: () => void
@@ -33,7 +34,7 @@ export interface SectionRailProps {
 export function selectionKey(selection: DeckSelection) {
   return selection.kind === 'section' ? `section:${selection.title}` : selection.kind
 }
-export function SectionRail({ sections, selection, onSelect, navSectionTitle, navLabel, panelOpen, alertCount, appearanceControl, onItemSelect, itemRef, collections = [] }: SectionRailProps) {
+export function SectionRail({ sections, selection, onSelect, navSectionTitle, navLabel, panelOpen, pathname, alertCount, appearanceControl, onItemSelect, itemRef, collections = [] }: SectionRailProps) {
   const { t } = useTranslation()
   const shortLabels: Record<string, string> = {
     'Advanced intelligence': t('nav.sidenav.shortAdvanced', 'Advanced'),
@@ -50,7 +51,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
   useEffect(() => {
     setFocusTitle(selected)
     buttons.current[sections.findIndex(s => s.title === selected)]?.scrollIntoView?.({ block: 'nearest' })
-  }, [selected, sections])
+  }, [selected, sections, pathname])
   useEffect(() => {
     const element = scrollRef.current
     if (!element) return
@@ -103,12 +104,16 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
       <Tooltip content={t('nav.deck.display', 'Display')} side="right">
         <div className="sidenav-utility">{appearanceControl ?? <PrefetchNavLink to="/settings#appearance" aria-label={t('nav.deck.display', 'Display')}><Icons.palette className="h-5 w-5" aria-hidden /></PrefetchNavLink>}</div>
       </Tooltip>
-      <details className="sidenav-account" onKeyDown={event => {
-        if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus() }
-      }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
-        <summary className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')}><Avatar size="sm" /></summary>
+      <details className="sidenav-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false }}>
+        <summary className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')} onKeyDown={event => {
+          const account = event.currentTarget.closest('details')
+          if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false }
+        }}><Avatar size="sm" /></summary>
         <div className="sidenav-account-menu">
-          {flattenSidebarItems(sections.find(section => section.title === 'Account')?.items ?? [], collections).map(item => <PrefetchNavLink key={item.to} to={item.to} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onItemSelect?.() }} className="sidenav-account-link">{navLabel?.(item) ?? item.label}</PrefetchNavLink>)}
+          {flattenSidebarItems(sections.find(section => section.title === 'Account')?.items ?? [], collections).map(item => <PrefetchNavLink key={item.to} to={item.to} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onItemSelect?.() }} onKeyDown={event => {
+            const account = event.currentTarget.closest('details')
+            if (event.key === 'Escape' && account?.open) { event.stopPropagation(); account.open = false; account.querySelector('summary')?.focus() }
+          }} className="sidenav-account-link">{navLabel?.(item) ?? item.label}</PrefetchNavLink>)}
         </div>
       </details>
     </div>

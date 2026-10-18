@@ -131,3 +131,6 @@ commit_msg*.txt
 state/
 
 .runner/
+
+# Worktree-local side navigation preview dependency cache.
+/.sidenav-vite-cache/

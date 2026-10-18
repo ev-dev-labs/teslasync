@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Input } from '@/components/ui/runtime'
 import { IconButton } from '@/components/ui/IconButton'
+import { VisuallyHidden } from '@/components/a11y'
 import { Icons } from '@/lib/icons'
 import type { SidebarSectionInput, SectionGroup } from '../sectionGroups'
 import { PrefetchNavLink } from '../PrefetchLink'
@@ -117,7 +118,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
       aria-label={t('nav.sidenav.filterLabel', { section: title, defaultValue: 'Filter {{section}} pages' })}
       placeholder={t('nav.sidenav.filter', { section: title, defaultValue: 'Filter {{section}}…' })} icon={<Icons.filter className="h-4 w-4" aria-hidden />}
       suffix={query ? <IconButton label={t('nav.deck.clearFilter', 'Clear filter')} icon={<Icons.close className="h-4 w-4" aria-hidden />} onClick={() => setQuery('')} /> : undefined} /></div>}
-    {pinSyncUnavailable && <p id={`${id}-pin-offline`} className="sr-only">{t('nav.deck.pinOfflineHint', 'Saved here until navigation pins can sync')}</p>}
+    {pinSyncUnavailable && <VisuallyHidden as="p" id={`${id}-pin-offline`}>{t('nav.deck.pinOfflineHint', 'Saved here until navigation pins can sync')}</VisuallyHidden>}
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 pb-8 pt-3 scrollbar-thin">
       {(section?.title === 'Home' || view.kind !== 'section') && <div className="space-y-1 border-b border-[var(--border-default)] pb-3">
         {view.kind !== 'section' && <Button variant="ghost" className="w-full justify-start" onClick={() => onHomeViewChange?.(null)}>{t('nav.groups.home', 'Home')}</Button>}
