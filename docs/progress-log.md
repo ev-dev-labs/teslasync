@@ -82,3 +82,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-18 07:00 UTC | suite F 56766/191; wave5 spawned for 111 trio-copy fails (39 files, 4 groups) | 503 fixed exact; 0 regressions outside trio copy | none
 2026-10-18 07:15 UTC | wave5a/b integrated (25+23, folders green) | TripReplay 3 = documented block; worktrees removed | none
 2026-10-18 08:15 UTC | wave5c/d integrated (32+29); FINAL suite G 56877/80 (111 fixed exact, 0 new) | remaining = trio-class 6 + pre-existing 52 + blocks 22; 0 flakes active | none
+2026-10-18 08:45 UTC | follow-ups setup: sidenav merged+verified (trio 7672, unit 42, e2e 10/10, lint/build green); branched fix/post-redesign-followups; baseline suite running | push only fix branch | none
+2026-10-18 09:00 UTC | baseline suite still running (~25 min in); setup complete, tree clean on fix branch | . | none
+2026-10-18 09:15 UTC | BASELINE 56831/168 (36 red): 79 known + 89 sidenav interactions (shell suites 80, shell-pres +5, scope 3, viewport 1); step 1 security next | sidenav unit suites assert pre-redesign nav | none
