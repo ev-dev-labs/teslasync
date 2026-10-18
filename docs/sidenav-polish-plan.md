@@ -26,3 +26,9 @@
 - Typed i18n verification: BottomTabBar 6 calls, AtlasPanel 30, CommandDeck 1, SectionRail 13, SidebarRow 0, MoreSegment 9; no missing keys, mismatched defaults, variables or plural counts. Normalized changed sources to LF, regenerated producer and combined checkpoints using existing scripts.
 - No English catalog wording changed. Reused statusBar.more.statusTitle (Status); regenerated split bundles for the changed source usage.
 - Full lint/audits, trio and Edge gates are running/pending.
+
+## Edge verification decisions
+- Port 3100 is occupied by pre-existing PID 5804 (`vite preview --port 3100 --strictPort --host 127.0.0.1`, started 09:48). Left that process untouched. Own dev server uses 3101; SIDENAV_BASE_URL overrides only the check endpoint (default remains 3100). This is the sole requested-port deviation.
+- Edge channel msedge, real touch contexts at 375/414/768, mouse at 1280/1920. Existing redesign interactions and reload checks retained; added density/hover/status/More checks and light/dark screenshots.
+- Extended existing route guard to 414px with the same measurements and thresholds. Requested routes: /, /charging, /battery, /settings, /live.
+- Trio suites: 7,672 passed, 0 failed (3 files).

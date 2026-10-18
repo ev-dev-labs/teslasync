@@ -1,14 +1,16 @@
 import { expect, test } from '@playwright/test'
 import { seedBrowserState, installApiMocks, waitForHarnessReady } from './mockApi'
 
-for (const theme of ['dark', 'light'] as const) for (const width of [375, 768, 1280, 1920]) {
+for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 768, 1280, 1920]) {
+  test.describe(`${theme} ${width}`, () => {
+  test.use({ hasTouch: width < 1280 })
   test(`${theme} ${width} navigation gallery and reload`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await seedBrowserState(page, theme, '/')
     const api = await installApiMocks(page, 'populated', theme)
     await page.goto('/')
     await waitForHarnessReady(page, api)
-    const shot = (name: string) => page.screenshot({ path: `../docs/sidenav-redesign/${theme}-${width}-${name}.png`, animations: 'disabled' })
+    const shot = (name: string) => page.screenshot({ path: `../docs/sidenav-polish/${theme}-${width}-${name}.png`, animations: 'disabled' })
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1)
     if (width < 768) {
       const tabs = page.getByRole('navigation', { name: 'Quick navigation' })
@@ -91,6 +93,70 @@ for (const theme of ['dark', 'light'] as const) for (const width of [375, 768, 1
       await shot('rail-scrolled')
     }
   })
+  })
+}
+
+for (const theme of ['dark', 'light'] as const) for (const width of [375, 414, 768, 1280, 1920]) {
+  test.describe(`polish ${theme} ${width}`, () => {
+    test.use({ hasTouch: width < 1280 })
+    test('density, utilities and phone status gallery', async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 })
+      await seedBrowserState(page, theme, '/charging')
+      const api = await installApiMocks(page, 'populated', theme)
+      await page.goto('/charging')
+      await waitForHarnessReady(page, api)
+      const shot = (name: string) => page.screenshot({ path: `../docs/sidenav-polish/${theme}-${width}-${name}.png`, animations: 'disabled' })
+      if (width < 768) {
+        const tabs = page.getByRole('navigation', { name: 'Quick navigation' })
+        const tabBox = (await tabs.boundingBox())!
+        const status = page.getByTestId('status-bar-more-trigger')
+        const statusBox = (await status.boundingBox())!
+        expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(tabBox.y + 1)
+        expect(tabBox.height).toBeGreaterThanOrEqual(56)
+        await expect(status).toHaveAccessibleName(/^Status(?:\.|$)/)
+        await expect(status.locator('.lucide-activity')).toBeVisible()
+        await shot('tabs-status')
+        await status.click()
+        await expect(page.getByRole('dialog', { name: 'Status', exact: true })).toBeVisible()
+        await shot('status-expanded')
+        await page.keyboard.press('Escape')
+        await tabs.getByRole('button', { name: 'Charging', exact: true }).click()
+        const row = page.getByRole('dialog').locator('.sidenav-page-row > a').first()
+        expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+        await shot('charging-section-sheet')
+        await page.keyboard.press('Escape')
+        await page.goto('/battery'); await waitForHarnessReady(page, api)
+        await tabs.getByRole('button', { name: 'More', exact: true }).click()
+        const more = page.getByRole('dialog')
+        for (const title of ['Home', 'Vehicles', 'Driving', 'Charging']) await expect(more.getByRole('button', { name: title, exact: true })).toHaveCount(0)
+        await expect(more.getByRole('button', { name: 'Battery', exact: true })).toHaveAttribute('aria-current', 'true')
+        await shot('more-current-section')
+      } else {
+        const panel = page.getByTestId('atlas-panel-secondary')
+        const row = panel.locator('.sidenav-page-row > a').first()
+        const height = (await row.boundingBox())!.height
+        if (width === 768) expect(height).toBeGreaterThanOrEqual(44)
+        else { expect(height).toBeGreaterThanOrEqual(32); expect(height).toBeLessThanOrEqual(34) }
+        await shot(width === 768 ? 'touch-drawer' : 'charging-tight-rows')
+        if (width >= 1280) {
+          const rail = page.getByTestId('command-deck-rail')
+          const driving = rail.getByRole('button', { name: 'Driving', exact: true })
+          await driving.hover()
+          await expect(driving).not.toHaveAttribute('title')
+          await expect(rail.locator('[data-testid="rail-scroll"] [role="tooltip"]')).toHaveCount(0)
+          await shot('hover-section-no-tooltip')
+          const alerts = rail.getByRole('link', { name: 'Alerts', exact: true })
+          await alerts.hover()
+          const tip = rail.getByRole('tooltip', { name: 'Alerts', exact: true })
+          await expect(tip).toHaveCSS('opacity', '1')
+          const tipBox = (await tip.boundingBox())!
+          expect(tipBox.x).toBeGreaterThanOrEqual((await alerts.boundingBox())!.x + (await alerts.boundingBox())!.width)
+          await shot('alerts-tooltip-right')
+        }
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1)
+    })
+  })
 }
 
 for (const width of [768, 1280]) {
@@ -112,7 +178,7 @@ for (const width of [768, 1280]) {
     expect(box.y).toBeGreaterThanOrEqual(0)
     expect(box.y + box.height).toBeLessThanOrEqual(anchor.y)
     if (width === 768) await expect(page.locator('.sidenav-tablet-panel')).toHaveCount(0)
-    await page.screenshot({ path: `../docs/sidenav-redesign/utilities/dark-${width}-display.png`, animations: 'disabled' })
+    await page.screenshot({ path: `../docs/sidenav-polish/utilities/dark-${width}-display.png`, animations: 'disabled' })
     await page.keyboard.press('Escape')
     await expect(picker).toHaveCount(0)
     if (width === 768) await rail.getByRole('button', { name: 'Home', exact: true }).click()

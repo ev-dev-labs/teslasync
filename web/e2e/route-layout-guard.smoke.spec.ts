@@ -314,6 +314,7 @@ const ROUTES: string[] = [
 
 const WIDTHS = [
   { width: 375, height: 844 },
+  { width: 414, height: 896 },
   { width: 768, height: 1024 },
   { width: 1280, height: 900 },
   { width: 1920, height: 900 },
