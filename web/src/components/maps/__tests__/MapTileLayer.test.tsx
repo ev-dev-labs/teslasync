@@ -90,12 +90,17 @@ import {
 const appendedContainers: HTMLElement[] = [];
 
 function renderTile(style?: MapStyle) {
+  // Row-19 contract: the layer marks the map container (map-style-dark)
+  // instead of styling tiles, so every render needs a fake map.
+  const { container: mapContainer, map } = makeMapWithContainer();
+  H.map = map;
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MapTileLayer style={style} />
     </QueryClientProvider>,
   );
+  return { ...view, mapContainer };
 }
 
 function tile(): HTMLElement {
@@ -136,75 +141,85 @@ afterEach(() => {
 
 describe('MapTileLayer — free provider tile selection', () => {
   it('defaults to the key-free OSM basemap when no style is supplied', async () => {
-    renderTile();
+    const { mapContainer } = renderTile();
     await settle();
     const el = tile();
     expect(el.getAttribute('data-url')).toBe('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
     expect(el.getAttribute('data-attribution')).toContain('OpenStreetMap');
-    expect(el).toHaveClass('[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]');
+    // Dark free tiles darken via the container marker (index.css tile-pane
+    // rule); L.TileLayer ignores className so tiles never carry the filter.
+    expect(mapContainer).toHaveClass('map-style-dark');
+    expect(el).not.toHaveClass('[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]');
   });
 
   it('selects the Esri World Imagery layer for the satellite style', async () => {
-    renderTile('satellite');
+    const { mapContainer } = renderTile('satellite');
     await settle();
     const el = tile();
     expect(el.getAttribute('data-url')).toContain('server.arcgisonline.com');
     expect(el.getAttribute('data-url')).toContain('World_Imagery');
     expect(el.getAttribute('data-attribution')).toContain('Esri');
+    expect(mapContainer).not.toHaveClass('map-style-dark');
   });
 
   it('selects OpenStreetMap tiles for the streets style', async () => {
-    renderTile('streets');
+    const { mapContainer } = renderTile('streets');
     await settle();
     expect(tile().getAttribute('data-url')).toContain('tile.openstreetmap.org');
     expect(tile()).not.toHaveClass('[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]');
     expect(tile().getAttribute('data-attribution')).toContain('OpenStreetMap');
+    expect(mapContainer).not.toHaveClass('map-style-dark');
   });
 
   it('selects OpenTopoMap tiles for the terrain style', async () => {
-    renderTile('terrain');
+    const { mapContainer } = renderTile('terrain');
     await settle();
     expect(tile().getAttribute('data-url')).toContain('tile.opentopomap.org');
     expect(tile().getAttribute('data-attribution')).toContain('OpenTopoMap');
+    expect(mapContainer).not.toHaveClass('map-style-dark');
   });
 
   it('falls back to the dark tile definition for an unknown style value', async () => {
     // `tiles['aurora']` is undefined → the `|| tiles.dark` guard applies.
-    renderTile('aurora' as MapStyle);
+    const { mapContainer } = renderTile('aurora' as MapStyle);
     await settle();
     expect(tile().getAttribute('data-url')).toContain('tile.openstreetmap.org');
-    expect(tile()).toHaveClass('[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]');
+    expect(mapContainer).toHaveClass('map-style-dark');
   });
 });
 
 describe('MapTileLayer — provider overrides', () => {
   it('uses Azure Maps tiles when the provider is azure and a key is present', async () => {
     H.getMapConfig.mockResolvedValue({ provider: 'azure', api_key: 'AZ-KEY-123' } satisfies MapConfig);
-    renderTile('dark');
+    const { mapContainer } = renderTile('dark');
     await waitFor(() => expect(tile().getAttribute('data-url')).toContain('atlas.microsoft.com'));
     const el = tile();
     expect(el.getAttribute('data-url')).toContain('subscription-key=AZ-KEY-123');
     expect(el.getAttribute('data-url')).toContain('tilesetId=microsoft.base.darkgrey');
     expect(el.getAttribute('data-attribution')).toContain('Azure Maps');
+    // Native dark tiles need no CSS marker.
+    expect(mapContainer).not.toHaveClass('map-style-dark');
   });
 
   it('uses Google Maps satellite tiles when the provider is google and a key is present', async () => {
     H.getMapConfig.mockResolvedValue({ provider: 'google', api_key: 'G-KEY-9' } satisfies MapConfig);
-    renderTile('satellite');
+    const { mapContainer } = renderTile('satellite');
     await waitFor(() => expect(tile().getAttribute('data-url')).toContain('mt1.google.com'));
     const el = tile();
     expect(el.getAttribute('data-url')).toContain('lyrs=s'); // satellite layer id
     expect(el.getAttribute('data-url')).toContain('key=G-KEY-9');
     expect(el.getAttribute('data-attribution')).toContain('Google Maps');
+    expect(mapContainer).not.toHaveClass('map-style-dark');
   });
 
   it('falls back to free tiles when the provider is azure but the key is missing', async () => {
     H.getMapConfig.mockResolvedValue({ provider: 'azure', api_key: '' } satisfies MapConfig);
-    renderTile('dark');
+    const { mapContainer } = renderTile('dark');
     await settle();
     // The `&& mapConfig.api_key` guard is falsy → we stay on the free basemap.
     expect(tile().getAttribute('data-url')).toContain('tile.openstreetmap.org');
     expect(tile().getAttribute('data-url')).not.toContain('atlas.microsoft.com');
+    expect(mapContainer).toHaveClass('map-style-dark');
   });
 });
 

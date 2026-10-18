@@ -81,8 +81,10 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
   // it), which is why "Dark" stayed selected while light tiles displayed.
   // Instead, mark the map container and let index.css darken the tile pane;
   // routes and markers live in other panes and keep their colors. Azure and
-  // Google serve natively dark tiles and need no marker.
-  const needsCssDarkening = tiles === freeTiles && effectiveStyle === 'dark'
+  // Google serve natively dark tiles and need no marker. The marker follows
+  // the RESOLVED tiles (not the requested style) so the unknown-style
+  // fallback to dark tiles is marked dark too.
+  const needsCssDarkening = tiles === freeTiles && t === tiles.dark
   useEffect(() => {
     const container = map.getContainer()
     container.classList.toggle('map-style-dark', needsCssDarkening)

@@ -390,6 +390,11 @@ Analytics pick (16/16): 192/201 resolved, 9 left in 5 files (SUBSET-OK). Its 1-c
 
 Children resolved **712** (full-green 12 folders: power-user 7, benchmarks 8, explore 14, action-center 12, dashcam 15, intelligence-packs 14, exports 18, onboarding 20, sharing 20, diagnostics 71, maps 13, system 112 = 334; partials: analytics 192, admin 74, charging 72, dashboard 50 = 378) + main-agent 14 = **726 wave-3 resolved**. Cumulative original failures resolved: **3002** (2276 + 726). Expected remaining: ~974 (trio 489 + trio-class i18n 18 + proven pre-existing 52 + wave-3 partials 392 [admin 175, charging 122, dashboard 86, analytics 9] + documented blocks 23 [battery 14, telemetry 5, driving 3, vehicles flake 1]).
 
+### Post-wave-3 full suite (2026-10-17)
+
+Full suite alone: **55,975 passed / 982 failed** (was 55,246 / 1,700; Δ −718 vs 726 resolved). Red files 165 (was 328); 165 files went green. Reconciliation: 974 expected + 9 new − 1 flake-passed (TeslaPhysicsPage green this run) = 982 exact. New red files: (1) MapTileLayer.test 8 — REAL, row-19 fallout: the shared container-marker fix landed without migrating its test (null-map crash + stale tile-class pins); the row-19 "12/12" receipt is irreconcilable with the committed tree and superseded. Fixed same-day: test migrated to the container-marker contract (fake map per render; dark→marked, native-dark/light→unmarked) + one production consistency fix (marker follows RESOLVED tiles so the unknown-style dark fallback is marked too); file now 21/21, MapOverview 40/40 + RoutePlayback 17/17 re-verified. (2) ChargingForensicsPage 1 (line 646 visibility) — FLAKE: passes filtered, 29/29 at row-19 commit, 3× 29/29 on current tree; timing-sensitive onlineManager test, same class as TeslaPhysicsPage. Report: `.runner/gates/vitest-full-20261017d.json` (local only; also under web/.runner/gates where the runner wrote it).
+Trio ownership: the i18n trio + trio-class suites are owned by branch `ui/i18n-trio` (separate agent, worktree D:/repos/teslasync-i18n — never touch); this branch leaves all 507 frozen-catalog fails red for a later merge.
+
 ### Main-agent sequential remainder (2026-10-17)
 
 84 fails / 41 files triaged by per-file UI-range forensics + a branch-base probe worktree (49287b5171, since removed):
