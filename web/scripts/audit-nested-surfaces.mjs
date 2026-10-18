@@ -16,6 +16,33 @@ const knownEmbeddedWrappers = new Set([
 ]);
 const headingTags = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'Heading', 'PanelTitle', 'PageTitle']);
 
+// Cheap literal pre-filter so the 30s CI budget isn't spent TS-parsing files
+// that cannot contain a finding. Every real JSX `<Tag` occurrence contains
+// its `<Tag` literal, so substring counting can only OVER-count (comments,
+// strings, member expressions) — never under-count. A skipped file provably
+// lacks the minimum tag combination for every finding kind:
+//   nestedSurfaces: 2+ surface elements (node + ancestor)
+//   nestedBriefs:   1+ surface element + 1+ *Brief element
+//   duplicateTitles: 1+ heading element + 1+ card/brief element
+function countLiteral(source, needle) {
+  let count = 0;
+  let at = -1;
+  while ((at = source.indexOf(needle, at + 1)) >= 0) count++;
+  return count;
+}
+
+function canContainFinding(source) {
+  let surfaces = 0;
+  for (const tag of surfaceTags) surfaces += countLiteral(source, `<${tag}`);
+  // Mirrors `tag === 'OperationalBrief' || tag.endsWith('Brief')`, including
+  // member expressions (`<Foo.Brief>`); the lookahead keeps `<Briefly>`-style
+  // prefixes out while over-counting stays safe.
+  const briefs = (source.match(/<[^\s/>]*Brief(?=[\s/>])/g) || []).length;
+  let headings = 0;
+  for (const tag of headingTags) headings += countLiteral(source, `<${tag}`);
+  return surfaces >= 2 || (surfaces >= 1 && briefs >= 1) || (headings >= 1 && surfaces + briefs >= 1);
+}
+
 function collectFiles(directory, files = []) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
@@ -76,8 +103,11 @@ export function analyzeNestedSurfaces(root = SOURCE_ROOT) {
   const nestedSurfaces = [];
   const duplicateTitles = [];
 
+  let parsed = 0;
   for (const file of collectFiles(root)) {
     const source = fs.readFileSync(file, 'utf8');
+    if (!canContainFinding(source)) continue;
+    parsed++;
     const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const relativeFile = path.relative(process.cwd(), file).replaceAll(path.sep, '/');
 
@@ -141,6 +171,9 @@ export function analyzeNestedSurfaces(root = SOURCE_ROOT) {
     visit(sourceFile);
   }
 
+  // Fail loudly rather than vacuously pass if the pre-filter ever excludes
+  // the whole tree (a filter bug must not read as a clean audit).
+  if (parsed === 0) throw new Error('nested-surfaces audit parsed zero files');
   return { nestedBriefs, nestedSurfaces, duplicateTitles };
 }
 
