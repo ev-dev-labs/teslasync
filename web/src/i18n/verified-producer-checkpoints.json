@@ -438,7 +438,7 @@
   {
     "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
     "calls": 68,
-    "sha256": "3ca7137dbc1584ece19c53b41b10adeb8260f60e9f043f1eebcc81b51808fac5"
+    "sha256": "3246da0d25676169e73f4cda53bfead5fb1afc573d7dfdb250f66bdfe0ca225c"
   },
   {
     "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
