@@ -862,6 +862,9 @@
     },
     "offline": {
       "title": "Offline"
+    },
+    "status": {
+      "paused": "Refresh paused"
     }
   },
   "dataSources": {
@@ -3570,7 +3573,8 @@
       "complete": "Between drives",
       "title": "Longest observed stints",
       "subtitle": "Showing {{shown}} of {{count}} reconstructed stints; range-edge durations are observed minimums.",
-      "empty": "No positive parking gaps are available to rank in this window."
+      "empty": "No positive parking gaps are available to rank in this window.",
+      "ended": "Ended at"
     },
     "monthly": {
       "dwellSeries": "Observed dwell ({{unit}})",
@@ -3896,7 +3900,13 @@
       "title": "Evidence quality and coverage",
       "subtitle": "Complete accounting for every returned row plus the transparent ingredients of the descriptive support index.",
       "indexExplanation": "{{band}}. The support index gates elapsed exposure with event volume, active weeks, repeat events, and occupied-cell occurrences; it is not statistical confidence.",
-      "capWarning": "The 1,000-row return cap was reached. Included and excluded counts are complete for returned rows, not guaranteed lifetime history."
+      "capWarning": "The 1,000-row return cap was reached. Included and excluded counts are complete for returned rows, not guaranteed lifetime history.",
+      "elapsedDays": "Elapsed returned-history span (days)",
+      "elapsedWeeks": "Elapsed returned-history span (weeks)",
+      "meanCalendarOpportunities": "Mean model-assumed opportunities per occupied cell",
+      "calendarOpportunityScore": "Calendar-opportunity ingredient",
+      "calendarTitle": "Elapsed calendar opportunity and recorded recurrence",
+      "calendarQualifier": "Elapsed spans run from the earliest included drive start to the fixed model anchor. Cell opportunities are model-assumed elapsed local-hour boundaries over returned history, not measured recording coverage or proof that the vehicle was monitored during gaps."
     },
     "heatmap": {
       "supported": "Supported",
@@ -3994,7 +4004,19 @@
       "limitsBody": "The 20-minute planning marker is illustrative and appears only with enough descriptive support. It does not schedule climate, wake, charge, navigate, or command the vehicle.",
       "title": "Methodology and limitations",
       "subtitle": "What the forecast learns, what it excludes, and how to interpret every estimate.",
-      "notice": "Planning aid only: no automation is created, and no departure is promised."
+      "notice": "Planning aid only: no automation is created, and no departure is promised.",
+      "effectiveZone": "Effective model timezone: {{timeZone}}.",
+      "zoneMetadata": "Source: selected vehicle timezone metadata ({{timeZone}}).",
+      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing or UTC.",
+      "zoneSavedUser": "saved user timezone",
+      "zoneBrowser": "browser timezone, or UTC if unavailable",
+      "zoneInvalid": "The resolved timezone \"{{requested}}\" is missing or invalid; this model uses UTC without changing shared settings.",
+      "snapshotTitle": "Fixed model snapshot",
+      "snapshotBody": "The clock is captured when this page mounts and stays fixed while it remains mounted, including history refreshes and vehicle or timezone changes. The lookback, next-24-hour horizon, “in” times, and planning marker use that anchor, not the current clock or the history fetch time. Refreshed rows can change the estimates without advancing the anchor.",
+      "calendarModelBody": "Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). The rate is (recorded departures + α) / (model-assumed calendar opportunities + β), and likelihood is 1 − exp(−rate). Outputs are modeled estimates, not calibrated probabilities.",
+      "opportunityTitle": "Model-assumed calendar opportunity",
+      "opportunityBody": "The denominator counts matching local-hour boundaries from the hour containing the earliest included returned drive start through the fixed model anchor, including elapsed gaps. Span days and weeks measure elapsed time, not observed recording coverage. Zero-event weeks mean no included returned starts; they do not prove inactivity. No telemetry uptime, completeness, or monitoring coverage metadata is available to this model.",
+      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}."
     },
     "next24": {
       "likelihoodSeries": "Hourly modeled likelihood",
@@ -4021,7 +4043,9 @@
       "rank": "#{{rank}}",
       "evidence": "{{relative}} · {{departures}} departures across {{occurrences}} observed cell occurrences",
       "likelihood": "{{value}}% modeled",
-      "capQualifier": "Ranking is qualified because the returned 1,000-row history may omit older drives."
+      "capQualifier": "Ranking is qualified because the returned 1,000-row history may omit older drives.",
+      "calendarEvidence": "{{relative}} · {{departures}} recorded departures / {{occurrences}} model-assumed calendar opportunities",
+      "opportunityQualifier": "Opportunities count elapsed matching local-hour boundaries from the earliest included drive start to the fixed model anchor, not verified telemetry coverage."
     },
     "weekdays": {
       "title": "Weekday peaks and routine support",
@@ -4044,7 +4068,11 @@
         "departures": "Departure events",
         "activeDays": "Active local days"
       },
-      "summary": "{{departures}} departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} observed weeks in {{timeZone}}."
+      "summary": "{{departures}} departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} observed weeks in {{timeZone}}.",
+      "calendarSubtitle": "Monday-based local weeks include zero returned events between the earliest included drive start and the fixed model anchor; elapsed calendar opportunity is model-assumed, not verified coverage.",
+      "calendarAria": "Weekly returned departure events and active local driving days across the elapsed model-timezone span",
+      "returnedDescription": "Bars count returned drive starts and the line counts distinct local days containing at least one returned drive start. Zero-event buckets mean no included returned events, not confirmed inactivity or continuous recording.",
+      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in {{timeZone}}. Calendar opportunity is model-assumed; gaps do not establish recording coverage."
     },
     "time": {
       "inMinutes": "in {{count}} min",
@@ -4090,7 +4118,9 @@
     "brief": {
       "description": "Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.",
       "window": "Next 24 hours · {{timezone}}; history coverage is limited to returned rows",
-      "source": "Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command."
+      "source": "Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command.",
+      "snapshotAnchor": "Model snapshot anchor: ",
+      "snapshotMeaning": "Next 24 hours and “in” times are relative to this fixed anchor, not a live countdown; history coverage is limited to returned rows."
     }
   },
   "driveDna": {
@@ -5834,7 +5864,8 @@
     "sidebar": "Sidebar navigation",
     "drivesDesc": "Trip history",
     "chargingDesc": "Sessions & costs",
-    "batteryDesc": "Health & degradation"
+    "batteryDesc": "Health & degradation",
+    "automations": "Automations"
   },
   "routes": {
     "mobileGridReference": "Mobile grid reference",
@@ -6763,7 +6794,26 @@
     "clearFilters": "Clear filters",
     "notAvailable": "N/A",
     "panel": "Panel",
-    "unknownError": "unknown error"
+    "unknownError": "unknown error",
+    "notProvided": "Not provided",
+    "time": "Time",
+    "vehicles": "Vehicles",
+    "none": "None",
+    "notApplicable": "Not applicable",
+    "dataSources": {
+      "status": {
+        "paused": "Refresh paused"
+      }
+    },
+    "freshness": {
+      "lastUpdated": "Last updated: {{time}}",
+      "updating": "Updating…"
+    },
+    "dataState": {
+      "stale": {
+        "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
+      }
+    }
   },
   "units": {
     "km": "km",
@@ -7128,14 +7178,16 @@
       "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "badge": "Helix",
       "generateButton": "Explain clusters",
-      "emptyHint": "Select a vehicle to explain its charging-curve clusters."
+      "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
+      "independentDescription": "Ask Helix to name and explain cluster fingerprints from retrieved charging history and a separate per-vehicle feature-query tool. That tool uses its own lookback window (90 days by default), not the workspace date range; retrieved history is not limited to the chart window. The narrator does not change cluster bucketing, and its source data is not established as equivalent to the charts below."
     },
     "aiMlClustering": {
       "title": "Learn per-vehicle charging-curve clusters",
       "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "badge": "Helix",
       "generateButton": "Train charging-curve clusters",
-      "noVehicleHint": "Pick a vehicle to train its charging-curve clusters."
+      "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
+      "independentDescription": "Compute a learned charging envelope for the selected vehicle over an independent 90-day window. Helix narrates the training and cluster-query tool results, including rule-label fallbacks when data is insufficient. The workspace date range does not filter this request; these results are not established as equivalent to the charts below and do not replace them."
     },
     "gauges": {
       "sessions": "Sessions",
@@ -7496,7 +7548,8 @@
       "socOverTimeAria": "Battery level, energy, and range throughout the charging session",
       "temperatureAria": "Battery, cabin, and ambient temperature throughout the charging session",
       "voltageCurrentAria": "Charging voltage and current throughout the session",
-      "timelineEmptyHelp": "Timeline charts appear when Tesla reports samples during a charging session."
+      "timelineEmptyHelp": "Timeline charts appear when Tesla reports samples during a charging session.",
+      "sourceTimezoneUnresolved": "Source timezone unresolved; timestamps are shown in UTC."
     },
     "heatmap": {
       "title": "Charging patterns",
@@ -7694,7 +7747,11 @@
     "overTimeEmpty": "No data for this metric in the selected range",
     "emptyForCollectionMessage": "Try switching to a different collection or clearing your filters.",
     "itemNoun": "sessions",
-    "free": "Free"
+    "free": "Free",
+    "currency": "Currency",
+    "forecast": {
+      "monthlySavings": "Monthly savings"
+    }
   },
   "compare": {
     "title": "Period comparison",
@@ -10563,7 +10620,8 @@
     "explorer": "Endpoint explorer",
     "noEndpoints": "No endpoints found in the API spec",
     "workspace": "Request workspace",
-    "request": "Request"
+    "request": "Request",
+    "historyRecovery": "Saved request history could not be loaded. The playground has started with an empty history; you can select endpoints and send new requests."
   },
   "admin": {
     "auditLog": {
@@ -11138,7 +11196,8 @@
           "kind": "Kind"
         },
         "loading": "Loading…",
-        "empty": "No samples in this window. Try widening the window or confirm the vehicle is publishing."
+        "empty": "No samples in this window. Try widening the window or confirm the vehicle is publishing.",
+        "kindFallback": "kind {{kind}}"
       },
       "stats": {
         "samples": "Total samples",
@@ -13433,7 +13492,8 @@
       "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "generateButton": "Generate narration",
       "badge": "Helix",
-      "emptyHint": "Select a vehicle above to recap its year."
+      "emptyHint": "Select a vehicle above to recap its year.",
+      "scopeDescription": "Get a short, Helix-written recap of the previous calendar year ({{year}}), independently of the year selected above."
     },
     "supercharger": "Supercharger",
     "dcFast": "DC fast",
@@ -13742,7 +13802,9 @@
       "mixed": "Mixed lifetime and last-30-day windows",
       "costDenominator": "Recorded cost divided by source kilometres; not display-distance units.",
       "periodDescription": "Totals and averages from the period-statistics response; its observation bounds are not returned.",
-      "periodScope": "Period-statistics source window; bounds unknown"
+      "periodScope": "Period-statistics source window; bounds unknown",
+      "chargingEnergyNumerator": "Charging-session energy added, not measured drive energy used; numerator of the efficiency proxy.",
+      "chargingEfficiencyProxy": "Charging-energy/distance proxy: charging-session energy added divided by completed-drive distance, not measured driving efficiency."
     },
     "stateDistributionAria": "Vehicle state distribution pie chart",
     "vehicleComparisonAria": "Distance and energy bar chart comparing all vehicles in the fleet"
@@ -13928,7 +13990,9 @@
       "pausedRetained": "Refresh is paused; retained {{section}} remains available"
     },
     "daily": {
-      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary"
+      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary",
+      "groupingNote": "Idle groups idle, online and parked transitions. Sleeping groups sleeping, asleep and offline transitions; this grouping does not establish measured sleep. Other destination states are unclassified. Raw states remain in State transitions.",
+      "unclassified": "Unclassified"
     },
     "trigger": "Trigger",
     "refresh": "Refresh timeline",
@@ -14326,7 +14390,8 @@
       "addError": "Failed to record cost",
       "hint": "{{count}} entries · {{total}} fixed · {{km}} km lifetime",
       "deleteTitle": "Delete this entry?",
-      "deleteMessage": "This removes the recorded cost from the ledger."
+      "deleteMessage": "This removes the recorded cost from the ledger.",
+      "allInDistance": "All-in: {{total}} ({{perDistance}}/{{unit}})"
     }
   },
   "carbon": {
@@ -15067,7 +15132,9 @@
       "noPlaces": "Create a geofence place first to install routines.",
       "noTemplates": "No geofence routine templates are available yet.",
       "createCustomHint": "You can still create a custom automation from the automations page."
-    }
+    },
+    "importRetryFailedOnly": "Correct and import only the failed entries listed below. Do not re-import successful entries; doing so creates duplicates.",
+    "importEntryError": "Entry {{entry}} ({{name}}): {{message}}"
   },
   "energy": {
     "tou": {
@@ -15536,7 +15603,21 @@
       "history": "Degradation history",
       "trendTitleAria": "Battery health trend and 95% confidence projection chart",
       "selectVehicleHelp": "Select a vehicle to view its battery history.",
-      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history."
+      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history.",
+      "predictionBandChartAria": "Battery health trend and approximate prediction band chart",
+      "approximatePredictionBand": "Approximate prediction band",
+      "belowThreshold": "Fitted health is already at or below 80%.",
+      "noFutureCrossing": "The fitted trend does not predict a future crossing of 80%.",
+      "crossingUnavailable": "The 80% crossing estimate is unavailable.",
+      "capacityEvidence": "Nominal baseline evidence: capacity_source={{source}}; original_capacity_wh={{capacity}}. This baseline is an assumption, not an observed or calibrated original pack capacity.",
+      "capacityEstimator": "Current capacity is a telemetry-derived estimator: the median of up to eight recent valid daily capacity estimates, or EnergyRemaining / (BatteryLevel / 100) when history is unavailable. SOH compares this estimator with the nominal baseline; it is not a direct capacity measurement.",
+      "capacityEstimatorUnavailable": "Observed current-capacity estimator unavailable; the nominal baseline alone does not establish current capacity or SOH.",
+      "capacityCalibration": "Actual pack-capacity calibration remains candidate BD-C01; no calibration is applied here.",
+      "observationEvidence": "Observation duration is time since the earliest retained battery history, charging session or drive session; it is not true pack age. Start: {{start}}; source: {{source}}. Manufacture and replacement dates are unknown.",
+      "predictionIntervalUnavailable": "Approximate prediction band: fit sample basis and multiplier unavailable. This is not a calibrated 95% confidence interval; empirical coverage remains unmeasured in BD-C01.",
+      "fittedSohTrend": "Fitted SOH trend",
+      "fittedSohTrendHelp": "Signed fitted SOH change in percentage points per year. Negative values indicate declining health; positive values indicate improving fitted health.",
+      "observationDuration": "Observation duration"
     },
     "health": {
       "excellent": "Excellent",
@@ -16315,6 +16396,13 @@
     "sections": {
       "trend": "Drain rate trend and gauge",
       "daily": "Daily drain and reduction tips"
+    },
+    "startDateGroups": {
+      "section": "Sessions by start date and reduction tips",
+      "title": "Parked sessions by start date",
+      "scope": "Whole-session battery loss and duration are grouped by start date in {{timeZone}}, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.",
+      "aria": "Whole-session battery loss and parked hours grouped by session start date",
+      "date": "Session start date"
     }
   },
   "climate": {
@@ -16809,7 +16897,10 @@
     "spread": "Cheapest stop saves {{save}}/kWh vs priciest",
     "sessionsAppear": "Sessions appear after Tesla charging history syncs; a selected date range can also exclude older sessions.",
     "locationsAppear": "Charging locations appear when synced sessions include location evidence.",
-    "selectVehicleHelp": "Choose a vehicle or wait for fleet sync to finish before the price radar can load."
+    "selectVehicleHelp": "Choose a vehicle or wait for fleet sync to finish before the price radar can load.",
+    "recordedDuration": "Recorded subtotal: {{subtotal}} · {{missing}} missing",
+    "recordedSubtotal": "Recorded subtotal",
+    "missingCount": "Missing count"
   },
   "tesla_sessions": {
     "title": "Fleet charging sessions",
@@ -16875,7 +16966,9 @@
     "mapLoading": "Loading charging locations…",
     "topLocationsLoading": "Loading top charging locations…",
     "rowLabel": "{{site}}, {{date}}",
-    "unknownSite": "Unknown site"
+    "unknownSite": "Unknown site",
+    "currencyUnavailable": "Mixed or unknown currency; monetary totals and comparisons are unavailable. See recorded session amounts. No currency conversion is applied.",
+    "unknownCurrency": "Unknown currency"
   },
   "dashSettings": {
     "allVehicles": "All vehicles",
@@ -17146,7 +17239,9 @@
       "period": "Last 24 hours requested; overlapping samples only",
       "periodReason": "The two histories are queried independently. Only valid overlapping samples contribute; exact request bounds are not supplied by these queries.",
       "samplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; raw points are overlapping samples at that lag.",
-      "significanceDescription": "The existing autocorrelation-adjusted significance test; the threshold is a coefficient, not a percentage."
+      "significanceDescription": "The existing autocorrelation-adjusted significance test; the threshold is a coefficient, not a percentage.",
+      "resampledPairs": "from {{n}} overlapping resampled pairs",
+      "resampledSamplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; overlapping resampled pairs are not original source records. Valid measurement counts, when available, are timestamp-deduplicated before overlap clipping or resampling."
     },
     "title": "Live telemetry",
     "drivetrain": "Drivetrain",
@@ -20487,7 +20582,13 @@
     },
     "elevationAria": "Shared drive elevation profile area chart by distance",
     "speedAria": "Shared drive speed profile line chart by distance",
-    "curveAria": "Shared session power and battery chart by minute"
+    "curveAria": "Shared session power and battery chart by minute",
+    "traceStart": "Start of disclosed trace",
+    "traceEnd": "End of disclosed trace",
+    "route": "Route",
+    "routeNotIncluded": "The route was not included in this share.",
+    "elevationNotIncluded": "The elevation profile was not included in this share.",
+    "speedNotIncluded": "The speed profile was not included in this share."
   },
   "sharing": {
     "trips": {
@@ -20560,7 +20661,8 @@
       "generateButton": "Draft a plan",
       "noVehicle": "Select a vehicle to let Helix draft a trip plan.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
-      "noDestination": "Set a destination for Helix to plan the route to."
+      "noDestination": "Set a destination for Helix to plan the route to.",
+      "draftingDescription": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. This advisory draft does not change the form, compute a route, or save a plan. Review the suggestions, enter your trip inputs in the form below, and use Plan to compute the route separately."
     },
     "socChart": {
       "title": "Battery along route",
@@ -20637,7 +20739,9 @@
     },
     "weather": {
       "title": "Weather impact",
-      "factor": "Efficiency factor: {{factor}}×"
+      "factor": "Efficiency factor: {{factor}}×",
+      "historicalEvidence": "The temperature model uses historical temperature, not a departure forecast.",
+      "missingEvidence": "Temperature evidence is unavailable; the model factor does not establish departure weather conditions."
     },
     "brief": {
       "noPlan": "No computed route yet",
@@ -20676,7 +20780,13 @@
       "check": "Will I make it?",
       "error": "Confidence check failed",
       "empty": "Enter remaining distance for a live arrival verdict.",
-      "detail": "Arrival ~{{soc}}% · {{margin}} kWh margin"
+      "detail": "Arrival ~{{soc}}% · {{margin}} kWh margin",
+      "manualScenario": "Manual scenario: starting SOC {{soc}}% and minimum arrival SOC {{floor}}% come from the planner form, not live telemetry.",
+      "defaultAssumptions": "Server default assumptions: 75 kWh battery capacity, 160 Wh/km consumption, and 1.0 efficiency factor.",
+      "unknownObservations": "Vehicle observations are unknown for this check: live SOC, actual battery capacity, recent efficiency, and route conditions are not supplied. This is an estimate, not a live arrival guarantee.",
+      "scenarioEmpty": "Enter remaining distance to estimate arrival for this manual scenario.",
+      "checkedScenario": "Checked scenario: starting SOC {{soc}}%, minimum arrival SOC {{floor}}%, remaining distance {{distance}} km.",
+      "inputsChanged": "Inputs have changed. This result applies only to the checked scenario; check again for the current inputs."
     }
   },
   "driveScore": {
@@ -20843,7 +20953,15 @@
     "empty": "Not enough drives in the selected period to calculate a score.",
     "categoryBreakdownAria": "Drive score category breakdown horizontal bar chart",
     "scoreDistributionAria": "Drive score distribution histogram bar chart",
-    "scoreTrendAria": "Drive score trend line chart with category breakdowns"
+    "scoreTrendAria": "Drive score trend line chart with category breakdowns",
+    "serverExplanationDistinct": "Overall score supplied by the server. Local history heuristics below are independent and do not explain the server model.",
+    "localHeuristicInputs": "Local heuristic: efficiency uses recorded energy divided by distance; smoothness uses average power, not acceleration or braking events; speed uses maximum speed, not speed-limit compliance. These inputs do not establish causes or driving safety.",
+    "heuristicBestEfficiency": "Local heuristic: low recorded energy per distance contributes to the efficiency score.",
+    "heuristicBestPower": "Local heuristic: low average power contributes to the smoothness score; acceleration and braking were not assessed.",
+    "heuristicBestSpeed": "Local heuristic: maximum speed contributes to the speed score; speed-limit compliance was not assessed.",
+    "heuristicWorstEfficiency": "Local heuristic: high recorded energy per distance lowers the efficiency score; the cause is not established.",
+    "heuristicWorstPower": "Local heuristic: high average power lowers the smoothness score; aggressive acceleration or braking was not detected.",
+    "heuristicWorstSpeed": "Local heuristic: the speed component uses maximum speed, with a penalty above 40.2336 m/s; it does not establish unsafe driving."
   },
   "drives": {
     "analysis": "Trends and highlights",
@@ -21157,7 +21275,8 @@
     "speedVsEfficiencyAria": "Speed versus efficiency scatter plot",
     "tempVsEfficiencyAria": "Temperature versus efficiency scatter plot",
     "speedDistAria": "Efficiency by speed-range bar chart",
-    "dailyTrendAria": "Daily efficiency trend area chart"
+    "dailyTrendAria": "Daily efficiency trend area chart",
+    "pricingAssumption": "Estimate based on average consumption and an assumed $0.12/kWh electricity price, in source dollars per km; not recorded spending. No currency conversion is applied."
   },
   "regen": {
     "title": "Regenerative braking",
@@ -22621,7 +22740,8 @@
       "quietHint": "Quiet hours silence the notification rather than dropping it, so nothing is lost. Critical alerts still ring.",
       "reset": "Reset device rules",
       "caveat": "A notification filtered here has still been delivered to the browser. Prefer server-side channel routing and quiet hours whenever they can express the same rule.",
-      "sectionAria": "Per-device notification and data rules"
+      "sectionAria": "Per-device notification and data rules",
+      "quietBypassHint": "Quiet hours silence notifications that pass your other device rules. Only severities selected below ring through while quiet hours are active; device, category, minimum severity, and vehicle filters still apply."
     },
     "archived": {
       "summary": {
@@ -23330,6 +23450,22 @@
     "removeDraftRate": {
       "title": "Remove this rate?",
       "message": "The rate row is removed from the draft rate plan."
+    },
+    "resetTypography": {
+      "title": "Reset typography?",
+      "message": "Typography settings return to their defaults."
+    },
+    "clearStream": {
+      "title": "Clear the stream?",
+      "message": "This removes the lines shown so far. New lines keep arriving."
+    },
+    "resetInputs": {
+      "title": "Reset all inputs?",
+      "message": "Your changes return to their default values."
+    },
+    "clearEditor": {
+      "title": "Clear the editor?",
+      "message": "This removes the current text from the editor. It can’t be undone."
     }
   },
   "region": {
@@ -24040,7 +24176,14 @@
       "title": "FSM health",
       "flapTitle": "State flapping",
       "stuckTitle": "Stuck sessions",
-      "recoveryTitle": "Pod recoveries"
+      "recoveryTitle": "Pod recoveries",
+      "pausedEvidence": "Transition evidence is paused; FSM health is unknown.",
+      "unknownEvidence": "Transition evidence has not loaded; FSM health is unknown.",
+      "emptyEvidence": "No transitions in the loaded result. This does not establish FSM health; try expanding the time range.",
+      "invalidEvidence": "Some loaded transitions have invalid timestamps; time-based FSM health is unknown.",
+      "loadedEvidence": "Heuristics cover only loaded transition rows, not authoritative current FSM health.",
+      "loadedClear": "No flapping, potentially stuck sessions, or recovery transitions detected in loaded rows.",
+      "loadedRecoveryTitle": "Recovery transitions"
     },
     "stateDiagram": "State diagram",
     "selectFsmType": "Select a specific FSM type to view its state diagram",
@@ -24160,7 +24303,9 @@
     "overview": "Vehicle state overview",
     "analysis": "Transition analysis",
     "timelineChartAria": "FSM transitions over time stacked area chart",
-    "distributionByStateAria": "FSM state distribution donut chart with per-state counts"
+    "distributionByStateAria": "FSM state distribution donut chart with per-state counts",
+    "noTransitionsOnPage": "No transitions on the loaded server page.",
+    "shareRollingLimit": "The link reopens the rolling preset, not these exact time bounds."
   },
   "changelog": {
     "title": "Changelog",
@@ -24538,7 +24683,8 @@
       "aria": "Create a new export"
     },
     "noVehiclesHelp": "Connect a Tesla account and sync a vehicle before exporting vehicle data.",
-    "columnsUnavailableHelp": "Column choices appear after the export catalog returns supported fields."
+    "columnsUnavailableHelp": "Column choices appear after the export catalog returns supported fields.",
+    "vehicleUnavailable": "Vehicle {{vehicleId}} is not available in the current fleet."
   },
   "dbHealth": {
     "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
@@ -25268,7 +25414,12 @@
       "bufferedDual": "{{inWindow}} in window · {{total}} in 24 h",
       "bufferedTooltip": "Counts inside the {{minutes}}-minute Window dropdown. {{outside}} more transitions fetched in the last 24 h.",
       "windowHours": "{{n}} h",
-      "windowMinutes": "{{n}} min"
+      "windowMinutes": "{{n}} min",
+      "scopedCounts": "{{inWindow}} in window · {{buffer}} in filtered buffer · {{loaded}} loaded · {{total}} matching",
+      "windowBufferCounts": "{{inWindow}} in window · {{buffer}} buffered",
+      "scopedTooltip": "Matching total: {{range}}. Loaded server page: {{page}}. Buffer cleared at: {{since}}; when cleared, only loaded rows at or after that instant are included. Timeline window: [{{windowStart}}, {{windowEnd}}], intersected with the filtered buffer. No full-range aggregate is inferred from loaded rows.",
+      "notCleared": "Not cleared",
+      "bufferTooltip": "The {{minutes}}-minute timeline window is a slice of the loaded buffer, not a full-range total."
     },
     "inspector": {
       "title": "Transition snapshot",
@@ -26360,7 +26511,8 @@
       "chargingSnapshotDescription": "Independent charging snapshot; source refresh warnings remain in the surrounding panel. Range-addition rate is not vehicle speed.",
       "chargingSnapshotStatus": "Snapshot returned",
       "recentActivity": "Recent activity",
-      "detailsUnavailable": "Vehicle details unavailable"
+      "detailsUnavailable": "Vehicle details unavailable",
+      "chargingTelemetryAppears": "Charging telemetry will appear when the vehicle reports a charging session."
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",
@@ -27003,7 +27155,8 @@
     "briefTitle": "{{title}} evidence summary",
     "briefLimits": "Returned observations only; missing readings and row caps do not establish lifetime completeness.",
     "briefCoverageUnknown": "Source coverage metadata unavailable; returned counts cannot establish completeness.",
-    "briefFetchedAt": "Report received {{at}}"
+    "briefFetchedAt": "Report received {{at}}",
+    "rangePairEqual": "{{first}} and {{second}} are equal in the returned estimates"
   },
   "card": {
     "interior": "Interior",
@@ -29112,7 +29265,15 @@
         "cta": "Check stream"
       },
       "title": "Setup progress",
-      "subtitle": "{{done}} / {{total}} complete"
+      "subtitle": "{{done}} / {{total}} complete",
+      "fleetHistory": {
+        "title": "Fleet telemetry observed",
+        "body": "Telemetry has been received from the fleet. This historical check does not confirm the selected VIN has a telemetry configuration."
+      },
+      "fleetHealth": {
+        "title": "Confirm fleet telemetry health",
+        "body": "Healthy means fleet telemetry arrived in the last 24 hours, not that the selected VIN is streaming now."
+      }
     },
     "guide": {
       "step1": {
@@ -29199,7 +29360,8 @@
       "ca": "CA certificate (PEM)",
       "needAuth": "Connect Tesla first. Subscribe uses the stored Fleet token.",
       "signalsPicked": "{{count}} signals selected. Presets (Balanced, Low Power, Track Mode, …) set intervals per category."
-    }
+    },
+    "telemetryScope": "Progress and streaming status are fleet-wide observations. Check the selected VIN configuration below; fleet history does not confirm that VIN is streaming."
   },
   "totp": {
     "disable": {
@@ -29305,6 +29467,9 @@
       },
       "title": "How setup works",
       "subtitle": "Four steps, about a minute."
+    },
+    "commands": {
+      "blocked": "Two-factor changes require available enrollment access and a successful live status check. Previously loaded settings remain visible. Retry the status check when access and the connection are ready."
     }
   },
   "Read-Write": "Read-write",
@@ -30605,7 +30770,15 @@
     "noSites": "No charging locations recorded yet.",
     "sessionsCount": "{{n}} sessions",
     "loadedHistory": "Calculated from returned charging history, not a complete time-range guarantee.",
-    "historyUnavailable": "Charging history has not loaded. Retry this source or reconnect to continue."
+    "historyUnavailable": "Charging history has not loaded. Retry this source or reconnect to continue.",
+    "energyMissing": "Energy denominator unavailable: some sessions have missing or invalid energy measurements.",
+    "energyNonpositive": "Energy denominator unavailable: no positive recorded energy.",
+    "noRemainingSites": "No remaining sites after removing the top site.",
+    "remainingEnergyMissing": "Remaining sites have missing or invalid energy measurements.",
+    "noRemainingEnergy": "Sites remain, but no positive recorded energy remains.",
+    "sessionFallback": "Session-based fallback, not energy-weighted; diversification uses the observed site count.",
+    "energyShareUnavailable": "Energy share unavailable",
+    "sessionDependency": "{{site}} — share of sessions, not energy"
   },
   "chargeDepartureAlignment": {
     "modernization": {
@@ -32216,7 +32389,8 @@
       "title": "Join-window support and overlap disclosure",
       "subtitle": "Support counts describe the bounded pre-drive join before classification gates are applied.",
       "reuseObserved": "{{count}} unique climate rows are referenced by more than one overlapping departure window; departures are therefore not row-independent.",
-      "reuseNone": "No climate-row reuse is observed in the returned windows, but the method permits reuse whenever departure windows overlap."
+      "reuseNone": "No climate-row reuse is observed in the returned windows, but the method permits reuse whenever departure windows overlap.",
+      "reuseUnknown": "Climate-row reuse could not be determined from the returned evidence."
     },
     "hourly": {
       "hourLabel": "{{hour}}:00",
@@ -33074,7 +33248,8 @@
       "noData": "No telemetry reconstruction is available for this clip.",
       "selectSignals": "Choose telemetry signals above to build a reconstruction.",
       "signalCatalogFailed": "The telemetry signal catalog could not be loaded.",
-      "noSignals": "No telemetry signals are available for this vehicle."
+      "noSignals": "No telemetry signals are available for this vehicle.",
+      "signalLimitHint": "Reconstruction loads the first 8 unique, non-empty signal names in selection order. Remove a selected signal before adding another at the limit; existing selections are kept."
     },
     "redaction": {
       "add": "Add region",
@@ -33116,6 +33291,9 @@
       "SavedClips": "Saved",
       "SentryClips": "Sentry",
       "unknown": "Unknown source"
+    },
+    "update": {
+      "error": "Failed to save clip changes"
     }
   },
   "fleetOps": {
@@ -33895,7 +34073,8 @@
       "vinWarning": "Disclosing the VIN (even masked) is identifying information. Only include it if the recipient specifically needs it."
     },
     "evidence": {
-      "scopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure profile tab to control what actually leaves your browser."
+      "scopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure profile tab to control what actually leaves your browser.",
+      "reportScopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the disclosure profile tab to control what is included in the local vault report, not the separate server certificate requests."
     },
     "export": {
       "digest": "SHA-256 digest",
@@ -33907,7 +34086,8 @@
       "sign": "Sign report",
       "signedAt": "Signed at",
       "subtitle": "Signing computes a SHA-256 digest of the report above and produces an ECDSA signature over it using your active local key.",
-      "title": "Export signed report"
+      "title": "Export signed report",
+      "olderPreview": "This signed snapshot belongs to an older preview. Download JSON exports that unchanged snapshot, not the current preview. Sign again to replace it."
     },
     "import": {
       "badJson": "This file is not valid JSON.",
@@ -33938,7 +34118,9 @@
     },
     "intro": {
       "body": "Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).",
-      "title": "Local-first, selectively disclosed"
+      "title": "Local-first, selectively disclosed",
+      "localReportBody": "Vault report assembly, report signing, imported report verification, signing keys, and the audit trail stay in this browser. You choose when to export or copy the vault report. The report excludes VIN unless you opt in, and always excludes precise locations, coordinates, tokens, raw trip paths, and driver identity.",
+      "serverCertificateBody": "The battery certificate is a separate server-signed attestation: opening Evidence fetches it from the server for the selected vehicle and automatically sends its certificate payload and signature to the server for verification. These requests do not wait for a report export and are not controlled by the vault disclosure profile."
     },
     "inventory": {
       "dataFound": "Data found",
@@ -33982,7 +34164,8 @@
     },
     "page": {
       "subtitle": "Build a selectively-disclosed, cryptographically signed vehicle-history report — entirely in this browser.",
-      "title": "Warranty & resale vault"
+      "title": "Warranty & resale vault",
+      "localReportSubtitle": "Assemble and sign a selectively disclosed vehicle-history report in this browser using evidence fetched from the server."
     },
     "preview": {
       "coarsened": "Coarsened ({{count}})",
@@ -34607,7 +34790,12 @@
       "rationale": {
         "insufficient": "The matched windows do not contain enough supported observations for a rollout decision.",
         "supported": "The decision reflects target regression relative to the matched peer change and window quality.",
-        "title": "Decision rationale"
+        "title": "Decision rationale",
+        "investigateMatched": "Investigation uses the returned matched-peer comparison with sufficient window quality.",
+        "investigateTargetOnly": "This is a target-only investigation: peer regression or matched excess is unavailable or invalid, so matched-peer support is not established.",
+        "investigateQuality": "Peer regression and matched excess were returned, but window quality does not establish sufficient matched-peer support.",
+        "investigateEvidence": "Target regression: {{target}}; peer regression: {{peer}}; matched excess: {{excess}}. Window quality: {{quality}}.",
+        "investigateThresholds": "The returned decision is unchanged. Target-only investigation requires target regression > 5%. With sufficient matched peers, excess > 10% means hold, excess ≤ 3% means rollout, and excess > 3% through 10% means investigate."
       },
       "subtitle": "Compare a target vehicle with matched peer windows before deciding rollout readiness.",
       "targetDelta": "Target regression",
@@ -35510,7 +35698,15 @@
       "form": {
         "accent": "Accent colour",
         "name": "Display name",
-        "primary": "Primary driver"
+        "primary": "Primary driver",
+        "accents": {
+          "cyan": "cyan",
+          "emerald": "emerald",
+          "amber": "amber",
+          "purple": "purple",
+          "rose": "rose",
+          "indigo": "indigo"
+        }
       },
       "fp": {
         "ambiguous": "ambiguous",
@@ -35643,7 +35839,9 @@
       "navTitle": "Data retention governance",
       "notice": {
         "body": "Every run on this page is a read-only dry run. TeslaSync computes what a policy would remove and records the plan in the ledger; it never issues a delete. Enforcement remains a deliberate, separate operator action outside this screen.",
-        "title": "Plan only — nothing is ever deleted here"
+        "title": "Plan only — nothing is ever deleted here",
+        "datasetTitle": "Plan only — dataset rows are not deleted here",
+        "policyWritesBody": "Saving or removing a retention policy changes the stored policy. Running a simulation records a dry-run plan in the ledger, but does not delete or downsample dataset rows. Dataset enforcement is not performed on this screen."
       },
       "policies": {
         "add": "Define policy",
@@ -35665,7 +35863,8 @@
         "executed": "Executed",
         "expiring": "Expiring",
         "fidelity": "Fidelity lost",
-        "mode": "Mode"
+        "mode": "Mode",
+        "dryRun": "dry run"
       },
       "runs": {
         "empty": "No plans recorded yet.",
@@ -35690,7 +35889,8 @@
       "title": "Data retention & lifecycle governance",
       "unsupported": {
         "delete": "Actually deleting rows — this screen is deliberately read-only",
-        "index": "Index and TOAST overhead attribution below table granularity"
+        "index": "Index and TOAST overhead attribution below table granularity",
+        "datasetDeletion": "Deleting or downsampling dataset rows — policy changes and recorded plans do not enforce retention"
       },
       "brief": {
         "title": "Governed storage and policy coverage",
@@ -35701,6 +35901,11 @@
       "impactBrief": {
         "title": "Computed dry-run totals",
         "scope": "Latest requested dry-run plan; no rows are deleted"
+      },
+      "warning": {
+        "legalHold": "A legal hold is active, so nothing would be removed even if execution were enabled.",
+        "highExpiry": "More than half the dataset would age out under this policy; consider a longer retention or a downsample tier.",
+        "noAffectedRows": "Nothing is old enough to be affected by this policy yet."
       }
     },
     "insurance": {
@@ -35797,7 +36002,9 @@
         "score": "Risk score",
         "scoreHint": "0 = best, 100 = worst",
         "severity": "Severity index",
-        "severityHint": "Expected claim size driver"
+        "severityHint": "Expected claim size driver",
+        "overnightTripDistance": "Distance of trips starting overnight (UTC)",
+        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands."
       },
       "subtitle": "Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.",
       "summary": {
@@ -35835,6 +36042,12 @@
       "costBrief": {
         "title": "Policy loss and distance costs",
         "description": "Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis."
+      },
+      "checksum": {
+        "title": "Risk-summary checksum",
+        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
+        "empty": "A risk-summary checksum is produced once a profile has been computed.",
+        "hash": "Limited risk-summary checksum (SHA-256)"
       }
     },
     "limitations": {
@@ -36045,7 +36258,10 @@
         "name": "Name",
         "price": "Price per period",
         "save": "Save subscription",
-        "started": "Started"
+        "started": "Started",
+        "newDraft": "Start new draft",
+        "benchmarkBasis": "{{currency}} minor / {{unit}} (stored unit; not a display-unit rate)",
+        "utcDateBasis": "Business dates are saved at midnight UTC; displayed instants use your saved timezone."
       },
       "kind": {
         "oneTime": "One-time purchase",
@@ -36106,7 +36322,19 @@
       },
       "brief": {
         "title": "Subscription commitment and realised value"
-      }
+      },
+      "metric": {
+        "supercharging_energy": "Supercharging energy",
+        "driving_distance": "Driving distance",
+        "connectivity_time": "Connectivity time",
+        "charging_sessions": "Charging sessions",
+        "drive_count": "Drive count"
+      },
+      "unit": {
+        "session": "session",
+        "drive": "drive"
+      },
+      "rateBasis": "{{value}} {{currency}} minor / {{unit}}"
     },
     "tariff": {
       "bands": {
@@ -36291,7 +36519,9 @@
         "pending": "pending",
         "predicted": "Predicted",
         "score": "Score it",
-        "when": "Predicted at"
+        "when": "Predicted at",
+        "reference": "Reference",
+        "sourceError": "Signed source error"
       },
       "predictions": {
         "add": "Record prediction",
@@ -36425,7 +36655,8 @@
         "closed": "Closed",
         "denied": "Denied",
         "draft": "Draft",
-        "submitted": "Submitted"
+        "submitted": "Submitted",
+        "expiring": "Expiring"
       },
       "subtitle": "Track which limit actually ends each coverage — calendar or odometer — at your real measured pace, and know before you call whether your evidence would survive a claim review.",
       "summary": {
@@ -36439,6 +36670,26 @@
       "brief": {
         "title": "Recorded warranty coverage and expiry",
         "scope": "Selected vehicle and recorded coverage terms; expiry projections use recorded driving"
+      },
+      "kind": {
+        "basic": "Basic",
+        "drivetrain": "Drivetrain",
+        "battery": "Battery",
+        "corrosion": "Corrosion",
+        "tires": "Tires",
+        "aftermarket": "Aftermarket",
+        "extended": "Extended"
+      },
+      "binding": {
+        "time": "Time",
+        "distance": "Distance",
+        "capacity": "Capacity"
+      },
+      "severity": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
       }
     },
     "window": {
@@ -36720,7 +36971,8 @@
       "dualWriteLabel": "Dual write",
       "dualWriteHelp": "— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.",
       "subscribedLabel": "Configured subscription",
-      "subscribedHelp": "— whether the field belongs to the configured desired subscription. \"Yes\" does not confirm observed vehicle ingestion. \"No\" means the field is routed but omitted from the desired subscription request."
+      "subscribedHelp": "— whether the field belongs to the configured desired subscription. \"Yes\" does not confirm observed vehicle ingestion. \"No\" means the field is routed but omitted from the desired subscription request.",
+      "columnDestinationHelp": "— the typed destination column. A dash means no per-field column is declared; read the Destination cell to see where the field is routed. Setting*Unit fields retain their explicit unit_history destination."
     },
     "orphans": {
       "title": "Orphan fields detected",
@@ -36758,7 +37010,9 @@
       "avgPerDay": "Avg energy/day",
       "perDay": "per day",
       "title": "Efficiency metrics",
-      "noData": "No efficiency metrics available."
+      "noData": "No efficiency metrics available.",
+      "sharedSource": "Shared source total",
+      "sharedSourceAlias": "The energy summary currently returns total energy used and total energy charged as aliases of the same source total. These are not independent consumed and charged measurements; distinct totals require a producer with measured consumption and charging semantics."
     },
     "dailyEfficiency": {
       "aria": "Daily driving efficiency over time",
@@ -36911,7 +37165,9 @@
       "volumeStepHelp": "Audio volume increment from the latest media snapshot, not a historical average.",
       "latestSnapshot": "Latest media snapshot",
       "returnedHistory": "Returned history: {{start}} – {{end}}",
-      "historyCoverage": "Listening totals describe returned snapshots within the selected dates, not complete listening time. Volume step uses the latest snapshot."
+      "historyCoverage": "Listening totals describe returned snapshots within the selected dates, not complete listening time. Volume step uses the latest snapshot.",
+      "retrievedAt": "Media retrieved at",
+      "measurementTimeUnavailable": "Measurement time unavailable; the latest media response does not include observation timestamps."
     },
     "sourceAria": "Pie chart of media source distribution",
     "volumeAria": "Media volume over time area chart"
@@ -37067,7 +37323,8 @@
       "empty": "No recent storm activity was returned.",
       "error": "Recent storm activity could not be loaded.",
       "unresolved": "Recent storm activity has not resolved yet; no empty result is inferred."
-    }
+    },
+    "peakGustFormatted": "Peak gust {{gust}}"
   },
   "comfort": {
     "title": "Cabin comfort Autopilot",
@@ -38809,7 +39066,10 @@
       "button": "Draft SQL",
       "promptPlaceholder": "e.g. how many drives did I take last week",
       "promptLabel": "SQL request",
-      "applyTooltip": "Copy the proposed SQL into the editor above. You can still edit it before clicking Run."
+      "applyTooltip": "Copy the proposed SQL into the editor above. You can still edit it before clicking Run.",
+      "noNarration": "No narration was returned. Review the typed SQL proposal above.",
+      "previewLabel": "Proposed SQL (review before applying)",
+      "noTypedDraft": "No applicable typed SQL proposal was returned. The manual editor remains available."
     },
     "info": {
       "title": "Working with queries",
@@ -38914,7 +39174,8 @@
         "revokeCancel": "Keep signed in",
         "revokeConfirm": "Sign out",
         "revokeMessage": "{{device}} will be signed out on its next request. Your other devices will stay signed in.",
-        "revokeTitle": "Sign out this device?"
+        "revokeTitle": "Sign out this device?",
+        "invalidated": "The session mode or selected devices changed. Nothing was signed out. Cancel and review the current devices before confirming again."
       },
       "kpi": {
         "lastActive": "Last active",
@@ -39697,7 +39958,17 @@
     "overlay": {
       "title": "Normalised overlay",
       "aria": "Area chart of the two selected signals normalised onto a common scale over the overlapping window"
-    }
+    },
+    "historyPaused": "History loading is paused. No comparison evidence has loaded yet.",
+    "historyPending": "History availability has not resolved yet.",
+    "nonnumericHistory": "At least one selected history has no usable numeric or boolean measurements.",
+    "insufficientEvidence": "There is not enough comparable evidence to compute a correlation.",
+    "screeningCorrelogramHint": "Correlation at every time shift; the dashed lines are an approximate screening threshold, not a calibrated significance guarantee",
+    "clearsScreen": "Clears screening threshold",
+    "belowScreen": "Below screening threshold",
+    "clearsScreenText": "The peak clears the approximate autocorrelation-adjusted screening threshold. This is a candidate for further investigation, not proof of a real relationship or causation.",
+    "belowScreenText": "The peak does not clear the approximate autocorrelation-adjusted screening threshold. This does not establish that the signals are unrelated or that the observed alignment is noise.",
+    "screeningMethodology": "Methodology: the screening rule uses a fixed critical value of 1.96 and a lag-1 autocorrelation-adjusted effective sample size. It is not a calibrated 95% significance guarantee: the fixed value is not conservative for small effective samples, resampling and gaps can affect dependence, and selecting the strongest peak across multiple lags is not corrected for multiple testing. The summary labels are screening outcomes only; neither a threshold crossing nor a time lead proves causation."
   },
   "sparkline": {
     "ariaLabel": "Trend sparkline"

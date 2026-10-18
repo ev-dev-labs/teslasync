@@ -91,6 +91,7 @@
     "speedVsEfficiencyAria": "Speed versus efficiency scatter plot",
     "tempVsEfficiencyAria": "Temperature versus efficiency scatter plot",
     "speedDistAria": "Efficiency by speed-range bar chart",
-    "dailyTrendAria": "Daily efficiency trend area chart"
+    "dailyTrendAria": "Daily efficiency trend area chart",
+    "pricingAssumption": "Estimate based on average consumption and an assumed $0.12/kWh electricity price, in source dollars per km; not recorded spending. No currency conversion is applied."
   }
 }

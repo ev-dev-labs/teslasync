@@ -359,7 +359,26 @@
     "clearFilters": "Clear filters",
     "notAvailable": "N/A",
     "panel": "Panel",
-    "unknownError": "unknown error"
+    "unknownError": "unknown error",
+    "notProvided": "Not provided",
+    "time": "Time",
+    "vehicles": "Vehicles",
+    "none": "None",
+    "notApplicable": "Not applicable",
+    "dataSources": {
+      "status": {
+        "paused": "Refresh paused"
+      }
+    },
+    "freshness": {
+      "lastUpdated": "Last updated: {{time}}",
+      "updating": "Updating…"
+    },
+    "dataState": {
+      "stale": {
+        "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
+      }
+    }
   },
   "compat": {
     "banner": {
@@ -372,10 +391,6 @@
   "confirm": {
     "silence": {
       "checkbox": "Don't ask again for this action"
-    },
-    "removeDraftRate": {
-      "title": "Remove this rate?",
-      "message": "The rate row is removed from the draft rate plan."
     }
   },
   "consent": {
@@ -1343,7 +1358,8 @@
     "sidebar": "Sidebar navigation",
     "drivesDesc": "Trip history",
     "chargingDesc": "Sessions & costs",
-    "batteryDesc": "Health & degradation"
+    "batteryDesc": "Health & degradation",
+    "automations": "Automations"
   },
   "notFound": {
     "title": "Page not found",

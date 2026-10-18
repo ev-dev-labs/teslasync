@@ -489,6 +489,7 @@
     "briefTitle": "{{title}} evidence summary",
     "briefLimits": "Returned observations only; missing readings and row caps do not establish lifetime completeness.",
     "briefCoverageUnknown": "Source coverage metadata unavailable; returned counts cannot establish completeness.",
-    "briefFetchedAt": "Report received {{at}}"
+    "briefFetchedAt": "Report received {{at}}",
+    "rangePairEqual": "{{first}} and {{second}} are equal in the returned estimates"
   }
 }

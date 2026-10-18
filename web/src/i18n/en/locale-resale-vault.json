@@ -41,7 +41,8 @@
       "vinWarning": "Disclosing the VIN (even masked) is identifying information. Only include it if the recipient specifically needs it."
     },
     "evidence": {
-      "scopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure profile tab to control what actually leaves your browser."
+      "scopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure profile tab to control what actually leaves your browser.",
+      "reportScopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the disclosure profile tab to control what is included in the local vault report, not the separate server certificate requests."
     },
     "export": {
       "digest": "SHA-256 digest",
@@ -53,7 +54,8 @@
       "sign": "Sign report",
       "signedAt": "Signed at",
       "subtitle": "Signing computes a SHA-256 digest of the report above and produces an ECDSA signature over it using your active local key.",
-      "title": "Export signed report"
+      "title": "Export signed report",
+      "olderPreview": "This signed snapshot belongs to an older preview. Download JSON exports that unchanged snapshot, not the current preview. Sign again to replace it."
     },
     "import": {
       "badJson": "This file is not valid JSON.",
@@ -84,7 +86,9 @@
     },
     "intro": {
       "body": "Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).",
-      "title": "Local-first, selectively disclosed"
+      "title": "Local-first, selectively disclosed",
+      "localReportBody": "Vault report assembly, report signing, imported report verification, signing keys, and the audit trail stay in this browser. You choose when to export or copy the vault report. The report excludes VIN unless you opt in, and always excludes precise locations, coordinates, tokens, raw trip paths, and driver identity.",
+      "serverCertificateBody": "The battery certificate is a separate server-signed attestation: opening Evidence fetches it from the server for the selected vehicle and automatically sends its certificate payload and signature to the server for verification. These requests do not wait for a report export and are not controlled by the vault disclosure profile."
     },
     "inventory": {
       "dataFound": "Data found",
@@ -128,7 +132,8 @@
     },
     "page": {
       "subtitle": "Build a selectively-disclosed, cryptographically signed vehicle-history report — entirely in this browser.",
-      "title": "Warranty & resale vault"
+      "title": "Warranty & resale vault",
+      "localReportSubtitle": "Assemble and sign a selectively disclosed vehicle-history report in this browser using evidence fetched from the server."
     },
     "preview": {
       "coarsened": "Coarsened ({{count}})",

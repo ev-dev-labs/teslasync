@@ -1,0 +1,27 @@
+{
+  "confirm": {
+    "silence": {
+      "checkbox": "Don't ask again for this action"
+    },
+    "removeDraftRate": {
+      "title": "Remove this rate?",
+      "message": "The rate row is removed from the draft rate plan."
+    },
+    "resetTypography": {
+      "title": "Reset typography?",
+      "message": "Typography settings return to their defaults."
+    },
+    "clearStream": {
+      "title": "Clear the stream?",
+      "message": "This removes the lines shown so far. New lines keep arriving."
+    },
+    "resetInputs": {
+      "title": "Reset all inputs?",
+      "message": "Your changes return to their default values."
+    },
+    "clearEditor": {
+      "title": "Clear the editor?",
+      "message": "This removes the current text from the editor. It can’t be undone."
+    }
+  }
+}

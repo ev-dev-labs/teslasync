@@ -349,6 +349,7 @@
       "lifetime": "Lifetime driving summary",
       "statsSource": "Vehicle driving aggregates; not filtered by the workspace range."
     },
+    "pricingAssumption": "Estimate based on average consumption and an assumed $0.12/kWh electricity price, in source dollars per km; not recorded spending. No currency conversion is applied.",
     "regenRatio": "Regen ratio",
     "regenRatioLabel": "Regen ratio",
     "section": {

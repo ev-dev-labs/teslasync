@@ -111,6 +111,8 @@
   "departure": {
     "brief": {
       "description": "Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.",
+      "snapshotAnchor": "Model snapshot anchor: ",
+      "snapshotMeaning": "Next 24 hours and “in” times are relative to this fixed anchor, not a live countdown; history coverage is limited to returned rows.",
       "source": "Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command."
     },
     "daypart": {
@@ -188,19 +190,31 @@
       "title": "Forecast evidence"
     },
     "method": {
+      "calendarModelBody": "Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). The rate is (recorded departures + α) / (model-assumed calendar opportunities + β), and likelihood is 1 − exp(−rate). Outputs are modeled estimates, not calibrated probabilities.",
+      "effectiveZone": "Effective model timezone: {{timeZone}}.",
       "eventsBody": "Every recorded drive start counts as a departure by design. Multiple trips on one local day are separate events; the model does not infer a unique driver or destination.",
       "eventsTitle": "Departure event definition",
       "inputsBody": "No calendar, destination, geofence, weather, battery temperature, state of charge, charging plan, traffic, or driver-identity input is used.",
       "inputsTitle": "Inputs not modeled",
       "limitsBody": "The 20-minute planning marker is illustrative and appears only with enough descriptive support. It does not schedule climate, wake, charge, navigate, or command the vehicle.",
       "limitsTitle": "No command or guarantee",
+      "modelTimezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}.",
       "modelTitle": "Model and shrinkage",
       "notice": "Planning aid only: no automation is created, and no departure is promised.",
+      "opportunityBody": "The denominator counts matching local-hour boundaries from the hour containing the earliest included returned drive start through the fixed model anchor, including elapsed gaps. Span days and weeks measure elapsed time, not observed recording coverage. Zero-event weeks mean no included returned starts; they do not prove inactivity. No telemetry uptime, completeness, or monitoring coverage metadata is available to this model.",
+      "opportunityTitle": "Model-assumed calendar opportunity",
+      "snapshotBody": "The clock is captured when this page mounts and stays fixed while it remains mounted, including history refreshes and vehicle or timezone changes. The lookback, next-24-hour horizon, “in” times, and planning marker use that anchor, not the current clock or the history fetch time. Refreshed rows can change the estimates without advancing the anchor.",
+      "snapshotTitle": "Fixed model snapshot",
       "subtitle": "What the forecast learns, what it excludes, and how to interpret every estimate.",
       "timezoneTitle": "Vehicle-local calendar",
       "title": "Methodology and limitations",
       "windowBody": "The model filters the newest rows returned by /drives to an absolute {{days}}-day lookback. A {{limit}}-row response can be capped and is not guaranteed lifetime history.",
-      "windowTitle": "Returned evidence window"
+      "windowTitle": "Returned evidence window",
+      "zoneBrowser": "browser timezone, or UTC if unavailable",
+      "zoneFallback": "Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing or UTC.",
+      "zoneInvalid": "The resolved timezone \"{{requested}}\" is missing or invalid; this model uses UTC without changing shared settings.",
+      "zoneMetadata": "Source: selected vehicle timezone metadata ({{timeZone}}).",
+      "zoneSavedUser": "saved user timezone"
     },
     "next24": {
       "aria": "Hourly and cumulative modeled departure likelihood across the next 24 vehicle-timezone hour boundaries",
@@ -225,14 +239,20 @@
       "activeDays": "Active local days",
       "activeWeekScore": "Active-week ingredient",
       "activeWeeks": "Active local weeks",
+      "calendarOpportunityScore": "Calendar-opportunity ingredient",
+      "calendarQualifier": "Elapsed spans run from the earliest included drive start to the fixed model anchor. Cell opportunities are model-assumed elapsed local-hour boundaries over returned history, not measured recording coverage or proof that the vehicle was monitored during gaps.",
+      "calendarTitle": "Elapsed calendar opportunity and recorded recurrence",
       "capWarning": "The 1,000-row return cap was reached. Included and excluded counts are complete for returned rows, not guaranteed lifetime history.",
       "concentration": "Routine concentration",
+      "elapsedDays": "Elapsed returned-history span (days)",
+      "elapsedWeeks": "Elapsed returned-history span (weeks)",
       "entropy": "Normalized routine entropy",
       "excluded": "Excluded rows",
       "future": "Future start times",
       "included": "Included departures",
       "indexExplanation": "{{band}}. The support index gates elapsed exposure with event volume, active weeks, repeat events, and occupied-cell occurrences; it is not statistical confidence.",
       "invalid": "Invalid start times",
+      "meanCalendarOpportunities": "Mean model-assumed opportunities per occupied cell",
       "occupiedCells": "Occupied cells",
       "outside": "Outside 120 days",
       "repeatScore": "Repeat-cell ingredient",
@@ -247,9 +267,11 @@
       "volumeScore": "Event-volume ingredient"
     },
     "ranked": {
+      "calendarEvidence": "{{relative}} · {{departures}} recorded departures / {{occurrences}} model-assumed calendar opportunities",
       "capQualifier": "Ranking is qualified because the returned 1,000-row history may omit older drives.",
       "likelihood": "{{value}}% modeled",
       "noSupported": "No next-24-hour slot has a recorded departure in the matching weekday-hour cell.",
+      "opportunityQualifier": "Opportunities count elapsed matching local-hour boundaries from the earliest included drive start to the fixed model anchor, not verified telemetry coverage.",
       "rank": "#{{rank}}",
       "subtitle": "Ranked within the next 24 local-hour slots from returned evidence; this is not a departure guarantee.",
       "title": "Strongest upcoming supported windows"
@@ -313,12 +335,16 @@
     },
     "weeklyTrend": {
       "activeDaySeries": "Active local days",
+      "calendarAria": "Weekly returned departure events and active local driving days across the elapsed model-timezone span",
+      "calendarSubtitle": "Monday-based local weeks include zero returned events between the earliest included drive start and the fixed model anchor; elapsed calendar opportunity is model-assumed, not verified coverage.",
       "column": {
         "activeDays": "Active local days",
         "departures": "Departure events",
         "week": "Local week starting"
       },
       "departureSeries": "Departure events",
+      "elapsedSummary": "{{departures}} returned departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} elapsed weeks in {{timeZone}}. Calendar opportunity is model-assumed; gaps do not establish recording coverage.",
+      "returnedDescription": "Bars count returned drive starts and the line counts distinct local days containing at least one returned drive start. Zero-event buckets mean no included returned events, not confirmed inactivity or continuous recording.",
       "title": "Recent weekly departure trend and active-day cadence"
     }
   },

@@ -277,7 +277,15 @@
       "form": {
         "accent": "Accent colour",
         "name": "Display name",
-        "primary": "Primary driver"
+        "primary": "Primary driver",
+        "accents": {
+          "cyan": "cyan",
+          "emerald": "emerald",
+          "amber": "amber",
+          "purple": "purple",
+          "rose": "rose",
+          "indigo": "indigo"
+        }
       },
       "fp": {
         "ambiguous": "ambiguous",
@@ -410,7 +418,9 @@
       "navTitle": "Data retention governance",
       "notice": {
         "body": "Every run on this page is a read-only dry run. TeslaSync computes what a policy would remove and records the plan in the ledger; it never issues a delete. Enforcement remains a deliberate, separate operator action outside this screen.",
-        "title": "Plan only — nothing is ever deleted here"
+        "title": "Plan only — nothing is ever deleted here",
+        "datasetTitle": "Plan only — dataset rows are not deleted here",
+        "policyWritesBody": "Saving or removing a retention policy changes the stored policy. Running a simulation records a dry-run plan in the ledger, but does not delete or downsample dataset rows. Dataset enforcement is not performed on this screen."
       },
       "policies": {
         "add": "Define policy",
@@ -432,7 +442,8 @@
         "executed": "Executed",
         "expiring": "Expiring",
         "fidelity": "Fidelity lost",
-        "mode": "Mode"
+        "mode": "Mode",
+        "dryRun": "dry run"
       },
       "runs": {
         "empty": "No plans recorded yet.",
@@ -457,7 +468,8 @@
       "title": "Data retention & lifecycle governance",
       "unsupported": {
         "delete": "Actually deleting rows — this screen is deliberately read-only",
-        "index": "Index and TOAST overhead attribution below table granularity"
+        "index": "Index and TOAST overhead attribution below table granularity",
+        "datasetDeletion": "Deleting or downsampling dataset rows — policy changes and recorded plans do not enforce retention"
       },
       "brief": {
         "title": "Governed storage and policy coverage",
@@ -468,6 +480,11 @@
       "impactBrief": {
         "title": "Computed dry-run totals",
         "scope": "Latest requested dry-run plan; no rows are deleted"
+      },
+      "warning": {
+        "legalHold": "A legal hold is active, so nothing would be removed even if execution were enabled.",
+        "highExpiry": "More than half the dataset would age out under this policy; consider a longer retention or a downsample tier.",
+        "noAffectedRows": "Nothing is old enough to be affected by this policy yet."
       }
     },
     "insurance": {
@@ -564,7 +581,9 @@
         "score": "Risk score",
         "scoreHint": "0 = best, 100 = worst",
         "severity": "Severity index",
-        "severityHint": "Expected claim size driver"
+        "severityHint": "Expected claim size driver",
+        "overnightTripDistance": "Distance of trips starting overnight (UTC)",
+        "overnightTripDistanceHint": "Trip-start proxy: full distance of completed trips starting at or after 22:00 or before 05:00 UTC. Includes distance outside the band on qualifying trips and excludes distance inside the band on other trips; neither an upper nor a lower bound on actual night distance. Actual night-distance measurement requires owned model support for distance within time bands."
       },
       "subtitle": "Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.",
       "summary": {
@@ -602,6 +621,12 @@
       "costBrief": {
         "title": "Policy loss and distance costs",
         "description": "Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis."
+      },
+      "checksum": {
+        "title": "Risk-summary checksum",
+        "subtitle": "A limited SHA-256 checksum of the vehicle ID, window bounds, risk score, frequency, severity and loss-cost indices, and ordered factor codes and observed rates at fixed precision. It does not verify identity or hash the complete evidence packet: raw exposure, other factor details, policy, premium, trend and evidence are not included. Matching checksums do not establish that the complete datasets are identical.",
+        "empty": "A risk-summary checksum is produced once a profile has been computed.",
+        "hash": "Limited risk-summary checksum (SHA-256)"
       }
     },
     "limitations": {
@@ -812,7 +837,10 @@
         "name": "Name",
         "price": "Price per period",
         "save": "Save subscription",
-        "started": "Started"
+        "started": "Started",
+        "newDraft": "Start new draft",
+        "benchmarkBasis": "{{currency}} minor / {{unit}} (stored unit; not a display-unit rate)",
+        "utcDateBasis": "Business dates are saved at midnight UTC; displayed instants use your saved timezone."
       },
       "kind": {
         "oneTime": "One-time purchase",
@@ -873,7 +901,19 @@
       },
       "brief": {
         "title": "Subscription commitment and realised value"
-      }
+      },
+      "metric": {
+        "supercharging_energy": "Supercharging energy",
+        "driving_distance": "Driving distance",
+        "connectivity_time": "Connectivity time",
+        "charging_sessions": "Charging sessions",
+        "drive_count": "Drive count"
+      },
+      "unit": {
+        "session": "session",
+        "drive": "drive"
+      },
+      "rateBasis": "{{value}} {{currency}} minor / {{unit}}"
     },
     "tariff": {
       "bands": {
@@ -1058,7 +1098,9 @@
         "pending": "pending",
         "predicted": "Predicted",
         "score": "Score it",
-        "when": "Predicted at"
+        "when": "Predicted at",
+        "reference": "Reference",
+        "sourceError": "Signed source error"
       },
       "predictions": {
         "add": "Record prediction",
@@ -1192,7 +1234,8 @@
         "closed": "Closed",
         "denied": "Denied",
         "draft": "Draft",
-        "submitted": "Submitted"
+        "submitted": "Submitted",
+        "expiring": "Expiring"
       },
       "subtitle": "Track which limit actually ends each coverage — calendar or odometer — at your real measured pace, and know before you call whether your evidence would survive a claim review.",
       "summary": {
@@ -1206,6 +1249,26 @@
       "brief": {
         "title": "Recorded warranty coverage and expiry",
         "scope": "Selected vehicle and recorded coverage terms; expiry projections use recorded driving"
+      },
+      "kind": {
+        "basic": "Basic",
+        "drivetrain": "Drivetrain",
+        "battery": "Battery",
+        "corrosion": "Corrosion",
+        "tires": "Tires",
+        "aftermarket": "Aftermarket",
+        "extended": "Extended"
+      },
+      "binding": {
+        "time": "Time",
+        "distance": "Distance",
+        "capacity": "Capacity"
+      },
+      "severity": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
       }
     },
     "window": {
@@ -1422,6 +1485,12 @@
     "col": {
       "date": "Date",
       "value": "Value"
+    }
+  },
+  "confirm": {
+    "removeDraftRate": {
+      "message": "The rate row is removed from the draft rate plan.",
+      "title": "Remove this rate?"
     }
   },
   "delta": {

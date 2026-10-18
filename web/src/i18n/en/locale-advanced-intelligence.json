@@ -155,7 +155,12 @@
       "rationale": {
         "insufficient": "The matched windows do not contain enough supported observations for a rollout decision.",
         "supported": "The decision reflects target regression relative to the matched peer change and window quality.",
-        "title": "Decision rationale"
+        "title": "Decision rationale",
+        "investigateMatched": "Investigation uses the returned matched-peer comparison with sufficient window quality.",
+        "investigateTargetOnly": "This is a target-only investigation: peer regression or matched excess is unavailable or invalid, so matched-peer support is not established.",
+        "investigateQuality": "Peer regression and matched excess were returned, but window quality does not establish sufficient matched-peer support.",
+        "investigateEvidence": "Target regression: {{target}}; peer regression: {{peer}}; matched excess: {{excess}}. Window quality: {{quality}}.",
+        "investigateThresholds": "The returned decision is unchanged. Target-only investigation requires target regression > 5%. With sufficient matched peers, excess > 10% means hold, excess ≤ 3% means rollout, and excess > 3% through 10% means investigate."
       },
       "subtitle": "Compare a target vehicle with matched peer windows before deciding rollout readiness.",
       "targetDelta": "Target regression",
@@ -621,7 +626,8 @@
       "empty": "No recent storm activity was returned.",
       "error": "Recent storm activity could not be loaded.",
       "unresolved": "Recent storm activity has not resolved yet; no empty result is inferred."
-    }
+    },
+    "peakGustFormatted": "Peak gust {{gust}}"
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",

@@ -881,7 +881,8 @@
       "quietHint": "Quiet hours silence the notification rather than dropping it, so nothing is lost. Critical alerts still ring.",
       "reset": "Reset device rules",
       "caveat": "A notification filtered here has still been delivered to the browser. Prefer server-side channel routing and quiet hours whenever they can express the same rule.",
-      "sectionAria": "Per-device notification and data rules"
+      "sectionAria": "Per-device notification and data rules",
+      "quietBypassHint": "Quiet hours silence notifications that pass your other device rules. Only severities selected below ring through while quiet hours are active; device, category, minimum severity, and vehicle filters still apply."
     },
     "archived": {
       "summary": {

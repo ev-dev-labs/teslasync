@@ -90,6 +90,12 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "confirm": {
+    "resetInputs": {
+      "message": "Your changes return to their default values.",
+      "title": "Reset all inputs?"
+    }
+  },
   "delta": {
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"

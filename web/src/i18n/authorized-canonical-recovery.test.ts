@@ -994,7 +994,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "coverage.col.subscribed",
-    "Subscribed"
+    "Configured subscription"
   ],
   [
     "coverage.category.totalFields",
@@ -1146,7 +1146,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.flags.composition.ariaLabel",
-    "Flag value-type composition"
+    "Returned flag value presentation; stored values are text"
   ],
   [
     "admin.flags.actions.editFlag",
@@ -1234,11 +1234,11 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.gdprExport.lookupHint",
-    "IDs come from the GDPR export queue email or the request response. The artifact polls while queued/running."
+    "Enter an artifact ID to look up its saved metadata. Use Refresh to request an updated snapshot; this page does not poll automatically."
   ],
   [
     "admin.gdprExport.lookupBlurb",
-    "Bundles are streamed straight from the backend and expire after the configured retention window. Look one up to track its status live."
+    "Lookup and Refresh only read artifact metadata; they do not create exports or download bundles. Bundles expire after the configured retention window. A saved manifest does not confirm current download availability or storage support."
   ],
   [
     "impersonation.policy.audit.title",
@@ -1574,7 +1574,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.percentSub",
-    "{{pct}} of total"
+    "Compressed chunks only; not a share of current disk usage."
   ],
   [
     "admin.diskForecast.fleetTotal",
@@ -1582,7 +1582,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.fleetUncompressed",
-    "Uncompressed"
+    "Before compression"
   ],
   [
     "admin.diskForecast.fleetGrowth",
@@ -1602,7 +1602,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.noQuota",
-    "No quota configured"
+    "No quota estimate available"
   ],
   [
     "admin.auditLog.colEntity",
@@ -2098,11 +2098,11 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.colSplit",
-    "Uncompressed / compressed"
+    "Before / after compression"
   ],
   [
     "admin.diskForecast.compressedSuffix",
-    "compressed"
+    "after compression"
   ],
   [
     "admin.diskForecast.colGrowth",
@@ -2110,7 +2110,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.subtitle",
-    "Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold."
+    "Current per-hypertable disk usage, before/after compression sizes for compressed chunks, and source-supplied days-to-quota estimates. Compression sizes are not additive parts of current disk usage."
   ],
   [
     "admin.diskForecast.notConfigured",
@@ -2126,15 +2126,15 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.composition",
-    "Storage composition"
+    "Compression size comparison"
   ],
   [
     "admin.diskForecast.compositionTitle",
-    "Compressed vs uncompressed"
+    "Before vs after compression"
   ],
   [
     "admin.diskForecast.compositionAria",
-    "Stacked bar chart of the largest hypertables split by uncompressed and compressed bytes"
+    "Grouped bar chart comparing before and after compression sizes of compressed chunks in the largest hypertables"
   ],
   [
     "admin.diskForecast.noComposition",
@@ -2142,7 +2142,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.uncompressed",
-    "Uncompressed"
+    "Before compression"
   ],
   [
     "admin.diskForecast.severityTitle",
@@ -2174,11 +2174,11 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "admin.diskForecast.noQuotaTitle",
-    "No quota configured"
+    "No quota estimate available"
   ],
   [
     "admin.diskForecast.noQuotaMessage",
-    "Set HYPERTABLE_QUOTA_BYTES to surface a days-to-quota estimate for each hypertable."
+    "An estimate may be absent when there is no measurable growth. Missing estimates do not establish whether a quota is configured."
   ],
   [
     "admin.diskForecast.daysValue",
@@ -2250,7 +2250,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "coverage.subtitle",
-    "Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts."
+    "Package-derived snapshot of routed Tesla proto fields and configured desired subscription membership. Sourced from routing.yaml and teslaconfig.Builder — not confirmation of observed vehicle ingestion."
   ],
   [
     "coverage.routing",
@@ -2298,11 +2298,11 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "coverage.legend.subscribedLabel",
-    "Subscribed"
+    "Configured subscription"
   ],
   [
     "coverage.legend.subscribedHelp",
-    "— whether Tesla Fleet Telemetry is currently pushing this field to us. \"No\" means the writer is wired but the subscription request omits the field."
+    "— whether the field belongs to the configured desired subscription. \"Yes\" does not confirm observed vehicle ingestion. \"No\" means the field is routed but omitted from the desired subscription request."
   ],
   [
     "coverage.orphans.title",
@@ -3190,7 +3190,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "battery.degradation.rangeLossAria",
-    "Original and current estimated driving range over time"
+    "First retained comparison baseline and estimated driving range over time"
   ],
   [
     "battery.degradation.healthFactors",
@@ -4506,7 +4506,7 @@ export const authorizedCanonicalAdditions: readonly (readonly [string, string])[
   ],
   [
     "driveDetail.fsd.loadFailedBody",
-    "The rest of this drive remains available. Retry the page to load the cumulative-counter evidence."
+    "The rest of this drive remains available. Retry supervised-driving evidence independently."
   ],
   [
     "driveDetail.fsd.section",
@@ -18986,7 +18986,7 @@ function assertTranslatorOrigin(call: ts.CallExpression, tree: ts.SourceFile, fi
 describe('authorized exact canonical catalog recovery attempt3', () => {
   it('resolves all 1921 static pairs through installed i18next and normal generated resources', async () => {
     expect(authorizedCanonicalAdditions).toHaveLength(1921)
-    expect(createHash('sha256').update(JSON.stringify(authorizedCanonicalAdditions)).digest('hex')).toBe('ddd686199ab95578cc9193fa70ead0a29130248d33ebb6999fdde1e8c15de053')
+    expect(createHash('sha256').update(JSON.stringify(authorizedCanonicalAdditions)).digest('hex')).toBe('5d1f0a21567e6deed09a957890554ba37f67f7b65ef324cb447449de50e5e660')
     const english = createInstance()
     await english.init({ lng: 'en', fallbackLng: 'en', fallbackNS: 'translation',
       resources: { en: { translation: catalog } }, interpolation: { escapeValue: false } })

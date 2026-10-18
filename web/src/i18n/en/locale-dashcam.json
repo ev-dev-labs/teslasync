@@ -124,7 +124,8 @@
       "noData": "No telemetry reconstruction is available for this clip.",
       "selectSignals": "Choose telemetry signals above to build a reconstruction.",
       "signalCatalogFailed": "The telemetry signal catalog could not be loaded.",
-      "noSignals": "No telemetry signals are available for this vehicle."
+      "noSignals": "No telemetry signals are available for this vehicle.",
+      "signalLimitHint": "Reconstruction loads the first 8 unique, non-empty signal names in selection order. Remove a selected signal before adding another at the limit; existing selections are kept."
     },
     "redaction": {
       "add": "Add region",
@@ -166,6 +167,9 @@
       "SavedClips": "Saved",
       "SentryClips": "Sentry",
       "unknown": "Unknown source"
+    },
+    "update": {
+      "error": "Failed to save clip changes"
     }
   },
   "achievements": {

@@ -20,7 +20,9 @@
       "pausedRetained": "Refresh is paused; retained {{section}} remains available"
     },
     "daily": {
-      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary"
+      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary",
+      "groupingNote": "Idle groups idle, online and parked transitions. Sleeping groups sleeping, asleep and offline transitions; this grouping does not establish measured sleep. Other destination states are unclassified. Raw states remain in State transitions.",
+      "unclassified": "Unclassified"
     },
     "trigger": "Trigger",
     "refresh": "Refresh timeline",

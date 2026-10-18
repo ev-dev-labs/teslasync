@@ -313,6 +313,12 @@
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
   },
+  "confirm": {
+    "resetInputs": {
+      "message": "Your changes return to their default values.",
+      "title": "Reset all inputs?"
+    }
+  },
   "date": {
     "preset": {
       "all": "All time",

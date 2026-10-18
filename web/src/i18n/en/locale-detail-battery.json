@@ -248,7 +248,21 @@
       "history": "Degradation history",
       "trendTitleAria": "Battery health trend and 95% confidence projection chart",
       "selectVehicleHelp": "Select a vehicle to view its battery history.",
-      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history."
+      "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history.",
+      "predictionBandChartAria": "Battery health trend and approximate prediction band chart",
+      "approximatePredictionBand": "Approximate prediction band",
+      "belowThreshold": "Fitted health is already at or below 80%.",
+      "noFutureCrossing": "The fitted trend does not predict a future crossing of 80%.",
+      "crossingUnavailable": "The 80% crossing estimate is unavailable.",
+      "capacityEvidence": "Nominal baseline evidence: capacity_source={{source}}; original_capacity_wh={{capacity}}. This baseline is an assumption, not an observed or calibrated original pack capacity.",
+      "capacityEstimator": "Current capacity is a telemetry-derived estimator: the median of up to eight recent valid daily capacity estimates, or EnergyRemaining / (BatteryLevel / 100) when history is unavailable. SOH compares this estimator with the nominal baseline; it is not a direct capacity measurement.",
+      "capacityEstimatorUnavailable": "Observed current-capacity estimator unavailable; the nominal baseline alone does not establish current capacity or SOH.",
+      "capacityCalibration": "Actual pack-capacity calibration remains candidate BD-C01; no calibration is applied here.",
+      "observationEvidence": "Observation duration is time since the earliest retained battery history, charging session or drive session; it is not true pack age. Start: {{start}}; source: {{source}}. Manufacture and replacement dates are unknown.",
+      "predictionIntervalUnavailable": "Approximate prediction band: fit sample basis and multiplier unavailable. This is not a calibrated 95% confidence interval; empirical coverage remains unmeasured in BD-C01.",
+      "fittedSohTrend": "Fitted SOH trend",
+      "fittedSohTrendHelp": "Signed fitted SOH change in percentage points per year. Negative values indicate declining health; positive values indicate improving fitted health.",
+      "observationDuration": "Observation duration"
     },
     "health": {
       "excellent": "Excellent",

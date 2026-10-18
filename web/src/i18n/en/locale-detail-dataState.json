@@ -42,6 +42,9 @@
     },
     "offline": {
       "title": "Offline"
+    },
+    "status": {
+      "paused": "Refresh paused"
     }
   }
 }

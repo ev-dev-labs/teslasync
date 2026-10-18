@@ -32,7 +32,19 @@ Regenerated the English catalog artifacts from existing en.json/source. Only `we
 
 The same three suites rerun at **7,183 passed / 489 failed / 0 skipped**. All 7,672 executions remain; no failing identity was added or removed. The manifest repair fixes the separate catalog gate, not any of the frozen-contract test failures. No full suite or unrelated tests were run.
 
-## Decisions needed
+## Decisions made
+
+- The user selected the current catalog wording for all 23 conflicts. Updated the 21 canonical and two feature-owned fixture values; regenerated the canonical fixture digest from the resulting array using the existing SHA-256/JSON mechanism. Updated the flag-composition source fallback to the catalog wording. No catalog wording was reversed.
+- Audited all 3,714 production TypeScript/TSX files (38,394 translation calls). Initial static audit found 239 distinct missing literal keys (282 call sites), 1,573 fallback differences, and 691 dynamic-key calls requiring further resolution. These are audit candidates, not 2,546 proven defects: explicit namespaces, plural variants, dynamic arguments and intentionally literal template examples need individual handling.
+- Added 223 unambiguous missing English keys using the identical literal fallback already present in their callers. No other-language translations were invented. The repair script refuses conflicting defaults, scalar ancestors, missing defaults and plural/count cases. Regenerated the split catalog artifacts.
+- Sixteen missing-key candidates remain for follow-up: six scalar-ancestor collisions and ten count/plural cases. No source fingerprint or catalog-history checkpoint has been updated: the required source verification is still incomplete.
+- Added a reproducible AST audit/repair script at `web/scripts/i18n-trio-checkpoint.mjs`. Its default mode is read-only; `--repair-missing` applies only the conservative missing-key repair above. It does not approve or rewrite fingerprints.
+
+### Verification after wording and missing-key group
+
+Only the requested three suites were run: **7,202 passed / 470 failed / 0 skipped**, still 7,672 executions. **19 failing executions closed; zero new failing identities** compared with the original baseline. Catalog split check: **PASS**, 57 grouped bundles, 181 fallbacks, 1,265 shell keys, zero known-missing manifest keys. No tests were weakened, skipped or deleted. The original 151 source checks and two combined contracts remain pending verification.
+
+## Original decisions requested (resolved by the user)
 
 1. **Disk-compression wording:** retain the current “After compression” and approve corresponding historical-test changes, or restore “Compressed” in source and catalog. Current code and tests disagree, so no wording change is authorized here. Affects `admin.diskForecast.compressed` and `admin.diskForecast.fleetCompressed`.
 2. **Subscription wording:** retain “Configured subscription” and approve historical-test changes, or restore “Subscribed” in source and catalog. Affects `coverage.col.subscribed`. The older wording can imply a confirmed live subscription, so this is a product choice.
