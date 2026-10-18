@@ -9,6 +9,9 @@ export const registryDependencies = [
   'web/src/lib/dataUnavailability.ts', 'web/src/lib/helpIndex.ts',
   'web/src/lib/routeMeta.ts', 'web/src/lib/contextNavigation.ts',
   'web/src/lib/palettePrefix.ts',
+  'web/src/components/layout/sidebar/collections.ts',
+  'web/src/components/layout/reportGroups.ts',
+  'web/src/components/layout/diagnosticGroups.ts',
 ];
 export function registryCalls(call, api) {
   const read = (file, name) => {
@@ -39,6 +42,15 @@ export function registryCalls(call, api) {
     if (typeof key !== 'string' || typeof fallback !== 'string') throw new Error('Nonliteral registry pair');
     return { ...call, key, fallback };
   });
+  if (call.file === 'web/src/components/layout/sidebar/AtlasPanel.tsx' && key === 'group.labelKey' && fallback === 'group.label') {
+    const definitions = read('web/src/components/layout/sidebar/collections.ts', 'DEFINITIONS');
+    const groups = [
+      ...read('web/src/components/layout/reportGroups.ts', 'REPORT_GROUPS'),
+      ...read('web/src/components/layout/diagnosticGroups.ts', 'DIAGNOSTIC_GROUPS'),
+    ];
+    return expand([...groups.map(group => [group.labelKey, group.label]),
+      ...definitions.map(([label, primary]) => ['nav.collections.' + primary.slice(1).replace(/\W/g, '_'), label])]);
+  }
   if (call.file === 'web/src/features/system/pages/RoadmapPage.tsx') {
     const entries = read(call.file, 'roadmapItems');
     if (key === '`roadmap.entries.${item.id}.title`' && fallback === 'item.title') return expand(entries.map(item => ['roadmap.entries.' + item.id + '.title', item.title]));

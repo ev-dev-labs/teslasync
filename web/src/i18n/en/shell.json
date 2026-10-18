@@ -1451,7 +1451,22 @@
     "drivesDesc": "Trip history",
     "chargingDesc": "Sessions & costs",
     "batteryDesc": "Health & degradation",
-    "automations": "Automations"
+    "automations": "Automations",
+    "sidenav": {
+      "shortAdvanced": "Advanced",
+      "shortOwnership": "Ownership",
+      "shortPhysics": "Physics",
+      "shortAlerts": "Alerts",
+      "shortConnect": "Connect",
+      "mobileVehicles": "Vehicles",
+      "mobileDriving": "Driving",
+      "hidePanel": "Hide panel",
+      "filterLabel": "Filter {{section}} pages",
+      "filter": "Filter {{section}}…",
+      "pinned": "Pinned",
+      "recent": "Recent",
+      "noMatches": "No pages match \"{{query}}\"."
+    }
   },
   "notFound": {
     "title": "Page not found",

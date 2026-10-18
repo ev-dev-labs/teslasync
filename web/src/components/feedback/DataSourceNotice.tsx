@@ -266,7 +266,7 @@ export function DataSourceNotice({
                     variant="ghost"
                     size="sm"
                     wrapLabel
-                    className="min-h-11 md:min-h-9"
+                    className="min-h-11 w-full min-w-0 md:min-h-9"
                     aria-label={`${retryText}: ${source.label}`}
                     onClick={() => { void source.query.refetch?.(); }}
                   >
@@ -283,7 +283,7 @@ export function DataSourceNotice({
             variant="ghost"
             size="sm"
             wrapLabel
-            className="min-h-11 md:min-h-9"
+            className="min-h-11 w-full min-w-0 md:min-h-9"
             onClick={handleRetry}
             icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />}
           >

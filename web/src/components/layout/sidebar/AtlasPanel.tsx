@@ -29,7 +29,8 @@ import { typography } from '@/lib/tokens'
 import type { SidebarSectionInput } from '../sectionGroups'
 import type { SectionGroup } from '../sectionGroups'
 import { isExclusiveActivePath } from './compactNav'
-import { groupSidebarItems } from './collections'
+import { groupSidebarItems, flattenSidebarItems } from './collections'
+import { PrefetchNavLink } from '../PrefetchLink'
 import { matchesSidebarTokens, searchSidebarSections, tokenizeSidebarQuery } from './sidebarSearch'
 import { NavSectionHeader } from './NavSectionHeader'
 import { SidebarCountChip, SidebarNotificationDot, SidebarRow } from './SidebarRow'
@@ -42,6 +43,7 @@ export interface AtlasPanelProps {
   variant: 'secondary' | 'inline'
   collapsed?: boolean
   onToggleCollapsed?: () => void
+  onHomeViewChange?: (view: DeckSelection | null) => void
   view: DeckSelection
   /** Inline only: back to the rail. */
   onBack?: () => void
@@ -70,7 +72,7 @@ const RECENT_OPEN_KEY = 'teslasync-deck-recent-open'
 
 function readExpanded(key: string): boolean {
   try {
-    return window.localStorage.getItem(key) === 'true'
+    return window.localStorage.getItem(key) !== 'false'
   } catch {
     return false
   }
@@ -87,9 +89,9 @@ function persistExpanded(key: string, expanded: boolean): void {
 export function AtlasPanel({
   variant,
   collapsed = false,
-  onToggleCollapsed,
   view,
   onBack,
+  onHomeViewChange,
   onClose,
   sections,
   pinnedItems,
@@ -136,16 +138,15 @@ export function AtlasPanel({
     if (!pinnedSet.has(to)) onPin(to)
   }
 
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem('teslasync-sidenav-collapsed-groups') ?? '{}') as Record<string, boolean> } catch { return {} }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('teslasync-sidenav-collapsed-groups', JSON.stringify(collapsedGroups)) } catch { /* Storage is optional. */ }
+  }, [collapsedGroups])
   const [filterQuery, setFilterQuery] = useState('')
-  const toggleGroup = (key: string) => {
-    setExpandedGroups(previous => {
-      const next = new Set(previous)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
+  const toggleGroup = (key: string) => setCollapsedGroups(previous => ({ ...previous, [viewKey + ':' + key]: !previous[viewKey + ':' + key] }))
+  const groupExpanded = (key: string) => Boolean(filterQuery.trim()) || !collapsedGroups[viewKey + ':' + key]
 
   // ── Shared row helpers ─────────────────────────────────────────────────
   const trailingFor = (to: string): React.ReactNode => {
@@ -262,21 +263,17 @@ export function AtlasPanel({
   // The current page already renders highlighted in its group below, so it
   // is excluded here — every destination shows exactly once per surface.
   const quickPins = openSection
-    ? safePinnedItems.filter(item => sectionPaths.has(item.to) && !itemIsActive(item.to))
+    ? safePinnedItems.filter(item => sectionPaths.has(item.to) && (!filtering || matchingPaths.has(item.to)))
     : []
   // Filtering forces pins open without overwriting the stored preference.
   const [quickPinsOpen, setQuickPinsOpen] = useState(() => readExpanded(QUICK_PINS_OPEN_KEY))
   const [recentOpen, setRecentOpen] = useState(() => readExpanded(RECENT_OPEN_KEY))
   const collapsibleGroupKeys = sectionGroups.filter(group => group.label).map(group => group.entries[0].to)
-  const activeGroupKey = sectionGroups.find(group =>
-    group.label && group.entries.some(entry => itemIsActive(entry.to)),
-  )?.entries[0].to ?? collapsibleGroupKeys[0]
   const viewKey = view.kind === 'section' ? `section:${view.title}` : view.kind
   useEffect(() => {
     setFilterQuery('')
-    setExpandedGroups(new Set(activeGroupKey ? [activeGroupKey] : []))
-  }, [viewKey, activeGroupKey, location.pathname])
-  const anyGroupCollapsed = collapsibleGroupKeys.some(key => !expandedGroups.has(key))
+  }, [viewKey])
+  const anyGroupCollapsed = collapsibleGroupKeys.some(key => !groupExpanded(key))
 
   const viewTitle = (): string => {
     switch (view.kind) {
@@ -338,7 +335,7 @@ export function AtlasPanel({
             title={anyGroupCollapsed
               ? t('nav.deck.expandAllGroups', 'Expand all groups')
               : t('nav.deck.collapseAllGroups', 'Collapse all groups')}
-            onClick={() => setExpandedGroups(new Set(anyGroupCollapsed ? collapsibleGroupKeys : []))}
+            onClick={() => setCollapsedGroups(previous => ({ ...previous, ...Object.fromEntries(collapsibleGroupKeys.map(key => [viewKey + ':' + key, !anyGroupCollapsed])) }))}
             className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
           >
             {anyGroupCollapsed
@@ -351,30 +348,7 @@ export function AtlasPanel({
             type="button"
             variant="ghost"
             size="sm"
-            aria-label={compact
-              ? t('nav.deck.expandPanel', 'Expand secondary navigation')
-              : t('nav.deck.collapsePanel', 'Collapse secondary navigation')}
-            title={compact
-              ? t('nav.deck.expandPanel', 'Expand secondary navigation')
-              : t('nav.deck.collapsePanel', 'Collapse secondary navigation')}
-            aria-expanded={!compact}
-            onClick={() => {
-              hideTip()
-              onToggleCollapsed?.()
-            }}
-            className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
-          >
-            {compact
-              ? <Icons.sidebarSecondaryExpand className="h-5 w-5 rtl:-scale-x-100" aria-hidden />
-              : <Icons.sidebarSecondaryCollapse className="h-5 w-5 rtl:-scale-x-100" aria-hidden />}
-          </Button>
-        )}
-        {variant === 'secondary' && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label={t('nav.deck.close', 'Close panel')}
+            aria-label={t('nav.sidenav.hidePanel', 'Hide panel')}
             title={t('nav.deck.close', 'Close panel')}
             onClick={onClose}
             className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
@@ -392,10 +366,9 @@ export function AtlasPanel({
             onChange={event => {
               const next = event.target.value
               setFilterQuery(next)
-              setExpandedGroups(new Set(next.trim() ? collapsibleGroupKeys : activeGroupKey ? [activeGroupKey] : []))
             }}
-            aria-label={t('nav.deck.filterSectionLabel', { section: viewTitle(), defaultValue: 'Filter {{section}} tools' })}
-            placeholder={t('nav.deck.filterSection', { section: viewTitle(), defaultValue: 'Filter {{section}} tools…' })}
+            aria-label={t('nav.sidenav.filterLabel', { section: viewTitle(), defaultValue: 'Filter {{section}} pages' })}
+            placeholder={t('nav.sidenav.filter', { section: viewTitle(), defaultValue: 'Filter {{section}}…' })}
             icon={<Icons.filter className="h-4 w-4" aria-hidden />}
             suffix={filterQuery && (
               <Button
@@ -405,7 +378,6 @@ export function AtlasPanel({
                 aria-label={t('nav.deck.clearFilter', 'Clear filter')}
                 onClick={() => {
                   setFilterQuery('')
-                  setExpandedGroups(new Set(activeGroupKey ? [activeGroupKey] : []))
                 }}
                 className="h-7 w-7 rounded-shape-sm p-0"
               >
@@ -437,6 +409,12 @@ export function AtlasPanel({
             },
           }}
         >
+        {(openSection?.title === 'Home' || view.kind !== 'section') && <div className="mb-3 space-y-1 border-b border-[var(--border-default)] pb-3">
+          {view.kind !== 'section' && <Button variant="ghost" className="w-full justify-start" onClick={() => onHomeViewChange?.(null)}>{t('nav.groups.home', 'Home')}</Button>}
+          <Button variant="ghost" className="w-full justify-between" onClick={() => onHomeViewChange?.({ kind: 'suggested' })}><span>{t('nav.deck.suggested', 'Suggested')}</span><span>{safeSuggestions.length}</span></Button>
+          <Button variant="ghost" className="w-full justify-between" onClick={() => onHomeViewChange?.({ kind: 'favorites' })}><span>{t('nav.deck.saved', 'Saved')}</span><span>{safePinnedItems.length}</span></Button>
+          <PrefetchNavLink to="/explore" onClick={onItemSelect} className="flex min-h-11 items-center justify-between px-3 text-sm"><span>{t('nav.deck.allPages', 'All pages')}</span><span>{new Set(safeSections.flatMap(section => flattenSidebarItems(section.items, safeCollections).map(item => item.to))).size}</span></PrefetchNavLink>
+        </div>}
         {view.kind === 'suggested' && (
           <div className="space-y-3">
             {safeSuggestions.length === 0 && visibleRecent.length === 0 && (
@@ -590,7 +568,7 @@ export function AtlasPanel({
                       : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
                     <Icons.pin className="h-4 w-4 shrink-0" aria-hidden />
                     <span className={cn('min-w-0 flex-1 truncate text-start', typography.role.label)}>
-                      {t('nav.deck.quickAccessPins', 'Quick access pins')}
+                      {t('nav.sidenav.pinned', 'Pinned')}
                     </span>
                     <span aria-hidden className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 tabular-nums', typography.size.xs, typography.weight.medium, typography.color.secondary)}>
                       {quickPins.length}
@@ -634,9 +612,13 @@ export function AtlasPanel({
                 </div>
               </div>
             )}
+            {safeRecentItems.some(item => sectionPaths.has(item.to) && (!filtering || matchingPaths.has(item.to))) && <div className="pb-3">
+              <NavSectionHeader label={t('nav.sidenav.recent', 'Recent')} />
+              {safeRecentItems.filter(item => sectionPaths.has(item.to) && (!filtering || matchingPaths.has(item.to))).map(item => <SidebarRow key={'section-recent-' + item.to} to={item.to} label={navLabel(item)} icon={item.icon} active={itemIsActive(item.to)} onSelect={onItemSelect} hoverAction={pinActionFor(item, navLabel(item))} />)}
+            </div>}
             {filtering && visibleGroups.length === 0 && (
               <p role="status" className="px-2 py-4 text-sm text-[var(--text-muted)]">
-                {t('nav.deck.noFilterResults', { query: filterQuery.trim(), defaultValue: 'No tools match "{{query}}".' })}
+                {t('nav.sidenav.noMatches', { query: filterQuery.trim(), defaultValue: 'No pages match "{{query}}".' })}
               </p>
             )}
             {visibleGroups.map((group, index) => (
@@ -646,7 +628,7 @@ export function AtlasPanel({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-expanded={expandedGroups.has(group.groupKey)}
+                    aria-expanded={groupExpanded(group.groupKey)}
                     aria-controls={`${groupListId}-${index}`}
                     aria-label={group.labelKey ? t(group.labelKey, group.label) : group.label}
                     {...(compact ? tipHandlers(group.labelKey ? t(group.labelKey, group.label) : group.label) : {})}
@@ -656,7 +638,7 @@ export function AtlasPanel({
                       compact ? 'mx-auto flex w-11 justify-center p-0' : cn('w-full justify-start gap-2 px-2', typography.size.sm, typography.weight.medium),
                     )}
                   >
-                    {expandedGroups.has(group.groupKey)
+                    {groupExpanded(group.groupKey)
                       ? <Icons.expand className="h-4 w-4 shrink-0" aria-hidden />
                       : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
                     {!compact && (
@@ -673,7 +655,7 @@ export function AtlasPanel({
                 )}
                 <div
                   id={group.label ? `${groupListId}-${index}` : undefined}
-                  hidden={Boolean(group.label && !expandedGroups.has(group.groupKey))}
+                  hidden={Boolean(group.label && !groupExpanded(group.groupKey))}
                   className="space-y-px"
                 >
                   {group.entries.map(entry => (

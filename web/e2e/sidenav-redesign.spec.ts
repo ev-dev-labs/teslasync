@@ -1,0 +1,62 @@
+import { expect, test } from '@playwright/test'
+import { seedBrowserState, installApiMocks, waitForHarnessReady } from './mockApi'
+
+for (const theme of ['dark', 'light'] as const) for (const width of [375, 768, 1280, 1920]) {
+  test(`${theme} ${width} navigation gallery and reload`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await seedBrowserState(page, theme, '/')
+    const api = await installApiMocks(page, 'populated', theme)
+    await page.goto('/')
+    await waitForHarnessReady(page, api)
+    const shot = (name: string) => page.screenshot({ path: `../docs/sidenav-redesign/${theme}-${width}-${name}.png`, animations: 'disabled' })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1)
+    if (width < 768) {
+      const tabs = page.getByRole('navigation', { name: 'Quick navigation' })
+      await expect(tabs.getByRole('button')).toHaveCount(5)
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await shot('phone-tabs')
+      await tabs.getByRole('button', { name: 'More', exact: true }).click()
+      await expect(page.getByRole('dialog')).toBeVisible()
+      await shot('more-sheet')
+      await page.getByRole('dialog').getByRole('button', { name: 'Battery', exact: true }).click()
+      await expect(page.getByRole('dialog').getByRole('searchbox')).toBeVisible()
+      await shot('section-sheet')
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await page.reload(); await waitForHarnessReady(page, api)
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(tabs.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'true')
+    } else {
+      const rail = page.getByTestId('command-deck-rail')
+      await expect(rail).toBeVisible()
+      expect((await rail.boundingBox())!.width).toBe(76)
+      if (width < 1280) {
+        await expect(page.getByRole('dialog')).toBeVisible()
+        expect((await page.getByRole('dialog').boundingBox())!.x).toBe(76)
+        await shot('tablet-drawer')
+        await page.keyboard.press('Escape')
+        await expect(page.getByRole('dialog')).toHaveCount(0)
+        await shot('rail-collapsed')
+        await rail.getByRole('button', { name: 'Battery', exact: true }).click()
+        await expect(page.getByRole('dialog').getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Battery…')
+      } else {
+        const panel = page.getByTestId('command-deck-secondary')
+        expect((await panel.boundingBox())!.width).toBe(272)
+        await shot('panel-open')
+        await rail.getByRole('button', { name: 'Battery', exact: true }).click()
+        await expect(panel.getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Battery…')
+        await page.reload(); await waitForHarnessReady(page, api)
+        await expect(rail.getByRole('button', { name: 'Battery', exact: true })).toHaveAttribute('aria-current', 'true')
+        await expect(panel.getByRole('searchbox')).toHaveAttribute('placeholder', 'Filter Battery…')
+        await panel.getByRole('button', { name: 'Hide panel', exact: true }).click()
+        await shot('rail-collapsed')
+        await page.reload(); await waitForHarnessReady(page, api)
+        await expect(panel).toHaveCount(0)
+        await rail.getByRole('button', { name: 'Battery', exact: true }).click()
+      }
+      await page.getByTestId('rail-scroll').evaluate(element => { element.scrollTop = 300 })
+      await expect(page.getByTestId('rail-fade-top')).toHaveAttribute('data-visible', 'true')
+      await shot('rail-scrolled')
+    }
+  })
+}

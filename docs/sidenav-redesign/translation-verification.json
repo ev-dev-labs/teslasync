@@ -1,0 +1,32 @@
+[
+  {
+    "file": "web/src/components/layout/Layout.tsx",
+    "calls": 14,
+    "errors": []
+  },
+  {
+    "file": "web/src/components/layout/BottomTabBar.tsx",
+    "calls": 6,
+    "errors": []
+  },
+  {
+    "file": "web/src/components/layout/sidebar/CommandDeck.tsx",
+    "calls": 1,
+    "errors": []
+  },
+  {
+    "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
+    "calls": 50,
+    "errors": []
+  },
+  {
+    "file": "web/src/components/layout/sidebar/SectionRail.tsx",
+    "calls": 11,
+    "errors": []
+  },
+  {
+    "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
+    "calls": 68,
+    "errors": []
+  }
+]

@@ -456,7 +456,7 @@ select option:checked {
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 768px) {
   :root {
     --shell-tab-bar-height: 0px;
     --shell-status-bar-row: 1.75rem;

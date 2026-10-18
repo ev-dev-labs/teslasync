@@ -1,328 +1,114 @@
-/**
- * SectionRail
- * ───────────
- * The primary column of the Command Deck: every parent group in one
- * scrolling list — hub shortcuts (Suggested, Saved, All pages)
- * pinned above the section groups, utility links plus the collapse
- * toggle pinned below.
- *
- * Collapses to icons-only (persisted by the host): labels unmount, the
- * accessible names stay full, and sighted users get an instant label
- * flyout on hover/focus (native `title` is too slow to scan by).
- * Desktop renders it in-flow at rail width; mobile renders it full
- * drawer width as the drill-in root (always expanded there).
- */
-
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PrefetchNavLink } from '../PrefetchLink'
 import { Button } from '@/components/ui/runtime'
+import { Tooltip } from '@/components/ui/Tooltip'
+import { Avatar } from '@/components/data-display/Avatar'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
-import { typography } from '@/lib/tokens'
-import type { SidebarSectionInput } from '../sectionGroups'
-import type { SectionGroup } from '../sectionGroups'
-import { flattenSidebarItems } from './collections'
-import { SIDEBAR_SECTION_ICONS, SIDEBAR_SHORTCUT_ICONS } from './sidebarIcons'
-import { SidebarFlyout, useSidebarFlyout } from './SidebarFlyout'
+import { PrefetchNavLink } from '../PrefetchLink'
+import type { SidebarSectionInput, SectionGroup } from '../sectionGroups'
+import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
 import type { DeckSelection } from './CommandDeck'
 
 export interface SectionRailProps {
-  collapsed: boolean
-  onToggleCollapsed: () => void
-  showCollapseControl?: boolean
-  /** Current secondary-panel selection, or null when it is closed. */
-  selection: DeckSelection | null
-  panelOpen?: boolean
-  onSelect: (selection: DeckSelection) => void
-  onItemSelect?: () => void
-  /** Ref sink so the deck can return focus here when the panel closes. */
-  itemRef?: (key: string, el: HTMLButtonElement | null) => void
   sections: SidebarSectionInput[]
-  collections?: readonly SectionGroup[]
+  selection: DeckSelection | null
+  onSelect: (selection: DeckSelection) => void
+  navLabel?: (item: { label: string; labelKey: string }) => string
   navSectionTitle: (section: { title: string; titleKey?: string }) => string
-  suggestedCount: number
-  favoritesCount: number
+  panelOpen?: boolean
   alertCount: number
+  appearanceControl?: ReactNode
+  onItemSelect?: () => void
+  itemRef?: (key: string, el: HTMLButtonElement | null) => void
+  // Retained for callers of the shared rail API.
+  collapsed?: boolean
+  onToggleCollapsed?: () => void
+  showCollapseControl?: boolean
+  collections?: readonly SectionGroup[]
+  suggestedCount?: number
+  favoritesCount?: number
 }
-
-export function selectionKey(selection: DeckSelection): string {
+export function selectionKey(selection: DeckSelection) {
   return selection.kind === 'section' ? `section:${selection.title}` : selection.kind
 }
-
-function RailBadge({ value, label }: { value: number; label: string }) {
-  if (value <= 0) return null
-  return (
-    <span
-      aria-label={label}
-      className={cn('inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--surface-2)] px-1 tabular-nums', typography.role.label, typography.color.secondary)}
-    >
-      {value > 99 ? '99+' : value}
-    </span>
-  )
-}
-
-interface RailButtonProps {
-  icon: typeof Icons.home
-  label: string
-  countLabel?: string
-  active: boolean
-  expanded?: boolean
-  collapsed: boolean
-  onClick: () => void
-  badge?: React.ReactNode
-  buttonRef?: (el: HTMLButtonElement | null) => void
-  /** Secondary flyout line when collapsed; falls back to `countLabel`. */
-  tipContext?: string
-  onShowTip?: (anchor: HTMLElement, label: string, context?: string) => void
-  onHideTip?: () => void
-}
-
-function RailButton({
-  icon: Icon,
-  label,
-  countLabel,
-  active,
-  expanded,
-  collapsed,
-  onClick,
-  badge,
-  buttonRef,
-  tipContext,
-  onShowTip,
-  onHideTip,
-}: RailButtonProps) {
-  const tipDetail = tipContext ?? countLabel
-  const handleTipShow = (e: React.SyntheticEvent<HTMLButtonElement>) => {
-    onShowTip?.(e.currentTarget, label, tipDetail)
-  }
-  return (
-    <Button
-      ref={buttonRef}
-      type="button"
-      variant="ghost"
-      size="sm"
-      onClick={onClick}
-      onMouseEnter={collapsed ? handleTipShow : undefined}
-      onMouseLeave={collapsed ? onHideTip : undefined}
-      onFocus={collapsed ? handleTipShow : undefined}
-      onBlur={collapsed ? onHideTip : undefined}
-      aria-label={countLabel ? `${label}, ${countLabel}` : label}
-      aria-pressed={active}
-      aria-expanded={expanded}
-      className={cn(
-        'h-auto min-h-11 w-full gap-2.5 rounded-shape-md border border-transparent px-2.5 py-2',
-        typography.size.sm,
-        collapsed ? 'justify-center px-1' : 'justify-start',
-        active
-          ? cn('border-[var(--border-default)] bg-[var(--nav-active-bg)]', typography.weight.semibold, typography.color.primary)
-          : cn(typography.weight.regular, typography.color.secondary, 'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'),
-      )}
-    >
-      <span className="relative inline-flex shrink-0">
-        <Icon className={cn(collapsed ? 'h-6 w-6' : 'h-5 w-5', active ? typography.color.primary : typography.color.muted)} aria-hidden />
-        {collapsed && badge && (
-          <span className="absolute -end-2 -top-2">{badge}</span>
-        )}
-      </span>
-      {!collapsed && (
-        <>
-          <span className="min-w-0 flex-1 break-words text-start leading-snug">{label}</span>
-          {badge}
-          {expanded && <Icons.next className={cn('h-4 w-4 shrink-0 rtl:rotate-180', typography.color.primary)} aria-hidden />}
-        </>
-      )}
-    </Button>
-  )
-}
-
-export function SectionRail({
-  collapsed,
-  onToggleCollapsed,
-  showCollapseControl = true,
-  selection,
-  panelOpen = false,
-  onSelect,
-  onItemSelect,
-  itemRef,
-  sections,
-  collections = [],
-  navSectionTitle,
-  suggestedCount,
-  favoritesCount,
-  alertCount,
-}: SectionRailProps) {
+export function SectionRail({ sections, selection, onSelect, navSectionTitle, navLabel, panelOpen, alertCount, appearanceControl, onItemSelect, itemRef }: SectionRailProps) {
   const { t } = useTranslation()
-  const safeSections = sections ?? []
-  const safeCollections = collections ?? []
-  const isActive = (key: string) => selection !== null && selectionKey(selection) === key
-
-  const { rootRef, tip, showTip, hideTip, tipHandlers } = useSidebarFlyout()
-
-  return (
-    <div
-      ref={rootRef}
-      role="navigation"
-      aria-label={t('nav.deck.groups', 'Sections and shortcuts')}
-      onMouseLeave={hideTip}
-      className="relative flex h-full min-h-0 w-full flex-col bg-[var(--nav-rail-bg)]"
-    >
-      <div
-        onScroll={hideTip}
-        className="min-h-0 flex-1 space-y-px overflow-y-auto overscroll-contain px-1.5 py-2 scrollbar-thin"
-      >
-        <RailButton
-          icon={SIDEBAR_SHORTCUT_ICONS.suggested}
-          label={t('nav.deck.suggested', 'Suggested')}
-          active={isActive('suggested')}
-          collapsed={collapsed}
-          onClick={() => onSelect({ kind: 'suggested' })}
-          buttonRef={el => itemRef?.('suggested', el)}
-          tipContext={suggestedCount > 0 ? t('nav.deck.suggestedCount', { count: suggestedCount, defaultValue: '{{count}} suggestions' }) : undefined}
-          onShowTip={showTip}
-          onHideTip={hideTip}
-          badge={(
-            <RailBadge
-              value={suggestedCount}
-              label={t('nav.deck.suggestedCount', { count: suggestedCount, defaultValue: '{{count}} suggestions' })}
-            />
-          )}
-        />
-        <RailButton
-          icon={SIDEBAR_SHORTCUT_ICONS.saved}
-          label={t('nav.deck.saved', 'Saved')}
-          active={isActive('favorites')}
-          collapsed={collapsed}
-          onClick={() => onSelect({ kind: 'favorites' })}
-          buttonRef={el => itemRef?.('favorites', el)}
-          tipContext={favoritesCount > 0 ? t('nav.deck.favoritesCount', { count: favoritesCount, defaultValue: '{{count}} pinned pages' }) : undefined}
-          onShowTip={showTip}
-          onHideTip={hideTip}
-          badge={(
-            <RailBadge
-              value={favoritesCount}
-              label={t('nav.deck.favoritesCount', { count: favoritesCount, defaultValue: '{{count}} pinned pages' })}
-            />
-          )}
-        />
-
-        <PrefetchNavLink
-          to="/explore"
-          onClick={onItemSelect}
-          aria-label={t('nav.deck.allPages', 'All pages')}
-          {...(collapsed ? tipHandlers(t('nav.deck.allPages', 'All pages')) : {})}
-          className={cn(
-            'flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 py-2 transition-colors duration-fast ease-standard motion-reduce:transition-none',
-            typography.role.bodySm, typography.weight.regular,
-            collapsed && 'justify-center px-1',
-            'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
-          )}
-        >
-          <SIDEBAR_SHORTCUT_ICONS.allPages className={cn(collapsed ? 'h-6 w-6 shrink-0' : 'h-5 w-5 shrink-0', 'text-[var(--text-muted)]')} aria-hidden />
-          {!collapsed && (
-            <span className="min-w-0 flex-1 break-words text-start leading-snug">{t('nav.deck.allPages', 'All pages')}</span>
-          )}
-        </PrefetchNavLink>
-
-        <div aria-hidden className="mx-2 py-1.5">
-          <div className="border-t border-[var(--border-default)]" />
-        </div>
-
-        {safeSections.map(section => {
-          const count = flattenSidebarItems(section.items, safeCollections).length
-          if (count === 0) return null
-          const key = `section:${section.title}`
-          const SectionIcon = SIDEBAR_SECTION_ICONS[section.title] ?? section.items[0]?.icon ?? Icons.home
-          return (
-            <RailButton
-              key={section.title}
-              icon={SectionIcon}
-              label={navSectionTitle(section)}
-              countLabel={t('nav.deck.pageCount', { count, defaultValue: '{{count}} pages' })}
-              active={isActive(key)}
-              expanded={panelOpen && isActive(key)}
-              collapsed={collapsed}
-              onClick={() => onSelect({ kind: 'section', title: section.title })}
-              buttonRef={el => itemRef?.(key, el)}
-              onShowTip={showTip}
-              onHideTip={hideTip}
-            />
-          )
+  const shortLabels: Record<string, string> = {
+    'Advanced intelligence': t('nav.sidenav.shortAdvanced', 'Advanced'),
+    'Ownership intelligence': t('nav.sidenav.shortOwnership', 'Ownership'),
+    'Tesla physics': t('nav.sidenav.shortPhysics', 'Physics'),
+    Notifications: t('nav.sidenav.shortAlerts', 'Alerts'),
+    Integrations: t('nav.sidenav.shortConnect', 'Connect'),
+  }
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const buttons = useRef<Array<HTMLButtonElement | null>>([])
+  const selected = selection?.kind === 'section' ? selection.title : 'Home'
+  const [focusTitle, setFocusTitle] = useState(selected)
+  const [fades, setFades] = useState({ top: false, bottom: false })
+  useEffect(() => {
+    setFocusTitle(selected)
+    buttons.current[sections.findIndex(s => s.title === selected)]?.scrollIntoView?.({ block: 'nearest' })
+  }, [selected, sections])
+  useEffect(() => {
+    const element = scrollRef.current
+    if (!element) return
+    const update = () => setFades({ top: element.scrollTop > 1, bottom: element.scrollTop + element.clientHeight < element.scrollHeight - 2 })
+    update()
+    element.addEventListener('scroll', update, { passive: true })
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update)
+    observer?.observe(element)
+    return () => { observer?.disconnect(); element.removeEventListener('scroll', update) }
+  }, [sections])
+  return <div className="sidenav-rail" aria-label={t('nav.deck.groups', 'Sections and shortcuts')}>
+    <div className="sidenav-brand" aria-hidden="true"><Icons.charging className="h-6 w-6" /></div>
+    <div className="sidenav-scroll-wrap">
+      <div ref={scrollRef} data-testid="rail-scroll" className="sidenav-rail-scroll">
+        {sections.map((section, index) => {
+          const label = navSectionTitle(section)
+          const short = shortLabels[section.title]
+          const Icon = SIDEBAR_SECTION_ICONS[section.title] ?? section.items[0]?.icon ?? Icons.home
+          return <Tooltip key={section.title} content={label} side="right">
+            <Button ref={element => { buttons.current[index] = element; itemRef?.(`section:${section.title}`, element) }}
+              type="button" variant="ghost" aria-label={label} aria-current={selected === section.title ? 'true' : undefined}
+              aria-expanded={selected === section.title && panelOpen} tabIndex={focusTitle === section.title ? 0 : -1}
+              className={cn('sidenav-rail-item', selected === section.title && 'is-selected')}
+              onFocus={() => setFocusTitle(section.title)}
+              onKeyDown={event => {
+                const next = event.key === 'Home' ? 0 : event.key === 'End' ? sections.length - 1
+                  : event.key === 'ArrowDown' ? (index + 1) % sections.length
+                  : event.key === 'ArrowUp' ? (index - 1 + sections.length) % sections.length : -1
+                if (next < 0) return
+                event.preventDefault()
+                buttons.current[next]?.focus()
+                buttons.current[next]?.scrollIntoView?.({ block: 'nearest' })
+              }} onClick={() => onSelect({ kind: 'section', title: section.title })}>
+              <span className="sidenav-icon"><Icon className="h-5 w-5" aria-hidden /></span>
+              <span className="sidenav-short-label">{short ?? label}</span>
+            </Button>
+          </Tooltip>
         })}
       </div>
-
-      <div className="shrink-0 border-t border-[var(--border-default)] px-1.5 py-1.5">
-        <div className="flex flex-col gap-0.5">
-          <PrefetchNavLink
-            to="/notifications/inbox"
-            onClick={onItemSelect}
-            aria-label={t('nav.deck.alerts', 'Alerts')}
-            {...(collapsed ? tipHandlers(
-              t('nav.deck.alerts', 'Alerts'),
-              alertCount > 0 ? t('nav.deck.alertCount', { count: alertCount, defaultValue: '{{count}} unread alerts' }) : undefined,
-            ) : {})}
-            className={cn(
-              'relative flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 py-2 transition-colors duration-fast ease-standard motion-reduce:transition-none',
-              typography.role.bodySm,
-              collapsed && 'justify-center px-1',
-              'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
-            )}
-          >
-            <SIDEBAR_SHORTCUT_ICONS.alerts className={collapsed ? 'h-6 w-6' : 'h-5 w-5'} aria-hidden />
-            {!collapsed && <span className="min-w-0 flex-1 break-words text-start">{t('nav.deck.alerts', 'Alerts')}</span>}
-            {alertCount > 0 && (
-              <span className={collapsed ? 'absolute -end-0.5 top-0' : 'shrink-0'}>
-                <RailBadge value={alertCount} label={t('nav.deck.alertCount', { count: alertCount, defaultValue: '{{count}} unread alerts' })} />
-              </span>
-            )}
-          </PrefetchNavLink>
-          <PrefetchNavLink
-            to="/settings#appearance"
-            onClick={onItemSelect}
-            aria-label={t('nav.deck.display', 'Display')}
-            {...(collapsed ? tipHandlers(t('nav.deck.display', 'Display')) : {})}
-            className={cn(
-              'flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 py-2 transition-colors duration-fast ease-standard motion-reduce:transition-none',
-              typography.role.bodySm,
-              collapsed && 'justify-center px-1',
-              'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
-            )}
-          >
-            <SIDEBAR_SHORTCUT_ICONS.display className={collapsed ? 'h-6 w-6' : 'h-5 w-5'} aria-hidden />
-            {!collapsed && <span className="min-w-0 flex-1 break-words text-start">{t('nav.deck.display', 'Display')}</span>}
-          </PrefetchNavLink>
-        </div>
-        {showCollapseControl && <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            // The label flips with the state — dismiss the stale flyout.
-            hideTip()
-            onToggleCollapsed()
-          }}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? t('nav.deck.expand', 'Expand sidebar') : t('nav.deck.collapse', 'Collapse sidebar')}
-          title={collapsed ? t('nav.deck.expand', 'Expand sidebar') : t('nav.deck.collapse', 'Collapse sidebar')}
-          {...tipHandlers(collapsed ? t('nav.deck.expand', 'Expand sidebar') : t('nav.deck.collapse', 'Collapse sidebar'))}
-          className={cn(
-            'mt-1 h-auto min-h-11 w-full gap-2.5 rounded-shape-md py-2 hover:text-[var(--text-primary)]',
-            typography.size.sm, typography.color.muted,
-            collapsed ? 'justify-center p-0' : 'justify-start px-2.5',
-          )}
-        >
-          {collapsed
-            ? <Icons.sidebarPrimaryExpand className="h-5 w-5 shrink-0 rtl:-scale-x-100" aria-hidden />
-            : <Icons.sidebarPrimaryCollapse className="h-5 w-5 shrink-0 rtl:-scale-x-100" aria-hidden />}
-          {!collapsed && <span className="min-w-0 break-words text-start">{t('nav.deck.collapseShort', 'Collapse')}</span>}
-        </Button>}
-      </div>
-
-      <SidebarFlyout tip={tip} testId="rail-tip" />
+      <div aria-hidden data-testid="rail-fade-top" data-visible={fades.top} className="sidenav-fade sidenav-fade-top" />
+      <div aria-hidden data-testid="rail-fade-bottom" data-visible={fades.bottom} className="sidenav-fade sidenav-fade-bottom" />
     </div>
-  )
+    <div className="sidenav-utilities">
+      <Tooltip content={t('nav.deck.alerts', 'Alerts')} side="right">
+        <PrefetchNavLink to="/notifications/inbox" onClick={onItemSelect} className="sidenav-utility" aria-label={t('nav.deck.alerts', 'Alerts')}>
+          <Icons.notificationsActive className="h-5 w-5" aria-hidden />
+          {alertCount > 0 && <span className="sidenav-alert-count">{alertCount > 99 ? '99+' : alertCount}</span>}
+        </PrefetchNavLink>
+      </Tooltip>
+      <Tooltip content={t('nav.deck.display', 'Display')} side="right">
+        <div className="sidenav-utility">{appearanceControl ?? <PrefetchNavLink to="/settings#appearance" aria-label={t('nav.deck.display', 'Display')}><Icons.palette className="h-5 w-5" aria-hidden /></PrefetchNavLink>}</div>
+      </Tooltip>
+      <details className="sidenav-account">
+        <summary className="sidenav-utility" aria-label={t('nav.groups.account', 'Account')}><Avatar size="sm" /></summary>
+        <div className="sidenav-account-menu">
+          {(sections.find(section => section.title === 'Account')?.items ?? []).map(item => <PrefetchNavLink key={item.to} to={item.to} onClick={onItemSelect} className="sidenav-account-link">{navLabel?.(item) ?? item.label}</PrefetchNavLink>)}
+        </div>
+      </details>
+    </div>
+  </div>
 }
-
 export default SectionRail
