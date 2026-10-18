@@ -50,6 +50,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const id = useId()
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [query, setQuery] = useState('')
+  const [filterClosed, setFilterClosed] = useState<Set<string>>(() => new Set())
   const viewKey = view.kind === 'section' ? `section:${view.title}` : view.kind
   const section = view.kind === 'section' ? sections.find(candidate => candidate.title === view.title) : null
   const title = view.kind === 'suggested' ? t('nav.suggested', 'Suggested')
@@ -61,11 +62,14 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
   const sectionPaths = new Set(groups.flatMap(group => group.entries.map(item => item.to)))
   const filtering = query.trim().length > 0
   const matches = new Set(section && filtering ? searchSidebarSections([section], collections, query, navLabel, { matchSectionTitle: false }).flatMap(result => result.hits.map(item => item.to)) : [])
-  const visibleGroups = groups.map(group => ({ ...group, entries: !filtering || (group.label && matchesSidebarTokens(`${group.label} ${group.labelKey ? t(group.labelKey, group.label) : ''}`.toLowerCase(), tokenizeSidebarQuery(query))) ? group.entries : group.entries.filter(item => matches.has(item.to)) })).filter(group => group.entries.length > 0)
+  const visibleGroups = groups.map(group => ({ ...group, groupKey: group.entries[0].to, entries: !filtering || (group.label && matchesSidebarTokens(`${group.label} ${group.labelKey ? t(group.labelKey, group.label) : ''}`.toLowerCase(), tokenizeSidebarQuery(query))) ? group.entries : group.entries.filter(item => matches.has(item.to)) })).filter(group => group.entries.length > 0)
   const pins = pinnedItems.filter(item => sectionPaths.has(item.to) && !isActive(item.to) && (!filtering || matches.has(item.to)))
   const recent = recentItems.filter(item => sectionPaths.has(item.to) && !pinned.has(item.to) && (!filtering || matches.has(item.to)))
-  const isOpen = (key: string) => filtering || !collapsed[viewKey + ':' + key]
-  const toggle = (key: string) => setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: !previous[viewKey + ':' + key] }))
+  const isOpen = (key: string) => filtering ? !filterClosed.has(key) : !collapsed[viewKey + ':' + key]
+  const toggle = (key: string) => {
+    if (filtering) setFilterClosed(previous => { const next = new Set(previous); if (next.has(key)) next.delete(key); else next.add(key); return next })
+    else setCollapsed(previous => ({ ...previous, [viewKey + ':' + key]: !previous[viewKey + ':' + key] }))
+  }
   useEffect(() => { setQuery('') }, [viewKey])
   useEffect(() => {
     try { localStorage.setItem(GROUP_STORAGE, JSON.stringify(collapsed)) } catch { /* Navigation remains usable with storage disabled. */ }
@@ -103,10 +107,13 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
       <p className="min-w-0 flex-1 truncate px-1 text-sm font-medium">{title}</p>
       {collectionKeys.length > 1 && <IconButton label={anyClosed ? t('nav.deck.expandAllGroups', 'Expand all groups') : t('nav.deck.collapseAllGroups', 'Collapse all groups')}
         icon={anyClosed ? <Icons.expandAll className="h-5 w-5" aria-hidden /> : <Icons.collapseAll className="h-5 w-5" aria-hidden />}
-        onClick={() => setCollapsed(previous => ({ ...previous, ...Object.fromEntries(collectionKeys.map(key => [viewKey + ':' + key, !anyClosed])) }))} className="min-h-11 min-w-11" />}
+        onClick={() => {
+          if (filtering) setFilterClosed(new Set(anyClosed ? [] : collectionKeys))
+          else setCollapsed(previous => ({ ...previous, ...Object.fromEntries(collectionKeys.map(key => [viewKey + ':' + key, !anyClosed])) }))
+        }} className="min-h-11 min-w-11" />}
       <IconButton label={t('nav.sidenav.hidePanel', 'Hide panel')} icon={<Icons.close className="h-4 w-4" aria-hidden />} onClick={onClose} className="min-h-11 min-w-11" />
     </div>
-    {section && <div className="shrink-0 px-3 pt-3"><Input type="search" value={query} onChange={event => setQuery(event.target.value)}
+    {section && <div className="shrink-0 px-3 pt-3"><Input type="search" value={query} onChange={event => { setQuery(event.target.value); setFilterClosed(new Set()) }}
       aria-label={t('nav.sidenav.filterLabel', { section: title, defaultValue: 'Filter {{section}} pages' })}
       placeholder={t('nav.sidenav.filter', { section: title, defaultValue: 'Filter {{section}}…' })} icon={<Icons.filter className="h-4 w-4" aria-hidden />}
       suffix={query ? <IconButton label={t('nav.deck.clearFilter', 'Clear filter')} icon={<Icons.close className="h-4 w-4" aria-hidden />} onClick={() => setQuery('')} /> : undefined} /></div>}
@@ -133,7 +140,7 @@ export function AtlasPanel({ view, onHomeViewChange, onClose, sections = [], pin
         {recent.length > 0 && <div>{groupHeader('recent', t('nav.sidenav.recent', 'Recent'), recent.length)}<div id={`${id}-recent`}>{isOpen('recent') && recent.map(item => row(item, `recent-${item.to}`))}</div></div>}
         {filtering && visibleGroups.length === 0 && pins.length === 0 && recent.length === 0 && <p role="status" className="px-2 py-4 text-sm text-[var(--text-muted)]">{t('nav.sidenav.noMatches', { query: query.trim(), defaultValue: 'No pages match "{{query}}".' })}</p>}
         {visibleGroups.map(group => {
-          const key = group.entries[0].to
+          const key = group.groupKey
           return <div key={key}>
             {group.label && groupHeader(key, group.labelKey ? t(group.labelKey, group.label) : group.label, group.entries.length)}
             <div id={group.label ? `${id}-${key}` : undefined}>{(!group.label || isOpen(key)) && group.entries.map(item => row(item))}</div>
