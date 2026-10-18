@@ -58,7 +58,11 @@ export interface CommandDefinition {
   section: CommandSection
   /** Extra search keywords for fuzzy matching */
   keywords?: string[]
-  /** Optional keyboard shortcut hint (display-only, e.g. "⌘K", "g d") */
+  /**
+   * Optional keyboard shortcut hint (display-only, e.g. "⌘K", "g d").
+   * Mirrored in `commandShortcuts.ts` (startup-safe table for GlobalShortcuts)
+   * — update both; globalShortcuts.test.tsx fails on drift.
+   */
   shortcut?: string
   /** Imperative side effect — invoked when the user picks the entry */
   perform: (ctx: CommandContext) => void | Promise<void>

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GOTO_SHORTCUTS } from '@/hooks/useKeyboardShortcuts'
 import { useShortcut, type ShortcutDefinition } from '@/hooks/useShortcutRegistry'
-import { commandRegistry, type CommandDefinition } from '@/lib/commandRegistry'
+import { COMMAND_SHORTCUTS } from '@/lib/commandShortcuts'
 
 /**
  * Registers global shortcuts.
@@ -71,17 +71,18 @@ export function GlobalShortcuts(): null {
       }),
     )
 
-    const palette: ShortcutDefinition[] = commandRegistry
-      .filter((c): c is CommandDefinition & { shortcut: string } => Boolean(c.shortcut))
-      .map(
-        (c): ShortcutDefinition => ({
-          id: `global.palette.cmd.${c.id}`,
-          keys: [c.shortcut],
-          description: t(c.labelKey, c.labelFallback),
-          group: groupCommands,
-          scope: 'global',
-        }),
-      )
+    // Startup-safe mirror: same entries the registry declares via `shortcut`,
+    // without pinning the whole palette into the boot bundle. Drift-guarded
+    // by globalShortcuts.test.tsx (expectations derive from the registry).
+    const palette: ShortcutDefinition[] = COMMAND_SHORTCUTS.map(
+      (c): ShortcutDefinition => ({
+        id: `global.palette.cmd.${c.id}`,
+        keys: [c.shortcut],
+        description: t(c.labelKey, c.labelFallback),
+        group: groupCommands,
+        scope: 'global',
+      }),
+    )
 
     return [...universals, ...navigation, ...palette]
   }, [t])
