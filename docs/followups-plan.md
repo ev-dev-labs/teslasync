@@ -406,8 +406,52 @@ Counts per class (284 total):
 
 ## Results
 
-TBD.
+Step 7 final gates (branch tip `b9caf3a1af` + this doc commit):
+- Full suite alone: **57,050 passed / 24 failed / 4 skipped**, 7 red files.
+  The 24 reconcile exactly with the known blocked/by-design inventory
+  (E1–E9: 9, C1–C7: 7, A4: 4, D1/F1/F2/G1: 1 each) — zero unexpected reds.
+- tsc clean; `npm run lint` (eslint + all audits + release-identity) green;
+  catalog `--check` green (32,971 keys); `npm run build` green;
+  `go build ./...` + `go test ./...` green (no FAIL/panic);
+  i18n folder 8,123/7 (the 7 are C1–C7).
+- Route-layout guard on 12 main routes
+  (/, /action-center, /explore, /live, /timeline, /vehicles, /drives,
+  /trips, /charging, /battery, /settings, /digital-twin) at
+  375/768/1280/1920: **12/12 passed** (Edge, preview server, GUARD_RUN_ID
+  step7-final). First attempt failed environmentally (preview server died
+  on a truncated pipe — known quirk); clean restart passed.
 
 ## Final summary
 
-TBD.
+What was fixed per item:
+- Security (§1): fixed npm web 4 (sharp, source-map-js, handlebars
+  criticals, serialize-javascript), docs 2, mobile 7→0, desktop 19→0,
+  Go 12→0. Blocked with reasons: tailwind v3→v4 migration, braces/
+  micromatch (no upstream fix), mermaid major, x/crypto GO-2026-5932
+  (uncalled, no fix).
+- Data bugs (§2): all 6 fixed with regression tests (recorded-cost
+  preference + "No rate configured"; all-time skips prior comparison;
+  missing≠zero at 4 sites; non-negative replay ages; "Not enough price
+  data"; 2 decimals under $1).
+- Performance (§3): ticker re-renders only age labels; render-count test
+  + single-timer proof; browser-verified.
+- Flake (§4): JourneyAssurance isolation fixed (20× + shuffle green).
+- Failures (§5): 143 resolved; 24 blocked/by-design (decision list §5).
+- Phase-6 items (§6): 264 already-fixed, 12 fixed here (th06, ctt-s01,
+  ss10, as-05, as-02, privacy-02, tl08, sd-12, tu09, ss-011, sc-f01,
+  ex05), 8 need decisions.
+
+Security before/after: npm web 13→9 (0 critical; rest blocked), docs
+4→2, mobile 7→0, desktop 19→0, Go 12 affecting→0.
+
+Test totals vs baseline: 56,831/168 → **57,050/24** (pass count grew
+with fixed + new regression tests; every remaining red is a recorded
+blocked/by-design item).
+
+Blocked: step-1 upgrades (tailwind, braces/micromatch, mermaid, x/crypto
+advisory); step-5 E1–E9/F1/F2/C1–C7 + by-design A4/D1/G1.
+
+Decision lists: step-5 list (§5: E1–E9 coverage gate, F1 NaN contract,
+F2 isStale≠retained, C1–C7 pin blessing) and step-6 list (§6: 4
+shared-range migrations, charger-label ownership, anomaly structured
+facts, dead Duplicate/Export buttons, insurance "0..60").

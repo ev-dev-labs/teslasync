@@ -130,3 +130,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Fixed+pushed: sc-f01 (SmartCharge Run/Apply live-mode gating via useOperationalMode disable+guard; mutations already requiresLiveMode), ex05 (exports delete failures: not_found->Already deleted + unknown fallback retaining raw reason). Suites 170/170 post-regen; catalog 32971; checkpoints re-pinned via generators; tsc/eslint clean.
 - Classification done: 284 = 264 already-fixed (121 individually verified + 143 bulk-accepted) + 12 fixed-here + 8 needs-decision. 0 excluded (redesign replaced nothing outright; by-design reds live under step 5). Plan section 6 written with counts + 8 plain-language decisions (4 shared-range migrations, ca13 labels, f05 prose, f08 dead buttons, insurance 0..60 phantom).
 - i18n folder 8123/7: the 7 reds are the pre-existing C1-C7 shell byte-pins (blocked, needs owner). Next: step 7 final gates.
+
+## 2026-10-18 10:05 UTC - step 7 COMPLETE; follow-ups done
+- Final gates all green: full suite alone 57050/24/4skip (24 = exactly the known blocked/by-design set, 0 unexpected); tsc, full lint+audits, catalog --check (32971), build, go build/test, i18n 8123/7 (C1-C7) green; route guard 12/12 on 12 main routes x 375/768/1280/1920 (Edge; first attempt hit the known truncated-pipe preview death, clean restart passed).
+- Killed 2 stale preview servers from step-3 verification. Final summary written in plan (Results + Final summary). Baseline 56831/168 -> final 57050/24. Next: PR #198 CI-green loop.
