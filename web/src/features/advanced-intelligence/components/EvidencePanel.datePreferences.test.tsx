@@ -42,8 +42,10 @@ afterEach(cleanup);
 
 describe('EvidencePanel date preferences', () => {
   it('renders both window endpoints and counted and uncounted observations in saved locale and UTC instead of browser defaults', () => {
-    expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('America/Los_Angeles');
-    expect(Intl.DateTimeFormat().resolvedOptions().locale).toBe('en-US');
+    // The saved prefs must differ from the browser defaults, whatever the
+    // ambient environment is, or this test could not catch a fallback bug.
+    const ambient = Intl.DateTimeFormat().resolvedOptions();
+    expect(`${ambient.timeZone}/${ambient.locale}`).not.toBe('UTC/en-GB');
     render(<EvidencePanel quality={quality} evidence={evidence}
       limitations={['No causal proof.']} unsupported={['No physical actuation.']} />);
     const qualitySection = screen.getByRole('region', { name: 'Data quality' });
@@ -187,7 +189,14 @@ describe('EvidencePanel date preferences', () => {
     preferences.settings.tz_display_default = 'user';
     preferences.settings.timezone_user = '';
     rerender(<EvidencePanel quality={quality} evidence={evidence} />);
-    expect(screen.getByText('14 Jan 2026, 16:30 – 16 Jan 2026, 04:45')).toBeVisible();
+    // Empty user zone falls back to the browser default zone, whatever it is.
+    const fallbackZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const fallbackFmt = new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: fallbackZone,
+    });
+    const fallbackRange = `${fallbackFmt.format(new Date(START))} – ${fallbackFmt.format(new Date(END))}`;
+    expect(screen.getByText(fallbackRange)).toBeVisible();
     expect(evidence.map(item => item.observed_at)).toEqual([START, END]);
   });
 

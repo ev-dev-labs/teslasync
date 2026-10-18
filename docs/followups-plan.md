@@ -523,3 +523,21 @@ Fixes (each verified locally under CI conditions before push):
    for chromium; CI chromium is arbiter, 500px/0.1 tolerance).
    Full visual suite locally: 49 passed + 41 by-design skips, 0 failed.
    Note: killed 2 stale node PIDs on :4173 blocking CI-mode rerun.
+5. Performance/perf:check BLOCKED (45-min box): `startup JS = 402.8 KB
+   exceeds budget 400 KB` (entry 270.4 + vendor-react 132.4).
+   Everything else in perf:check passes (precache, shell-closure,
+   i18n-runtime via Chrome probe exit 0, dupes, sourcemaps in private
+   mode). Entry audit: 555 modules, no pages, 14 feature modules all
+   legitimate (12 onboarding host + 2 server gate); biggest mapped
+   modules tailwind-merge/App/Layout/useVehicles/themePresets. No
+   illegitimate leakage found; needs a deliberate >2.8KB startup diet
+   (return pass).
+6. CI Frontend tests CI-only failures (5, all reproduced locally):
+   (a) 3 datePreferences tests hard-coded ambient America/Los_Angeles —
+   dynamic non-collision guards + ambient-computed fallback expectation
+   (same pins; 23/23 under UTC and local TZ). (b) DataTable.tableId
+   30s timeout under CI load — skip files without the `<DataTable`
+   literal before TS-parsing (semantics unchanged) + parsed>0 guard
+   (7.9s→0.8s). (c) GDPR refresh-recovery asserted isSuccess
+   synchronously — waitFor settled state (same assertions; 10× green
+   + green under coverage). Merge had already turned shards 2/5/7 green.

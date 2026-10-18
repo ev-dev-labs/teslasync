@@ -38,10 +38,15 @@ function* walk(dir: string): Generator<string> {
   }
 }
 
-function findOffenders(): string[] {
+function findOffenders(): { offenders: string[]; parsed: number } {
   const offenders: string[] = []
+  let parsed = 0
   for (const file of walk(ROOT)) {
     const text = readFileSync(file, 'utf8')
+    // A file without the literal `<DataTable` cannot contain a DataTable JSX
+    // element; skip the expensive parse. Semantics unchanged.
+    if (!text.includes('<DataTable')) continue
+    parsed += 1
     const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
     const visit = (node: ts.Node) => {
       if (
@@ -57,12 +62,13 @@ function findOffenders(): string[] {
     }
     visit(source)
   }
-  return offenders
+  return { offenders, parsed }
 }
 
 describe('DataTable tableId coverage', () => {
   it('every <DataTable> under src/features sets a tableId so persistence works', () => {
-    const offenders = findOffenders()
+    const { offenders, parsed } = findOffenders()
+    expect(parsed).toBeGreaterThan(0)
     if (offenders.length > 0) {
       const list = offenders.map((o) => `  ${o}`).join('\n')
       throw new Error(

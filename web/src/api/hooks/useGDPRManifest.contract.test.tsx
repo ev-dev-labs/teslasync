@@ -279,7 +279,10 @@ describe('GDPR manifest contract', () => {
     expect(result.current.data?.sha256).toBe('a'.repeat(64));
     requestMock.mockResolvedValue({ data: { ...manifest, download_count: 2 } });
     await act(async () => { await result.current.refetch(); });
-    expect(result.current.isSuccess).toBe(true);
+    // Under load (CI shard + coverage) the recovery fetch may not have
+    // settled when refetch() resolves; wait for the settled state instead
+    // of asserting it synchronously. Same assertions, no race.
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.error).toBeNull();
     expect(result.current.data?.download_count).toBe(2);
     expect(result.current.data?.storage_kind).toBe('local_fs');

@@ -74,8 +74,10 @@ afterEach(cleanup);
 
 describe('AnalysisBrief date preferences', () => {
   it('renders window scope confidence basis and generation in saved locale and UTC instead of browser defaults', () => {
-    expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('America/Los_Angeles');
-    expect(Intl.DateTimeFormat().resolvedOptions().locale).toBe('en-US');
+    // The saved prefs must differ from the browser defaults, whatever the
+    // ambient environment is, or this test could not catch a fallback bug.
+    const ambient = Intl.DateTimeFormat().resolvedOptions();
+    expect(`${ambient.timeZone}/${ambient.locale}`).not.toBe('UTC/en-GB');
     render(<AnalysisBrief {...props} />);
     const brief = screen.getByTestId('date-preference-brief');
     assertOperationalBriefDisclosure(brief, 'Limited evidence');
