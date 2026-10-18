@@ -50,7 +50,7 @@ function current(): ComponentProps<typeof DrivingSummaryBrief> {
 describe.each(['kpis', 'insights'] as const)('EfficiencyEvidenceBrief %s source status', kind => {
   it('distinguishes active loading, prerequisites and paused initial loads without inventing errors or zeros', () => {
     const view = render(brief({ isLoading: true, fetchStatus: 'fetching' }, kind));
-    expect(current()).toMatchObject({ statusLabel: 'Loading evidence', loading: true, error: null, retained: false });
+    expect(current()).toMatchObject({ statusLabel: 'Loading source', loading: true, error: null, retained: false });
     expect(current().metrics.every(metric => metric.rawValue == null)).toBe(true);
 
     view.rerender(brief({ fetchStatus: 'idle' }, kind));
@@ -81,7 +81,7 @@ describe.each(['kpis', 'insights'] as const)('EfficiencyEvidenceBrief %s source 
     const view = render(brief({ data, isSuccess: true, refetch }, kind));
     const metrics = current().metrics.map(metric => metric.rawValue);
     view.rerender(brief({ data, error: new Error('refresh failed'), refetch }, kind));
-    expect(current()).toMatchObject({ statusLabel: 'Retained evidence', loading: false, error: null, retained: true });
+    expect(current()).toMatchObject({ statusLabel: 'Retained source', loading: false, error: null, retained: true });
     expect(current().metrics.map(metric => metric.rawValue)).toEqual(metrics);
     current().onRetry();
     expect(refetch).toHaveBeenCalledOnce();

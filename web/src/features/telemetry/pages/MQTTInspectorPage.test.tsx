@@ -286,7 +286,7 @@ describe('MQTTInspectorPage — loading state', () => {
       assertOperationalMetricUnavailable(summary, label);
     }
     expectHiddenFieldCount(summary, '4 empty fields are hidden.');
-    assertOperationalBriefDisclosure(summary, 'Loading');
+    assertOperationalBriefDisclosure(summary, 'Loading...');
 
     // No snapshot is not evidence of a disconnected broker.
     expect(screen.getByText('Unknown')).toBeInTheDocument();

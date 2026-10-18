@@ -328,7 +328,7 @@ describe('DriveScorePage', () => {
     expect(periodValue('Total Distance')).toHaveTextContent(/50/);
     expect(periodValue('Total Duration')).not.toHaveTextContent('—');
     expect(periodValue('A+ Drives')).toHaveTextContent('0');
-    expect(screen.queryByRole('meter', { name: 'Overall Score' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: 'Overall score' })).not.toBeInTheDocument();
   });
 
   it.each([undefined, null])('keeps absent physical payload %s unknown', (data) => {
@@ -371,7 +371,7 @@ describe('DriveScorePage', () => {
     fireEvent.click(within(recovery).getByRole('button', { name: 'Retry' }));
     expect(source === 'history' ? refetchMock : scoreRefetchMock).toHaveBeenCalledOnce();
     expect(source === 'history' ? scoreRefetchMock : refetchMock).not.toHaveBeenCalled();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Overall score' })).toBeInTheDocument();
     expect(screen.queryByRole('status', { name: 'Loading drive' })).not.toBeInTheDocument();
     if (source === 'history') {
       expect(screen.getByText('Grade: A')).toBeInTheDocument();
@@ -396,7 +396,7 @@ describe('DriveScorePage', () => {
     h.drives = makeQuery({ isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching' });
     h.score = makeQuery({ isPending: true, isLoading: true, fetchStatus: 'paused', refetch: scoreRefetchMock });
     renderPage();
-    const hero = within(screen.getByRole('region', { name: 'Overall Score' }));
+    const hero = within(screen.getByRole('region', { name: 'Overall score' }));
     expect(hero.getAllByText('Server drive score loading is deferred.')).toHaveLength(2);
     expect(hero.queryByRole('status', { name: 'Loading drive' })).not.toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Drive History' })).getByRole('status', { name: 'Loading drive' })).toBeInTheDocument();
@@ -477,7 +477,7 @@ describe('DriveScorePage', () => {
     // Section landmarks — every band is present (no hidden sections).
     for (const name of [
       'Key metrics',
-      'Overall Score',
+      'Overall score',
       'Category Breakdown',
       'Score Trend',
       'Score Distribution',
@@ -538,7 +538,7 @@ describe('DriveScorePage', () => {
     const placeholder = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
     expect(container.querySelectorAll(placeholder).length).toBeGreaterThan(0);
     for (const [name, heights] of [
-      ['Overall Score', [240, 240]],
+      ['Overall score', [240, 240]],
       ['Category Breakdown', [260, 260, 260]],
       ['Score Trend', [300, 260]],
       ['Score Distribution', [220, 220]],
@@ -754,7 +754,7 @@ describe('DriveScorePage', () => {
 
     expect(screen.getByText('Grade: A')).toBeInTheDocument();
     expect(screen.getByText('Based on 42 drives')).toBeInTheDocument();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '88');
+    expect(screen.getByRole('meter', { name: 'Overall score' })).toHaveAttribute('aria-valuenow', '88');
     expect(screen.getByText('— drives in period')).toBeInTheDocument();
     expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Drive History' })).toBeInTheDocument();
@@ -770,7 +770,7 @@ describe('DriveScorePage', () => {
     const notice = screen.getByTestId('drive-score-server-unavailable');
     expect(notice).toHaveAttribute('role', 'status');
     expect(screen.getByText('First Drive')).toBeInTheDocument();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Overall score' })).toBeInTheDocument();
     fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
     expect(scoreRefetchMock).toHaveBeenCalledOnce();
     expect(refetchMock).not.toHaveBeenCalled();
@@ -780,7 +780,7 @@ describe('DriveScorePage', () => {
     h.drives = makeQuery({ data: [] });
     h.score = makeQuery({ data: undefined, isLoading: true, isFetching: true, refetch: scoreRefetchMock });
     renderPage();
-    const overall = within(screen.getByRole('region', { name: 'Overall Score' }));
+    const overall = within(screen.getByRole('region', { name: 'Overall score' }));
     expect(overall.getAllByRole('status').length).toBeGreaterThanOrEqual(1);
     expect(overall.queryByText('Not enough drives in the selected period to calculate a score.')).not.toBeInTheDocument();
     expect(screen.getByText('No drives found for the selected period.')).toBeInTheDocument();
@@ -814,7 +814,7 @@ describe('DriveScorePage', () => {
       assertOperationalMetricUnavailable(kpis, label);
     }
     expect(screen.getByText('— drives in period')).toBeInTheDocument();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '88');
+    expect(screen.getByRole('meter', { name: 'Overall score' })).toHaveAttribute('aria-valuenow', '88');
   });
 
   it('keeps measured zero scores numeric rather than converting them to unknown', () => {
@@ -824,7 +824,7 @@ describe('DriveScorePage', () => {
       refetch: scoreRefetchMock,
     });
     renderPage();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('meter', { name: 'Overall score' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByRole('meter', { name: 'Efficiency' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByText('Grade: F')).toBeInTheDocument();
     expect(screen.queryByText(/loading is deferred/)).not.toBeInTheDocument();
@@ -837,7 +837,7 @@ describe('DriveScorePage', () => {
       refetch: scoreRefetchMock,
     });
     renderPage();
-    expect(screen.queryByRole('meter', { name: 'Overall Score' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: 'Overall score' })).not.toBeInTheDocument();
     expect(screen.queryByRole('meter', { name: 'Efficiency' })).not.toBeInTheDocument();
     expect(screen.getByText('Tips appear once drives are scored')).toBeInTheDocument();
   });
@@ -850,7 +850,7 @@ describe('DriveScorePage', () => {
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
     expect(screen.getByText('Select a vehicle in the header to load drive score evidence.')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Drive History' })).toBeInTheDocument();
-    expect(screen.queryByRole('meter', { name: 'Overall Score' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter', { name: 'Overall score' })).not.toBeInTheDocument();
   });
 });
 

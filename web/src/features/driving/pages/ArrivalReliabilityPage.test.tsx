@@ -383,14 +383,14 @@ describe('ArrivalReliabilityPage', () => {
     view.rerenderPage();
     expectEverySection();
     expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
-    assertOperationalBriefDisclosure(screen.getByTestId('arrival-kpis'), 'Updating…');
+    assertOperationalBriefDisclosure(screen.getByTestId('arrival-kpis'), 'updating…');
     expect(screen.getAllByText('Home → Office').length).toBeGreaterThan(0);
 
     h.history = query({ data });
     view.rerenderPage();
     expectEverySection();
     expect(screen.queryByText('Refresh paused')).toBeNull();
-    expect(screen.queryByText('Updating…')).toBeNull();
+    expect(screen.queryByText('updating…')).toBeNull();
     assertOperationalBriefDisclosure(screen.getByTestId('arrival-kpis'), 'Returned evidence');
   });
 

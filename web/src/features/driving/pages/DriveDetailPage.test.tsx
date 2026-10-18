@@ -397,7 +397,7 @@ describe('DriveDetailPage', () => {
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
     expect(screen.queryByTestId('drive-skeleton')).toBeNull()
     expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive detail' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive details' }))
     expect(refetch).toHaveBeenCalledOnce()
 
     hookState.current = loadedState()
@@ -503,7 +503,7 @@ describe('DriveDetailPage', () => {
 
     expect(screen.getByTestId('drive-skeleton')).toBeInTheDocument()
     // No page chrome or sections while the skeleton owns the screen.
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive details' })).toBeInTheDocument()
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
     expect(screen.getByText('No Overview data is available for this drive.')).toBeInTheDocument()
@@ -517,7 +517,7 @@ describe('DriveDetailPage', () => {
     // raw error.message — status-less errors fall into the network branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
     // The generic title still anchors the page…
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive details' })).toBeInTheDocument()
     // …but the error surface replaces the sections, and the empty state is NOT
     // shown (error takes precedence over the not-found branch).
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
@@ -660,7 +660,7 @@ describe('DriveDetailPage', () => {
     expect(screen.getByTestId('hero-gauges')).toContainElement(screen.getByTestId('route-map'))
     expect(screen.getByTestId('why-ended')).toBeInTheDocument()
     // With no addresses the title falls back to the generic label.
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive details' })).toBeInTheDocument()
   })
 
   it('keeps the numeric panels alive when only raw telemetry rows exist (zero aggregates)', () => {

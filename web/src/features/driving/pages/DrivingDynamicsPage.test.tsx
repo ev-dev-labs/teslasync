@@ -633,7 +633,7 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Driving Dynamics' }),
+      screen.getByRole('heading', { level: 1, name: 'Driving dynamics' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Understand one ride: energy outcome, powertrain evidence, and the signals behind it.'),
@@ -656,7 +656,7 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
 
   it('sets the document title via usePageTitle', () => {
     renderPage();
-    expect(document.title).toContain('Driving Dynamics');
+    expect(document.title).toContain('Driving dynamics');
   });
 
   it('wires the page-owned data hooks with SI/snake_case-correct arguments', () => {
