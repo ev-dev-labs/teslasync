@@ -53,12 +53,22 @@ vi.mock('@/components/charts', () => {
   };
 });
 
+function lastRealCall(mock: { calls: unknown[][] }): unknown {
+  // React dev re-invokes mocked function components with `undefined` props to
+  // sample a component-stack frame when logging a DOM-nesting warning (the
+  // power branch renders `<defs>` without its real SVG ancestor once the chart
+  // is mocked). Those sampler calls carry no props, so select the last call
+  // that actually received props.
+  const real = mock.calls.filter(args => args[0] !== undefined);
+  return real[real.length - 1]![0];
+}
+
 function cardProps(): ChartCardProps {
-  return captured.card.mock.lastCall![0];
+  return lastRealCall(captured.card.mock) as ChartCardProps;
 }
 
 function chartPoints(): TrendPoint[] {
-  return captured.chart.mock.lastCall![0].data;
+  return (lastRealCall(captured.chart.mock) as { data: TrendPoint[] }).data;
 }
 
 const base = { isLoading: false, error: null, onRetry: vi.fn() };

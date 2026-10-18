@@ -154,7 +154,9 @@ describe('Charger Health confirmed presentation contracts', () => {
   it('separates returned, admitted, clean and excluded denominators without changing metrics', () => {
     const { container } = mount(<ChargerHealthStats summary={summary()} state={sourceState()} loading={false} />);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(screen.getByText(/4 scorable sessions/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Charger health metrics details' });
+    expect(within(details).getByText(/4 scorable sessions/)).toBeInTheDocument();
     expect(screen.getByText(/Returned sessions: 7; model-admitted: 5; clean for scoring: 4; excluded before admission: 2/))
       .toBeInTheDocument();
     expect(screen.getByText(/Admitted tapered sessions contribute to usage, not scoring/)).toBeInTheDocument();
@@ -163,7 +165,9 @@ describe('Charger Health confirmed presentation contracts', () => {
   it('localizes grouped denominator counts at the display boundary', () => {
     const data = { ...summary([site({ ratedSessions: 1000 })]), totalSessions: 1200, usableSessions: 1100 };
     mount(<ChargerHealthStats summary={data} state={sourceState()} loading={false} />);
-    expect(screen.getByText(/1\.000 scorable sessions/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Charger health metrics details' });
+    expect(within(details).getByText(/1\.000 scorable sessions/)).toBeInTheDocument();
     expect(screen.getByText(/Returned sessions: 1\.200; model-admitted: 1\.100/)).toBeInTheDocument();
   });
 
@@ -175,6 +179,20 @@ describe('Charger Health confirmed presentation contracts', () => {
       summary={summary([site({ status, hoursLostPerYear: 0 })])}
       state={sourceState()} loading={false}
     />);
+    if (valueState === 'missing') {
+      // Face-value disclosure: unknown tiles are omitted from the face while
+      // the valued site count stays visible; the drawer counts the hidden.
+      for (const id of ['charger-health-underperforming', 'charger-health-time-lost']) {
+        expect(container.querySelector(`[data-operational-metric="${id}"]`)).toBeNull();
+      }
+      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      expect(container.querySelector('[data-operational-metric="charger-health-sites"] [data-operational-value]'))
+        .toHaveTextContent('1');
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const details = screen.getByRole('dialog', { name: 'Charger health metrics details' });
+      expect(within(details).getByText('3 empty fields are hidden.')).toBeInTheDocument();
+      return;
+    }
     for (const id of ['charger-health-underperforming', 'charger-health-time-lost']) {
       const tile = container.querySelector(`[data-operational-metric="${id}"]`);
       expect(tile).toHaveAttribute('data-value-state', valueState);
@@ -313,7 +331,11 @@ describe('Charger Health confirmed presentation contracts', () => {
   it('keeps the existing selected-vehicle query with no added bounds or producer substitution', () => {
     const { container } = mount(<ChargerHealthPage />);
     expect(fixture.sessionsHook).toHaveBeenLastCalledWith('7');
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    const stats = container.querySelector('#charger-health-metrics') as HTMLElement;
+    fireEvent.click(within(stats).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Charger health metrics details' });
+    expect(within(details).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText(/individual stalls and charger faults are not identified/)).toBeInTheDocument();
     expect(chartProps().exportData).toEqual([]);
     expect(screen.getByText('No charging locations recorded yet.')).toBeInTheDocument();

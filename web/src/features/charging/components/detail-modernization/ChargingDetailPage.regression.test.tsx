@@ -162,7 +162,9 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     expect(useVehicle).toHaveBeenCalledWith('7');
     expect(useChargingTelemetryLatest).toHaveBeenCalledWith(7);
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    // Face-value disclosure: seven valued stats on the face, one unknown
+    // stat counted in the drawer.
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
     expect(screen.getAllByRole('figure')).toHaveLength(4);
     for (const owner of ['diagnosis-owner', 'physics-owner', 'ledger-owner'])
       expect(screen.getByTestId(owner)).toHaveTextContent('42');
@@ -175,6 +177,9 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     expect(screen.getByRole('dialog')).toHaveAttribute('data-session-id', '42');
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close share' }));
     expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Key metrics details' });
+    expect(within(details).getByText('1 empty field is hidden.')).toBeInTheDocument();
   });
   it('retains all charts, neighbors and live values after session/telemetry/live refresh failures', () => {
     mockSession(query(session, new Error('session refresh failed')));
@@ -183,23 +188,36 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     mockLive(latest);
     const { container } = mount();
     expect(screen.getAllByRole('figure')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
+    // The telemetry refresh failure warns at both the summary and the curve
+    // section, so all four source warnings stay visible next to retained data.
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(4);
     expect(liveValue('Range Added')).toBe('45.00 km');
-    fireEvent.click(within(screen.getAllByTestId('stale-refresh-warning')[2]!).getByRole('button', { name: 'Refresh' }));
+    const liveWarning = screen.getAllByTestId('stale-refresh-warning')
+      .find(warning => within(warning).queryByText(/Advanced Charging Parameters/));
+    if (!liveWarning) throw new Error('Live refresh warning missing');
+    fireEvent.click(within(liveWarning).getByRole('button', { name: 'Refresh' }));
     expect(latest.refetch).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const refreshDetails = screen.getByRole('dialog', { name: 'Key metrics details' });
+    expect(within(refreshDetails).getByText('1 empty field is hidden.')).toBeInTheDocument();
   });
   it('isolates fatal telemetry failure, retains summaries and retries the actual telemetry source', () => {
     const failed = query<ChargeTelemetryReading[] | undefined>(undefined, new Error('sample source failed'));
     mockTelemetry(failed);
     const { container } = mount();
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
     expect(screen.getAllByRole('figure')).toHaveLength(1);
+    // Every chart section — including the curve section that still renders
+    // its synthesized figure — retries the failed telemetry source.
     const retries = screen.getAllByRole('button', { name: 'Retry' });
-    expect(retries).toHaveLength(3);
+    expect(retries).toHaveLength(4);
     fireEvent.click(retries[0]!);
     expect(failed.refetch).toHaveBeenCalledOnce();
     expect(screen.getByTestId('ledger-owner')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const fatalDetails = screen.getByRole('dialog', { name: 'Key metrics details' });
+    expect(within(fatalDetails).getByText('1 empty field is hidden.')).toBeInTheDocument();
   });
   it.each([true, false])('keeps primary-source outlines for loading=%s without requesting specialists', loading => {
     mockSession(query<ChargingSession | undefined>(undefined, loading ? null : new Error('session failed'), loading));
@@ -232,14 +250,18 @@ describe('real page orchestration with source-isolated specialist/chart doubles'
     mockTelemetry(query([]));
     mockLive(query(null));
     const { container } = mount();
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
     expect(screen.getByText('(estimated)')).toBeInTheDocument();
     expect(screen.getAllByRole('figure')).toHaveLength(1);
-    expect(screen.getByText('No battery level, energy, or range samples were recorded for this session.')).toBeInTheDocument();
+    // Both the curve section and the timeline section disclose the gap.
+    expect(screen.getAllByText('No battery level, energy, or range samples were recorded for this session.')).toHaveLength(2);
     expect(screen.getByText('No battery, cabin, or ambient temperature samples were recorded for this session.')).toBeInTheDocument();
     expect(screen.getByText('No voltage or current samples were recorded for this session.')).toBeInTheDocument();
     expect(screen.getByText('No location recorded for this session.')).toBeInTheDocument();
     expect(screen.getByTestId('bill-owner')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const estimatedDetails = screen.getByRole('dialog', { name: 'Key metrics details' });
+    expect(within(estimatedDetails).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
   it('preserves all four dense plots while omitting only their capped accessible-table payload', () => {
     const rows = Array.from({ length: 2001 }, () => ({ ...reading }));

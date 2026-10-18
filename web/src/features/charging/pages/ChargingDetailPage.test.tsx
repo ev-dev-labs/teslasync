@@ -416,7 +416,11 @@ function namedCard(title: string): HTMLElement {
 
 /** Three distinct original session-distance presentations, not the live rate/total. */
 function assertSessionDistances(expected: string) {
-  expect(cardValue(kpiRegion(), 'Miles Added')).toBe(expected);
+  if (expected === '—') {
+    assertOperationalMetricUnavailable(kpiRegion(), 'Miles Added');
+  } else {
+    expect(cardValue(kpiRegion(), 'Miles Added')).toBe(expected);
+  }
   const progressLabel = within(namedCard('Battery Progress')).getByText('Range Gained');
   expect(progressLabel.closest('p')?.nextElementSibling?.textContent).toBe(expected);
   const summaryLabel = within(namedCard('Charge Summary')).getByText('Miles Added');
@@ -622,7 +626,9 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(cardValue(kpi, 'Energy')).toBe('44.49 kWh');
     expect(cardValue(kpi, 'Total Cost')).toBe('21.80 USD');
     expect(cardValue(kpi, 'Per kWh')).toBe('0.49 USD/kWh');
-    expect(within(kpi).getByText('Vehicle measured 42.62 kWh')).toBeInTheDocument();
+    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Key metrics details' });
+    expect(within(details).getByText('Vehicle measured 42.62 kWh')).toBeInTheDocument();
     // Charge-summary restates vehicle energy, not the Supercharger bill.
     expect(within(namedCard('Battery Progress')).getByText('42.62 kWh')).toBeInTheDocument();
   });
@@ -656,7 +662,9 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(cardValue(kpiRegion(), 'Per kWh')).toBe('0.49 CAD/kWh');
     expect(within(kpiRegion()).queryByText('from settings')).toBeNull();
     expect(cardValue(kpiRegion(), 'Est. Cost')).toBe('$6.00');
-    expect(within(kpiRegion()).getByText('at $0.12/kWh')).toBeInTheDocument();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Key metrics details' });
+    expect(within(details).getByText('at $0.12/kWh')).toBeInTheDocument();
   });
 
   it('renders the five live gauges with SI-converted values and the DC 250 kW ceiling', () => {
@@ -818,10 +826,12 @@ describe('ChargingDetailPage — AC session without telemetry', () => {
     expect(screen.getByText('(estimated)')).toBeInTheDocument();
     // cost_decimal null but energy present → Est. Cost via formatEnergyCost.
     expect(cardValue(kpi, 'Est. Cost')).toBe('$6.00'); // 50 kWh × $0.12
-    expect(within(kpi).getByText('at $0.12/kWh')).toBeInTheDocument();
+    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Key metrics details' });
+    expect(within(details).getByText('at $0.12/kWh')).toBeInTheDocument();
     // Per kWh falls back to the settings rate and is labelled as such.
     expect(cardValue(kpi, 'Per kWh')).toBe('$0.12/kWh');
-    expect(within(kpi).getByText('from settings')).toBeInTheDocument();
+    expect(within(details).getByText('from settings')).toBeInTheDocument();
   });
 
   it('shows a per-panel empty state for each time-axis chart that has no data', () => {

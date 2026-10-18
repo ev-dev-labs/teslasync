@@ -133,6 +133,10 @@ describe('charger resilience page-local modernization', () => {
       ['Informationen zum hypothetischen Szenario', 'A hypothetical, not a prediction:'],
     ];
     const assertHelp = () => {
+      if (screen.queryByRole('dialog') == null) {
+        fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+        expect(screen.getByRole('dialog', { name: 'Charger resilience metrics details' })).toBeInTheDocument();
+      }
       for (const [name, explanation] of help) {
         const trigger = screen.getByRole('button', { name: name! });
         const tooltip = document.getElementById(trigger.getAttribute('aria-describedby')!);
@@ -153,8 +157,9 @@ describe('charger resilience page-local modernization', () => {
     for (const [name] of help) {
       expect(screen.queryByRole('button', { name: name! })).not.toBeInTheDocument();
     }
-    expect(screen.getByText('Resilience Score')).toBeInTheDocument();
-    expect(screen.getByText('Effective Site Count')).toBeInTheDocument();
+    const face = document.getElementById('charger-resilience-metrics')!;
+    expect(within(face).getByText('Resilience Score')).toBeInTheDocument();
+    expect(within(face).getByText('Effective Site Count')).toBeInTheDocument();
     expect(screen.getByText('What If the Top Site Disappeared?')).toBeInTheDocument();
     h.contextualHelp = true;
     rerender(
@@ -182,9 +187,13 @@ describe('charger resilience page-local modernization', () => {
     expect(h.chart?.exportData).toEqual(h.chart?.data);
     const syntheticSite = screen.getAllByText('Unbekannter Standort').find(node => node.closest('li'))?.closest('li');
     expect(syntheticSite).toHaveTextContent('2 sessions');
-    expect(screen.getAllByText(energyAvailable
-      ? 'Unbekannter Standort'
-      : 'Unbekannter Standort — share of sessions, not energy').length).toBeGreaterThan(0);
+    if (energyAvailable) {
+      expect(screen.getAllByText('Unbekannter Standort').length).toBeGreaterThan(0);
+    } else {
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog', { name: 'Charger resilience metrics details' });
+      expect(within(dialog).getAllByText('Unbekannter Standort — share of sessions, not energy').length).toBeGreaterThan(0);
+    }
     expect(screen.getByText('New top site').nextElementSibling).toHaveTextContent('Unknown location');
   });
 
@@ -206,11 +215,15 @@ describe('charger resilience page-local modernization', () => {
     ] };
     const { container } = mountPage();
     expect(screen.getAllByText('Energy denominator unavailable: some sessions have missing or invalid energy measurements.').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Session-based fallback, not energy-weighted; diversification uses the observed site count.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Session-based fallback, not energy-weighted/).length).toBeGreaterThan(0);
     expect(screen.getAllByText('Energy share unavailable')).toHaveLength(2);
     expect(screen.getByText('Sites')).toBeInTheDocument();
     expect(screen.getByText('What If the Top Site Disappeared?')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog', { name: 'Charger resilience metrics details' });
+    expect(within(dialog).getByText('Session-based fallback, not energy-weighted; diversification uses the observed site count.')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3);
+    expect(within(dialog).getByText(/^1 empty fields? (is|are) hidden\.$/)).toBeInTheDocument();
     expect(h.chart?.data?.map(row => row.share)).toEqual([null, null]);
     const chart = screen.getByRole('figure', { name: 'Energy Share by Site' });
     for (const row of within(chart).getAllByRole('row').slice(1)) {
@@ -308,7 +321,11 @@ describe('charger resilience page-local modernization', () => {
     expect(screen.getByText('Sites')).toBeInTheDocument();
     expect(screen.getByText('Not enough data to model a loss scenario yet.')).toBeInTheDocument();
     expect(screen.getAllByText('No charging locations recorded yet.')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog', { name: 'Charger resilience metrics details' });
+    expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
     expect(screen.queryAllByRole('button', { name: 'Retry' })).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));

@@ -434,8 +434,16 @@ describe('PowersharePage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Powershare' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
 
-    // KPI band degrades to "—" placeholders for all four metrics (never blank).
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    // KPI band degrades to the honest unknown form (never blank, never
+    // fabricated values); the loading status lives in the drawer header.
+    const metricsRegion = screen.getByRole('region', { name: 'Powershare metrics' });
+    expect(metricsRegion).toHaveAttribute('aria-busy', 'true');
+    expect(within(metricsRegion).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(metricsRegion.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    fireEvent.click(within(metricsRegion).getByRole('button', { name: 'Review details' }));
+    const loadingDetails = screen.getByRole('dialog', { name: 'Latest raw Powershare telemetry details' });
+    expect(within(loadingDetails).getByText('Loading source measurements')).toBeInTheDocument();
+    expect(within(loadingDetails).getByText('4 empty fields are hidden.')).toBeInTheDocument();
 
     // Three static panel placeholders; each trend owns seven chart-shaped bars.
     const skeleton = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
@@ -479,8 +487,13 @@ describe('PowersharePage', () => {
     fireEvent.click(retries[0]);
     expect(h.queries[POWERSHARE_SIGNALS.power].refetch).toHaveBeenCalledTimes(1);
 
-    // The KPI band still renders its "—" form rather than crashing on error.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    // The KPI band still renders its honest unknown form rather than crashing.
+    const errorRegion = screen.getByRole('region', { name: 'Powershare metrics' });
+    expect(within(errorRegion).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(errorRegion.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    fireEvent.click(within(errorRegion).getByRole('button', { name: 'Review details' }));
+    const errorDetails = screen.getByRole('dialog', { name: 'Latest raw Powershare telemetry details' });
+    expect(within(errorDetails).getByText('4 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('blanks only the stop + snapshot panels on a stop-reason failure (runtime error excludes it)', () => {
@@ -565,9 +578,13 @@ describe('PowersharePage', () => {
       data: [numObs(POWERSHARE_SIGNALS.power, Number.NaN, '2024-05-01T10:02:00Z')],
     });
     renderPage();
-    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
-    expect(kpi.getByText('—')).toBeInTheDocument();
+    const nonFiniteRegion = screen.getByRole('region', { name: 'Powershare metrics' });
+    const kpi = within(nonFiniteRegion);
+    expect(nonFiniteRegion.querySelector('[data-operational-metric="output-power"]')).toBeNull();
     expect(kpi.queryByText('0.00 kW')).not.toBeInTheDocument();
+    fireEvent.click(kpi.getByRole('button', { name: 'Review details' }));
+    const nonFiniteDetails = screen.getByRole('dialog', { name: 'Latest raw Powershare telemetry details' });
+    expect(within(nonFiniteDetails).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText(/No power readings yet/i)).toBeInTheDocument();
   });
 
@@ -581,9 +598,13 @@ describe('PowersharePage', () => {
     const region = screen.getByRole('region', { name: 'Powershare metrics' });
     const kpi = within(region);
     expect(region).toHaveAttribute('aria-busy', 'true');
-    expect(kpi.getByText('Loading source measurements')).toBeInTheDocument();
-    expect(kpi.queryByText('No source measurements')).not.toBeInTheDocument();
-    expect(kpi.getAllByText('—')).toHaveLength(4);
+    expect(kpi.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    fireEvent.click(kpi.getByRole('button', { name: 'Review details' }));
+    const summaryDetails = screen.getByRole('dialog', { name: 'Latest raw Powershare telemetry details' });
+    expect(within(summaryDetails).getByText('Loading source measurements')).toBeInTheDocument();
+    expect(within(summaryDetails).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    expect(within(summaryDetails).queryByText('No source measurements')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Signal Snapshot' })).toBeInTheDocument();
   });
@@ -598,9 +619,11 @@ describe('PowersharePage', () => {
     renderPage();
 
     const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
-    expect(kpi.getByText('Retained source measurements')).toBeInTheDocument();
     expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
     expect(kpi.queryByText('Source measurements available')).not.toBeInTheDocument();
+    fireEvent.click(kpi.getByRole('button', { name: 'Review details' }));
+    const retainedDetails = screen.getByRole('dialog', { name: 'Latest raw Powershare telemetry details' });
+    expect(within(retainedDetails).getByText('Retained source measurements')).toBeInTheDocument();
     const snapshot = within(screen.getByRole('table', { name: 'charging:powershare-signals' }));
     expect(snapshot.getByText('3.25 kW')).toBeInTheDocument();
     expect(snapshot.getByText('5.50 h')).toBeInTheDocument();
@@ -621,10 +644,13 @@ describe('PowersharePage', () => {
     const region = screen.getByRole('region', { name: 'Powershare metrics' });
     const kpi = within(region);
     expect(region).not.toHaveAttribute('aria-busy');
-    expect(kpi.getByText('Some measurements unavailable')).toBeInTheDocument();
     expect(kpi.getByText('Enabled')).toBeInTheDocument();
     expect(kpi.getByText('5.50 h')).toBeInTheDocument();
-    expect(kpi.getByText('—')).toBeInTheDocument();
+    expect(region.querySelector('[data-operational-metric="output-power"]')).toBeNull();
+    fireEvent.click(kpi.getByRole('button', { name: 'Review details' }));
+    const partialDetails = screen.getByRole('dialog', { name: 'Latest raw Powershare telemetry details' });
+    expect(within(partialDetails).getByText('Some measurements unavailable')).toBeInTheDocument();
+    expect(within(partialDetails).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'charging:powershare-signals' })).toBeInTheDocument();
   });
 
@@ -634,10 +660,12 @@ describe('PowersharePage', () => {
     renderPage();
 
     const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
-    expect(kpi.getByText('Retained source measurements')).toBeInTheDocument();
     expect(kpi.getByText('5.50 h')).toBeInTheDocument();
     expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
     expect(kpi.queryByText('Source measurements available')).not.toBeInTheDocument();
+    fireEvent.click(kpi.getByRole('button', { name: 'Review details' }));
+    const pausedDetails = screen.getByRole('dialog', { name: 'Latest raw Powershare telemetry details' });
+    expect(within(pausedDetails).getByText('Retained source measurements')).toBeInTheDocument();
     expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
   });
 

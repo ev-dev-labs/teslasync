@@ -49,8 +49,10 @@ vi.mock('@/components/charts', async importOriginal => {
   return {
     ...actual,
     // Keep ChartContainer/export/accessibility real; replace SVG geometry only.
+    // The shared export menu only offers image actions when the figure
+    // contains an <svg>, so the BarChart double keeps an empty shell.
     ResponsiveContainer: passthrough,
-    BarChart: passthrough,
+    BarChart: ({ children }: PropsWithChildren) => <svg>{children}</svg>,
     Bar: passthrough,
     Cell: () => null,
     CartesianGrid: () => null,
@@ -136,8 +138,10 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     expect(metricTiles(result.container)[1]?.querySelector('[data-operational-value]')).toHaveTextContent('1');
     expect(metricTiles(result.container)[2]?.querySelector('[data-operational-value]')).toHaveTextContent('10.00');
     expect(metricTiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('148');
-    const context = metricTiles(result.container)[0]?.querySelector(':scope > div:last-child');
-    expect(context).toHaveTextContent('10 scorable sessions');
+    // Face-value disclosure: tile context moved to the Review-details drawer.
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Charger health metrics details' });
+    expect(within(details).getByText('10 scorable sessions')).toBeInTheDocument();
     const fallback = within(chart()).getByRole('table');
     expect(fallback).toHaveTextContent('70');
     expect(fallback).toHaveTextContent('10');
@@ -172,8 +176,12 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     expect(metricTiles(result.container)[2]).toHaveAttribute('data-value-state', 'value');
     sources.sessions = { fetchStatus: 'paused', isLoading: false, refetch: sources.retry };
     result.rerender(<ChargerHealthPage />);
-    expect(metricTiles(result.container)).toHaveLength(4);
-    for (const tile of metricTiles(result.container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
+    // Face-value disclosure: every tile is unknown, so the face is empty and
+    // the drawer counts all four hidden fields.
+    expect(metricTiles(result.container)).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const pausedDetails = screen.getByRole('dialog', { name: 'Charger health metrics details' });
+    expect(within(pausedDetails).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getAllByText('Charging sessions loading is paused. Connect to resume or retry.').length).toBeGreaterThan(0);
     fireEvent.click(within(locations(result.container)).getByRole('button', { name: 'Retry' }));
     expect(sources.retry).toHaveBeenCalledOnce();
@@ -190,15 +198,23 @@ describe('ChargerHealthPage live modernization (execution NOTRUN)', () => {
     expect(locations(result.container)).toBeInTheDocument();
     sources.sessions = { error: new Error('initial failure'), isError: true, fetchStatus: 'idle', refetch: sources.retry };
     result.rerender(<ChargerHealthPage />);
-    expect(metricTiles(result.container)).toHaveLength(4);
+    // Face-value disclosure: every tile is unknown, so the face shows the
+    // empty state instead of four missing shells.
+    expect(metricTiles(result.container)).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
     // Shared friendly classifier text, not raw Error.message.
     expect(within(locations(result.container)).getByText("Can't reach server")).toBeInTheDocument();
     fireEvent.click(within(locations(result.container)).getByRole('button', { name: 'Retry' }));
     expect(sources.retry).toHaveBeenCalledOnce();
     sources.sessions = { data: [], fetchStatus: 'idle', refetch: sources.retry };
     result.rerender(<ChargerHealthPage />);
+    // The real zero stays on the face; the three unknown tiles are omitted
+    // and counted in the drawer.
+    expect(metricTiles(result.container)).toHaveLength(1);
     expect(metricTiles(result.container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0');
-    for (const tile of Array.from(metricTiles(result.container)).slice(1)) expect(tile).toHaveAttribute('data-value-state', 'missing');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const emptyDetails = screen.getByRole('dialog', { name: 'Charger health metrics details' });
+    expect(within(emptyDetails).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(within(locations(result.container)).getByText('No charging locations recorded yet.')).toBeInTheDocument();
     expect(within(chart()).getByText(/No charging location has enough clean sessions/)).toBeInTheDocument();
   });

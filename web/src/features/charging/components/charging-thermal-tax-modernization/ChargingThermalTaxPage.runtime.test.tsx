@@ -123,6 +123,20 @@ function chooseSession() {
 function metricTiles(container: HTMLElement) {
   return container.querySelectorAll('[data-operational-metric]');
 }
+function expectAllMetricsMissing(container: HTMLElement) {
+  // Face-value disclosure: unknown metrics are omitted from the face; the
+  // four slots persist as face label chips plus the drawer hidden-count.
+  expect(metricTiles(container)).toHaveLength(0);
+  const brief = container.querySelector('[data-operational-brief]') as HTMLElement;
+  expect(brief).not.toBeNull();
+  for (const label of ['Heater Energy', 'Heater Share', 'Heater On Time', 'Peak Heater Power']) {
+    expect(within(brief).getByText(label)).toBeInTheDocument();
+  }
+  expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const details = screen.getByRole('dialog', { name: 'Charging thermal tax metrics details' });
+  expect(within(details).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+}
 const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
 function resizeAllocatedWidth(width: number) {
   act(() => {
@@ -184,8 +198,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     sources.history = { ...sources.history, data: [{ ...numericSession, id: 43 }] };
     result.rerender(<ChargingThermalTaxPage />);
     expect(sources.telemetryHook).toHaveBeenLastCalledWith(null);
-    expect(metricTiles(result.container)).toHaveLength(4);
-    for (const tile of metricTiles(result.container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
+    expectAllMetricsMissing(result.container);
   });
 
   it('retries an empty history without requesting a fabricated session or hiding analysis shells', () => {
@@ -196,7 +209,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(sources.historyRetry).toHaveBeenCalledOnce();
     expect(sources.telemetryRetry).not.toHaveBeenCalled();
     expect(sources.telemetryHook).toHaveBeenLastCalledWith(null);
-    expect(metricTiles(container)).toHaveLength(4);
+    expectAllMetricsMissing(container);
     expect(screen.getByRole('heading', { name: 'Thermal Phases' })).toBeInTheDocument();
   });
   it('retries the selected empty telemetry from the phase shell without changing selection or metrics', () => {
@@ -219,8 +232,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(screen.getByRole('heading', { name: 'Charging thermal tax metrics' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Heater vs. Charge Power' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Thermal Phases' })).toBeInTheDocument();
-    expect(metricTiles(container)).toHaveLength(4);
-    for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
+    expectAllMetricsMissing(container);
     expect(sources.historyHook).toHaveBeenCalledWith('7');
     expect(sources.telemetryHook).toHaveBeenCalledWith(null);
   });
@@ -281,7 +293,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     expect(screen.getAllByText('Telemetry loading is paused. Connect to resume or retry.').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(sources.telemetryRetry).toHaveBeenCalledOnce();
-    expect(metricTiles(result.container)).toHaveLength(4);
+    expectAllMetricsMissing(result.container);
   });
 
   it('does not display unavailable heater inputs as zero or no-tax; retains delivered-energy provenance', () => {
@@ -314,7 +326,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     sources.telemetry = { error: new Error('telemetry failed'), isError: true, fetchStatus: 'idle', refetch: sources.telemetryRetry };
     result.rerender(<ChargingThermalTaxPage />);
     expect(screen.getByRole('combobox', { name: 'Inspect session' })).not.toBeDisabled();
-    expect(metricTiles(result.container)).toHaveLength(4);
+    expectAllMetricsMissing(result.container);
     expect(screen.getAllByRole('button', { name: /retry/i }).length).toBeGreaterThan(0);
     sources.telemetry = { data: [], fetchStatus: 'idle', refetch: sources.telemetryRetry };
     result.rerender(<ChargingThermalTaxPage />);

@@ -30,6 +30,7 @@ const h = vi.hoisted(() => ({
   },
   refetch: vi.fn(),
   queryCall: vi.fn(),
+  timezone: 'UTC',
 }));
 
 vi.mock('@/api/hooks/useCharging', async importOriginal => {
@@ -42,6 +43,16 @@ vi.mock('@/api/hooks/useCharging', async importOriginal => {
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: h.vehicleId, vehicle: null, vehicles: [], setVehicleId: vi.fn() }),
 }));
+// Pin the workspace-range day bounds to UTC so query operands never depend
+// on the host timezone (same pattern as the page-level suite).
+vi.mock('@/hooks/useRangeState', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useRangeState')>();
+  return {
+    ...actual,
+    useRangeState: (options?: Parameters<typeof actual.useRangeState>[0]) =>
+      actual.useRangeState({ ...options, timezone: h.timezone }),
+  };
+});
 vi.mock('@/components/motion', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/motion')>();
   return { ...actual, FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> };
@@ -116,6 +127,7 @@ function mountPage() {
 beforeEach((): void => {
   vi.clearAllMocks();
   localStorage.clear();
+  h.timezone = 'UTC';
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
   h.vehicleId = 7;
@@ -136,7 +148,7 @@ describe('charging curve production orchestration', () => {
   it('retains every metric, full ordered downstream session list, scope operands and AI scope', () => {
     const { container } = mountPage();
     expect(h.queryCall).toHaveBeenLastCalledWith(7, {
-      limit: 200, start: '2024-05-01', end: '2024-05-31',
+      limit: 200, start: '2024-05-01T00:00:00.000Z', end: '2024-06-01T00:00:00.000Z',
     });
     const tiles = container.querySelectorAll('[data-operational-metric]');
     expect(tiles).toHaveLength(6);
@@ -146,7 +158,7 @@ describe('charging curve production orchestration', () => {
       ['Avg Duration', '200 min'], ['Total Cost', '$16.75'],
     ];
     expected.forEach(([label, value], index) => {
-      expect(tiles[index]?.firstElementChild?.firstElementChild).toHaveTextContent(label);
+      expect(tiles[index]).toHaveTextContent(label);
       expect(tiles[index]?.querySelector('[data-operational-value]')).toHaveTextContent(value);
     });
     for (const id of ['comparison', 'charger', 'speed', 'ttc']) {
@@ -184,12 +196,12 @@ describe('charging curve production orchestration', () => {
     fireEvent.change(select, { target: { value: '101' } });
     fireEvent.click(screen.getByRole('button', { name: 'Change workspace range' }));
     expect(select).toHaveValue('');
-    expect(h.queryCall).toHaveBeenLastCalledWith(7, { limit: 200, start: '2024-06-01', end: '2024-06-30' });
+    expect(h.queryCall).toHaveBeenLastCalledWith(7, { limit: 200, start: '2024-06-01T00:00:00.000Z', end: '2024-07-01T00:00:00.000Z' });
     fireEvent.change(select, { target: { value: '102' } });
     h.vehicleId = 8;
     mounted.refresh();
     expect(select).toHaveValue('');
-    expect(h.queryCall).toHaveBeenLastCalledWith(8, { limit: 200, start: '2024-06-01', end: '2024-06-30' });
+    expect(h.queryCall).toHaveBeenLastCalledWith(8, { limit: 200, start: '2024-06-01T00:00:00.000Z', end: '2024-07-01T00:00:00.000Z' });
     expect(screen.queryByTestId('curve')).not.toBeInTheDocument();
     expect(screen.queryByTestId('details')).not.toBeInTheDocument();
   });
@@ -223,10 +235,15 @@ describe('charging curve production orchestration', () => {
     h.query = { ...h.query, data: [] };
     const { container } = mountPage();
     expect(container.querySelectorAll('[data-card]')).toHaveLength(8);
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    // Face-value disclosure: the five unknown tiles are omitted while the
+    // real zero count stays visible; the drawer counts the hidden.
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
     expect(container.querySelector('[data-operational-metric="totalSessions"] [data-operational-value]')).toHaveTextContent('0');
     expect(screen.getAllByRole('button', { name: 'Reset date range' })).toHaveLength(6);
     expect(screen.getByRole('combobox', { name: 'Inspect session' })).toBeDisabled();
+    fireEvent.click(within(screen.getByTestId('charging-curve-summary')).getByRole('button', { name: 'Review details' }));
+    const emptyDetails = screen.getByRole('dialog', { name: 'Returned sessions in the workspace range details' });
+    expect(within(emptyDetails).getByText('5 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('paused retained results remain usable while initial paused results do not pretend to load forever', () => {
@@ -241,8 +258,11 @@ describe('charging curve production orchestration', () => {
     h.query = { ...h.query, data: undefined };
     mounted.refresh();
     expect(mounted.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy', 'true');
-    expect(mounted.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(mounted.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
     expect(screen.getAllByText('Charging sessions are waiting for a connection.')).toHaveLength(6);
+    fireEvent.click(within(screen.getByTestId('charging-curve-summary')).getByRole('button', { name: 'Review details' }));
+    const pausedDetails = screen.getByRole('dialog', { name: 'Returned sessions in the workspace range details' });
+    expect(within(pausedDetails).getByText('6 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('never displays an all-unknown aggregate as measured zero; real zero remains a reading', () => {
@@ -251,7 +271,10 @@ describe('charging curve production orchestration', () => {
     })] };
     const mounted = mountPage();
     const summary = screen.getByTestId('charging-curve-summary');
-    expect(summary.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(summary.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const unknownDetails = screen.getByRole('dialog', { name: 'Returned sessions in the workspace range details' });
+    expect(within(unknownDetails).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(/incomplete/);
     expect(screen.getByTestId('comparison')).toHaveAttribute('data-ids', '101');
     h.query = { ...h.query, data: [session({ peak_power_w: 0, total_energy_added_wh: 0, cost_decimal: 0 })] };
@@ -265,13 +288,16 @@ describe('charging curve production orchestration', () => {
     h.query = { ...h.query, data: undefined };
     const { container } = mountPage();
     expect(h.queryCall).toHaveBeenLastCalledWith(null, {
-      limit: 200, start: '2024-05-01', end: '2024-05-31',
+      limit: 200, start: '2024-05-01T00:00:00.000Z', end: '2024-06-01T00:00:00.000Z',
     });
-    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
     expect(container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy', 'true');
     expect(screen.getAllByText('Choose a vehicle in the workspace header to view charging sessions.')).toHaveLength(6);
     expect(screen.getByTestId('fingerprint')).toHaveAttribute('data-vehicle', '');
     expect(screen.getByTestId('ml')).toHaveAttribute('data-vehicle', '');
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    fireEvent.click(within(screen.getByTestId('charging-curve-summary')).getByRole('button', { name: 'Review details' }));
+    const scopeDetails = screen.getByRole('dialog', { name: 'Returned sessions in the workspace range details' });
+    expect(within(scopeDetails).getByText('6 empty fields are hidden.')).toBeInTheDocument();
   });
 });

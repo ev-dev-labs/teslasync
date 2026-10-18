@@ -10,12 +10,13 @@ function source(...parts: string[]) { return readFileSync(resolve(root, ...parts
 
 describe('complete charging presentation exports', () => {
   it.each([
-    ['SessionCurveChart', 'rows'],
-    ['SessionComparisonChart', 'comparisonData'],
-    ['SpeedTrendChart', 'tableData'],
-  ])('passes every prepared row from %s to CSV', (component, rows) => {
+    ['SessionCurveChart', 'rows', 'exportData={rows.map((row) => ({', '...row,'],
+    ['SessionComparisonChart', 'comparisonData', 'exportData={comparisonData.map((point) => ({', '...point,'],
+    ['SpeedTrendChart', 'tableData', 'exportData={tableData}', ''],
+  ])('passes every prepared row from %s to CSV', (component, rows, exportPin, spreadPin) => {
     const text = source('components', 'charging-curve', `${component}.tsx`);
-    expect(text).toContain(`exportData={${rows}}`);
+    expect(text).toContain(exportPin);
+    if (spreadPin) expect(text).toContain(spreadPin);
     expect(text).toContain(`data={${rows}}`);
     expect(text).toContain('exportable');
   });
@@ -23,7 +24,8 @@ describe('complete charging presentation exports', () => {
     const text = source('components', 'charging-curve', 'SessionComparisonChart.tsx');
     expect(text).toContain('(sessions ?? []).slice(0, 10)');
     expect(text).toContain('data={comparisonData}');
-    expect(text).toContain('exportData={comparisonData}');
+    expect(text).toContain('exportData={comparisonData.map((point) => ({');
+    expect(text).toContain('...point,');
     expect(text).toContain('...comparisonSessions.map(');
     expect(text).toContain('key: `s${index}`');
     expect(text).toContain('dataKey={`s${i}`}');
@@ -54,7 +56,9 @@ describe('complete charging presentation exports', () => {
       .toContain('exportData={rows}');
     const forecast = source('components', 'stat-modernization', 'CostForecastSection.tsx');
     expect(forecast).toContain('exportData={chartData}');
-    expect(forecast).toContain('exportData={historicalData.map(');
+    expect(forecast).toContain('exportData={trendExportData}');
+    expect(forecast).toContain('trendData.map(({ month, cost_per_kwh })');
+    expect(forecast).toContain('historicalData.map((row) => ({');
     for (const key of ['actual', 'forecast', 'ci_low', 'ci_band', 'ci_high'])
       expect(forecast).toContain(key);
   });

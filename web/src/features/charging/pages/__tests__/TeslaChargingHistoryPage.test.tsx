@@ -91,6 +91,17 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+// The global setup stubs useSettings to en-US/UTC defaults, which ignores the
+// per-test /settings payload this suite installs. Restore the real hook (a
+// file-level vi.mock wins over the setupFiles registration) so saved
+// locale/tz/precision preferences genuinely drive formatting.
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>(
+    '@/hooks/useSettings',
+  );
+  return { ...actual };
+});
+
 import TeslaChargingHistoryPage, {
   durationMinutes,
   formatDurationMinutes,
@@ -538,7 +549,9 @@ describe('TeslaChargingHistoryPage — happy path', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Monthly spending')).toBeInTheDocument();
     expect(screen.getByText('Top locations')).toBeInTheDocument();
-    expect(screen.getByText('Charging sessions')).toBeInTheDocument();
+    // The sessions table renders an sr-only caption with the same name, so
+    // pin the visible panel heading by role.
+    expect(screen.getByRole('heading', { name: 'Charging sessions' })).toBeInTheDocument();
   });
 
   it('fills the wide-screen space below spending with sessions alongside Price Radar', async () => {
@@ -566,9 +579,14 @@ describe('TeslaChargingHistoryPage — happy path', () => {
     expect(kpiValue('Total spend')).toBe('30.00 · —');
     expect(kpiValue('Avg cost/kWh')).toBe('0.26 · —');
     // Total Duration + Sites Visited are derived client-side from the entries.
-    expect(kpiValue('Total duration')).toBe('—');
-    expect(screen.getByText('Recorded subtotal: 1h 30m · 1 missing')).toBeInTheDocument();
     expect(kpiValue('Sites visited')).toBe('2');
+    // Duration is unknown (one session is still open), so the brief face
+    // omits the metric entirely instead of showing a dash; the Review
+    // details drawer counts it as hidden rather than measured zero.
+    expect(screen.queryByText('Total duration')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Charging summary metrics details' });
+    expect(within(details).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('renders the top-locations panel ranked by spend with formatted currency + counts', async () => {
@@ -645,7 +663,7 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
     expect(screen.getByPlaceholderText('Search by location…')).toHaveValue('Fremont');
     expect(screen.getByText('Monthly spending')).toBeInTheDocument();
     expect(screen.getByText('Top locations')).toBeInTheDocument();
-    expect(screen.getByText('Charging sessions')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging sessions' })).toBeInTheDocument();
     expect(screen.queryAllByText('Server error')).toHaveLength(0);
   });
   it('shows skeletons (never blank panels) while the first feed is in flight', async () => {
@@ -689,13 +707,19 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
     await waitForSummary();
 
     expect(screen.getAllByText('No charging sessions yet')).toHaveLength(3);
-    expect(screen.getByText('Charging sessions')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'All vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging sessions' })).toBeInTheDocument();
+    // Each of the three empty panels offers the fleet-scope recovery.
+    expect(screen.getAllByRole('button', { name: 'All vehicles' })).toHaveLength(3);
     expect(refreshCalls()).toHaveLength(0);
-    // KPIs still render guarded zeros / em-dashes, never NaN.
+    // KPIs still render guarded zeros, never NaN; unknown metrics are
+    // omitted from the face and counted as hidden in the drawer.
     expect(kpiValue('Total sessions')).toBe('0');
-    expect(kpiValue('Total energy')).toBe('—');
-    fireEvent.click(screen.getByRole('button', { name: 'All vehicles' }));
+    expect(screen.queryByText('Total energy')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Charging summary metrics details' });
+    expect(within(details).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.click(within(details).getByText('Close'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'All vehicles' })[0]);
     await waitFor(() => expect(historyCalls()).toContain('/tesla/charging/history'));
     expect(refreshCalls()).toHaveLength(0);
   });

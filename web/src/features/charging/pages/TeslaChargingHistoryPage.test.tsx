@@ -9,6 +9,18 @@ import type { AppSettings } from '@/api/types';
 import { formatDateTime } from '@/lib/dateFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ApiError } from '@/lib/resilience';
+
+// The global setup stubs useSettings to en-US/UTC defaults, which ignores the
+// per-test /settings payload this suite installs. Restore the real hook (a
+// file-level vi.mock wins over the setupFiles registration) so saved
+// locale/tz/precision preferences genuinely drive formatting.
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>(
+    '@/hooks/useSettings',
+  );
+  return { ...actual };
+});
+
 import TeslaChargingHistoryPage from './TeslaChargingHistoryPage';
 
 const vehicle = { id: 1, vehicle_id: 1, vin: 'QA_HISTORY_VEHICLE', display_name: 'History fixture', state: 'online' };
@@ -193,11 +205,12 @@ describe('Tesla charging history adoption', () => {
   it('recovers a range-empty view to all time without syncing or clearing search', async () => {
     installTransport(response());
     mount(375, '/tesla-charging-history?from=2024-02-01&to=2024-02-29&q=Synthetic');
-    await screen.findByRole('button', { name: 'All time' });
+    // Each of the three range-empty panels offers the all-time recovery.
+    expect(await screen.findAllByRole('button', { name: 'All time' })).toHaveLength(3);
     expect(screen.getAllByText('No sessions in this range')).toHaveLength(3);
-    expect(screen.getByText('Charging sessions')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging sessions' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search by location…')).toHaveValue('Synthetic');
-    fireEvent.click(screen.getByRole('button', { name: 'All time' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'All time' })[0]);
     await screen.findByRole('button', { name: 'Quick view' });
     expect(screen.getByPlaceholderText('Search by location…')).toHaveValue('Synthetic');
     expect(screen.queryByText('No sessions in this range')).not.toBeInTheDocument();
@@ -217,7 +230,9 @@ describe('Tesla charging history adoption', () => {
     expect(screen.queryByText('No charging sessions yet')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'All time' })).not.toBeInTheDocument();
     const before = vi.mocked(request).mock.calls.filter(([path]) => path === '/tesla/charging/history?vin=QA_HISTORY_VEHICLE').length;
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    // Each of the three unavailable panels offers the source retry.
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     await waitFor(() => expect(vi.mocked(request).mock.calls.filter(([path]) => path === '/tesla/charging/history?vin=QA_HISTORY_VEHICLE').length).toBeGreaterThan(before));
     expect(vi.mocked(request).mock.calls.some(([path]) => path.includes('/history/refresh'))).toBe(false);
   });
@@ -243,7 +258,9 @@ describe('Tesla charging history adoption', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
     expect(within(screen.getByRole('dialog')).getByText('Date', { selector: 'dt' }).nextElementSibling)
       .toHaveTextContent(formatDateTime(row.charge_start_datetime, opts));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /close/i }));
+    // The dialog offers both a header dismiss and a footer Close; either dismisses it.
+    expect(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close' })).toHaveLength(2);
+    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close' })[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /JSON/ }));
     await waitFor(() => expect(create).toHaveBeenCalledOnce());

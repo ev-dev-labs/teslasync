@@ -52,19 +52,28 @@ describe('charging detail source preservation (not mounted/runtime evidence)', (
     expect(page).toContain('const A11Y_TABLE_ROW_CAP = 2000');
     expect(page).toContain('telemetryCount > A11Y_TABLE_ROW_CAP');
     expect(page.match(/data=\{isLargeDataset \? undefined : /g)).toHaveLength(4);
-    for (const rows of ['chargeCurve', 'timeSeriesData', 'tempData', 'voltCurrentData'])
+    for (const rows of ['timeSeriesData', 'tempData', 'voltCurrentData'])
       expect(page).toContain(`exportData={${rows}}`);
+    // The curve export enriches every prepared point with units and
+    // provenance instead of passing the raw series.
+    expect(page).toContain('exportData={curveExportData}');
+    expect(page).toContain('chargeCurve.map((point) => ({');
+    expect(page).toContain('...point,');
     expect(page.match(/^\s+exportable$/gm)).toHaveLength(4);
     expect(page.match(/^\s+fullscreen$/gm)).toHaveLength(4);
     expect(page.match(/\{\.\.\.seriesPerfProps\}/g)).toHaveLength(9);
     expect(page).toContain('return synthesizeCurve(session)');
   });
   it('retains original business derivations, nullable specialist values and exactly eight stat occurrences', () => {
+    // Authorized correction: duration is derived from a parsed
+    // started/ended interval in seconds, and average power uses the recorded
+    // measurement instead of re-deriving it from energy over time.
     for (const source of [
-      'durationMinutes(session.started_at, session.ended_at)',
+      '(Date.parse(session.ended_at) - Date.parse(session.started_at)) / 1000',
+      'Math.round(durationSeconds / 60)',
       'distanceAddedM(session)',
       'billedEnergyWh != null && billedEnergyWh > 0 ? billedEnergyWh : vehicleEnergyWh',
-      '(displayEnergyWh / 1000 / durationMin) * 60',
+      "session.avg_power_w != null ? convertPowerFromSI(session.avg_power_w, 'kW') : null",
       'billedCost ?? session.cost_decimal ?? null',
       'displayCost / (displayEnergyWh / 1000)',
       'perKwhRate ?? settingsCostPerKwh',
@@ -94,7 +103,9 @@ describe('charging detail source preservation (not mounted/runtime evidence)', (
       ['voltageCurrent', 'Voltage & Current'],
     ]) {
       expect(page).not.toContain(`<LayoutCard title={t('charging.detail.${key}', '${label}')}`);
-      expect(page).toContain(`<section aria-label={t('charging.detail.${key}', '${label}')}`);
+      expect(page).toMatch(new RegExp(
+        `<section\\s+aria-label=\\{t\\('charging\\.detail\\.${key}', '${label}'\\)\\}`,
+      ));
     }
     for (const id of ['jsx-17259', 'jsx-17287', 'jsx-17310', 'jsx-17330'])
       expect(page).toContain(`<DetailPlacement sourceId="${id}"`);
@@ -104,7 +115,7 @@ describe('charging detail source preservation (not mounted/runtime evidence)', (
     expect(page).toContain('sessionDataState.fatalError');
     expect(page).toContain('liveDataState.fatalError');
     expect(page.match(/telemetryLoading && !telemetryDataState.hasData/g)).toHaveLength(3);
-    expect(page.match(/onRetry=\{\(\) => refetchTelemetry\(\)\}/g)).toHaveLength(3);
+    expect(page.match(/onRetry=\{\(\) => refetchTelemetry\(\)\}/g)).toHaveLength(4);
     expect(page).toContain('<DetailSourceOutline loading');
     expect(page).toContain('<DetailSourceOutline />');
     expect(page).toContain('onClick={() => setShareDialogOpen(true)}');

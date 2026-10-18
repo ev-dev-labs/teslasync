@@ -41,9 +41,10 @@ function setQuery(overrides: Record<string, unknown> = {}) {
   } as ReturnType<typeof useChargingSessionsPaginated>);
 }
 
-function setScope(vehicleId = 7, start = '2026-01-01', end = '2026-03-01') {
+function setScope(vehicleId = 7, start = '2026-01-01', end = '2026-03-01',
+  startInstant = '2026-01-01T08:00:00.000Z', endInstantExclusive = '2026-03-01T08:00:00.000Z') {
   vi.mocked(useSelectedVehicle).mockReturnValue({ vehicleId } as ReturnType<typeof useSelectedVehicle>);
-  vi.mocked(useRangeState).mockReturnValue({ start, end } as ReturnType<typeof useRangeState>);
+  vi.mocked(useRangeState).mockReturnValue({ start, end, startInstant, endInstantExclusive } as ReturnType<typeof useRangeState>);
 }
 
 function setSettings(precision = 2, locale = 'en-US', symbol = '$') {
@@ -154,7 +155,12 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     for (const label of ['Favorite Charging Time', 'Busiest Day', 'Busiest Hour', 'Weekdays', 'Weekends']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(container.querySelectorAll('figure')).toHaveLength(2);
+    // The grid figure wraps the role-img calendar; the two breakdown
+    // figures carry their own accessible names.
+    expect(screen.getAllByRole('figure')).toHaveLength(3);
+    for (const name of ['Top Charging Locations', 'Sessions by Day of Week']) {
+      expect(screen.getByRole('figure', { name })).toBeInTheDocument();
+    }
   });
 
   it('preserves the mounted grid and summary through a failed refresh, pause and recovery', () => {
@@ -201,8 +207,13 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     expectPanels(container);
     expect(metric(container, 'charge.sessions')).toHaveAttribute('data-value-state', 'value');
     expect(metric(container, 'charge.sessions').querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(metric(container, 'charge.energyAdded')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric(container, 'charge.avgDuration')).toHaveAttribute('data-value-state', 'missing');
+    // Face-value disclosure: the three unknown tiles are omitted while the
+    // real zero count stays visible; the drawer counts the hidden.
+    expect(container.querySelector('[data-operational-metric="charging-heatmap-total-energy"]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="charging-heatmap-average-duration"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const emptyDetails = screen.getByRole('dialog', { name: 'Returned charging sessions details' });
+    expect(within(emptyDetails).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('distinguishes recorded zero cost/energy from missing cost and unfinished duration', () => {
@@ -210,11 +221,14 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     const { container, rerender } = mount();
     expect(metric(container, 'charge.energyAdded')).toHaveAttribute('data-value-state', 'value');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('$0.00');
-    expect(metric(container, 'charge.avgDuration')).toHaveAttribute('data-value-state', 'missing');
+    // Face-value disclosure: the unfinished duration is omitted, never zero.
+    expect(container.querySelector('[data-operational-metric="charging-heatmap-average-duration"]')).toBeNull();
     setQuery({ data: [session(1, { total_energy_added_wh: 0, cost_decimal: null, ended_at: null })] });
     rerender(<ChargingHeatmapPage />);
-    expect(metric(container, 'charge.recordedCost')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric(container, 'charge.recordedCost').querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(container.querySelector('[data-operational-metric="charging-heatmap-total-cost"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const missingDetails = screen.getByRole('dialog', { name: 'Returned charging sessions details' });
+    expect(within(missingDetails).getByText('2 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('retains the positive completed-duration denominator and recorded-only cost total', () => {
@@ -225,15 +239,18 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     expect(metric(container, 'charge.avgDuration')).toHaveTextContent('2.00 h');
     expect(metric(container, 'charge.energyAdded')).toHaveTextContent('36.00 kWh');
     expect(metric(container, 'charge.recordedCost')).toHaveTextContent('$3.00');
-    expect(metric(container, 'charge.recordedCost').querySelector(':scope > div:last-child')).toHaveTextContent('recorded values only');
+    // Face-value disclosure: the recorded-only caveat moved to the drawer.
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const costDetails = screen.getByRole('dialog', { name: 'Returned charging sessions details' });
+    expect(within(costDetails).getByRole('group', { name: 'Total Cost' })).toHaveTextContent('recorded values only');
   });
 
   it('keeps exact query operands on persistent scope rerender and adds no local selectors', () => {
     const { rerender } = mount();
-    expect(useChargingSessionsPaginated).toHaveBeenLastCalledWith(7, { limit: 2000, start: '2026-01-01', end: '2026-03-01' });
-    setScope(9, '2026-02-01', '2026-04-01');
+    expect(useChargingSessionsPaginated).toHaveBeenLastCalledWith(7, { limit: 2000, start: '2026-01-01T08:00:00.000Z', end: '2026-03-01T08:00:00.000Z' });
+    setScope(9, '2026-02-01', '2026-04-01', '2026-02-01T08:00:00.000Z', '2026-04-01T07:00:00.000Z');
     rerender(<ChargingHeatmapPage />);
-    expect(useChargingSessionsPaginated).toHaveBeenLastCalledWith(9, { limit: 2000, start: '2026-02-01', end: '2026-04-01' });
+    expect(useChargingSessionsPaginated).toHaveBeenLastCalledWith(9, { limit: 2000, start: '2026-02-01T08:00:00.000Z', end: '2026-04-01T07:00:00.000Z' });
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(retry).toHaveBeenCalledTimes(1);
@@ -255,7 +272,8 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     // Controls belong to the two opted-in breakdown figures, not the calendar.
     expect(within(grid).queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
     expect(within(grid).queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
-    const breakdownCharts = container.querySelectorAll('figure');
+    const breakdownCharts = ['Top Charging Locations', 'Sessions by Day of Week']
+      .map(name => screen.getByRole('figure', { name }));
     expect(breakdownCharts).toHaveLength(2);
     for (const chart of breakdownCharts) {
       expect(within(chart).getByRole('button', { name: /full.?screen/i })).toBeInTheDocument();

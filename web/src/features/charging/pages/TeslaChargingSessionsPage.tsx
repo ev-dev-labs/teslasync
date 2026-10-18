@@ -906,7 +906,7 @@ export default function TeslaChargingSessionsPage() {
               loading={isLoading}
               error={error}
               onRetry={() => { void sessionsQuery.refetch(); }}
-              exportData={monthlyData.map(m => ({ ...m, currency: scopedCurrency }))}
+              exportData={monthlyData}
               exportFilename={`tesla-monthly-cost-${new Date().toISOString().slice(0, 10)}`}
             >
               {isLoading ? (

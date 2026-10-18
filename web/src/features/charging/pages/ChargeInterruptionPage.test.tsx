@@ -46,11 +46,13 @@ vi.mock('@/components/charts', async importOriginal => {
     // Keep ChartContainer, exports, accessible table and state surfaces real.
     // Echo identity and visibility; SVG layout remains browser acceptance work.
     ResponsiveContainer: passthrough,
-    ComposedChart: passthrough,
+    // The shared export menu only offers "Save as SVG" when the figure holds
+    // a capture-eligible plot SVG; keep that geometry in the doubles.
+    ComposedChart: ({ children }: PropsWithChildren) => <svg aria-hidden="true">{children}</svg>,
     Bar: ({ dataKey, yAxisId, hide }: { dataKey?: string; yAxisId?: string; hide?: boolean }) =>
-      <span data-testid="interruption-risk-series" data-key={dataKey} data-axis={yAxisId} data-hidden={String(!!hide)} />,
+      <g data-testid="interruption-risk-series" data-key={dataKey} data-axis={yAxisId} data-hidden={String(!!hide)} />,
     Line: ({ dataKey, yAxisId, hide }: { dataKey?: string; yAxisId?: string; hide?: boolean }) =>
-      <span data-testid="interruption-evidence-series" data-key={dataKey} data-axis={yAxisId} data-hidden={String(!!hide)} />,
+      <g data-testid="interruption-evidence-series" data-key={dataKey} data-axis={yAxisId} data-hidden={String(!!hide)} />,
     XAxis: () => null,
     YAxis: () => null,
     CartesianGrid: () => null,
@@ -146,7 +148,7 @@ describe('ChargeInterruptionPage source adoption and preservation', () => {
     { name: 'populated', data: history, error: undefined, message: 'Charging history loaded, 6 items', priority: 'polite' },
     { name: 'empty', data: [], error: undefined, message: 'No Charging history to show', priority: 'polite' },
     { name: 'failed', data: undefined, error: new Error('private failure'), message: 'Could not refresh Charging history', priority: 'assertive' },
-  ] as const)('announces the $name source result without replacing section shells', ({ data, error, message, priority }) => {
+  ] as const)('announces the $name source result without replacing section shells', ({ name, data, error, message, priority }) => {
     const announcement = vi.fn();
     const unsubscribe = subscribeAnnouncer(announcement);
     try {
@@ -163,10 +165,23 @@ describe('ChargeInterruptionPage source adoption and preservation', () => {
       result.rerender(<ChargeInterruptionPage />);
       expect(figure()).toBe(chart);
       expect(sites(result.container)).toBe(details);
-      expect(tiles(result.container)).toHaveLength(6);
+      // Unknown tiles are omitted from the face and counted in the drawer.
+      if (name === 'populated') {
+        expect(tiles(result.container)).toHaveLength(6);
+      } else if (name === 'empty') {
+        expect(tiles(result.container)).toHaveLength(5);
+      } else {
+        expect(tiles(result.container)).toHaveLength(0);
+        expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+      }
       expect(shell).not.toHaveAttribute('aria-busy');
       expect(announcement).toHaveBeenCalledOnce();
       expect(announcement).toHaveBeenCalledWith(expect.stringContaining(message), priority);
+      if (name !== 'populated') {
+        fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+        const drawer = screen.getByRole('dialog', { name: 'Charge interruption metrics details' });
+        expect(within(drawer).getByText(name === 'empty' ? '1 empty field is hidden.' : '6 empty fields are hidden.')).toBeInTheDocument();
+      }
       if (data?.length) {
         assertSeries();
         expect(details.querySelectorAll('li')).toHaveLength(2);
@@ -197,8 +212,8 @@ describe('ChargeInterruptionPage source adoption and preservation', () => {
       .toHaveTextContent((summary.overallPosteriorMean * 100).toFixed(2));
     expect(tiles(result.container)[1]?.querySelector('[data-operational-value]'))
       .toHaveTextContent(String(summary.suspectedSessions));
-    expect(tiles(result.container)[2]?.querySelector(':scope > div:last-child'))
-      .toHaveTextContent(summary.highestRiskSite!.label);
+    expect(tiles(result.container)[2]?.querySelector('[data-operational-value]'))
+      .toHaveTextContent((summary.highestRiskSite!.posteriorMean * 100).toFixed(2));
     expect(tiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('2');
     expect(tiles(result.container)[4]?.querySelector('[data-operational-value]')).toHaveTextContent('6');
     expect(tiles(result.container)[5]?.querySelector('[data-operational-value]'))
@@ -219,6 +234,8 @@ describe('ChargeInterruptionPage source adoption and preservation', () => {
     const limitations = within(narrative).getByText('Limitations', { exact: true }).parentElement;
     if (!limitations) throw new Error('Source limitations container missing');
     expect(within(limitations).getByText(/Coverage and time bounds are not reported/)).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByRole('group', { name: 'Highest-Risk Site' }))
+      .toHaveTextContent(summary.highestRiskSite!.label);
   });
 
   it('keeps all source data and URL state after refresh failure, and retries the history source', () => {
@@ -275,10 +292,16 @@ describe('ChargeInterruptionPage source adoption and preservation', () => {
     expect(source.retry).toHaveBeenCalledOnce();
     source.query = { data: [], refetch: source.retry };
     result.rerender(<ChargeInterruptionPage />);
+    // The unknown Highest-Risk Site tile is omitted from the face; its slot
+    // is counted in the Review-details drawer with the model-prior context.
+    expect(tiles(result.container)).toHaveLength(5);
     expect(tiles(result.container)[0]?.querySelector('[data-operational-value]')).toHaveTextContent('50.00');
-    expect(tiles(result.container)[0]?.querySelector(':scope > div:last-child')).toHaveTextContent('model prior');
     expect(tiles(result.container)[1]?.querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(tiles(result.container)[2]).toHaveAttribute('data-value-state', 'missing');
+    expect(result.container.querySelector('[data-operational-metric="charge-interruption-highest-risk"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const emptyDetails = screen.getByRole('dialog', { name: 'Charge interruption metrics details' });
+    expect(within(emptyDetails).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    expect(within(emptyDetails).getByRole('group', { name: 'Overall Risk' })).toHaveTextContent('model prior');
     expect(tiles(result.container)[4]?.querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(within(sites(result.container)).getByText('No charging locations recorded yet.')).toBeInTheDocument();
     expect(within(figure()).getByText(/No charging location has enough history/)).toBeInTheDocument();

@@ -52,8 +52,8 @@ function mountPage() {
   </MemoryRouter></QueryClientProvider>);
 }
 function tiles(container: HTMLElement) { return container.querySelectorAll('[data-operational-metric]'); }
-function assertSections(container: HTMLElement) {
-  expect(tiles(container)).toHaveLength(4);
+function assertSections(container: HTMLElement, expectedTiles = 4) {
+  expect(tiles(container)).toHaveLength(expectedTiles);
   for (const label of ['Energy Share by Site', 'What If the Top Site Disappeared?', 'Sites'])
     expect(screen.getByText(label)).toBeInTheDocument();
 }
@@ -115,12 +115,22 @@ describe('charger resilience canonical migration', () => {
       fetchStatus: mode === 'initial-paused' ? 'paused' : mode === 'loading' ? 'fetching' : 'idle',
     };
     const { container } = mountPage();
-    assertSections(container);
-    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(mode === 'loading' ? 0 : 4);
-    if (mode === 'loading') expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
-    for (const tile of tiles(container)) {
-      expect(tile).toHaveAttribute('data-value-state', 'missing');
-      if (mode !== 'loading') expect(tile.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
+    assertSections(container, mode === 'loading' ? 4 : 0);
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    if (mode === 'loading') {
+      expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+      for (const tile of tiles(container)) {
+        expect(tile).toHaveAttribute('data-value-state', 'missing');
+      }
+    } else {
+      expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+      expect(screen.queryByText('0.00')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const dialog = screen.getByRole('dialog', { name: 'Charger resilience metrics details' });
+      expect(within(dialog).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+      for (const label of ['Resilience Score', 'Effective Site Count', 'Top-Site Dependency', 'Fallback Coverage']) {
+        expect(within(dialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+      }
     }
     if (mode === 'fatal') {
       fireEvent.click(screen.getAllByRole('button', { name: /retry/i })[0]!);

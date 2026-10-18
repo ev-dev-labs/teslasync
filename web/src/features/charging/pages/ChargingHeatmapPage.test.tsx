@@ -145,8 +145,16 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
     expect(mockSessions).toHaveBeenCalledWith(null, expect.objectContaining({ limit: 2000 }));
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
-    expect(within(kpiRegion()).getByText('Total Sessions').closest('[data-operational-metric]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    // Unresolved scope means unknown measurements: the face omits every tile
+    // and the drawer accounts for all four hidden metrics.
+    expect(within(kpiRegion()).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(kpiRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    for (const label of ['Total Sessions', 'Total Energy', 'Total Cost', 'Avg Duration']) {
+      expect(within(details).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(details).getByText(/empty fields are hidden\./)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     expect(query.refetch).not.toHaveBeenCalled();
   });
@@ -357,9 +365,20 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
     mockSessions.mockReturnValue(makeQuery({ data: [] }));
     renderPage();
 
-    // Labels render with zeroed values — legitimate empty data, not an error.
-    expect(within(kpiRegion()).getByText('Total Sessions')).toBeInTheDocument();
-    expect(within(kpiRegion()).getByText('Total Energy')).toBeInTheDocument();
+    // Total Sessions is a known zero; energy/cost/duration have no recorded
+    // measurements, so the face omits them and the drawer counts them hidden.
+    const sessionsMetric = within(kpiRegion()).getByText('Total Sessions').closest('[data-operational-metric]');
+    expect(sessionsMetric).toHaveAttribute('data-value-state', 'value');
+    expect(sessionsMetric?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(kpiRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(within(kpiRegion()).queryByText('Total Energy')).not.toBeInTheDocument();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    expect(within(details).getByText('Total Sessions')).toBeInTheDocument();
+    expect(within(details).queryByText('Total Energy')).not.toBeInTheDocument();
+    expect(within(details).queryByText('Total Cost')).not.toBeInTheDocument();
+    expect(within(details).queryByText('Avg Duration')).not.toBeInTheDocument();
+    expect(within(details).getByText(/empty fields are hidden\./)).toBeInTheDocument();
     expect(within(kpiRegion()).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });

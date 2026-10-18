@@ -10,9 +10,9 @@ import type { DataStateSource } from '@/api/dataState';
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 import {
-  getFormatterPreferences, setGlobalLocale, setGlobalPrecision,
+  fmtInt, fmtNumber, getFormatterPreferences, isFiniteNumber, setGlobalLocale, setGlobalPrecision,
 } from '@/lib/numberFormat';
-import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import { analyzeChargeDepartureAlignment } from '../../lib/chargeDepartureAlignment';
 import ChargeDepartureAlignmentPage from '../../pages/ChargeDepartureAlignmentPage';
 
@@ -61,7 +61,9 @@ vi.mock('@/components/charts', async importOriginal => {
     // Keep ChartContainer's state, export, accessible table and fullscreen real.
     // Actual SVG geometry/legend payload remain browser acceptance work.
     ResponsiveContainer: passthrough,
-    ComposedChart: passthrough,
+    // The real ComposedChart renders an <svg> plot; the shared export menu
+    // only offers "Save as SVG" when the figure contains one.
+    ComposedChart: ({ children }: PropsWithChildren) => <svg>{children}</svg>,
     Bar: () => null,
     Line: () => null,
     XAxis: () => null,
@@ -71,6 +73,12 @@ vi.mock('@/components/charts', async importOriginal => {
     ChartLegend: () => null,
   };
 });
+
+// Mirrors the page's instantLabel: locale rendering plus zone and ISO
+// provenance. The global timezone mock pins the zone to UTC.
+function instantLabel(iso: string) {
+  return `${formatDateTime(iso, { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } })} (UTC) · ${new Date(iso).toISOString()}`;
+}
 
 function session(index: number, overrides: Partial<ChargingSession> = {}): ChargingSession {
   const started = new Date(Date.UTC(2026, 8, index + 1, 8)).toISOString();
@@ -172,13 +180,12 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(stats[0]?.querySelector('[data-operational-value]'))
       .toHaveTextContent(formatDurationSecondsAsMinutes(summary.avgDwellS));
     expect(stats[1]?.querySelector('[data-operational-value]')).toHaveTextContent('65.10');
-    expect(stats[2]?.querySelector(':scope > div:last-child')).toHaveTextContent('15 of 15 paired sessions');
-    expect(stats[3]?.querySelector(':scope > div:last-child')).toHaveTextContent('of 15 ended charges within 24h of a drive');
+    expect(stats[2]?.querySelector('[data-operational-value]')).toHaveTextContent('100.00');
+    expect(stats[3]?.querySelector('[data-operational-value]')).toHaveTextContent('15');
     expect(result.container.querySelector('[data-layout-reference]')).toHaveClass('w-full', 'min-w-0');
     expect(result.container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
-    expect(screen.getByText(/Pairing and flags are model-derived/)).toBeInTheDocument();
     expect(result.container.querySelector('[data-alignment-bounds="charging-history"]'))
-      .toHaveTextContent(new Date(charges[0]!.ended_at!).toLocaleString('en'));
+      .toHaveTextContent(instantLabel(charges[0]!.ended_at!));
     expect(result.container.querySelector('[data-alignment-bounds="drive-history"]'))
       .toHaveTextContent('15 valid timestamps');
     expect(figure()).toBeInTheDocument();
@@ -187,6 +194,13 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(screen.queryByRole('combobox', { name: /Vehicle|Date range|Time range/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
     const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
+    expect(within(details).getByRole('group', { name: 'Misaligned Rate' }))
+      .toHaveTextContent('15 of 15 paired sessions');
+    expect(within(details).getByRole('group', { name: 'Paired Sessions' }))
+      .toHaveTextContent('of 15 ended charges within 24h of a drive');
+    // The drawer repeats the disclosure as its description and as the
+    // What-changed narrative; pin both occurrences.
+    expect(within(details).getAllByText(/Pairing and flags are model-derived/)).toHaveLength(2);
     const scopeContext = within(details).getByText('What changed', { exact: true }).parentElement;
     if (!scopeContext) throw new Error('Missing narrative scope context');
     expect(within(scopeContext).getByText(
@@ -262,12 +276,17 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     source.sessions.data = [];
     source.drives.data = [];
     const result = mountPage();
+    // Face-value disclosure: the three unknown tiles are omitted while the
+    // real zero paired count stays visible; the drawer counts the hidden.
     const stats = tiles(result.container);
-    expect(stats).toHaveLength(4);
-    expect(stats[0]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(stats[1]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(stats[2]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(stats[3]?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(stats).toHaveLength(1);
+    expect(stats[0]?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(result.container.querySelector('[data-operational-metric="alignment-avg-dwell"]')).toBeNull();
+    expect(result.container.querySelector('[data-operational-metric="alignment-avg-margin"]')).toBeNull();
+    expect(result.container.querySelector('[data-operational-metric="alignment-misaligned-rate"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
+    expect(within(details).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(figure()).toBeInTheDocument();
     expect(pairsHeading()).toBeInTheDocument();
     expect(screen.getAllByText('No paired sessions to show yet.').length).toBeGreaterThan(0);
@@ -276,8 +295,16 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
   it('does not infer a zero readiness margin from a missing drive-end reading', () => {
     source.drives.data = drives.map(row => ({ ...row, endBatteryPct: null }));
     const result = mountPage();
-    expect(tiles(result.container)[1]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
-    expect(screen.getByText('No paired drive has a recorded end SoC.')).toBeInTheDocument();
+    // Face-value disclosure: no zero is inferred — the margin tile is omitted
+    // and counted in the drawer instead of rendering '—' on the face.
+    expect(tiles(result.container)).toHaveLength(3);
+    expect(result.container.querySelector('[data-operational-metric="alignment-avg-margin"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
+    expect(within(details).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    // Face-value disclosure: the drawer counts the hidden margin instead of
+    // repeating its missing reason, and no zero is inferred anywhere.
+    expect(within(details).queryByRole('group', { name: 'Avg. Readiness Margin' })).not.toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: 'Recent Pairs' })).getAllByText('—').length).toBeGreaterThan(0);
   });
 
@@ -302,8 +329,13 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
       source.drives = { error: new Error('sensitive backend detail'), isError: true, refetch: source.driveRetry };
     }
     const result = mountPage();
-    expect(tiles(result.container)).toHaveLength(4);
-    expect(tiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    // Face-value disclosure: every tile is unknown, so the face shows the
+    // empty state and the drawer counts all four hidden fields.
+    expect(tiles(result.container)).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
+    expect(within(details).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(figure()).toBeInTheDocument();
     expect(pairsHeading()).toBeInTheDocument();
     expect(screen.queryByText('sensitive backend detail')).not.toBeInTheDocument();
@@ -442,9 +474,9 @@ describe('Charge departure chart flag alternatives (AUTHORED_NOTRUN)', () => {
     expect(rows).toHaveLength(8);
     expect(rows.slice(1).map(row => within(row).getAllByRole('cell').map(cell => cell.textContent))).toEqual(
       pairs.map((pair, index) => [
-        new Date(pair.chargeEndedMs).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
-        String(Math.round(pair.dwellS / 60)),
-        String(pair.readinessMarginPct),
+        instantLabel(new Date(pair.chargeEndedMs).toISOString()),
+        fmtInt(Math.round(pair.dwellS / 60)),
+        isFiniteNumber(pair.readinessMarginPct) ? fmtNumber(pair.readinessMarginPct) : '—',
         index === 0 ? 'Well matched' : 'Heuristic flags, not confirmed faults',
       ]),
     );
@@ -493,7 +525,7 @@ describe('Charge departure chart flag alternatives (AUTHORED_NOTRUN)', () => {
       expect(lines[0]).toBe('date,dwellMin,margin,flags');
       expect(lines).toHaveLength(16);
       expect(lines.slice(1)).toEqual(pairs.map(pair => [
-        new Date(pair.chargeEndedMs).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+        `"${instantLabel(new Date(pair.chargeEndedMs).toISOString())}"`,
         Math.round(pair.dwellS / 60),
         pair.readinessMarginPct,
         pair.flags.length > 0 ? '"Heuristic flags, not confirmed faults"' : 'Well matched',

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { createInstance, type i18n } from 'i18next';
 import { I18nextProvider, initReactI18next, useTranslation } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import english from '@/i18n/en.json';
@@ -202,7 +202,9 @@ describe('Tesla charging history canonical copy isolation', () => {
     mount(<><TeslaChargingSessionsPage /><LiveQueryCopyProbe /></>, '/tesla/charging/sessions');
 
     const brief = await screen.findByTestId('charging-operational-brief');
-    expect(within(brief).getByText('Updating')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Cost, energy, and session evidence in one operating view details' });
+    expect(within(details).getByText('Updating')).toBeInTheDocument();
     expect(brief).toHaveAttribute('aria-busy', 'true');
     expect(within(brief).queryByText('Resolving live state')).not.toBeInTheDocument();
     expect(await screen.findByText('Resolving live state')).toBeInTheDocument();
@@ -219,12 +221,14 @@ describe('Tesla charging history canonical copy isolation', () => {
     mount(<TeslaChargingSessionsPage />, '/tesla/charging/sessions');
     const brief = await screen.findByTestId('charging-operational-brief');
     expect(within(brief).getByText(returnedCopy.returnedSessionsTitle)).toBeInTheDocument();
-    expect(within(brief).getByText(returnedCopy.returnedSessionsDescription)).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Cost, energy, and session evidence in one operating view details' });
+    expect(within(details).getAllByText(returnedCopy.returnedSessionsDescription).length).toBeGreaterThan(0);
     await waitFor(() => expect(brief).not.toHaveAttribute('aria-busy'));
     expect(captured.brief?.provenance).toBe(returnedCopy.returnedSessionsProvenance);
     expect(captured.brief?.provenance).not.toMatch(/live vehicle state|departure readiness/i);
     expect(captured.brief?.description).not.toMatch(/departure readiness|current charging state/i);
-    expect(within(brief).getByLabelText('Historical')).toBeInTheDocument();
+    expect(within(details).getByLabelText('Historical')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument();
   });
@@ -233,7 +237,9 @@ describe('Tesla charging history canonical copy isolation', () => {
     mount(<ChargingListPage />, '/charging');
     const brief = await screen.findByTestId('charging-operational-brief');
     expect(within(brief).getByText('Cost, reliability, and battery-friendly behavior')).toBeInTheDocument();
-    expect(within(brief).getByText(
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Cost, reliability, and battery-friendly behavior details' });
+    expect(within(details).getByText(
       'Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.',
     )).toBeInTheDocument();
     expect(captured.brief?.provenance).toBe(

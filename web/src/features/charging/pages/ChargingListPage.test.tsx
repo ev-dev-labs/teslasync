@@ -496,11 +496,14 @@ describe('ChargingListPage — prior-period evidence', () => {
 
       renderPage(['/charging?from=2024-06-15&to=2024-06-15']);
 
-      const overview = await screen.findByTestId('charging-overview');
-      expect(within(overview).getByText(/^Prior-period comparison unavailable:/)).toHaveTextContent(
+      await screen.findByTestId('charging-overview');
+      // The comparison caption renders in the overview panel below the brief face.
+      const overviewPanel = document.getElementById('charging-overview');
+      if (!overviewPanel) throw new Error('Missing charging overview panel');
+      expect(within(overviewPanel).getByText(/^Prior-period comparison unavailable:/)).toHaveTextContent(
         '2024',
       );
-      expect(within(overview).queryByText(/^prior period:/)).not.toBeInTheDocument();
+      expect(within(overviewPanel).queryByText(/^prior period:/)).not.toBeInTheDocument();
       expect(await findSessionCard(101)).toBeInTheDocument();
       expect(sessionCard(102)).toBeNull();
       expect(mockSessions).toHaveBeenCalledWith(1, expect.objectContaining({
@@ -593,12 +596,15 @@ describe('ChargingListPage — responsive evidence adoption', () => {
     expect(within(list).getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
   });
 
-  it('does not describe unknown battery state as zero-percent departure readiness', () => {
+  it('does not describe unknown battery state as zero-percent departure readiness', async () => {
     mockVehicleState.mockReturnValue(qr({ data: { state: { ...LIVE_STATE, battery_level: null } } }));
     renderPage();
-    const readiness = briefMetric('Departure readiness');
-    expect(within(readiness).getByText('—')).toBeInTheDocument();
-    expect(within(readiness).queryByText('0%')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('charging-operational-brief');
+    expect(brief.querySelector('[data-operational-metric="departure"]')).toBeNull();
+    expect(within(brief).queryByText('0%')).not.toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = await screen.findByRole('dialog', { name: 'Cost, reliability, and battery-friendly behavior details' });
+    expect(within(details).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('excludes unknown-cost sessions from the free collection', async () => {
@@ -936,10 +942,13 @@ describe('ChargingListPage — happy path', () => {
     ).toBeInTheDocument();
     expect(document.title).toContain('Charging sessions');
 
-    // Real shared overview metric labels.
+    // Real shared overview metric labels; the rate context lives in the drawer.
     expect(screen.getByText('Energy (kWh)')).toBeInTheDocument();
-    expect(screen.getByText('Avg rate (kW)')).toBeInTheDocument();
-    expect(screen.getByTestId('charging-overview').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    const overviewBrief = screen.getByTestId('charging-overview');
+    expect(overviewBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    fireEvent.click(within(overviewBrief).getByRole('button', { name: 'Review details' }));
+    const overviewDetails = await screen.findByRole('dialog', { name: 'Overview details' });
+    expect(within(overviewDetails).getByText('Avg rate (kW)')).toBeInTheDocument();
 
     // Trend chart branch fired (currentStats.count > 0).
     expect(trendChart()).toBeInTheDocument();
@@ -975,7 +984,7 @@ describe('ChargingListPage — happy path', () => {
     expect(within(briefMetric('Charger reliability')).getByText('83% clear')).toBeInTheDocument();
     // Freshness lives in the page header; the brief keeps provenance only.
     const header = document.querySelector('header') as HTMLElement;
-    expect(within(header).getByText('just now')).toBeInTheDocument();
+    expect(within(header).getByRole('button', { name: /just now/ })).toBeInTheDocument();
     const brief = screen.getByTestId('charging-operational-brief');
     expect(within(brief).queryByRole('button', { name: /Source: / })).toBeNull();
     expect(mockVehicleState).toHaveBeenCalledWith(1);
@@ -1023,7 +1032,7 @@ describe('ChargingListPage — happy path', () => {
       expect(within(details).queryByText('0 sessions were evaluated in the active period.')).not.toBeInTheDocument();
     });
 
-    it('keeps failed history distinct from an empty list and preserves every source section', () => {
+    it('keeps failed history distinct from an empty list and preserves every source section', async () => {
       mockSessions.mockReturnValue(qr({ isError: true, error: new Error('History failed') }));
       renderPage();
       for (const [name, count] of [['Overview', 2], ['Charging over time', 1], ['All charging sessions', 1], ['Charging insights', 1]] as const) {
@@ -1033,7 +1042,12 @@ describe('ChargingListPage — happy path', () => {
       expect(screen.queryByText('No charging activity in this window')).not.toBeInTheDocument();
       expect(screen.queryByText('Charging insights need completed sessions in the selected range.')).not.toBeInTheDocument();
       expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
-      expect(within(briefMetric('Potential interruptions')).getByText('—')).toBeInTheDocument();
+      const failedBrief = screen.getByTestId('charging-operational-brief');
+      expect(failedBrief.querySelector('[data-operational-metric="interruptions"]')).toBeNull();
+      expect(failedBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
+      fireEvent.click(within(failedBrief).getByRole('button', { name: 'Review details' }));
+      const failedDetails = await screen.findByRole('dialog', { name: 'Cost, reliability, and battery-friendly behavior details' });
+      expect(within(failedDetails).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     });
 
     it.each([
