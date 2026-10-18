@@ -1129,3 +1129,41 @@ describe('TariffLabPage — restrained page adoption', () => {
     expect(screen.getByRole('button', { name: 'Add plan' })).toBeInTheDocument();
   });
 });
+
+describe('TariffLabPage — localized structure labels', () => {
+  it('shows localized structure badges while preserving user-authored names', () => {
+    renderPage();
+    const library = card('Your rate plan library');
+    // Both fixtures are 'tou' plans: badges must show the localized label,
+    // never the raw enum.
+    expect(within(library).getAllByText('Time of use')).toHaveLength(2);
+    expect(within(library).queryByText('tou')).not.toBeInTheDocument();
+    // User-authored plan names are untouched.
+    expect(within(library).getByText('EV Nights')).toBeInTheDocument();
+    expect(within(library).getByText('Flat Saver')).toBeInTheDocument();
+  });
+
+  it('offers localized structure options that submit the raw enum value', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    const select = screen.getByLabelText('Rate structure');
+    expect(within(select).getByText('Time of use')).toBeInTheDocument();
+    expect(within(select).getByText('Real time')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Plan name required' }), { target: { value: 'Label plan' } });
+    fireEvent.change(select, { target: { value: 'real_time' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    // The payload carries the raw enum, not the display label.
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Label plan', structure: 'real_time',
+    }), expect.any(Object));
+  });
+
+  it('labels fresh bands with the localized default name', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    // The first band of a fresh draft carries the catalog default label.
+    expect(screen.getByRole('textbox', { name: 'Label' })).toHaveValue('Standard');
+  });
+});

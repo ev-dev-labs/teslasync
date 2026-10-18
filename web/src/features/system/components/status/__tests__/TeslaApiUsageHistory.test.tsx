@@ -40,7 +40,22 @@ vi.mock('@/api/hooks/useTeslaUsage', async (importOriginal) => ({
   useTeslaUsageHistory: useHistory,
 }))
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
+  // Mirrors i18next's missing-key plural resolution for the observed-buckets
+  // call (defaultValue_one/other + provided-vars interpolation); every other
+  // call renders its fallback exactly as before.
+  useTranslation: () => ({
+    t: (_key: string, fallback: string, vars?: Record<string, unknown>) => {
+      let out = fallback
+      if (vars?.count === 1 && typeof vars.defaultValue_one === 'string') out = vars.defaultValue_one
+      else if (vars?.count !== undefined && typeof vars.defaultValue_other === 'string') out = vars.defaultValue_other
+      if (vars) {
+        for (const [k, v] of Object.entries(vars)) {
+          if (k === 'count') out = out.replace(/\{\{\s*count\s*\}\}/g, String(v))
+        }
+      }
+      return out
+    },
+  }),
 }))
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ formatCurrency: (amount: number) => `$${amount.toFixed(4)}` }),
@@ -133,6 +148,15 @@ describe('Tesla usage selected history', () => {
     appearance.modeId = 'dark'
     rerender(<TeslaApiUsageHistory />)
     verify(CHART_COLORS_NEON)
+  })
+  it.each([
+    { points: [point], expected: '1 observed bucket' },
+    { points: [point, { ...point, bucket_start: '2024-01-02T00:00:00Z' }], expected: '2 observed buckets' },
+  ])('selects the singular/plural observed-bucket message: $expected', ({ points, expected }) => {
+    useHistory.mockReturnValue({ data: { points, total: { ...point } }, isLoading: false, error: null, refetch: vi.fn() })
+    render(<TeslaApiUsageHistory />)
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(within(screen.getByRole('dialog')).getByText(expected)).toBeInTheDocument()
   })
   it.each([undefined, null])('does not fabricate accessible or exported costs without totals: %s', total => {
     useHistory.mockReturnValue({ data: { points: [], total }, isLoading: false, error: null, refetch: vi.fn() })

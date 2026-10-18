@@ -116,3 +116,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 07:15 UTC - step 5 ALL 8 integrated (143 resolved, 24 blocked/by-design)
 - A31/4, C4/7, D7/1, F6/2, G30/1 + B45, E5/9, H15. Full close suite running.
 - Decision list: E9 scenario gate, F1 NaN-chart, F2 isStale, C1-7 shell pins. Worktrees removed.
+
+## 2026-10-18 08:20 UTC - step 6 fix batch committed + pushed (ad1e9818a9)
+- Announcer plurals ({{count}} governed leaves + defaultValue_one/other), session-toast namespace alignment (settingsSessions.* + 3 leaves + displayCount), th06 live-mode pin, ctt-s01 thermal adapter test.
+- Batch suites 188/188; i18n folder at 7 pre-existing shell reds only; catalog 32954 + checkpoints re-pinned via generators; tsc/eslint clean.
+- Post-reboot state loss: pre-reboot manual triage conclusions lost; rebuilding step-6 classification from artifacts + close report with fresh evidence. Next: evidence table, review queue, remaining fixables, plan write-up.

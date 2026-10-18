@@ -164,6 +164,60 @@ describe('describeConsent — blank-safety guard', () => {
   })
 })
 
+describe('describeConsent — consent-gate policy awareness', () => {
+  it('keeps the accepted detail truthful with and without a consent gate', () => {
+    // Reporting is on in both policies once accepted.
+    expect(describeConsent('accepted', passthrough, true).detail).toBe(
+      'Accepted — performance & error reporting on',
+    )
+    expect(describeConsent('accepted', passthrough, false).detail).toBe(
+      'Accepted — performance & error reporting on',
+    )
+  })
+
+  it('switches the declined detail to preview copy without a consent gate', () => {
+    // Without a gate the stored decline is a preview: reporting stays on,
+    // so "only essential storage" would be false.
+    const cp = describeConsent('declined', passthrough, false)
+    expect(cp.detail).toBe(
+      'Declined — preview only; reporting stays on without a consent gate',
+    )
+    expect(cp.short).toBe('Declined')
+    expect(cp.color).toBe('amber')
+    expect(cp.dot).toBe('bg-amber-400')
+  })
+
+  it('switches the unknown detail to no-gate copy without a consent gate', () => {
+    // Without a gate no banner ever appears, so the next-visit claim is false.
+    const cp = describeConsent('unknown', passthrough, false)
+    expect(cp.detail).toBe(
+      'Not decided — no consent gate on this deployment; reporting stays on',
+    )
+    expect(cp.short).toBe('Not decided')
+  })
+
+  it('requests the preview i18n keys only when the gate is off', () => {
+    const t = vi.fn((_k: string, d: string) => d)
+    describeConsent('declined', t, false)
+    expect(t).toHaveBeenCalledWith(
+      'consent.state.declinedPreview',
+      'Declined — preview only; reporting stays on without a consent gate',
+    )
+    t.mockClear()
+    describeConsent('unknown', t, false)
+    expect(t).toHaveBeenCalledWith(
+      'consent.state.unknownPreview',
+      'Not decided — no consent gate on this deployment; reporting stays on',
+    )
+    t.mockClear()
+    describeConsent('declined', t, true)
+    expect(t).not.toHaveBeenCalledWith(
+      'consent.state.declinedPreview',
+      expect.anything(),
+    )
+  })
+})
+
 describe('describeConsent — structural contract & purity', () => {
   it('every state yields a well-formed ConsentPresentation', () => {
     for (const state of REAL_STATES) {

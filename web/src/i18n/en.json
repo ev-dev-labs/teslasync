@@ -106,6 +106,8 @@
     "weekly": "Weekly (UTC, Monday start)",
     "selectedEstimate": "Selected range estimate",
     "observedBuckets": "{{count}} observed buckets",
+    "observedBuckets_one": "{{count}} observed bucket",
+    "observedBuckets_other": "{{count}} observed buckets",
     "notInvoice": "Local estimate, not an invoice",
     "trendTitle": "Tesla usage cost over time",
     "trendSubtitle": "Observed USD estimate per UTC bucket; gaps are not filled with zeroes.",
@@ -6231,6 +6233,15 @@
       "title": "Inbox actions are read-only"
     }
   },
+  "statusHero": {
+    "headline": {
+      "healthy": "All systems operational",
+      "degraded": "Degraded performance",
+      "unhealthy": "Service outage",
+      "unknown": "Status unknown",
+      "maintenance": "Scheduled maintenance"
+    }
+  },
   "statusBar": {
     "aria": "Application status",
     "announcements": "Application status announcements",
@@ -6692,7 +6703,9 @@
     "state": {
       "accepted": "Accepted — performance & error reporting on",
       "declined": "Declined — only essential storage in use",
-      "unknown": "Not decided — banner will appear on next visit"
+      "declinedPreview": "Declined — preview only; reporting stays on without a consent gate",
+      "unknown": "Not decided — banner will appear on next visit",
+      "unknownPreview": "Not decided — no consent gate on this deployment; reporting stays on"
     },
     "action": {
       "accept": "Re-grant consent",
@@ -37063,7 +37076,15 @@
         "provider": "Provider",
         "save": "Save rate plan",
         "standing": "Standing charge (minor/day)",
-        "structure": "Rate structure"
+        "structure": "Rate structure",
+        "defaultRateLabel": "Standard"
+      },
+      "structure": {
+        "flat": "Flat",
+        "tou": "Time of use",
+        "tiered": "Tiered",
+        "realTime": "Real time",
+        "demand": "Demand"
       },
       "notice": {
         "body": "Each plan is priced against the exact sessions you actually charged, bucketed into their real time-of-day bands. Annualisation scales the observed window — it does not predict future consumption.",
@@ -39894,7 +39915,7 @@
       },
       "kpi": {
         "lastActive": "Last active",
-        "never": "Never",
+        "unknownActivity": "No verified activity",
         "otherDevices": "Other devices",
         "thisDevice": "This device",
         "total": "Active sessions"

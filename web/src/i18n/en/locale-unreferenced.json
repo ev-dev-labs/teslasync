@@ -370,6 +370,15 @@
       "revokedAllOthersCountUnknown": "Other sessions signed out. The number of signed-out devices is unavailable."
     }
   },
+  "statusHero": {
+    "headline": {
+      "healthy": "All systems operational",
+      "degraded": "Degraded performance",
+      "unhealthy": "Service outage",
+      "unknown": "Status unknown",
+      "maintenance": "Scheduled maintenance"
+    }
+  },
   "streaming": "streaming",
   "subtitle": "Real-time fleet intelligence and control",
   "temperature": {

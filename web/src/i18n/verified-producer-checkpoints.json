@@ -740,7 +740,7 @@
   {
     "file": "web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx",
     "calls": 24,
-    "sha256": "02c90110182779926ed9c60445b10422e9a791cada0eaf1bacc61dbe3472bbe9"
+    "sha256": "442b9ec2fda1bf6c998894ade6ab149ff92d40be80aadc057399ff950405118e"
   },
   {
     "file": "web/src/features/settings/components/TeslaAccountSection.tsx",

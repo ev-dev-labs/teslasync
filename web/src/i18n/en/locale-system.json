@@ -1815,6 +1815,8 @@
     "weekly": "Weekly (UTC, Monday start)",
     "selectedEstimate": "Selected range estimate",
     "observedBuckets": "{{count}} observed buckets",
+    "observedBuckets_one": "{{count}} observed bucket",
+    "observedBuckets_other": "{{count}} observed buckets",
     "notInvoice": "Local estimate, not an invoice",
     "trendTitle": "Tesla usage cost over time",
     "trendSubtitle": "Observed USD estimate per UTC bucket; gaps are not filled with zeroes.",

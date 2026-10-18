@@ -70,7 +70,7 @@
       },
       "kpi": {
         "lastActive": "Last active",
-        "never": "Never",
+        "unknownActivity": "No verified activity",
         "otherDevices": "Other devices",
         "thisDevice": "This device",
         "total": "Active sessions"

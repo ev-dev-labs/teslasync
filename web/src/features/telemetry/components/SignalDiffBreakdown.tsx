@@ -16,6 +16,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { Layers, Database, Pin } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Badge, Text } from '@/components/ui';
@@ -90,6 +91,7 @@ export function SignalDiffBreakdown({
   className,
 }: SignalDiffBreakdownProps) {
   const { t } = useTranslation();
+  const { fmtInt } = useNumberFormatting();
 
   // Null-safety: `rows`/`pinnedSignals` come straight from live query +
   // user state upstream; a slow, failed, or not-yet-initialised source can
@@ -166,7 +168,7 @@ export function SignalDiffBreakdown({
                 max={total || c.count}
                 color={chartTokens.series[0]}
                 fill="solid"
-                sublabel={`${c.count} (${pct(c.count, total)}%)`}
+                sublabel={`${fmtInt(c.count)} (${pct(c.count, total)}%)`}
               />
             ))}
           </div>
@@ -205,7 +207,7 @@ export function SignalDiffBreakdown({
                 max={total || s.count}
                 color={s.color}
                 fill="solid"
-                sublabel={`${s.count} (${pct(s.count, total)}%)`}
+                sublabel={`${fmtInt(s.count)} (${pct(s.count, total)}%)`}
               />
             ))}
           </div>

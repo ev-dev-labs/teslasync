@@ -961,7 +961,15 @@
         "provider": "Provider",
         "save": "Save rate plan",
         "standing": "Standing charge (minor/day)",
-        "structure": "Rate structure"
+        "structure": "Rate structure",
+        "defaultRateLabel": "Standard"
+      },
+      "structure": {
+        "flat": "Flat",
+        "tou": "Time of use",
+        "tiered": "Tiered",
+        "realTime": "Real time",
+        "demand": "Demand"
       },
       "notice": {
         "body": "Each plan is priced against the exact sessions you actually charged, bucketed into their real time-of-day bands. Annualisation scales the observed window — it does not predict future consumption.",

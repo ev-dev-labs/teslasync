@@ -47,9 +47,11 @@ export function SessionsSummaryCards({
     ? describeDevice(current.user_agent)
     : t('account.sessions.unknownDevice', 'Unknown device')
   const currentIp = current?.ip || undefined
+  // An absent timestamp means no verified activity, not a device that has
+  // never been active — never render "Never" for missing data.
   const lastActiveLabel = lastActive
     ? formatRelativeTime(lastActive)
-    : t('account.sessions.kpi.never', 'Never')
+    : t('account.sessions.kpi.unknownActivity', 'No verified activity')
 
   // QueryError renders `null` for a falsy error, so an `isError` flag paired
   // with a nullish `error` would collapse to a blank panel. Fall back to a

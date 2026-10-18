@@ -212,7 +212,9 @@ describe('SessionsSummaryCards — empty / no current session', () => {
     renderCards({ total: 0, current: null, otherCount: 0, lastActive: null })
 
     expect(screen.getByText('Unknown device')).toBeInTheDocument()
-    expect(screen.getByText('Never')).toBeInTheDocument()
+    // Absent last-active must read as unknown activity, never "Never".
+    expect(screen.getByText('No verified activity')).toBeInTheDocument()
+    expect(screen.queryByText('Never')).not.toBeInTheDocument()
     // total + otherCount both render 0 — never a blank value.
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2)
     // No last-active timestamp → formatters are skipped entirely.

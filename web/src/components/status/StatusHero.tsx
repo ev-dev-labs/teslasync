@@ -11,12 +11,21 @@
  */
 
 import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle, Wrench, RefreshCw } from 'lucide-react'
 import { GlassPanel, Button, Text } from '@/components/ui'
 import { LiveIndicator } from '@/components/data-display'
 import { cn } from '@/lib/cn'
 
 export type HeroStatus = 'healthy' | 'degraded' | 'unhealthy' | 'unknown' | 'maintenance'
+
+const STATUS_HEADLINE_KEYS: Record<HeroStatus, string> = {
+  healthy: 'statusHero.headline.healthy',
+  degraded: 'statusHero.headline.degraded',
+  unhealthy: 'statusHero.headline.unhealthy',
+  unknown: 'statusHero.headline.unknown',
+  maintenance: 'statusHero.headline.maintenance',
+}
 
 const STATUS_CONFIG: Record<HeroStatus, {
   icon: typeof CheckCircle
@@ -56,9 +65,10 @@ export function StatusHero({
   id,
   className,
 }: StatusHeroProps) {
+  const { t } = useTranslation()
   const cfg = STATUS_CONFIG[status]
   const Icon = cfg.icon
-  const heading = headline ?? cfg.defaultHeadline
+  const heading = headline ?? t(STATUS_HEADLINE_KEYS[status], cfg.defaultHeadline)
 
   return (
     <GlassPanel

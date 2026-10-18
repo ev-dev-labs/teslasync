@@ -56,10 +56,10 @@ const STRUCTURES: TariffStructure[] = ['flat', 'tou', 'tiered', 'real_time', 'de
 const ALL_DAYS = 127;
 
 /** A fresh band spanning the whole week and the whole day. */
-function newRate(): Omit<TariffRate, 'end_minute'> & { endClock: string } {
+function newRate(defaultLabel: string): Omit<TariffRate, 'end_minute'> & { endClock: string } {
   return {
     id: 0,
-    label: 'Standard',
+    label: defaultLabel,
     day_mask: ALL_DAYS,
     start_minute: 0,
     endClock: '24:00',
@@ -105,10 +105,21 @@ export default function TariffLabPage() {
     demand_charge_minor_per_w: 0,
     export_price_minor_per_wh: 0,
     is_current: false,
-    rates: [newRate()],
+    rates: [newRate(t('ownership.tariff.form.defaultRateLabel', 'Standard'))],
   });
 
   usePageTitle(t('ownership.tariff.title', 'Utility tariff arbitrage lab'));
+
+  // Localized display labels for the known TariffStructure enum values. Raw
+  // enum values stay untouched as option values / API payloads; only the
+  // user-facing labels translate.
+  const structureLabels: Record<TariffStructure, string> = {
+    flat: t('ownership.tariff.structure.flat', 'Flat'),
+    tou: t('ownership.tariff.structure.tou', 'Time of use'),
+    tiered: t('ownership.tariff.structure.tiered', 'Tiered'),
+    real_time: t('ownership.tariff.structure.realTime', 'Real time'),
+    demand: t('ownership.tariff.structure.demand', 'Demand'),
+  };
 
   const tariffQuery = useTariffs(planPageSize, (planPage - 1) * planPageSize);
   const create = useCreateTariff();
@@ -215,7 +226,7 @@ export default function TariffLabPage() {
     }, {
       onSuccess: () => {
         setFormOpen(false);
-        setDraft((current) => ({ ...current, name: '', provider: '', rates: [newRate()] }));
+        setDraft((current) => ({ ...current, name: '', provider: '', rates: [newRate(t('ownership.tariff.form.defaultRateLabel', 'Standard'))] }));
       },
     });
   };
@@ -250,7 +261,7 @@ export default function TariffLabPage() {
     {
       key: 'structure',
       header: t('ownership.tariff.plan.structure', 'Structure'),
-      render: (row) => <Badge variant="info">{row.structure.replace(/_/g, ' ')}</Badge>,
+      render: (row) => <Badge variant="info">{structureLabels[row.structure] ?? row.structure}</Badge>,
     },
     {
       key: 'bands',
@@ -797,7 +808,7 @@ export default function TariffLabPage() {
                   label={t('ownership.tariff.form.structure', 'Rate structure')}
                   options={STRUCTURES.map((structure) => ({
                     value: structure,
-                    label: structure.replace(/_/g, ' '),
+                    label: structureLabels[structure],
                   }))}
                   value={draft.structure}
                   onChange={(event) =>
@@ -868,7 +879,7 @@ export default function TariffLabPage() {
                     size="sm"
                     icon={<Plus className="h-4 w-4" aria-hidden="true" />}
                     onClick={() =>
-                      setDraft((current) => ({ ...current, rates: [...current.rates, newRate()] }))
+                      setDraft((current) => ({ ...current, rates: [...current.rates, newRate(t('ownership.tariff.form.defaultRateLabel', 'Standard'))] }))
                     }
                   >
                     {t('ownership.tariff.form.addBand', 'Add band')}

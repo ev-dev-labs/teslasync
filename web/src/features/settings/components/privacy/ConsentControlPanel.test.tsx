@@ -205,7 +205,7 @@ describe('ConsentControlPanel — live status region', () => {
   })
 
   it('describes the "declined" state with an amber dot and full detail line', () => {
-    renderPanel({ consent: 'declined' })
+    renderPanel({ consent: 'declined', requireConsent: true })
     const region = stateRegion()
     expect(region).toHaveAttribute('data-consent-state', 'declined')
 
@@ -217,7 +217,7 @@ describe('ConsentControlPanel — live status region', () => {
   })
 
   it('describes the "unknown" state with a slate dot and the not-decided copy', () => {
-    renderPanel({ consent: 'unknown' })
+    renderPanel({ consent: 'unknown', requireConsent: true })
     const region = stateRegion()
     expect(region).toHaveAttribute('data-consent-state', 'unknown')
 
@@ -226,6 +226,31 @@ describe('ConsentControlPanel — live status region', () => {
     expect(
       within(region).getByText('Not decided — banner will appear on next visit'),
     ).toBeInTheDocument()
+  })
+
+  it('shows policy-aware preview details when no consent gate is enforced', () => {
+    // Without a gate the stored choice is a preview: reporting stays on, so
+    // the gated "essential-only / banner" claims would be false here.
+    const declined = renderPanel({ consent: 'declined', requireConsent: false })
+    expect(
+      within(stateRegion()).getByText(
+        'Declined — preview only; reporting stays on without a consent gate',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(stateRegion()).queryByText('Declined — only essential storage in use'),
+    ).not.toBeInTheDocument()
+    declined.unmount()
+
+    renderPanel({ consent: 'unknown', requireConsent: false })
+    expect(
+      within(stateRegion()).getByText(
+        'Not decided — no consent gate on this deployment; reporting stays on',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(stateRegion()).queryByText('Not decided — banner will appear on next visit'),
+    ).not.toBeInTheDocument()
   })
 })
 

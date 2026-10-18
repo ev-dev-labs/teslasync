@@ -39,7 +39,7 @@ export function ConsentControlPanel({
   onReset,
 }: ConsentControlPanelProps) {
   const { t } = useTranslation()
-  const cp = describeConsent(consent, t)
+  const cp = describeConsent(consent, t, requireConsent)
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="privacy-consent-section">

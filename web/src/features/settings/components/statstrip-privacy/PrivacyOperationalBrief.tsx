@@ -20,7 +20,7 @@ interface PrivacyOperationalBriefProps {
 export function PrivacyOperationalBrief({ recentCount, consent, requireConsent, policyLoading,
   policyError, retained, onRetry }: PrivacyOperationalBriefProps) {
   const { t } = useTranslation();
-  const cp = describeConsent(consent, t);
+  const cp = describeConsent(consent, t, requireConsent ?? true);
   const period: StatPeriod = {
     kind: 'unknown',
     label: t('account.privacy.stats.sources', 'Browser-local privacy and deployment policy'),

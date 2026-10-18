@@ -242,6 +242,17 @@ describe('SignalDiffBreakdown', () => {
     expect(within(panel).queryByText('Motor')).toBeNull();
   });
 
+  it('formats large category and source counts with locale grouping', () => {
+    // 1,000 battery rows on L1: both panels must show grouped counts while
+    // the percentage denominator stays exact.
+    const rows = Array.from({ length: 1000 }, (_, i) => ({
+      name: `battery_cell_${i}`, value_a: 1, value_b: 2, source_b: 'l1', changed: true,
+    }));
+    renderBreakdown({ rows });
+    expect(within(panelFor(CATEGORY_TITLE)).getByText('1,000 (100%)')).toBeInTheDocument();
+    expect(within(panelFor(SOURCE_TITLE)).getByText('1,000 (100%)')).toBeInTheDocument();
+  });
+
   it('buckets source layers by the current window (source_b), folding a missing layer into Unknown', () => {
     renderBreakdown();
     const panel = panelFor(SOURCE_TITLE);
