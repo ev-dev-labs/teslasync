@@ -455,3 +455,45 @@ Decision lists: step-5 list (§5: E1–E9 coverage gate, F1 NaN contract,
 F2 isStale≠retained, C1–C7 pin blessing) and step-6 list (§6: 4
 shared-range migrations, charger-label ownership, anomaly structured
 facts, dead Duplicate/Export buttons, insurance "0..60").
+
+## CI (PR #198: ui/simplification → main, draft)
+
+Note: the task brief said "Frontend tests job in release.yml", but
+release.yml runs only on main-push/workflow_dispatch. The failing
+"Frontend tests (1–8/8)" jobs live in ci.yml (workflow "CI"). All
+work below targets the actual failing checks.
+
+How CI runs (recorded from workflow files):
+- CI (ci.yml): ubuntu-latest, Node 26 (`npm ci --legacy-peer-deps` in
+  web/), Go from go.mod. Frontend shards (8):
+  `NODE_OPTIONS='--no-experimental-webstorage' npx vitest run
+  --shard=N/8 --maxWorkers=2 --coverage --coverage.reporter=json
+  --coverage.reportOnFailure --reporter=default --reporter=blob`.
+  No TZ/LANG overrides (runner defaults). Backend: 8 race shards +
+  coverage merge; lint via golangci-lint; frontend lint/build jobs.
+- Frontend Quality Gates (frontend-quality.yml): route registry +
+  test discovery, hermetic browser build, Chromium responsive ×16,
+  a11y, performance, firefox/webkit smoke, Windows visual ×10.
+- Others on this PR: SI Canonical Gate (new legacy unit-suffixed
+  identifiers in merge-base...HEAD added lines), Security
+  (supply-chain pins, ingress, govulncheck, trivy, gitleaks,
+  CodeQL...), Performance (Lighthouse CI), AI Evaluation, Ops Gate,
+  Auto Label.
+
+Runs:
+- Pre-merge baseline (08:18–08:37Z, head f6150b0715): CI Frontend
+  tests 8/8 FAIL, Merge frontend coverage FAIL, Generated artifacts
+  FAIL; Quality Gates route-registry + responsive 16/16 + a11y +
+  perf + smoke + visual 10/10 FAIL; SI FAIL (43 violines); Security
+  FAIL (gitleaks 66); Performance FAIL (Lighthouse). Backend, lint,
+  build, Docker green.
+- Merge: fast-forwarded follow-ups (d6928402a7) into ui/simplification
+  (no conflicts — head had not moved) and pushed; new runs 3914698xxxx.
+
+Fixes (each verified locally under CI conditions before push):
+1. Security/gitleaks 66→0: all 66 confirmed false positives (SHA
+   fingerprints, command transcripts, prose in PR-new audit/docs
+   files; trio test pins must not change). Added targeted
+   [[allowlists]] to .gitleaks.toml (audit-evidence dir + 5
+   path+line entries). Local gitleaks 8.27.2 on pristine HEAD export:
+   66→0; probe secret still detected.

@@ -148,3 +148,42 @@ condition = "AND"
 regexTarget = "line"
 paths = ['''(^|/)web/src/components/ui/__tests__/MaskedValue\.test\.tsx$''']
 regexes = ['''sk_live_abcdef1234''']
+
+[[allowlists]]
+description = "Generated frontend audit evidence (SHA fingerprints, command transcripts, prose) — docs only, no maintained source or credentials."
+paths = ['''(^|/)docs/frontend-audits/''']
+
+[[allowlists]]
+description = "Design-contract doc: file fingerprint and prose mentioning keys"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)docs/frontend-design-contract\.md$''']
+regexes = ['''`[0-9a-f]{64}`''', '''keys, invalidation/broadcast and toast''']
+
+[[allowlists]]
+description = "Migration queue rows: phase-token list names and tokens test reference"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)migration-queue\.md$''']
+regexes = ['''phase3-font-inheritance-tokens,phase3-''', '''phase3-side-panel-geometry-tokens''']
+
+[[allowlists]]
+description = "Work-items queue: task prose mentioning keys"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)work-items\.json$''']
+regexes = ['''Continue the existing modernization, not a new page migration''']
+
+[[allowlists]]
+description = "Trio registry palette guard compares a route key name, not a credential"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/scripts/i18n-trio-registries\.mjs$''']
+regexes = ['''key === 'route\.i18nKey'''']
+
+[[allowlists]]
+description = "Trio producer test pins per-file SHA fingerprints (frozen evidence, not secrets)"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/i18n/excluded-feature-owned-producers\.test\.ts$''']
+regexes = ['''\["web/src/[^"]+", "[0-9a-f]{64}"\]''']
