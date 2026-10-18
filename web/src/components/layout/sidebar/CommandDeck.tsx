@@ -2,11 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/runtime'
-import { Icons } from '@/lib/icons'
 import { SectionRail } from './SectionRail'
 import { AtlasPanel, type AtlasPanelProps } from './AtlasPanel'
 import { BottomTabBar } from '../BottomTabBar'
-import { SIDEBAR_SECTION_ICONS } from './sidebarIcons'
+import { resolveSectionIcon, PHONE_TAB_SECTIONS } from './sidebarIcons'
 import type { SidebarSectionInput, SectionGroup } from '../sectionGroups'
 import type { SidebarSuggestion } from './sidebarSuggest'
 import './sidenav.css'
@@ -129,9 +128,9 @@ export function CommandDeck(props: CommandDeckProps) {
       <Modal open={phoneSheet !== null} onClose={() => { setPhoneSheet(null); onItemSelect?.() }}
         title={phoneSheet === 'more' ? t('nav.mobileMore', 'More') : undefined}
         ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })} className="sidenav-sheet">
-        {phoneSheet === 'more' ? <div className="sidenav-section-grid">{sections.map(section => {
-          const Icon = SIDEBAR_SECTION_ICONS[section.title] ?? Icons.home
-          return <Button key={section.title} type="button" variant="ghost" onClick={() => select({ kind: 'section', title: section.title })}>
+        {phoneSheet === 'more' ? <div className="sidenav-section-grid">{sections.filter(section => !PHONE_TAB_SECTIONS.some(title => title === section.title)).map(section => {
+          const Icon = resolveSectionIcon(section.title)
+          return <Button key={section.title} type="button" variant="ghost" aria-current={section.title === activeSectionTitle ? 'true' : undefined} className={section.title === activeSectionTitle ? 'is-selected' : undefined} onClick={() => select({ kind: 'section', title: section.title })}>
             <Icon className="h-5 w-5" aria-hidden /><span>{sectionLabel(section)}</span>
           </Button>
         })}</div> : panel}

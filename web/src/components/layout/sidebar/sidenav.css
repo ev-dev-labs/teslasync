@@ -7,7 +7,6 @@
 .sidenav-scroll-wrap { position: relative; flex: 1; min-height: 0; }
 .sidenav-rail-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; padding: 0 4px 18px; }
 .sidenav-rail-scroll::-webkit-scrollbar { display: none; }
-.sidenav-rail-scroll > span { display: flex; width: 100%; }
 .sidenav-rail-item { position: relative; display: flex; flex-direction: column; gap: 2px; justify-content: center; width: 100%; height: 60px; min-height: 60px; padding: 3px 0; border: 0; border-radius: 8px; color: var(--text-secondary); }
 .sidenav-rail-item.is-selected { background: color-mix(in srgb, var(--theme-accent) 12%, var(--nav-rail-bg)); color: var(--text-primary); }
 .sidenav-rail-item.is-selected::before { content: ''; position: absolute; inset-inline-start: -4px; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--theme-accent); }
@@ -28,9 +27,9 @@
 .sidenav-account-menu { position: absolute; inset-inline-start: 52px; bottom: 0; width: 220px; padding: 8px; z-index: 70; background: var(--surface-1); border: 1px solid var(--border-default); border-radius: 12px; }
 .sidenav-account-link { display: flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
 .sidenav-phone-tabs { display: flex; position: fixed; inset-inline: 0; bottom: 0; z-index: 60; height: var(--shell-tab-bar-height); align-items: stretch; background: var(--surface-1); border-top: 1px solid var(--border-default); }
-.sidenav-phone-tab { position: relative; display: flex; flex: 1; min-width: 0; min-height: 44px; flex-direction: column; gap: 2px; padding: 4px 0; font-size: 11px; color: var(--text-secondary); border-radius: 0; }
+.sidenav-phone-tab { position: relative; display: flex; flex: 1; min-width: 0; min-height: 44px; flex-direction: column; gap: 4px; padding: 8px 0; font-size: 11px; color: var(--text-secondary); border-radius: 0; }
 .sidenav-phone-tab.is-selected { color: var(--text-primary); }
-.sidenav-phone-tab.is-selected::before { content: ''; position: absolute; top: 0; width: 24px; height: 3px; background: var(--theme-accent); border-radius: 0 0 3px 3px; }
+.sidenav-phone-tab.is-selected::before { content: ''; position: absolute; top: 4px; width: 24px; height: 3px; background: var(--theme-accent); border-radius: 0 0 3px 3px; }
 .sidenav-section-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 12px; overflow-y: auto; }
 .sidenav-section-grid button { display: flex; height: auto; min-height: 76px; flex-direction: column; gap: 8px; padding: 8px 4px; white-space: normal; font-size: 11px; text-align: center; }
 .sidenav-sheet { position: fixed; inset-inline: 0; bottom: 0; width: 100%; height: 82dvh; max-height: 90dvh; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -44,3 +43,20 @@
 @media (min-width: 768px) { .sidenav-phone-tabs { display: none; } }
 @media (prefers-reduced-motion: reduce) { .sidenav-deck *, .sidenav-sheet, .sidenav-tablet-panel { scroll-behavior: auto; animation: none; transition: none; } }
 @media (forced-colors: active) { .sidenav-rail-item.is-selected { outline: 2px solid Highlight; } }
+
+/* Density follows the input device; phone sheets always keep touch targets. */
+.sidenav-panel { --sidenav-row-height: 44px; --sidenav-group-height: 44px; --sidenav-filter-height: 44px; }
+.sidenav-panel .sidenav-page-row > a { min-height: var(--sidenav-row-height); padding-block: 6px; font-size: 14px; outline-offset: -2px; }
+.sidenav-panel .sidenav-pin { min-height: var(--sidenav-row-height); height: var(--sidenav-row-height); min-width: var(--sidenav-row-height); padding: 4px; }
+.sidenav-panel .sidenav-group-header { min-height: var(--sidenav-group-height); height: var(--sidenav-group-height); padding-block: 2px; outline-offset: -2px; }
+.sidenav-panel .sidenav-filter { min-height: var(--sidenav-filter-height); height: var(--sidenav-filter-height); padding-block: 4px; }
+.sidenav-section-grid { padding-bottom: 16px; gap: 12px; }
+.sidenav-section-grid button span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 16px; }
+.sidenav-section-grid button.is-selected { background: var(--nav-active-bg); color: var(--text-primary); outline: 2px solid var(--theme-accent); outline-offset: -2px; }
+@media (min-width: 768px) and (pointer: fine) {
+  .sidenav-panel { --sidenav-row-height: 34px; --sidenav-group-height: 28px; --sidenav-filter-height: 34px; }
+}
+@media (pointer: coarse) {
+  .sidenav-panel { --sidenav-row-height: 44px; --sidenav-group-height: 44px; --sidenav-filter-height: 44px; }
+  .sidenav-page-row > div { opacity: 1; }
+}

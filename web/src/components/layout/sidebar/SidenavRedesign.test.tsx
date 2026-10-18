@@ -55,7 +55,7 @@ describe('frozen old-nav reachability', () => {
     for(const section of inventory)for(const item of section.items)expect(paths.has(item.to),item.to).toBe(true)
   })
   it.each(sections.map(section=>[section.title,section] as const))('every page in %s is reachable at its unchanged route', (title,section) => {
-    render(<Harness route={title} />); const panel=screen.getByTestId('command-deck-secondary'); const reachable=new Set(Array.from(panel.querySelectorAll('a[href]')).map(link=>link.getAttribute('href')));
+    render(<Harness route={title} />); const panel=screen.getByTestId('command-deck-secondary'); for(const group of within(panel).queryAllByRole('button',{expanded:false}))if(group.hasAttribute('aria-controls'))fireEvent.click(group); const reachable=new Set(Array.from(panel.querySelectorAll('a[href]')).map(link=>link.getAttribute('href')));
     for(const item of flattenSidebarItems(section.items,collections))expect(reachable.has(item.to),item.to).toBe(true)
   })
   it('collection expansion covers every recorded secondary destination exactly', () => { const reachable=new Set(sections.flatMap(section=>flattenSidebarItems(section.items,collections).map(item=>item.to))); for(const section of inventory)for(const item of section.items)expect(reachable.has(item.to),item.to).toBe(true) })

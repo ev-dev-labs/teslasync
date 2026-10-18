@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
-  Ellipsis,
+  Activity,
   Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -51,7 +51,7 @@ export function MoreSegment({
   const { hasBuildNews } = useBuildNews();
   const { open, toggle, close } = useStatusBarPopover('more');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const label = t('statusBar.more.label', 'More');
+  const label = t('statusBar.more.statusTitle', 'Status');
   const hasError = backgroundJobs.jobs.some((job) => job.status === 'error');
   const hasRunning = backgroundJobs.jobs.some(
     (job) => job.status === 'running',
@@ -82,17 +82,14 @@ export function MoreSegment({
   const triggerSummary = [statusSummary, buildNewsSummary]
     .filter(Boolean)
     .join(' · ');
-  const triggerLabel = t(
-    'statusBar.more.open',
-    'Open more status options',
-  );
+  const triggerLabel = label;
   const TriggerIcon = hasError
     ? AlertTriangle
     : hasRunning
       ? Loader2
       : backgroundJobs.hasJobs
         ? CheckCircle2
-        : Ellipsis;
+        : Activity;
   const triggerTone = hasError
     ? neonColorMap.red.text
     : hasRunning

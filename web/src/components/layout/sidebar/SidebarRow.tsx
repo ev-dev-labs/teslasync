@@ -67,7 +67,7 @@ export function SidebarRow({
               show: { opacity: 1, y: 0, transition: { duration: 0.13, ease: 'easeOut' } },
             }
       }
-      className={cn('group/sidebar-row relative flex items-center', compact && 'justify-center')}
+      className={cn('sidenav-page-row group/sidebar-row relative flex items-center', compact && 'justify-center')}
     >
       {active && (
         <span

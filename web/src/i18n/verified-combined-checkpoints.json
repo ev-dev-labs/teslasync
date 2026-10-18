@@ -77,7 +77,7 @@
     {
       "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
       "calls": 30,
-      "sha256": "8655e0996ff7d1553f30ea80ba34bf15f602e317323dea2641d5657e9efc239f"
+      "sha256": "369a84fbabbf75143755e80e5be414ba7d7bbbb79d7177eca68fff401b77b6df"
     },
     {
       "file": "web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx",
