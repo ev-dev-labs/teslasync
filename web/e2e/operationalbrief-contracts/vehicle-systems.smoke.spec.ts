@@ -29,7 +29,7 @@ function endpoints(contract: RootContract, mode: FixtureMode): Endpoint[] {
     case 'climate':
     case 'preconditioning': {
       const result = [
-        scoped('/climate', empty ? [] : accountingClimate),
+        scoped('/climate', empty ? [] : accountingClimate, ['start', 'end']),
       ];
       if (contract.route === '/climate-control') {
         result.push(
@@ -48,7 +48,7 @@ function endpoints(contract: RootContract, mode: FixtureMode): Endpoint[] {
         scoped('/tire-pressure', empty ? [] : pressureHistory, ['start', 'end']),
       ];
     case 'drift':
-      return [scoped('/tire-pressure', empty ? [] : differentialHistory, ['start'])];
+      return [scoped('/tire-pressure', empty ? [] : differentialHistory, ['start', 'end'])];
     case 'media':
       return [
         scoped('/media/latest', unknown ? unknownMedia : mediaLatest),

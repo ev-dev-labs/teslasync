@@ -141,7 +141,7 @@ async function setup(
   });
   await page.goto(fleetRoute);
   await waitForHarnessReady(page, mocks);
-  await expect(brief(page)).toHaveAttribute('data-operational-brief', '');
+  await expect(brief(page)).toHaveAttribute('data-operational-brief', 'true');
   await expect(brief(page).locator('[data-operational-metric]')).toHaveCount(4);
   await expectThemeApplied(page, theme);
   return { mocks, control };

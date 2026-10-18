@@ -154,3 +154,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 15:00 UTC - full suite green; waiting on e2e matrix
 - Local full suite alone: 2714 files, 57064 passed / 0 failed / 4 skipped (7.7 min; vs step-7 baseline 57050/24 — the CI-loop fixes cleared the known set too).
 - CI: 37 pass, 39 pending (e2e matrix), 1 fail = Lighthouse (blocked notice-shifts, recorded). Next: triage e2e when it lands.
+
+## 2026-10-18 15:35 UTC - r2 triaged and fixed locally; harvesting r3-r16
+- CI run 39169020871: r1 pass, r2 + 13 more shards FAIL (r15 pending at poll).
+- r2: 17 fails in 5 groups, all fixed locally (titles, deck migration + rail role, axis guard, hover hygiene, binding self-collection).
+- Holding push until every shard lands (cancel-in-progress would destroy pending evidence).

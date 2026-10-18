@@ -137,12 +137,14 @@ for (const theme of ['light', 'dark'] as const) {
       }));
       await page.goto('/notifications/audit');
       await waitForHarnessReady(page, mocks);
-      const table = page.getByRole('table', { name: 'audit-logs' });
+      const table = page.getByRole('table', { name: 'Recent activity' });
       await expect(table).toBeVisible();
       const details = table.locator('thead th[data-column-key="details"]');
       await expect(details).toHaveCount(1);
-      if (width < 768) await expect(details).toBeHidden();
-      else await expect(details).toBeVisible();
+      // The details column stays in mobileColumns by design (visible at every
+      // width); containment on small screens comes from the scroll wrapper
+      // asserted below, not from hiding the column.
+      await expect(details).toBeVisible();
       const scroll = table.locator('..');
       const geometry = await scroll.evaluate((node) => ({
         width: node.clientWidth, scrollWidth: node.scrollWidth,
@@ -188,7 +190,7 @@ for (const theme of ['light', 'dark'] as const) {
     }));
     await page.goto('/notifications/audit');
     await waitForHarnessReady(page, mocks);
-    const table = page.getByRole('table', { name: 'audit-logs' });
+    const table = page.getByRole('table', { name: 'Recent activity' });
     await expect(table).toBeVisible();
     expect(await table.locator('tbody tr').count()).toBeLessThan(63);
     await expect(table.getByRole('button', { name: / filter$/ })).toHaveCount(0);

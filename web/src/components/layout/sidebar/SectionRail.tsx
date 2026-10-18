@@ -63,7 +63,7 @@ export function SectionRail({ sections, selection, onSelect, navSectionTitle, na
     observer?.observe(element)
     return () => { observer?.disconnect(); element.removeEventListener('scroll', update) }
   }, [sections])
-  return <div className="sidenav-rail" aria-label={t('nav.deck.groups', 'Sections and shortcuts')}>
+  return <div role="navigation" className="sidenav-rail" aria-label={t('nav.deck.groups', 'Sections and shortcuts')}>
     <div className="sidenav-brand" aria-hidden="true"><Icons.charging className="h-6 w-6" /></div>
     <div className="sidenav-scroll-wrap">
       <div ref={scrollRef} data-testid="rail-scroll" className="sidenav-rail-scroll">

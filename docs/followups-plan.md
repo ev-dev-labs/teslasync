@@ -651,3 +651,42 @@ Fixes (each verified locally under CI conditions before push):
 14. Visual baselines: 6 charging.png regenerated (optimizer section now
     renders real content instead of the stub-crash error state; sizes
     +12-17%, no blanks). Only charging snapshots affected.
+
+## CI run 39169020871 (head 1f84906396) - responsive shards triage
+- r1 pass; r2 FAIL (17 unexpected / 86 ok / 1 flaky / 3 skipped);
+  r3-r16: 13 more FAIL, r15 pending at poll time. Harvesting all reports.
+- r2 groups (all reproduced locally under CI=true TZ=UTC, chromium-smoke):
+  (a) charging-history-layout 2x: spec Title Case vs code sentence case
+  ('Monthly spending' etc., asserted by unit tests) -> spec titles updated,
+  2/2 local.
+  (b) collection-navigation 7x: spec written for pre-redesign deck (rail had
+  no navigation role; 'N pages' counts, Saved/Suggested rail buttons,
+  collapse controls, 'Close panel', 'Filter Driving tools' gone by redesign).
+  Code fix: role=navigation restored on SectionRail (aria-label without a
+  role is ignored by AT; unit 400/400). Spec migrated to the new deck with
+  probe-grounded values (rail bg 11,13,18 dark; panel 17,21,28 dark /
+  250,251,252 light; 76+272px docked columns; Home->Suggested/Saved in
+  panel; theme-picker popover -> Customize -> /settings#appearance;
+  mobile via Quick-navigation tabs + More sheet + Ctrl+K palette).
+  Dropped only what the redesign removed (rail collapse widths, compact
+  secondary, exclusive group auto-expansion, z-index), recorded here.
+  7/7 local.
+  (c) axis-formatter group-boundary 4x: nice-domain tick $1,050.00000000
+  wider than any measured data label (max plotted <1000); canvas measure +
+  20px padding clips ~1px on Linux fonts (passes on Windows).
+  Code fix: CostBreakdownWidget grows YAxis from RENDERED tick boxes when
+  they overflow the SVG origin; no-op otherwise (zero visual churn).
+  tsc + widget 32/32; Linux CI is arbiter.
+  (d) catalogue-states retained 2x (1440 only): test cursor rests on the
+  clicked Refresh button; its hover tooltip floats above the panel top by
+  design; main is not scrollable at 1440 so hover never clears (at 390 a
+  scroll ends hover -> passed). Harness hygiene only: park cursor on the
+  panel title before capture. Assertions unchanged. 4/4 local.
+  (e) charge-query-binding 2x in shard: beforeAll required
+  E2E_CHARGE_BINDING_EVIDENCE, which no workflow/config/producer sets
+  (spec added on PR branch, never wired). Fix: collect the same native
+  observer evidence in beforeAll via the browser fixture (procedure copied
+  from the diagnostic spec); all 13 tests in file pass locally.
+- Local e2e harness note: bundled-chromium download blocked in sandbox;
+  repro uses installed desktop Chrome via temp pw-chrome.local.config.ts
+  (deleted before push), CI=true TZ=UTC E2E_MOCKS=1.

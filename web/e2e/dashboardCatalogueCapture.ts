@@ -220,6 +220,13 @@ export async function captureCataloguePanel(page: Page, panel: Locator, info: Te
   };
   try {
     await panel.waitFor({ state: 'visible', timeout: remainingCaptureBudget(deadline) });
+    // Park the cursor on fixed chrome (viewport corner) before settling:
+    // settlement scrolls content under a stationary mouse, which can
+    // re-hover buttons (reviving their tooltips) or light up group-hover
+    // chrome over panel text. The corner sits on the fixed sidebar/appbar,
+    // which never scrolls, holds no panel text, and carries no tooltip at
+    // this point — so the capture asserts content, not cursor state.
+    await page.mouse.move(2, 2);
     let previous = '';
     let stable = 0;
     const signatureOf = (geometry: Awaited<ReturnType<typeof captureGeometry>>) => JSON.stringify({

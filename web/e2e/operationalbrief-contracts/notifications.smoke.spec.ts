@@ -19,7 +19,7 @@ async function metric(brief: Locator, key: string, value: string, state: 'value'
 async function briefMarker(page: Page, testId: string) {
   const brief = page.getByTestId(testId);
   await expect(brief).toBeVisible();
-  await expect(brief).toHaveAttribute('data-operational-brief', '');
+  await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   return brief;
 }
 

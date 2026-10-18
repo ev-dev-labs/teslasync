@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PieChart as PieIcon } from 'lucide-react';
 import {
@@ -91,6 +91,31 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
   const axisWidth = useMeasuredAxisWidth({
     labels: axisLabels, fontSize: 10, minWidth: 45, padding: 20, enabled: !isCompact && !canUseDonut,
   });
+  // The measured width covers data labels, but recharts' nice domain can
+  // render a wider boundary tick (e.g. data peaks below $1,000 while the
+  // axis crosses into $1,050). Grow the axis from the rendered ticks when
+  // they overflow the SVG origin; a no-op when everything already fits, so
+  // normal renders keep their exact width.
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [axisOverflow, setAxisOverflow] = useState(0);
+  useLayoutEffect(() => {
+    if (isCompact || canUseDonut) return;
+    let needed = 0;
+    try {
+      const texts = chartRef.current?.querySelectorAll('.recharts-yAxis .recharts-cartesian-axis-tick text');
+      texts?.forEach(node => {
+        const box = typeof (node as SVGTextElement).getBBox === 'function'
+          ? (node as SVGTextElement).getBBox()
+          : null;
+        if (box && Number.isFinite(box.x)) needed = Math.max(needed, 1 - box.x);
+      });
+    } catch {
+      needed = 0;
+    }
+    const grown = Math.max(0, Math.ceil(needed));
+    setAxisOverflow(previous => (previous === grown ? previous : grown));
+  }, [axisWidth, axisOverflow, donutData, isCompact, canUseDonut]);
+  const yAxisWidth = axisWidth + axisOverflow;
 
   const rankedItems = useMemo((): (RankedItem & { value: number })[] => {
     return monthlyEntries.flatMap((entry, i) => {
@@ -228,6 +253,7 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
             emptyMessage={t('widget.costBreakdown.noData', 'No cost data')}
             className="h-full min-w-0"
           >
+            <div ref={chartRef} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
               {canUseDonut ? (
               <PieChart>
@@ -253,12 +279,13 @@ export default function CostBreakdownWidget({ vehicleId, config, size }: WidgetP
               ) : (
                 <BarChart data={donutData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
                   <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
-                  <YAxis tick={axisTickSm} width={axisWidth} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatAmount(value)} />
+                  <YAxis tick={axisTickSm} width={yAxisWidth} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatAmount(value)} />
                   <Tooltip content={<ChartTooltip valueFormatter={(value) => formatAmount(value)} />} />
                   <Bar dataKey="value" name={t('widget.costBreakdown.cost', 'Cost')} fill={palette.primary} maxBarSize={32} radius={[4, 4, 0, 0]} />
                 </BarChart>
               )}
             </ResponsiveContainer>
+            </div>
           </EmbeddedChart>
 
           <div className="min-h-0 min-w-0 overflow-auto">

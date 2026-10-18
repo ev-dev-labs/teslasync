@@ -385,7 +385,7 @@ for (const theme of ['light', 'dark'] as const) {
       await value(lifetime, 'cost', '$216.00');
       await value(lifetime, 'peak-power', '44.00 kW');
       const active = page.getByTestId('charging-operational-brief');
-      await expect(active).toHaveAttribute('data-operational-brief', '');
+      await expect(active).toHaveAttribute('data-operational-brief', 'true');
       await value(active, 'sessions', '1');
       await value(active, 'energy', '18.00 kWh');
       await value(active, 'cost', '$0.00');

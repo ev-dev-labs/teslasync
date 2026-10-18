@@ -41,7 +41,7 @@ async function stormSources(page: Page, mocks: MockApiController | null) {
 }
 
 async function reviewSource(page: Page, brief: Locator, title: string, source: string, limitations: readonly string[]) {
-  await expect(brief).toHaveAttribute('data-operational-brief', '');
+  await expect(brief).toHaveAttribute('data-operational-brief', 'true');
   await expect(brief).toContainText('Vehicle #7');
   await expect(brief).toContainText('Observation window: Aug 1, 2026');
   await expect(brief).toContainText('Aug 3, 2026');

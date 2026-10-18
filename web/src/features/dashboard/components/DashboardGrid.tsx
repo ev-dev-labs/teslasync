@@ -640,7 +640,8 @@ export const DashboardGrid = memo(function DashboardGrid({
             onClick={() => setFullscreenWidget(widget.id)}
             className="absolute top-2 right-12 z-10 h-11 w-11 p-0 rounded-lg bg-[var(--surface-overlay)]
               text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
-              opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
+              opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all
+              pointer-events-none group-hover:pointer-events-auto focus-visible:pointer-events-auto"
             aria-label={t('dashboard.grid.expandLabel', 'Expand {{name}}', { name: def.name })}
           >
             <Maximize2 className="h-3.5 w-3.5" />
