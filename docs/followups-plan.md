@@ -690,3 +690,22 @@ Fixes (each verified locally under CI conditions before push):
 - Local e2e harness note: bundled-chromium download blocked in sandbox;
   repro uses installed desktop Chrome via temp pw-chrome.local.config.ts
   (deleted before push), CI=true TZ=UTC E2E_MOCKS=1.
+
+## Merge origin/ui/sidenav-polish (9569ffca47)
+- Clean merge, no conflicts; kept both sides (SectionRail role=navigation
+  + polish resolveSectionIcon/icon density). 4329f421e9 (r2 fixes) is the
+  first parent.
+- Polish behavior deltas absorbed: rail section tooltips removed;
+  AtlasPanel defaultClosed for sections >25 paths (only the current group
+  starts open); More sheet filters PHONE_TAB_SECTIONS and marks the active
+  section aria-current; status-bar More trigger relabeled to Status
+  (shell.json keys removed); phone tab/density CSS.
+- Gates green locally: tsc, lint, catalog check, build, i18n 8110/8110
+  (fingerprints consistent, no regen needed), sidenav+statusbar 438/438,
+  sidenav-redesign e2e 22/22 (docs screenshots churned by Windows fonts,
+  reverted).
+- collection-navigation re-adapted to polish (2be8c339de): no-tooltip
+  hover assertion, Expand-first toggle cycles, exclusive-default group
+  asserts restored incl. Trips-0, More grid taps Battery. 7/7 local.
+- Climate endpoint fix verified past the query assertion; fails forward
+  at cabin-thermal-tau metric (next triage item).

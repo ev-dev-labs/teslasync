@@ -159,3 +159,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - CI run 39169020871: r1 pass, r2 + 13 more shards FAIL (r15 pending at poll).
 - r2: 17 fails in 5 groups, all fixed locally (titles, deck migration + rail role, axis guard, hover hygiene, binding self-collection).
 - Holding push until every shard lands (cancel-in-progress would destroy pending evidence).
+
+## 2026-10-18 16:10 UTC - sidenav-polish merged, gates green
+- Merged origin/ui/sidenav-polish (9569ffca47, no conflicts, both sides kept).
+- Gates: tsc/lint/catalog/build green; i18n 8110; sidenav+statusbar 438; redesign e2e 22/22.
+- collection-navigation re-adapted to polish (2be8c339de), 7/7 local.
