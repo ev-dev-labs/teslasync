@@ -39,6 +39,8 @@ Fix order: critical/high first (sharp, source-map-js, handlebars, tailwind attem
 - web/braces HIGH + micromatch HIGH (via boundaries + tailwind): NO upstream fix (braces 3.0.3 is latest). Dev/build-time only; patterns come from own configs. Constrain-if-needed later by replacing micromatch usage, out of scope here.
 - web/eslint-plugin-boundaries + @boundaries/elements rollups: plugin 7.2.0 already latest; remaining via-chain entries are the braces/micromatch items above.
 
+Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), docs 4→2 (2L blocked), mobile 7→0, desktop 19→0, Go 12 affecting→0 (1 uncalled, no upstream fix). Closing suite alone: 56,832/167 vs baseline 56,831/168 — 0 new (1 flake-passed delta). Dependabot alerts will close on next scan (no action needed).
+
 ## 2. Data bugs
 
 TBD (a–f with root causes + regression tests).

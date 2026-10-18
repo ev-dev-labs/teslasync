@@ -85,3 +85,6 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-18 08:45 UTC | follow-ups setup: sidenav merged+verified (trio 7672, unit 42, e2e 10/10, lint/build green); branched fix/post-redesign-followups; baseline suite running | push only fix branch | none
 2026-10-18 09:00 UTC | baseline suite still running (~25 min in); setup complete, tree clean on fix branch | . | none
 2026-10-18 09:15 UTC | BASELINE 56831/168 (36 red): 79 known + 89 sidenav interactions (shell suites 80, shell-pres +5, scope 3, viewport 1); step 1 security next | sidenav unit suites assert pre-redesign nav | none
+2026-10-18 09:45 UTC | step 1 fixes done (sharp/sourcemap/handlebars/serialize, mobile 0, desktop 0, Go 0 affecting); closing suite running | tailwind+braces+mermaid+xcrypto blocked (reasons in plan) | none
+2026-10-18 10:15 UTC | step-1 closing suite running (~20 min in) | . | none
+2026-10-18 10:30 UTC | STEP 1 DONE: web 13->9 (blocked only), docs 4->2, mobile 0, desktop 0, Go 0 affecting; closing suite 56832/167, 0 new | step 2 data bugs next | none
