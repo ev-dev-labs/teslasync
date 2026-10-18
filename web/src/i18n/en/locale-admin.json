@@ -133,7 +133,11 @@
       "refresh": "Refresh vehicle cost data",
       "subtitle": "Per-vehicle telemetry cost over the selected window. Use this to spot vehicles whose ingest volume is disproportionate to the fleet baseline.",
       "notConfigured": "The ingest-x-ray subsystem is not configured on this deployment. Vehicle cost reporting requires the signal_log hypertable to be populated.",
-      "breakdownRegion": "Ingest cost breakdown"
+      "breakdownRegion": "Ingest cost breakdown",
+      "window1d": "Last 1 day",
+      "window7d": "Last 7 days",
+      "window30d": "Last 30 days",
+      "window90d": "Last 90 days"
     },
     "systemStatus": {
       "clientPerformance": {
@@ -572,7 +576,8 @@
           "kind": "Kind"
         },
         "loading": "Loading…",
-        "empty": "No samples in this window. Try widening the window or confirm the vehicle is publishing."
+        "empty": "No samples in this window. Try widening the window or confirm the vehicle is publishing.",
+        "kindFallback": "kind {{kind}}"
       },
       "stats": {
         "samples": "Total samples",
@@ -605,7 +610,35 @@
       "actions": {
         "refresh": "Refresh ingest x-ray"
       },
-      "hero": "Sample volume"
+      "hero": "Sample volume",
+      "windowOption": {
+        "5m": "5m",
+        "15m": "15m",
+        "1h": "1h",
+        "6h": "6h",
+        "24h": "24h"
+      },
+      "bucketOption": {
+        "30s": "30s",
+        "1m": "1m",
+        "5m": "5m",
+        "15m": "15m",
+        "1h": "1h"
+      },
+      "windowLabel": {
+        "24h": "24 hours",
+        "6h": "6 hours",
+        "5m": "5 minutes",
+        "15m": "15 minutes",
+        "1h": "1 hour"
+      },
+      "bucketLabel": {
+        "30s": "30 seconds",
+        "5m": "5 minutes",
+        "15m": "15 minutes",
+        "1h": "1 hour",
+        "1m": "1 minute"
+      }
     },
     "liveSignals": {
       "refresh": "Refresh live snapshot",
@@ -689,6 +722,15 @@
         "barAria": "Signal source-layer distribution: {{l1}} live, {{stale}} stale, {{l2}} legacy, {{unknown}} unknown",
         "noVehicle": "Select a vehicle to see how its signals are distributed across the L1 / L2 / stale layers.",
         "empty": "No live signals to classify yet."
+      },
+      "kind": {
+        "numeric": "Numeric",
+        "boolean": "Boolean",
+        "text": "Text",
+        "enum": "Enum",
+        "time": "Time",
+        "compound": "Compound",
+        "other": "Other"
       }
     },
     "teslaOrders": {
@@ -906,7 +948,15 @@
       "subtitle": "Status of every tracked credential. Severity reflects per-kind warn/critical thresholds; rotate anything in the critical tier as soon as possible.",
       "notConfigured": "The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.",
       "criticalTitle": "Overdue rotations",
-      "criticalMessage": "{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius."
+      "criticalMessage": "{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius.",
+      "kind": {
+        "tesla_refresh_token": "Tesla refresh token",
+        "mqtt_mtls_cert": "MQTT mTLS certificate",
+        "database_password": "Database password",
+        "session_jwk": "Session JWK",
+        "app_signing_key": "App signing key",
+        "authentik_secret": "Authentik client secret"
+      }
     },
     "slowQueries": {
       "colQuery": "Query",
@@ -945,7 +995,11 @@
       "emptyMessage": "pg_stat_statements is empty or has been reset recently. Slow queries will accumulate here as the system processes load.",
       "emptyTable": "No slow queries",
       "subtitle": "Top queries from pg_stat_statements. Sort by mean time to surface the slowest individual calls, or total time to surface the costliest in aggregate.",
-      "notConfigured": "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page."
+      "notConfigured": "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page.",
+      "orderMean": "Mean time",
+      "orderTotal": "Total time",
+      "orderCalls": "Calls",
+      "orderMax": "Max time"
     },
     "dataQuality": {
       "summary": {
@@ -1353,7 +1407,31 @@
     "storageByProvider": "Storage by provider",
     "noStorage": "No stored backups yet.",
     "noErrors": "No recent backup failures.",
-    "runN": "Run #{{id}}"
+    "runN": "Run #{{id}}",
+    "configurationSubtitle": "Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install.",
+    "provider.local": "Local",
+    "provider.s3": "Amazon S3",
+    "provider.azure": "Azure Blob",
+    "provider.gcs": "Google Cloud",
+    "runType.backup": "backup",
+    "runType.restore": "restore",
+    "status.completed": "completed",
+    "status.failed": "failed",
+    "status.running": "running",
+    "status.queued": "queued",
+    "field": {
+      "path": "Path",
+      "bucket": "Bucket",
+      "region": "Region",
+      "access_key": "Access key",
+      "secret_key": "Secret key",
+      "endpoint": "Endpoint (optional)",
+      "prefix": "Prefix (optional)",
+      "account_name": "Account name",
+      "account_key": "Account key",
+      "container_name": "Container name",
+      "credentials_json": "Credentials JSON"
+    }
   },
   "coverage": {
     "destinations": {
@@ -1402,7 +1480,12 @@
       "empty": "This category has no routed fields."
     },
     "stat": {
-      "subscriptionCoverage": "Subscription coverage"
+      "subscriptionCoverage": "Subscription coverage",
+      "categories": "Categories",
+      "routedFields": "Routed fields",
+      "subscribed": "Subscribed",
+      "routedNotSubscribed": "Routed, not subscribed",
+      "orphans": "Orphan fields"
     },
     "kpis": "Coverage summary",
     "subtitle": "Package-derived snapshot of routed Tesla proto fields and configured desired subscription membership. Sourced from routing.yaml and teslaconfig.Builder — not confirmation of observed vehicle ingestion.",
@@ -1415,7 +1498,8 @@
       "dualWriteLabel": "Dual write",
       "dualWriteHelp": "— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.",
       "subscribedLabel": "Configured subscription",
-      "subscribedHelp": "— whether the field belongs to the configured desired subscription. \"Yes\" does not confirm observed vehicle ingestion. \"No\" means the field is routed but omitted from the desired subscription request."
+      "subscribedHelp": "— whether the field belongs to the configured desired subscription. \"Yes\" does not confirm observed vehicle ingestion. \"No\" means the field is routed but omitted from the desired subscription request.",
+      "columnDestinationHelp": "— the typed destination column. A dash means no per-field column is declared; read the Destination cell to see where the field is routed. Setting*Unit fields retain their explicit unit_history destination."
     },
     "orphans": {
       "title": "Orphan fields detected",
@@ -1659,7 +1743,35 @@
     "configIdle": "Fetch config to see results",
     "onboarding": {
       "stepLabel": "Step {{step}}",
-      "goToStep": "Go to step {{step}}: {{label}}"
+      "goToStep": "Go to step {{step}}: {{label}}",
+      "account": {
+        "label": "Tesla developer account",
+        "desc": "Create a Tesla Developer account at developer.tesla.com"
+      },
+      "application": {
+        "label": "Create application",
+        "desc": "Register a new application in the Tesla Developer Portal"
+      },
+      "keypair": {
+        "label": "Generate key pair",
+        "desc": "Generate an EC private/public key pair for Fleet API authentication"
+      },
+      "register": {
+        "label": "Register partner",
+        "desc": "Register as a Fleet API partner with your public key"
+      },
+      "auth": {
+        "label": "Authorize account",
+        "desc": "Complete OAuth2 authorization to get API access tokens"
+      },
+      "pair": {
+        "label": "Pair vehicle key",
+        "desc": "Pair your public key with each vehicle for command access"
+      },
+      "telemetry": {
+        "label": "Fleet Telemetry",
+        "desc": "Configure Fleet Telemetry streaming for real-time data"
+      }
     },
     "health": {
       "vin": "VIN",
@@ -1738,7 +1850,11 @@
     "errorsRaw": "Show raw Tesla response",
     "vehicleDataIdle": "Choose a vehicle and an action to see results.",
     "ref": {
-      "empty": "No reference links available"
+      "empty": "No reference links available",
+      "fleetOverview": "Fleet API overview",
+      "partnerEndpoints": "Partner endpoints",
+      "devPortal": "Developer portal",
+      "telemetryGuide": "Fleet Telemetry guide"
     },
     "url": {
       "modeGroup": "Encoding mode"
@@ -1966,7 +2082,9 @@
     "explorer": "Endpoint explorer",
     "noEndpoints": "No endpoints found in the API spec",
     "workspace": "Request workspace",
-    "request": "Request"
+    "request": "Request",
+    "historyRecovery": "Saved request history could not be loaded. The playground has started with an empty history; you can select endpoints and send new requests.",
+    "selectExplorerEndpoint": "Select an endpoint from the explorer to start testing"
   },
   "queueStatus": {
     "title": "Background workers",
@@ -2036,7 +2154,8 @@
       "ok": "Healthy",
       "warn": "Warning",
       "critical": "Critical"
-    }
+    },
+    "budgetResetIn": "Resets in {{duration}}"
   },
   "redis": {
     "signalName": "Signal name",
@@ -2955,11 +3074,13 @@
       "badge": "Helix",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
+      "independentDescription": "Ask Helix to name and explain cluster fingerprints from retrieved charging history and a separate per-vehicle feature-query tool. That tool uses its own lookback window (90 days by default), not the workspace date range; retrieved history is not limited to the chart window. The narrator does not change cluster bucketing, and its source data is not established as equivalent to the charts below.",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
       "generateButton": "Train charging-curve clusters",
+      "independentDescription": "Compute a learned charging envelope for the selected vehicle over an independent 90-day window. Helix narrates the training and cluster-query tool results, including rule-label fallbacks when data is insufficient. The workspace date range does not filter this request; these results are not established as equivalent to the charts below and do not replace them.",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
@@ -3008,6 +3129,12 @@
       "generateButton": "Narrate comparison",
       "noVehicleHint": "Pick a vehicle to enable Helix narration.",
       "title": "Narrate the period comparison"
+    }
+  },
+  "confirm": {
+    "clearStream": {
+      "message": "This removes the lines shown so far. New lines keep arriving.",
+      "title": "Clear the stream?"
     }
   },
   "costAnalysis": {
@@ -3300,10 +3427,58 @@
     }
   },
   "emptyState": {
+    "alerts": {
+      "list": {
+        "likelyCause": "Either no rules are configured yet, or every rule has evaluated cleanly in the selected window.",
+        "meaning": "No alerts have fired — this is the expected steady state."
+      }
+    },
+    "analytics": {
+      "efficiency": {
+        "likelyCause": "Most often the selected range contains no completed drives — widen it before assuming data is missing.",
+        "meaning": "No efficiency figures can be computed for the selected period."
+      }
+    },
+    "automations": {
+      "list": {
+        "likelyCause": "This list is empty by default — automations are opt-in and are never created for you.",
+        "meaning": "No automations are configured, so nothing is being evaluated."
+      }
+    },
+    "battery": {
+      "degradation": {
+        "likelyCause": "Most often the vehicle was linked recently, so the observation window is still too short to be meaningful.",
+        "meaning": "There is not enough history yet to estimate battery degradation."
+      }
+    },
+    "charging": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not charged since it was linked, or it charged while asleep and unreachable.",
+        "meaning": "No charging sessions have been recorded for this vehicle yet."
+      }
+    },
+    "drives": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not driven since it was linked, or the selected date range ends before the first recorded drive.",
+        "meaning": "No completed drives have been recorded for this vehicle yet."
+      }
+    },
     "generic": "No data available yet.",
     "label": {
       "likelyCause": "Most likely reason",
       "prerequisite": "What has to happen first"
+    },
+    "signals": {
+      "live": {
+        "likelyCause": "Most often the vehicle is asleep — Tesla stops streaming while a car sleeps, and waking it costs range.",
+        "meaning": "No live signals are arriving for this vehicle right now."
+      }
+    },
+    "vehicles": {
+      "list": {
+        "likelyCause": "Either setup has not been completed, or the stored Tesla authorisation was revoked and needs renewing.",
+        "meaning": "No vehicles are linked, so nothing is being collected anywhere in the app."
+      }
     }
   },
   "entityContext": {
@@ -4071,6 +4246,9 @@
       "badge": "Helix",
       "button": "Draft SQL",
       "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "noNarration": "No narration was returned. Review the typed SQL proposal above.",
+      "noTypedDraft": "No applicable typed SQL proposal was returned. The manual editor remains available.",
+      "previewLabel": "Proposed SQL (review before applying)",
       "promptLabel": "SQL request",
       "promptPlaceholder": "e.g. how many drives did I take last week",
       "title": "Helix natural-language SQL drafter"
@@ -4694,6 +4872,7 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
+      "draftingDescription": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. This advisory draft does not change the form, compute a route, or save a plan. Review the suggestions, enter your trip inputs in the form below, and use Plan to compute the route separately.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -4803,6 +4982,7 @@
       "badge": "Helix",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
+      "scopeDescription": "Get a short, Helix-written recap of the previous calendar year ({{year}}), independently of the year selected above.",
       "title": "Helix narration"
     },
     "pageTitle": "{{year}} Year in review"

@@ -118,7 +118,13 @@
   },
   "signalCatalog": {
     "removeSignal": "Remove {{name}} from selection",
-    "addSignal": "Add {{name}} to selection"
+    "addSignal": "Add {{name}} to selection",
+    "staleness": {
+      "never": "Never received",
+      "active": "Active",
+      "aging": "Aging",
+      "stale": "Stale"
+    }
   },
   "signalChangePoints": {
     "title": "Signal change points",
@@ -218,7 +224,17 @@
     "overlay": {
       "title": "Normalised overlay",
       "aria": "Area chart of the two selected signals normalised onto a common scale over the overlapping window"
-    }
+    },
+    "historyPaused": "History loading is paused. No comparison evidence has loaded yet.",
+    "historyPending": "History availability has not resolved yet.",
+    "nonnumericHistory": "At least one selected history has no usable numeric or boolean measurements.",
+    "insufficientEvidence": "There is not enough comparable evidence to compute a correlation.",
+    "screeningCorrelogramHint": "Correlation at every time shift; the dashed lines are an approximate screening threshold, not a calibrated significance guarantee",
+    "clearsScreen": "Clears screening threshold",
+    "belowScreen": "Below screening threshold",
+    "clearsScreenText": "The peak clears the approximate autocorrelation-adjusted screening threshold. This is a candidate for further investigation, not proof of a real relationship or causation.",
+    "belowScreenText": "The peak does not clear the approximate autocorrelation-adjusted screening threshold. This does not establish that the signals are unrelated or that the observed alignment is noise.",
+    "screeningMethodology": "Methodology: the screening rule uses a fixed critical value of 1.96 and a lag-1 autocorrelation-adjusted effective sample size. It is not a calibrated 95% significance guarantee: the fixed value is not conservative for small effective samples, resampling and gaps can affect dependence, and selecting the strongest peak across multiple lags is not corrected for multiple testing. The summary labels are screening outcomes only; neither a threshold crossing nor a time lead proves causation."
   },
   "signalDeadband": {
     "title": "Signal deadband",
@@ -530,7 +546,10 @@
       "signals": "Signals",
       "totalRecords": "Total records",
       "signalsWithData": "{{count}} with data",
-      "timeSpan": "Time span"
+      "timeSpan": "Time span",
+      "numeric": "Numeric points",
+      "text": "Text points",
+      "boolean": "Boolean points"
     },
     "title": "Signal log viewer",
     "perPage": "Per page",
@@ -771,7 +790,13 @@
       "period": "Last 24 hours requested; overlapping samples only",
       "periodReason": "The two histories are queried independently. Only valid overlapping samples contribute; exact request bounds are not supplied by these queries.",
       "samplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; raw points are overlapping samples at that lag.",
-      "significanceDescription": "The existing autocorrelation-adjusted significance test; the threshold is a coefficient, not a percentage."
+      "significanceDescription": "The existing autocorrelation-adjusted significance test; the threshold is a coefficient, not a percentage.",
+      "resampledPairs": "from {{n}} overlapping resampled pairs",
+      "resampledSamplesDescription": "Autocorrelation-adjusted effective sample size at the best lag; overlapping resampled pairs are not original source records. Valid measurement counts, when available, are timestamp-deduplicated before overlap clipping or resampling.",
+      "sourceRecordsA": "Signal A: {{n}} source records",
+      "validMeasurementsA": "Signal A: {{n}} valid timestamp-deduplicated measurements",
+      "sourceRecordsB": "Signal B: {{n}} source records",
+      "validMeasurementsB": "Signal B: {{n}} valid timestamp-deduplicated measurements"
     },
     "title": "Live telemetry",
     "drivetrain": "Drivetrain",
@@ -1439,11 +1464,13 @@
       "badge": "Helix",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
+      "independentDescription": "Ask Helix to name and explain cluster fingerprints from retrieved charging history and a separate per-vehicle feature-query tool. That tool uses its own lookback window (90 days by default), not the workspace date range; retrieved history is not limited to the chart window. The narrator does not change cluster bucketing, and its source data is not established as equivalent to the charts below.",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
       "generateButton": "Train charging-curve clusters",
+      "independentDescription": "Compute a learned charging envelope for the selected vehicle over an independent 90-day window. Helix narrates the training and cluster-query tool results, including rule-label fallbacks when data is insufficient. The workspace date range does not filter this request; these results are not established as equivalent to the charts below and do not replace them.",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
@@ -1487,6 +1514,12 @@
       "generateButton": "Narrate comparison",
       "noVehicleHint": "Pick a vehicle to enable Helix narration.",
       "title": "Narrate the period comparison"
+    }
+  },
+  "confirm": {
+    "clearStream": {
+      "message": "This removes the lines shown so far. New lines keep arriving.",
+      "title": "Clear the stream?"
     }
   },
   "costAnalysis": {
@@ -1737,10 +1770,58 @@
     }
   },
   "emptyState": {
+    "alerts": {
+      "list": {
+        "likelyCause": "Either no rules are configured yet, or every rule has evaluated cleanly in the selected window.",
+        "meaning": "No alerts have fired — this is the expected steady state."
+      }
+    },
+    "analytics": {
+      "efficiency": {
+        "likelyCause": "Most often the selected range contains no completed drives — widen it before assuming data is missing.",
+        "meaning": "No efficiency figures can be computed for the selected period."
+      }
+    },
+    "automations": {
+      "list": {
+        "likelyCause": "This list is empty by default — automations are opt-in and are never created for you.",
+        "meaning": "No automations are configured, so nothing is being evaluated."
+      }
+    },
+    "battery": {
+      "degradation": {
+        "likelyCause": "Most often the vehicle was linked recently, so the observation window is still too short to be meaningful.",
+        "meaning": "There is not enough history yet to estimate battery degradation."
+      }
+    },
+    "charging": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not charged since it was linked, or it charged while asleep and unreachable.",
+        "meaning": "No charging sessions have been recorded for this vehicle yet."
+      }
+    },
+    "drives": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not driven since it was linked, or the selected date range ends before the first recorded drive.",
+        "meaning": "No completed drives have been recorded for this vehicle yet."
+      }
+    },
     "generic": "No data available yet.",
     "label": {
       "likelyCause": "Most likely reason",
       "prerequisite": "What has to happen first"
+    },
+    "signals": {
+      "live": {
+        "likelyCause": "Most often the vehicle is asleep — Tesla stops streaming while a car sleeps, and waking it costs range.",
+        "meaning": "No live signals are arriving for this vehicle right now."
+      }
+    },
+    "vehicles": {
+      "list": {
+        "likelyCause": "Either setup has not been completed, or the stored Tesla authorisation was revoked and needs renewing.",
+        "meaning": "No vehicles are linked, so nothing is being collected anywhere in the app."
+      }
     }
   },
   "entityContext": {
@@ -2210,6 +2291,9 @@
       "badge": "Helix",
       "button": "Draft SQL",
       "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "noNarration": "No narration was returned. Review the typed SQL proposal above.",
+      "noTypedDraft": "No applicable typed SQL proposal was returned. The manual editor remains available.",
+      "previewLabel": "Proposed SQL (review before applying)",
       "promptLabel": "SQL request",
       "promptPlaceholder": "e.g. how many drives did I take last week",
       "title": "Helix natural-language SQL drafter"
@@ -2731,6 +2815,7 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
+      "draftingDescription": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. This advisory draft does not change the form, compute a route, or save a plan. Review the suggestions, enter your trip inputs in the form below, and use Plan to compute the route separately.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -2810,6 +2895,7 @@
       "badge": "Helix",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
+      "scopeDescription": "Get a short, Helix-written recap of the previous calendar year ({{year}}), independently of the year selected above.",
       "title": "Helix narration"
     },
     "pageTitle": "{{year}} Year in review"

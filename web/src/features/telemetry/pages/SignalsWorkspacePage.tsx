@@ -561,7 +561,7 @@ export default function SignalsWorkspacePage() {
                   description={diffSummary.period.kind === 'unknown' ? diffSummary.period.reason ?? diffSummary.period.label : diffSummary.period.label}
                   metrics={diffBriefMetrics}
                   scope={diffSummary.period.label}
-                  statusLabel={diffLoading && !diffResp ? t('common.loading', 'Loading')
+                  statusLabel={diffLoading && !diffResp ? t('common.loading', "Loading...")
                     : diffState.fatalError ? t('error.loadFailed', 'Failed to load data')
                       : diffState.refreshError || diffState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
                         : diffResp ? t('signalsWorkspace.summary.diffAvailable', 'Snapshot comparison available')
@@ -694,7 +694,7 @@ export default function SignalsWorkspacePage() {
                   onPauseToggle={() => live.setTailPaused((p) => !p)}
                   onClear={live.clearTail}
                   bufferMax={LIVE_TAIL_MAX}
-                  title={t('liveMonitor.title', 'Live tail')}
+                  title={t('liveMonitor.title', "Live monitor")}
                   maxHeight="55vh"
                 />
               ) : hasHistorical ? (
@@ -739,7 +739,7 @@ export default function SignalsWorkspacePage() {
           {/* Helper footer for catalog refresh tip */}
           <div className="flex items-center justify-end gap-1">
             <RefreshCw className="h-3 w-3 text-[var(--text-muted)]" aria-hidden="true" />
-            <Caption>{t('signalGap.refreshInterval', 'Catalog refreshes every 5s')}</Caption>
+            <Caption>{t('signalGap.refreshInterval', "Refreshes every 5s")}</Caption>
           </div>
       </div>
     </PageLayout>

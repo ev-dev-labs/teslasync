@@ -83,7 +83,7 @@ export function ChannelsGrid({
       <EmptyState
         icon={<Bell className="h-8 w-8" aria-hidden="true" />}
         title={t('notifications.channels.empty.title', 'No channels configured')}
-        message={t('notifications.channels.empty.message', 'Add a notification channel to start receiving alerts via Discord, Slack, Telegram, email, and more.')}
+        message={t('notifications.channels.empty.message', "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more.")}
         action={{ label: t('notifications.channels.add', 'Add channel'), onClick: onAdd }}
       />
     );

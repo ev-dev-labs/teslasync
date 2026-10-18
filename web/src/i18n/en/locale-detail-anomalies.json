@@ -38,6 +38,12 @@
     "chart": {
       "title": "Your Consumption Law",
       "aria": "Scatter of drive consumption against speed with fitted curve and two-sigma band; outliers highlighted"
-    }
+    },
+    "reasonUnknown": "no obvious cause in the data",
+    "reasonCold": "much colder than usual",
+    "reasonHot": "much hotter than usual",
+    "reasonLowRegen": "unusually little regen",
+    "reasonCrawl": "stop-and-go crawling",
+    "reasonEfficient": "exceptionally efficient run"
   }
 }

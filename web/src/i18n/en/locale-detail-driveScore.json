@@ -163,6 +163,14 @@
     "empty": "Not enough drives in the selected period to calculate a score.",
     "categoryBreakdownAria": "Drive score category breakdown horizontal bar chart",
     "scoreDistributionAria": "Drive score distribution histogram bar chart",
-    "scoreTrendAria": "Drive score trend line chart with category breakdowns"
+    "scoreTrendAria": "Drive score trend line chart with category breakdowns",
+    "serverExplanationDistinct": "Overall score supplied by the server. Local history heuristics below are independent and do not explain the server model.",
+    "localHeuristicInputs": "Local heuristic: efficiency uses recorded energy divided by distance; smoothness uses average power, not acceleration or braking events; speed uses maximum speed, not speed-limit compliance. These inputs do not establish causes or driving safety.",
+    "heuristicBestEfficiency": "Local heuristic: low recorded energy per distance contributes to the efficiency score.",
+    "heuristicBestPower": "Local heuristic: low average power contributes to the smoothness score; acceleration and braking were not assessed.",
+    "heuristicBestSpeed": "Local heuristic: maximum speed contributes to the speed score; speed-limit compliance was not assessed.",
+    "heuristicWorstEfficiency": "Local heuristic: high recorded energy per distance lowers the efficiency score; the cause is not established.",
+    "heuristicWorstPower": "Local heuristic: high average power lowers the smoothness score; aggressive acceleration or braking was not detected.",
+    "heuristicWorstSpeed": "Local heuristic: the speed component uses maximum speed, with a penalty above 40.2336 m/s; it does not establish unsafe driving."
   }
 }

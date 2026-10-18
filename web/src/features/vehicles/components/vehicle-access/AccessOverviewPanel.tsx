@@ -53,6 +53,16 @@ export function AccessOverviewPanel({
 }: AccessOverviewPanelProps) {
   const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
+  const statusLabels: Record<string, string> = {
+    "pending": t("vehicleAccess.status.pending", "pending"),
+    "accepted": t("vehicleAccess.status.accepted", "accepted"),
+    "revoked": t("vehicleAccess.status.revoked", "revoked"),
+    "expired": t("vehicleAccess.status.expired", "expired"),
+  };
+  const roleLabels: Record<string, string> = {
+
+  };
+
 
   // Null-safe views of the breakdown arrays — the contract types them as
   // required, but a mid-flight hook (or a future caller) could hand us
@@ -84,7 +94,7 @@ export function AccessOverviewPanel({
     }
     return (
       <div aria-busy="true">
-        <VisuallyHidden liveRegion>{t('common.loading', 'Loading…')}</VisuallyHidden>
+        <VisuallyHidden liveRegion>{t('common.loading', "Loading...")}</VisuallyHidden>
         <Skeleton height={100} />
       </div>
     );
@@ -119,7 +129,7 @@ export function AccessOverviewPanel({
                   return (
                     <MetricBar
                       key={slice.status}
-                      label={t(`vehicleAccess.status.${slice.status}`, titleCase(slice.status))}
+                      label={statusLabels[slice.status] ?? titleCase(slice.status)}
                       value={count}
                       max={invitations || count || 1}
                       color={slice.color}
@@ -144,7 +154,7 @@ export function AccessOverviewPanel({
                 {roles.map((slice) => (
                   <li key={slice.role}>
                     <Badge variant="neutral">
-                      {t(`vehicleAccess.role.${slice.role}`, titleCase(slice.role))}
+                      {roleLabels[slice.role] ?? titleCase(slice.role)}
                       <Text color="muted" className="ml-1">{fmtInt(slice.count ?? 0)}</Text>
                     </Badge>
                   </li>

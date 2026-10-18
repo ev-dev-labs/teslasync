@@ -192,7 +192,7 @@ export function ChargingPlacesWorkspace({
   return (
     <LayoutCard
       title={t('chargingPlaces.workspace.unifiedTitle', 'Places & charging zones')}
-      description={t('chargingPlaces.workspace.unifiedDescription', 'Review visited places, define their boundaries and charging purpose, and manage rates and session history.')}
+      description={t('chargingPlaces.workspace.unifiedDescription', "Manage zone boundaries, alerts, categories, charging rates, and session history in one place.")}
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <IconButton icon={<RefreshCw className={placesQuery.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />} label={t('common.refresh', 'Refresh')} onClick={refreshAll} disabled={placesQuery.isFetching} />

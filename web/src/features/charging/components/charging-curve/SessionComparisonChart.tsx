@@ -64,9 +64,9 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
 
   return (
     <ChartContainer
-        title={t('charging.curve.sessionComparison', 'Session Comparison')}
+        title={t('charging.curve.sessionComparison', 'Session comparison')}
         subtitle={modeledContext}
-        ariaLabel={`${t('charging.curve.sessionComparison', 'Session Comparison')} — ${returnedContext}`}
+        ariaLabel={`${t('charging.curve.sessionComparison', 'Session comparison')} — ${returnedContext}`}
         ariaDescription={`${modeledContext} ${windowContext} ${comparisonSessions.length} / ${(sessions ?? []).length}`}
         metadata={{
           sourceLabel: modeledContext,

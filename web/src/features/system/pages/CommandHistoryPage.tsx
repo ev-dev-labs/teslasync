@@ -123,7 +123,59 @@ function commandFallbackLabel(cmd: string): string {
  * label; the curated English map is the default value.
  */
 function formatCommandName(cmd: string, t: TranslateFn): string {
-  return t(`commandHistory.commands.${cmd}`, commandFallbackLabel(cmd));
+  switch (cmd) {
+    case "lock": return t("commandHistory.commands.lock", "Lock");
+    case "unlock": return t("commandHistory.commands.unlock", "Unlock");
+    case "wake_up": return t("commandHistory.commands.wake_up", "Wake up");
+    case "climate_on": return t("commandHistory.commands.climate_on", "Climate ON");
+    case "climate_off": return t("commandHistory.commands.climate_off", "Climate OFF");
+    case "honk_horn": return t("commandHistory.commands.honk_horn", "Honk horn");
+    case "flash_lights": return t("commandHistory.commands.flash_lights", "Flash lights");
+    case "charge_start": return t("commandHistory.commands.charge_start", "Start charging");
+    case "charge_stop": return t("commandHistory.commands.charge_stop", "Stop charging");
+    case "set_charge_limit": return t("commandHistory.commands.set_charge_limit", "Set charge limit");
+    case "set_temps": return t("commandHistory.commands.set_temps", "Set temperature");
+    case "actuate_trunk": return t("commandHistory.commands.actuate_trunk", "Open/close trunk");
+    case "actuate_frunk": return t("commandHistory.commands.actuate_frunk", "Open frunk");
+    case "window_control": return t("commandHistory.commands.window_control", "Window control");
+    case "sun_roof_control": return t("commandHistory.commands.sun_roof_control", "Sunroof control");
+    case "remote_start_drive": return t("commandHistory.commands.remote_start_drive", "Remote start");
+    case "set_sentry_mode": return t("commandHistory.commands.set_sentry_mode", "Sentry mode");
+    case "set_speed_limit": return t("commandHistory.commands.set_speed_limit", "Speed limit");
+    case "clear_speed_limit": return t("commandHistory.commands.clear_speed_limit", "Clear speed limit");
+    case "set_valet_mode": return t("commandHistory.commands.set_valet_mode", "Valet mode");
+    case "reset_valet_pin": return t("commandHistory.commands.reset_valet_pin", "Reset valet PIN");
+    case "schedule_software_update": return t("commandHistory.commands.schedule_software_update", "Schedule update");
+    case "cancel_software_update": return t("commandHistory.commands.cancel_software_update", "Cancel update");
+    case "media_toggle_playback": return t("commandHistory.commands.media_toggle_playback", "Media play/pause");
+    case "media_next_track": return t("commandHistory.commands.media_next_track", "Next track");
+    case "media_prev_track": return t("commandHistory.commands.media_prev_track", "Previous track");
+    case "media_volume_up": return t("commandHistory.commands.media_volume_up", "Volume up");
+    case "media_volume_down": return t("commandHistory.commands.media_volume_down", "Volume down");
+    case "adjust_volume": return t("commandHistory.commands.adjust_volume", "Adjust volume");
+    case "navigation_request": return t("commandHistory.commands.navigation_request", "Navigate");
+    case "share": return t("commandHistory.commands.share", "Share to vehicle");
+    case "trigger_homelink": return t("commandHistory.commands.trigger_homelink", "Trigger HomeLink");
+    case "set_bioweapon_mode": return t("commandHistory.commands.set_bioweapon_mode", "Bioweapon defense");
+    case "set_climate_keeper": return t("commandHistory.commands.set_climate_keeper", "Climate keeper");
+    case "set_cop_temp": return t("commandHistory.commands.set_cop_temp", "Cabin overheat protection");
+    case "dog_mode_on": return t("commandHistory.commands.dog_mode_on", "Dog mode ON");
+    case "dog_mode_off": return t("commandHistory.commands.dog_mode_off", "Dog mode OFF");
+    case "camp_mode_on": return t("commandHistory.commands.camp_mode_on", "Camp mode ON");
+    case "camp_mode_off": return t("commandHistory.commands.camp_mode_off", "Camp mode OFF");
+    case "set_scheduled_departure": return t("commandHistory.commands.set_scheduled_departure", "Scheduled departure");
+    case "set_scheduled_charging": return t("commandHistory.commands.set_scheduled_charging", "Scheduled charging");
+    case "set_preconditioning_max": return t("commandHistory.commands.set_preconditioning_max", "Max preconditioning");
+    case "auto_conditioning_start": return t("commandHistory.commands.auto_conditioning_start", "Start preconditioning");
+    case "auto_conditioning_stop": return t("commandHistory.commands.auto_conditioning_stop", "Stop preconditioning");
+    case "remote_seat_heater_request": return t("commandHistory.commands.remote_seat_heater_request", "Seat heater");
+    case "remote_seat_cooler_request": return t("commandHistory.commands.remote_seat_cooler_request", "Seat cooler");
+    case "remote_steering_wheel_heater_request": return t("commandHistory.commands.remote_steering_wheel_heater_request", "Steering wheel heater");
+    case "close_charge_port": return t("commandHistory.commands.close_charge_port", "Close charge port");
+    case "open_charge_port": return t("commandHistory.commands.open_charge_port", "Open charge port");
+    case "set_pin_to_drive": return t("commandHistory.commands.set_pin_to_drive", "PIN to drive");
+    default: return commandFallbackLabel(cmd);
+  }
 }
 
 const PAGE_SIZE = 25;

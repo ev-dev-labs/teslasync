@@ -43,17 +43,17 @@ export function EfficiencyEvidenceBrief(props: StatsPresentation & { kind: 'kpis
   const statusLabel = props.source.malformed || state.fatalError != null || state.status === 'unavailable'
     ? t('driving.brief.unavailable', 'Source unavailable')
     : state.refreshError != null && state.hasData
-      ? t('driving.brief.retained', 'Retained evidence')
+      ? t('driving.brief.retained', "Retained source")
       : state.isRefreshBlocked
         ? state.hasData
           ? t('dataSources.status.paused', 'Refresh paused')
           : t('energyFlow.state.pausedTitle', 'Source paused')
         : !state.hasData
           ? loading
-            ? t('driving.brief.loading', 'Loading evidence')
+            ? t('driving.brief.loading', "Loading source")
             : t('driving.brief.awaiting', 'Awaiting evidence')
           : state.status === 'stale'
-            ? t('driving.brief.retained', 'Retained evidence')
+            ? t('driving.brief.retained', "Retained source")
             : state.status === 'partial'
               ? t('driving.brief.partial', 'Partial evidence')
               : t('driving.brief.returned', 'Returned evidence');

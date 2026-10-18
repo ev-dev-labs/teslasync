@@ -306,7 +306,7 @@ export default function StateMachineDebuggerPage() {
       },
       {
         key: 'fsm_name',
-        header: t('fsm.type', 'FSM'),
+        header: t('fsm.type', "FSM type"),
         render: (row: FSMTransition) => (
           <Text size="xs" color="secondary" mono className="">{row.fsm_name?.replace('_', ' ') ?? 'vehicle'}</Text>
         ),
@@ -385,7 +385,7 @@ export default function StateMachineDebuggerPage() {
       { key: 'vehicle_id', label: t('fsm.detail.vehicleId', 'Vehicle ID'), value: row.vehicle_id },
       {
         key: 'context',
-        label: t('fsm.detail.context', 'Details'),
+        label: t('fsm.detail.context', "Context snapshot"),
         value: row.details && Object.keys(row.details).length > 0
           ? <Text as="pre" mono className="whitespace-pre-wrap break-words">{JSON.stringify(row.details, null, 2)}</Text>
           : '—',
@@ -662,7 +662,7 @@ export default function StateMachineDebuggerPage() {
               </div>
               <div className="w-full sm:w-40">
                 <Select
-                  label={t('fsm.perPage', 'Per Page')}
+                  label={t('fsm.perPage', "Per page")}
                   options={perPageOptions}
                   value={String(perPage)}
                   onChange={(e) => {
@@ -1104,7 +1104,7 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
       </div>
       {transition.details && Object.keys(transition.details).length > 0 && (
         <div className="sm:col-span-2 lg:col-span-4">
-          <Caption className="mb-1 block">{t('fsm.detail.context', 'Details')}</Caption>
+          <Caption className="mb-1 block">{t('fsm.detail.context', "Context snapshot")}</Caption>
           <div className="mt-1 flex flex-wrap gap-2">
             {Object.entries(transition.details).map(([key, val]) => (
               <Text as="span" size="xs" color="secondary" mono key={key} className="rounded bg-[var(--surface-2)] px-2 py-0.5">

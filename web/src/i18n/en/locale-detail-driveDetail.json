@@ -263,7 +263,13 @@
       "trigger": "trigger: {{trigger}}",
       "signalTitle": "Signal window",
       "signalEmpty": "No signals in this window for the default whitelist.",
-      "loading": "Loading drive diagnostic…"
+      "loading": "Loading drive diagnostic…",
+      "windowOption": {
+        "30s": "30s",
+        "60s": "60s",
+        "5m": "5m",
+        "15m": "15m"
+      }
     },
     "stat": {
       "mean": "Mean",

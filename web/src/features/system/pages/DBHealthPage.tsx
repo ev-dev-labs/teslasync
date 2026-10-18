@@ -160,7 +160,7 @@ export default function DBHealthPage() {
       {
         key: 'name',
         filterValue: (tbl) => tbl.name ?? null,
-        header: t('dbHealth.table.name', 'Hypertable'),
+        header: t('dbHealth.table.name', 'Table'),
         render: (tbl: TableInfo) => {
           const isLarge = (tbl.sizeBytes ?? 0) > LARGE_TABLE_THRESHOLD;
           return (
@@ -262,7 +262,7 @@ export default function DBHealthPage() {
 
   return (
     <PageLayout
-      title={t('dbHealth.title', 'DB health dashboard')}
+      title={t('dbHealth.title', 'DB health')}
       subtitle={t('dbHealth.subtitle', 'Database health metrics and table statistics')}
       metadataActions={
         <Caption className="flex items-center gap-1.5">
@@ -311,7 +311,7 @@ export default function DBHealthPage() {
                 ariaDescription={rowChartScope}
                 data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
                 dataColumns={[
-                  { key: 'name', label: t('dbHealth.col.table', 'Hypertable') },
+                  { key: 'name', label: t('dbHealth.col.table', 'Table') },
                   { key: 'rows', label: t('dbHealth.col.rows', 'Rows'), kind: 'count' },
                 ]}
                 loading={statsLoading}

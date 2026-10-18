@@ -158,7 +158,39 @@
     "privateHelp": "Your fleet data stays in the infrastructure you control.",
     "tasks": {
       "optOut": "Stop showing setup tips",
-      "dismiss": "Dismiss this tip"
-    }
+      "dismiss": "Dismiss this tip",
+      "linkVehicle": {
+        "title": "Link a vehicle to start collecting data",
+        "body": "Nothing is recorded until at least one vehicle is linked to your Tesla account."
+      },
+      "liveTelemetry": {
+        "title": "Turn on live telemetry for second-by-second signals",
+        "body": "Without streaming telemetry this page can only show polled snapshots, which arrive minutes apart."
+      },
+      "chargingCost": {
+        "title": "Set an electricity price to see charging costs",
+        "body": "Charging sessions are recorded without a price until a tariff is configured, so cost columns stay empty."
+      },
+      "automation": {
+        "title": "Create your first automation",
+        "body": "Automations react to vehicle state — for example, notify when charging stops below a target."
+      },
+      "notificationChannel": {
+        "title": "Add a notification channel so alerts can reach you",
+        "body": "Automations and alerts evaluate normally, but nothing is delivered until a channel exists."
+      }
+    },
+    "welcome.title": "Welcome to TeslaSync",
+    "connect.title": "Connect Your Tesla",
+    "configure": {
+      "title": "Configure Settings",
+      "desc": "Customize your polling interval, distance units, energy cost per kWh, notification preferences, and MQTT integration to match your setup."
+    },
+    "done": {
+      "title": "You're All Set!",
+      "desc": "Your dashboard is ready. Explore drives, charging sessions, efficiency analytics, and more. You can always revisit settings to fine-tune your experience."
+    },
+    "welcome.desc": "Your all-in-one Tesla fleet management dashboard. Track drives, monitor battery health, analyze energy usage, and control your vehicles — all in one place.",
+    "connect.desc": "Head to Settings and link your Tesla account via OAuth. TeslaSync will securely poll your vehicle data and keep everything in sync automatically."
   }
 }

@@ -283,7 +283,7 @@ export function EntryDrawer({
             ) : (
               <div>
                 {detail.isRefreshing && (
-                  <Text role="status">{t('freshness.updating', 'Updating…')}</Text>
+                  <Text role="status">{t('freshness.updating', "updating…")}</Text>
                 )}
                 <div className="mb-2 flex items-center justify-end gap-2">
                   {copyText !== undefined && <CopyButton text={copyText} />}

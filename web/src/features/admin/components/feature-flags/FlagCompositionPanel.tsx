@@ -94,7 +94,7 @@ export function FlagCompositionPanel({
       <EmptyState
         message={t(
           'admin.flags.composition.empty',
-          'No flags to summarize yet. Add a flag to see its value-type breakdown here.',
+          'No flags to summarize yet. Stored values are text, including valid empty text.',
         )}
         // no-action: the create surface is the "Add flag" CTA in the page header.
       />
@@ -105,7 +105,7 @@ export function FlagCompositionPanel({
     <div
       className="space-y-3"
       role="list"
-      aria-label={t('admin.flags.composition.ariaLabel', 'Flag value-type composition')}
+      aria-label={t('admin.flags.composition.ariaLabel', 'Returned flag value presentation; stored values are text')}
     >
       {rows.map((row) => {
         const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;

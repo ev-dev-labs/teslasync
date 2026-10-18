@@ -64,8 +64,33 @@
     }
   },
   "accessGuidance": {
+    "featureDisabled": {
+      "explanation": "The capability exists in this build but is disabled by configuration, so the server will keep declining it until that changes.",
+      "grantedBy": "An administrator, via feature configuration.",
+      "title": "This feature is switched off for this deployment"
+    },
+    "forbidden": {
+      "explanation": "You are signed in, and the server understood the request — it declined it because your account lacks the required role for this resource. The data is not missing.",
+      "grantedBy": "An administrator of this TeslaSync install, or the owner of the vehicle whose data you need.",
+      "title": "Your account is not entitled to this"
+    },
     "grantedByLabel": "Who can grant this",
-    "stepsLabel": "How to request access"
+    "openMode": {
+      "explanation": "The deployment runs without an identity provider, so there is no per-user identity to attach this feature to. This is a deployment choice, not a fault.",
+      "grantedBy": "Whoever operates this deployment.",
+      "title": "This install has no user accounts"
+    },
+    "readOnly": {
+      "explanation": "The app is in a read-only state — historical browsing or maintenance. Reading works normally; writes are refused so nothing is applied to the wrong point in time.",
+      "grantedBy": "Resolves on its own, or via the operator running maintenance.",
+      "title": "Changes are temporarily disabled"
+    },
+    "stepsLabel": "How to request access",
+    "unauthenticated": {
+      "explanation": "The server did not recognise a signed-in identity for this request. Sessions expire, and signing in again restores exactly the access you had before.",
+      "grantedBy": "You — no administrator involvement is needed.",
+      "title": "Your session is no longer valid"
+    }
   },
   "alerts": {
     "tabFlash": "(!) Alert — ",
@@ -359,7 +384,28 @@
     "clearFilters": "Clear filters",
     "notAvailable": "N/A",
     "panel": "Panel",
-    "unknownError": "unknown error"
+    "unknownError": "unknown error",
+    "notProvided": "Not provided",
+    "time": "Time",
+    "vehicles": "Vehicles",
+    "none": "None",
+    "notApplicable": "Not applicable",
+    "dataSources": {
+      "status": {
+        "paused": "Refresh paused"
+      }
+    },
+    "freshness": {
+      "lastUpdated": "Last updated: {{time}}",
+      "updating": "Updating…"
+    },
+    "dataState": {
+      "stale": {
+        "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
+      }
+    },
+    "idealRange": "Ideal Range",
+    "ratedRange": "Rated Range"
   },
   "compat": {
     "banner": {
@@ -372,10 +418,6 @@
   "confirm": {
     "silence": {
       "checkbox": "Don't ask again for this action"
-    },
-    "removeDraftRate": {
-      "title": "Remove this rate?",
-      "message": "The rate row is removed from the draft rate plan."
     }
   },
   "consent": {
@@ -488,6 +530,41 @@
     }
   },
   "dataUnavailable": {
+    "filterScope": {
+      "body": "The query succeeded and returned zero rows for the selected vehicle, date range and filters.",
+      "title": "No records match the current filters",
+      "whatToDo": "Widen the date range or clear filters before concluding that the data is missing."
+    },
+    "ingestionLag": {
+      "body": "The newest stored row is older than expected, so recent activity has not been written yet.",
+      "title": "Ingestion is behind",
+      "whatToDo": "Wait for the pipeline to catch up. If the gap keeps growing, check pipeline health."
+    },
+    "permission": {
+      "body": "The server refused the request for this scope. This is an access decision, not a failure — the data may well exist.",
+      "title": "Your account cannot read this data",
+      "whatToDo": "Request access from an administrator. Retrying or reloading will return the same result."
+    },
+    "retention": {
+      "body": "Rows older than the configured retention horizon are deleted permanently, so no query can return them.",
+      "title": "Part of this range is older than the retention window",
+      "whatToDo": "Shorten the range to stay inside retention, or ask an administrator to extend the retention policy."
+    },
+    "serviceOutage": {
+      "body": "A dependency this view needs is unreachable or erroring, so the request could not be answered.",
+      "title": "A required service did not respond",
+      "whatToDo": "Check system status for a known incident. The view recovers automatically once the dependency returns."
+    },
+    "vehicleAsleep": {
+      "body": "Tesla stops reporting while a vehicle sleeps. The values shown are the last ones received before it slept.",
+      "title": "The vehicle is asleep",
+      "whatToDo": "Nothing — this is normal and preserves range. Data resumes automatically when the vehicle wakes."
+    },
+    "vehicleOffline": {
+      "body": "The vehicle is not reachable — usually no cellular coverage, or the car is in a garage or transport mode.",
+      "title": "The vehicle is offline",
+      "whatToDo": "Wait for connectivity to return. Repeated wake attempts will not help and consume range."
+    },
     "whatToDo": "What to do"
   },
   "date": {
@@ -701,6 +778,36 @@
     "loading": "Loading"
   },
   "glossary": {
+    "degradation": {
+      "howMeasured": "Derived from many observed charges over weeks. A single reading is noise: temperature, recent fast charging and a resting pack all shift the estimate by more than a year of real loss.",
+      "term": "Degradation"
+    },
+    "efficiency": {
+      "howMeasured": "Computed from completed drives that report both distance and energy. Charging losses are not included, so a wall-meter figure will always look worse than this one.",
+      "term": "Efficiency"
+    },
+    "phantomDrain": {
+      "howMeasured": "Measured only across parked, non-charging windows. Sentry mode, cabin overheat protection, preconditioning and frequent polling all raise it, and each is a setting rather than a fault.",
+      "term": "Phantom drain (vampire drain)"
+    },
+    "ratedRange": {
+      "definition": "A rating, not a prediction: the current state of charge multiplied by a fixed EPA-derived distance per percent. It ignores weather, speed, terrain and load.",
+      "howMeasured": "Reported by the vehicle. Because the multiplier is fixed, rated range moves only when state of charge or the pack’s estimated capacity moves — real trips almost always use more.",
+      "term": "Rated range"
+    },
+    "signalFreshness": {
+      "howMeasured": "Freshness is the age of the last received value, not a health check. A sleeping vehicle produces stale signals by design; that is normal and costs no range.",
+      "term": "Signal freshness"
+    },
+    "soc": {
+      "definition": "The percentage of usable energy currently left in the battery, where 100% is a full charge of the pack as it exists today — not as it was when new.",
+      "howMeasured": "Reported directly by the vehicle. The displayed value already excludes the buffer the car reserves below 0%, so a car at 0% is not an empty pack.",
+      "term": "State of charge (SOC)"
+    },
+    "stateOfHealth": {
+      "howMeasured": "Estimated from observed full-charge capacity over time. It is an estimate with a real error bar, which is why the trend matters more than any single value.",
+      "term": "State of health (SoH)"
+    },
     "tooltipLabel": "What is {{term}}?"
   },
   "help": {
@@ -1343,7 +1450,8 @@
     "sidebar": "Sidebar navigation",
     "drivesDesc": "Trip history",
     "chargingDesc": "Sessions & costs",
-    "batteryDesc": "Health & degradation"
+    "batteryDesc": "Health & degradation",
+    "automations": "Automations"
   },
   "notFound": {
     "title": "Page not found",
@@ -1409,7 +1517,9 @@
       "densityCompact": "Workspace density: Compact",
       "densitySpacious": "Workspace density: Spacious",
       "export": "Open data export",
+      "feedback": "Report bug / Send feedback",
       "fleetComparison": "Compare fleet vehicles",
+      "fleetSetup": "Open Fleet Setup",
       "frecencyReset": "Reset command palette usage history",
       "newAlert": "Create new alert rule",
       "notificationsHistory": "Open notification history",
@@ -1800,6 +1910,14 @@
   },
   "runtimeHealth": {
     "affected": "Affected components: {{components}}.",
+    "components": {
+      "database": "Database",
+      "mqtt": "MQTT",
+      "redis": "Redis",
+      "telemetry": "Fleet Telemetry",
+      "tesla_api": "Tesla API",
+      "worker": "Background worker"
+    },
     "configureAlerts": "Health alerts",
     "historyAvailable": "The application and stored history remain available; live or dependent features may be stale.",
     "systemStatus": "System status",
@@ -2268,7 +2386,8 @@
   "severity": {
     "info": "Info",
     "warn": "Warning",
-    "critical": "Critical"
+    "critical": "Critical",
+    "success": "Success"
   },
   "smallMultiples": {
     "noData": "No data"

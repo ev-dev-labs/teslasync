@@ -26,7 +26,7 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone, time
     : state.isLoading ? t('departure.states.loadingKpi', 'Waiting for returned drive history…')
       : state.error ? t('departure.states.errorKpi', 'Departure history is unavailable; use the status below to retry.')
         : !state.isResolved && state.isRefreshBlocked
-          ? t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', { source: t('departure.title', 'Departure Forecast') })
+          ? t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', { source: t('departure.title', "Departure forecast") })
         : !state.isResolved ? t('departure.states.pendingKpi', 'Departure-history availability has not resolved.') : null;
   const percentDisplay = { formatter: (raw: number) => ({ value: fmtNumber(raw, undefined, locale), unit: '%' }) };
   const metrics: readonly StatMetric[] = [
@@ -84,7 +84,7 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone, time
         : state.isRefreshBlocked ? ready
           ? t('dataSources.status.paused', 'Refresh paused')
           : t('energyFlow.state.pausedTitle', 'Source paused')
-        : ready && state.fetchStatus === 'fetching' ? t('freshness.updating', 'Updating…')
+        : ready && state.fetchStatus === 'fetching' ? t('freshness.updating', "updating…")
         : !state.isResolved && !state.isLoading && !state.error ? t('driving.brief.awaiting', 'Awaiting evidence') : undefined} />
     <DepartureForecastQueryStatus forecast={forecast} state={state} />
   </section>;

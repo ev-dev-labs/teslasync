@@ -295,11 +295,11 @@ function formatRecentVisitedAgo(t: TFunction, visitedAt: number, now: number): s
   const diffMin = Math.floor(diffMs / 60_000)
   // relative-time: when the recent item was used
   if (diffMin < 1) return t('palette.recent.justNow', 'Just now')
-  if (diffMin < 60) return t('palette.recent.minutesAgo', { count: diffMin, defaultValue: `${diffMin}m ago` })
+  if (diffMin < 60) return t('palette.recent.minutesAgo', { count: diffMin, defaultValue: "{{count}}m ago" })
   const diffHr = Math.floor(diffMin / 60)
-  if (diffHr < 24) return t('palette.recent.hoursAgo', { count: diffHr, defaultValue: `${diffHr}h ago` })
+  if (diffHr < 24) return t('palette.recent.hoursAgo', { count: diffHr, defaultValue: "{{count}}h ago" })
   const diffDay = Math.floor(diffHr / 24)
-  return t('palette.recent.daysAgo', { count: diffDay, defaultValue: `${diffDay}d ago` })
+  return t('palette.recent.daysAgo', { count: diffDay, defaultValue: "{{count}}d ago" })
 }
 
 // ─── CommandPalette ─────────────────────────────────────────────────────────
@@ -620,7 +620,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
       const item: PaletteItem = {
         id: `cmd-${cfg.command}`,
         label: t(cfg.labelKey, cfg.labelFallback),
-        section: t('palette.section.commands', 'Vehicle Commands'),
+        section: t('palette.section.commands', "Vehicle commands"),
         icon: getIconForConfig(cfg, def),
         keywords: cfg.keywords,
         type: 'command',
@@ -641,7 +641,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
       .filter(v => v.id !== activeVehicleId)
       .map(v => ({
         id: `switch-vehicle-${v.id}`,
-        label: t('palette.cmd.switchVehicle', { name: v.display_name || v.vin, defaultValue: `Switch to ${v.display_name || v.vin}` }),
+        label: t('palette.cmd.switchVehicle', { name: v.display_name || v.vin, defaultValue: "Switch to {{name}}" }),
         section: t('palette.section.vehicles', 'Vehicles'),
         icon: <ArrowRightLeft className="h-4 w-4" />,
         type: 'vehicle-switch' as const,
@@ -754,7 +754,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
       .filter(s => s.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, MOST_USED_MAX_DISPLAY)
-    const sectionLabel = t('palette.section.mostUsed', 'Most Used')
+    const sectionLabel = t('palette.section.mostUsed', "Most used")
     return ranked.map(({ item }): PaletteItem => ({
       ...item,
       // Re-key so React doesn't see the same id twice (the underlying item
@@ -819,7 +819,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
     vehicleList.map(v => ({
       id: `vehicle-${v.id}`,
       label: v.display_name || v.vin,
-      section: t('palette.section.selectVehicle', 'Select Vehicle'),
+      section: t('palette.section.selectVehicle', "Select vehicle"),
       icon: <Car className="h-4 w-4" />,
       type: 'navigate' as const,
       sublabel: `${v.model ?? ''} · ${v.state ?? 'unknown'}`.trim(),
@@ -831,7 +831,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
     () =>
       openAlertList.map((alert) => ({
         id: `acknowledge-alert-${alert.id}`,
-        label: alert.title?.trim() || t('operations.alerts.untitled', 'Untitled alert'),
+        label: alert.title?.trim() || t('operations.alerts.untitled', "untitled alert"),
         section: t('palette.section.openAlerts', 'Open alerts'),
         icon: <BellRing className="h-4 w-4" />,
         type: 'command' as const,
@@ -1304,7 +1304,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                         : <BellRing className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />}
                       <Text variant="bodySm" className="min-w-0 break-words">
                         {mode === 'vehicle-select'
-                          ? t('palette.selectVehicleFor', { command: pendingCommandLabel, defaultValue: `Send "${pendingCommandLabel}" to…` })
+                          ? t('palette.selectVehicleFor', { command: pendingCommandLabel, defaultValue: "Send \"{{command}}\" to…" })
                           : t('palette.acknowledgeAlert.select', 'Choose an open alert to acknowledge')}
                       </Text>
                     </div>
@@ -1445,7 +1445,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                             scope: getScopeMeta(activeScope).label,
                             defaultValue: `No ${getScopeMeta(activeScope).label.toLowerCase()} available`,
                           })
-                        : t('palette.noResults', { query: scopedTerm || query, defaultValue: `No results for "${scopedTerm || query}"` })
+                        : t('palette.noResults', { query: scopedTerm || query, defaultValue: "No results for \"{{query}}\"" })
                     }
                   </Text>
                 ) : (
@@ -1501,7 +1501,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                             </div>
                             {item.shortcut && (
                               <Text as="kbd" variant="caption" mono
-                                aria-label={t('palette.shortcut', { keys: item.shortcut, defaultValue: `Shortcut: ${item.shortcut}` })}
+                                aria-label={t('palette.shortcut', { keys: item.shortcut, defaultValue: "Shortcut: {{keys}}" })}
                                 className="hidden shrink-0 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 sm:inline-flex"
                               >
                                 {item.shortcut}
@@ -1526,7 +1526,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         <Search className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                        <Text variant="bodySm" className="min-w-0 break-words">{t('search.palette.viewAll', { query: debouncedQuery, defaultValue: `View all results for "${debouncedQuery}"` })}</Text>
+                        <Text variant="bodySm" className="min-w-0 break-words">{t('search.palette.viewAll', { query: debouncedQuery, defaultValue: "View all results for \"{{query}}\"" })}</Text>
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 shrink-0 rtl:rotate-180" aria-hidden="true" />
                     </Button>

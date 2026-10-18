@@ -71,7 +71,7 @@ export function CostForecastSection({
   return (
     <div className="space-y-6">
       <CostStatSection
-        title={t('costAnalysis.forecast.title', 'Cost Forecast')}
+        title={t('costAnalysis.forecast.title', "Cost forecast")}
         icon={<TrendingUp className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
         isLoading={isLoading}
         error={error}
@@ -83,7 +83,7 @@ export function CostForecastSection({
         skeletonHeight={300}
       >
         <EmbeddedChart
-          title={t('costAnalysis.forecast.title', 'Cost Forecast')}
+          title={t('costAnalysis.forecast.title', "Cost forecast")}
           ariaLabel={t('costAnalysis.forecast.predictionChartAria', 'Historical and projected monthly charging cost with an approximate prediction interval')}
           data={chartData}
           exportData={chartData}
@@ -91,8 +91,8 @@ export function CostForecastSection({
           fullscreen
           dataColumns={[
             { key: 'month', label: t('costAnalysis.forecast.month', 'Month') },
-            { key: 'actual', label: t('costAnalysis.forecast.actual', 'Actual Cost') },
-            { key: 'forecast', label: t('costAnalysis.forecast.projected', 'Projected Cost') },
+            { key: 'actual', label: t('costAnalysis.forecast.actual', "Actual cost") },
+            { key: 'forecast', label: t('costAnalysis.forecast.projected', "Projected cost") },
             { key: 'ci_low', label: t('costAnalysis.forecast.lowerBound', 'Lower bound') },
             { key: 'ci_high', label: t('costAnalysis.forecast.upperBound', 'Upper bound') },
           ]}
@@ -111,8 +111,8 @@ export function CostForecastSection({
                 <ChartLegend />
                 <Area {...AREA_DEFAULTS} dataKey="ci_low" stackId="ci" stroke="none" fill="transparent" fillOpacity={0} legendType="none" connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
                 <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill={forecastColor} fillOpacity={0.08} name={t('costAnalysis.forecast.predictionInterval', 'Approximate prediction interval')} connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
-                <Area {...AREA_DEFAULTS} dataKey="actual" stroke={actualColor} fill={actualColor} fillOpacity={0.08} name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('actual')} />
-                <Line {...AREA_DEFAULTS} dataKey="forecast" stroke={forecastColor} strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
+                <Area {...AREA_DEFAULTS} dataKey="actual" stroke={actualColor} fill={actualColor} fillOpacity={0.08} name={t('costAnalysis.forecast.actual', "Actual cost")} connectNulls={false} hide={hiddenSeries?.isHidden('actual')} />
+                <Line {...AREA_DEFAULTS} dataKey="forecast" stroke={forecastColor} strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', "Projected cost")} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
               </ComposedChart>
             </ResponsiveContainer>
           )}
@@ -123,7 +123,7 @@ export function CostForecastSection({
         error={error} onRetry={onRetry} period={period} />
 
       <CostStatSection
-        title={t('costAnalysis.forecast.costPerKwhTrend', 'Cost per kWh Trend')}
+        title={t('costAnalysis.forecast.costPerKwhTrend', "Cost per kWh trend")}
         isLoading={isLoading}
         error={error}
         onRetry={onRetry}
@@ -134,7 +134,7 @@ export function CostForecastSection({
         skeletonHeight={200}
       >
         <EmbeddedChart
-          title={t('costAnalysis.forecast.costPerKwhTrend', 'Cost per kWh Trend')}
+          title={t('costAnalysis.forecast.costPerKwhTrend', "Cost per kWh trend")}
           ariaLabel={t('costAnalysis.forecast.trendAria', 'Monthly average cost per kilowatt-hour trend')}
           data={trendExportData}
           exportData={trendExportData}

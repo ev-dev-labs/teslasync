@@ -203,6 +203,9 @@
         "scope": "Selected range and current loaded page have different coverage.",
         "mixDescription": "Counts by event type describe only the loaded page, not the entire selected range."
       }
-    }
+    },
+    "browseDrives": "View all",
+    "batteryTrendTitle": "Battery trend",
+    "batteryTrendEmpty": "Charge data will appear here"
   }
 }

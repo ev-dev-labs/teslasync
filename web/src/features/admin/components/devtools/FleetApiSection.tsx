@@ -343,7 +343,7 @@ function PublicKeySetupTool() {
           <Textarea
             label={t('devtools.fleet.uploadPem', 'Upload PEM')}
             rows={4}
-            placeholder={t('devtools.fleet.pemPlaceholder', 'Pem Placeholder')}
+            placeholder={t('devtools.fleet.pemPlaceholder', "PEM placeholder")}
             value={pemInput}
             onChange={(e) => setPemInput(e.target.value)}
           />
@@ -393,15 +393,15 @@ function VehicleKeyPairingTool() {
           <ul className={cn('mt-2 space-y-1', typography.role.helper)}>
             <li className="flex items-start gap-2">
               <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-secondary)]" />
-              <span>{t('devtools.fleet.pairingStep1', 'Pairing step1')}</span>
+              <span>{t('devtools.fleet.pairingStep1', "Pairing Step1")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-secondary)]" />
-              <span>{t('devtools.fleet.pairingStep2', 'Pairing step2')}</span>
+              <span>{t('devtools.fleet.pairingStep2', "Pairing Step2")}</span>
             </li>
             <li className="flex items-start gap-2">
               <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-secondary)]" />
-              <span>{t('devtools.fleet.pairingStep3', 'Pairing step3')}</span>
+              <span>{t('devtools.fleet.pairingStep3', "Pairing Step3")}</span>
             </li>
           </ul>
         </div>
@@ -476,7 +476,7 @@ function FleetTelemetrySubscribeTool() {
           <Textarea
             label={t('devtools.fleet.caCert', 'CA cert')}
             rows={3}
-            placeholder={t('devtools.fleet.caCertPlaceholder', 'Ca Cert Placeholder')}
+            placeholder={t('devtools.fleet.caCertPlaceholder', "CA cert placeholder")}
             value={caCert}
             onChange={(e) => setCaCert(e.target.value)}
           />

@@ -187,14 +187,14 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'history',
-    title: 'Vehicle History & Physics',
+    title: "Vehicle history & physics",
     description: 'Evidence-led history and explainable vehicle behavior',
     icon: Map,
     phase: 'done',
     features: [
       'Vehicle day log and full state timeline',
       'Time-machine views of historical signals',
-      'Drive physics energy ledger and Science Lab',
+      "Drive physics energy ledger and science lab",
       'Driving dynamics and efficiency workbench',
       'Signal history, coverage, and diagnostics',
       'Fleet and vehicle history in the same navigation tree',
@@ -202,7 +202,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'charging',
-    title: 'Charging & Energy Intelligence',
+    title: "Charging & energy intelligence",
     description: 'From charge history to costs, thermal behavior, and energy flows',
     icon: Leaf,
     phase: 'done',
@@ -217,7 +217,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'journeys',
-    title: 'Journeys & Ownership',
+    title: "Journeys & ownership",
     description: 'Planning, travel context, and fleet ownership insights',
     icon: Users,
     phase: 'done',
@@ -231,13 +231,13 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'helixStudio',
-    title: 'Helix & Alert Studio',
+    title: "Helix & alert studio",
     description: 'Assisted investigations and configurable notification workflows',
     icon: Brain,
     phase: 'done',
     features: [
       'Helix analysis tools and Azure Foundry provider support',
-      'Alert Studio and editable installed alert rules',
+      "Alert studio and editable installed alert rules",
       'Curated alert packs and custom pack previews',
       'Pack defaults for alert behavior, cooldown, and channels',
       'Notification inbox, delivery channels, and health',
@@ -245,7 +245,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'operator',
-    title: 'Operator Experience',
+    title: "Operator experience",
     description: 'Direct navigation and responsive controls across the application',
     icon: Layers,
     phase: 'done',
@@ -259,7 +259,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'reliability',
-    title: 'Reliability & Data Trust',
+    title: "Reliability & data trust",
     description: 'Active focus on telemetry correctness and operational recovery',
     icon: Shield,
     phase: 'current',
@@ -272,7 +272,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'helixQuality',
-    title: 'Helix Quality & Cost Controls',
+    title: "Helix quality & cost controls",
     description: 'Improve grounded answers without making AI mandatory',
     icon: Brain,
     phase: 'next',
@@ -298,7 +298,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'ecosystem',
-    title: 'Energy Ecosystem',
+    title: "Energy ecosystem",
     description: 'Explore deeper integration with home energy and charging decisions',
     icon: Leaf,
     phase: 'future',
@@ -311,7 +311,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'fleetInsights',
-    title: 'Privacy-preserving Fleet Insights',
+    title: "Privacy-preserving fleet insights",
     description: 'Explore useful comparisons without exposing individual journeys',
     icon: BarChart3,
     phase: 'future',
@@ -329,7 +329,7 @@ const roadmapItems: RoadmapEntry[] = [
     icon: Plug,
     phase: 'future',
     features: [
-      'Assess Home Assistant integration needs',
+      "Assess home assistant integration needs",
       'Explore calendar context for trip planning',
       'Document stable webhook and API extension points',
       'Prioritize integrations based on operator demand',
@@ -337,7 +337,7 @@ const roadmapItems: RoadmapEntry[] = [
   },
   {
     id: 'accessibleOps',
-    title: 'Accessible Operator Workflows',
+    title: "Accessible operator workflows",
     description: 'Continue refining navigation and dense screens on every display size',
     icon: Smartphone,
     phase: 'future',
@@ -554,7 +554,7 @@ export default function RoadmapPage() {
   return (
     <PageLayout
       title={t('roadmap.title', 'Roadmap')}
-      subtitle={t('roadmap.subtitle', "What's been built, What's in progress, and What's coming next")}
+      subtitle={t('roadmap.subtitle', "What's been built, what's in progress, and what's coming next")}
     >
       {/* 1 — KPI band: initiatives per phase + totals */}
       <FadeIn>

@@ -289,7 +289,7 @@ export function SettingsExportImport() {
             </Heading>
             <Text variant="bodySm">
               {t(
-                'backup.subtitle',
+                "backup.configurationSubtitle",
                 'Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install.',
               )}
             </Text>

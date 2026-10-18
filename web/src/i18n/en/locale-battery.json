@@ -1244,7 +1244,9 @@
       "avgPerDay": "Avg energy/day",
       "perDay": "per day",
       "title": "Efficiency metrics",
-      "noData": "No efficiency metrics available."
+      "noData": "No efficiency metrics available.",
+      "sharedSource": "Shared source total",
+      "sharedSourceAlias": "The energy summary currently returns total energy used and total energy charged as aliases of the same source total. These are not independent consumed and charged measurements; distinct totals require a producer with measured consumption and charging semantics."
     },
     "dailyEfficiency": {
       "aria": "Daily driving efficiency over time",
@@ -2240,6 +2242,13 @@
     "sections": {
       "trend": "Drain rate trend and gauge",
       "daily": "Daily drain and reduction tips"
+    },
+    "startDateGroups": {
+      "section": "Sessions by start date and reduction tips",
+      "title": "Parked sessions by start date",
+      "scope": "Whole-session battery loss and duration are grouped by start date in {{timeZone}}, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.",
+      "aria": "Whole-session battery loss and parked hours grouped by session start date",
+      "date": "Session start date"
     }
   },
   "achievements": {
@@ -2887,27 +2896,40 @@
     "degradation": {
       "actualHealth": "Actual health %",
       "analysis": "Range and risk analysis",
+      "approximatePredictionBand": "Approximate prediction band",
       "avgDoD": "Avg depth of discharge",
       "avgDoDLabel": "Avg DoD",
       "baselineSampledAt": "Baseline sample timestamp",
       "batteryAge": "Battery age",
+      "belowThreshold": "Fitted health is already at or below 80%.",
       "brief": {
         "prediction": "Degradation model evidence",
         "summary": "Battery degradation evidence"
       },
       "capacity": "Capacity",
+      "capacityCalibration": "Actual pack-capacity calibration remains candidate BD-C01; no calibration is applied here.",
+      "capacityEstimator": "Current capacity is a telemetry-derived estimator: the median of up to eight recent valid daily capacity estimates, or EnergyRemaining / (BatteryLevel / 100) when history is unavailable. SOH compares this estimator with the nominal baseline; it is not a direct capacity measurement.",
+      "capacityEstimatorUnavailable": "Observed current-capacity estimator unavailable; the nominal baseline alone does not establish current capacity or SOH.",
+      "capacityEvidence": "Nominal baseline evidence: capacity_source={{source}}; original_capacity_wh={{capacity}}. This baseline is an assumption, not an observed or calibrated original pack capacity.",
+      "chargeEquivalentEvidence_one": "Estimated charge equivalents: recorded energy added across {{count}} valid charging session divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
+      "chargeEquivalentEvidence_other": "Estimated charge equivalents: recorded energy added across {{count}} valid charging sessions divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
       "chargeHabits": "Charge habits",
       "chargingImpact": "Charging habits impact",
       "confidence": "95% Confidence",
+      "crossingUnavailable": "The 80% crossing estimate is unavailable.",
       "currentRange": "Current range",
       "currentSoh": "Current SOH",
       "cycleDepth": "Cycle depth",
       "date": "Date",
       "deepDischarges": "deep discharges",
+      "driveDropEvidence_one": "Arithmetic mean of start SOC minus end SOC across {{count}} valid recorded drive (0–100% SOC, start ≥ end, including zero drops). This is per-drive SOC change, not depth of a full discharge/recharge cycle. The depth score is 100 minus this mean.",
+      "driveDropEvidence_other": "Arithmetic mean of start SOC minus end SOC across {{count}} valid recorded drives (0–100% SOC, start ≥ end, including zero drops). This is per-drive SOC change, not depth of a full discharge/recharge cycle. The depth score is 100 minus this mean.",
       "estimateEvidence": "Health, capacity, range and forecasts are estimates derived from available telemetry snapshots, not direct pack-capacity measurements.",
       "estimatedCapacity": "Estimated capacity",
       "fastCharge": "Fast charge",
       "fastCharges": "fast charges",
+      "fittedSohTrend": "Fitted SOH trend",
+      "fittedSohTrendHelp": "Signed fitted SOH change in percentage points per year. Negative values indicate declining health; positive values indicate improving fitted health.",
       "fullCharge": "Full charge",
       "guidance": "Recommendations and health factors",
       "healthFactors": "Battery health factors",
@@ -2918,6 +2940,7 @@
       "lowerBetter": "Lower is better for longevity",
       "monthsCount": "{{count}} months",
       "needMore": "Need more data points to generate prediction (minimum 3 snapshots required)",
+      "noFutureCrossing": "The fitted trend does not predict a future crossing of 80%.",
       "noHistory": "No degradation records found.",
       "noHistoryDescription": "Capacity estimates appear after enough charging, range, and odometer snapshots have accumulated.",
       "noRange": "Range data will appear once history is available.",
@@ -2926,12 +2949,18 @@
       "noRiskData": "Risk data will appear once charging history is available.",
       "noSoh": "Battery health is not available yet.",
       "noStress": "Charging impact will appear once charging history is available.",
+      "observationDuration": "Observation duration",
+      "observationEvidence": "Observation duration is time since the earliest retained battery history, charging session or drive session; it is not true pack age. Start: {{start}}; source: {{source}}. Manufacture and replacement dates are unknown.",
       "odometer": "Odometer",
       "odometerSampledAt": "Odometer sample timestamp",
       "originalRange": "Original range",
       "prediction": "Prediction",
       "predictionAndHabits": "Prediction and charging habits",
+      "predictionBandChartAria": "Battery health trend and approximate prediction band chart",
       "predictionDesc": "At current rate, battery reaches",
+      "predictionIntervalEvidence_one": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH sample (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
+      "predictionIntervalEvidence_other": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH samples (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
+      "predictionIntervalUnavailable": "Approximate prediction band: fit sample basis and multiplier unavailable. This is not a calibrated 95% confidence interval; empirical coverage remains unmeasured in BD-C01.",
       "projected": "Projected %",
       "range": "Range",
       "rangeLoss": "Range loss over time",
@@ -2950,6 +2979,13 @@
       "reconnectHelp": "Reconnect to Tesla, then retry to load this vehicle's battery history.",
       "retainedRangeBaseline": "First retained range estimate",
       "retainedRangeEvidence": "The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.",
+      "risk": {
+        "cycle_count_rate": "cycle count rate",
+        "deep_discharge_frequency": "deep discharge frequency",
+        "fast_charge_ratio": "fast charge ratio",
+        "high_soc_charging": "high soc charging",
+        "temperature_exposure": "temperature exposure"
+      },
       "riskDetail": {
         "cycle_count_rate": "{{cycles}} cycles/month vs ~{{typical}} typical",
         "deep_discharge_frequency": "{{percent}}% of sessions start below {{threshold}}% SOC",
@@ -2986,6 +3022,7 @@
       "totalCycles": "Total cycles",
       "trendTitle": "Health trend & projection",
       "trendTitleAria": "Battery health trend and 95% confidence projection chart",
+      "validFitRequired": "Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)",
       "warranty": "80% Warranty",
       "years": "years",
       "yearsCount": "{{y}} years",
@@ -3047,7 +3084,13 @@
       "title": "Smart insights"
     },
     "links": {
-      "title": "Explore More"
+      "cells": "Battery Cells",
+      "degradation": "Degradation",
+      "energyFlow": "Energy Flow",
+      "projectedRange": "Projected Range",
+      "sleepEfficiency": "Sleep Efficiency",
+      "title": "Explore More",
+      "vampireDrain": "Vampire Drain"
     },
     "metric": {
       "age": "Battery age",
@@ -3167,11 +3210,13 @@
       "badge": "Helix",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
+      "independentDescription": "Ask Helix to name and explain cluster fingerprints from retrieved charging history and a separate per-vehicle feature-query tool. That tool uses its own lookback window (90 days by default), not the workspace date range; retrieved history is not limited to the chart window. The narrator does not change cluster bucketing, and its source data is not established as equivalent to the charts below.",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
       "generateButton": "Train charging-curve clusters",
+      "independentDescription": "Compute a learned charging envelope for the selected vehicle over an independent 90-day window. Helix narrates the training and cluster-query tool results, including rule-label fallbacks when data is insufficient. The workspace date range does not filter this request; these results are not established as equivalent to the charts below and do not replace them.",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
@@ -3449,10 +3494,58 @@
     }
   },
   "emptyState": {
+    "alerts": {
+      "list": {
+        "likelyCause": "Either no rules are configured yet, or every rule has evaluated cleanly in the selected window.",
+        "meaning": "No alerts have fired — this is the expected steady state."
+      }
+    },
+    "analytics": {
+      "efficiency": {
+        "likelyCause": "Most often the selected range contains no completed drives — widen it before assuming data is missing.",
+        "meaning": "No efficiency figures can be computed for the selected period."
+      }
+    },
+    "automations": {
+      "list": {
+        "likelyCause": "This list is empty by default — automations are opt-in and are never created for you.",
+        "meaning": "No automations are configured, so nothing is being evaluated."
+      }
+    },
+    "battery": {
+      "degradation": {
+        "likelyCause": "Most often the vehicle was linked recently, so the observation window is still too short to be meaningful.",
+        "meaning": "There is not enough history yet to estimate battery degradation."
+      }
+    },
+    "charging": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not charged since it was linked, or it charged while asleep and unreachable.",
+        "meaning": "No charging sessions have been recorded for this vehicle yet."
+      }
+    },
+    "drives": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not driven since it was linked, or the selected date range ends before the first recorded drive.",
+        "meaning": "No completed drives have been recorded for this vehicle yet."
+      }
+    },
     "generic": "No data available yet.",
     "label": {
       "likelyCause": "Most likely reason",
       "prerequisite": "What has to happen first"
+    },
+    "signals": {
+      "live": {
+        "likelyCause": "Most often the vehicle is asleep — Tesla stops streaming while a car sleeps, and waking it costs range.",
+        "meaning": "No live signals are arriving for this vehicle right now."
+      }
+    },
+    "vehicles": {
+      "list": {
+        "likelyCause": "Either setup has not been completed, or the stored Tesla authorisation was revoked and needs renewing.",
+        "meaning": "No vehicles are linked, so nothing is being collected anywhere in the app."
+      }
     }
   },
   "entityContext": {
@@ -3985,6 +4078,9 @@
       "badge": "Helix",
       "button": "Draft SQL",
       "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "noNarration": "No narration was returned. Review the typed SQL proposal above.",
+      "noTypedDraft": "No applicable typed SQL proposal was returned. The manual editor remains available.",
+      "previewLabel": "Proposed SQL (review before applying)",
       "promptLabel": "SQL request",
       "promptPlaceholder": "e.g. how many drives did I take last week",
       "title": "Helix natural-language SQL drafter"
@@ -4424,6 +4520,7 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
+      "draftingDescription": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. This advisory draft does not change the form, compute a route, or save a plan. Review the suggestions, enter your trip inputs in the form below, and use Plan to compute the route separately.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -4494,6 +4591,7 @@
       "badge": "Helix",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
+      "scopeDescription": "Get a short, Helix-written recap of the previous calendar year ({{year}}), independently of the year selected above.",
       "title": "Helix narration"
     },
     "goToVehicles": "Go to vehicles",

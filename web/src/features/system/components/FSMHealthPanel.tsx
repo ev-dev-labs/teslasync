@@ -78,7 +78,7 @@ export function FSMHealthPanel({ transitions, sourceState, isLoading = false, hi
       result.push({
         type: 'stuck',
         severity: 'warning',
-        message: t('fsm.health.loadedStuck', '{{count}} potentially stuck session(s): latest loaded state is pending/active for >4 hours', { count: stuckCount }),
+        message: t('fsm.health.loadedStuck', "{{count}} potentially stuck sessions: latest loaded state is pending/active for >4 hours", { count: stuckCount }),
         count: stuckCount,
       });
     }

@@ -90,7 +90,7 @@ const CRUISE_SIGNAL_FIELDS = ['CruiseSetSpeed', 'CruiseFollowDistance', 'Vehicle
 
 export default function DrivingDynamicsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('dynamics.title', 'Driving Dynamics'));
+  usePageTitle(t('dynamics.title', "Driving dynamics"));
 
   /* ---- vehicle selection ---- */
   const { vehicleId } = useSelectedVehicle();
@@ -192,7 +192,7 @@ export default function DrivingDynamicsPage() {
 
   return (
     <PageLayout
-      title={t('dynamics.title', 'Driving Dynamics')}
+      title={t('dynamics.title', "Driving dynamics")}
       subtitle={t('dynamics.review.subtitle', 'Understand one ride: energy outcome, powertrain evidence, and the signals behind it.')}
       query={rangeDrivesQuery}
       busy={rangeDrivesQuery.isLoading}

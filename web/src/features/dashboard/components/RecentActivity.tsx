@@ -110,7 +110,7 @@ export function RecentActivity({
             <Activity aria-hidden="true" className="h-4 w-4 text-cyan-300" /> {t('activity.title', 'Recent activity')}
           </h3>
           <Link to="/drives" className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors">
-            {t('activity.viewAll', 'View all')}
+            {t("activity.browseDrives", 'View all')}
           </Link>
         </div>
         {activityItems.length > 0 ? (
@@ -140,7 +140,7 @@ export function RecentActivity({
         {/* Battery Trend Chart */}
         <GlassPanel className="p-5">
           <h3 className="section-title flex items-center gap-2 mb-4">
-            <BatteryCharging aria-hidden="true" className="h-4 w-4 text-emerald-300" /> {t('battery.title', 'Battery trend')}
+            <BatteryCharging aria-hidden="true" className="h-4 w-4 text-emerald-300" /> {t("activity.batteryTrendTitle", 'Battery trend')}
           </h3>
           {batteryTrend.length > 1 ? (
             <div className="h-36 sm:h-48">
@@ -154,7 +154,7 @@ export function RecentActivity({
             </div>
           ) : (
             <div data-testid="battery-empty" className="h-36 sm:h-48 flex items-center justify-center">
-              <p className="text-xs text-[var(--text-muted)]">{t('battery.empty', 'Charge data will appear here')}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t("activity.batteryTrendEmpty", 'Charge data will appear here')}</p>
             </div>
           )}
         </GlassPanel>

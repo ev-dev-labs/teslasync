@@ -94,6 +94,27 @@ function riskFactorIcon(name: string) {
 export default function BatteryDegradationPage() {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  // Only known product values are translation keys; future server values retain their readable fallback.
+  const stressLabels: Record<string, string> = {
+    "Low": t("battery.degradation.stressValue.Low", "Low"),
+    "Medium": t("battery.degradation.stressValue.Medium", "Medium"),
+    "High": t("battery.degradation.stressValue.High", "High"),
+  };
+  const riskLabels: Record<string, string> = {
+    "low": t("battery.degradation.riskLabel.low", "Low"),
+    "moderate": t("battery.degradation.riskLabel.moderate", "Moderate"),
+    "elevated": t("battery.degradation.riskLabel.elevated", "Elevated"),
+    "high": t("battery.degradation.riskLabel.high", "High"),
+    "unknown": t("battery.degradation.riskLabel.unknown", "Unknown"),
+  };
+  const riskNames: Record<string, string> = {
+    "fast_charge_ratio": t("battery.degradation.risk.fast_charge_ratio", "fast charge ratio"),
+    "high_soc_charging": t("battery.degradation.risk.high_soc_charging", "high soc charging"),
+    "temperature_exposure": t("battery.degradation.risk.temperature_exposure", "temperature exposure"),
+    "cycle_count_rate": t("battery.degradation.risk.cycle_count_rate", "cycle count rate"),
+    "deep_discharge_frequency": t("battery.degradation.risk.deep_discharge_frequency", "deep discharge frequency"),
+  };
+
   const { opts, formatDate: formatInstantDate, formatDateTime } = useDateFormat();
   const formatHistoryDate = useCallback(
     (key: string | null | undefined) => formatDayKey(key, opts),
@@ -480,7 +501,7 @@ export default function BatteryDegradationPage() {
                       stroke={chartTokens.axisStroke}
                       strokeWidth={1}
                       strokeDasharray="6 4"
-                      label={{ value: t('battery.degradation.warranty', '80% warranty'), fill: chartTokens.axisStroke, position: 'insideTopRight' }}
+                      label={{ value: t('battery.degradation.warranty', "80% Warranty"), fill: chartTokens.axisStroke, position: 'insideTopRight' }}
                     />
                     <ReferenceLine y={70} stroke={chartTokens.axisStroke} strokeWidth={1} strokeDasharray="6 4" />
                     {renderAnnotationLines(chartAnnotations, (ts) => ts)}
@@ -600,7 +621,7 @@ export default function BatteryDegradationPage() {
             ) : (
               <EmptyState /* no-action: prediction needs a minimum snapshot count that isn't met yet */
                 icon={<AlertTriangle className="h-8 w-8" />}
-                message={t('battery.degradation.needMore', 'Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)')}
+                message={t("battery.degradation.validFitRequired", 'Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)')}
               />
             )}
           </LayoutCard>
@@ -622,7 +643,7 @@ export default function BatteryDegradationPage() {
                   stressLevel === 'Medium' ? 'warning' : 'danger'
                 }
                 icon={<Thermometer className="h-5 w-5" aria-hidden="true" />}
-                title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${batteryCount(habits.deep_discharge_count) != null ? fmtInt(habits.deep_discharge_count) : '—'} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${stressLevel != null ? t(`battery.degradation.stressValue.${stressLevel}`, stressLevel) : '—'} ${t('battery.degradation.stressLabel', 'stress')}`}
+                title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${batteryCount(habits.deep_discharge_count) != null ? fmtInt(habits.deep_discharge_count) : '—'} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${stressLevel != null ? stressLabels[stressLevel] ?? stressLevel : '—'} ${t('battery.degradation.stressLabel', 'stress')}`}
               >
                 {stressLevel == null
                   ? t('battery.degradation.noStress', 'Charging impact will appear once charging history is available.')
@@ -764,12 +785,12 @@ export default function BatteryDegradationPage() {
                         <div className="flex min-w-0 max-w-full items-center gap-2">
                           <Icon className={cn('h-4 w-4 shrink-0', riskScoreColor(score))} aria-hidden="true" />
                           <Text variant="bodySm" className="break-words">
-                            {t(`battery.degradation.risk.${rf.name}`, rf.name.replace(/_/g, ' '))}
+                            {riskNames[rf.name] ?? rf.name.replace(/_/g, ' ')}
                           </Text>
                         </div>
                         <Badge variant={riskBadgeVariant(score)} size="sm">
                           {Number.isFinite(score) && typeof rf.label === 'string'
-                            ? t(`battery.degradation.riskLabel.${rf.label_code ?? rf.label.toLowerCase()}`, rf.label) : '—'}
+                            ? riskLabels[rf.label_code ?? rf.label.toLowerCase()] ?? rf.label : '—'}
                         </Badge>
                       </div>
                       <MetricBar

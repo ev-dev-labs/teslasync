@@ -7,7 +7,8 @@
       "generateButton": "Draft a plan",
       "noVehicle": "Select a vehicle to let Helix draft a trip plan.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
-      "noDestination": "Set a destination for Helix to plan the route to."
+      "noDestination": "Set a destination for Helix to plan the route to.",
+      "draftingDescription": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. This advisory draft does not change the form, compute a route, or save a plan. Review the suggestions, enter your trip inputs in the form below, and use Plan to compute the route separately."
     },
     "socChart": {
       "title": "Battery along route",
@@ -84,7 +85,9 @@
     },
     "weather": {
       "title": "Weather impact",
-      "factor": "Efficiency factor: {{factor}}×"
+      "factor": "Efficiency factor: {{factor}}×",
+      "historicalEvidence": "The temperature model uses historical temperature, not a departure forecast.",
+      "missingEvidence": "Temperature evidence is unavailable; the model factor does not establish departure weather conditions."
     },
     "brief": {
       "noPlan": "No computed route yet",
@@ -123,7 +126,13 @@
       "check": "Will I make it?",
       "error": "Confidence check failed",
       "empty": "Enter remaining distance for a live arrival verdict.",
-      "detail": "Arrival ~{{soc}}% · {{margin}} kWh margin"
+      "detail": "Arrival ~{{soc}}% · {{margin}} kWh margin",
+      "manualScenario": "Manual scenario: starting SOC {{soc}}% and minimum arrival SOC {{floor}}% come from the planner form, not live telemetry.",
+      "defaultAssumptions": "Server default assumptions: 75 kWh battery capacity, 160 Wh/km consumption, and 1.0 efficiency factor.",
+      "unknownObservations": "Vehicle observations are unknown for this check: live SOC, actual battery capacity, recent efficiency, and route conditions are not supplied. This is an estimate, not a live arrival guarantee.",
+      "scenarioEmpty": "Enter remaining distance to estimate arrival for this manual scenario.",
+      "checkedScenario": "Checked scenario: starting SOC {{soc}}%, minimum arrival SOC {{floor}}%, remaining distance {{distance}} km.",
+      "inputsChanged": "Inputs have changed. This result applies only to the checked scenario; check again for the current inputs."
     }
   }
 }

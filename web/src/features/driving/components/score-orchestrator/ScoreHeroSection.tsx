@@ -23,17 +23,17 @@ export function ScoreHeroSection({ model, scoreState }: ScoreHeroSectionProps) {
   return (
     <FadeIn delay={0.05}>
       <section
-        aria-label={t('driveScore.overall', 'Overall Score')}
+        aria-label={t('driveScore.overall', "Overall score")}
         className="grid grid-cols-1 gap-4 xl:grid-cols-3"
       >
         <GlassPanel className="flex flex-col p-4 sm:p-5 xl:col-span-2">
-          <PanelTitle className="mb-3">{t('driveScore.overall', 'Overall Score')}</PanelTitle>
+          <PanelTitle className="mb-3">{t('driveScore.overall', "Overall score")}</PanelTitle>
           {scoreState(240, noDrivesMsg, <Icons.speed className="h-8 w-8" aria-hidden="true" />) ?? (
             <div className="flex flex-1 flex-col items-center justify-center py-4">
               <LinearGauge
                 value={overallReading}
                 max={100}
-                label={t('driveScore.overall', 'Overall Score')}
+                label={t('driveScore.overall', "Overall score")}
                 color={gradeColor(overallGrade)}
                 size={200}
               />
@@ -53,7 +53,7 @@ export function ScoreHeroSection({ model, scoreState }: ScoreHeroSectionProps) {
                     })
                     : localScoreExplanation(t)}
                   ariaLabel={t('help.driveScore.iconLabel', {
-                    defaultValue: 'More info about Drive Score',
+                    defaultValue: "More info about drive score",
                   })}
                 />
               </div>

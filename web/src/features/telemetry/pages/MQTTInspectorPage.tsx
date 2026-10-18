@@ -308,7 +308,7 @@ export default function MQTTInspectorPage() {
             metrics={briefMetrics}
             scope={summary.period.label}
             statusLabel={metricsUnavailable
-              ? isLoading ? t('common.loading', 'Loading') : t('mqtt.summary.unavailable', 'Broker snapshot unavailable')
+              ? isLoading ? t('common.loading', "Loading...") : t('mqtt.summary.unavailable', 'Broker snapshot unavailable')
               : statusState.refreshError || statusState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
                 : statusState.status === 'partial' ? t('dataState.partial.title', 'Partial data')
                   : t('mqtt.summary.available', 'Broker snapshot available')}

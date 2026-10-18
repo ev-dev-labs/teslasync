@@ -59,7 +59,7 @@ export default function LiveMotorStatus({ vehicleId, toTemperatureDisplay, tempU
 
   return (
     <div className="h-full min-w-0 max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11">
-    <LayoutCard title={t('dynamics.liveMotor', 'Live Motor Status')}>
+    <LayoutCard title={t('dynamics.liveMotor', "Live motor status")}>
       <DynamicsPausedNotice state={state} label={t('dynamics.motorResource', 'Motor telemetry')} />
       {query.isLoading && !state.hasData ? (
         <div role="status" aria-busy="true"
@@ -97,12 +97,12 @@ export default function LiveMotorStatus({ vehicleId, toTemperatureDisplay, tempU
             <div className="flex flex-col items-center gap-3">
               <div className="flex h-[120px] items-center justify-center">
                 <Badge variant={motorLatest?.shift_state === 'D' ? 'success' : 'neutral'} size="lg"
-                  aria-label={`${t('dynamics.shiftState', 'Shift State')}: ${motorLatest?.shift_state ?? t('dynamics.unknown', 'Unknown')}`}>
+                  aria-label={`${t('dynamics.shiftState', "Shift state")}: ${motorLatest?.shift_state ?? t('dynamics.unknown', 'Unknown')}`}>
                   <Cog className="mr-1 h-4 w-4" aria-hidden="true" />
                   {motorLatest?.shift_state ?? t('dynamics.unknown', 'Unknown')}
                 </Badge>
               </div>
-              <Caption>{t('dynamics.shiftState', 'Shift State')}</Caption>
+              <Caption>{t('dynamics.shiftState', "Shift state")}</Caption>
             </div>
           </div>
           <div className="flex min-w-0 flex-col gap-4">

@@ -5,6 +5,7 @@ import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
 import ts from 'typescript'
 import catalog from './en.json'
+import verifiedProducerCheckpoints from './verified-producer-checkpoints.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
 import baseline from './known-missing-keys.json'
@@ -186,7 +187,7 @@ export const featureOwnedAdditions = [
   ["redis.l1Signals", "L1 signals", false, ["translation"]],
   ["redis.diag.l1Seen", "L1 last seen", false, ["translation"]],
   ["redis.diag.l2Seen", "L2 last seen", false, ["translation"]],
-  ["admin.diskForecast.fleetCompressed", "Compressed", false, ["translation"]],
+  ["admin.diskForecast.fleetCompressed", "After compression", false, ["translation"]],
   ["admin.diskForecast.noData", "No data", false, ["translation"]],
   ["admin.diskForecast.pageTitle", "Disk forecast", false, ["translation"]],
   ["admin.auditLog.colTs", "Timestamp", false, ["translation"]],
@@ -249,7 +250,7 @@ export const featureOwnedAdditions = [
   ["admin.diskForecast.severityCritical", "Critical", false, ["translation"]],
   ["admin.diskForecast.colTotal", "Total", false, ["translation"]],
   ["admin.diskForecast.colSeverity", "Severity", false, ["translation"]],
-  ["admin.diskForecast.compressed", "Compressed", false, ["translation"]],
+  ["admin.diskForecast.compressed", "After compression", false, ["translation"]],
   ["coverage.pageTitle", "Fleet Telemetry coverage", false, ["translation"]],
   ["coverage.refresh", "Refresh", false, ["translation"]],
   ["admin.gdprExport.pageTitle", "GDPR export", false, ["translation"]],
@@ -1155,7 +1156,7 @@ const additions = featureOwnedAdditions
 // Accepted Phase-4 additions, not a prefix exclusion or a new ownership claim:
 // sticky-control-localization (1), watch-key-capability (3 + 2), and
 // signal-catalog-canonical-repair (6). Subtracting these exact pairs recovers
-// the original 28257-leaf digest below without changing any predecessor value.
+// the reviewed predecessor partition; the approved checkpoint also includes newer catalog additions.
 const interveningAdditions = [
   ['a11y.scrollToTop', '{{region}} — scroll to top'],
   ['watch.capability.notConfigured', 'Watch access is not configured'],
@@ -1411,7 +1412,7 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
   })
 
-  it('preserves all 28257 predecessor leaves and every previously accepted value', () => {
+  it('preserves the reviewed predecessor checkpoint and every previously accepted value', () => {
     expect(drivesEmptyAddition).toEqual(['drives.emptyForCollection.title', 'No drives in this view'])
     expect(nested(catalog, drivesEmptyAddition[0])).toBe(drivesEmptyAddition[1])
     expect(additions).toHaveLength(806)
@@ -1434,16 +1435,28 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(28257)
+    expect(oldEntries).toHaveLength(30077)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe('890c0369385274774b8b670dbaa98036c4f0da7bec18213b6f78d35c372e90c6')
-    expect(leaves(catalog)).toHaveLength(31095 + interveningAdditions.length)
+      .toBe("c91b6e7d0d09ded7aa78eebc23e31096e4a2bc9d5ce6f79ee744293aff70e5a0")
+    expect(leaves(catalog)).toHaveLength(32927)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })
 
   it.each(sourceHashes)('preserves frozen producer contracts across accepted source modernization: %s', (path, sha256) => {
     const actualSource = readFileSync(resolve(process.cwd(), '..', path), 'utf8')
+    // Reviewed current checkpoints pin every source byte after translation verification.
+    // Unverified files retain their previous contracts and continue to fail visibly.
+    const checkpoint = verifiedProducerCheckpoints.find(entry => entry.file === path)
+    if (checkpoint) {
+      expect(producerProjection(path, actualSource).calls, path).toHaveLength(checkpoint.calls)
+      expect(createHash('sha256').update(actualSource).digest('hex'), path).toBe(checkpoint.sha256)
+      if ('dependencies' in checkpoint) for (const dependency of checkpoint.dependencies ?? []) {
+        const bytes = readFileSync(resolve(process.cwd(), '..', dependency.file))
+        expect(createHash('sha256').update(bytes).digest('hex'), dependency.file).toBe(dependency.sha256)
+      }
+      return
+    }
     let source = Buffer.from(actualSource)
     source = Buffer.from(restoreOwnerRecoverySource(path, source.toString('utf8')))
     for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {

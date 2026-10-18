@@ -8,7 +8,18 @@
       "title": "FSM health",
       "flapTitle": "State flapping",
       "stuckTitle": "Stuck sessions",
-      "recoveryTitle": "Pod recoveries"
+      "recoveryTitle": "Pod recoveries",
+      "pausedEvidence": "Transition evidence is paused; FSM health is unknown.",
+      "unknownEvidence": "Transition evidence has not loaded; FSM health is unknown.",
+      "emptyEvidence": "No transitions in the loaded result. This does not establish FSM health; try expanding the time range.",
+      "invalidEvidence": "Some loaded transitions have invalid timestamps; time-based FSM health is unknown.",
+      "loadedEvidence": "Heuristics cover only loaded transition rows, not authoritative current FSM health.",
+      "loadedClear": "No flapping, potentially stuck sessions, or recovery transitions detected in loaded rows.",
+      "loadedRecoveryTitle": "Recovery transitions",
+      "loadedStuck_one": "{{count}} potentially stuck session: latest loaded state is pending/active for >4 hours",
+      "loadedStuck_other": "{{count}} potentially stuck sessions: latest loaded state is pending/active for >4 hours",
+      "loadedRecoveries_one": "{{count}} transition to recovered in loaded rows; the recovery cause is not established",
+      "loadedRecoveries_other": "{{count}} transitions to recovered in loaded rows; the recovery cause is not established"
     },
     "stateDiagram": "State diagram",
     "selectFsmType": "Select a specific FSM type to view its state diagram",
@@ -128,6 +139,8 @@
     "overview": "Vehicle state overview",
     "analysis": "Transition analysis",
     "timelineChartAria": "FSM transitions over time stacked area chart",
-    "distributionByStateAria": "FSM state distribution donut chart with per-state counts"
+    "distributionByStateAria": "FSM state distribution donut chart with per-state counts",
+    "noTransitionsOnPage": "No transitions on the loaded server page.",
+    "shareRollingLimit": "The link reopens the rolling preset, not these exact time bounds."
   }
 }

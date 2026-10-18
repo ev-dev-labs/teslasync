@@ -69,7 +69,7 @@ export function RegionSettings() {
         ) : region ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
-              <p className="text-xs text-[var(--text-muted)] mb-1 tracking-wider">{t('region.regionCode', 'Region')}</p>
+              <p className="text-xs text-[var(--text-muted)] mb-1 tracking-wider">{t('region.regionCode', "Region code")}</p>
               <p className="text-lg font-semibold text-[var(--text-primary)]">{region}</p>
             </div>
             <div className="rounded-lg bg-white/[0.02] border border-[var(--border-subtle)] p-4">
@@ -81,7 +81,7 @@ export function RegionSettings() {
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" aria-hidden="true" />} message={
             regionConfig?.fetched_at
               ? t('region.noRegion', 'Tesla did not return a region for this account.')
-              : t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')
+              : t('region.noData', "No region data yet. Click refresh to fetch from Tesla.")
           } />
         )}
       </GlassPanel>
