@@ -13,14 +13,15 @@ export interface DebriefBeat {
 
 export interface DrivePhysicsDebrief {
   beats: DebriefBeat[];
-  peakPowerKw: number | null;
+  /** Peak drive power in watts (SI); chart samples arrive in kW. */
+  peakPowerW: number | null;
   regenShare: number | null;
   fsdSharePct: number | null;
   fsdConfidence: DriveFsdInsight['confidence'] | null;
   resetAffected: boolean;
 }
 
-const LAUNCH_KW = 80;
+const LAUNCH_W = 80_000;
 
 function finite(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -34,7 +35,9 @@ export function interpretDriveDebrief(
   const samples = chart ?? [];
   const powers = samples.map((row) => finite(row.power)).filter((value): value is number => value != null);
   // An average aggregate is not a measured peak. Zero is a valid sample.
-  const peakPowerKw = powers.length > 0 ? powers.reduce((max, value) => Math.max(max, value), -Infinity) : null;
+  const peakPowerW = powers.length > 0
+    ? powers.reduce((max, value) => Math.max(max, value), -Infinity) * 1000
+    : null;
   const { energyWh, regenWh, regenSource } = statsEnergyEvidence(stats);
   const grossEnergyWh = energyWh != null && regenWh != null ? finite(energyWh + regenWh) : null;
   const regenShare = grossEnergyWh != null && grossEnergyWh > 0 && regenWh != null
@@ -47,7 +50,7 @@ export function interpretDriveDebrief(
   } else {
     beats.push({
       id: 'launch',
-      honesty: peakPowerKw != null && peakPowerKw >= LAUNCH_KW ? 'live' : 'stale',
+      honesty: peakPowerW != null && peakPowerW >= LAUNCH_W ? 'live' : 'stale',
     });
     beats.push({
       id: 'regen',
@@ -67,7 +70,7 @@ export function interpretDriveDebrief(
 
   return {
     beats,
-    peakPowerKw,
+    peakPowerW,
     regenShare,
     fsdSharePct: fsd?.fsd_share_pct ?? null,
     fsdConfidence: fsd?.confidence ?? null,

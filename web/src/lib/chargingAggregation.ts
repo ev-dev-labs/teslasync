@@ -125,12 +125,12 @@ export interface ChargingPeriodStats {
   totalEnergyWh: number;
   /** Sum of `cost_decimal` (caller-supplied currency). */
   totalCost: number;
-  /** Sum of `durationMinutes(s)`. */
-  totalDurationMin: number;
-  /** Average kWh/hr across sessions with usable duration. */
-  avgRateKw: number | null;
-  /** Average minutes per session. */
-  avgDurationMin: number | null;
+  /** Sum of session durations in seconds (SI canonical). */
+  totalDurationS: number;
+  /** Average watts across sessions with usable duration. */
+  avgRateW: number | null;
+  /** Average seconds per session. */
+  avgDurationS: number | null;
   /** Average power in W (uses {@link avgPowerW}). */
   avgPowerW: number | null;
   /** Most common starting hour-of-day (0–23) in the requested tz. */
@@ -205,10 +205,10 @@ export function computeChargingPeriodStats(
   let count = 0;
   let totalEnergyWh = 0;
   let totalCost = 0;
-  let totalDurationMin = 0;
+  let totalDurationS = 0;
   let durationN = 0;
   let rateEnergyWh = 0;
-  let rateDurationMin = 0;
+  let rateDurationS = 0;
   let powerSum = 0;
   let powerN = 0;
   let freeCount = 0;
@@ -227,15 +227,15 @@ export function computeChargingPeriodStats(
     inWindow.push(s);
     totalEnergyWh += s.total_energy_added_wh;
     totalCost += s.cost_decimal ?? 0;
-    const minutes = durationMinutes(s);
-    totalDurationMin += minutes;
-    if (minutes > 0) {
+    const seconds = durationMinutes(s) * 60;
+    totalDurationS += seconds;
+    if (seconds > 0) {
       durationN += 1;
       // Pair energy with its own measured duration; open sessions cannot add
       // energy to a rate whose denominator excludes their elapsed time.
       if (Number.isFinite(s.total_energy_added_wh)) {
         rateEnergyWh += s.total_energy_added_wh;
-        rateDurationMin += minutes;
+        rateDurationS += seconds;
       }
     }
     const p = sessionAveragePowerW(s);
@@ -255,11 +255,11 @@ export function computeChargingPeriodStats(
     count,
     totalEnergyWh,
     totalCost,
-    totalDurationMin,
-    avgRateKw: rateDurationMin > 0
-      ? rateEnergyWh / 1000 / (rateDurationMin / 60)
+    totalDurationS,
+    avgRateW: rateDurationS > 0
+      ? rateEnergyWh / (rateDurationS / 3600)
       : null,
-    avgDurationMin: durationN > 0 ? totalDurationMin / durationN : null,
+    avgDurationS: durationN > 0 ? totalDurationS / durationN : null,
     avgPowerW: powerN > 0 ? powerSum / powerN : null,
     mostCommonStartHour: hourCounts.some((c) => c > 0)
       ? hourCounts.indexOf(Math.max(...hourCounts))

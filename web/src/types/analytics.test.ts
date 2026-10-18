@@ -57,6 +57,7 @@ function assertAnalyticsSummaryShape(s: AnalyticsSummary): void {
   const numeric: Array<keyof AnalyticsSummary> = [
     'totalVehicles', 'totalDrives', 'totalChargingSessions', 'totalDistanceKm',
     'totalEnergyKwh', 'totalCost', 'avgEfficiencyWhKm',
+    'totalEnergyWh',
   ];
   for (const k of numeric) {
     expect(typeof s[k]).toBe('number');
@@ -226,6 +227,7 @@ describe('analytics type contracts — interface shape guards (frontend fixtures
       totalChargingSessions: 47,
       totalDistanceKm: 12345,
       totalEnergyKwh: 450,
+      totalEnergyWh: 450000,
       totalCost: 321,
       avgEfficiencyWhKm: 158,
       co2SavedKg: 210,
@@ -249,6 +251,7 @@ describe('analytics type contracts — interface shape guards (frontend fixtures
       totalChargingSessions: 0,
       totalDistanceKm: 0,
       totalEnergyKwh: 0,
+      totalEnergyWh: 0,
       totalCost: 0,
       avgEfficiencyWhKm: 0,
       vehicleComparison: [],

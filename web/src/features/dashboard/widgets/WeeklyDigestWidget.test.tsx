@@ -154,6 +154,8 @@ function makeDigest(over: Partial<WeeklyDigestData> = {}): WeeklyDigestData {
     prevEnergyKwh: 20,
     prevCost: 2.8,
     prevEfficiency: 300,
+    energyWh: 25000,
+    prevEnergyWh: 20000,
     ...over,
   };
 }

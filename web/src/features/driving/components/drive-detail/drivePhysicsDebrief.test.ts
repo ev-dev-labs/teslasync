@@ -108,6 +108,7 @@ describe('interpretDriveDebrief', () => {
     } satisfies DriveFsdInsight);
 
     expect(debrief.beats.find((beat) => beat.id === 'launch')?.honesty).toBe('live');
+    expect(debrief.peakPowerW).toBe(90000);
     expect(debrief.beats.find((beat) => beat.id === 'blended')?.honesty).toBe('missing');
     expect(debrief.fsdSharePct).toBe(40);
   });

@@ -35,16 +35,16 @@ function coverage(sessions: ChargingSession[]) {
   const priced = sessions.filter(s => finite(s.cost_decimal) != null);
   const energized = sessions.filter(s => finite(s.total_energy_added_wh) != null);
   const paired = priced.filter(s => finite(s.total_energy_added_wh) != null);
-  const pricedEnergyKwh = paired.reduce((sum, s) => sum + s.total_energy_added_wh!, 0) / 1000;
+  const pricedEnergyWh = paired.reduce((sum, s) => sum + s.total_energy_added_wh!, 0);
   const pairedCost = paired.reduce((sum, s) => sum + s.cost_decimal!, 0);
-  const rate = pricedEnergyKwh > 0 ? finite(pairedCost / pricedEnergyKwh) : null;
+  const rate = pricedEnergyWh > 0 ? finite(pairedCost / (pricedEnergyWh / 1000)) : null;
   return {
     pricedCount: priced.length,
     energyCount: energized.length,
     pairedCount: paired.length,
     unknownCostCount: sessions.length - priced.length,
     unknownEnergyCount: sessions.length - energized.length,
-    pricedEnergyKwh,
+    pricedEnergyWh,
     rate,
     rateStatus: rate == null ? 'unknown' as const
       : paired.length === sessions.length ? 'complete' as const : 'partial' as const,

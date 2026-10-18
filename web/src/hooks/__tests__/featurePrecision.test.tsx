@@ -44,14 +44,14 @@ describe('feature display precision', () => {
     const efficiency = 187.456789
     expect(result.current.formatEfficiency(efficiency)).toBe('187.46 Wh/km')
     expect(result.current.formatDistance(12345.678)).toBe('12.35 km')
-    expect(result.current.convertEfficiency(efficiency)).toBe(efficiency)
+    expect(result.current.toEfficiencyDisplay(efficiency)).toBe(efficiency)
 
     act(() => setGlobalPrecision(4))
     expect(result.current.formatEfficiency(efficiency)).toBe('187.4568 Wh/km')
     expect(result.current.formatDistance(12345.678)).toBe('12.3457 km')
     expect(result.current.formatSignedEfficiency(0)).toBe('0.0000 Wh/km')
     expect(result.current.formatEfficiency(null)).toBe('—')
-    expect(result.current.convertEfficiency(efficiency)).toBe(efficiency)
+    expect(result.current.toEfficiencyDisplay(efficiency)).toBe(efficiency)
     expect(result.current.formatEfficiency(efficiency, 1)).toBe('187.5 Wh/km')
   })
 })

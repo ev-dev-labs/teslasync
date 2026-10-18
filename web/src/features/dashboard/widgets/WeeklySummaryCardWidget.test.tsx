@@ -123,6 +123,8 @@ function makeDigest(overrides: Partial<WeeklyDigestData> = {}): WeeklyDigestData
     prevEnergyKwh: 50,
     prevCost: 7,
     prevEfficiency: 250,
+    energyWh: 40000,
+    prevEnergyWh: 50000,
     ...overrides,
   };
 }

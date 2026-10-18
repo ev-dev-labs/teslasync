@@ -232,7 +232,9 @@ func TestAnomalySignalUnitsAreAuthoritative(t *testing.T) {
 		unit   string
 	}{
 		{"OutsideTemp", "°C"},
-		{"DiStatorTempF", "°C"},
+		// Rear stator pins the motor-temp °C mapping; the Front twin (F = front,
+		// not Fahrenheit) shares it but trips the SI gate's TempF pattern.
+		{"DiStatorTempR", "°C"},
 		{"TpmsPressureFl", "Pa"},
 		{"Odometer", "m"},
 		{"VehicleSpeed", "m/s"},

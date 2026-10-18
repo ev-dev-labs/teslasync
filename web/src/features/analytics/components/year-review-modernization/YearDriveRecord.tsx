@@ -21,7 +21,7 @@ export function YearDriveRecord({ drive, id, period }: {
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   const distanceDisplay = fmtInt(convertDistanceFromSI((drive?.distance_km ?? 0) * 1000, distanceUnit));
-  const durationDisplay = recordDuration(drive?.duration_min ?? 0);
+  const durationDisplay = recordDuration((drive?.duration_s ?? 0) / 60);
   const efficiencyWhKm = drive?.efficiency_wh_km ?? 0;
   const efficiencyDisplay = efficiencyWhKm > 0
     ? fmtInt(distanceUnit === 'mi' ? efficiencyWhKm * 1.609344 : efficiencyWhKm) : '—';

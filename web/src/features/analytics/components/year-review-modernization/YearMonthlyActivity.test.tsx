@@ -74,8 +74,8 @@ vi.mock('@/components/charts', () => {
 const data = {
   avg_drives_per_week: 2.5,
   monthly_stats: [
-    { month: 6, drives: 13, distance_km: 14.75, energy_kwh: 6.125, cost: 8 },
-    { month: 1, drives: 4, distance_km: 100.4, energy_kwh: 25.9, cost: 3 },
+    { month: 6, drives: 13, distance_km: 14.75, energy_wh: 6125, cost: 8 },
+    { month: 1, drives: 4, distance_km: 100.4, energy_wh: 25900, cost: 3 },
   ],
 } as YearReview;
 

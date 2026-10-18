@@ -62,8 +62,8 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
     const eff = (data.efficiency ?? 0) * kmPerDisplayUnit;
     const prevEff = (data.prevEfficiency ?? 0) * kmPerDisplayUnit;
 
-    const energy = data.energyKwh ?? 0;
-    const prevEnergy = data.prevEnergyKwh ?? 0;
+    const energy = (data.energyWh ?? 0) / 1000;
+    const prevEnergy = (data.prevEnergyWh ?? 0) / 1000;
 
     const drives = data.drives ?? 0;
     const prevDrives = data.prevDrives ?? 0;
@@ -86,9 +86,9 @@ export default function WeeklyDigestWidget({ vehicleId, size }: WidgetProps) {
       },
       {
         label: t('widget.weeklyDigest.energy', 'Energy'),
-        current: isFiniteNumber(data.energyKwh) ? energy : null,
-        previous: isFiniteNumber(data.prevEnergyKwh) ? prevEnergy : null,
-        formattedCurrent: isFiniteNumber(data.energyKwh) ? fmtNumber(energy) : '—',
+        current: isFiniteNumber(data.energyWh) ? energy : null,
+        previous: isFiniteNumber(data.prevEnergyWh) ? prevEnergy : null,
+        formattedCurrent: isFiniteNumber(data.energyWh) ? fmtNumber(energy) : '—',
         unit: 'kWh',
         higherIsBetter: true,
       },

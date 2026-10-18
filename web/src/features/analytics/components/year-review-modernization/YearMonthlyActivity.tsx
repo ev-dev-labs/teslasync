@@ -41,7 +41,7 @@ export function YearMonthlyActivity({ data, loading, error, onRetry, emptyMessag
     month: monthShortLabel(m.month, locale),
     drives: m.drives ?? 0,
     distance: Math.round(convertDistanceFromSI((m.distance_km ?? 0) * 1000, distanceUnit)),
-    energy: Math.round(m.energy_kwh ?? 0),
+    energy: Math.round((m.energy_wh ?? 0) / 1000),
   })), [data?.monthly_stats, distanceUnit, locale]);
   const drivesName = t('yearReview.drives', 'drives');
   const distanceName = t('yearReview.distanceSeries', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' });

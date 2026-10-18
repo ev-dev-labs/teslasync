@@ -29,7 +29,7 @@ import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 import { getEfficiency } from '@/lib/drivesAggregation';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
-import { convertSpeedFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
+import { convertSpeedFromSI, convertSpeedToSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
@@ -193,16 +193,16 @@ export default function SpeedProfilePage() {
       const eff = getEfficiency(d);
       if (eff == null || !Number.isFinite(eff)) return;
       // The source distribution uses fixed mph bands, independently of viewer
-      // preferences. Compare in that source unit; retain raw SI accumulators
-      // and convert averages only when displaying them.
-      const sourceSpeedMph = convertSpeedFromSI(d.avgSpeedMps, 'mph');
+      // preferences. Convert the band edges to SI once and compare in
+      // meters per second; retain raw SI accumulators and convert
+      // averages only when displaying them.
       for (const r of ranges) {
         const bucket = r.speedBucket ?? r.speed_bucket ?? '';
         const parts = bucket.match(/(\d+)/g);
         if (!parts) continue;
-        const lo = Number(parts[0]);
-        const hi = parts.length > 1 ? Number(parts[1]) : Number.POSITIVE_INFINITY;
-        if (sourceSpeedMph >= lo && sourceSpeedMph < hi) {
+        const loMps = convertSpeedToSI(Number(parts[0]), 'mph');
+        const hiMps = parts.length > 1 ? convertSpeedToSI(Number(parts[1]), 'mph') : Number.POSITIVE_INFINITY;
+        if (d.avgSpeedMps >= loMps && d.avgSpeedMps < hiMps) {
           const existing = acc.get(bucket) ?? { totalEff: 0, totalSpdMps: 0, count: 0 };
           existing.totalEff += eff;
           existing.totalSpdMps += d.avgSpeedMps;

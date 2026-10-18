@@ -426,8 +426,9 @@ func (a *ContextSource) LoadWatchContext(ctx context.Context) (*nl.WatchContextE
 // deterministic /watch/summary handler does:
 //
 //   - BatteryLevel → SOCPercent (int %)
-//   - RatedRange   → display-only RangeMi (meters ÷1609.344)
-//     AND RangeKm (meters ÷1000); the cache remains SI.
+//   - RatedRange   → display-only range pair via
+//     nl.ProjectRangeDisplay (meters ÷1609.344 AND meters
+//     ÷1000); the cache remains SI.
 //   - InsideTemp   → InsideTempC (°C SI) AND InsideTempF
 //     (cToFPtr-style precomputed °F)
 //   - OutsideTemp  → OutsideTempC + OutsideTempF
@@ -444,8 +445,7 @@ func projectSignals(env *nl.WatchContextEnvelope, signals map[string]interface{}
 		env.SOCPercent = v
 	}
 	if v, ok := signalFloat(signals, "RatedRange"); ok {
-		env.RangeMi = v / 1609.344
-		env.RangeKm = v / 1000
+		nl.ProjectRangeDisplay(env, v)
 	}
 	if v, ok := signalFloat(signals, "InsideTemp"); ok {
 		env.InsideTempC = v

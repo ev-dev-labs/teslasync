@@ -651,7 +651,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	const severity = "info"
 	testRule := &alertmodel.AlertRule{Name: "Test Rule", Severity: severity, Kind: "signal",
 		SignalName: body.SignalName, Op: body.Op, ValueNum: body.ValueNum,
-		ValueText: body.ValueText, ValueBool: body.ValueBool, ValueMin: body.ValueMin, ValueMax: body.ValueMax,
+		ValueText: body.ValueText, ValueBool: body.ValueBool, ValueMin: body.ValueMinimum, ValueMax: body.ValueMax,
 		MsgTemplate: body.MsgTemplate, IncludeTitle: body.IncludeTitle == nil || *body.IncludeTitle,
 	}
 	if body.Name != "" {

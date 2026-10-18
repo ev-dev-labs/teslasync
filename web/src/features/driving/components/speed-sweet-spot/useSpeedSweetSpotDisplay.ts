@@ -24,7 +24,7 @@ export function useSpeedSweetSpotDisplay() {
       : t('sweetSpot.whPerKm', 'Wh/km');
   const efficiencyScale = convertDistanceToSI(1, distanceUnit) / 1_000;
 
-  const convertEfficiency = useCallback(
+  const toEfficiencyDisplay = useCallback(
     (whPerKm: number) => whPerKm * efficiencyScale,
     [efficiencyScale],
   );
@@ -44,18 +44,18 @@ export function useSpeedSweetSpotDisplay() {
   const formatEfficiency = useCallback(
     (whPerKm: number | null | undefined, precision = getGlobalPrecision()) =>
       whPerKm != null && Number.isFinite(whPerKm)
-        ? `${fmtNumber(convertEfficiency(whPerKm), precision)} ${efficiencyUnit}`
+        ? `${fmtNumber(toEfficiencyDisplay(whPerKm), precision)} ${efficiencyUnit}`
         : '—',
-    [convertEfficiency, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
+    [toEfficiencyDisplay, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
   );
   const formatSignedEfficiency = useCallback(
     (whPerKm: number | null | undefined, precision = getGlobalPrecision()) => {
       if (whPerKm == null || !Number.isFinite(whPerKm)) return '—';
-      const converted = convertEfficiency(whPerKm);
+      const converted = toEfficiencyDisplay(whPerKm);
       const sign = converted > 0 ? '+' : converted < 0 ? '−' : '';
       return `${sign}${fmtNumber(Math.abs(converted), precision)} ${efficiencyUnit}`;
     },
-    [convertEfficiency, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
+    [toEfficiencyDisplay, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
   );
   const formatDistance = useCallback(
     (distanceM: number | null | undefined, precision = getGlobalPrecision()) =>
@@ -100,7 +100,7 @@ export function useSpeedSweetSpotDisplay() {
     distanceUnit,
     speedUnit,
     efficiencyUnit,
-    convertEfficiency,
+    toEfficiencyDisplay,
     convertBandSpeed,
     convertDriveSpeed,
     convertDistance,

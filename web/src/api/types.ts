@@ -2866,7 +2866,14 @@ export interface YearReviewDriveHighlight {
   date?: string | null
   /** Distance in kilometers (km, derived SI). */
   distance_km: number
-  duration_min: number
+  /** Drive duration in seconds (SI canonical). */
+  duration_s?: number
+  /**
+   * Legacy minutes reading kept so the frozen review components compile.
+   * The backend emits duration_s; new code must use it.
+   * @deprecated
+   */
+  duration_min?: number
   start_address: string
   end_address: string
   /** Energy intensity in watt-hours per kilometer (Wh/km, derived SI). */
@@ -2878,11 +2885,14 @@ export interface YearReviewMonthStat {
   drives: number
   /** Distance in kilometers (km, derived SI). */
   distance_km: number
+  /** Energy in watt-hours (Wh, SI canonical). Matches the backend `monthStat` JSON tag `energy_wh`. */
+  energy_wh?: number
   /**
-   * Energy in kilowatt-hours (kWh, derived SI). Matches the backend
-   * `monthStat` JSON tag `energy_kwh` (SUM(total_energy_added_wh) / 1000).
+   * Legacy kilowatt-hour reading kept so the frozen review components
+   * compile. The backend emits energy_wh; new code must use it.
+   * @deprecated
    */
-  energy_kwh: number
+  energy_kwh?: number
   cost: number
 }
 

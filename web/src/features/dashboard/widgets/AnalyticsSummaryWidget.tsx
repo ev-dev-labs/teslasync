@@ -99,7 +99,7 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
     {
       metricId: 'energy',
       label: t('widget.analyticsSummary.energyConsumed', 'Energy consumed'),
-      rawValue: data?.totalEnergyKwh == null ? null : data.totalEnergyKwh * 1000,
+      rawValue: data?.totalEnergyWh,
       description: t('widget.analyticsSummary.summary.energyHelp', 'Source energy normalized from kWh to Wh; the existing kWh display is retained.'),
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
     },

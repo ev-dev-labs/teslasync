@@ -17,7 +17,7 @@ export function useColdStartDisplay() {
       ? t('coldStart.whPerMi', 'Wh/mi')
       : t('coldStart.whPerKm', 'Wh/km');
 
-  const convertEfficiency = useCallback(
+  const toEfficiencyDisplay = useCallback(
     (whPerKm: number) =>
       whPerKm * (convertDistanceToSI(1, distanceUnit) / 1_000),
     [distanceUnit],
@@ -26,9 +26,9 @@ export function useColdStartDisplay() {
   const formatEfficiency = useCallback(
     (whPerKm: number | null | undefined) =>
       whPerKm != null && Number.isFinite(whPerKm)
-        ? `${fmtNumber(convertEfficiency(whPerKm))} ${efficiencyUnit}`
+        ? `${fmtNumber(toEfficiencyDisplay(whPerKm))} ${efficiencyUnit}`
         : '—',
-    [convertEfficiency, efficiencyUnit, fmtNumber],
+    [toEfficiencyDisplay, efficiencyUnit, fmtNumber],
   );
 
   const formatMonth = useCallback(
@@ -54,7 +54,7 @@ export function useColdStartDisplay() {
   return {
     ...units,
     efficiencyUnit,
-    convertEfficiency,
+    toEfficiencyDisplay,
     formatEfficiency,
     formatMonth,
   };

@@ -24,23 +24,23 @@ interface MonthlyColdStartChartProps {
 export function MonthlyColdStartChart({ months, state, className }: MonthlyColdStartChartProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const { convertEfficiency, efficiencyUnit, formatMonth } = useColdStartDisplay();
+  const { toEfficiencyDisplay, efficiencyUnit, formatMonth } = useColdStartDisplay();
   const rows = useMemo(
     () =>
       months.map((month) => ({
         month: formatMonth(month.month),
         cold:
           month.cold.whPerKm != null
-            ? convertEfficiency(month.cold.whPerKm)
+            ? toEfficiencyDisplay(month.cold.whPerKm)
             : null,
         warm:
           month.warm.whPerKm != null
-            ? convertEfficiency(month.warm.whPerKm)
+            ? toEfficiencyDisplay(month.warm.whPerKm)
             : null,
         coldSamples: month.cold.drives,
         warmSamples: month.warm.drives,
       })),
-    [convertEfficiency, formatMonth, months],
+    [toEfficiencyDisplay, formatMonth, months],
   );
   const hasData = rows.some((row) => row.cold != null || row.warm != null);
   const coldName = t('coldStart.monthly.coldSeries', 'Cold consumption');

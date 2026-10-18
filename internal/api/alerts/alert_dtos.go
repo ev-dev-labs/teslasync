@@ -140,7 +140,7 @@ type alertTestRequest struct {
 	ValueNum        *float64                `json:"value_num"`
 	ValueText       *string                 `json:"value_text"`
 	ValueBool       *bool                   `json:"value_bool"`
-	ValueMin        *float64                `json:"value_min"`
+	ValueMinimum    *float64                `json:"value_minimum"`
 	ValueMax        *float64                `json:"value_max"`
 	VehicleName     string                  `json:"vehicle_name"`
 	VehicleTimezone string                  `json:"vehicle_timezone"`

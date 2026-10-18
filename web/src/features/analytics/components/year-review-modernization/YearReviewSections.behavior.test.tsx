@@ -58,7 +58,7 @@ const period = { kind: 'event' as const, label: '2024', eventId: 'year-review:20
 const drive: YearReviewDriveHighlight = { drive_id: 42, date: '2024-08-18',
   start_address: 'Unabridged origin, with a long localized address',
   end_address: 'Unabridged destination, with a long localized address',
-  distance_km: 100, efficiency_wh_km: 200, duration_min: 119.7 };
+  distance_km: 100, efficiency_wh_km: 200, duration_s: 7182 };
 beforeEach(() => { state.distance = 'km'; state.metrics = {}; state.bars = []; });
 
 describe('specialist source behavior preserved inside shared card shells', () => {
@@ -76,7 +76,7 @@ describe('specialist source behavior preserved inside shared card shells', () =>
     expect(state.metrics.record).toBeUndefined();
   });
   it('nonpositive efficiency remains a dash; corrupt duration still follows original zero-minute policy', () => {
-    render(<YearDriveRecord drive={{ ...drive, efficiency_wh_km: 0, duration_min: NaN }} id="record" period={period} />);
+    render(<YearDriveRecord drive={{ ...drive, efficiency_wh_km: 0, duration_s: NaN }} id="record" period={period} />);
     expect(state.metrics.record.map(metric => metric.rawValue)).toEqual(['100', '0m', '—']);
   });
   it('patterns retain source weekday, wrapped peak hour, fractional weekly average and specialist unit conversion', () => {

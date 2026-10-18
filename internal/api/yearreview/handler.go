@@ -45,20 +45,20 @@ func NewHandler(db *database.DB) *Handler {
 }
 
 type driveHighlight struct {
-	DriveID         int64   `json:"drive_id"`
-	Date            string  `json:"date"`
-	DistanceKm      float64 `json:"distance_km"`
-	DurationMinutes float64 `json:"duration_min"`
-	StartAddress    string  `json:"start_address"`
-	EndAddress      string  `json:"end_address"`
-	EfficiencyWhKm  float64 `json:"efficiency_wh_km"`
+	DriveID        int64   `json:"drive_id"`
+	Date           string  `json:"date"`
+	DistanceKm     float64 `json:"distance_km"`
+	DurationS      float64 `json:"duration_s"`
+	StartAddress   string  `json:"start_address"`
+	EndAddress     string  `json:"end_address"`
+	EfficiencyWhKm float64 `json:"efficiency_wh_km"`
 }
 
 type monthStat struct {
 	Month      int      `json:"month"`
 	Drives     *int     `json:"drives"`
 	DistanceKm *float64 `json:"distance_km"`
-	EnergyKwh  *float64 `json:"energy_kwh"`
+	EnergyWh   *float64 `json:"energy_wh"`
 	Cost       *float64 `json:"cost"`
 }
 
@@ -205,11 +205,11 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	// SI canonical charging_sessions (migration 000184): total_energy_added_wh,
 	// cost_decimal NUMERIC, started_at / ended_at.
 	var totalChargeSessions int
-	var totalEnergyKwh float64
+	var totalEnergyAddedWh float64
 	var totalChargingCost *float64
 	err = h.q.QueryRow(ctx, `
 		SELECT COUNT(*),
-		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
+		       COALESCE(SUM(total_energy_added_wh), 0),
 		       CASE WHEN COUNT(*) = 0 THEN 0
 		            WHEN COUNT(cost_decimal) = COUNT(*) THEN SUM(cost_decimal::float8)
 		       END
@@ -219,7 +219,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		  AND started_at >= $2
 		  AND started_at < $3`,
 		vehicleID, yearStart, yearEnd,
-	).Scan(&totalChargeSessions, &totalEnergyKwh, &totalChargingCost)
+	).Scan(&totalChargeSessions, &totalEnergyAddedWh, &totalChargingCost)
 	if err != nil {
 		logger.Error().Err(err).Msg("year-review: failed to get charging stats")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute year review")
@@ -273,8 +273,8 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 			dh.Date = startDate.UTC().Format("2006-01-02")
 		}
 		dh.DistanceKm = distM / 1000.0
-		// This report's existing wire contract uses minutes; storage remains seconds.
-		dh.DurationMinutes = durS / 60.0
+		// SI canonical wire: seconds straight from storage.
+		dh.DurationS = durS
 		if startAddr != nil {
 			dh.StartAddress = *startAddr
 		}
@@ -360,7 +360,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 
 	chargeMonthRows, err := h.q.Query(ctx, `
 		SELECT EXTRACT(MONTH FROM started_at AT TIME ZONE 'UTC')::int AS m,
-		       SUM(total_energy_added_wh) / 1000.0,
+		       SUM(total_energy_added_wh),
 		       SUM(cost_decimal::float8)
 		FROM charging_sessions
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL
@@ -374,7 +374,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		defer chargeMonthRows.Close()
 		for _, ms := range monthlyMap {
 			zeroEnergy, zeroCost := 0.0, 0.0
-			ms.EnergyKwh, ms.Cost = &zeroEnergy, &zeroCost
+			ms.EnergyWh, ms.Cost = &zeroEnergy, &zeroCost
 		}
 		for chargeMonthRows.Next() {
 			var m int
@@ -384,7 +384,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 				chargeMonthsOK = false
 			} else {
 				if ms, ok := monthlyMap[m]; ok {
-					ms.EnergyKwh = roundNullableYR(energy, 1)
+					ms.EnergyWh = roundNullableYR(energy, 1)
 					ms.Cost = roundNullableYR(cost, 2)
 				} else {
 					chargeMonthsOK = false
@@ -399,7 +399,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	}
 	if !chargeMonthsOK {
 		for _, ms := range monthlyMap {
-			ms.EnergyKwh, ms.Cost = nil, nil
+			ms.EnergyWh, ms.Cost = nil, nil
 		}
 	}
 
@@ -572,9 +572,10 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 			"model":        vModel,
 		},
 
-		"total_drives":          totalDrives,
-		"total_distance_km":     roundYR(totalDistKm, 1),
-		"total_energy_kwh":      roundYR(totalEnergyKwh, 1),
+		"total_drives":      totalDrives,
+		"total_distance_km": roundYR(totalDistKm, 1),
+		// Grandfathered kWh headline key; aggregates stay SI watt-hours above.
+		"total_energy_kwh":      roundYR(totalEnergyAddedWh/1000.0, 1),
 		"total_charge_sessions": totalChargeSessions,
 		"total_driving_minutes": roundYR(totalDrivingMin, 1),
 		"total_charging_cost":   roundNullableYR(totalChargingCost, 2),

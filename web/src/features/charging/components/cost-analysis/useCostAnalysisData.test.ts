@@ -805,7 +805,7 @@ describe('useCostAnalysisData — hardening', () => {
       expect(result.coverage).toMatchObject({
         pricedCount: 3, energyCount: 3, pairedCount: 2,
         unknownCostCount: 1, unknownEnergyCount: 1,
-        pricedEnergyKwh: 0.75, rateStatus: 'partial',
+        pricedEnergyWh: 750, rateStatus: 'partial',
       });
       expect(result.coverage.rate).toBeCloseTo(-1 / 3);
       expect(result.coreStats?.totalCost).toBe(1.75);

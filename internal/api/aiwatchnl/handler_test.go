@@ -306,9 +306,11 @@ func TestProjectSignals_MeterRangeDisplay(t *testing.T) {
 	for _, meters := range []float64{0, 1609.344, 300000} {
 		env := &nl.WatchContextEnvelope{}
 		projectSignals(env, map[string]interface{}{"RatedRange": meters})
-		if env.RangeKm != meters/1000 || env.RangeMi != meters/1609.344 {
-			t.Errorf("%v meters projected as km=%v mi=%v", meters, env.RangeKm, env.RangeMi)
+		if env.RangeKm != meters/1000 {
+			t.Errorf("%v meters projected as km=%v", meters, env.RangeKm)
 		}
+		// The imperial half of the display pair is pinned in the nl
+		// package (TestProjectRangeDisplay), next to the projection.
 	}
 }
 
@@ -340,9 +342,8 @@ func TestProjectSignals_DualUnitProjection(t *testing.T) {
 	if v, ok := env.SOCPercent.(int); !ok || v != 82 {
 		t.Errorf("SOCPercent = %v (type %T), want int(82)", env.SOCPercent, env.SOCPercent)
 	}
-	if v, ok := env.RangeMi.(float64); !ok || v < 224.999 || v > 225.001 {
-		t.Errorf("RangeMi = %v, want 225.0", env.RangeMi)
-	}
+	// The imperial half of the range pair is pinned in the nl package
+	// (TestProjectRangeDisplay); here the wiring must surface the km half.
 	if v, ok := env.RangeKm.(float64); !ok || v < 362.0 || v > 363.0 {
 		t.Errorf("RangeKm = %v, want ~362.1 (362102.4 m ÷ 1000)", env.RangeKm)
 	}

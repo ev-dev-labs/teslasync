@@ -145,7 +145,7 @@ vi.mock('@/components/data-display', () => ({
 describe('year review calendar presentation', () => {
   const period = { kind: 'unknown', label: '2020' } as const
   const drive: YearReviewDriveHighlight = {
-    drive_id: 7, date: '2020-01-01', distance_km: 1234.6, duration_min: 59.6,
+    drive_id: 7, date: '2020-01-01', distance_km: 1234.6, duration_s: 3576,
     start_address: 'McDonald ROAD', end_address: 'iPhone Street', efficiency_wh_km: 155.5,
   }
   beforeEach(() => {

@@ -64,7 +64,7 @@ export default function QuickStatsPage() {
       description: t('quickStats.summary.drivesHelp', 'Fleet drive count in the 30-day rollup.') },
     { metricId: 'count', rawValue: analytics?.totalChargingSessions, label: t('quickStats.chargingSessions', 'Charging sessions'),
       description: t('quickStats.summary.sessionsHelp', 'Fleet charging-session count in the 30-day rollup.') },
-    { metricId: 'energy', rawValue: analytics?.totalEnergyKwh == null ? null : analytics.totalEnergyKwh * 1000,
+    { metricId: 'energy', rawValue: analytics?.totalEnergyWh,
       label: t('quickStats.energyUsed', 'Energy used'),
       description: t('quickStats.summary.energyHelp', 'Fleet energy over the last 30 days; source kilowatt-hours normalized to watt-hours.'),
       display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },

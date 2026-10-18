@@ -34,7 +34,7 @@ export function DriveEvidenceScatter({
   const {
     convertDistance,
     convertDriveSpeed,
-    convertEfficiency,
+    toEfficiencyDisplay,
     convertBandSpeed,
     distanceUnit,
     efficiencyUnit,
@@ -53,7 +53,7 @@ export function DriveEvidenceScatter({
         date: formatDate(point.startTs, { locale: unitPrefs.locale }),
         speed: Math.round(convertDriveSpeed(point.avgSpeedMps) * 10) / 10,
         consumption:
-          Math.round(convertEfficiency(point.whPerKm) * 10) / 10,
+          Math.round(toEfficiencyDisplay(point.whPerKm) * 10) / 10,
         distance: Math.round(convertDistance(point.distanceM) * 10) / 10,
         group:
           point.bucketKey === summary.sweetSpot?.key
@@ -63,7 +63,7 @@ export function DriveEvidenceScatter({
     [
       convertDistance,
       convertDriveSpeed,
-      convertEfficiency,
+      toEfficiencyDisplay,
       inBandName,
       otherName,
       summary.driveEvidence,

@@ -158,10 +158,10 @@ describe('computeChargingPeriodStats', () => {
     expect(stats.byCategory.dc).toBe(1);
   });
 
-  it('reports avgRateKw based on total energy and duration', () => {
-    // 100 kWh in 9.5 h → ~10.5 kW
+  it('reports avgRateW based on total energy and duration', () => {
+    // 100000 Wh in 9.5 h → ~10526 W
     const stats = computeChargingPeriodStats(sessions);
-    expect(stats.avgRateKw).toBeCloseTo(100 / 9.5, 1);
+    expect(stats.avgRateW).toBeCloseTo(100_000 / 9.5, 0);
   });
 
   it('does not inflate rates or shorten average duration with unfinished sessions', () => {
@@ -170,8 +170,8 @@ describe('computeChargingPeriodStats', () => {
       s({ id: 2, total_energy_added_wh: 60_000, ended_at: null, avg_power_w: null }),
     ]);
     expect(stats.totalEnergyWh).toBe(78_000);
-    expect(stats.avgRateKw).toBe(18);
-    expect(stats.avgDurationMin).toBe(60);
+    expect(stats.avgRateW).toBe(18_000);
+    expect(stats.avgDurationS).toBe(3600);
     expect(stats.avgPowerW).toBe(18_000);
   });
 
@@ -187,7 +187,7 @@ describe('computeChargingPeriodStats', () => {
   it('returns count=0 and avg=null for empty windows', () => {
     const stats = computeChargingPeriodStats([]);
     expect(stats.count).toBe(0);
-    expect(stats.avgRateKw).toBeNull();
+    expect(stats.avgRateW).toBeNull();
     expect(stats.batteryFriendlyScore).toBeNull();
   });
 });

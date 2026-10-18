@@ -43,17 +43,17 @@ export function buildChartData(
   toPressureValue: (pa: number | null | undefined) => number | null,
 ): ChartDatum[] {
   const items: unknown[] = Array.isArray(data) ? data : [];
-  const convertPressure = (value: unknown) => toPressureValue(isFiniteNumber(value) ? value : null);
+  const toDisplayPressure = (value: unknown) => toPressureValue(isFiniteNumber(value) ? value : null);
   return items
     .filter((d): d is Record<string, unknown> & { created_at: string } =>
       d != null && typeof d === 'object' && 'created_at' in d &&
       typeof d.created_at === 'string' && Number.isFinite(Date.parse(d.created_at)))
     .map((d) => ({
       time: d.created_at,
-      fl: convertPressure(d.frontLeft),
-      fr: convertPressure(d.frontRight),
-      rl: convertPressure(d.rearLeft),
-      rr: convertPressure(d.rearRight),
+      fl: toDisplayPressure(d.frontLeft),
+      fr: toDisplayPressure(d.frontRight),
+      rl: toDisplayPressure(d.rearLeft),
+      rr: toDisplayPressure(d.rearRight),
     }))
     .sort((a, b) => a.time.localeCompare(b.time));
 }

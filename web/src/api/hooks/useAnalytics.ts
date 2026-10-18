@@ -33,6 +33,12 @@ export function useAnalyticsSummary(days = 30) {
   return useQuery({
     queryKey: analyticsKeys.summary(days),
     queryFn: ({ signal }) => request<AnalyticsSummary>(`/analytics/fleet?days=${days}`, { signal }),
+    // The wire's energy key is grandfathered kWh; expose SI watt-hours
+    // once at the boundary so every consumer reads canonical units.
+    select: (data) => ({
+      ...data,
+      totalEnergyWh: (data.total_energy_kwh ?? 0) * 1000,
+    }),
   });
 }
 
@@ -220,6 +226,13 @@ export function useWeeklyDigest(vehicleId: string) {
     enabled: !!vehicleId,
     retry: false,
     staleTime: STALE_TIMES.STATIC,
+    // The wire's energy keys are grandfathered kWh; expose SI watt-hours
+    // once at the boundary so every consumer reads canonical units.
+    select: (data) => ({
+      ...data,
+      energyWh: (data.energy_kwh ?? 0) * 1000,
+      prevEnergyWh: (data.prev_energy_kwh ?? 0) * 1000,
+    }),
   });
 }
 

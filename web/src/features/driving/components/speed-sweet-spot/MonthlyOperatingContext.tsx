@@ -31,7 +31,7 @@ export function MonthlyOperatingContext({
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const {
-    convertDistance, convertDriveSpeed, convertEfficiency, distanceUnit,
+    convertDistance, convertDriveSpeed, toEfficiencyDisplay, distanceUnit,
     efficiencyUnit, formatMonth, speedUnit,
   } = useSpeedSweetSpotDisplay();
   const consumptionName = t(
@@ -57,13 +57,13 @@ export function MonthlyOperatingContext({
           }),
           drives: month.drives,
           consumption:
-            Math.round(convertEfficiency(month.whPerKm) * 10) / 10,
+            Math.round(toEfficiencyDisplay(month.whPerKm) * 10) / 10,
           speed: Math.round(convertDriveSpeed(month.avgSpeedMps) * 10) / 10,
           distance: Math.round(convertDistance(month.distanceM) * 10) / 10,
         };
       }),
     [
-      convertDistance, convertDriveSpeed, convertEfficiency, formatMonth,
+      convertDistance, convertDriveSpeed, toEfficiencyDisplay, formatMonth,
       summary.monthly, t,
     ],
   );

@@ -5,12 +5,12 @@ import type { CoreStats, GasComparison, LifetimeMetrics, HourBucket, TouInsights
 // Synthetic test inputs only. No fixture is imported by a production page or query.
 export const chargingStats = Object.freeze({
   ...computeChargingPeriodStats([]),
-  count: 3, totalEnergyWh: 12345, totalCost: 31.5, totalDurationMin: 178.5,
-  avgRateKw: 12.125, avgDurationMin: 59.5, avgPowerW: 18375,
+  count: 3, totalEnergyWh: 12345, totalCost: 31.5, totalDurationS: 10710,
+  avgRateW: 12125, avgDurationS: 3570, avgPowerW: 18375,
 });
 export const priorChargingStats = Object.freeze({
   ...chargingStats, count: 2, totalEnergyWh: 10000, totalCost: 15.75,
-  avgRateKw: 10, avgDurationMin: 60, avgPowerW: 20000,
+  avgRateW: 10000, avgDurationS: 3600, avgPowerW: 20000,
 });
 export const coreStats: CoreStats = Object.freeze({
   totalCost: 88.75, totalEnergy: 320.5, avgCostPerKwh: 0.2769, totalDuration: 300,

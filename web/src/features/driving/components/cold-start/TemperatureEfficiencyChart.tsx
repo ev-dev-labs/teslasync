@@ -28,7 +28,7 @@ export function TemperatureEfficiencyChart({ points, state, className }: Tempera
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
-  const { convertEfficiency, efficiencyUnit, unitPrefs } = useColdStartDisplay();
+  const { toEfficiencyDisplay, efficiencyUnit, unitPrefs } = useColdStartDisplay();
   const rows = useMemo(
     () =>
       points.map((point) => ({
@@ -39,11 +39,11 @@ export function TemperatureEfficiencyChart({ points, state, className }: Tempera
             ? t('coldStart.temperature.cold', 'Cold')
             : t('coldStart.temperature.warm', 'Warm'),
         temperature: convertTempFromSI(point.outsideTempAvgC, unitPrefs.temperature),
-        consumption: convertEfficiency(point.whPerKm),
+        consumption: toEfficiencyDisplay(point.whPerKm),
         distance: convertDistanceFromSI(point.distanceM, unitPrefs.distance),
       })),
     [
-      convertEfficiency,
+      toEfficiencyDisplay,
       formatDate,
       points,
       t,

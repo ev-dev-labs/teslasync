@@ -247,14 +247,15 @@ func mustDate(s string) time.Time {
 }
 
 // okQuerier returns a fully-populated fakeQuerier whose every sub-query
-// succeeds with deterministic fixtures. Distances/energy are the already
-// SI-converted values the SELECT boundary produces (km, kWh, km/h, °C).
+// succeeds with deterministic fixtures. Distances are the already
+// SI-converted values the SELECT boundary produces (km, km/h, °C);
+// energy stays SI watt-hours and durations stay SI seconds.
 func okQuerier() *fakeQuerier {
 	return &fakeQuerier{
 		vehicleRow:       fakeRow{vals: []any{"Model Y Test", "modely"}},
 		driveStatsRow:    fakeRow{vals: []any{int(100), 2000.0, 3000.0, 180.0, -5.0, 38.0}},
 		efficiencyRow:    fakeRow{vals: []any{155.5}},
-		chargingStatsRow: fakeRow{vals: []any{int(50), 1200.0, 50.0}},
+		chargingStatsRow: fakeRow{vals: []any{int(50), 1200000.0, 50.0}},
 		settingsRow:      fakeRow{vals: []any{3.50, 25.0}},
 		longestRow:       fakeRow{vals: []any{int64(7), mustDate("2020-06-15"), 90000.0, 3600.0, strptr("Home"), strptr("Work")}},
 		shortestRow:      fakeRow{vals: []any{int64(8), mustDate("2020-02-01"), 2000.0, 600.0, strptr("A"), strptr("B")}},
@@ -262,7 +263,7 @@ func okQuerier() *fakeQuerier {
 		hourRow:          fakeRow{vals: []any{int(17), int(25)}},
 		socRow:           fakeRow{vals: []any{42.0, int(20)}},
 		driveMonthRows:   &fakeRows{rows: [][]any{{int(6), int(40), 800.0}, {int(2), int(60), 1200.0}}},
-		chargeMonthRows:  &fakeRows{rows: [][]any{{int(6), 500.0, 90.0}, {int(2), 700.0, 90.0}}},
+		chargeMonthRows:  &fakeRows{rows: [][]any{{int(6), 500000.0, 90.0}, {int(2), 700000.0, 90.0}}},
 		chargeTypeRows:   &fakeRows{rows: [][]any{{"supercharger", int(30)}, {"dc_fast", int(15)}, {"ac_other", int(5)}}},
 	}
 }
@@ -291,19 +292,19 @@ func emptyQuerier() *fakeQuerier {
 // --- response decoding ---------------------------------------------------
 
 type highlightJSON struct {
-	DriveID         int64   `json:"drive_id"`
-	Date            string  `json:"date"`
-	DistanceKm      float64 `json:"distance_km"`
-	DurationMinutes float64 `json:"duration_min"`
-	StartAddress    string  `json:"start_address"`
-	EndAddress      string  `json:"end_address"`
+	DriveID      int64   `json:"drive_id"`
+	Date         string  `json:"date"`
+	DistanceKm   float64 `json:"distance_km"`
+	DurationS    float64 `json:"duration_s"`
+	StartAddress string  `json:"start_address"`
+	EndAddress   string  `json:"end_address"`
 }
 
 type monthJSON struct {
 	Month      int     `json:"month"`
 	Drives     int     `json:"drives"`
 	DistanceKm float64 `json:"distance_km"`
-	EnergyKwh  float64 `json:"energy_kwh"`
+	EnergyWh   float64 `json:"energy_wh"`
 	Cost       float64 `json:"cost"`
 }
 
@@ -414,7 +415,7 @@ func TestGetYearReview_CalendarBasis(t *testing.T) {
 				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
 			}
 			got := decodeYR(t, rec.Body.Bytes()).LongestDrive
-			if got == nil || got.Date != tt.want || got.DurationMinutes != 59.6 || got.StartAddress != "McDonald ROAD" {
+			if got == nil || got.Date != tt.want || got.DurationS != 3576 || got.StartAddress != "McDonald ROAD" {
 				t.Fatalf("highlight = %+v", got)
 			}
 			count := 0
@@ -672,12 +673,12 @@ func TestGetYearReview_GroupFailuresPreserveNeighbors(t *testing.T) {
 						assertWire(t, month, "drives", "null")
 						assertWire(t, month, "distance_km", "null")
 					} else if group == "charge" {
-						assertWire(t, month, "energy_kwh", "null")
+						assertWire(t, month, "energy_wh", "null")
 						assertWire(t, month, "cost", "null")
 					}
 				}
 				if group != "charge" {
-					assertWire(t, months[5], "energy_kwh", "500")
+					assertWire(t, months[5], "energy_wh", "500000")
 				}
 				if group != "drive" {
 					assertWire(t, months[5], "drives", "40")
@@ -702,7 +703,7 @@ func TestGetYearReview_MonthlyValuesAndFractionalDuration(t *testing.T) {
 	fq.driveStatsRow = fakeRow{vals: []any{100, 2000.0, 3000.5, 180.0, -5.0, 38.0}}
 	fq.driveMonthRows = &fakeRows{rows: [][]any{{6, 40, math.NaN()}}}
 	fq.chargeMonthRows = &fakeRows{rows: [][]any{
-		{6, nil, -5.265}, {2, 0.0, 0.0}, {3, 1.26, math.Inf(1)},
+		{6, nil, -5.265}, {2, 0.0, 0.0}, {3, 1260.0, math.Inf(1)},
 	}}
 	raw := rawReview(t, fq)
 	assertWire(t, raw, "total_driving_minutes", "3000.5")
@@ -712,14 +713,14 @@ func TestGetYearReview_MonthlyValuesAndFractionalDuration(t *testing.T) {
 	}
 	assertWire(t, months[5], "drives", "40")
 	assertWire(t, months[5], "distance_km", "null")
-	assertWire(t, months[5], "energy_kwh", "null")
+	assertWire(t, months[5], "energy_wh", "null")
 	assertWire(t, months[5], "cost", "-5.27")
-	assertWire(t, months[1], "energy_kwh", "0")
+	assertWire(t, months[1], "energy_wh", "0")
 	assertWire(t, months[1], "cost", "0")
-	assertWire(t, months[2], "energy_kwh", "1.3")
+	assertWire(t, months[2], "energy_wh", "1260")
 	assertWire(t, months[2], "cost", "null")
 	assertWire(t, months[0], "drives", "0")
-	assertWire(t, months[0], "energy_kwh", "0")
+	assertWire(t, months[0], "energy_wh", "0")
 }
 
 const jsonCT = "application/json; charset=utf-8"
@@ -977,14 +978,14 @@ func TestGetYearReview_Success(t *testing.T) {
 		t.Fatalf("longest_drive is null, want populated")
 	}
 	if got.LongestDrive.DriveID != 7 || got.LongestDrive.Date != "2020-06-15" ||
-		got.LongestDrive.DistanceKm != 90 || got.LongestDrive.DurationMinutes != 60 ||
+		got.LongestDrive.DistanceKm != 90 || got.LongestDrive.DurationS != 3600 ||
 		got.LongestDrive.StartAddress != "Home" || got.LongestDrive.EndAddress != "Work" {
 		t.Errorf("longest_drive = %+v", *got.LongestDrive)
 	}
 	if got.ShortestDrive == nil {
 		t.Fatalf("shortest_drive is null, want populated")
 	}
-	if got.ShortestDrive.DriveID != 8 || got.ShortestDrive.DistanceKm != 2 || got.ShortestDrive.DurationMinutes != 10 {
+	if got.ShortestDrive.DriveID != 8 || got.ShortestDrive.DistanceKm != 2 || got.ShortestDrive.DurationS != 600 {
 		t.Errorf("shortest_drive = %+v, want id=8 dist=2", *got.ShortestDrive)
 	}
 	// efficiency-extreme highlights are intentionally always null (range
@@ -1006,15 +1007,15 @@ func TestGetYearReview_Success(t *testing.T) {
 		}
 	}
 	feb := got.MonthlyStats[1]
-	if feb.Drives != 60 || feb.DistanceKm != 1200 || feb.EnergyKwh != 700 || feb.Cost != 90 {
-		t.Errorf("february = %+v, want drives=60 dist=1200 energy=700 cost=90", feb)
+	if feb.Drives != 60 || feb.DistanceKm != 1200 || feb.EnergyWh != 700000 || feb.Cost != 90 {
+		t.Errorf("february = %+v, want drives=60 dist=1200 energy=700000 cost=90", feb)
 	}
 	jun := got.MonthlyStats[5]
-	if jun.Drives != 40 || jun.DistanceKm != 800 || jun.EnergyKwh != 500 || jun.Cost != 90 {
-		t.Errorf("june = %+v, want drives=40 dist=800 energy=500 cost=90", jun)
+	if jun.Drives != 40 || jun.DistanceKm != 800 || jun.EnergyWh != 500000 || jun.Cost != 90 {
+		t.Errorf("june = %+v, want drives=40 dist=800 energy=500000 cost=90", jun)
 	}
 	jan := got.MonthlyStats[0]
-	if jan.Drives != 0 || jan.DistanceKm != 0 || jan.EnergyKwh != 0 || jan.Cost != 0 {
+	if jan.Drives != 0 || jan.DistanceKm != 0 || jan.EnergyWh != 0 || jan.Cost != 0 {
 		t.Errorf("january = %+v, want all zero", jan)
 	}
 
@@ -1087,8 +1088,8 @@ func TestGetYearReview_HighlightWireContract(t *testing.T) {
 		name string
 		want string
 	}{
-		{"longest_drive", `{"drive_id":7,"date":"2020-06-15","distance_km":90,"duration_min":59.6,"start_address":"Home","end_address":"Work","efficiency_wh_km":0}`},
-		{"shortest_drive", `{"drive_id":8,"date":"2020-02-01","distance_km":2,"duration_min":0.5,"start_address":"","end_address":"","efficiency_wh_km":0}`},
+		{"longest_drive", `{"drive_id":7,"date":"2020-06-15","distance_km":90,"duration_s":3576,"start_address":"Home","end_address":"Work","efficiency_wh_km":0}`},
+		{"shortest_drive", `{"drive_id":8,"date":"2020-02-01","distance_km":2,"duration_s":30,"start_address":"","end_address":"","efficiency_wh_km":0}`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var got, want map[string]any
@@ -1219,7 +1220,7 @@ func TestGetYearReview_ToleratedFailures(t *testing.T) {
 			},
 			check: func(t *testing.T, got yrResponse) {
 				for _, ms := range got.MonthlyStats {
-					if ms.Drives != 0 || ms.EnergyKwh != 0 {
+					if ms.Drives != 0 || ms.EnergyWh != 0 {
 						t.Fatalf("month %d should be zero after query error: %+v", ms.Month, ms)
 					}
 				}

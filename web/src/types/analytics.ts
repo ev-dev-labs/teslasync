@@ -13,6 +13,10 @@ export interface AnalyticsSummary {
   totalChargingSessions: number;
   totalDistanceKm: number;
   totalEnergyKwh: number;
+  /** Total energy in watt-hours (Wh, SI). Mapped from the wire's kWh. */
+  totalEnergyWh: number;
+  /** Wire kWh reading (snake_case) consumed by the hook's SI mapper. */
+  total_energy_kwh?: number;
   totalCost: number;
   avgEfficiencyWhKm: number;
   /**
@@ -195,4 +199,11 @@ export interface WeeklyDigestData {
   prevEnergyKwh: number;
   prevCost: number;
   prevEfficiency: number;
+  /** Weekly energy in watt-hours (Wh, SI). Mapped from the wire's kWh. */
+  energyWh: number;
+  /** Prior-week energy in watt-hours (Wh, SI). Mapped from the wire's kWh. */
+  prevEnergyWh: number;
+  /** Wire kWh readings (snake_case) consumed by the hook's SI mapper. */
+  energy_kwh?: number;
+  prev_energy_kwh?: number;
 }

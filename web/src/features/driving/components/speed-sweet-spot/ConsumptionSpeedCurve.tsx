@@ -28,7 +28,7 @@ export function ConsumptionSpeedCurve({
   const {
     convertBandSpeed,
     convertDistance,
-    convertEfficiency,
+    toEfficiencyDisplay,
     distanceUnit,
     efficiencyUnit,
     formatBand,
@@ -49,11 +49,11 @@ export function ConsumptionSpeedCurve({
         band: formatBand(point.fromKph, point.toKph),
         speed: Math.round(convertBandSpeed(point.speedKph) * 10) / 10,
         qualifiedConsumption: point.qualified
-          ? Math.round(convertEfficiency(point.whPerKm) * 10) / 10
+          ? Math.round(toEfficiencyDisplay(point.whPerKm) * 10) / 10
           : null,
         unqualifiedConsumption: point.qualified
           ? null
-          : Math.round(convertEfficiency(point.whPerKm) * 10) / 10,
+          : Math.round(toEfficiencyDisplay(point.whPerKm) * 10) / 10,
         distance: Math.round(convertDistance(point.distanceM) * 10) / 10,
         drives: point.drives,
         qualification: point.qualified
@@ -63,7 +63,7 @@ export function ConsumptionSpeedCurve({
     [
       convertBandSpeed,
       convertDistance,
-      convertEfficiency,
+      toEfficiencyDisplay,
       formatBand,
       summary.points,
       t,

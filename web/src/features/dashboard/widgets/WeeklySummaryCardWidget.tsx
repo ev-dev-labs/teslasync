@@ -98,12 +98,15 @@ export default function WeeklySummaryCardWidget({ vehicleId, size }: WidgetProps
     // Wh/km → Wh/mi only when the user reads miles; km is already the base unit.
     const toEfficiency = (whPerKm: number | null | undefined) => whPerKm == null || !Number.isFinite(whPerKm)
       ? null : (distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm);
+    // SI watt-hours back to the kWh display unit; missing stays missing.
+    const toDisplayKwh = (wh: number | null | undefined) => wh == null || !Number.isFinite(wh)
+      ? null : wh / 1000;
 
     return {
       distance: toDistance(data.distanceKm),
       prevDistance: toDistance(data.prevDistanceKm),
-      energy: data.energyKwh,
-      prevEnergy: data.prevEnergyKwh,
+      energy: toDisplayKwh(data.energyWh),
+      prevEnergy: toDisplayKwh(data.prevEnergyWh),
       cost: data.cost,
       prevCost: data.prevCost,
       efficiency: toEfficiency(data.efficiency),

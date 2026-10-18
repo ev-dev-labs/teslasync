@@ -6,8 +6,7 @@ import { type StatMetric } from '@/components/data-display/stat-reference';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { ChargingPeriodStats } from '@/lib/chargingAggregation';
-import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
-import { kwToCanonicalWatts, minutesToCanonicalSeconds } from './displayBoundary';
+import { convertDurationFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 
 export interface ChargingOverviewStatsProps {
   stats: ChargingPeriodStats;
@@ -44,15 +43,19 @@ export function ChargingOverviewStats({
     { metricId: 'charge.recordedCost', rawValue: hasRecordedCosts ? stats.totalCost : null,
       label: t('charging.totalCost', 'Cost'), missingReason: hasRecordedCosts ? undefined : t('charging.stats.costMissing', 'No recorded session costs in the selected returned sessions.'),
       comparisonContent: prior ? <Delta metric="cost" current={stats.totalCost} previous={prior.totalCost} display="percent" /> : undefined },
-    { metricId: 'charge.overallRate', rawValue: kwToCanonicalWatts(stats.avgRateKw),
+    { metricId: 'charge.overallRate', rawValue: stats.avgRateW,
       label: t('developerReference.stats.metric.charge.overallRate.label', 'Overall charging rate'),
       context: t('charging.avgRate', 'Avg rate (kW)'), display: { units: { power: 'kW' } },
-      comparisonContent: prior && stats.avgRateKw != null && prior.avgRateKw != null
-        ? <Delta metric={{ direction: 'neutral' }} current={stats.avgRateKw} previous={prior.avgRateKw} display="percent" /> : undefined },
-    { metricId: 'charge.avgDuration', rawValue: minutesToCanonicalSeconds(stats.avgDurationMin),
+      comparisonContent: prior && stats.avgRateW != null && prior.avgRateW != null
+        ? <Delta metric={{ direction: 'neutral' }}
+          current={convertPowerFromSI(stats.avgRateW, 'kW')}
+          previous={convertPowerFromSI(prior.avgRateW, 'kW')} display="percent" /> : undefined },
+    { metricId: 'charge.avgDuration', rawValue: stats.avgDurationS,
       label: t('charging.avgDuration', 'Avg duration'), display: { durationStyle: 'roundedMinutes' },
-      comparisonContent: prior && stats.avgDurationMin != null && prior.avgDurationMin != null
-        ? <Delta metric={{ direction: 'neutral' }} current={stats.avgDurationMin} previous={prior.avgDurationMin} display="percent" /> : undefined },
+      comparisonContent: prior && stats.avgDurationS != null && prior.avgDurationS != null
+        ? <Delta metric={{ direction: 'neutral' }}
+          current={convertDurationFromSI(stats.avgDurationS, 'min')}
+          previous={convertDurationFromSI(prior.avgDurationS, 'min')} display="percent" /> : undefined },
     { metricId: 'charge.meanSessionPower', rawValue: stats.avgPowerW,
       label: t('developerReference.stats.metric.charge.meanSessionPower.label', 'Mean session power'),
       context: t('charging.avgPower', 'Avg power (kW)'), display: { units: { power: 'kW' } },

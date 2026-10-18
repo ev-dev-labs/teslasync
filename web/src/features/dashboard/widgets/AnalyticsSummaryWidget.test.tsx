@@ -123,6 +123,7 @@ const SUMMARY: AnalyticsSummary = {
   totalChargingSessions: 40,
   totalDistanceKm: 1000,
   totalEnergyKwh: 200,
+  totalEnergyWh: 200000,
   totalCost: 250,
   avgEfficiencyWhKm: 150,
   co2SavedKg: 90,
@@ -234,7 +235,7 @@ describe('AnalyticsSummaryWidget', () => {
 
   it('keeps known zero measurements visible instead of reporting no qualifying data', () => {
     analyticsMock.mockReturnValue(makeQuery({
-      data: { ...SUMMARY, totalDistanceKm: 0, totalEnergyKwh: 0, avgEfficiencyWhKm: 0 },
+      data: { ...SUMMARY, totalDistanceKm: 0, totalEnergyWh: 0, avgEfficiencyWhKm: 0 },
     }));
     renderWidget();
     expect(screen.getByText('0.00 km')).toBeInTheDocument();

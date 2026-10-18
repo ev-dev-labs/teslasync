@@ -53,7 +53,7 @@ test('all six annual sections, all record operands and unchanged vehicle/year ac
 test('monthly source series, rounding, axes, tooltip, legend key and export identity survive', () => {
   const source = read('YearMonthlyActivity.tsx');
   for (const fragment of ['monthly_stats ?? []', 'drives: m.drives ?? 0',
-    '(m.distance_km ?? 0) * 1000', 'Math.round(m.energy_kwh ?? 0)',
+    '(m.distance_km ?? 0) * 1000', 'Math.round((m.energy_wh ?? 0) / 1000)',
     "useHiddenSeries('year-monthly-chart')", 'chartKey="year-monthly-chart"',
     'exportFilename="year-review-monthly"', 'dataKey="drives"', 'dataKey="distance"',
     'yAxisId="left"', 'yAxisId="right"', '<ChartTooltip', '<ChartLegend', '{chartGrid}',

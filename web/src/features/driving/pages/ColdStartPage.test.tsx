@@ -222,7 +222,7 @@ vi.mock('../components/cold-start/useColdStartDisplay', () => ({
     formatDistance: (value: number) => `${value} m`,
     formatDuration: (value: number) => `${value} s`,
     formatTemperature: (value: number | null) => value == null ? '—' : `${value} °C`,
-    convertEfficiency: (value: number) => value * (displayPrefs.distance === 'mi' ? 1.609344 : 1),
+    toEfficiencyDisplay: (value: number) => value * (displayPrefs.distance === 'mi' ? 1.609344 : 1),
     efficiencyUnit: displayPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km',
     formatMonth: (value: string) => value,
     unitPrefs: { ...displayPrefs, locale: 'en-US' },
