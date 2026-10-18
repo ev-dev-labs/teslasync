@@ -669,6 +669,7 @@ describe('useOptimizeCharge', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/charge-planner/optimize');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual(optimizeReq);
     expect(successToast).toHaveBeenCalledWith(
       'toast.charging.optimize.success',

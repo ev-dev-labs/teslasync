@@ -84,6 +84,13 @@ export default function ExportsPage() {
 
   const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
   const [deleteFailures, setDeleteFailures] = useState<ExportBulkResult['failed']>([]);
+  // The backend reports verified-missing jobs as `not_found` (already
+  // deleted); any future code renders through the honest unknown label with
+  // the raw reason retained for diagnostics.
+  const deleteFailureLabel = (reason: string) =>
+    reason === 'not_found'
+      ? t('exportsList.deleteFailure.notFound', 'Already deleted')
+      : t('exportsList.deleteFailure.unknown', 'Unknown failure: {{reason}}', { reason });
   const bulkDelete = useBulkExportsDelete();
   const { confirm, dialogProps } = useConfirm();
 
@@ -270,7 +277,7 @@ export default function ExportsPage() {
                   title={t('toast.export.bulkDelete.error', 'Failed to delete exports')}>
                   <ul className="space-y-1">
                     {deleteFailures.map(({ id, reason }) => (
-                      <li key={id}><Text variant="bodySm" className="break-words">{id}: {reason}</Text></li>
+                      <li key={id}><Text variant="bodySm" className="break-words">{id}: {deleteFailureLabel(reason)}</Text></li>
                     ))}
                   </ul>
                 </AlertBanner>

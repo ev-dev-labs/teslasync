@@ -148,6 +148,10 @@ describe('ExportsPage — phase-five contract adoption', () => {
       { id: 'job-ready-1', reason: 'not_found' },
       { id: 'job-ready-2', reason: 'not_found' },
     ] },
+    { case: 'mixed known and unknown reason codes', deleted: 0, failed: [
+      { id: 'job-ready-1', reason: 'timeout' },
+      { id: 'job-ready-2', reason: 'not_found' },
+    ] },
   ])('retains failed members and reported reasons after $case', async ({ deleted, failed }) => {
     mutateAsyncSpy.mockResolvedValueOnce({ deleted, failed });
     renderPage();
@@ -162,7 +166,11 @@ describe('ExportsPage — phase-five contract adoption', () => {
     expect(checkboxes[0]).toHaveProperty('checked', deleted === 0);
     expect(checkboxes[1]).toBeChecked();
     expect(screen.getByText('Failed to delete exports')).toBeInTheDocument();
-    failed.forEach(({ id, reason }) => expect(screen.getByText(`${id}: ${reason}`)).toBeInTheDocument());
+    // Verified-missing jobs explain themselves; future codes fall back to an
+    // honest unknown label that retains the raw reason for diagnostics.
+    failed.forEach(({ id, reason }) => expect(screen.getByText(
+      reason === 'not_found' ? `${id}: Already deleted` : `${id}: Unknown failure: ${reason}`,
+    )).toBeInTheDocument());
     expect(kpiValue('Total exports')).toBe('6');
     expect(screen.getByText('Status breakdown')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
@@ -170,6 +178,24 @@ describe('ExportsPage — phase-five contract adoption', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(mutateAsyncSpy).toHaveBeenCalledOnce();
     expect(screen.getByText(`${failed.length} selected`)).toBeInTheDocument();
+  });
+
+  it('renders delete-failure reasons through the deleteFailure catalog keys', async () => {
+    translations['exportsList.deleteFailure.notFound'] = 'BEREITS GELÖSCHT';
+    translations['exportsList.deleteFailure.unknown'] = 'UNBEKANNT';
+    mutateAsyncSpy.mockResolvedValueOnce({ deleted: 0, failed: [
+      { id: 'job-ready-1', reason: 'not_found' },
+      { id: 'job-ready-2', reason: 'timeout' },
+    ] });
+    renderPage();
+    const checkboxes = within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ });
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByText('job-ready-1: BEREITS GELÖSCHT')).toBeInTheDocument();
+    expect(screen.getByText('job-ready-2: UNBEKANNT')).toBeInTheDocument();
   });
 
   it('keeps complete mobile job details, ready downloads, selection and selected-loaded export scope', async () => {

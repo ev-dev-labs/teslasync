@@ -27,6 +27,7 @@ import { ChargingSummaryBrief } from '../components/operationalbrief-all/Chargin
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -129,6 +130,9 @@ export default function SmartChargePage() {
   const ratePlansState = useDataState(ratePlansQuery);
   const optimizeMutation = useOptimizeCharge();
   const applyMutation = useApplySchedule();
+  // Both mutations are live-mode writes (requiresLiveMode at the request
+  // layer); disable the actions with the shared reason while offline.
+  const { canWrite, writeBlockReason } = useOperationalMode();
   const { reset: resetOptimize } = optimizeMutation;
   const { reset: resetApply } = applyMutation;
 
@@ -215,7 +219,7 @@ export default function SmartChargePage() {
   }, [result]);
 
   const handleOptimize = () => {
-    if (!vehicleIdNum) return;
+    if (!vehicleIdNum || !canWrite) return;
     // Validate before mutating: a cleared Depart By field parses to Invalid
     // Date, whose toISOString() throws an uncaught RangeError, and cleared
     // numerics collapse to 0 (Number('') / UnitInput null → 0).
@@ -257,7 +261,7 @@ export default function SmartChargePage() {
   };
 
   const handleApply = () => {
-    if (!result) return;
+    if (!result || !canWrite) return;
     const submittedScope = currentVehicleScope.current;
     applyMutation.mutate(
       { plan_id: result.plan_id },
@@ -515,7 +519,8 @@ export default function SmartChargePage() {
                 <Button
                   wrapLabel
                   onClick={handleOptimize}
-                  disabled={!vehicleIdNum || optimizeMutation.isPending}
+                  disabled={!canWrite || !vehicleIdNum || optimizeMutation.isPending}
+                  title={writeBlockReason ?? undefined}
                   loading={optimizeMutation.isPending}
                   icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
                   className="h-auto min-h-11 w-full gap-2 md:min-h-10"
@@ -577,7 +582,8 @@ export default function SmartChargePage() {
                     <Button
                       wrapLabel
                       onClick={handleApply}
-                      disabled={applyMutation.isPending}
+                      disabled={!canWrite || applyMutation.isPending}
+                      title={writeBlockReason ?? undefined}
                       loading={applyMutation.isPending}
                       icon={<Zap className="h-4 w-4" aria-hidden="true" />}
                       className="h-auto min-h-11 gap-2 md:min-h-10"

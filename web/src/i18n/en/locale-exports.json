@@ -82,7 +82,11 @@
       "updated": "Last successful load: {{time}}"
     },
     "rowLabel": "{{type}} export, {{created}}",
-    "unknownType": "Unknown"
+    "unknownType": "Unknown",
+    "deleteFailure": {
+      "notFound": "Already deleted",
+      "unknown": "Unknown failure: {{reason}}"
+    }
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",

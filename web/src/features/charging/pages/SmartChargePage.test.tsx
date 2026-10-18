@@ -337,8 +337,18 @@ function expectSavingsValue(savingsShell: Element, value: string, context: strin
 const autopilotCard = () =>
   screen.getByRole('heading', { name: 'Charging Autopilot' }).closest('[data-card]') as HTMLElement;
 
+const mockOperationalMode = vi.hoisted(() => ({
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}));
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => mockOperationalMode,
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mockOperationalMode.canWrite = true;
+  mockOperationalMode.writeBlockReason = null;
   mockSelected.mockReturnValue(selected(7));
   mockOptimize.mockReturnValue(optimizeState());
   mockApply.mockReturnValue(applyState());
@@ -353,6 +363,34 @@ beforeEach(() => {
   // Embedded ChargePointsPanel defaults (no charger reporting).
   mockOcppPoints.mockReturnValue(makeQuery({ data: [] }));
   mockOcppSessions.mockReturnValue(makeQuery({ data: [] }));
+});
+
+describe('SmartChargePage — operational-mode write gating', () => {
+  it('disables Run and Apply with the shared reason while writes are blocked', () => {
+    const optimize = optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) =>
+        opts?.onSuccess?.(RESULT)),
+    });
+    mockOptimize.mockReturnValue(optimize);
+    const { rerenderPage } = renderPage();
+    // Establish a result while live, then drop into blocked mode.
+    fireEvent.click(optimizeButton());
+    expect(optimize.mutate).toHaveBeenCalledTimes(1);
+    mockOperationalMode.canWrite = false;
+    mockOperationalMode.writeBlockReason = 'Reconnect before making operational changes.';
+    rerenderPage();
+
+    const run = optimizeButton();
+    expect(run).toBeDisabled();
+    expect(run).toHaveAttribute('title', 'Reconnect before making operational changes.');
+    // The handler guard holds even for programmatic clicks on the disabled button.
+    fireEvent.click(run);
+    expect(optimize.mutate).toHaveBeenCalledTimes(1);
+
+    const applyBtn = screen.getByRole('button', { name: 'Apply schedule' });
+    expect(applyBtn).toBeDisabled();
+    expect(applyBtn).toHaveAttribute('title', 'Reconnect before making operational changes.');
+  });
 });
 
 describe('SmartChargePage — mobile action allocation', () => {

@@ -67448,6 +67448,8 @@
       "exportsList.col.size",
       "exportsList.col.status",
       "exportsList.col.type",
+      "exportsList.deleteFailure.notFound",
+      "exportsList.deleteFailure.unknown",
       "exportsList.download",
       "exportsList.downloadAria",
       "exportsList.empty.body",
