@@ -160,6 +160,19 @@ export function fmtInt(v: unknown, locale?: string): string {
 }
 
 /**
+ * Floor currency precision at cents for sub-unit amounts. A 1-decimal (or
+ * 0-decimal) user precision would otherwise render $0.04 and $0.14 alike as
+ * "$0.1" (or "$0"), losing the cents that distinguish small amounts.
+ * Amounts of 1 unit or more keep the requested precision, as do non-finite
+ * inputs (whose rendering is the caller's existing fallback path).
+ */
+export function currencyDecimals(amount: unknown, requested: number): number {
+  return typeof amount === 'number' && Number.isFinite(amount) && Math.abs(amount) < 1
+    ? Math.max(requested, 2)
+    : requested
+}
+
+/**
  * Compact human-readable number: 12_345 → "12.3K", 1_234_567 → "1.2M",
  * 1_200_000_000 → "1.2B". Below `threshold` (default 10_000) the value is
  * returned verbatim via `fmtInt` so small numbers stay precise. Used by

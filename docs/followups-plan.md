@@ -171,7 +171,23 @@ Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), do
 - Catalog: 1 new key, regen + trio re-pin (42,199 keys) → 7672/0.
   tsc/lint/build green.
 
-### 2f. TBD
+### 2f. Small-amount precision ("$0.1/km", "Monthly est. $0.1") — FIXED
+- Root cause: every currency path honoured the raw user/metric/global
+  precision, so a 1-decimal (or 0-decimal) precision rendered $0.04 and
+  $0.14 alike as "$0.1" (or "$0"). The $/km metric additionally ignored
+  the metric precision entirely, using the injected display default.
+- Fix: new `currencyDecimals(amount, requested)` helper
+  (`numberFormat.ts`) floors sub-unit amounts at 2 decimals, wired into
+  all five currency paths — `formatCurrency`, `formatEnergyCost`,
+  `<Currency>`, the efficiency cost/km metric formatter (now also honours
+  the metric precision + locale from the pipeline), and `formatMetric`'s
+  currency branch (one-line digits floor, covers drawer evidence).
+  Amounts ≥ 1 unit and non-currency formats keep the requested precision.
+- Regression tests: 5 fail-before (all showed '$0.1') / pass-after
+  across numberFormat, useFormatting (×2), Currency, metrics, and
+  formatMetric; precision-3 provenance ('$0.024 /km') unchanged.
+  Target files 245/245; wide formatting trees 3205 + 3 baseline-only.
+  No i18n changes; trio 7672/0; tsc/lint/build green.
 
 ## 3. Performance (dashboard 60s re-render)
 

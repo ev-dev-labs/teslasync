@@ -41,6 +41,20 @@ describe('efficiency pricing provenance', () => {
     }
   });
 
+  it('floors the cost/km display at cents under a 1-decimal metric precision', () => {
+    const props = presentation(fakeStats(), true);
+    const result = efficiencyMetrics(props, t, fmtNumber, fmtInt);
+    const preferences: MetricPreferences = {
+      units: { ...props.units.unitPrefs, precision: 1, locale: 'en-US' },
+      currency: { kind: 'symbol', value: '$' },
+    };
+    for (const metrics of [result.kpis, result.insights]) {
+      const cost = metrics.find(metric => metric.metricId === 'currency')!;
+      const formatted = formatMetric(cost.metricId, cost.rawValue, preferences, undefined, cost.display);
+      expect(formatted.text).toBe('$0.02 /km');
+    }
+  });
+
   it('preserves populated consumption, economy, speed, distance, counts and energy insights', () => {
     const result = efficiencyMetrics(presentation(), t, fmtNumber, fmtInt);
     expect(result.kpis).toHaveLength(8);

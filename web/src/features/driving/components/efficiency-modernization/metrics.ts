@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import type { StatMetric } from '@/components/data-display/stat-reference';
+import { currencyDecimals, fmtNumber as libFmtNumber } from '@/lib/numberFormat';
 import type { StatsPresentation } from './types';
 import { finite } from './model';
 
@@ -36,7 +37,14 @@ export function efficiencyMetrics(
       rawValue: finite(stats?.totalDistanceKm) ? stats.totalDistanceKm * 1000 : null, display: { precision: 0 } },
     { metricId: 'currency', occurrenceId: 'costPerKm', label: t('efficiency.costPerKm', 'Est. cost/km'), rawValue: cost,
       description: pricingAssumption, context: pricingAssumption,
-      display: { formatter: raw => ({ value: `$${fmtNumber(raw)}`, unit: '/km' }) } },
+      display: { formatter: (raw, preferences) => {
+        // Honour the metric precision (not the injected display default) and
+        // keep cents for sub-dollar amounts: "$0.1/km" hides whether the
+        // estimate is $0.05 or $0.14 per km.
+        const requested = preferences?.units?.precision ?? 2;
+        const digits = currencyDecimals(raw, requested);
+        return { value: `$${libFmtNumber(raw, digits, preferences?.units?.locale)}`, unit: '/km' };
+      } } },
     { metricId: 'count', occurrenceId: 'totalDrives', label: t('efficiency.drivesAnalyzed', 'Drives analyzed'),
       rawValue: finite(stats?.totalDrives) ? stats.totalDrives : null },
   ];

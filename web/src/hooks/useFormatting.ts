@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { FUEL } from '@/lib/constants'
-import { fmtNumber } from '@/lib/numberFormat'
+import { currencyDecimals, fmtNumber } from '@/lib/numberFormat'
 import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { useSettings } from './useSettings'
 import { useUnits } from './useUnits'
@@ -51,12 +51,12 @@ export function useFormatting(): UseFormattingResult {
   const formatEnergyCost = useCallback((kwh: number): string => {
     if (costPerKwh == null || !Number.isFinite(kwh)) return '—'
     const cost = kwh * costPerKwh
-    return `${currencySymbol}${fmtNumber(cost, userPrecision, unitPrefs.locale)}`
+    return `${currencySymbol}${fmtNumber(cost, currencyDecimals(cost, userPrecision), unitPrefs.locale)}`
   }, [costPerKwh, currencySymbol, userPrecision, unitPrefs.locale])
 
   const formatCurrency = useCallback((amount: number, decimals?: number): string => {
     const d = decimals === undefined ? userPrecision : normalizePrecision(decimals, userPrecision)
-    return `${currencySymbol}${fmtNumber(amount, d, unitPrefs.locale)}`
+    return `${currencySymbol}${fmtNumber(amount, currencyDecimals(amount, d), unitPrefs.locale)}`
   }, [currencySymbol, userPrecision, unitPrefs.locale])
 
   /**

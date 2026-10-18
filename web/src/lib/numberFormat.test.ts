@@ -15,6 +15,7 @@ import {
   fmtCompact,
   formatBytes,
   getFormatterPreferences,
+  currencyDecimals,
   _resetFormatterPreferences,
 } from './numberFormat'
 
@@ -369,5 +370,27 @@ describe('numberFormat — formatBytes', () => {
   it('honours the gbDecimals option', () => {
     expect(formatBytes(1073741824, { gbDecimals: 2 })).toBe('1.00 GB')
     expect(formatBytes(2 * 1073741824, { gbDecimals: 0 })).toBe('2 GB')
+  })
+})
+
+describe('numberFormat - currencyDecimals', () => {
+  it('floors sub-unit amounts at 2 decimals regardless of the requested precision', () => {
+    expect(currencyDecimals(0.14, 1)).toBe(2)
+    expect(currencyDecimals(0.04, 0)).toBe(2)
+    expect(currencyDecimals(-0.5, 1)).toBe(2)
+    expect(currencyDecimals(0, 1)).toBe(2)
+  })
+
+  it('keeps the requested precision for amounts of 1 unit or more', () => {
+    expect(currencyDecimals(12.5, 1)).toBe(1)
+    expect(currencyDecimals(1, 0)).toBe(0)
+    expect(currencyDecimals(-5, 1)).toBe(1)
+    expect(currencyDecimals(0.14, 3)).toBe(3)
+  })
+
+  it('passes non-finite inputs through to the caller fallback path', () => {
+    expect(currencyDecimals(Number.NaN, 1)).toBe(1)
+    expect(currencyDecimals(null, 1)).toBe(1)
+    expect(currencyDecimals(undefined, 1)).toBe(1)
   })
 })

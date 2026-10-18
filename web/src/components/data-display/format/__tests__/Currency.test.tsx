@@ -100,6 +100,14 @@ describe('Currency — value formatting', () => {
     // Hover titles use the same locale and precision as the visible amount.
     expect(span(container)?.getAttribute('title')).toBe('$1.234,50');
   });
+
+  it('floors sub-$1 amounts at 2 decimals under a 1-decimal global precision', () => {
+    setGlobalPrecision(1);
+    const { container } = render(<Currency value={0.14} />);
+    expect(container.textContent).toBe('$0.14');
+    const { container: big } = render(<Currency value={12.5} />);
+    expect(big.textContent).toBe('$12.5');
+  });
 });
 
 describe('Currency — negative amounts (established contract)', () => {

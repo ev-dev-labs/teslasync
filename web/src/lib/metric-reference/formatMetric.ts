@@ -116,7 +116,10 @@ export function formatMetric(
     const value = formatDurationMinutes(convertDurationFromSI(raw, 'min'));
     return { value, unit: '', text: value, state: 'value', accessibility: value, rawValue: raw };
   }
-  const digits = format === 'count' ? 0 : precision;
+  // Currency amounts under one unit keep cents even under a coarse user
+  // precision: "$0.1" hides whether the amount is $0.05 or $0.14.
+  const digits = format === 'count' ? 0
+    : format === 'currency' && Math.abs(display) < 1 ? Math.max(precision, 2) : precision;
   // Suppress a display-rounded negative zero without changing the retained raw measurement.
   const roundedDigits = options?.notation === 'compact'
     && Math.abs(display) < (options.compactThreshold ?? 10000) ? 0 : digits;

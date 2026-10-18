@@ -218,4 +218,10 @@ describe('candidate formatMetric preserves measurements and preference policy', 
     expect(formatMetric('currency', 33.6, { ...prefs, units: { ...prefs.units, locale: 'not_a_locale' },
       currency: { kind: 'iso', value: 'USD' } }).text).toBe('$33.60');
   });
+  it('floors currency precision at cents for sub-unit amounts', () => {
+    const low = { ...prefs, units: { ...prefs.units, precision: 1 } };
+    expect(formatMetric('currency', 0.14, low).text).toBe('$0.14');
+    expect(formatMetric('currency', 12.5, low).text).toBe('$12.5');
+    expect(formatMetric('currency', 0.04, { ...prefs, units: { ...prefs.units, precision: 0 } }).text).toBe('$0.04');
+  });
 });

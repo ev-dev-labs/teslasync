@@ -1,5 +1,6 @@
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { currencyDecimals } from '@/lib/numberFormat';
 
 interface CurrencyProps {
   /**
@@ -35,16 +36,16 @@ export function Currency({
   fallback = '—',
 }: CurrencyProps) {
   const { currencySymbol } = useFormatting();
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, precision: settingsPrecision } = useNumberFormatting();
   if (value == null || !Number.isFinite(value)) {
     return <span className={className}>{fallback}</span>;
   }
   // Preserve explicit overrides, with invalid requests falling back to settings.
   const safePrecision = precision != null && Number.isFinite(precision)
     ? Math.min(20, Math.max(0, Math.floor(precision)))
-    : undefined;
+    : settingsPrecision;
   const symbol = symbolOverride ?? currencySymbol;
-  const display = fmtNumber(value, safePrecision);
+  const display = fmtNumber(value, currencyDecimals(value, safePrecision));
   return (
     <span className={className} title={`${symbol}${display}`}>
       {symbol}{display}

@@ -138,6 +138,13 @@ describe('useFormatting — formatEnergyCost', () => {
     expect(out).not.toContain('NaN')
     expect(out).toBe('—')
   })
+
+  it('floors sub-$1 energy costs at 2 decimals under a 1-decimal user precision', () => {
+    mockSettings = { ...BASE, decimal_precision: 1 }
+    const { result } = renderHook(() => useFormatting())
+    expect(result.current.formatEnergyCost(0.7)).toBe('$0.14') // 0.7 × $0.2
+    expect(result.current.formatEnergyCost(100)).toBe('$20.0')
+  })
 })
 
 describe('useFormatting — formatCurrency', () => {
@@ -178,6 +185,14 @@ describe('useFormatting — formatCurrency', () => {
     const { result } = renderHook(() => useFormatting())
     expect(result.current.formatCurrency(5, -1)).toBe('$5.00')
     expect(result.current.formatCurrency(5, Number.NaN)).toBe('$5.00')
+  })
+
+  it('floors sub-$1 amounts at 2 decimals under a 1-decimal user precision', () => {
+    mockSettings = { ...BASE, decimal_precision: 1 }
+    const { result } = renderHook(() => useFormatting())
+    expect(result.current.formatCurrency(0.14)).toBe('$0.14')
+    expect(result.current.formatCurrency(0.14, 1)).toBe('$0.14')
+    expect(result.current.formatCurrency(12.5)).toBe('$12.5')
   })
 })
 
