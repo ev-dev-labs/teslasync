@@ -358,11 +358,16 @@
       "allOthersCancel": "Cancel"
     },
     "errors": {
-      "load": "Failed to load active sessions."
+      "load": "Failed to load active sessions.",
+      "revoke": "Failed to sign out session",
+      "revokeAllOthers": "Failed to sign out other sessions"
     },
     "toasts": {
       "revoked": "Session signed out.",
-      "revokedAllOthers": "Signed out {{count}} other devices."
+      "revokedAllOthers": "Signed out {{count}} other devices.",
+      "revokedAllOthers_one": "Signed out {{displayCount}} other device.",
+      "revokedAllOthers_other": "Signed out {{displayCount}} other devices.",
+      "revokedAllOthersCountUnknown": "Other sessions signed out. The number of signed-out devices is unavailable."
     }
   },
   "streaming": "streaming",

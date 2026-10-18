@@ -26,8 +26,19 @@ const source = vi.hoisted(() => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, values: Record<string, unknown> = {}) =>
-      fallback.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => String(values[key] ?? '')),
+    t: (_key: string, fallback: string, values: Record<string, unknown> = {}) => {
+      // Mirror i18next's missing-key plural resolution: a singular count
+      // selects defaultValue_one and any other count selects
+      // defaultValue_other, so the mock speaks the same sentence the real
+      // catalog would.
+      const template =
+        values.count === 1 && typeof values.defaultValue_one === 'string'
+          ? values.defaultValue_one
+          : values.count !== undefined && typeof values.defaultValue_other === 'string'
+            ? values.defaultValue_other
+            : fallback;
+      return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => String(values[key] ?? ''));
+    },
   }),
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
@@ -142,7 +153,7 @@ describe('FirmwareImpactPage governed comparison announcements and preservation'
     source.updates = { data: [install], isSuccess: true };
     view.rerender(<FirmwareImpactPage />);
     expectSections();
-    expect(spoken).toEqual([{ message: 'Firmware impact loaded, 1 items', priority: 'polite' }]);
+    expect(spoken).toEqual([{ message: 'Firmware impact loaded, 1 item', priority: 'polite' }]);
     expect(source.page.mock.lastCall?.[0]).toMatchObject({ announce: false, busy: false });
     expect(source.page.mock.lastCall?.[0].loading).toBeUndefined();
     expect(source.page.mock.lastCall?.[0].error).toBeUndefined();

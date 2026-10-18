@@ -3230,6 +3230,12 @@
       "verified": "Harmony verified"
     }
   },
+  "settingsSessions": {
+    "toasts": {
+      "revoked": "Session signed out.",
+      "revokedAllOthersCountUnknown": "Other sessions signed out. The number of signed-out devices is unavailable."
+    }
+  },
   "sharing": {
     "aiTripPostcard": {
       "badge": "Helix",

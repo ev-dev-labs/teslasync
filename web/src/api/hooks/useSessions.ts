@@ -19,6 +19,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, isApiError, request } from '../client'
 import { useMutationToast } from './_toastHelpers'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast'
 import type { ActiveSession, ActiveSessionsResponse, RevokeAllOthersResponse } from '@/api/types'
 
@@ -132,10 +133,10 @@ export function useRevokeSession() {
       request<void>(`/auth/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: sessionKeys.list })
-      toast.success('settings.sessions.toasts.revoked', 'Session signed out.')
+      toast.success('settingsSessions.toasts.revoked', 'Session signed out.')
     },
     onError: (err) =>
-      toast.error(err, 'settings.sessions.errors.revoke', 'Failed to sign out session'),
+      toast.error(err, 'settingsSessions.errors.revoke', 'Failed to sign out session'),
   })
 }
 
@@ -147,6 +148,7 @@ export function useRevokeSession() {
 export function useRevokeAllOtherSessions() {
   const qc = useQueryClient()
   const toast = useMutationToast()
+  const { fmtInt } = useNumberFormatting()
   return useMutation<RevokeAllOthersResult, ApiError, void>({
     mutationFn: () =>
       request<unknown>('/auth/sessions/all-others', { method: 'DELETE' })
@@ -156,21 +158,26 @@ export function useRevokeAllOtherSessions() {
       const revoked = result.revoked
       if (revoked === null) {
         toast.success(
-          'settings.sessions.toasts.revokedAllOthersCountUnknown',
+          'settingsSessions.toasts.revokedAllOthersCountUnknown',
           'Other sessions signed out. The number of signed-out devices is unavailable.',
         )
         return
       }
       toast.success(
-        'settings.sessions.toasts.revokedAllOthers',
+        'settingsSessions.toasts.revokedAllOthers',
         `Signed out ${revoked} other device${revoked === 1 ? '' : 's'}.`,
-        { count: revoked },
+        {
+          count: revoked,
+          displayCount: fmtInt(revoked),
+          defaultValue_one: 'Signed out {{displayCount}} other device.',
+          defaultValue_other: 'Signed out {{displayCount}} other devices.',
+        },
       )
     },
     onError: (err) =>
       toast.error(
         err,
-        'settings.sessions.errors.revokeAllOthers',
+        'settingsSessions.errors.revokeAllOthers',
         'Failed to sign out other sessions',
       ),
   })

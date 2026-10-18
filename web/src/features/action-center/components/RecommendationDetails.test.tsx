@@ -77,7 +77,7 @@ describe('RecommendationDetails bounded history coverage', () => {
     setHistory({ data: page(26, 25) });
     rerender(details());
     expect(within(history).getByText('Showing 26–26 of 26')).toBeVisible();
-    expect(within(history).getByText('Action history loaded, 1 items')).toBeVisible();
+    expect(within(history).getByText('Action history loaded, 1 item')).toBeVisible();
     expect(within(history).getByText('Restore · Acknowledged → Open · Applied')).toBeVisible();
     expect(within(history).getByRole('button', { name: 'Next page' })).toBeDisabled();
     fireEvent.click(within(history).getByRole('button', { name: 'Previous page' }));

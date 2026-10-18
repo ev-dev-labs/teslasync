@@ -173,11 +173,26 @@ describe('exact81 feature-owned consistent producer defaults', () => {
     ['notifications.channels.providers.configured', '{{count}} configured'],
     ['telemetry.sparkline.trend', 'Speed trend, {{count}} samples in the last hour'],
     ['a11y.summary.timeline.count', 'Drives: {{count}} entries'],
-    ['a11y.status.loadedCount', 'Drives loaded, {{count}} items'],
   ])('retains the source count default for %s at zero, one, two and many', (key, expected) => {
     for (const count of [0, 1, 2, 99]) {
       expect(english.t(key, { count, label: 'Drives', signal: 'Speed', returnObjects: true }))
         .toBe(expected.replace('{{count}}', String(count)))
+    }
+  })
+
+  it('selects the singular loadedCount leaf for one and the plural leaf otherwise', () => {
+    // a11y.status.loadedCount left the shared count-default table above: it
+    // now ships _one/_other leaves, so count=1 renders "1 item" instead of
+    // the old base-template "1 items". Zero/two/many still use the plural.
+    const cases = [
+      [0, 'Drives loaded, 0 items'],
+      [1, 'Drives loaded, 1 item'],
+      [2, 'Drives loaded, 2 items'],
+      [99, 'Drives loaded, 99 items'],
+    ] as const
+    for (const [count, expected] of cases) {
+      expect(english.t('a11y.status.loadedCount', { count, label: 'Drives', returnObjects: true }))
+        .toBe(expected)
     }
   })
 
@@ -209,10 +224,10 @@ describe('exact81 feature-owned consistent producer defaults', () => {
     expect(keys.size).toBe(2931)
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(30016)
+    expect(oldEntries).toHaveLength(30023)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("0a292f9a2b66f7f4c967d82dc2933cdb9dbc4eba567687d823342abc49ba5607")
-    expect(leaves(catalog)).toHaveLength(32947)
+      .toBe("33fddcd9eb3709df120a6d4d624a9b5631ac90010781cf03aea500210287e1a7")
+    expect(leaves(catalog)).toHaveLength(32954)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
     expect(shell.pwa.offline).toEqual(catalog.pwa.offline)

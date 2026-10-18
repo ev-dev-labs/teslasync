@@ -47,6 +47,7 @@ vi.mock('@/lib/queryBroadcast', () => ({
 
 import { ApiError, request, AUTH_MODE_OPEN_CODE } from '@/api/client';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { fmtInt as fmtIntLib } from '@/lib/numberFormat';
 import {
   sessionKeys,
   useSessions,
@@ -287,7 +288,7 @@ describe('useRevokeSession', () => {
       queryKey: ['sessions', 'list'],
     });
     expect(toastSuccess).toHaveBeenCalledWith(
-      'settings.sessions.toasts.revoked',
+      'settingsSessions.toasts.revoked',
       'Session signed out.',
     );
   });
@@ -315,7 +316,7 @@ describe('useRevokeSession', () => {
     expect(mockedInvalidate).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalledWith(
       err,
-      'settings.sessions.errors.revoke',
+      'settingsSessions.errors.revoke',
       'Failed to sign out session',
     );
   });
@@ -340,9 +341,14 @@ describe('useRevokeAllOtherSessions', () => {
       queryKey: ['sessions', 'list'],
     });
     expect(toastSuccess).toHaveBeenCalledWith(
-      'settings.sessions.toasts.revokedAllOthers',
+      'settingsSessions.toasts.revokedAllOthers',
       'Signed out 3 other devices.',
-      { count: 3 },
+      {
+        count: 3,
+        displayCount: '3',
+        defaultValue_one: 'Signed out {{displayCount}} other device.',
+        defaultValue_other: 'Signed out {{displayCount}} other devices.',
+      },
     );
   });
 
@@ -355,9 +361,14 @@ describe('useRevokeAllOtherSessions', () => {
     });
 
     expect(toastSuccess).toHaveBeenCalledWith(
-      'settings.sessions.toasts.revokedAllOthers',
+      'settingsSessions.toasts.revokedAllOthers',
       'Signed out 1 other device.',
-      { count: 1 },
+      {
+        count: 1,
+        displayCount: '1',
+        defaultValue_one: 'Signed out {{displayCount}} other device.',
+        defaultValue_other: 'Signed out {{displayCount}} other devices.',
+      },
     );
   });
 
@@ -370,9 +381,14 @@ describe('useRevokeAllOtherSessions', () => {
     });
 
     expect(toastSuccess).toHaveBeenCalledWith(
-      'settings.sessions.toasts.revokedAllOthers',
+      'settingsSessions.toasts.revokedAllOthers',
       'Signed out 0 other devices.',
-      { count: 0 },
+      {
+        count: 0,
+        displayCount: '0',
+        defaultValue_one: 'Signed out {{displayCount}} other device.',
+        defaultValue_other: 'Signed out {{displayCount}} other devices.',
+      },
     );
   });
 
@@ -388,7 +404,7 @@ describe('useRevokeAllOtherSessions', () => {
     expect(toastSuccess).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalledWith(
       expect.objectContaining({ code: 'INVALID_RESPONSE' }),
-      'settings.sessions.errors.revokeAllOthers',
+      'settingsSessions.errors.revokeAllOthers',
       'Failed to sign out other sessions',
     );
   });
@@ -406,7 +422,7 @@ describe('useRevokeAllOtherSessions', () => {
     expect(mockedInvalidate).toHaveBeenCalledWith(expect.anything(), { queryKey: sessionKeys.list });
     expect(toastError).not.toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalledExactlyOnceWith(
-      'settings.sessions.toasts.revokedAllOthersCountUnknown',
+      'settingsSessions.toasts.revokedAllOthersCountUnknown',
       'Other sessions signed out. The number of signed-out devices is unavailable.',
     );
   });
@@ -420,7 +436,7 @@ describe('useRevokeAllOtherSessions', () => {
     expect(mockedInvalidate).toHaveBeenCalledTimes(1);
     expect(toastError).not.toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalledExactlyOnceWith(
-      'settings.sessions.toasts.revokedAllOthersCountUnknown',
+      'settingsSessions.toasts.revokedAllOthersCountUnknown',
       'Other sessions signed out. The number of signed-out devices is unavailable.',
     );
   });
@@ -434,9 +450,14 @@ describe('useRevokeAllOtherSessions', () => {
     expect(mockedInvalidate).toHaveBeenCalledTimes(1);
     expect(toastError).not.toHaveBeenCalled();
     expect(toastSuccess).toHaveBeenCalledExactlyOnceWith(
-      'settings.sessions.toasts.revokedAllOthers',
+      'settingsSessions.toasts.revokedAllOthers',
       `Signed out ${revoked} other device${revoked === 1 ? '' : 's'}.`,
-      { count: revoked },
+      {
+        count: revoked,
+        displayCount: fmtIntLib(revoked),
+        defaultValue_one: 'Signed out {{displayCount}} other device.',
+        defaultValue_other: 'Signed out {{displayCount}} other devices.',
+      },
     );
   });
 
@@ -452,7 +473,7 @@ describe('useRevokeAllOtherSessions', () => {
     expect(mockedInvalidate).not.toHaveBeenCalled();
     expect(toastError).toHaveBeenCalledWith(
       err,
-      'settings.sessions.errors.revokeAllOthers',
+      'settingsSessions.errors.revokeAllOthers',
       'Failed to sign out other sessions',
     );
     expect(toastSuccess).not.toHaveBeenCalled();

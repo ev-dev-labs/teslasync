@@ -252,6 +252,8 @@ export function RecommendationDetails({
               {t('a11y.status.loadedCount', '{{label}} loaded, {{count}} items', {
                 label: t('actionCenter.history.resource', 'Action history'),
                 count: historyItems.length,
+                defaultValue_one: '{{label}} loaded, {{count}} item',
+                defaultValue_other: '{{label}} loaded, {{count}} items',
               })}
             </Text>
             <fieldset

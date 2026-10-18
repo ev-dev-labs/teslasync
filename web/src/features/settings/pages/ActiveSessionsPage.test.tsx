@@ -165,7 +165,7 @@ describe('ActiveSessionsPage — load announcements', () => {
           ? 'Could not refresh Active sessions'
           : outcome === 'empty'
             ? 'No Active sessions to show'
-            : 'Active sessions loaded, 1 items'
+            : 'Active sessions loaded, 1 item'
         expect(announcement).toHaveBeenCalledWith(
           expect.stringContaining(message),
           outcome === 'failure' ? 'assertive' : 'polite',

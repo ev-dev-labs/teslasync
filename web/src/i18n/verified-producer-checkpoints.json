@@ -954,5 +954,10 @@
     "file": "web/src/features/vehicles/components/VehicleGauges.tsx",
     "calls": 14,
     "sha256": "1db51629437aa3eb97314c5eceeee7e8fc78f25dae693a4fcd28d682adcbebe4"
+  },
+  {
+    "file": "web/src/hooks/useStatusAnnouncer.ts",
+    "calls": 17,
+    "sha256": "69144fd85a68983e1d3cd552b1d9b1b819b51369b3640da87cd79ce7f1647c3c"
   }
 ]

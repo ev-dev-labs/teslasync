@@ -102,6 +102,8 @@ export function useStatusAnnouncer() {
           : t('a11y.status.loadedCount', '{{label}} loaded, {{count}} items', {
               label,
               count,
+              defaultValue_one: '{{label}} loaded, {{count}} item',
+              defaultValue_other: '{{label}} loaded, {{count}} items',
             });
       emitGoverned(text, 'polite', { key: `loaded:${label}` });
     },

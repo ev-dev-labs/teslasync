@@ -46,6 +46,8 @@
     "status": {
       "loaded": "{{label}} loaded",
       "loadedCount": "{{label}} loaded, {{count}} items",
+      "loadedCount_one": "{{label}} loaded, {{count}} item",
+      "loadedCount_other": "{{label}} loaded, {{count}} items",
       "empty": "No {{label}} to show",
       "refreshError": "Could not refresh {{label}}",
       "saveError": "Could not save {{label}}",

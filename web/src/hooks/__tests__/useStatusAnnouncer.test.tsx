@@ -66,6 +66,18 @@ describe('useStatusAnnouncer', () => {
     expect(capture.spoken[0].priority).toBe('polite');
   });
 
+  it('selects singular/plural item forms from the catalog leaves', () => {
+    const { result } = renderHook(() => useStatusAnnouncer());
+    act(() => result.current.announceLoaded('Drive', 1));
+    act(() => result.current.announceLoaded('Drives', 2));
+    act(() => result.current.announceLoaded('Trips', 1234));
+    expect(capture.spoken.map((entry) => entry.message)).toEqual([
+      'Drive loaded, 1 item',
+      'Drives loaded, 2 items',
+      'Trips loaded, 1234 items',
+    ]);
+  });
+
   it('announces refresh failures assertively', () => {
     const { result } = renderHook(() => useStatusAnnouncer());
     act(() => result.current.announceRefreshError('Drives'));
