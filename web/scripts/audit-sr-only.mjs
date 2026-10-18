@@ -51,6 +51,10 @@ const ROOT = join('src');
  * - `typography-agent/observer.ts` (and its test) only *detect* the class
  * via `classList.contains` so the live-DOM scan can skip visually-hidden
  * subtrees that overflow by design. They never render `sr-only` markup.
+ * - `ChangesPanel.test.tsx` asserts the placeholder announcer's live region
+ * carries the canonical class; `LiveSignalInspectorPage.test.tsx` filters
+ * headings via `classList.contains` (same detect-only pattern as the
+ * observer). Both are test-only and never render `sr-only` markup.
  */
 const ALLOWED_FILES = new Set([
   toAllowKey(join('src', 'components', 'a11y', 'VisuallyHidden.tsx')),
@@ -59,6 +63,8 @@ const ALLOWED_FILES = new Set([
   toAllowKey(join('src', 'components', 'ui', 'RadioCard.tsx')),
   toAllowKey(join('src', 'components', 'ai', 'AINLSearch.test.tsx')),
   toAllowKey(join('src', 'features', 'admin', 'components', 'dlq-inspector', 'AuditPanel.contract.test.tsx')),
+  toAllowKey(join('src', 'features', 'admin', 'components', 'feature-flags', 'ChangesPanel.test.tsx')),
+  toAllowKey(join('src', 'features', 'admin', 'pages', 'LiveSignalInspectorPage.test.tsx')),
   toAllowKey(join('src', 'features', 'battery', 'pages', 'PowerFlowDashboardPage.test.tsx')),
   toAllowKey(join('src', 'features', 'onboarding', 'pages', 'OnboardingPage.test.tsx')),
   toAllowKey(join('src', 'features', 'system', 'components', 'FSMStateDiagram.test.tsx')),

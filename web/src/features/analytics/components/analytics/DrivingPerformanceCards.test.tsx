@@ -68,8 +68,6 @@ vi.mock('@/hooks/useSettings', async () => {
 
 import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 
-const EM_DASH = '\u2014';
-
 const LABELS = {
   topSpeed: 'Top speed',
   avgSpeed: 'Avg speed',

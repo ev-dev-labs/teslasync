@@ -32,7 +32,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, cleanup, render, screen, fireEvent, within } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
