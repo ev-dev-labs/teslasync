@@ -76,7 +76,7 @@ const writes: WriteCase[] = [
     key: ownershipKeys.all,
     useSubmit: () => { const mutation = useDeleteRetentionPolicy(); return () => mutation.mutateAsync(7); } },
   { name: 'recorded plan POST', path: '/data-governance/simulate', method: 'POST',
-    body: plan, key: ownershipKeys.governanceRuns(25, 0),
+    body: plan, key: ownershipKeys.governanceRunsAll(),
     useSubmit: () => { const mutation = useSimulateGovernance(); return () => mutation.mutateAsync(plan); } },
   { name: 'subscription POST', path: '/subscription-roi/subscriptions', method: 'POST',
     body: subscription, key: ownershipKeys.all,

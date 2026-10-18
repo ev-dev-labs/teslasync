@@ -166,6 +166,7 @@ describe('guard config route contract', () => {
     expect(requestMock).toHaveBeenCalledWith('/vehicles/42/guard', {
       method: 'POST',
       requiresLiveMode: true,
+      skipAuthRefresh: true,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
@@ -207,7 +208,7 @@ describe('guard ACK and PANIC wire contracts', () => {
     });
     expect(requestMock).toHaveBeenCalledExactlyOnceWith(
       '/vehicles/42/guard/events/7/acknowledge',
-      { method: 'POST', requiresLiveMode: true },
+      { method: 'POST', requiresLiveMode: true, skipAuthRefresh: true },
     );
     expect(invalidateAndBroadcast).toHaveBeenCalledWith(expect.any(QueryClient), {
       queryKey: ['guard-events', 42],
@@ -241,7 +242,7 @@ describe('guard ACK and PANIC wire contracts', () => {
     });
     expect(requestMock).toHaveBeenCalledExactlyOnceWith(
       '/vehicles/42/guard/panic',
-      { method: 'POST', requiresLiveMode: true },
+      { method: 'POST', requiresLiveMode: true, skipAuthRefresh: true },
     );
     expect(invalidateAndBroadcast).toHaveBeenCalledWith(expect.any(QueryClient), {
       queryKey: ['guard-events', 42],
@@ -281,7 +282,7 @@ describe('guard ACK and PANIC wire contracts', () => {
     expect(toastMock.error).toHaveBeenCalledExactlyOnceWith('Failed to trigger panic: panic request failed');
     expect(requestMock).toHaveBeenCalledExactlyOnceWith(
       '/vehicles/42/guard/panic',
-      { method: 'POST', requiresLiveMode: true },
+      { method: 'POST', requiresLiveMode: true, skipAuthRefresh: true },
     );
   });
 });

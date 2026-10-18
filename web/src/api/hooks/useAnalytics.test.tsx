@@ -410,14 +410,22 @@ describe('useTimeline', () => {
 // ---------------------------------------------------------------------------
 
 describe('useStateSummary', () => {
-  it('passes an array payload straight through', async () => {
-    mockedRequest.mockResolvedValueOnce([
-      { state: 'asleep', totalMin: 600, count: 3 },
-    ]);
+  it('passes the by_state rows straight through', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7,
+      days: 7,
+      start: '2026-05-01T00:00:00Z',
+      end: '2026-05-08T00:00:00Z',
+      total_seconds: 36000,
+      by_state: [
+        { state: 'asleep', total_seconds: 36000, percentage: 100, transition_count: 3 },
+      ],
+    });
     const { result } = renderHook(() => useStateSummary('7'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(callAt()[0]).toBe('/vehicle-states/summary?vehicle_id=7');
     expect(result.current.data?.[0].state).toBe('asleep');
+    expect(result.current.data?.[0].total_seconds).toBe(36000);
   });
 
   it('coerces a non-array payload to an empty array', async () => {

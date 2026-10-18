@@ -120,7 +120,7 @@ describe('useSettings — derived flags', () => {
     expect(result.current.decimals).toBe(4)
     expect(result.current.refetch).toBe(originalRefetch)
     expect(request).toHaveBeenCalledTimes(1)
-    expect(request).toHaveBeenCalledWith('/settings')
+    expect(request).toHaveBeenCalledWith('/settings', { signal: expect.any(AbortSignal) })
   })
 
   it('revalidates unit preferences when a page mounts with a still-fresh settings cache', async () => {
@@ -129,7 +129,7 @@ describe('useSettings — derived flags', () => {
     nextSettings = { unit_of_length: 'mi', locale: 'en-US', decimal_precision: 2 }
     const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isMiles).toBe(true))
-    expect(request).toHaveBeenCalledWith('/settings')
+    expect(request).toHaveBeenCalledWith('/settings', { signal: expect.any(AbortSignal) })
   })
 
   it('derives the metric branch (km / C / bar / rated) from resolved settings', async () => {

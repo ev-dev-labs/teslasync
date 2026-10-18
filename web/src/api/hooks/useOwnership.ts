@@ -579,6 +579,9 @@ export function useSimulateGovernance() {
       request<GovernanceSimulationResponse>(`${GOVERNANCE}/simulate`, {
         method: 'POST',
         requiresLiveMode: true,
+        // Fail closed instead of replaying a plan-recording write through
+        // the resilient pipeline (same rationale as guardWriteOptions).
+        skipAuthRefresh: true,
         body: JSON.stringify(body),
       }),
     networkMode: 'always',

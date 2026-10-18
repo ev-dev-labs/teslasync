@@ -102,7 +102,10 @@ describe.each(actions)('auth recovery $path', ({ hook, path }) => {
     const invalidate = vi.spyOn(qc, 'invalidateQueries');
 
     await act(async () => {
-      await expect(result.current.mutateAsync()).resolves.toEqual(payload);
+      // directRequest exposes camelCase aliases alongside the snake_case
+      // wire keys, so the replayed payload carries authUrl too.
+      const expected = payload ? { ...payload, authUrl: payload.auth_url } : payload;
+      await expect(result.current.mutateAsync()).resolves.toEqual(expected);
     });
     expect(challenge).toHaveBeenCalledExactlyOnceWith(path);
     expect(fetch).toHaveBeenCalledTimes(2);

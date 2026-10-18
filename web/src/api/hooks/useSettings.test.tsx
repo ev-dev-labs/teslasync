@@ -669,6 +669,36 @@ describe('useGasPriceStatus', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(mockedRequest).toHaveBeenCalledTimes(1);
   });
+
+  it('invalidates gas-price history when a refetch advances last_poll_time', async () => {
+    const { Wrapper, qc } = makeWrapper();
+    qc.setQueryData(settingsKeys.gasPriceStatus, gasStatus);
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    mockedRequest.mockResolvedValueOnce({
+      ...gasStatus,
+      last_poll_time: '2026-07-02T00:00:00Z',
+    });
+
+    const { result } = renderHook(() => useGasPriceStatus(true), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory }),
+    );
+  });
+
+  it('leaves gas-price history alone when last_poll_time does not advance', async () => {
+    const { Wrapper, qc } = makeWrapper();
+    qc.setQueryData(settingsKeys.gasPriceStatus, gasStatus);
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    mockedRequest.mockResolvedValueOnce({ ...gasStatus });
+
+    const { result } = renderHook(() => useGasPriceStatus(true), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await tick();
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory });
+  });
 });
 
 describe('useGasPriceHistory', () => {
@@ -704,7 +734,7 @@ describe('useGasPriceHistory', () => {
 });
 
 describe('gas-price mutations', () => {
-  it('usePollGasPrice POSTs /gas-price/poll and invalidates BOTH status + history', async () => {
+  it('usePollGasPrice POSTs /gas-price/poll, invalidates status only, and toasts that the poll was triggered', async () => {
     mockedRequest.mockResolvedValueOnce({ status: 'ok' });
 
     const { Wrapper, qc } = makeWrapper();
@@ -716,10 +746,13 @@ describe('gas-price mutations', () => {
     expect(callAt(0)[0]).toBe('/gas-price/poll');
     expect(callAt(0)[1].method).toBe('POST');
     expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceStatus });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory });
+    // History is NOT invalidated eagerly: the worker runs async, and the
+    // status refetch chains history invalidation only when last_poll_time
+    // actually advances (see useGasPriceStatus below).
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: settingsKeys.gasPriceHistory });
     expect(successToast).toHaveBeenCalledWith(
-      'toast.settings.gasPrice.poll.success',
-      'Gas prices updated',
+      'gas.pollTriggered',
+      'Gas price poll triggered',
     );
   });
 

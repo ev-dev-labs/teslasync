@@ -35,7 +35,8 @@ import type {
 export { SudoCanceledError };
 
 // DLQReplayAuditRepo.Recent caps this endpoint at 500, unlike general pagination.
-const DLQ_AUDIT_MAX_LIMIT = 500;
+// Exported so tests assert against the documented cap instead of a magic number.
+export const DLQ_AUDIT_MAX_LIMIT = 500;
 
 export const dlqKeys = {
   list: ['system', 'dlq', 'list'] as const,

@@ -209,7 +209,11 @@ describe('useSessions', () => {
   it('retains validated sessions during an active refresh before switching to open mode', async () => {
     const initial = { mode: 'session', sessions: [sessionRow] };
     mockedRequest.mockResolvedValueOnce(initial);
-    const { result } = renderHook(() => useSessions(), { wrapper: SessionsTestProvider });
+    // Spread during render so every flag is accessed (tracked): React Query
+    // v5 only re-renders for tracked props, and a bare `useSessions()`
+    // return tracks nothing — the in-flight isRefetching transition would
+    // otherwise never produce a render for waitFor to observe.
+    const { result } = renderHook(() => ({ ...useSessions() }), { wrapper: SessionsTestProvider });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     let reject!: (error: ApiError) => void;

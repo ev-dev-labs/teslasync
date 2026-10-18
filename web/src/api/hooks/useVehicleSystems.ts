@@ -29,7 +29,9 @@ export const vehicleSystemsKeys = {
   safetyHistory: (vehicleId: string) => ['safety', 'history', vehicleId] as const,
   media: (vehicleId: string) => ['media', vehicleId] as const,
   mediaHistory: (vehicleId: string, start = '', end = '') =>
-    ['media', 'history', vehicleId, start, end] as const,
+    start || end
+      ? ['media', 'history', vehicleId, start, end] as const
+      : ['media', 'history', vehicleId] as const,
 };
 
 export function useClimate(vehicleId: string) {

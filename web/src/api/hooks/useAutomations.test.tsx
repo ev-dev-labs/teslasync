@@ -36,6 +36,7 @@ import {
   useInstallRoutine,
   type AutomationFullInput,
   type AutomationImportEnvelope,
+  type AutomationImportResult,
   type AutomationBulkOp,
   type AutomationBulkResult,
 } from './useAutomations';
@@ -333,11 +334,14 @@ describe('useImportAutomations', () => {
   };
 
   it('POSTs the envelope, invalidates list + history, and toasts success', async () => {
-    requestMock.mockResolvedValueOnce({ imported: 1, skipped: 0 });
+    requestMock.mockResolvedValueOnce({
+      imported: [{ id: 1, name: 'x' }],
+      errors: [],
+    });
     const client = makeClient();
     const { result } = renderHook(() => useImportAutomations(), { wrapper: wrapperFor(client) });
 
-    let out: { imported?: number } | undefined;
+    let out: AutomationImportResult | undefined;
     await act(async () => {
       out = await result.current.mutateAsync(envelope);
     });
@@ -346,7 +350,9 @@ describe('useImportAutomations', () => {
     expect(calledOpts().method).toBe('POST');
     expect(calledOpts().requiresLiveMode).toBe(true);
     expect(JSON.parse(calledOpts().body as string)).toEqual(envelope);
-    expect(out?.imported).toBe(1);
+    expect(out?.imported).toHaveLength(1);
+    expect(out?.imported[0]).toEqual({ id: 1, name: 'x' });
+    expect(out?.errors).toEqual([]);
 
     const keys = invalidateSpy.mock.calls.map((c) => JSON.stringify(c[1]));
     expect(keys).toContain(JSON.stringify({ queryKey: automationKeys.all }));
