@@ -402,6 +402,10 @@ Dashboard integrated 86/86 (ce9c23bcce + 2809bbcd9a, 42 files, folder 4572/4572 
 Admin integrated 175/175 (59 files, folder 3338/3338 green; 1 value-neutral production hunk — GasTrendChart dataKey reads the model-native `price_per_unit` instead of the derived `price` alias — satisfying a pre-existing unweakened test that feeds raw model rows; worktree/branch removed after push).
 Wave 4 complete 4/4: **392/392 resolved** (analytics 9, dashboard 86, charging 122, admin 175). Cumulative original failures resolved: **3394**.
 
+### Post-wave-4 full suite (2026-10-17)
+
+Full suite alone: **56,374 passed / 583 failed** (was 55,975 / 982; Δ −399 vs 392 resolved + MapTileLayer 8 − 1 new). Red files 38 (was 165); 127 files went green. Fixed-titles diff vs suite D: exactly 400 (392 wave-4 + 8 MapTileLayer), zero regressions. Remaining: trio 489 + trio-class 18 + proven pre-existing 52 + stable blocks 22 (battery 14, telemetry 5, driving 3) + 2 flakes (ChargingForensicsPage 1, known; JourneyAssurancePage.departureZone 1, new — passes filtered and 14/14 solo once, then 13/14 and 12/14 with varying victims across runs; file and production untouched since wave 2, no advintel/shared changes in the D→E window: intra-file order/timing flake, 4th of the known flake class). TeslaPhysicsPage flake passed this run. Report: `web/.runner/gates/vitest-full-20261017e.json` (local only).
+
 ### Main-agent sequential remainder (2026-10-17)
 
 84 fails / 41 files triaged by per-file UI-range forensics + a branch-base probe worktree (49287b5171, since removed):
