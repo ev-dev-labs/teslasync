@@ -103,7 +103,11 @@
     "info": {
       "title": "Working with queries",
       "readonly": "This is a read-only composing surface. Nothing runs in the browser.",
-      "exampleLabel": "Example"
+      "exampleLabel": "Example",
+      "tip1": "Reference the catalog below for exact column names before you write a query.",
+      "tip2": "Values are stored in SI — meters, seconds, watt-hours. Convert to your units in your client.",
+      "tip3": "Use Copy query, then paste into psql, DBeaver, or TablePlus to execute.",
+      "tip4": "With Helix enabled, describe the question in plain English and apply the drafted SQL above."
     },
     "catalog": {
       "noDescription": "No description",

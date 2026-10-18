@@ -35,9 +35,19 @@
     "sha256": "395953f720dc808a89d598340838995c33f51e27d3b4a9b52486bd7c052b2b21"
   },
   {
+    "file": "web/src/components/layout/WorkspaceContextControl.tsx",
+    "calls": 34,
+    "sha256": "73561f633f504e2ad3d2b78331337f667b2dbfa79ed2fc50a6956fabade1e84f"
+  },
+  {
     "file": "web/src/features/admin/components/continuation-admin-1/SchemaFingerprints.tsx",
     "calls": 16,
     "sha256": "9c2b17167b2f3789d0220dcf5ef2347ae2357883938247e98afeaea62cb53718"
+  },
+  {
+    "file": "web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx",
+    "calls": 31,
+    "sha256": "cdb2a398bc2158d98e394e2eeb4e33f08f175d4df469c755b27244c893d31379"
   },
   {
     "file": "web/src/features/admin/components/continuation-admin-2/AuditExpandedDetail.tsx",
@@ -73,6 +83,11 @@
     "file": "web/src/features/admin/components/gdpr-export/GDPRLifecyclePanel.tsx",
     "calls": 6,
     "sha256": "5cea3a2c72fb10d4016681b4469273ad635bc069d3f6c5949775aaa0681cbabd"
+  },
+  {
+    "file": "web/src/features/admin/components/live-signal-inspector/LiveSignalsTable.tsx",
+    "calls": 10,
+    "sha256": "e9ecfd7e68f8da519dc4ad8ba818d0fb52bda36e4b9314a681a3ef7a35ca0641"
   },
   {
     "file": "web/src/features/admin/components/ResponseViewer.tsx",
@@ -155,6 +170,11 @@
     "sha256": "22dca86578f0003d09a412a9d922aece2923ad70cbbc5454ec865a0401959c03"
   },
   {
+    "file": "web/src/features/admin/hooks/useSlowQueriesPage.ts",
+    "calls": 2,
+    "sha256": "d975000ad9b08df5970040aa675b75e08452477c893f6442fa02c8ec04c93064"
+  },
+  {
     "file": "web/src/features/admin/pages/ApiPlaygroundPage.tsx",
     "calls": 34,
     "sha256": "b4239ad1cda04f5cbf40c076339d3230f58b448d8f6a86d29aaf9944afd50f28"
@@ -188,6 +208,11 @@
     "file": "web/src/features/admin/pages/GDPRExportPage.tsx",
     "calls": 30,
     "sha256": "fea9aa7c204b22983291fc052ad02ceedd8062c0d2932574bf55d44c5e8b8e1e"
+  },
+  {
+    "file": "web/src/features/admin/pages/RedisSignalViewerPage.tsx",
+    "calls": 79,
+    "sha256": "4374da5448e942cb004a46977e7c056de261238cc5c0d4a7f5c04ebe1701c93b"
   },
   {
     "file": "web/src/features/admin/pages/SecretRotationPage.tsx",
@@ -285,9 +310,19 @@
     "sha256": "0242640832143ebf600b280c1541df3faa3f93f2f281ef54bb4fc71de4fff5dc"
   },
   {
+    "file": "web/src/features/dashboard/components/RecentActivity.tsx",
+    "calls": 14,
+    "sha256": "f6a6fa9aaefc6112bea1b442da3ef4a5225cdfc981f391fae88546a1468964ae"
+  },
+  {
     "file": "web/src/features/dashboard/components/VehicleHero.tsx",
     "calls": 40,
     "sha256": "8c65c937ab0785d0cf708543747cb2942eacc2f6d07602575e21092e610c21d4"
+  },
+  {
+    "file": "web/src/features/dashboard/pages/DashboardPage.tsx",
+    "calls": 68,
+    "sha256": "3ca7137dbc1584ece19c53b41b10adeb8260f60e9f043f1eebcc81b51808fac5"
   },
   {
     "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
@@ -480,6 +515,11 @@
     "sha256": "d8e94621bc62fe6e3b28552269a9b09d21c720add2645d4a0dd1f13ba531f7bc"
   },
   {
+    "file": "web/src/features/settings/components/QuietHoursPanel.tsx",
+    "calls": 45,
+    "sha256": "dfc98cf2c69244a8b349492801f51758dc843b562dc45aa61a8fcd1ba0472934"
+  },
+  {
     "file": "web/src/features/settings/components/RegionSettings.tsx",
     "calls": 12,
     "sha256": "a7ca0b1f6dbd19c618aa120a7c5f454eb919c8f06ad52c974385d64530d8f576"
@@ -575,6 +615,11 @@
     "sha256": "30d590cf02fbf34cfd07917eaddf04c2098c48d623ea629880e07409364c1480"
   },
   {
+    "file": "web/src/features/system/pages/DataExportPage.tsx",
+    "calls": 118,
+    "sha256": "b1a5e65776b2496c6aa8375e52370b1399f1656273db775328ff97f2ed8324a2"
+  },
+  {
     "file": "web/src/features/system/pages/OutageAutobiographyPage.tsx",
     "calls": 42,
     "sha256": "11ed764d0186d34ebd5af89fe878a648a0cceafe87576b5285df71d6561d45c8"
@@ -588,6 +633,11 @@
     "file": "web/src/features/system/pages/SearchPage.tsx",
     "calls": 6,
     "sha256": "3f4fad226ed37186f9d8a01ad1157e4a166c1b708fc9b8d56be96aaa989ca2fd"
+  },
+  {
+    "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+    "calls": 82,
+    "sha256": "2fe65149f864ec8d2057fb01afa6556ee98a90e725205dcc6b4f4815258c5fed"
   },
   {
     "file": "web/src/features/telemetry/components/SignalCompareControls.tsx",
@@ -618,6 +668,21 @@
     "file": "web/src/features/telemetry/pages/SignalLogViewerPage.tsx",
     "calls": 18,
     "sha256": "92089e043d6bff7009507f09ebd4a40b2e6d6b3b2aa1153db25371492f775e36"
+  },
+  {
+    "file": "web/src/features/telemetry/pages/SignalsWorkspacePage.tsx",
+    "calls": 56,
+    "sha256": "0f8a0c5080862840ca0c23b367098d7f67382b1847330c9581944db7c774d686"
+  },
+  {
+    "file": "web/src/features/trips/components/ArrivalPanel.tsx",
+    "calls": 12,
+    "sha256": "bd8a39b86bf8193703ef1ad7c119bbbedefbbe31617439e0b59407949329d166"
+  },
+  {
+    "file": "web/src/features/trips/components/LiveTripPanel.tsx",
+    "calls": 21,
+    "sha256": "afa048c3fb07750ce9fd0534a09a6ea178d6c88c89d146985628bbda151192d5"
   },
   {
     "file": "web/src/features/trips/components/TripReplayMap.tsx",

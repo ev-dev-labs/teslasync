@@ -154,7 +154,7 @@ export function RecentActivity({
             </div>
           ) : (
             <div data-testid="battery-empty" className="h-36 sm:h-48 flex items-center justify-center">
-              <p className="text-xs text-[var(--text-muted)]">{t('battery.empty', 'Charge data will appear here')}</p>
+              <p className="text-xs text-[var(--text-muted)]">{t("activity.batteryTrendEmpty", 'Charge data will appear here')}</p>
             </div>
           )}
         </GlassPanel>

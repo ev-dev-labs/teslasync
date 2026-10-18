@@ -286,6 +286,13 @@
       "json": "JSON",
       "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
       "jsonDesc": "Structured JSON format for programmatic access"
+    },
+    "status": {
+      "failed": "Failed",
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "expired": "Expired"
     }
   },
   "dbHealth": {
@@ -414,7 +421,13 @@
     "resultsLabel": "Help results",
     "noResults": "Nothing in the help index matches that. Try a shorter word, or send a problem report below.",
     "title": "Search the help index",
-    "subtitle": "Definitions, pages and troubleshooting, indexed by term and route. Results are the same every time — no model, no network."
+    "subtitle": "Definitions, pages and troubleshooting, indexed by term and route. Results are the same every time — no model, no network.",
+    "kind": {
+      "page": "Page",
+      "glossary": "Definition",
+      "task": "Setup task",
+      "troubleshooting": "Troubleshooting"
+    }
   },
   "incidentTimeline": {
     "aiSummary": {
@@ -512,7 +525,13 @@
     "empty": "No releases have been published yet.",
     "actionNeeded": "Action needed",
     "migration": "Migration",
-    "itemActionPrefix": "Action:"
+    "itemActionPrefix": "Action:",
+    "audience": {
+      "allUsers": "All users",
+      "fleetOperators": "Fleet operators",
+      "administrators": "Administrators",
+      "developers": "API consumers"
+    }
   },
   "roadmap": {
     "title": "Roadmap",
@@ -3359,6 +3378,14 @@
   },
   "onboarding": {
     "close": "Close and skip introduction",
+    "configure": {
+      "desc": "Customize your polling interval, distance units, energy cost per kWh, notification preferences, and MQTT integration to match your setup.",
+      "title": "Configure Settings"
+    },
+    "done": {
+      "desc": "Your dashboard is ready. Explore drives, charging sessions, efficiency analytics, and more. You can always revisit settings to fine-tune your experience.",
+      "title": "You're All Set!"
+    },
     "getStarted": "Get Started",
     "next": "Next",
     "progress": {

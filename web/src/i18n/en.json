@@ -3390,7 +3390,8 @@
       "thu": "Thu",
       "fri": "Fri",
       "sat": "Sat",
-      "sun": "Sun"
+      "sun": "Sun",
+      "unknown": "Unknown"
     },
     "sections": {
       "consistency": "Departure consistency by weekday",
@@ -6822,7 +6823,9 @@
       "stale": {
         "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
       }
-    }
+    },
+    "idealRange": "Ideal Range",
+    "ratedRange": "Rated Range"
   },
   "units": {
     "km": "km",
@@ -8684,7 +8687,19 @@
     "tasks": {
       "optOut": "Stop showing setup tips",
       "dismiss": "Dismiss this tip"
-    }
+    },
+    "welcome.title": "Welcome to TeslaSync",
+    "connect.title": "Connect Your Tesla",
+    "configure": {
+      "title": "Configure Settings",
+      "desc": "Customize your polling interval, distance units, energy cost per kWh, notification preferences, and MQTT integration to match your setup."
+    },
+    "done": {
+      "title": "You're All Set!",
+      "desc": "Your dashboard is ready. Explore drives, charging sessions, efficiency analytics, and more. You can always revisit settings to fine-tune your experience."
+    },
+    "welcome.desc": "Your all-in-one Tesla fleet management dashboard. Track drives, monitor battery health, analyze energy usage, and control your vehicles — all in one place.",
+    "connect.desc": "Head to Settings and link your Tesla account via OAuth. TeslaSync will securely poll your vehicle data and keep everything in sync automatically."
   },
   "paint": {
     "label": "Paint",
@@ -10029,7 +10044,59 @@
           "label": "Natural-language dashboard composer",
           "description": "Opt-in Helix translator on the Dashboard Composer page (/power/dashboards) that converts a natural-language dashboard request into a typed dashboard JSON DRAFT (a single dashboard envelope — title + ordered list of panel slots picking panels by name from the curated install-wide catalog and placing each on the Grafana 24-column grid) by routing through two propose-only tools (draft_dashboard_layout + validate_dashboard_layout). The translator NEVER pushes the dashboard to Grafana — there is no apply or push tool; the per-request scope binding refuses any panel_name outside the curated catalog; the layout contract refuses overlapping bounding boxes, more than 12 slots, or the same panel_name twice. The user reviews the typed proposal in the AI side panel, clicks Apply to editor to copy the draft into the manual JSON dashboard composer, and clicks the canonical Copy to clipboard button to paste it into their existing Grafana dashboard. The deterministic manual JSON composer and curated panel catalog viewer remain the canonical baseline when Helix is off."
         },
-        "empty": "No AI features are available yet."
+        "empty": "No AI features are available yet.",
+        "__redaction_bypass__": {
+          "label": "AI Redaction Bypass Report",
+          "description": "Per-(feature, provider) bypass summary from F8 redact decorator. Gates on ai_mode != 'off' only."
+        },
+        "__usage__": {
+          "label": "AI Usage Card",
+          "description": "Per-call audit log + spend visualisation for the AI provider chain. Gates on ai_mode != 'off' only."
+        },
+        "alert-message-template-suggestion": {
+          "label": "Helix alert message template suggestion",
+          "description": "Opt-in Helix advisor on Alert Studio that proposes a notification message template from the alert dimensions the user already selected (kind, signal or computed metric, operator, severity, thresholds). Routes through two propose-only tools: draft_alert_message_template returns the same placeholder catalog and related presets the deterministic editor uses; validate_alert_message_template rejects unknown {{tokens}} and over-long bodies so an applied template is byte-equivalent to one the user could type. Helix never saves; Apply copies the draft into the existing Message Template field and the canonical Save button remains the only write path. The deterministic preset gallery and {{ autocomplete remain the baseline when AI is off."
+        },
+        "alert-pack-builder": {
+          "label": "Helix custom Alert Packs",
+          "description": "Proposes a goal-based group from supported alert templates. Review and edit the draft before explicit installation. Never changes rules autonomously."
+        },
+        "auto-trip-naming": {
+          "label": "Auto trip naming",
+          "description": "Opt-in LLM-assisted trip-name suggestions grounded in the trip's route context (start/end places, drive count, distance, time window). Propose-only: the AI produces a structured proposal via two typed read-only tools and the user explicitly confirms or edits before saving through the existing trip-update path. The deterministic TripDetailPage stat cards, KVList of metadata, and existing trip labels remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated."
+        },
+        "ml-charging-curve-clustering": {
+          "label": "Charging-curve clustering model",
+          "description": "Opt-in LLM narrator that EXPLAINS the per-cluster (L1 overnight / L2 workplace / DC fast / unknown) learned charging envelope (mean peak power plus stddev/p5/p95 per cluster, mean avg power / total energy / duration / ramp shape; rule-label fallback per cluster when fewer than 3 sessions exist in the recent window) for one vehicle. The deterministic Charging Curve page with the rule-label classification remains the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript does not reveal vehicle identity beyond the user-supplied vehicle_id."
+        },
+        "quiet-hours-suggestion": {
+          "label": "Helix quiet-hours suggestion",
+          "description": "Opt-in Helix advisor on the Quiet hours / Do-Not-Disturb settings page that proposes ONE candidate quiet-hours window from your recent notification history. Routes through two read-only typed tools: draft_quiet_hours_window aggregates the trailing 30-day notification_logs (non-critical severities only) into per-hour event counts, finds the longest contiguous interval where non-critical traffic is sparsest, and returns a typed candidate {start_local, end_local, weekdays, timezone, bypass_severities, history_summary, assumptions, status} (the candidate-finder NEVER quotes individual notification titles/messages — only aggregated counts cross the tool boundary); validate_quiet_hours_window asserts the candidate satisfies the SAME validation rules the canonical POST /api/v1/notifications/quiet-hours handler enforces (HH:MM, distinct start/end, valid IANA timezone, weekday bitmask 0..127, bypass severities subset of {info, warn, critical}) so an AI-accepted window is byte-equivalent to a hand-typed one. The advisor NEVER triggers a save; the user clicks 'Apply to form' which copies the typed candidate into the existing QuietHoursPanel form state, then reviews and clicks the canonical Save button (which still fires the canonical useSaveQuietHours mutation against /api/v1/notifications/quiet-hours). The narrator surfaces a 2-3 sentence rationale grounded strictly in the aggregated history and explicitly discloses the descriptive-replay caveat: the candidate is derived from past notification cadence, not a forecast of future traffic. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); tool aggregation is the primary privacy guard, the redaction policy is defence-in-depth. The deterministic QuietHoursPanel CRUD form, the /api/v1/notifications/quiet-hours endpoints, and the notification dispatcher's defer logic remain the canonical baseline when AI is off (ADR-015 §I3)."
+        },
+        "safety-setting-explainer": {
+          "label": "Helix safety setting explainer",
+          "description": "Opt-in Helix advisor on the Safety settings page that explains your TeslaSync safety-related settings in plain English without changing any defaults. Routes through two read-only typed tools: query_safety_settings reads the deterministic SettingsRepo and returns a typed envelope of every safety-related toggle (notification quiet hours state, alert digest mode, critical-flash signalling, tab-badge signalling, and the api_suspended operational gate) — each entry carries {key, current_value, default_value, allowed_values, short_description, docs_anchor} so the narrator has a schema-plus-state envelope and never needs to invent a setting that does not exist; retrieve_docs (the shared F7-backed RAG tool registered by the rag-help slice) pulls matching documentation chunks scoped to the global docs corpus only — runbooks and i18n corpora are forbidden by the system prompt because the explainer is user-facing help, not operator guidance. The advisor NEVER persists state and NEVER changes a setting; the user must use the existing Settings UI to change values. The narrator surfaces a 2-4 sentence explanation grounded strictly in the typed envelope plus the retrieved chunks, names the current value (from query_safety_settings), and cites the matching docs chunk by its source label so the user can read more. Per-feature redaction policy is PolicyChatbot (Allow=nil); the typed tool returns scalar setting values only — no PII, no notification titles, no addresses — so the policy is defence in depth. The deterministic baseline rendering of the Safety settings page (the listing of every safety-related setting with its current value plus a static link to the canonical docs) is unchanged when AI is off; the AI panel is absent (ADR-015 §I3 + §I5)."
+        },
+        "suggest-new-geofences": {
+          "label": "Suggest new geofences",
+          "description": "Opt-in LLM-assisted geofence-suggestion proposals grounded in repeated visits to the same location (visit_count, total_duration_s, last_visited, current address_name). Propose-only: the AI produces a typed geofence draft envelope (centroid lat/lon + radius_m + name) via two typed read-only tools (draft_geofence then validate_geofence) and the user reviews + clicks 'Apply to form' before SAVING IT THEMSELVES through the existing baseline POST /api/v1/geofences write path. The deterministic geofence list, Add Geofence modal, and map rendered by GeofencesPage at /geofences remain the canonical baseline when AI is off. The per-feature redaction policy keeps lat/long and street addresses tagged; only the vehicle name may be narrated."
+        },
+        "trip-postcard-share-card-image-generation": {
+          "label": "Trip postcard and share-card image generation",
+          "description": "Opt-in LLM-backed propose-only assistant that drafts a typed share-card image-prompt plus a render-ready share-card preview envelope (proposed title, optional subtitle, image_prompt, optional style/palette hint) for ONE existing trip, grounded in the trip's route context (start_place, end_place, drive count, distance, time window). The strategy NEVER generates image bytes, NEVER calls an external image-generation provider, NEVER persists or uploads anything; the user reviews the structured proposal in the AI panel and applies it through the existing manual share-link controls on /sharing/trips. The static /s/:token shared-drive baseline and existing share-link generator / list / copy / revoke controls remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home/work locations nor exact route geometry."
+        },
+        "vehicle-paint-preview": {
+          "label": "Vehicle paint preview",
+          "description": "Opt-in LLM-backed propose-only assistant that drafts a typed paint-preview image-prompt envelope (proposed color, image prompt, optional style hint) for ONE existing vehicle grounded in the vehicle's read-only model / trim / current exterior color. The strategy NEVER generates image bytes, NEVER calls an external image-generation provider, NEVER persists or applies a new color; the user reviews the structured proposal in the AI panel and applies the new paint color through the existing manual per-vehicle Color setting on /vehicles/:vehicleId. The existing vehicle photo gallery + manual exterior_color row + manual theme/appearance settings remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript reveals neither the vehicle's display name nor VIN nor any location."
+        },
+        "voice-mode": {
+          "label": "Helix voice mode",
+          "description": "Opt-in browser-local voice mode for the Helix chatbot on the /chatbot page. The browser handles speech-to-text (window.SpeechRecognition) and text-to-speech (window.speechSynthesis) entirely client-side — only the transcribed text is POSTed to /api/v1/ai/voice/chat and only the streamed text is spoken back. The backend strategy uses ONE read-only typed tool (stream_chatbot_response) that returns a deterministic envelope of recent chat history plus an install-wide vehicle snapshot so the LLM has the same class of grounding the text chatbot has, with a voice-specific system prompt that keeps replies conversational, short (1-3 sentences per turn), and free of markdown / lists / code blocks because TTS would otherwise read the syntax aloud. The user must explicitly press the mic button each turn — there is no always-on listening; the transcript draft is persisted to localStorage under 'ai.voiceMode.transcriptDraft' so an interrupted browser session can recover the last unsent utterance. Per-feature redaction policy is PolicyChatbot (Allow=nil; every PII class is tagged round-trip before the provider sees the message). The deterministic text-only /chatbot baseline page remains the canonical surface when AI is off; the voice card is ABSENT (ADR-015 §I3 + §I5 + §I12), so no audio capture, no TTS playback, and no localStorage key are touched in off mode."
+        },
+        "watch-face-nl-response": {
+          "label": "Helix watch face natural-language response",
+          "description": "Opt-in Helix narrator on the /watch route that answers glance-style natural-language questions (battery, range, charging, locks, climate, recent alerts) about the install's primary vehicle. The narrator uses ONE read-only typed tool (query_watch_context) that returns a deterministic envelope mirroring the deterministic /watch card state (vehicle_name, soc_percent, range_km AND range_mi, is_charging, time_to_full_min, is_locked, sentry_mode, inside_temp_c AND inside_temp_f, outside_temp_c AND outside_temp_f, is_climate_on, recent_alerts (max 5, non-critical, {severity, age_seconds} pair only — NO alert title, message body, or kind tag because the canonical notification_log table has no stable kind enum and the title is a templated string that may contain custom rule names / vehicle names / place names), last_updated). Both °C AND pre-computed °F fields are emitted side by side for every temperature reading, and both km AND mi fields are emitted side by side for range — the LLM picks whichever matches the user's preferred display unit rather than doing arithmetic on small local models (cToFPtr precedent in drive_coaching.go). Replies are 1-2 sentences, plain prose only (no markdown, no lists, no code blocks, no URLs) because watch panels render plain text and are 40-45 mm wide. The narrator is READ-only: it NEVER claims to have changed a setting, NEVER promises to send a vehicle command, NEVER says 'I have locked it' — the deterministic tap-icons on the watch face remain the only command path and continue to work regardless of whether this narrator is enabled. Per-feature redaction policy is PolicyChatbot (Allow=nil); the typed envelope omits PII (no GPS, no street names, no charger labels, no alert titles or message bodies) by construction, and the redaction policy is defence in depth in case a future edit widens the schema or the user's free-text question contains PII the policy will tag round-trip. The deterministic /watch route (battery gauge, status icons, tap-commands, /api/v1/watch/summary read path) remains the canonical surface when AI is off (ADR-015 §I3 + §I5 + §I6)."
+        }
       },
       "archive": {
         "title": "Restore previous Helix selection?",
@@ -10466,25 +10533,32 @@
       "stepLabel": "Step {{step}}",
       "goToStep": "Go to step {{step}}: {{label}}",
       "account": {
-        "label": "Tesla developer account"
+        "label": "Tesla developer account",
+        "desc": "Create a Tesla Developer account at developer.tesla.com"
       },
       "application": {
-        "label": "Create application"
+        "label": "Create application",
+        "desc": "Register a new application in the Tesla Developer Portal"
       },
       "keypair": {
-        "label": "Generate key pair"
+        "label": "Generate key pair",
+        "desc": "Generate an EC private/public key pair for Fleet API authentication"
       },
       "register": {
-        "label": "Register partner"
+        "label": "Register partner",
+        "desc": "Register as a Fleet API partner with your public key"
       },
       "auth": {
-        "label": "Authorize account"
+        "label": "Authorize account",
+        "desc": "Complete OAuth2 authorization to get API access tokens"
       },
       "pair": {
-        "label": "Pair vehicle key"
+        "label": "Pair vehicle key",
+        "desc": "Pair your public key with each vehicle for command access"
       },
       "telemetry": {
-        "label": "Fleet Telemetry"
+        "label": "Fleet Telemetry",
+        "desc": "Configure Fleet Telemetry streaming for real-time data"
       }
     },
     "health": {
@@ -11427,6 +11501,15 @@
         "barAria": "Signal source-layer distribution: {{l1}} live, {{stale}} stale, {{l2}} legacy, {{unknown}} unknown",
         "noVehicle": "Select a vehicle to see how its signals are distributed across the L1 / L2 / stale layers.",
         "empty": "No live signals to classify yet."
+      },
+      "kind": {
+        "numeric": "Numeric",
+        "boolean": "Boolean",
+        "text": "Text",
+        "enum": "Enum",
+        "time": "Time",
+        "compound": "Compound",
+        "other": "Other"
       }
     },
     "teslaOrders": {
@@ -15232,7 +15315,9 @@
       "greaterThanOrEqual": ">=",
       "changed": "Changed",
       "crossedAbove": "Crossed above",
-      "crossedBelow": "Crossed below"
+      "crossedBelow": "Crossed below",
+      "between": "Between",
+      "in": "In"
     },
     "event": {
       "triggered": "triggered",
@@ -17768,7 +17853,8 @@
       }
     },
     "browseDrives": "View all",
-    "batteryTrendTitle": "Battery trend"
+    "batteryTrendTitle": "Battery trend",
+    "batteryTrendEmpty": "Charge data will appear here"
   },
   "perf": {
     "title": "Fleet performance",
@@ -19314,7 +19400,13 @@
       "expired": "Expired",
       "activeCount": "active",
       "noData": "No subscriptions",
-      "title": "Subscriptions"
+      "title": "Subscriptions",
+      "premiumConnectivity": "Premium Connectivity",
+      "fsd": "Full Self-Driving",
+      "enhancedAutopilot": "Enhanced Autopilot",
+      "standardConnectivity": "Standard Connectivity",
+      "dataSharing": "Data sharing",
+      "satellite": "Satellite connectivity"
     },
     "superchargerHistory": {
       "currencyUnit": "$",
@@ -19549,7 +19641,12 @@
       "title": "Warranty status",
       "timeRemaining": "Time remaining",
       "daysUnit": "days",
-      "mileageRemaining": "Mileage remaining"
+      "mileageRemaining": "Mileage remaining",
+      "basic": "Basic",
+      "batteryDrive": "Battery/drive unit",
+      "corrosion": "Corrosion",
+      "emissions": "Emissions",
+      "body": "Body"
     },
     "noWatchData": "No watch data",
     "watchState": {
@@ -19755,7 +19852,11 @@
       "noStats": "No stats available"
     },
     "recentDrivesListDrive": "Drive",
-    "recentDrivesDurationUnit": "min"
+    "recentDrivesDurationUnit": "min",
+    "exportFailed": "Failed",
+    "exportQueued": "Queued",
+    "exportRunning": "Running",
+    "exportDone": "Done"
   },
   "operationalSummary": {
     "retained": "Retained source data",
@@ -22841,6 +22942,13 @@
         "changed": "changed",
         "between": "between",
         "outside": "outside"
+      },
+      "metricCategories": {
+        "driving": "Driving",
+        "energy": "Energy",
+        "charging": "Charging",
+        "battery": "Battery",
+        "cost": "Cost"
       }
     },
     "log": {
@@ -24973,6 +25081,13 @@
       "json": "JSON",
       "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
       "jsonDesc": "Structured JSON format for programmatic access"
+    },
+    "status": {
+      "failed": "Failed",
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "expired": "Expired"
     }
   },
   "dbHealth": {
@@ -28700,7 +28815,8 @@
       "ok": "Healthy",
       "warn": "Warning",
       "critical": "Critical"
-    }
+    },
+    "budgetResetIn": "Resets in {{duration}}"
   },
   "queueStatus": {
     "title": "Background workers",
@@ -33977,6 +34093,15 @@
       "scope": "Fleet-wide · {{scope}}",
       "freshness": "Independent source snapshots",
       "provenance": "Fleet assignment, reservation and work-order API records; inferred utilization forecast. Loaded counts are not server-wide totals."
+    },
+    "days": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
     }
   },
   "homeEnergy": {
@@ -37852,7 +37977,13 @@
       "empty": "No nudge yet.",
       "loading": "Reading departure window…",
       "slot": "calm {{time}}",
-      "blocker": "Blocker"
+      "blocker": "Blocker",
+      "verdict": {
+        "unknown": "Unknown",
+        "wait": "Wait",
+        "leave_now": "Leave now",
+        "delay": "Delay"
+      }
     },
     "live": {
       "loadFailed": "The live trip could not be loaded.",
@@ -37870,7 +38001,13 @@
       "wait": "{{time}} wait",
       "noNextStop": "No scored stop yet",
       "lastFix": "Last fix {{time}}",
-      "fixes": "{{count}} fixes"
+      "fixes": "{{count}} fixes",
+      "verdict": {
+        "unknown": "Unknown",
+        "ok": "On energy",
+        "attention": "Tight",
+        "action": "Charge soon"
+      }
     },
     "replan": {
       "loadFailed": "The route assessment could not be loaded.",
@@ -37880,7 +38017,13 @@
       "empty": "No deviation reading yet.",
       "loading": "Measuring deviation…",
       "offBy": "{{distance}} off corridor",
-      "scoring": "Rescoring stops…"
+      "scoring": "Rescoring stops…",
+      "verdict": {
+        "unknown": "Unknown",
+        "on_track": "On track",
+        "drifted": "Drifting",
+        "off_route": "Off route"
+      }
     },
     "arrival": {
       "loadFailed": "Arrival advice could not be loaded.",
@@ -37891,7 +38034,13 @@
       "loading": "Preparing arrival…",
       "moving": "moving",
       "shortfall": "top up ≈ {{energy}} en route",
-      "adjusted": "adjusted {{ratio}}× from {{count}} trips"
+      "adjusted": "adjusted {{ratio}}× from {{count}} trips",
+      "verdict": {
+        "unknown": "Unknown",
+        "ok": "Arrive with buffer",
+        "attention": "Arrive tight",
+        "action": "Top up en route"
+      }
     },
     "report": {
       "loadFailed": "The trip report could not be loaded.",
@@ -39449,7 +39598,11 @@
     "info": {
       "title": "Working with queries",
       "readonly": "This is a read-only composing surface. Nothing runs in the browser.",
-      "exampleLabel": "Example"
+      "exampleLabel": "Example",
+      "tip1": "Reference the catalog below for exact column names before you write a query.",
+      "tip2": "Values are stored in SI — meters, seconds, watt-hours. Convert to your units in your client.",
+      "tip3": "Use Copy query, then paste into psql, DBeaver, or TablePlus to execute.",
+      "tip4": "With Helix enabled, describe the question in plain English and apply the drafted SQL above."
     },
     "catalog": {
       "noDescription": "No description",
@@ -40141,7 +40294,13 @@
     "chart": {
       "title": "Your Consumption Law",
       "aria": "Scatter of drive consumption against speed with fitted curve and two-sigma band; outliers highlighted"
-    }
+    },
+    "reasonUnknown": "no obvious cause in the data",
+    "reasonCold": "much colder than usual",
+    "reasonHot": "much hotter than usual",
+    "reasonLowRegen": "unusually little regen",
+    "reasonCrawl": "stop-and-go crawling",
+    "reasonEfficient": "exceptionally efficient run"
   },
   "landscape": {
     "mph": "mph",
@@ -40240,7 +40399,13 @@
     "resultsLabel": "Help results",
     "noResults": "Nothing in the help index matches that. Try a shorter word, or send a problem report below.",
     "title": "Search the help index",
-    "subtitle": "Definitions, pages and troubleshooting, indexed by term and route. Results are the same every time — no model, no network."
+    "subtitle": "Definitions, pages and troubleshooting, indexed by term and route. Results are the same every time — no model, no network.",
+    "kind": {
+      "page": "Page",
+      "glossary": "Definition",
+      "task": "Setup task",
+      "troubleshooting": "Troubleshooting"
+    }
   },
   "releaseNotes": {
     "badge": {
@@ -40252,7 +40417,13 @@
     "empty": "No releases have been published yet.",
     "actionNeeded": "Action needed",
     "migration": "Migration",
-    "itemActionPrefix": "Action:"
+    "itemActionPrefix": "Action:",
+    "audience": {
+      "allUsers": "All users",
+      "fleetOperators": "Fleet operators",
+      "administrators": "Administrators",
+      "developers": "API consumers"
+    }
   },
   "supportBundle": {
     "source": {
@@ -40359,14 +40530,74 @@
     "aria": "Score {{grade}}"
   },
   "dataUnavailable": {
-    "whatToDo": "What to do"
+    "whatToDo": "What to do",
+    "vehicleAsleep": {
+      "body": "Tesla stops reporting while a vehicle sleeps. The values shown are the last ones received before it slept.",
+      "whatToDo": "Nothing — this is normal and preserves range. Data resumes automatically when the vehicle wakes.",
+      "title": "The vehicle is asleep"
+    },
+    "vehicleOffline": {
+      "body": "The vehicle is not reachable — usually no cellular coverage, or the car is in a garage or transport mode.",
+      "whatToDo": "Wait for connectivity to return. Repeated wake attempts will not help and consume range.",
+      "title": "The vehicle is offline"
+    },
+    "permission": {
+      "body": "The server refused the request for this scope. This is an access decision, not a failure — the data may well exist.",
+      "whatToDo": "Request access from an administrator. Retrying or reloading will return the same result.",
+      "title": "Your account cannot read this data"
+    },
+    "retention": {
+      "body": "Rows older than the configured retention horizon are deleted permanently, so no query can return them.",
+      "whatToDo": "Shorten the range to stay inside retention, or ask an administrator to extend the retention policy.",
+      "title": "Part of this range is older than the retention window"
+    },
+    "ingestionLag": {
+      "body": "The newest stored row is older than expected, so recent activity has not been written yet.",
+      "whatToDo": "Wait for the pipeline to catch up. If the gap keeps growing, check pipeline health.",
+      "title": "Ingestion is behind"
+    },
+    "filterScope": {
+      "body": "The query succeeded and returned zero rows for the selected vehicle, date range and filters.",
+      "whatToDo": "Widen the date range or clear filters before concluding that the data is missing.",
+      "title": "No records match the current filters"
+    },
+    "serviceOutage": {
+      "body": "A dependency this view needs is unreachable or erroring, so the request could not be answered.",
+      "whatToDo": "Check system status for a known incident. The view recovers automatically once the dependency returns.",
+      "title": "A required service did not respond"
+    }
   },
   "errorHelp": {
     "title": "Where to look next"
   },
   "accessGuidance": {
     "grantedByLabel": "Who can grant this",
-    "stepsLabel": "How to request access"
+    "stepsLabel": "How to request access",
+    "unauthenticated": {
+      "title": "Your session is no longer valid",
+      "explanation": "The server did not recognise a signed-in identity for this request. Sessions expire, and signing in again restores exactly the access you had before.",
+      "grantedBy": "You — no administrator involvement is needed."
+    },
+    "forbidden": {
+      "title": "Your account is not entitled to this",
+      "explanation": "You are signed in, and the server understood the request — it declined it because your account lacks the required role for this resource. The data is not missing.",
+      "grantedBy": "An administrator of this TeslaSync install, or the owner of the vehicle whose data you need."
+    },
+    "openMode": {
+      "title": "This install has no user accounts",
+      "explanation": "The deployment runs without an identity provider, so there is no per-user identity to attach this feature to. This is a deployment choice, not a fault.",
+      "grantedBy": "Whoever operates this deployment."
+    },
+    "featureDisabled": {
+      "title": "This feature is switched off for this deployment",
+      "explanation": "The capability exists in this build but is disabled by configuration, so the server will keep declining it until that changes.",
+      "grantedBy": "An administrator, via feature configuration."
+    },
+    "readOnly": {
+      "title": "Changes are temporarily disabled",
+      "explanation": "The app is in a read-only state — historical browsing or maintenance. Reading works normally; writes are refused so nothing is applied to the wrong point in time.",
+      "grantedBy": "Resolves on its own, or via the operator running maintenance."
+    }
   },
   "glossary": {
     "tooltipLabel": "What is {{term}}?",
@@ -40431,7 +40662,13 @@
   },
   "signalCatalog": {
     "removeSignal": "Remove {{name}} from selection",
-    "addSignal": "Add {{name}} to selection"
+    "addSignal": "Add {{name}} to selection",
+    "staleness": {
+      "never": "Never received",
+      "active": "Active",
+      "aging": "Aging",
+      "stale": "Stale"
+    }
   },
   "vehicleVisualization": {
     "status": {

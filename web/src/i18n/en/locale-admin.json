@@ -722,6 +722,15 @@
         "barAria": "Signal source-layer distribution: {{l1}} live, {{stale}} stale, {{l2}} legacy, {{unknown}} unknown",
         "noVehicle": "Select a vehicle to see how its signals are distributed across the L1 / L2 / stale layers.",
         "empty": "No live signals to classify yet."
+      },
+      "kind": {
+        "numeric": "Numeric",
+        "boolean": "Boolean",
+        "text": "Text",
+        "enum": "Enum",
+        "time": "Time",
+        "compound": "Compound",
+        "other": "Other"
       }
     },
     "teslaOrders": {
@@ -1705,25 +1714,32 @@
       "stepLabel": "Step {{step}}",
       "goToStep": "Go to step {{step}}: {{label}}",
       "account": {
-        "label": "Tesla developer account"
+        "label": "Tesla developer account",
+        "desc": "Create a Tesla Developer account at developer.tesla.com"
       },
       "application": {
-        "label": "Create application"
+        "label": "Create application",
+        "desc": "Register a new application in the Tesla Developer Portal"
       },
       "keypair": {
-        "label": "Generate key pair"
+        "label": "Generate key pair",
+        "desc": "Generate an EC private/public key pair for Fleet API authentication"
       },
       "register": {
-        "label": "Register partner"
+        "label": "Register partner",
+        "desc": "Register as a Fleet API partner with your public key"
       },
       "auth": {
-        "label": "Authorize account"
+        "label": "Authorize account",
+        "desc": "Complete OAuth2 authorization to get API access tokens"
       },
       "pair": {
-        "label": "Pair vehicle key"
+        "label": "Pair vehicle key",
+        "desc": "Pair your public key with each vehicle for command access"
       },
       "telemetry": {
-        "label": "Fleet Telemetry"
+        "label": "Fleet Telemetry",
+        "desc": "Configure Fleet Telemetry streaming for real-time data"
       }
     },
     "health": {
@@ -2107,7 +2123,8 @@
       "ok": "Healthy",
       "warn": "Warning",
       "critical": "Critical"
-    }
+    },
+    "budgetResetIn": "Resets in {{duration}}"
   },
   "redis": {
     "signalName": "Signal name",

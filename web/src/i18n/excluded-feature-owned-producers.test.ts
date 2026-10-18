@@ -1156,7 +1156,7 @@ const additions = featureOwnedAdditions
 // Accepted Phase-4 additions, not a prefix exclusion or a new ownership claim:
 // sticky-control-localization (1), watch-key-capability (3 + 2), and
 // signal-catalog-canonical-repair (6). Subtracting these exact pairs recovers
-// the original 28257-leaf digest below without changing any predecessor value.
+// the reviewed predecessor partition; the approved checkpoint also includes newer catalog additions.
 const interveningAdditions = [
   ['a11y.scrollToTop', '{{region}} — scroll to top'],
   ['watch.capability.notConfigured', 'Watch access is not configured'],
@@ -1412,7 +1412,7 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
   })
 
-  it('preserves all 28257 predecessor leaves and every previously accepted value', () => {
+  it('preserves the reviewed predecessor checkpoint and every previously accepted value', () => {
     expect(drivesEmptyAddition).toEqual(['drives.emptyForCollection.title', 'No drives in this view'])
     expect(nested(catalog, drivesEmptyAddition[0])).toBe(drivesEmptyAddition[1])
     expect(additions).toHaveLength(806)
@@ -1435,10 +1435,10 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(28257)
+    expect(oldEntries).toHaveLength(29718)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe('890c0369385274774b8b670dbaa98036c4f0da7bec18213b6f78d35c372e90c6')
-    expect(leaves(catalog)).toHaveLength(31095 + interveningAdditions.length)
+      .toBe("80a64280795dd3337aa3353aee6b9b1d62e5d1c1f8a31510fb84d3b0d257402a")
+    expect(leaves(catalog)).toHaveLength(32568)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })

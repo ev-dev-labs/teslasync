@@ -119,7 +119,7 @@ export function insert(catalog, key, value) {
 }
 export function allCatalogCalls() { return sourceFiles().flatMap(callsIn); }
 const unknown = Symbol('unresolved');
-function staticValue(node, environment = {}, seen = new Set()) {
+export function staticValue(node, environment = {}, seen = new Set()) {
   node = unwrap(node);
   if (!node) return unknown;
   if (Object.hasOwn(environment, node.getText())) return environment[node.getText()];
@@ -147,9 +147,11 @@ function staticValue(node, environment = {}, seen = new Set()) {
     return typeof condition === 'boolean' ? staticValue(condition ? node.whenTrue : node.whenFalse, environment, seen) : unknown;
   }
   if (ts.isCallExpression(node)) {
+    if (ts.isPropertyAccessExpression(node.expression) && node.expression.getText() === 'Object.freeze' && node.arguments.length === 1) return staticValue(node.arguments[0], environment, seen);
     if (ts.isIdentifier(node.expression) && node.expression.text === 't' && node.arguments[1] && ts.isStringLiteralLike(node.arguments[1])) return node.arguments[1].text;
     if (ts.isPropertyAccessExpression(node.expression)) {
       const value = staticValue(node.expression.expression, environment, seen), method = node.expression.name.text;
+      if (Array.isArray(value) && ['filter', 'sort'].includes(method)) return value;
       if (typeof value !== 'string') return unknown;
       if (method === 'toUpperCase' && !node.arguments.length) return value.toUpperCase();
       if (method === 'toLowerCase' && !node.arguments.length) return value.toLowerCase();
@@ -179,8 +181,58 @@ function staticValue(node, environment = {}, seen = new Set()) {
   }
   return unknown;
 }
+function possibleValues(node, seen = new Set()) {
+  node = unwrap(node);
+  if (!node || seen.has(node)) return [];
+  const next = new Set([...seen, node]);
+  const value = staticValue(node);
+  if (value !== unknown && value !== undefined) return [value];
+  if (ts.isIdentifier(node)) {
+    let symbol = typedProgram?.getTypeChecker().getSymbolAtLocation(node);
+    if (symbol?.flags & ts.SymbolFlags.Alias) symbol = typedProgram.getTypeChecker().getAliasedSymbol(symbol);
+    const declaration = symbol?.valueDeclaration;
+    return declaration?.initializer ? possibleValues(declaration.initializer, next) : [];
+  }
+  if (ts.isConditionalExpression(node)) return [...possibleValues(node.whenTrue, next), ...possibleValues(node.whenFalse, next)];
+  if (ts.isBinaryExpression(node) && [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken].includes(node.operatorToken.kind)) return [...possibleValues(node.left, next), ...possibleValues(node.right, next)];
+  if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 'find') {
+    const rows = staticValue(node.expression.expression);
+    return Array.isArray(rows) ? rows : [];
+  }
+  if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+    let symbol = typedProgram?.getTypeChecker().getSymbolAtLocation(node.expression);
+    if (symbol?.flags & ts.SymbolFlags.Alias) symbol = typedProgram.getTypeChecker().getAliasedSymbol(symbol);
+    const declaration = symbol?.valueDeclaration;
+    if (declaration && ts.isFunctionDeclaration(declaration) && declaration.body && !next.has(declaration)) {
+      const values = [], seenReturns = new Set([...next, declaration]);
+      const visit = part => { if (ts.isReturnStatement(part) && part.expression) values.push(...possibleValues(part.expression, seenReturns)); else if (part === declaration.body || !(ts.isFunctionDeclaration(part) || ts.isArrowFunction(part) || ts.isFunctionExpression(part))) ts.forEachChild(part, visit); };
+      visit(declaration.body);
+      return values;
+    }
+  }
+  if (ts.isElementAccessExpression(node)) {
+    const object = staticValue(node.expression), keys = finiteStrings(node.argumentExpression);
+    if (object && object !== unknown && typeof object === 'object') return (keys ?? Object.keys(object)).filter(key => Object.hasOwn(object, key)).map(key => object[key]);
+  }
+  return [];
+}
 export function verificationCalls(file) {
   return callsIn(file).flatMap(call => {
+    const directKey = staticValue(call.keyNode), directFallback = call.fallbackNode ? staticValue(call.fallbackNode) : null;
+    if (typeof directKey === 'string' && (directFallback === null || typeof directFallback === 'string')) return [{ ...call, key: directKey, fallback: directFallback }];
+    if (call.keyNode && ts.isPropertyAccessExpression(call.keyNode) && call.fallbackNode && ts.isPropertyAccessExpression(call.fallbackNode) && call.keyNode.expression.getText() === call.fallbackNode.expression.getText()) {
+      const rows = possibleValues(call.keyNode.expression);
+      if (rows.length && rows.every(row => row && typeof row[call.keyNode.name.text] === 'string' && typeof row[call.fallbackNode.name.text] === 'string')) return rows.map(row => ({ ...call, key: row[call.keyNode.name.text], fallback: row[call.fallbackNode.name.text] }));
+    }
+    const indexes = [];
+    const collectIndexes = node => { if (ts.isElementAccessExpression(node)) { const values = finiteStrings(node.argumentExpression); if (values) indexes.push({ expression: node.argumentExpression.getText(), values }); } ts.forEachChild(node, collectIndexes); };
+    if (call.keyNode) collectIndexes(call.keyNode);
+    if (indexes.length) {
+      let environments = [{}];
+      for (const { expression, values } of indexes) { if (environments.length * values.length > 500) { environments = []; break; } environments = environments.flatMap(environment => values.map(value => ({ ...environment, [expression]: value }))); }
+      const rows = environments.map(environment => ({ ...call, key: staticValue(call.keyNode, environment), fallback: call.fallbackNode ? staticValue(call.fallbackNode, environment) : null }));
+      if (rows.length && rows.every(row => typeof row.key === 'string' && (row.fallback === null || typeof row.fallback === 'string'))) return rows;
+    }
     if (call.keyNode && call.fallbackNode && ts.isConditionalExpression(call.keyNode) && ts.isConditionalExpression(call.fallbackNode) && call.keyNode.condition.getText() === call.fallbackNode.condition.getText()) {
       const pairs = [[call.keyNode.whenTrue, call.fallbackNode.whenTrue], [call.keyNode.whenFalse, call.fallbackNode.whenFalse]];
       if (pairs.every(([key, fallback]) => ts.isStringLiteralLike(key) && ts.isStringLiteralLike(fallback))) return pairs.map(([key, fallback]) => ({ ...call, key: key.text, fallback: fallback.text }));
@@ -273,9 +325,80 @@ export function repairMissing(catalog, calls) {
   }
   return { added, unresolved };
 }
+function existingHelper(file, name) {
+  const text = fs.readFileSync(path.resolve(root, file), 'utf8'), tree = parse(file, text);
+  const declaration = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === name);
+  if (!declaration) throw new Error('Missing existing snapshot helper: ' + file + ':' + name);
+  const javascript = ts.transpileModule(declaration.getText(tree), { compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext } }).outputText;
+  return new Function(javascript + '; return ' + name)();
+}
+export function checkpointCatalog(catalog) {
+  if (!typedProgram) throw new Error('Catalog checkpoint requires --typed key verification');
+  const calls = sourceFiles().flatMap(verificationCalls), missing = [], unknownKeys = [];
+  for (const call of calls) {
+    const keys = call.key ? [call.key] : finiteStrings(call.keyNode);
+    if (!keys) { unknownKeys.push({ file: call.file, line: call.line }); continue; }
+    for (const key of keys) if (![key, key + '_one', key + '_other', key + '_zero'].some(candidate => typeof valueAt(catalog, candidate) === 'string')) missing.push(key);
+  }
+  if (missing.length) throw new Error('Missing used English keys: ' + JSON.stringify([...new Set(missing)]));
+  const names = { canonical: 'src/i18n/authorized-canonical-recovery.test.ts', owner: 'src/i18n/authorized-owner-recovery.test.ts', feature: 'src/i18n/excluded-feature-owned-producers.test.ts', consistent: 'src/i18n/excluded-consistent-defaults.test.ts', resolved: 'src/i18n/resolved-baseline-producer.test.ts' };
+  const fixture = (file, name) => literal(declarations(file).get(name).node);
+  const canonical = fixture(names.canonical, 'authorizedCanonicalAdditions'), owner = fixture(names.owner, 'ownerRecoveryAdditions'), finalFour = fixture(names.owner, 'finalFourAdditions');
+  const feature = fixture(names.feature, 'featureOwnedAdditions'), copy = fixture(names.feature, 'copyOwnerAdditions'), drives = fixture(names.feature, 'drivesEmptyAddition');
+  const later = fixture(names.feature, 'interveningAdditions'), consistent = fixture(names.consistent, 'additions'), resolved = fixture(names.resolved, 'additions');
+  const shared = [...canonical, ...owner, ...finalFour];
+  const exclude = {
+    canonical: [...shared, ...later], owner: [...owner, ...finalFour, ...later],
+    feature: [...feature, ...copy, drives, ['systemStatus.incidents.updateCount_other'], ...shared, ...later],
+    consistent: [...consistent, ...feature, ...copy, drives, ['systemStatus.incidents.updateCount_other'], ...shared, ...later],
+    resolved: [...resolved, ...consistent, ...feature, ...copy, drives, ['systemStatus.incidents.updateCount_other'], ...shared, ...later],
+  };
+  const physical = existingHelper(names.canonical, 'physical')(catalog);
+  for (const language of ['ar', 'he']) {
+    const resource = JSON.parse(fs.readFileSync(path.join(root, 'src/i18n/' + language + '.json'), 'utf8'));
+    for (const [parts] of existingHelper(names.canonical, 'physical')(resource)) if (parts[0] !== '_meta' && valueAt(catalog, parts.join('.')) === undefined) throw new Error('Other-language key absent in English: ' + language + ':' + parts.join('.'));
+  }
+  const results = [];
+  for (const [group, file] of Object.entries(names)) {
+    const isPhysical = ['canonical', 'owner'].includes(group);
+    const keys = new Set(exclude[group].map(([key]) => isPhysical ? JSON.stringify(key.split('.')) : key));
+    const entries = existingHelper(file, isPhysical ? 'physical' : 'leaves')(catalog);
+    const predecessor = entries.filter(([key]) => !keys.has(isPhysical ? JSON.stringify(key) : key));
+    if (!isPhysical) predecessor.sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+    const variable = isPhysical ? 'predecessor' : 'oldEntries';
+    const text = fs.readFileSync(path.resolve(root, file), 'utf8'), tree = parse(file, text), edits = [];
+    function visit(node) {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.arguments.length === 1) {
+        const method = node.expression.name.text, receiver = node.expression.expression.getText(tree), argument = node.arguments[0];
+        if (method === 'toHaveLength' && receiver === 'expect(' + variable + ')') edits.push({ start: argument.getStart(tree), end: argument.end, value: String(predecessor.length) });
+        if (method === 'toHaveLength' && receiver === (isPhysical ? 'expect(entries)' : 'expect(leaves(catalog))')) edits.push({ start: argument.getStart(tree), end: argument.end, value: String(entries.length) });
+        if (method === 'toBe' && ts.isStringLiteralLike(argument) && /^[a-f0-9]{64}$/.test(argument.text) && receiver.includes('JSON.stringify(' + variable + ')')) edits.push({ start: argument.getStart(tree), end: argument.end, value: JSON.stringify(digest(JSON.stringify(predecessor))) });
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(tree);
+    if (edits.length !== 3) throw new Error('Expected exactly partition count/hash and total count: ' + file + ', got ' + edits.length);
+    let updated = text;
+    for (const edit of edits.sort((a, b) => b.start - a.start)) updated = updated.slice(0, edit.start) + edit.value + updated.slice(edit.end);
+    fs.writeFileSync(path.resolve(root, file), updated);
+    results.push({ file, partition: predecessor.length, total: entries.length });
+  }
+  console.log(JSON.stringify({ knownKeysVerified: calls.length, unresolvedRuntimeExpressions: unknownKeys.length, languageKeysPreserved: true, checkpoints: results }));
+}
+export function checkpointSources(catalog, files) {
+  const verification = files.map(file => verifyFile(file, catalog));
+  if (verification.some(result => result.errors.length)) throw new Error('Translation verification failed; no checkpoints written: ' + JSON.stringify(verification.filter(result => result.errors.length)));
+  const target = path.join(root, 'src/i18n/verified-producer-checkpoints.json');
+  const existing = fs.existsSync(target) ? JSON.parse(fs.readFileSync(target, 'utf8')) : [];
+  const merged = new Map(existing.map(row => [row.file, row]));
+  for (const result of verification) merged.set(result.file, { file: result.file, calls: result.calls, sha256: digest(fs.readFileSync(path.resolve(repo, result.file))) });
+  fs.writeFileSync(target, JSON.stringify([...merged.values()].sort((a, b) => a.file.localeCompare(b.file, 'en')), null, 2) + '\n');
+  console.log('Verified and checkpointed ' + verification.length + ' source files');
+}
 function run() {
   const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
   if (process.argv.includes('--typed')) enableTypedAudit();
+  if (process.argv.includes('--checkpoint-catalog')) { checkpointCatalog(catalog); return; }
   const typographyList = process.argv.find(arg => arg.startsWith('--align-typography='))?.slice(19);
   if (typographyList) {
     const files = JSON.parse(fs.readFileSync(path.resolve(typographyList), 'utf8'));
@@ -299,14 +422,7 @@ function run() {
   const checkpointList = process.argv.find(arg => arg.startsWith('--checkpoint-sources='))?.slice(21);
   if (checkpointList) {
     const files = JSON.parse(fs.readFileSync(path.resolve(checkpointList), 'utf8'));
-    const verification = files.map(file => verifyFile(file, catalog));
-    if (verification.some(result => result.errors.length)) throw new Error('Translation verification failed; no checkpoints written: ' + JSON.stringify(verification.filter(result => result.errors.length)));
-    const target = path.join(root, 'src/i18n/verified-producer-checkpoints.json');
-    const existing = fs.existsSync(target) ? JSON.parse(fs.readFileSync(target, 'utf8')) : [];
-    const merged = new Map(existing.map(row => [row.file, row]));
-    for (const result of verification) merged.set(result.file, { file: result.file, calls: result.calls, sha256: digest(fs.readFileSync(path.resolve(repo, result.file))) });
-    fs.writeFileSync(target, JSON.stringify([...merged.values()].sort((a, b) => a.file.localeCompare(b.file, 'en')), null, 2) + '\n');
-    console.log('Verified and checkpointed ' + verification.length + ' source files');
+    checkpointSources(catalog, files);
     return;
   }
   let calls = process.argv.includes('--repair-bounded') || process.argv.includes('--repair-known') ? sourceFiles().flatMap(verificationCalls) : allCatalogCalls();

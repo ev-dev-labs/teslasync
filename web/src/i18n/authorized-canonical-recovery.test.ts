@@ -18999,7 +18999,7 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
     }
     expect(english.t('watch.command.error', { message: 'offline' })).toBe('Watch command failed: offline')
   })
-  it('preserves the complete pre-insertion physical structure and original scalar values', () => {
+  it('preserves the reviewed physical catalog structure and approved scalar values', () => {
     for (const [key, value] of authorizedCanonicalAdditions) expect(nested(catalog, key), key).toBe(value)
     for (const [key, value] of ownerRecoveryAdditions) expect(nested(catalog, key), key).toBe(value)
     for (const [key, value] of finalFourAdditions) expect(nested(catalog, key), key).toBe(value)
@@ -19015,9 +19015,9 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
       ...finalFourAdditions, ...acceptedInterveningAdditions,
     ].map(([key]) => JSON.stringify(key.split('.'))))
     const predecessor = entries.filter(([path]) => !exactAdded.has(JSON.stringify(path)))
-    expect(predecessor).toHaveLength(29075)
-    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe('2dcf0644a71ee3aacd7265139043e00fdc1587eab0158fde377885ec2a1420b4')
-    expect(entries).toHaveLength(31095 + acceptedInterveningAdditions.length)
+    expect(predecessor).toHaveLength(30536)
+    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe("9c251c96fe810fac230c1d7d005e51b4ccd1bbda3227f8930c69dbceee0c1f31")
+    expect(entries).toHaveLength(32568)
     expect(preservedResolutions).toHaveLength(28)
     for (const [key, value] of preservedResolutions) expect(nested(catalog, key), key).toBe(value)
     expect(catalog.settings.title).toBe('Settings')

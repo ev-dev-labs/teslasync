@@ -1258,7 +1258,13 @@
       "expired": "Expired",
       "activeCount": "active",
       "noData": "No subscriptions",
-      "title": "Subscriptions"
+      "title": "Subscriptions",
+      "premiumConnectivity": "Premium Connectivity",
+      "fsd": "Full Self-Driving",
+      "enhancedAutopilot": "Enhanced Autopilot",
+      "standardConnectivity": "Standard Connectivity",
+      "dataSharing": "Data sharing",
+      "satellite": "Satellite connectivity"
     },
     "superchargerHistory": {
       "currencyUnit": "$",
@@ -1493,7 +1499,12 @@
       "title": "Warranty status",
       "timeRemaining": "Time remaining",
       "daysUnit": "days",
-      "mileageRemaining": "Mileage remaining"
+      "mileageRemaining": "Mileage remaining",
+      "basic": "Basic",
+      "batteryDrive": "Battery/drive unit",
+      "corrosion": "Corrosion",
+      "emissions": "Emissions",
+      "body": "Body"
     },
     "noWatchData": "No watch data",
     "watchState": {
@@ -1699,6 +1710,10 @@
       "noStats": "No stats available"
     },
     "recentDrivesListDrive": "Drive",
-    "recentDrivesDurationUnit": "min"
+    "recentDrivesDurationUnit": "min",
+    "exportFailed": "Failed",
+    "exportQueued": "Queued",
+    "exportRunning": "Running",
+    "exportDone": "Done"
   }
 }

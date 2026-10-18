@@ -384,3 +384,21 @@ Reviewed six genuine key collisions and gave their existing source text dedicate
 Latest completed trio run: **7,580 passed / 92 failed / 0 skipped**, 7,672 executions. **397 original failures closed**. A final rerun after the last 102 additions and catalog generation follows below.
 
 Final group verification: **7,580 passed / 92 failed / 0 skipped; zero new failing identities**. Catalog split check: **PASS**, 57 grouped bundles, 181 fallback bundles, 1,283 shell keys, zero known-missing manifest keys.
+
+## Reviewed catalog checkpoint and remaining finite domains
+
+Reviewed the 74 outstanding defaults directly in their owners: range preference labels, warranty/subscription definitions, AI registry names/descriptions, Fleet API onboarding steps, signal-kind/staleness metadata, computed-metric category labels, SQL tips, day labels and the budget reset hint. Copied their existing English verbatim. Broader constant-return and lookup analysis recovered another 86 missing defaults, including the two automation operators that correctly blocked checkpoint regeneration on its first attempt.
+
+After this repair, the typed known-key audit reports **zero missing keys**. The audit still lists 268 unresolved runtime expressions; these are not claimed as verified finite domains and their associated source contracts remain pending where applicable. All non-metadata Arabic/Hebrew keys have English counterparts; no pre-existing English key was removed or changed. The catalog now has 32,568 physical leaves, **705 more than the starting catalog**, including the explicitly scoped context repairs.
+
+### Decisions made: current catalog history
+
+Advanced all five history checkpoints to the reviewed current catalog using `node web/scripts/i18n-trio-checkpoint.mjs --typed --checkpoint-catalog`. The command refuses missing known keys and missing other-language counterparts. It reuses each test’s existing physical/leaves traversal and SHA-256/JSON mechanism, retains the exact historical exclusion sets and all explicit key/value/interpolation/PWA assertions, and regenerates only each partition count/hash and total leaf count. No hashes were hand-edited. The five partitions contain 30,536 / 32,457 / 29,718 / 29,637 / 29,619 leaves respectively; each total is 32,568.
+
+### Decisions made: source defaults
+
+Qualified Dashboard title/subtitle calls with the existing dashboard keys, avoiding unrelated root title/subtitle strings. Aligned 17 same-context defaults with the text users already receive from the current catalog. Scoped the drive-end SOC trend empty message separately from battery-health emptiness, preserving its existing caller wording. Replaced eight palette defaults that had interpolated values inside template literals with the exact catalog interpolation templates; their existing count/name/command/query/keys operands remain intact.
+
+**139 of 151 source files now pass verification and have generated current full-source checkpoints.** Twelve files remain under review; their previous contracts stay active. Both combined source contracts remain unchanged pending their own complete translation verification. Final group suite/catalog results follow.
+
+Group verification: **7,630 passed / 42 failed / 0 skipped**, still 7,672 executions. **447 original failures closed; zero new failing identities**. Catalog split check: **PASS**, 57 grouped bundles, 181 fallbacks, 1,319 shell keys, zero known-missing manifest keys.

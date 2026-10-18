@@ -21,7 +21,8 @@
       "thu": "Thu",
       "fri": "Fri",
       "sat": "Sat",
-      "sun": "Sun"
+      "sun": "Sun",
+      "unknown": "Unknown"
     },
     "sections": {
       "consistency": "Departure consistency by weekday",

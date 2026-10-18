@@ -214,7 +214,7 @@ function DashboardMoreMenu({
             className={cn(ACTION_TARGET, 'w-full justify-start')}
           >
             <Icon icon={Tv} className={typography.color.muted} />
-            {t('dashboard.kiosk', 'Kiosk mode')}
+            {t('dashboard.kiosk', "Kiosk")}
           </Button>
           <PrintButton
             label={t('dashboard.printSnapshot', 'Print snapshot')}
@@ -229,7 +229,7 @@ function DashboardMoreMenu({
 
 export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
-  usePageTitle(t('title', 'Fleet operations'));
+  usePageTitle(t("dashboard.title", 'Fleet operations'));
   const queryClient = useQueryClient();
 
   /* ——— Dashboard layout state ——— */
@@ -557,9 +557,9 @@ export default function DashboardPage() {
   return (
     <PageLayout
       actionLayout="scope-first"
-      title={t('title', 'Fleet operations')}
+      title={t("dashboard.title", 'Fleet operations')}
       subtitle={t(
-        'subtitle',
+        "dashboard.subtitle",
         'Monitor readiness, investigate exceptions, and act from one workspace',
       )}
       contextActions={dashboards.length > 0 && vehicleList.length > 0 && !vehiclesLoading ? (
@@ -631,7 +631,7 @@ export default function DashboardPage() {
                   <span className="min-w-0 sm:flex-1">
                     {t(
                       'dashboard.customizeHint',
-                      'You can customize this dashboard. Add the signals and workflows your team uses most.',
+                      "You can customize this dashboard. Tap the + to add widgets.",
                     )}
                   </span>
                   <Button
@@ -656,7 +656,7 @@ export default function DashboardPage() {
                 icon={<Icon icon={AlertCircle} size="lg" />}
                 title={t('auth.notConnected', 'Tesla account not connected')}
               >
-                {t('auth.connectPrompt', 'Reconnect your account in')}{' '}
+                {t('auth.connectPrompt', "Connect your account in")}{' '}
                 <Link to="/settings" className={cn(typography.weight.medium, typography.color.primary, 'underline underline-offset-2')}>
                   {t('auth.settings', 'Settings')}
                 </Link>{' '}
@@ -841,22 +841,22 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
   const features = [
     {
       icon: Activity,
-      label: t('onboarding.tracking', 'Live telemetry'),
+      label: t('onboarding.tracking', "Real-time Tracking"),
       description: t('onboarding.trackingHelp', 'See current vehicle state and data freshness.'),
     },
     {
       icon: Route,
-      label: t('onboarding.drives', 'Drive intelligence'),
+      label: t('onboarding.drives', "Drive history"),
       description: t('onboarding.drivesHelp', 'Review routes, efficiency, and driving patterns.'),
     },
     {
       icon: BatteryCharging,
-      label: t('onboarding.charging', 'Energy analytics'),
+      label: t('onboarding.charging', "Charge analytics"),
       description: t('onboarding.chargingHelp', 'Understand charging cost and battery health.'),
     },
     {
       icon: Shield,
-      label: t('onboarding.control', 'Fleet operations'),
+      label: t('onboarding.control', "Vehicle control"),
       description: t('onboarding.controlHelp', 'Manage alerts, automations, and vehicle actions.'),
     },
   ];
@@ -896,13 +896,13 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
           <div className="mt-6 max-w-2xl">
             <Heading level="section">
               {authenticated
-                ? t('onboarding.syncTitle', 'Bring your vehicles into TeslaSync')
-                : t('onboarding.title', 'Build a live operating picture of your Tesla fleet')}
+                ? t('onboarding.syncTitle', "Sync your vehicles")
+                : t('onboarding.title', "Welcome to TeslaSync")}
             </Heading>
             <Text as="p" variant="bodySm" className="mt-3 max-w-xl leading-relaxed">
               {authenticated
-                ? t('onboarding.syncDesc', 'Your account is authorized. Sync the vehicle inventory to activate live status, analytics, and operational workflows.')
-                : t('onboarding.desc', 'Connect your Tesla account to create a private, self-hosted workspace for live monitoring, historical analysis, and fleet operations.')}
+                ? t('onboarding.syncDesc', "Your Tesla account is connected. Sync your vehicles to start tracking.")
+                : t('onboarding.desc', "The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.")}
             </Text>
           </div>
           <div className="mt-7 flex flex-wrap items-center gap-3">

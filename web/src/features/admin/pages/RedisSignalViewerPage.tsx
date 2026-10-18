@@ -403,7 +403,7 @@ export default function RedisSignalViewerPage() {
   return (
     <PageLayout
       title={t('redis.title', 'Redis signal viewer')}
-      subtitle={t('redis.subtitle', 'Inspect cached signal values in Redis (L2)')}
+      subtitle={t('redis.subtitle', "Inspect cached signal values in Redis")}
       contextActions={actions}
       dataSources={[{
         id: 'redis-signals',

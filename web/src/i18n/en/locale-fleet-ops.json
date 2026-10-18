@@ -332,6 +332,15 @@
       "scope": "Fleet-wide · {{scope}}",
       "freshness": "Independent source snapshots",
       "provenance": "Fleet assignment, reservation and work-order API records; inferred utilization forecast. Loaded counts are not server-wide totals."
+    },
+    "days": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
     }
   },
   "achievements": {

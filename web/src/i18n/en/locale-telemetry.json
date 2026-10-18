@@ -118,7 +118,13 @@
   },
   "signalCatalog": {
     "removeSignal": "Remove {{name}} from selection",
-    "addSignal": "Add {{name}} to selection"
+    "addSignal": "Add {{name}} to selection",
+    "staleness": {
+      "never": "Never received",
+      "active": "Active",
+      "aging": "Aging",
+      "stale": "Stale"
+    }
   },
   "signalChangePoints": {
     "title": "Signal change points",

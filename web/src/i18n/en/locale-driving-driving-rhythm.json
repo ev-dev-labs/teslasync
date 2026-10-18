@@ -606,6 +606,7 @@
       "sun": "Sun",
       "thu": "Thu",
       "tue": "Tue",
+      "unknown": "Unknown",
       "wed": "Wed"
     },
     "driveCount": "{{count}} drives",

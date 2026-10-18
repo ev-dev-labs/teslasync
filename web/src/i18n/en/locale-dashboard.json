@@ -517,6 +517,7 @@
       "vehicleCommandUnlock": "Unlock vehicle",
       "vehicleCommandWake": "Wake vehicle"
     },
+    "batteryTrendEmpty": "Charge data will appear here",
     "batteryTrendTitle": "Battery trend",
     "browseDrives": "View all",
     "charged": "charged",
@@ -952,7 +953,6 @@
       "aria": "Battery {{from}}% to {{to}}%",
       "unknown": "Battery delta unknown"
     },
-    "empty": "No battery health data available yet.",
     "seriesLabel": "Battery %"
   },
   "bulk": {
@@ -1201,6 +1201,7 @@
       "toggleEdit": "Toggle edit mode",
       "undo": "Undo layout change"
     },
+    "subtitle": "Monitor readiness, investigate exceptions, and act from one workspace",
     "summary": {
       "eyebrow": "Source summary",
       "status": {
@@ -1220,6 +1221,7 @@
       },
       "noRecommendations": "No recommendations"
     },
+    "title": "Fleet operations",
     "undo": "Undo",
     "widgetSettings": {
       "15s": "15 seconds",
@@ -3414,8 +3416,12 @@
       "minutesAgo": "{{minutes}}m ago"
     },
     "exportActiveJobs": "Active exports",
+    "exportDone": "Done",
     "exportDownload": "Download",
+    "exportFailed": "Failed",
     "exportIdleBadge": "Idle",
+    "exportQueued": "Queued",
+    "exportRunning": "Running",
     "exportRunningBadge": "Running",
     "exportStatus": "Export status",
     "failing": "Failing",
@@ -4136,8 +4142,14 @@
     "subscriptions": {
       "active": "Active",
       "activeCount": "active",
+      "dataSharing": "Data sharing",
+      "enhancedAutopilot": "Enhanced Autopilot",
       "expired": "Expired",
+      "fsd": "Full Self-Driving",
       "noData": "No subscriptions",
+      "premiumConnectivity": "Premium Connectivity",
+      "satellite": "Satellite connectivity",
+      "standardConnectivity": "Standard Connectivity",
       "title": "Subscriptions",
       "unknown": "Unknown"
     },
@@ -4358,12 +4370,17 @@
     },
     "warranty": {
       "active": "Active",
+      "basic": "Basic",
+      "batteryDrive": "Battery/drive unit",
+      "body": "Body",
+      "corrosion": "Corrosion",
       "coverageCaveat": "Cached warranty information; coverage ends at the first time or mileage limit. Confirm terms with Tesla.",
       "covered": "Covered",
       "currentMileage": "Current mileage",
       "daysLeft": "days left",
       "daysRemaining": "Days remaining",
       "daysUnit": "days",
+      "emissions": "Emissions",
       "expired": "Expired",
       "expiryDate": "Expiry date",
       "included": "Included",

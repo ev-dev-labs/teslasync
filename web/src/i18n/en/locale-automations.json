@@ -499,7 +499,9 @@
       "greaterThanOrEqual": ">=",
       "changed": "Changed",
       "crossedAbove": "Crossed above",
-      "crossedBelow": "Crossed below"
+      "crossedBelow": "Crossed below",
+      "between": "Between",
+      "in": "In"
     },
     "event": {
       "triggered": "triggered",

@@ -130,7 +130,13 @@
       "empty": "No nudge yet.",
       "loading": "Reading departure window…",
       "slot": "calm {{time}}",
-      "blocker": "Blocker"
+      "blocker": "Blocker",
+      "verdict": {
+        "unknown": "Unknown",
+        "wait": "Wait",
+        "leave_now": "Leave now",
+        "delay": "Delay"
+      }
     },
     "live": {
       "loadFailed": "The live trip could not be loaded.",
@@ -148,7 +154,13 @@
       "wait": "{{time}} wait",
       "noNextStop": "No scored stop yet",
       "lastFix": "Last fix {{time}}",
-      "fixes": "{{count}} fixes"
+      "fixes": "{{count}} fixes",
+      "verdict": {
+        "unknown": "Unknown",
+        "ok": "On energy",
+        "attention": "Tight",
+        "action": "Charge soon"
+      }
     },
     "replan": {
       "loadFailed": "The route assessment could not be loaded.",
@@ -158,7 +170,13 @@
       "empty": "No deviation reading yet.",
       "loading": "Measuring deviation…",
       "offBy": "{{distance}} off corridor",
-      "scoring": "Rescoring stops…"
+      "scoring": "Rescoring stops…",
+      "verdict": {
+        "unknown": "Unknown",
+        "on_track": "On track",
+        "drifted": "Drifting",
+        "off_route": "Off route"
+      }
     },
     "arrival": {
       "loadFailed": "Arrival advice could not be loaded.",
@@ -169,7 +187,13 @@
       "loading": "Preparing arrival…",
       "moving": "moving",
       "shortfall": "top up ≈ {{energy}} en route",
-      "adjusted": "adjusted {{ratio}}× from {{count}} trips"
+      "adjusted": "adjusted {{ratio}}× from {{count}} trips",
+      "verdict": {
+        "unknown": "Unknown",
+        "ok": "Arrive with buffer",
+        "attention": "Arrive tight",
+        "action": "Top up en route"
+      }
     },
     "report": {
       "loadFailed": "The trip report could not be loaded.",

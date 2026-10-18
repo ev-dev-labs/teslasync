@@ -159,6 +159,18 @@
     "tasks": {
       "optOut": "Stop showing setup tips",
       "dismiss": "Dismiss this tip"
-    }
+    },
+    "welcome.title": "Welcome to TeslaSync",
+    "connect.title": "Connect Your Tesla",
+    "configure": {
+      "title": "Configure Settings",
+      "desc": "Customize your polling interval, distance units, energy cost per kWh, notification preferences, and MQTT integration to match your setup."
+    },
+    "done": {
+      "title": "You're All Set!",
+      "desc": "Your dashboard is ready. Explore drives, charging sessions, efficiency analytics, and more. You can always revisit settings to fine-tune your experience."
+    },
+    "welcome.desc": "Your all-in-one Tesla fleet management dashboard. Track drives, monitor battery health, analyze energy usage, and control your vehicles — all in one place.",
+    "connect.desc": "Head to Settings and link your Tesla account via OAuth. TeslaSync will securely poll your vehicle data and keep everything in sync automatically."
   }
 }

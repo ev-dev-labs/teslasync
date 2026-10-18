@@ -760,6 +760,13 @@
         "changed": "changed",
         "between": "between",
         "outside": "outside"
+      },
+      "metricCategories": {
+        "driving": "Driving",
+        "energy": "Energy",
+        "charging": "Charging",
+        "battery": "Battery",
+        "cost": "Cost"
       }
     },
     "log": {

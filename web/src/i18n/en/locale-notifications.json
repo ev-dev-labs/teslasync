@@ -2043,6 +2043,13 @@
         "system": "System service",
         "systemHint": "Notify when a monitored system service fails or recovers."
       },
+      "metricCategories": {
+        "battery": "Battery",
+        "charging": "Charging",
+        "cost": "Cost",
+        "driving": "Driving",
+        "energy": "Energy"
+      },
       "operators": {
         "!=": "!=",
         "<": "<",

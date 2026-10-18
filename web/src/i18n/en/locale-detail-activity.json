@@ -205,6 +205,7 @@
       }
     },
     "browseDrives": "View all",
-    "batteryTrendTitle": "Battery trend"
+    "batteryTrendTitle": "Battery trend",
+    "batteryTrendEmpty": "Charge data will appear here"
   }
 }
