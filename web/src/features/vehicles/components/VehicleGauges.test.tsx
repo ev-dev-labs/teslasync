@@ -33,8 +33,9 @@
  *      ways round.
  *   8. An empty software version degrades to the i18n "N/A" fallback.
  *   9. a11y: every decorative chip icon is aria-hidden and colour-coded.
- *  10. TeslaCarViz receives the coalesced telemetry + the parsed model key.
- *  11. Resilience: absent numeric telemetry never reaches a gauge/bar as NaN.
+ *  10. TeslaCarViz receives the pass-through telemetry + the parsed model key.
+ *  11. Resilience: absent numeric telemetry reaches gauges/bars as null
+ *      (unknown state) — never a fabricated 0 and never NaN.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -69,12 +70,12 @@ vi.mock('@/components/data-display/TeslaCarViz', async () => {
   return {
     ...actual,
     TeslaCarViz: (props: {
-      batteryLevel: number
+      batteryLevel: number | null
       isCharging: boolean
       isLocked: boolean
       isClimateOn: boolean
       sentryMode: boolean
-      speed: number
+      speed: number | null
       model?: string
       size?: string
     }) => (
@@ -95,7 +96,7 @@ vi.mock('@/components/data-display/TeslaCarViz', async () => {
 
 vi.mock('@/components/charts/LinearGauge', () => ({
   LinearGauge: (props: {
-    value: number
+    value: number | null
     max: number
     label: string
     unit?: string
@@ -116,7 +117,7 @@ vi.mock('@/components/charts/LinearGauge', () => ({
 
 vi.mock('@/components/data-display/MetricBar', () => ({
   MetricBar: (props: {
-    value: number
+    value: number | null
     max: number
     color: string
     label: string
@@ -398,7 +399,7 @@ describe('VehicleGauges — car visualisation wiring', () => {
 })
 
 describe('VehicleGauges — null-safety', () => {
-  it('never lets absent numeric telemetry reach a gauge or bar as NaN', () => {
+  it('passes absent numeric telemetry through as null so gauges/bars render unknown', () => {
     render(
       <VehicleGauges
         vehicle={makeVehicle()}
@@ -412,18 +413,20 @@ describe('VehicleGauges — null-safety', () => {
       />,
     )
 
-    // Pre-hardening these produced NaN (Math.round(convertFromSI(undefined))).
-    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-value', '0')
-    expect(screen.getByTestId('gauge-Range')).toHaveAttribute('data-value', '0')
-    expect(screen.getByTestId('gauge-Speed')).toHaveAttribute('data-value', '0')
-    expect(screen.getByTestId('gauge-Power')).toHaveAttribute('data-value', '0')
-    expect(screen.getByTestId('bar-Battery level')).toHaveAttribute('data-value', '0')
-    expect(screen.getByTestId('bar-Estimated range')).toHaveAttribute('data-value', '0')
+    // Absent readings stay null (the shared gauges/bars render their unknown
+    // state) — never a fabricated 0 and never NaN from an unguarded conversion.
+    expect(screen.getByTestId('gauge-Battery')).toHaveAttribute('data-value', 'null')
+    expect(screen.getByTestId('gauge-Range')).toHaveAttribute('data-value', 'null')
+    expect(screen.getByTestId('gauge-Speed')).toHaveAttribute('data-value', 'null')
+    expect(screen.getByTestId('gauge-Power')).toHaveAttribute('data-value', 'null')
+    expect(screen.getByTestId('bar-Battery level')).toHaveAttribute('data-value', 'null')
+    expect(screen.getByTestId('bar-Estimated range')).toHaveAttribute('data-value', 'null')
+    expect(screen.getByTestId('bar-Battery level')).toHaveAttribute('data-sublabel', '—')
 
-    // And the visualisation receives 0 (a valid number), not NaN.
+    // And the visualisation receives null (unknown), not NaN.
     const viz = screen.getByTestId('car-viz')
-    expect(viz).toHaveAttribute('data-battery', '0')
-    expect(viz).toHaveAttribute('data-speed', '0')
+    expect(viz).toHaveAttribute('data-battery', 'null')
+    expect(viz).toHaveAttribute('data-speed', 'null')
 
     // No 'NaN' string leaks into any rendered attribute.
     expect(document.body.innerHTML).not.toContain('NaN')

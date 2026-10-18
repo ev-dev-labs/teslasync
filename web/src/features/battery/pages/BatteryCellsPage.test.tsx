@@ -376,6 +376,42 @@ describe('BatteryCellsPage', () => {
     }
   });
 
+  it('shows unknown (never 0.00°C / 0 V) for readings the backend flags unavailable', () => {
+    h.query = makeQuery({ data: makeData({
+      avg_temperature: 0, min_temperature: 0, max_temperature: 0, temp_spread: 0,
+      avg_voltage: 0, pack_voltage: 0, imbalance_mv: 0,
+      signal_availability: {
+        min_voltage: true, max_voltage: true, avg_voltage: false,
+        voltage_spread: false, imbalance_mv: false, pack_voltage: false,
+        min_temperature: false, max_temperature: false, avg_temperature: false, temp_spread: false,
+      },
+    }) });
+    renderPage();
+
+    const tempsEl = screen.getByRole('region', { name: 'Temperature summary', exact: true });
+    const temps = within(tempsEl);
+    expect(temps.queryAllByText('0.00°C')).toHaveLength(0);
+    expect(temps.getByText('No metric values are available yet.')).toBeInTheDocument();
+
+    const summaryRegion = screen.getByRole('region', { name: 'Summary metrics' });
+    const metrics = within(summaryRegion);
+    expect(metrics.queryAllByText(/0\.0+ V/)).toHaveLength(0);
+    expect(metrics.queryAllByText('0.00 mV')).toHaveLength(0);
+    assertOperationalMetricUnavailable(summaryRegion, 'Avg voltage');
+    assertOperationalMetricUnavailable(summaryRegion, 'Pack voltage');
+    assertOperationalMetricUnavailable(summaryRegion, 'Imbalance');
+  });
+
+  it('still renders genuine measured zeros flagged available', () => {
+    h.query = makeQuery({ data: makeData({
+      avg_temperature: 0, min_temperature: 0, max_temperature: 0, temp_spread: 0,
+    }) });
+    renderPage();
+
+    const temps = within(screen.getByRole('region', { name: 'Temperature summary', exact: true }));
+    expect(temps.getAllByText('0.00°C').length).toBeGreaterThanOrEqual(4);
+  });
+
   it('re-converts SI temperatures to the user °F preference at the render boundary', () => {
     h.temp = '°F';
     h.query = makeQuery({ data: makeData() });
@@ -646,13 +682,16 @@ describe('BatteryCellsPage', () => {
     expect(screen.queryByText('All cells healthy') != null).toBe(healthy);
     const summaryRegion = screen.getByRole('region', { name: 'Summary metrics' });
     const metrics = within(summaryRegion);
-    if (Number.isFinite(value)) {
+    if (availability?.imbalance_mv === false) {
+      // Unavailable signals render unknown, never a fabricated zero.
+      assertOperationalMetricUnavailable(summaryRegion, 'Imbalance');
+    } else if (Number.isFinite(value)) {
       expect(metrics.getByText(`${value.toFixed(2)} mV`)).toBeInTheDocument();
     } else {
       expect(metrics.queryByText('NaN mV')).not.toBeInTheDocument();
     }
     if (!healthy) {
-      if (Number.isFinite(value)) {
+      if (Number.isFinite(value) && availability?.imbalance_mv !== false) {
         fireEvent.click(within(summaryRegion).getByRole('button', { name: 'Review details' }));
         const unknownDialog = screen.getByRole('dialog');
         expect(within(unknownDialog).getByRole('group', { name: 'Imbalance' })).toHaveTextContent('Unknown');

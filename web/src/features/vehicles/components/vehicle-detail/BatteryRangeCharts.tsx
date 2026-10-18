@@ -13,6 +13,7 @@ import {
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI } from '@/lib/unitConversion'
+import { isFiniteNumber } from '@/lib/numberFormat'
 import { formatDate } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
@@ -34,14 +35,15 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
 
   // Runtime null-safety: `VehicleState` types these as `number`, but the Go
   // API can serialise a genuine `null` for a vehicle that has never reported
-  // battery/range. Coerce once so every downstream consumer (gauge, chart,
-  // headline) shares the same non-NaN value.
-  const batteryLevel = state.battery_level ?? 0
-  const ratedRange = state.rated_range ?? 0
+  // battery/range. Absent readings stay null so the gauge, chart, and
+  // headlines render their unknown state — never a fabricated zero and
+  // never NaN.
+  const batteryLevel = isFiniteNumber(state.battery_level) ? state.battery_level : null
+  const ratedRange = isFiniteNumber(state.rated_range) ? state.rated_range : null
 
   const batteryChartData = useMemo(() => [
     { name: t('common.current', 'Current'), value: batteryLevel },
-    { name: t('common.remaining', 'Remaining'), value: Math.max(0, 100 - batteryLevel) },
+    { name: t('common.remaining', 'Remaining'), value: batteryLevel == null ? null : Math.max(0, 100 - batteryLevel) },
   ], [batteryLevel, t])
 
   const driveChartData = useMemo(() =>
@@ -53,14 +55,14 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
   [drives, unitPrefs.distance])
 
   const ratedRangeDisplay = useMemo(
-    () => convertDistanceFromSI(ratedRange, unitPrefs.distance),
+    () => (ratedRange == null ? null : convertDistanceFromSI(ratedRange, unitPrefs.distance)),
     [ratedRange, unitPrefs.distance],
   )
 
   const batteryColumns = useMemo<ChartDataColumn[]>(
     () => [
       { key: 'name', label: t('common.category', 'Category') },
-      { key: 'value', label: t('common.percentage', '%'), format: (v) => `${v}%` },
+      { key: 'value', label: t('common.percentage', '%'), format: (v) => (v == null ? '—' : `${v}%`) },
     ],
     [t],
   );
@@ -96,7 +98,7 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
             max={100}
             label={t('common.battery', 'Battery')}
             unit="%"
-            color={batteryColor(batteryLevel)}
+            color={batteryColor(batteryLevel ?? NaN)}
             size={100}
             className="w-32 shrink-0"
           />

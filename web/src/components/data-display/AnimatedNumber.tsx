@@ -4,7 +4,8 @@ import { safeNumber } from '@/lib/numberFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AnimatedNumberProps {
-  value: number;
+  /** Null / non-finite values render unknown ("—"); only finite values tween. */
+  value: number | null;
   duration?: number;
   /** Explicit display precision; otherwise uses kind's default. */
   decimals?: number;

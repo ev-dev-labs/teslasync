@@ -3,7 +3,8 @@
 // vehicle detail view. The grid is a pure prop-driven presenter over a
 // VehicleState, so the contract worth pinning is the per-tile branching:
 //   - battery colour thresholds (>50 emerald / >20 amber / else rose) including
-//     the null-safe `?? 0` guard so an absent level neither throws nor mis-colours,
+//     the null-safe guard so an absent level renders unknown ("—", muted) and
+//     neither throws, mis-colours as critical, nor leaks "0.00%"/"undefined%",
 //   - speed → Driving / Parked (null-safe),
 //   - charger value (kW while charging, i18n "Not Charging" otherwise), the
 //     emerald/muted colour, and the "Full in Xh" ETA sub-line which must be HIDDEN
@@ -141,15 +142,23 @@ describe('TelemetryGrid', () => {
     expect(screen.getByText('20.00%').className).toContain('text-rose-300')
   })
 
-  it('is null-safe for an absent battery level (renders 0% at the critical colour, no throw)', () => {
+  it('is null-safe for an absent battery level (renders unknown muted, no throw)', () => {
     expect(() => renderGrid({ battery_level: undefined as unknown as number })).not.toThrow()
 
-    const value = screen.getByText('0.00%')
+    const value = screen.getByText('—')
     expect(value).toBeInTheDocument()
-    // `(state.battery_level ?? 0) > 50` — undefined collapses to 0 → rose, never a
-    // NaN-comparison-driven blank or an "undefined%" leak.
-    expect(value.className).toContain('text-rose-300')
+    // Missing is unknown: muted, never a fabricated "0.00%" at the critical
+    // colour, never a NaN-comparison-driven blank or an "undefined%" leak.
+    expect(value.className).toContain('text-[var(--text-muted)]')
+    expect(screen.queryByText('0.00%')).toBeNull()
     expect(screen.queryByText('undefined%')).toBeNull()
+  })
+
+  it('renders a measured 0% battery at the critical colour (real zeros stay zero)', () => {
+    renderGrid({ battery_level: 0 })
+
+    const value = screen.getByText('0.00%')
+    expect(value.className).toContain('text-rose-300')
   })
 
   it('labels speed as Driving when moving and Parked when stopped, via i18n', () => {
@@ -196,6 +205,13 @@ describe('TelemetryGrid', () => {
       time_to_full_charge: null as unknown as number,
     })
     expect(screen.queryByText(/Full in/)).toBeNull()
+  })
+
+  it('renders unknown charger power while charging when the reading is missing', () => {
+    renderGrid({ is_charging: true, charger_power: undefined as unknown as number })
+
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('0.00 kW')).toBeNull()
   })
 
   it('shows an i18n "Not Charging" label with muted colour and no ETA when idle', () => {

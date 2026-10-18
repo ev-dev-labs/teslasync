@@ -18,8 +18,9 @@
  *     `convertDistanceFromSI(state.rated_range, …)` with NO `?? 0`, unlike the
  *     drive-trend series which already guarded `distance_m ?? 0`. A `null`
  *     battery/range (the Go API can serialise one) leaked `NaN` into the gauge,
- *     bar chart, and headline. `battery_level`/`rated_range` are now coerced to
- *     0 once so every consumer shares a non-NaN value.
+ *     bar chart, and headline. `battery_level`/`rated_range` are now passed
+ *     through as null so every consumer renders its unknown state — never a
+ *     fabricated 0 and never NaN.
  *   - the "Remaining" battery slice is clamped to ≥ 0 so bad (>100) data can't
  *     paint a negative bar.
  *
@@ -60,7 +61,7 @@ vi.mock('@/components/data-display', () => ({
     prefix,
     suffix,
   }: {
-    value: number
+    value: number | null
     prefix?: string
     suffix?: string
   }) => (
@@ -312,7 +313,7 @@ describe('BatteryRangeCharts — drive distance trend', () => {
 })
 
 describe('BatteryRangeCharts — null-safety (the hardening this test guards)', () => {
-  it('coerces a null battery_level / rated_range to 0 without leaking NaN', () => {
+  it('passes a null battery_level / rated_range through as unknown without leaking NaN', () => {
     const { container } = render(
       <BatteryRangeCharts
         state={makeState({
@@ -323,18 +324,24 @@ describe('BatteryRangeCharts — null-safety (the hardening this test guards)', 
       />,
     )
 
-    expect(screen.getByText('0%')).toBeInTheDocument()
-    expect(screen.getByText('0 km')).toBeInTheDocument()
-    expect(screen.getByTestId('linear-gauge').dataset.value).toBe('0')
-    // Remaining stays a full 100 % rather than collapsing to NaN.
+    // Headlines receive null (the stub renders value-less suffixes; the real
+    // AnimatedNumber renders "—"), never a fabricated 0.
+    const headlines = screen.getAllByTestId('animated-number')
+    expect(headlines).toHaveLength(2)
+    expect(headlines[0]).toHaveTextContent('%')
+    expect(headlines[1]).toHaveTextContent('km')
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+    expect(screen.queryByText('0 km')).not.toBeInTheDocument()
+    expect(screen.getByTestId('linear-gauge').dataset.value).toBe('null')
+    // Both chart slices stay null rather than fabricating 0 % / 100 %.
     expect(seriesOf('bar-chart')).toEqual([
-      { name: 'Current', value: 0 },
-      { name: 'Remaining', value: 100 },
+      { name: 'Current', value: null },
+      { name: 'Remaining', value: null },
     ])
     expect(container.textContent).not.toMatch(/NaN/)
   })
 
-  it('coerces an undefined battery_level / rated_range to 0 (regression: was NaN)', () => {
+  it('passes an undefined battery_level / rated_range through as unknown (regression: was NaN)', () => {
     const { container } = render(
       <BatteryRangeCharts
         state={makeState({
@@ -346,9 +353,10 @@ describe('BatteryRangeCharts — null-safety (the hardening this test guards)', 
     )
 
     // Pre-hardening `100 - undefined` / `convertDistanceFromSI(undefined, …)`
-    // both produced NaN here.
-    expect(screen.getByText('0%')).toBeInTheDocument()
-    expect(screen.getByText('0 km')).toBeInTheDocument()
+    // both produced NaN here; the `?? 0` era then fabricated 0 % / 0 km.
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+    expect(screen.queryByText('0 km')).not.toBeInTheDocument()
+    expect(screen.getByTestId('linear-gauge').dataset.value).toBe('null')
     expect(container.textContent).not.toMatch(/NaN/)
   })
 

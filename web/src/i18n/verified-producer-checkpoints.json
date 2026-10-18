@@ -949,5 +949,10 @@
     "file": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointBody.tsx",
     "calls": 20,
     "sha256": "866be9433aa9e91b77e12aa922404fc8d7206779fd758cc287aff41cc33441a8"
+  },
+  {
+    "file": "web/src/features/vehicles/components/VehicleGauges.tsx",
+    "calls": 14,
+    "sha256": "1db51629437aa3eb97314c5eceeee7e8fc78f25dae693a4fcd28d682adcbebe4"
   }
 ]

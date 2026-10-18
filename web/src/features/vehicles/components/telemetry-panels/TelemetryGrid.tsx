@@ -8,6 +8,7 @@ import { useUnits } from '@/hooks/useUnits'
 import { InfoTile } from './InfoTile'
 import type { VehicleState } from '@/api/types'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface TelemetryGridProps {
   state: VehicleState
@@ -17,6 +18,12 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatTemperature } = useUnits()
+  // Missing readings are unknown — never a fabricated zero ("0.00%") and
+  // never a threshold colour that implies a measured critical level.
+  const batteryLevel = state.battery_level
+  const batteryKnown = isFiniteNumber(batteryLevel)
+  const chargerPower = state.charger_power
+  const chargerPowerKnown = isFiniteNumber(chargerPower)
 
   return (
     <StaggerContainer className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -24,13 +31,15 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Battery}
           label={t('common.battery', 'Battery')}
-          value={`${fmtNumber(state.battery_level)}%`}
+          value={batteryKnown ? `${fmtNumber(batteryLevel)}%` : null}
           color={
-            state.battery_level > 50
-              ? 'text-emerald-300'
-              : state.battery_level > 20
-                ? 'text-amber-300'
-                : 'text-rose-300'
+            !batteryKnown
+              ? 'text-[var(--text-muted)]'
+              : batteryLevel > 50
+                ? 'text-emerald-300'
+                : batteryLevel > 20
+                  ? 'text-amber-300'
+                  : 'text-rose-300'
           }
           sub={`${formatDistance(state.rated_range)} ${t('common.range', 'range')}`}
         />
@@ -64,7 +73,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           label={t('common.charger', 'Charger')}
           value={
             state.is_charging
-              ? `${fmtNumber(state.charger_power)} kW`
+              ? (chargerPowerKnown ? `${fmtNumber(chargerPower)} kW` : null)
               : t('common.notCharging', 'Not charging')
           }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}

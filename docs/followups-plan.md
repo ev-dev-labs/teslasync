@@ -90,7 +90,50 @@ Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), do
 - Catalog: 3 new keys, regen + trio re-pin (42,197 keys) → 7672/0.
   tsc/lint/build green.
 
-### 2c–2f. TBD
+### 2c. Missing data shown as zero — FIXED (4 sites)
+- Root causes (each symptom traced separately; the shared formatting
+  stack — lib formatters, format components, OperationalBrief pipeline,
+  useVehicleState hook, LinearGauge/MetricBar/AnimatedNumber — already
+  null-guards, so every symptom was an inline coercion or an ignored
+  presence channel):
+  - Temp "0.0°C" (LIVE): `batterycells` backend sends `0` for absent
+    temp/voltage signals with presence in `signal_availability`
+    (`handler.go` "presence is independent of value"); `BatteryCellsStats`
+    trusted bare values for display (only health badges checked the
+    flags). Fix: new `availableReading()` gates every displayed reading
+    on its explicit flag (`=== false` → null; absent map/flag trusts the
+    value per the backend's always-complete-map contract).
+  - Battery "0.00%" (exported, currently unreached in prod nav):
+    `TelemetryGrid` formatted via `fmtNumber` (safeNumber coerces
+    missing → "0.00") and coloured missing as critical rose. Fix:
+    unknown renders "—" muted; charger power same treatment.
+  - Battery "0.00%" + range "0.0 km" (exported, currently unreached):
+    `VehicleGauges` and `BatteryRangeCharts` coalesced to `?? 0`. Fix:
+    null-through into the null-safe children (gauges/bars/viz/headlines
+    render unknown); chart slices stay null with a null-safe table
+    format; colours fall back to muted/gray.
+  - Real measured zeros still render (proved by dedicated tests).
+- Regression tests: new fail-before/pass-after tests per surface
+  (cells temp fail-before showed 4× "0.00°C" tiles); three existing
+  suites pinned the buggy strings and were updated to the mandated
+  unknown rendering with intent preserved (no-throw, no undefined%,
+  no-NaN, health-evidence distinction); drive-trend `?? 0` chart-series
+  geometry intentionally untouched (charts need numbers; not a
+  displayed reading).
+- Wider blast radius checked: live vehicle surfaces (QuickStatsGrid,
+  VehicleHero, Glance, FleetCompare, LiveTelemetry, EnergyFlow,
+  ClimateSection, drive detail, ClimateControlPage, drivetrain-health)
+  all null-guard; AnimatedNumber prop widened `number | null` (17/17).
+  No new i18n keys. Trio: VehicleGauges frozen-producer bytes re-pinned
+  via `--checkpoint-sources` → 7672/0. tsc/lint/build green.
+- Recorded, NOT fixed (needs owner decision): Go `VehicleState` uses
+  non-pointer numerics, so the state endpoint serializes unobserved
+  fields as 0 (frontend can only distinguish via `verified_fields`,
+  which most display components don't consult); legacy
+  `api.getVehicleState` coerces `?? 0` (no production callers);
+  TelemetryGrid speed-missing → "Parked" (adjacent, not a zero display).
+
+### 2d–2f. TBD
 
 ## 3. Performance (dashboard 60s re-render)
 
