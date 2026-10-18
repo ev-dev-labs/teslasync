@@ -612,7 +612,29 @@ Fixes (each verified locally under CI conditions before push):
     config (engine-agnostic flow); pwa-navigation.spec references the
     attribute too but matches no CI project (dead spec, left alone).
     Perf job failure (dashboard CLS 0.233) is the fixed shell shift;
-    queued CLS fix should green it. Remaining r2 distinct failures to
-    triage from the fresh run: alert-pack dialog counts/clicks, API
-    evidence table Expand/Comfortable, appearance Display Mode text
-    (charging-overview was crash cascade).
+    queued CLS fix should green it.
+13. E2E layer 3 (all ROOT-CAUSED, verified on Edge, pushed): (a) tablet
+    modal open-by-default covered content at 768/1024 (dialog x=76 w=272
+    at load) -> deckPanelOpen fresh default is now viewport-aware
+    (desktop open/docked, smaller closed; explicit stored choice still
+    wins); Layout unit tests stub viewport + new tablet test; shell
+    re-pinned + trio re-checkpointed. (b) alert-pack count 5-vs-6:
+    phase3 removed aria-haspopup=listbox from VehicleMultiSelect (right:
+    checkbox popover is not a listbox) -> restored as dialog (correct
+    hint) + spec locator broadened to button[aria-haspopup].
+    (c) alert-pack 11-vs-10 + row-editor misindexing: draggable THs
+    gained aria-labels that pollute getByLabel -> row locators scoped to
+    input/select/textarea (layout-agnostic). Alert-packs 22/22 on Edge.
+    (d) api-log Expand row: expander label has row suffix by design
+    ('Expand row: ...') -> spec regex. (e) 390 Method-filter click eaten
+    by the 44px mobile resize handle -> handle now straddles the column
+    boundary (44px kept, divider stays put); resizer 27/27. Api-log 6/6.
+    (f) a11y light tab contrast 2.34 (accent label on light surface):
+    selected phone tab now text-primary like the rail (accent bar kept);
+    a11y 13/13. (g) appearance Display Mode: catalog 'Display mode'
+    wins (fallback + spec + 2 unit asserts updated; trio 7672).
+    (h) CodeQL round 2: non-global regex ALSO flagged -> indexOf/slice
+    helper (byte-identical fixture, 7/7).
+14. Visual baselines: 6 charging.png regenerated (optimizer section now
+    renders real content instead of the stub-crash error state; sizes
+    +12-17%, no blanks). Only charging snapshots affected.

@@ -146,3 +146,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 14:10 UTC - e2e layer2 + smoke migration pushed; fresh CI running
 - 72625d1f69 (optimizer mock wire shape, a11y themed tab pin, Table tabindex) + dff4cdb2ba (smoke mobile-nav journey rewrite, 3/3 on Edge) pushed. Fresh CI just started (11 pending).
 - Docs held locally (would cancel the validation run). Next: triage remaining responsive failures (alert-pack, api-evidence, appearance) from fresh artifacts.
+
+## 2026-10-18 14:45 UTC - e2e layer3 + visual baselines pushed
+- Root-caused+fixed on Edge: tablet modal default (Layout viewport-aware), VehicleMultiSelect haspopup dialog, alert-pack TH-polluted locators (22/22), api-log Expand regex + resizer straddle (6/6), tab contrast text-primary (a11y 13/13), Display-mode sentence case, CodeQL indexOf helper. 6 charging.png regenerated (crash-error -> real content).
+- Pushed as layer-3 batch. Next: watch fresh CI, triage remaining shards (r3/r5/r6/r13/r14/r16) from new artifacts.
