@@ -191,7 +191,28 @@ Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), do
 
 ## 3. Performance (dashboard 60s re-render)
 
-TBD.
+Done (commit `2e7c0657b1`, pushed).
+- Root cause: `DashboardPage` held a 60s `setTick` that re-rendered the
+  whole grid; every widget body re-executed on each tick.
+- Fix: new shared 30s `useTicker` (`web/src/hooks/useTicker.ts`,
+  one timer process-wide); `FreshnessDot` migrated to it; `VehicleHero`
+  memoized with a `ChargeDoneAt` ticker leaf; `FleetOperationsBrief` and
+  `AnomalyDetectorWidget` memoized, subscribing as text-only units;
+  page `setTick` removed; grid callbacks stabilized; `DashboardGrid`
+  memoized. Fingerprints re-pinned via
+  `i18n-trio-checkpoint.mjs --typed --checkpoint-sources` (generator).
+- Proof: `useTicker` 2/2; `DashboardGrid.ticker` 2/2 (single shared
+  timer; bodies render once across 3 ticks; memo skip with control);
+  `DashboardPage` ticker-isolation guard; dashboard tree 4575/0;
+  trio 7672/0; tsc/lint/build green.
+- Browser verification (temp spec, deleted after the run): on a preview
+  build with mocked `vehicles/states`, created the Operations Desk
+  layout via the gallery, fast-forwarded the clock 125s, and the
+  fleet-brief "Oldest reading" age label advanced with no fixture
+  churn. (Playwright CDN unreachable, so the run used installed MS Edge
+  via a temp config; both temp files deleted. Not committed.)
+- Decision: profiler-based memo proof abandoned (Profiler counts
+  commits, not executions); execution counting at grid level instead.
 
 ## 4. JourneyAssurance flake
 

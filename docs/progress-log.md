@@ -94,3 +94,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-18 12:30 UTC | 2d DONE: trip replay source age clamped at zero (future-row tie-break kept, timestamp still shows); regtest fail-before/pass-after; trips 62/62, trio 7672/0, gates green | 2e charge-home recommendation next | none
 2026-10-18 13:00 UTC | 2e DONE: charge-home gate on empty prices (Not enough price data + Autopilot CTA); regtests fail-before/pass-after; strip 26/26, trio 7672/0, gates green | 2f small-amount precision next | none
 2026-10-18 13:30 UTC | 2f DONE + STEP 2 COMPLETE: sub- currency floored at cents in all 5 paths (formatCurrency, formatEnergyCost, Currency, cost/km metric, formatMetric); 5 regtests fail-before/pass-after; 245/245 + wide 3205/3-baseline; trio 7672/0, gates green | step 3 dashboard ticker next | none
+
+## 2026-10-18 00:45 UTC - step 3 done, pushed as 2e7c0657b1
+- Browser verification passed (temp Playwright spec via MS Edge: oldest-reading age advanced across 125s fast-forward, no fixture churn); temp spec + config deleted.
+- Committed + pushed step 3 (shared useTicker, memoization, ticker-isolation tests). Gates: dashboard 4575/0, trio 7672/0, tsc/lint/build green.
+- Next: step 4 JourneyAssurance isolation fix.
