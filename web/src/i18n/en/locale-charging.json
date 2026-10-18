@@ -1349,7 +1349,8 @@
     "selectVehicleHelp": "Choose a vehicle or wait for fleet sync to finish before the price radar can load.",
     "recordedDuration": "Recorded subtotal: {{subtotal}} · {{missing}} missing",
     "recordedSubtotal": "Recorded subtotal",
-    "missingCount": "Missing count"
+    "missingCount": "Missing count",
+    "partialSubtotal": "Recorded subtotal: {{subtotal}} · {{missing}} missing · {{sessions}}×"
   },
   "tesla_sessions": {
     "title": "Fleet charging sessions",

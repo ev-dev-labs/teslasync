@@ -251,7 +251,7 @@ export default function RedisSignalViewerPage() {
             t('redis.purgeAllPartial', 'Redis L2 cache partially purged'),
             t(
               'redis.purgeAllPartialDetail',
-              'Removed {{count}} of up to {{limit}} vehicle HSET(s) from Redis. More keys remain — click Purge All Redis again to drain.',
+              "Removed {{count}} of up to {{limit}} vehicle HSET(s) from Redis. More keys remain — click Purge all Redis again to drain.",
               { count: res.purged, limit: res.limit },
             ),
           )
@@ -617,7 +617,7 @@ export default function RedisSignalViewerPage() {
                   disabled={selectedVehicleId === null || isPurging}
                   wrapLabel
                   className="justify-center"
-                  title={t('redis.purgeButtonTitle', 'Delete this vehicle\u2019s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.')}
+                  title={t('redis.purgeButtonTitle', "Delete this vehicle's cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.")}
                 >
                   <Icon icon={Trash2} />
                   {t('redis.purgeButton', 'Purge Redis (L2)')}
@@ -653,7 +653,7 @@ export default function RedisSignalViewerPage() {
           purgeMode === 'all'
             ? t(
                 'redis.purgeAllMessage',
-                'This deletes every vehicle:*:signals HSET in Redis (the L2 cache). The L1 in-memory cache on each pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives. If more than 1000 keys exist, you may need to click Purge All Redis again to drain.',
+                "This deletes every vehicle:*:signals HSET in Redis (the L2 cache). The L1 in-memory cache on each pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives. If more than 1000 keys exist, you may need to click Purge all Redis again to drain.",
               )
             : t(
                 'redis.purgeMessage',

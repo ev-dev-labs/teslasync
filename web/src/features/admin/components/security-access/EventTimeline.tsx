@@ -63,8 +63,8 @@ function useTimelineLabels() {
       case 'sentry':
         return {
           title: ev.variant === 'positive'
-            ? t('admin.security.timeline.sentry.positive', 'Sentry mode activated')
-            : t('admin.security.timeline.sentry.negative', 'Sentry mode deactivated'),
+            ? t('admin.security.timeline.sentry.positive', "Sentry Mode activated")
+            : t('admin.security.timeline.sentry.negative', "Sentry Mode deactivated"),
           subtitle: ev.variant === 'positive'
             ? t('admin.security.timeline.sentry.positiveDesc', 'Camera surveillance enabled')
             : t('admin.security.timeline.sentry.negativeDesc', 'Camera surveillance disabled'),

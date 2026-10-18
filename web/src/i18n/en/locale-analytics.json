@@ -1743,7 +1743,9 @@
       "hint": "{{count}} entries · {{total}} fixed · {{km}} km lifetime",
       "deleteTitle": "Delete this entry?",
       "deleteMessage": "This removes the recorded cost from the ledger.",
-      "allInDistance": "All-in: {{total}} ({{perDistance}}/{{unit}})"
+      "allInDistance": "All-in: {{total}} ({{perDistance}}/{{unit}})",
+      "hintDistance_one": "{{count}} entry · {{total}} fixed · {{distance}} {{unit}} lifetime",
+      "hintDistance_other": "{{count}} entries · {{total}} fixed · {{distance}} {{unit}} lifetime"
     }
   },
   "yearReview": {

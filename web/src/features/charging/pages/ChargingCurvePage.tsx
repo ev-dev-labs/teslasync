@@ -33,7 +33,7 @@ import {
 export default function ChargingCurvePage() {
   const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('charging.curve.title', 'Charging Curve'));
+  usePageTitle(t('charging.curve.title', "Charging curve"));
 
   /* ── Vehicle, range & session selection ──────────────────────────────── */
 
@@ -126,7 +126,7 @@ export default function ChargingCurvePage() {
 
   return (
     <PageLayout
-      title={t('charging.curve.title', 'Charging Curve')}
+      title={t('charging.curve.title', "Charging curve")}
       subtitle={t('charging.curve.subtitle', 'Power vs state-of-charge across sessions')}
       query={sessionsQuery}
       busy={sourceState.isRefreshing || initialLoading}
@@ -221,7 +221,7 @@ export default function ChargingCurvePage() {
                 size: 'third',
                 content: (
                   <CurveSourceSection {...sectionProps} height={320}
-                    title={t('charging.curve.sessionDetails', 'Session Details')}
+                    title={t('charging.curve.sessionDetails', "Session details")}
                     selectionRequired={!selectedSession}>
                     {selectedSession ? <SessionDetailPanel session={selectedSession} /> : null}
                   </CurveSourceSection>
@@ -234,9 +234,9 @@ export default function ChargingCurvePage() {
 
       {/* 3 — Session comparison (full-width band) */}
       <FadeIn delay={0.15}>
-        <section aria-label={t('charging.curve.sessionComparison', 'Session Comparison')}>
+        <section aria-label={t('charging.curve.sessionComparison', "Session comparison")}>
           <CurveSourceSection {...sectionProps} height={300}
-            title={t('charging.curve.sessionComparison', 'Session Comparison')}>
+            title={t('charging.curve.sessionComparison', "Session comparison")}>
             <SessionComparisonChart sessions={sessions} />
           </CurveSourceSection>
         </section>
@@ -256,7 +256,7 @@ export default function ChargingCurvePage() {
                 size: 'half',
                 content: (
                   <CurveSourceSection {...sectionProps} height={280}
-                    title={t('charging.curve.chargerType', 'Charge Rate by Charger Type')}>
+                    title={t('charging.curve.chargerType', "Charge rate by charger type")}>
                     <ChargerTypeChart sessions={sessions} />
                   </CurveSourceSection>
                 ),
@@ -266,7 +266,7 @@ export default function ChargingCurvePage() {
                 size: 'half',
                 content: (
                   <CurveSourceSection {...sectionProps} height={280}
-                    title={t('charging.curve.speedTrend', 'Charging Speed Trend')}>
+                    title={t('charging.curve.speedTrend', "Charging speed trend")}>
                     <SpeedTrendChart sessions={sessions} />
                   </CurveSourceSection>
                 ),
@@ -278,9 +278,9 @@ export default function ChargingCurvePage() {
 
       {/* 5 — Time-to-charge analysis (KPI sub-grid + yearly trend) */}
       <FadeIn delay={0.25}>
-        <section aria-label={t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}>
+        <section aria-label={t('charging.curve.timeToCharge', "Time-to-charge analysis")}>
           <CurveSourceSection {...sectionProps} height={320}
-            title={t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}>
+            title={t('charging.curve.timeToCharge', "Time-to-charge analysis")}>
             <TimeToChargeSection sessions={sessions} />
           </CurveSourceSection>
         </section>

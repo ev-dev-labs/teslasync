@@ -104,7 +104,7 @@ export default function DriveScorePage() {
 
   return (
     <PageLayout
-      title={t('driveScore.title', 'Drive Score')}
+      title={t('driveScore.title', "Drive score")}
       subtitle={t('driveScore.subtitle', 'Your driving rating and breakdown')}
       secondaryActions={actions}
       query={[drivesQuery, scoreQuery]}

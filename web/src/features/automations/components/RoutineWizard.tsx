@@ -111,7 +111,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
       <StaleRefreshWarning state={geofencesState} label={t('automations.routines.place', 'Place')} />
       {geofencesState.isRefreshing && (
         <Text role="status" aria-busy="true" color="secondary">
-          {t('automations.routines.place', 'Place')}: {t('freshness.updating', 'Updating…')}
+          {t('automations.routines.place', 'Place')}: {t('freshness.updating', "updating…")}
         </Text>
       )}
       {!geofencesState.hasData && !geofencesState.fatalError && !geofencesState.isRefreshBlocked && (geofencesQuery.isLoading || geofencesQuery.isFetching) && (
@@ -142,7 +142,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
       <StaleRefreshWarning state={templatesState} label={t('automations.routines.resource', 'Geofence routines')} />
       {templatesState.isRefreshing && (
         <Text role="status" aria-busy="true" color="secondary">
-          {t('automations.routines.resource', 'Geofence routines')}: {t('freshness.updating', 'Updating…')}
+          {t('automations.routines.resource', 'Geofence routines')}: {t('freshness.updating', "updating…")}
         </Text>
       )}
       {templatesState.fatalError ? (

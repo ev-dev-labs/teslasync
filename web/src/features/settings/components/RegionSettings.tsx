@@ -81,7 +81,7 @@ export function RegionSettings() {
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Info className="h-10 w-10" aria-hidden="true" />} message={
             regionConfig?.fetched_at
               ? t('region.noRegion', 'Tesla did not return a region for this account.')
-              : t('region.noData', 'No region data yet. Click Refresh to fetch from Tesla.')
+              : t('region.noData', "No region data yet. Click refresh to fetch from Tesla.")
           } />
         )}
       </GlassPanel>

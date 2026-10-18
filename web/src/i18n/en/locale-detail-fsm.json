@@ -15,7 +15,11 @@
       "invalidEvidence": "Some loaded transitions have invalid timestamps; time-based FSM health is unknown.",
       "loadedEvidence": "Heuristics cover only loaded transition rows, not authoritative current FSM health.",
       "loadedClear": "No flapping, potentially stuck sessions, or recovery transitions detected in loaded rows.",
-      "loadedRecoveryTitle": "Recovery transitions"
+      "loadedRecoveryTitle": "Recovery transitions",
+      "loadedStuck_one": "{{count}} potentially stuck session: latest loaded state is pending/active for >4 hours",
+      "loadedStuck_other": "{{count}} potentially stuck sessions: latest loaded state is pending/active for >4 hours",
+      "loadedRecoveries_one": "{{count}} transition to recovered in loaded rows; the recovery cause is not established",
+      "loadedRecoveries_other": "{{count}} transitions to recovered in loaded rows; the recovery cause is not established"
     },
     "stateDiagram": "State diagram",
     "selectFsmType": "Select a specific FSM type to view its state diagram",

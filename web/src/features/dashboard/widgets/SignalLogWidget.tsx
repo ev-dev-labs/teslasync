@@ -78,7 +78,7 @@ function CompactView({
     <WidgetBigNumber
       value={rate == null ? null : Math.round(rate)}
       animated={false}
-      label={t('widget.signalLog.signalsPerSec', 'Signals/sec')}
+      label={t('widget.signalLog.signalsPerSec', "signals/sec")}
     />
   );
 }

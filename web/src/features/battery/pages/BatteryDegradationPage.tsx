@@ -480,7 +480,7 @@ export default function BatteryDegradationPage() {
                       stroke={chartTokens.axisStroke}
                       strokeWidth={1}
                       strokeDasharray="6 4"
-                      label={{ value: t('battery.degradation.warranty', '80% warranty'), fill: chartTokens.axisStroke, position: 'insideTopRight' }}
+                      label={{ value: t('battery.degradation.warranty', "80% Warranty"), fill: chartTokens.axisStroke, position: 'insideTopRight' }}
                     />
                     <ReferenceLine y={70} stroke={chartTokens.axisStroke} strokeWidth={1} strokeDasharray="6 4" />
                     {renderAnnotationLines(chartAnnotations, (ts) => ts)}

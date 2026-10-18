@@ -662,7 +662,7 @@ export default function StateMachineDebuggerPage() {
               </div>
               <div className="w-full sm:w-40">
                 <Select
-                  label={t('fsm.perPage', 'Per Page')}
+                  label={t('fsm.perPage', "Per page")}
                   options={perPageOptions}
                   value={String(perPage)}
                   onChange={(e) => {

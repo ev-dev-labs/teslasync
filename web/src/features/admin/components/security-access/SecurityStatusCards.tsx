@@ -35,7 +35,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
         <div
           role="status"
           aria-busy="true"
-          aria-label={t('common.loading', 'Loading…')}
+          aria-label={t('common.loading', "Loading...")}
           className="grid grid-cols-1 gap-3 sm:grid-cols-2 3xl:grid-cols-3"
         >
           {Array.from({ length: 6 }).map((_, i) => (
@@ -75,7 +75,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
           <StatusTile
             icon={sentryOn == null ? <ShieldQuestion className="h-5 w-5" /> : sentryOn ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
             tone={sentryOn ? 'blue' : 'muted'}
-            label={t('admin.security.card.sentryMode', 'Sentry mode')}
+            label={t('admin.security.card.sentryMode', "Sentry Mode")}
             value={sentryOn == null ? t('admin.security.unknown', 'Unknown') : sentryOn ? t('admin.security.active', 'Active') : t('admin.security.inactive', 'Inactive')}
             description={t('admin.security.card.sentryDesc', 'Camera surveillance system')}
           />
@@ -107,7 +107,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
           <StatusTile
             icon={<UserCheck className="h-5 w-5" />}
             tone={latest.guestMode ? 'amber' : 'muted'}
-            label={t('admin.security.card.guestMode', 'Guest mode')}
+            label={t('admin.security.card.guestMode', "Guest Mode")}
             value={latest.guestMode == null ? t('admin.security.unknown', 'Unknown') : latest.guestMode ? t('admin.security.enabled', 'Enabled') : t('admin.security.disabled', 'Disabled')}
             description={t('admin.security.card.guestDesc', 'Temporary access mode')}
           />

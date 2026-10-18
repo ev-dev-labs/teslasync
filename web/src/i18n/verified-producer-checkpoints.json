@@ -80,6 +80,16 @@
     "sha256": "45b4f830d650bf4ef412d6f004d68883d305bebbc12043b720c41cba8c63fca4"
   },
   {
+    "file": "web/src/features/admin/components/security-access/EventTimeline.tsx",
+    "calls": 18,
+    "sha256": "2a3b26bb68fc1834ecc19607cb9c59a1f86b27be00fae17533a7c4c932ff5918"
+  },
+  {
+    "file": "web/src/features/admin/components/security-access/SecurityStatusCards.tsx",
+    "calls": 30,
+    "sha256": "83117bd67420c82932a3a90257182e6cf92de484bb47701c889be9757bca0f49"
+  },
+  {
     "file": "web/src/features/admin/components/statstrip-api-quality/ApiLogsSummary.tsx",
     "calls": 20,
     "sha256": "e6aaffc8e5f3028b393e6f06028c856f55c4a7e6bb679c456dae29002092796f"
@@ -175,6 +185,11 @@
     "sha256": "cf4e18515253af0fa5b1d195afdbf400633834e6bd83d1ac465c1162df88485a"
   },
   {
+    "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsBatteryBrief.tsx",
+    "calls": 21,
+    "sha256": "a9d90800a97a79cd33f7a7ad832d2010c620fa0a2b3670b130226f9f402dd061"
+  },
+  {
     "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsMileageBrief.tsx",
     "calls": 22,
     "sha256": "b192ce2ab805c809d3e0fe86714f7fc3ca625abfc3142adc6cefa1e4411eb593"
@@ -185,6 +200,11 @@
     "sha256": "845c323509c733df4a3f658789b4741053500df0ba53a766acd160f24d234445"
   },
   {
+    "file": "web/src/features/analytics/components/true-cost-modernization/TrueCostFixedLedger.tsx",
+    "calls": 14,
+    "sha256": "b7e6cf5e90a40e93e23dcebc04a124a43351e3b4dbcdaab4a45bf8dda42602ed"
+  },
+  {
     "file": "web/src/features/analytics/components/true-cost-modernization/TrueCostLedgerColumns.tsx",
     "calls": 5,
     "sha256": "840cd73a8913697294cd05f3314cf22d55438c65413a435e57b913b52922f638"
@@ -193,6 +213,16 @@
     "file": "web/src/features/analytics/pages/PeriodComparePage.tsx",
     "calls": 77,
     "sha256": "488c96d5ead951b64100b000da619bff8ef628e07dc1f5125dae4cd1df1f004f"
+  },
+  {
+    "file": "web/src/features/analytics/pages/YearReviewPage.tsx",
+    "calls": 63,
+    "sha256": "3d870d3fc3ed19f5f3244fcb756ce326668606644b34a3e728bf340237003bd5"
+  },
+  {
+    "file": "web/src/features/automations/components/RoutineWizard.tsx",
+    "calls": 24,
+    "sha256": "e4ac5e86a41cf4d584e7366783e2f4d4460e37eff3ce189d436fae10faba736d"
   },
   {
     "file": "web/src/features/automations/pages/AutomationListTable.tsx",
@@ -218,6 +248,11 @@
     "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
     "calls": 19,
     "sha256": "418a4aacf535056bb9f8e92f01a0afb178d23f81b9515e413378e1c61443cf59"
+  },
+  {
+    "file": "web/src/features/charging/pages/ChargingCurvePage.tsx",
+    "calls": 25,
+    "sha256": "74bbca6be61fc94b3ddc89ebc4f644f571d561778af9b9cdb14cf08fc9754f8b"
   },
   {
     "file": "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
@@ -275,6 +310,21 @@
     "sha256": "ad82207e6e5a180d8d572f996b5c2d8ba6e3ed30b39bd86264efdf55084dc4fd"
   },
   {
+    "file": "web/src/features/driving/components/driving-dynamics-modernization/LiveMotorStatus.tsx",
+    "calls": 21,
+    "sha256": "62240921f19486742b0fff4932b5ea7adccb89b7872ed142d13dad342eba0539"
+  },
+  {
+    "file": "web/src/features/driving/components/operationalbrief-a-m/ArrivalEvidenceBrief.tsx",
+    "calls": 29,
+    "sha256": "23d6eea9b5d4534c81b133aef8ce9cca2f545b2765374b9a0a6002a4314a4307"
+  },
+  {
+    "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+    "calls": 35,
+    "sha256": "5315fc063e46ebcd33a784b0c1e55691926a8a90a0ce945f982da3e00130e61f"
+  },
+  {
     "file": "web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx",
     "calls": 22,
     "sha256": "96a319e6e48f9f3a069e533a60836d5d70dedca5d13eba54d67d5e585fa03ec2"
@@ -285,6 +335,16 @@
     "sha256": "9f8f77fd1c43fea3c18b93307c5cb327541033118450c56294b59c8ea9df16db"
   },
   {
+    "file": "web/src/features/driving/components/score-orchestrator/ScoreHeroSection.tsx",
+    "calls": 10,
+    "sha256": "fb550bccc1e6f8ac5a0e6c2d3359bd41855b22f23280ada07c27a21691fb047b"
+  },
+  {
+    "file": "web/src/features/driving/pages/DrivingDynamicsPage.tsx",
+    "calls": 21,
+    "sha256": "acfceb388892d5cf989209a593e547ddd7b02497e04949c3d5702582791f48cf"
+  },
+  {
     "file": "web/src/features/notifications/components/BrowserTabSignalsPanel.tsx",
     "calls": 13,
     "sha256": "17ca64cfc6c277123fa380a6ac9d9f6f8c5ddc1fb397b689b678ed984168c6e0"
@@ -293,6 +353,11 @@
     "file": "web/src/features/notifications/components/channels/ChannelCard.tsx",
     "calls": 21,
     "sha256": "8570aa0affd190f9867d975c48b92b9191aad1ee4fb33d02b3d890adb3c5f7b5"
+  },
+  {
+    "file": "web/src/features/notifications/components/channels/ChannelsGrid.tsx",
+    "calls": 10,
+    "sha256": "dea1c7e62cdb6f92b78ae4f83bb4543281181724fe022670cad6b1b512e7ae68"
   },
   {
     "file": "web/src/features/notifications/components/NotificationInboxDetails.tsx",
@@ -328,6 +393,11 @@
     "file": "web/src/features/service-intelligence/components/WarrantyPanel.tsx",
     "calls": 10,
     "sha256": "4f4777a04743d5252478218022e2fa01e6ccf676e925b1114da07c42c825512f"
+  },
+  {
+    "file": "web/src/features/settings/components/FeatureToggles.tsx",
+    "calls": 16,
+    "sha256": "57014ecabb98014b125c0a45fbb649b6d726271234d322f88adb2b902a4798af"
   },
   {
     "file": "web/src/features/settings/components/fleet-setup/FleetSetupStreamingPanel.tsx",

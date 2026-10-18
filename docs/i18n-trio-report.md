@@ -360,3 +360,13 @@ Trio results: **7,472 passed / 200 failed / 0 skipped**, 7,672 executions; **270
 
 The exact full-source digests are recorded in `web/src/i18n/verified-producer-checkpoints.json`.
 </details>
+
+## Plurals and mechanical fallback group
+
+Added nine English one/other pairs using the existing whole-sentence source defaults, with only the counted noun made singular for one. Added the count-neutral Tesla partial-subtotal default. The FSM potentially-stuck fallback now uses the plural sentence instead of “session(s)”; i18next selects its singular at count=1. No other-language files changed.
+
+The reusable codemod aligned 52 fallback call sites in 21 already-failing files where the difference was exclusively capitalization, whitespace, ellipsis, dash or quotation typography. It preserves current catalog wording and does not rewrite semantic differences. Corrected the audit to resolve existing mixed dotted/nested catalog keys; six scalar-ancestor candidates were already valid and were left untouched. All 223 earlier additions remain confirmed genuinely missing against the initial catalog.
+
+**Verification:** 104/151 source files now pass all conservative checks and have regenerated full-source fingerprints. Local constant interpolation objects and explicit count===1 singular/default branches are resolved and checked; unknown operands remain refused. All 38,394 production calls were rescanned: **zero missing literal keys**; 691 dynamic calls still need bounded-domain verification. No English key was deleted relative to bca2df7b44. Every non-metadata Arabic/Hebrew entry still has an English counterpart (21 entries each; five _meta fields each are locale metadata).
+
+Trio: **7,514 passed / 158 failed / 0 skipped**; **42 further closures**, **331 total closures**, **zero new failing identities**. Catalog split check: **PASS** (zero known-missing manifest keys).

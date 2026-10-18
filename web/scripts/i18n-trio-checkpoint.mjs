@@ -30,15 +30,36 @@ export function declarations(file) {
   return result;
 }
 export function valueAt(catalog, key) {
-  const normalized = key.replace(/^([^:]+):/, '$1.');
-  return normalized.split('.').reduce((value, part) => value?.[part], catalog) ?? catalog[normalized];
+  const parts = key.replace(/^([^:]+):/, '$1.').split('.');
+  function find(target, offset) {
+    if (target === null || typeof target !== 'object') return undefined;
+    for (let end = offset + 1; end <= parts.length; end++) {
+      const segment = parts.slice(offset, end).join('.');
+      if (!Object.hasOwn(target, segment)) continue;
+      const value = target[segment];
+      const found = end === parts.length ? value : find(value, end);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  return find(catalog, 0);
 }
 export function callsIn(file) {
   const text = fs.readFileSync(path.resolve(repo, file), 'utf8'), tree = parse(file, text), calls = [];
   function visit(node) {
     if (ts.isCallExpression(node) && ((ts.isIdentifier(node.expression) && node.expression.text === 't') || (ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 't'))) {
       const second = node.arguments[1], third = node.arguments[2];
-      const options = second && ts.isObjectLiteralExpression(second) ? second : third && ts.isObjectLiteralExpression(third) ? third : null;
+      let options = second && ts.isObjectLiteralExpression(second) ? second : third && ts.isObjectLiteralExpression(third) ? third : null;
+      if (!options && third && ts.isIdentifier(third)) {
+        // Resolve a local immutable options object, never an unknown parameter.
+        for (let scope = node.parent; scope; scope = scope.parent) {
+          const candidates = [];
+          for (const statement of scope.statements ?? []) if (ts.isVariableStatement(statement) && (statement.declarationList.flags & ts.NodeFlags.Const)) {
+            for (const declaration of statement.declarationList.declarations) if (ts.isIdentifier(declaration.name) && declaration.name.text === third.text && declaration.initializer && ts.isObjectLiteralExpression(declaration.initializer)) candidates.push(declaration.initializer);
+          }
+          if (candidates.length === 1) { options = candidates[0]; break; }
+        }
+      }
       const properties = new Map(options?.properties.filter(part => ts.isPropertyAssignment(part) || ts.isShorthandPropertyAssignment(part)).map(part => [part.name.getText(tree).replace(/^['"]|['"]$/g, ''), ts.isPropertyAssignment(part) ? part.initializer : part.name]) ?? []);
       const fallback = second && ts.isStringLiteralLike(second) ? second : properties.get('defaultValue');
       calls.push({ file, tree, node, keyNode: node.arguments[0], key: node.arguments[0] && ts.isStringLiteralLike(node.arguments[0]) ? node.arguments[0].text : null, fallbackNode: fallback, fallback: fallback && ts.isStringLiteralLike(fallback) ? fallback.text : null, options, properties, line: tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1 });
@@ -53,8 +74,14 @@ export function sourceFiles() {
 }
 export function insert(catalog, key, value) {
   const parts = key.split('.'); let target = catalog;
-  for (const part of parts.slice(0, -1)) {
-    if (target[part] !== undefined && (typeof target[part] !== 'object' || target[part] === null)) throw new Error('Scalar ancestor: ' + key);
+  for (const [index, part] of parts.slice(0, -1).entries()) {
+    if (target[part] !== undefined && (typeof target[part] !== 'object' || target[part] === null)) {
+      // Preserve scalar headings using the catalog's existing dotted-sibling convention.
+      const sibling = parts.slice(index).join('.');
+      if (target[sibling] !== undefined && target[sibling] !== value) throw new Error('Conflicting value: ' + key);
+      target[sibling] = value;
+      return;
+    }
     target = target[part] ??= {};
   }
   if (target[parts.at(-1)] !== undefined && target[parts.at(-1)] !== value) throw new Error('Conflicting value: ' + key);
@@ -71,7 +98,17 @@ export function verifyFile(file, catalog) {
     const plural = ['_one', '_other'].map(suffix => valueAt(catalog, call.key + suffix));
     const values = typeof direct === 'string' ? [direct] : plural.every(value => typeof value === 'string') ? plural : [];
     if (!values.length) { errors.push({ ...at, reason: 'Missing English key' }); continue; }
-    if (call.fallbackNode && call.fallback === null) errors.push({ ...at, reason: 'Unresolved dynamic fallback' });
+    if (call.fallbackNode && call.fallback === null) {
+      const fallback = call.fallbackNode;
+      const count = call.properties.get('count');
+      const conditionalPlural = ts.isConditionalExpression(fallback) && count && ts.isBinaryExpression(fallback.condition)
+        && fallback.condition.left.getText(call.tree) === count.getText(call.tree)
+        && fallback.condition.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken
+        && fallback.condition.right.getText(call.tree) === '1'
+        && ts.isStringLiteralLike(fallback.whenTrue) && ts.isStringLiteralLike(fallback.whenFalse)
+        && fallback.whenTrue.text === plural[0] && fallback.whenFalse.text === plural[1];
+      if (!conditionalPlural) errors.push({ ...at, reason: 'Unresolved dynamic fallback' });
+    }
     if (call.fallback !== null && !values.includes(call.fallback)) errors.push({ ...at, reason: 'Fallback differs', fallback: call.fallback, expected: values[0] });
     if (typeof direct !== 'string' && !call.properties.has('count')) errors.push({ ...at, reason: 'Plural key without explicit count' });
     for (const value of values) for (const match of value.matchAll(/{{-?\s*([^},\s]+)[^}]*}}/g)) {
@@ -96,6 +133,26 @@ export function repairMissing(catalog, calls) {
 }
 function run() {
   const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8'));
+  const typographyList = process.argv.find(arg => arg.startsWith('--align-typography='))?.slice(19);
+  if (typographyList) {
+    const files = JSON.parse(fs.readFileSync(path.resolve(typographyList), 'utf8'));
+    const normalize = text => text.toLowerCase().replaceAll('…', '...').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, '-').replace(/\s+/g, ' ').trim();
+    let changed = 0;
+    for (const file of files) {
+      const edits = callsIn(file).flatMap(call => {
+        const expected = call.key ? valueAt(catalog, call.key) : undefined;
+        return call.fallback !== null && typeof expected === 'string' && call.fallback !== expected && normalize(call.fallback) === normalize(expected)
+          ? [{ start: call.fallbackNode.getStart(call.tree), end: call.fallbackNode.end, value: JSON.stringify(expected) }] : [];
+      });
+      if (!edits.length) continue;
+      let source = fs.readFileSync(path.resolve(repo, file), 'utf8');
+      for (const edit of edits.sort((a, b) => b.start - a.start)) source = source.slice(0, edit.start) + edit.value + source.slice(edit.end);
+      fs.writeFileSync(path.resolve(repo, file), source);
+      changed += edits.length;
+    }
+    console.log('Aligned ' + changed + ' typographic/case-only fallback differences');
+    return;
+  }
   const checkpointList = process.argv.find(arg => arg.startsWith('--checkpoint-sources='))?.slice(21);
   if (checkpointList) {
     const files = JSON.parse(fs.readFileSync(path.resolve(checkpointList), 'utf8'));

@@ -620,7 +620,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
       const item: PaletteItem = {
         id: `cmd-${cfg.command}`,
         label: t(cfg.labelKey, cfg.labelFallback),
-        section: t('palette.section.commands', 'Vehicle Commands'),
+        section: t('palette.section.commands', "Vehicle commands"),
         icon: getIconForConfig(cfg, def),
         keywords: cfg.keywords,
         type: 'command',
@@ -754,7 +754,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
       .filter(s => s.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, MOST_USED_MAX_DISPLAY)
-    const sectionLabel = t('palette.section.mostUsed', 'Most Used')
+    const sectionLabel = t('palette.section.mostUsed', "Most used")
     return ranked.map(({ item }): PaletteItem => ({
       ...item,
       // Re-key so React doesn't see the same id twice (the underlying item
@@ -819,7 +819,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
     vehicleList.map(v => ({
       id: `vehicle-${v.id}`,
       label: v.display_name || v.vin,
-      section: t('palette.section.selectVehicle', 'Select Vehicle'),
+      section: t('palette.section.selectVehicle', "Select vehicle"),
       icon: <Car className="h-4 w-4" />,
       type: 'navigate' as const,
       sublabel: `${v.model ?? ''} · ${v.state ?? 'unknown'}`.trim(),
@@ -831,7 +831,7 @@ export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbac
     () =>
       openAlertList.map((alert) => ({
         id: `acknowledge-alert-${alert.id}`,
-        label: alert.title?.trim() || t('operations.alerts.untitled', 'Untitled alert'),
+        label: alert.title?.trim() || t('operations.alerts.untitled', "untitled alert"),
         section: t('palette.section.openAlerts', 'Open alerts'),
         icon: <BellRing className="h-4 w-4" />,
         type: 'command' as const,

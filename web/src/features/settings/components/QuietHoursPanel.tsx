@@ -467,7 +467,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
           loadingContent={
             <ListSkeleton
               rows={2}
-              label={t('quietHours.loading', 'Loading quiet-hours Windows…')}
+              label={t('quietHours.loading', "Loading quiet-hours windows…")}
               testId="quiet-hours-loading"
             />
           }

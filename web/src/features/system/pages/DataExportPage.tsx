@@ -781,7 +781,7 @@ function ColumnPickerSection({
   if (catalogState.status === 'initial') {
     return (
       <div className="mb-5">
-        <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
+        <Label className="mb-2 block">{t('dataExport.columns.title', "STEP 2½ — Columns")}</Label>
         {catalogState.isRefreshBlocked ? (
           <Text color="secondary" role="status">{t('dataSources.status.paused', 'Refresh paused')}</Text>
         ) : (
@@ -793,7 +793,7 @@ function ColumnPickerSection({
   if (catalogState.fatalError) {
     return (
       <div className="mb-5">
-        <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
+        <Label className="mb-2 block">{t('dataExport.columns.title', "STEP 2½ — Columns")}</Label>
         <QueryError error={catalogState.fatalError} onRetry={() => { void catalogQuery.refetch(); }} />
       </div>
     );
@@ -804,8 +804,8 @@ function ColumnPickerSection({
   if (!data || !data.supports_selection || (data.columns?.length ?? 0) === 0) {
     return (
       <div className="mb-5" data-testid="export-column-picker">
-        <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
-        <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', 'STEP 2½ — columns')} />
+        <Label className="mb-2 block">{t('dataExport.columns.title', "STEP 2½ — Columns")}</Label>
+        <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', "STEP 2½ — Columns")} />
         <EmptyState message={t('dataExport.columns.unavailableTitle', 'No export columns are available for this data type.')}
           description={t('dataExport.columnsUnavailableHelp', 'Column choices appear after the export catalog returns supported fields.')}
           action={{ label: t('common.retry', 'Retry'), onClick: () => { void catalogQuery.refetch(); } }} />
@@ -861,8 +861,8 @@ function ColumnPickerSection({
 
   return (
     <div className="mb-5" data-testid="export-column-picker">
-      <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
-      <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', 'STEP 2½ — columns')} />
+      <Label className="mb-2 block">{t('dataExport.columns.title', "STEP 2½ — Columns")}</Label>
+      <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', "STEP 2½ — Columns")} />
       <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <HelperText className="max-w-prose">
@@ -898,7 +898,7 @@ function ColumnPickerSection({
         <div
           className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
           role="group"
-          aria-label={t('dataExport.columns.title', 'STEP 2½ — columns')}
+          aria-label={t('dataExport.columns.title', "STEP 2½ — Columns")}
         >
           {data.columns.map((col) => {
             const checked = selectedSet.has(col.name);

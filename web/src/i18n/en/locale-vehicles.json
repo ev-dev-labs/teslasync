@@ -154,7 +154,13 @@
     "startBarColTime": "Time",
     "briefDescription": "Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.",
     "briefSource": "Drive-derived parking reconstruction",
-    "briefWindow": "{{sample}} · {{start}} → {{end}} · {{timezone}}"
+    "briefWindow": "{{sample}} · {{start}} → {{end}} · {{timezone}}",
+    "kpis.overnightSample_one": "22:00–06:00 · {{count}} stint",
+    "kpis.overnightSample_other": "22:00–06:00 · {{count}} stints",
+    "kpis.longestSample_one": "{{location}} · longest of {{count}} stint",
+    "kpis.longestSample_other": "{{location}} · longest of {{count}} stints",
+    "locations.subtitle_one": "{{count}} location group across {{stints}} reconstructed stints",
+    "locations.subtitle_other": "{{count}} location groups across {{stints}} reconstructed stints"
   },
   "physicsLedger": {
     "title": "Physics ledger",

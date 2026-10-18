@@ -3637,7 +3637,13 @@
     "startBarColTime": "Time",
     "briefDescription": "Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.",
     "briefSource": "Drive-derived parking reconstruction",
-    "briefWindow": "{{sample}} · {{start}} → {{end}} · {{timezone}}"
+    "briefWindow": "{{sample}} · {{start}} → {{end}} · {{timezone}}",
+    "kpis.overnightSample_one": "22:00–06:00 · {{count}} stint",
+    "kpis.overnightSample_other": "22:00–06:00 · {{count}} stints",
+    "kpis.longestSample_one": "{{location}} · longest of {{count}} stint",
+    "kpis.longestSample_other": "{{location}} · longest of {{count}} stints",
+    "locations.subtitle_one": "{{count}} location group across {{stints}} reconstructed stints",
+    "locations.subtitle_other": "{{count}} location groups across {{stints}} reconstructed stints"
   },
   "mileageBudget": {
     "chartAria": "Cumulative driven distance against the pro-rata allowance, by month",
@@ -14391,7 +14397,9 @@
       "hint": "{{count}} entries · {{total}} fixed · {{km}} km lifetime",
       "deleteTitle": "Delete this entry?",
       "deleteMessage": "This removes the recorded cost from the ledger.",
-      "allInDistance": "All-in: {{total}} ({{perDistance}}/{{unit}})"
+      "allInDistance": "All-in: {{total}} ({{perDistance}}/{{unit}})",
+      "hintDistance_one": "{{count}} entry · {{total}} fixed · {{distance}} {{unit}} lifetime",
+      "hintDistance_other": "{{count}} entries · {{total}} fixed · {{distance}} {{unit}} lifetime"
     }
   },
   "carbon": {
@@ -15617,7 +15625,13 @@
       "predictionIntervalUnavailable": "Approximate prediction band: fit sample basis and multiplier unavailable. This is not a calibrated 95% confidence interval; empirical coverage remains unmeasured in BD-C01.",
       "fittedSohTrend": "Fitted SOH trend",
       "fittedSohTrendHelp": "Signed fitted SOH change in percentage points per year. Negative values indicate declining health; positive values indicate improving fitted health.",
-      "observationDuration": "Observation duration"
+      "observationDuration": "Observation duration",
+      "driveDropEvidence_one": "Arithmetic mean of start SOC minus end SOC across {{count}} valid recorded drive (0–100% SOC, start ≥ end, including zero drops). This is per-drive SOC change, not depth of a full discharge/recharge cycle. The depth score is 100 minus this mean.",
+      "driveDropEvidence_other": "Arithmetic mean of start SOC minus end SOC across {{count}} valid recorded drives (0–100% SOC, start ≥ end, including zero drops). This is per-drive SOC change, not depth of a full discharge/recharge cycle. The depth score is 100 minus this mean.",
+      "predictionIntervalEvidence_one": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH sample (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
+      "predictionIntervalEvidence_other": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH samples (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
+      "chargeEquivalentEvidence_one": "Estimated charge equivalents: recorded energy added across {{count}} valid charging session divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
+      "chargeEquivalentEvidence_other": "Estimated charge equivalents: recorded energy added across {{count}} valid charging sessions divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption."
     },
     "health": {
       "excellent": "Excellent",
@@ -16900,7 +16914,8 @@
     "selectVehicleHelp": "Choose a vehicle or wait for fleet sync to finish before the price radar can load.",
     "recordedDuration": "Recorded subtotal: {{subtotal}} · {{missing}} missing",
     "recordedSubtotal": "Recorded subtotal",
-    "missingCount": "Missing count"
+    "missingCount": "Missing count",
+    "partialSubtotal": "Recorded subtotal: {{subtotal}} · {{missing}} missing · {{sessions}}×"
   },
   "tesla_sessions": {
     "title": "Fleet charging sessions",
@@ -24183,7 +24198,11 @@
       "invalidEvidence": "Some loaded transitions have invalid timestamps; time-based FSM health is unknown.",
       "loadedEvidence": "Heuristics cover only loaded transition rows, not authoritative current FSM health.",
       "loadedClear": "No flapping, potentially stuck sessions, or recovery transitions detected in loaded rows.",
-      "loadedRecoveryTitle": "Recovery transitions"
+      "loadedRecoveryTitle": "Recovery transitions",
+      "loadedStuck_one": "{{count}} potentially stuck session: latest loaded state is pending/active for >4 hours",
+      "loadedStuck_other": "{{count}} potentially stuck sessions: latest loaded state is pending/active for >4 hours",
+      "loadedRecoveries_one": "{{count}} transition to recovered in loaded rows; the recovery cause is not established",
+      "loadedRecoveries_other": "{{count}} transitions to recovered in loaded rows; the recovery cause is not established"
     },
     "stateDiagram": "State diagram",
     "selectFsmType": "Select a specific FSM type to view its state diagram",

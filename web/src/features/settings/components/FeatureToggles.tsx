@@ -126,7 +126,7 @@ export function FeatureToggles() {
             emptyMessage={t('featureConfig.noMatch', 'No features match your filters.')}
           />
         ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; the Refresh action already lives in the panel header */ icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')} />
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; the Refresh action already lives in the panel header */ icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', "No feature config data yet. Click refresh to fetch from Tesla.")} />
         )}
       </GlassPanel>
     </FadeIn>

@@ -16,7 +16,7 @@ export function ArrivalEvidenceBrief({ analysis, state, locale, formatDuration }
     : state.isLoading ? t('arrivalReliability.states.loadingKpi', 'Waiting for returned drive history…')
       : state.error ? t('arrivalReliability.states.errorKpi', 'Drive history is unavailable; use the status below to retry.')
         : !state.isResolved && state.isRefreshBlocked
-          ? t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', { source: t('arrivalReliability.title', 'Arrival Reliability') })
+          ? t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', { source: t('arrivalReliability.title', "Arrival reliability") })
           : !state.isResolved ? t('arrivalReliability.states.pendingKpi', 'Drive-history availability has not resolved.') : null;
   const cap = analysis.accounting.historyCapReached
     ? t('arrivalReliability.kpis.capReached', 'Latest 1,000-row cap reached')
@@ -59,7 +59,7 @@ export function ArrivalEvidenceBrief({ analysis, state, locale, formatDuration }
         : state.isRefreshBlocked ? ready
           ? t('dataSources.status.paused', 'Refresh paused')
           : t('energyFlow.state.pausedTitle', 'Source paused')
-          : ready && state.fetchStatus === 'fetching' ? t('freshness.updating', 'Updating…')
+          : ready && state.fetchStatus === 'fetching' ? t('freshness.updating', "updating…")
         : !state.isResolved && !state.isLoading && !state.error ? t('driving.brief.awaiting', 'Awaiting evidence') : undefined} />
     <ArrivalReliabilityQueryStatus analysis={analysis} state={state} />
   </section>;

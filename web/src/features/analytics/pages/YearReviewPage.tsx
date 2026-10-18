@@ -110,7 +110,7 @@ export default function YearReviewPage() {
   const highlightMetrics: StatMetric[] = [
     { metricId: 'distance', rawValue: data?.total_distance_km == null ? null : data.total_distance_km * 1000,
       label: t('yearReview.distance', 'Distance'), display: { precision: unitPrefs.precision ?? 1 } },
-    { metricId: 'count', rawValue: data?.total_drives, label: t('yearReview.drives', 'Drives') },
+    { metricId: 'count', rawValue: data?.total_drives, label: t('yearReview.drives', "drives") },
     { metricId: 'energy', rawValue: data?.total_energy_kwh == null ? null : data.total_energy_kwh * 1000,
       label: t('yearReview.energy', 'Energy'), display: { precision: unitPrefs.precision ?? 2 } },
     { metricId: 'count', rawValue: data?.total_charge_sessions, label: t('yearReview.charges', 'Charges') },
