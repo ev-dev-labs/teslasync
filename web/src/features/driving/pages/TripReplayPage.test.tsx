@@ -568,7 +568,7 @@ describe('TripReplayPage — hardening', () => {
     expect(screen.queryByText('60m')).toBeNull();
   });
 
-  it('never feeds NaN into the speed/power chart when the first ts is unparseable', () => {
+  it('marks the unparseable first ts as NaN without inventing a time (shared trips contract)', () => {
     driveState.current = loadedQuery({
       positions: [
         makePos({ latitude: 47.6, longitude: -122.3, timestamp: 'not-a-date' }),
@@ -578,11 +578,13 @@ describe('TripReplayPage — hardening', () => {
     });
     renderPage();
 
+    // This page re-exports the trips implementation: unknown timestamps stay
+    // NaN, anchored on the first *parseable* row → [NaN, 0, 1].
     const times = (chartsProps.last?.data ?? []).map((d) => d.time);
     expect(times).toHaveLength(3);
-    expect(times.every((t) => Number.isFinite(t))).toBe(true);
-    // Anchored on the first *parseable* row → last sample is +1 minute.
-    expect(times[times.length - 1]).toBe(1);
+    expect(times[0]).toBeNaN();
+    expect(times[1]).toBe(0);
+    expect(times[2]).toBe(1);
   });
 });
 

@@ -135,11 +135,6 @@ function setViewportWidth(width: number) {
 const desktopRail = () => within(screen.getByTestId('command-deck-rail'))
 const secondaryPanel = () => within(screen.getByTestId('command-deck-secondary'))
 const dialogPanel = () => within(screen.getByRole('dialog'))
-// Pre-redesign mobile drill testid. The responsive redesign replaced the
-// mobile rail/panel drill with bottom tabs + modal sheets; this helper
-// exists only so the intentionally-red legacy tests below still compile and
-// fail at their behavior assertions with a precise reason.
-const mobileRail = () => within(screen.getByTestId('command-deck-mobile-rail'))
 
 beforeEach(() => {
   setViewportWidth(1920)
@@ -478,33 +473,26 @@ describe('CommandDeck', () => {
     }
   })
 
-  it('keeps a collapsed secondary rail navigable with icon labels on hover and focus', () => {
+  it('keeps the secondary panel navigable with always-labeled links (no icon-only collapsed rail)', () => {
     renderControlledDeck({ collections: [tripCollection] })
-    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 4 pages' }))
-    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Collapse secondary navigation' }))
-    expect(secondaryPanel().getByRole('navigation', { name: 'Sidebar navigation' })).toHaveAttribute('data-collapsed', 'true')
-    expect(desktopRail().queryByText('Driving')).toBeNull()
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
+    // The redesign removed the collapsible icon-only rail: links always carry text.
+    expect(secondaryPanel().queryByRole('button', { name: 'Collapse secondary navigation' })).toBeNull()
+    expect(secondaryPanel().getByRole('navigation', { name: 'Sidebar navigation' })).not.toHaveAttribute('data-collapsed')
     const mileage = secondaryPanel().getByRole('link', { name: 'Mileage Log' })
-    expect(mileage).toHaveAttribute('aria-label', 'Mileage Log')
-    expect(mileage).not.toHaveTextContent('Mileage Log')
-    fireEvent.mouseOver(mileage)
-    expect(screen.getByTestId('atlas-tip')).toHaveTextContent('Mileage Log')
-    fireEvent.mouseOut(mileage)
+    expect(mileage).toHaveTextContent('Mileage Log')
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Trip Records' }))
     expect(secondaryPanel().queryByRole('link', { name: 'Mileage Log' })).toBeNull()
     fireEvent.click(secondaryPanel().getByRole('button', { name: 'Trip Records' }))
-    fireEvent.click(secondaryPanel().getByRole('button', { name: 'Expand secondary navigation' }))
-    expect(secondaryPanel().getByRole('navigation', { name: 'Sidebar navigation' })).toHaveAttribute('data-collapsed', 'false')
-    expect(desktopRail().queryByText('Driving')).toBeNull()
     expect(secondaryPanel().getByRole('link', { name: 'Mileage Log' })).toBeInTheDocument()
   })
 
-  it('keeps the compact secondary rail navigable after opening a section', () => {
+  it('ignores the legacy collapse props and opens labeled section links', () => {
     renderControlledDeck({ panelCollapsed: true, railCollapsed: true })
-    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving, 3 pages' }))
-    expect(secondaryPanel().getByRole('navigation', { name: 'Sidebar navigation' })).toHaveAttribute('data-collapsed', 'true')
-    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toBeInTheDocument()
-    expect(desktopRail().queryByText('Driving')).toBeNull()
+    fireEvent.click(desktopRail().getByRole('button', { name: 'Driving' }))
+    // Legacy props no longer collapse anything: links render with text.
+    expect(secondaryPanel().getByRole('navigation', { name: 'Sidebar navigation' })).not.toHaveAttribute('data-collapsed')
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveTextContent('Drives')
   })
 
   it('highlights the active section on the rail while the panel is docked away', () => {
@@ -739,20 +727,22 @@ describe('CommandDeck', () => {
     expect(desktopRail().queryByRole('button')).not.toBeInTheDocument()
   })
 
-  it.each(['ltr', 'rtl'])('keeps a sharp directional entrance in %s on both panel levels', (direction) => {
+  it.each(['ltr', 'rtl'])('renders both panel levels instantly with no entrance transform in %s', (direction) => {
     document.documentElement.dir = direction
     renderDeck({ panelOpen: true })
+    // The redesign removed directional entrances: panels render instantly.
     const desktop = screen.getByTestId('command-deck-secondary')
-    expect(desktop.style.transform).toContain(`translateX(${direction === 'rtl' ? 22 : -22}px)`)
+    expect(desktop.style.transform).toBe('')
     expect(desktop.style.filter).toBe('')
-    expect(desktop.style.transform).not.toContain('scale')
-    expect(desktop).toHaveClass('ease-standard', 'motion-reduce:transition-none')
 
-    fireEvent.click(mobileRail().getByRole('button', { name: 'Suggested' }))
-    const mobile = screen.getByTestId('command-deck-mobile-panel')
-    expect(mobile.style.transform).toContain(`translateX(${direction === 'rtl' ? -22 : 22}px)`)
-    expect(mobile.style.filter).toBe('')
-    expect(mobile.style.transform).not.toContain('scale')
+    cleanup()
+    window.localStorage.clear()
+    setViewportWidth(900)
+    renderDeck({ panelOpen: true })
+    const tablet = screen.getByRole('dialog')
+    expect(tablet).toHaveClass('sidenav-tablet-panel')
+    expect(tablet.style.transform).toBe('')
+    expect(tablet.style.filter).toBe('')
   })
 
   it('renders both panel levels immediately when the shared motion policy requests reduction', () => {

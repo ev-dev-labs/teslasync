@@ -390,7 +390,6 @@ describe('SignalGapDetectorPage — unknown and retained trust', () => {
 
   it.each([
     ['background refresh', { isFetching: true }],
-    ['stale response', { isStale: true }],
     ['refresh failure', { error: new Error('retained refresh failed') }],
     ['paused refresh', { fetchStatus: 'paused' as const }],
   ])('retains observations and marks KPI trust during a %s', (_label, overrides) => {
@@ -400,6 +399,29 @@ describe('SignalGapDetectorPage — unknown and retained trust', () => {
     expect(captured.kpis.unavailable).toBe(false);
     expect(captured.kpis.loading).toBe(false);
     expect(captured.kpis.retained).toBe(true);
+    expect(captured.kpis.freshnessPct).toBe(50);
+    expect(captured.kpis.buckets).toEqual<GapBuckets>({
+      total: 4, active: 1, aging: 1, stale: 1, never: 1,
+    });
+    const analysis = captured.health.analysis as SignalGapAnalysis;
+    expect(analysis.query.data).toBe(live);
+    expect(captured.freshness.analysis).toBe(analysis);
+    for (const section of ['kpis', 'health', 'freshness', 'catalog']) {
+      expect(screen.getByTestId(section)).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', REFRESH));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows observations without retained trust for a plain stale flag (shared contract)', () => {
+    signalGapsMock.mockReturnValue(makeQuery({ data: live, isStale: true }));
+    renderPage();
+
+    // deriveDataState deliberately ignores react-query isStale: a staleness
+    // flag is not stale evidence, so retained stays false while data shows.
+    expect(captured.kpis.unavailable).toBe(false);
+    expect(captured.kpis.loading).toBe(false);
+    expect(captured.kpis.retained).toBe(false);
     expect(captured.kpis.freshnessPct).toBe(50);
     expect(captured.kpis.buckets).toEqual<GapBuckets>({
       total: 4, active: 1, aging: 1, stale: 1, never: 1,

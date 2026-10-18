@@ -91,14 +91,15 @@ describe('phase6 audit workspace range registration', () => {
     expect(isWorkspaceRangePresetAvailable('/drive-calendar', '24h')).toBe(false);
   });
 
-  it('feeds the existing desktop header and mobile drawer from the same route capability', () => {
+  it('feeds the responsive header from the same route capability (no separate mobile drawer control)', () => {
     expect(layoutSource).toMatch(
       /const workspaceScope = useMemo\(\s*\(\) => getWorkspaceRouteScope\(location\.pathname\)/,
     );
     expect(layoutSource).toContain('<WorkspaceScopeProvider scope={workspaceScope}>');
-    expect(layoutSource).toMatch(
-      /\{workspaceScope\.range && \(\s*<div[^>]*className="[^"]*\bxl:hidden"[^>]*>\s*<Suspense[^>]*>\s*<WorkspaceContextControl\s+className="w-full max-w-none"\s+listenForCommands=\{false\}/,
-    );
+    // The sidenav shell removed the separate mobile-drawer context block; the
+    // responsive header below is the single context surface at every width.
+    expect(layoutSource).not.toContain('WorkspaceContextControl');
+    expect(headerSource).toContain('<WorkspaceContextControl');
     expect(headerSource).toContain('const workspaceScope = useWorkspaceScope()');
     expect(headerSource).toContain('const showRange = !workspaceScope.managed || workspaceScope.range');
     expect(headerSource).toContain('hidden={!showRange}');
