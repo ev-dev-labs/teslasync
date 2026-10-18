@@ -647,10 +647,14 @@ export default function TripReplayPage() {
                       : origin === 'telemetry' && quantity === 'power' ? 'inferred' : 'historical';
                     const positionTs = cp ? new Date(cp.timestamp).getTime() : Number.NaN;
                     const known = cp != null && Number.isFinite(cp[quantity]);
-                    // Signed age is relative to the GPS frame. Nearest alignment
-                    // can select a future row, which must not appear age zero.
+                    // Age is relative to the GPS frame. Position and telemetry
+                    // streams carry independent timestamps, so nearest
+                    // alignment (with the later-row tie break) can select a
+                    // future row; its age clamps to zero — age must never be
+                    // negative. The source timestamp beside it still shows
+                    // when the reading is newer than the frame.
                     const age = sourceTs != null && Number.isFinite(positionTs)
-                      ? `${fmtNumber((positionTs - sourceTs) / 1000)} s`
+                      ? `${fmtNumber(Math.max(0, (positionTs - sourceTs) / 1000))} s`
                       : t('common.unknown', 'Unknown');
                     return (
                       <div key={quantity} className="min-w-0" data-testid={`replay-source-${quantity}`}

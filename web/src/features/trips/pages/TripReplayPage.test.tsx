@@ -193,7 +193,7 @@ describe('TripReplayPage local modernization regressions', () => {
     }
   });
 
-  it('exposes independent source instants and signed GPS-frame age without imposing a tolerance', () => {
+  it('exposes independent source instants and GPS-frame age without imposing a tolerance', () => {
     currentDrive.positions = [
       position(0, { power: null, elevation: null, ratedRange: 0, outsideTemp: null }),
       position(1),
@@ -238,7 +238,7 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(time.textContent).not.toBe('2024-01-01T00:00:00.000Z');
   });
 
-  it('retains the existing later-row tie break and reveals future telemetry as negative age', () => {
+  it('retains the existing later-row tie break and clamps future telemetry to zero age', () => {
     currentDrive.positions = [position(0, { power: null }), position(1)];
     currentDrive.telemetry = [-10, 10].map((seconds) => ({
       ...position(0, {
@@ -253,7 +253,7 @@ describe('TripReplayPage local modernization regressions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sources' }));
     const powerTime = screen.getByTestId('replay-source-power').querySelector('time');
     expect(powerTime).toHaveAttribute('dateTime', '2024-01-01T00:00:10.000Z');
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: -10.00 s');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: 0.00 s');
   });
 
   it('rejects missing, nonfinite and out-of-bounds coordinates without fabricating a route', () => {

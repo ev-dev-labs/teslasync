@@ -133,7 +133,24 @@ Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), do
   `api.getVehicleState` coerces `?? 0` (no production callers);
   TelemetryGrid speed-missing → "Parked" (adjacent, not a zero display).
 
-### 2d–2f. TBD
+### 2d. Negative "Age: -1.00 s" in trip replay sources — FIXED
+- Root cause: position and telemetry streams carry independent
+  timestamps; nearest-row alignment (with the intentional later-row tie
+  break) can attach a newer telemetry row to an older GPS frame, so
+  `positionTs − sourceTs` goes negative. The code even documented this
+  as deliberate ("must not appear age zero").
+- Fix (`TripReplayPage.tsx` sources drawer): clamp displayed age at
+  zero — age must never be negative. The source timestamp beside it
+  still shows when a reading is newer than the frame. Alignment and
+  tie-break untouched (test mandates retaining them).
+- Regression test: renamed to "clamps future telemetry to zero age";
+  stash round-trip proved fail-before ('Age: -10.00 s' rendered) and
+  pass-after ('Age: 0.00 s'); tie-break assertions (later row wins)
+  unchanged. Trips suites 62/62; driving replay suite (same component)
+  16 passed + baseline-only TripReplay 3. No i18n changes; trio 7672/0;
+  tsc/lint/build green.
+
+### 2e–2f. TBD
 
 ## 3. Performance (dashboard 60s re-render)
 
