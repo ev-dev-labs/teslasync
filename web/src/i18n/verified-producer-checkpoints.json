@@ -42,7 +42,7 @@
   {
     "file": "web/src/components/layout/Layout.tsx",
     "calls": 14,
-    "sha256": "2cd86cf77fd0010317d4b6da24ea709b4539faf97f6b79bf353a02e3ae787a8f",
+    "sha256": "96c08ab2902a736838201934e4d2c9c41d0b9a8a8c5d325059d75e88c1f5e807",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",

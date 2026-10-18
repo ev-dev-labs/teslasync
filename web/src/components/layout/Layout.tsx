@@ -736,7 +736,12 @@ export default function Layout() {
   }, [sidebarOpen, presentation.mode])
   const [deckPanelOpen, setDeckPanelOpen] = useState(() => {
     try {
-      return window.localStorage.getItem('teslasync-deck-panel-open') !== '0'
+      const stored = window.localStorage.getItem('teslasync-deck-panel-open')
+      if (stored !== null) return stored !== '0'
+      // Fresh default is viewport-aware: on desktop the open panel docks
+      // in-flow (harmless), but below the desktop breakpoint it renders as
+      // a modal overlay that would cover page content on first paint.
+      return window.innerWidth >= 1280
     } catch {
       return false
     }

@@ -637,6 +637,9 @@ describe('Layout — unified sidebar wiring', () => {
   })
 
   it('sizes the Command Deck rail to 348px expanded, 76px collapsed, with no resize handle', async () => {
+    // Fresh default is open on desktop (the docked case this test sizes).
+    const previousWidth = window.innerWidth
+    window.innerWidth = 1440
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
     // The panel is open by default (no stored preference): 76px rail + 272px panel.
@@ -658,9 +661,14 @@ describe('Layout — unified sidebar wiring', () => {
       '--shell-sidebar-width': '76px',
     })
     expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).toBeNull()
+    window.innerWidth = previousWidth
   })
 
   it('restores the secondary panel open state after a reload', async () => {
+    // Fresh default is open on desktop (docked, harmless); covered for
+    // smaller viewports by 'keeps the panel closed on fresh tablet loads'.
+    const previousWidth = window.innerWidth
+    window.innerWidth = 1440
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
     // Open is the default: first paint shows the panel until the user closes it.
@@ -679,9 +687,27 @@ describe('Layout — unified sidebar wiring', () => {
     renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
     expect(unifiedProps().panelOpen).toBe(true)
+    window.innerWidth = previousWidth
+  })
+
+  it('keeps the panel closed on fresh tablet loads so the modal never covers first paint', async () => {
+    const previousWidth = window.innerWidth
+    window.innerWidth = 768
+    try {
+      renderLayout('/')
+      expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+      expect(unifiedProps().panelOpen).toBe(false)
+      // An explicit stored choice still wins on small viewports.
+      act(() => unifiedProps().onPanelOpenChange(true))
+      expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
+    } finally {
+      window.innerWidth = previousWidth
+    }
   })
 
   it('maps the docked secondary panel width to its open state and persists that preference', async () => {
+    const previousWidth = window.innerWidth
+    window.innerWidth = 1440
     const first = renderLayout('/')
     expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
     const shell = screen.getByTestId('command-deck').closest('[data-presentation-mode]')
@@ -700,6 +726,7 @@ describe('Layout — unified sidebar wiring', () => {
     expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
       '--shell-sidebar-width': '348px',
     })
+    window.innerWidth = previousWidth
   })
 
   it('feeds the unified sidebar the complete catalog as its search corpus', () => {
