@@ -80,8 +80,12 @@ export function CommandDeck(props: CommandDeckProps) {
     if (viewport !== 'desktop') onPanelOpenChange(false)
   }, [pathname, activeSectionTitle, sections, viewport, onPanelOpenChange])
   useEffect(() => {
+    // Late-loading sections must not clobber the saved view: while the
+    // stored section is absent from the current list, leave storage alone
+    // so its arrival restores it instead of the fallback.
+    if (stored?.kind === 'section' && !sections.some(section => section.title === stored.title)) return
     try { localStorage.setItem(VIEW_KEY, JSON.stringify({ kind: 'section', title })) } catch { /* Private storage is optional. */ }
-  }, [title])
+  }, [title, stored, sections])
   useEffect(() => {
     if (viewport !== 'tablet' || !panelOpen) return
     // The rail stays interactive beside the drawer, so Escape must also work
