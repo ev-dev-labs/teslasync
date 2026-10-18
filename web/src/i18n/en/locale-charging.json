@@ -881,6 +881,7 @@
     },
     "priorPeriod": "prior period: {{start}} – {{end}}",
     "priorUnavailable": "Prior-period comparison unavailable: {{start}} – {{end}}",
+    "priorUnavailableAllTime": "Prior-period comparison skipped for All time: the range already covers your full history.",
     "viewAnomalies": "View anomalies",
     "anomalyCount": "{{count}} {{noun}} in this range",
     "anomaly_one": "anomaly",

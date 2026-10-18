@@ -68,7 +68,29 @@ Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), do
   installed on this box; used official ripgrep 15.2.0 binary in D:/tmp
   (PATH-only, nothing committed) for that one invocation.
 
-### 2b–2f. TBD
+### 2b. "All time" nonsense prior window — FIXED
+- Root cause: the All-time preset resolves to `2015-01-01 → today`
+  (`datePresets.ts`), and `priorPeriod()` unconditionally mirrors an
+  equal-length window before it → `Mar 16, 2003 – Dec 31, 2014`, rendered
+  by both DrivesListPage ("No drives in prior period: …") and
+  ChargingListPage ("Prior-period comparison unavailable: …"). It also
+  dragged the drives fetch window back to 2003.
+- Fix: new `isAllTimeRange(start, end, presetId?)` helper (persisted
+  preset id preferred, `matchPresetId` fallback for deep links). Both
+  pages set `priorRange = null` for All time, which also nulls
+  `priorStats`/deltas and shrinks the fetch window. Skip messages with
+  the reason: `drives.noPriorAllTime`,
+  `charging.priorUnavailableAllTime`, plus a comparison-free scope
+  sentence `drives.brief.overviewScopeNoComparison` (threaded as
+  `isAllTime` through the drives controller into DrivesOverview).
+- Regression tests: new all-time tests on both pages failed before
+  (nonsense window visible in output) and pass after; full page files
+  153/153; helper unit tests 3/3. `datePresets.test.ts` has 1 failure
+  (`6h` preset i18nKey) identical in baseline → pre-existing, step 5.
+- Catalog: 3 new keys, regen + trio re-pin (42,197 keys) → 7672/0.
+  tsc/lint/build green.
+
+### 2c–2f. TBD
 
 ## 3. Performance (dashboard 60s re-render)
 

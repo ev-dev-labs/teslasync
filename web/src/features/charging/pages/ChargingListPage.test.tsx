@@ -236,6 +236,7 @@ import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import type { ChargingSession, VehicleState } from '@/api/types';
 import type { ChargingOptimizerData } from '@/types/charging';
+import { getDatePreset } from '@/lib/datePresets';
 
 const mockSessions = vi.mocked(useChargingSessionsPaginated);
 const mockOptimizer = vi.mocked(useChargingOptimizer);
@@ -514,6 +515,25 @@ describe('ChargingListPage — prior-period evidence', () => {
       }));
     },
   );
+});
+
+describe('ChargingListPage — all-time comparison skip', () => {
+  it('skips the prior-period comparison for All time and says why', async () => {
+    const allEnd = getDatePreset('all')?.resolve().end;
+    if (!allEnd) throw new Error('Missing All time preset');
+    mockSessions.mockReturnValue(qr({ data: [makeSession({ id: 101 })] }));
+    renderPage([`/charging?from=2015-01-01&to=${allEnd}`]);
+
+    await screen.findByTestId('charging-overview');
+    const overviewPanel = document.getElementById('charging-overview');
+    if (!overviewPanel) throw new Error('Missing charging overview panel');
+    expect(
+      within(overviewPanel).getByText(/Prior-period comparison skipped for All time/),
+    ).toBeInTheDocument();
+    // The nonsense mirrored window (e.g. 2003–2014) must not appear anywhere.
+    expect(overviewPanel.textContent).not.toMatch(/20(0\d|1[0-4])/);
+    expect(within(overviewPanel).queryByText(/^prior period:/)).not.toBeInTheDocument();
+  });
 });
 
 describe('ChargingListPage — preferred clock labels', () => {

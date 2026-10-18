@@ -235,3 +235,16 @@ export function matchPresetId(start: string, end: string, now?: Date): string | 
   }
   return undefined;
 }
+
+/**
+ * Whether (start, end) is the "All time" range. Prefers the persisted
+ * `presetId` when the caller has it (exact, timezone-independent);
+ * otherwise matches the resolved range, so deep-linked ranges without a
+ * stored preset are still recognised. Pages use this to skip the
+ * prior-period comparison: mirroring an equal-length window before
+ * "2015-01-01 → today" yields a nonsense pre-history window.
+ */
+export function isAllTimeRange(start: string, end: string, presetId?: string): boolean {
+  if (presetId === 'all') return true;
+  return matchPresetId(start, end) === 'all';
+}

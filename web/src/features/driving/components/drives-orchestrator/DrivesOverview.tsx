@@ -10,20 +10,22 @@ import { useUnits } from '@/hooks/useUnits';
 
 type Props = Pick<DrivesListPageController,
   't' | 'drivesState' | 'refetchDrives' | 'isDrivesLoading' | 'currentStats'
-  | 'periodLabel' | 'priorLabel' | 'fmtCompact' | 'priorHasData' | 'priorStats'
+  | 'periodLabel' | 'priorLabel' | 'isAllTime' | 'fmtCompact' | 'priorHasData' | 'priorStats'
   | 'distanceUnit' | 'distMi' | 'priorDistMi' | 'driveTimeMin' | 'priorDriveTimeMin'
   | 'avgGrade' | 'efficiencyUnit' | 'avgEffDisp' | 'fmtInt' | 'priorEffDisp'
   | 'formatEnergy' | 'formatEnergyCost' | 'priorTotalCost' | 'totalCost'>;
 
 export function DrivesOverview({
   t, drivesState, refetchDrives, isDrivesLoading, currentStats, periodLabel,
-  priorLabel, fmtCompact, priorHasData, priorStats, distanceUnit, distMi,
+  priorLabel, isAllTime, fmtCompact, priorHasData, priorStats, distanceUnit, distMi,
   priorDistMi, driveTimeMin, priorDriveTimeMin, avgGrade, efficiencyUnit,
   avgEffDisp, fmtInt, priorEffDisp, formatEnergy, formatEnergyCost, priorTotalCost, totalCost,
 }: Props) {
   const { unitPrefs } = useUnits();
   const available = drivesState.hasData && !isDrivesLoading;
-  const scope = t('drives.brief.overviewScope', 'Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals.');
+  const scope = isAllTime
+    ? t('drives.brief.overviewScopeNoComparison', 'Aggregated returned drives in the selected window. These are not server-wide totals.')
+    : t('drives.brief.overviewScope', 'Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals.');
   const metrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'drives', rawValue: available ? currentStats.count : null,
       label: t('drives.totalDrives', 'Drives'),

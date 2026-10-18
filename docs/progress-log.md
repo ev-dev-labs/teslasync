@@ -89,3 +89,4 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-18 10:15 UTC | step-1 closing suite running (~20 min in) | . | none
 2026-10-18 10:30 UTC | STEP 1 DONE: web 13->9 (blocked only), docs 4->2, mobile 0, desktop 0, Go 0 affecting; closing suite 56832/167, 0 new | step 2 data bugs next | none
 2026-10-18 11:00 UTC | 2a DONE: zero-rate cost fix (useFormatting null-rate + recorded-cost fallback + noRateConfigured key); trio re-pinned via generator (7672/0); cost-surface suites 9988 + baseline-only TripReplay 3; tsc/lint/build green | 2b all-time comparison next | none
+2026-10-18 11:30 UTC | 2b DONE: all-time prior comparison skipped with reason (isAllTimeRange helper, drives+charging); regtests fail-before/pass-after, pages 153/153, trio 7672/0, gates green | 2c missing-as-zero next | none

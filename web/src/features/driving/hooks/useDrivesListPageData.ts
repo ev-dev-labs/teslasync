@@ -17,6 +17,7 @@ import { calendarRangeToInstants } from '@/lib/dateRange';
 import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { isAllTimeRange } from '@/lib/datePresets';
 import { priorPeriod, shiftDayKey } from '@/lib/drivesAggregation';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { DRIVES_FETCH_LIMIT, FSD_MAX_RANGE_DAYS, inclusiveDateKeySpan } from '../components/drives-orchestrator/drivesListConstants';
@@ -37,10 +38,20 @@ export function useDrivesListPageData() {
    * the API applies a 50-row default page, so filtering client-side alone
    * capped this page at the 50 newest drives regardless of the chosen range
    * or page size. */
-  const { start: startDate, end: endDate } = useRangeState({
+  const { start: startDate, end: endDate, presetId: rangePresetId } = useRangeState({
     persistKey: 'drives.list.range',
   });
-  const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
+  // All time has no meaningful prior window: mirroring an equal-length
+  // range before "2015-01-01 → today" yields a nonsense pre-history
+  // window (e.g. 2003–2014), so the comparison is skipped instead.
+  const isAllTime = useMemo(
+    () => isAllTimeRange(startDate, endDate, rangePresetId),
+    [startDate, endDate, rangePresetId],
+  );
+  const priorRange = useMemo(
+    () => (isAllTime ? null : priorPeriod(startDate, endDate)),
+    [isAllTime, startDate, endDate],
+  );
 
   /* Fetch window. It has to reach back over the prior period as well, because
    * the delta comparison below is computed from drives that fall *before* the
@@ -161,7 +172,7 @@ export function useDrivesListPageData() {
 
   return {
     fmtNumber, fmtInt, fmtCompact, t, navigate, savedView, desktopEvidence,
-    vehicleId, startDate, endDate, priorRange, drives, drivesQuery,
+    vehicleId, startDate, endDate, priorRange, isAllTime, drives, drivesQuery,
     refetchDrives, hasDrivePayload, drivesState, isDrivesLoading,
     previewDrive, setPreviewDrive, exportScope, truncated, tz,
     fsdRangeSupported, refetchFsd, fsdState, fsdDataAvailable, fsdByDriveID,

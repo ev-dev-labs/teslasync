@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DATE_PRESETS, DEFAULT_PRESET_IDS, getDatePreset, matchPresetId } from './datePresets';
+import { DATE_PRESETS, DEFAULT_PRESET_IDS, getDatePreset, isAllTimeRange, matchPresetId } from './datePresets';
 
 // Fixed reference: Friday 2026-05-15 (May = month index 4, Q2 starts at month 3 = April).
 const NOW = new Date(2026, 4, 15, 14, 30, 0);
@@ -156,5 +156,23 @@ describe('matchPresetId', () => {
 
   it('does not infer rolling scopes from ambiguous calendar dates', () => {
     expect(matchPresetId('2026-05-14', '2026-05-15', NOW)).toBeUndefined();
+  });
+});
+
+describe('isAllTimeRange', () => {
+  it('trusts the persisted preset id without consulting the clock', () => {
+    expect(isAllTimeRange('2015-01-01', '2026-05-15', 'all')).toBe(true);
+    expect(isAllTimeRange('2026-05-01', '2026-05-15', '7d')).toBe(false);
+  });
+
+  it('recognises the resolved All time range when no preset id was stored', () => {
+    const all = getDatePreset('all')?.resolve();
+    if (!all) throw new Error('Missing All time preset');
+    expect(isAllTimeRange(all.start, all.end)).toBe(true);
+  });
+
+  it('rejects bounded ranges (fixed past dates can never resolve to All time)', () => {
+    expect(isAllTimeRange('2026-05-01', '2026-05-15')).toBe(false);
+    expect(isAllTimeRange('2015-01-01', '2015-01-31')).toBe(false);
   });
 });

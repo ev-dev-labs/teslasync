@@ -89,6 +89,7 @@
       "inputLabel": "Describe the drive to find"
     },
     "noPriorData": "No drives in prior period: {{start}} – {{end}}",
+    "noPriorAllTime": "No prior-period comparison for All time: the range already covers your full history.",
     "priorPeriod": "prior period: {{start}} – {{end}}",
     "totalDrives": "Total drives",
     "total": "Total",
@@ -164,6 +165,7 @@
     },
     "brief": {
       "overviewScope": "Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals.",
+      "overviewScopeNoComparison": "Aggregated returned drives in the selected window. These are not server-wide totals.",
       "measuredEnergyScope": "{{measured}} of {{total}} returned drives supply energy; cost uses the configured rate, not invoices."
     },
     "driveTime": "Drive time",

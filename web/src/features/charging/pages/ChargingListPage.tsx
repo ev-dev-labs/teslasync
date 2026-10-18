@@ -44,7 +44,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { PullToRefresh } from '@/components/mobile';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey, formatTime } from '@/lib/dateFormat';
-import { matchPresetId, getDatePreset } from '@/lib/datePresets';
+import { matchPresetId, getDatePreset, isAllTimeRange } from '@/lib/datePresets';
 
 import { buildContextHref } from '@/lib/contextNavigation';
 import type { ChargingSession } from '@/api/types';
@@ -105,7 +105,7 @@ export default function ChargingListPage() {
   const { asOf } = useAsOfDate();
 
   /* ── URL state ───────────────────────────────────────────────── */
-  const { start: startDate, end: endDate, startInstant, endInstantExclusive } = useRangeState({
+  const { start: startDate, end: endDate, startInstant, endInstantExclusive, presetId: rangePresetId } = useRangeState({
     persistKey: 'charging.list.range',
     timezone: tz,
   });
@@ -193,7 +193,17 @@ export default function ChargingListPage() {
     () => computeChargingPeriodStats(dateFilteredSessions, undefined, undefined, tz),
     [dateFilteredSessions, tz],
   );
-  const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
+  // All time has no meaningful prior window: mirroring an equal-length
+  // range before "2015-01-01 → today" yields a nonsense pre-history
+  // window (e.g. 2003–2014), so the comparison is skipped instead.
+  const isAllTime = useMemo(
+    () => isAllTimeRange(startDate, endDate, rangePresetId),
+    [startDate, endDate, rangePresetId],
+  );
+  const priorRange = useMemo(
+    () => (isAllTime ? null : priorPeriod(startDate, endDate)),
+    [isAllTime, startDate, endDate],
+  );
   // The capped current-range query does not establish prior-period coverage.
   const priorStats: ChargingPeriodStats | null = null;
 
@@ -532,11 +542,13 @@ export default function ChargingListPage() {
   const formattedRange = `${formatDayKey(startDate, { style: 'long' })} – ${formatDayKey(endDate, { style: 'long' })}`;
   const periodLabel = datePresetLabel ? `${datePresetLabel} · ${formattedRange}` : formattedRange;
   const priorHasData = false;
-  const priorLabel: string | undefined = priorRange
+  const priorLabel: string | undefined = isAllTime
+    ? t('charging.priorUnavailableAllTime', 'Prior-period comparison skipped for All time: the range already covers your full history.')
+    : priorRange
       ? t('charging.priorUnavailable', 'Prior-period comparison unavailable: {{start}} – {{end}}', {
-          start: formatDayKey(priorRange.start, { style: 'long' }),
-          end: formatDayKey(priorRange.end, { style: 'long' }),
-        })
+        start: formatDayKey(priorRange.start, { style: 'long' }),
+        end: formatDayKey(priorRange.end, { style: 'long' }),
+      })
       : undefined;
 
   /* ── Anomaly callout ─────────────────────────────────────────── */

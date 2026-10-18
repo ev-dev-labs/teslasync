@@ -39,6 +39,7 @@ import type { Vehicle } from '@/types/vehicle';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtCompact, fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { formatDurationMinutes } from '@/lib/dateFormat';
+import { getDatePreset } from '@/lib/datePresets';
 import { ToastProvider } from '@/components/feedback/Toast';
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
@@ -647,6 +648,27 @@ describe('DrivesListPage — populated (km)', () => {
     expect(within(list).getByText('Aug 27, 2026')).toBeInTheDocument();
     expect(within(list).getByText(/· Today/)).toBeInTheDocument();
     expect(within(list).queryByText(/· Yesterday/)).not.toBeInTheDocument();
+  });
+});
+
+describe('DrivesListPage — all-time comparison skip', () => {
+  it('skips the prior-period comparison for All time and says why', async () => {
+    const allEnd = getDatePreset('all')?.resolve().end;
+    if (!allEnd) throw new Error('Missing All time preset');
+    renderPage([`/drives?from=2015-01-01&to=${allEnd}`]);
+
+    // No comparison tiles: the mirrored pre-history window has no baseline.
+    expect(kpiRegion().querySelector('[data-testid^="delta-"]')).toBeNull();
+
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const details = await screen.findByRole('dialog', { name: 'Overview details' });
+    const calculation = within(details).getByRole('region', { name: 'How this was calculated' });
+    expect(
+      within(calculation).getByText(/No prior-period comparison for All time/),
+    ).toBeInTheDocument();
+    // The nonsense mirrored window (e.g. 2003–2014) must not appear anywhere.
+    expect(calculation.textContent).not.toMatch(/20(0\d|1[0-4])/);
+    expect(calculation.textContent).not.toMatch(/prior period: /);
   });
 });
 

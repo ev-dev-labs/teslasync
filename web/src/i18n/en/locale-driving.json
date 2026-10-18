@@ -1122,7 +1122,8 @@
     "batteryChange": "Battery change",
     "brief": {
       "measuredEnergyScope": "{{measured}} of {{total}} returned drives supply energy; cost uses the configured rate, not invoices.",
-      "overviewScope": "Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals."
+      "overviewScope": "Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals.",
+      "overviewScopeNoComparison": "Aggregated returned drives in the selected window. These are not server-wide totals."
     },
     "coll": {
       "allOption": "All drives",
@@ -1249,6 +1250,7 @@
       "grade": "Efficiency grade"
     },
     "noHighlights": "No highlights in this range",
+    "noPriorAllTime": "No prior-period comparison for All time: the range already covers your full history.",
     "noPriorData": "No drives in prior period: {{start}} – {{end}}",
     "noStatsRange": "No drives in this range",
     "noTelemetry": "No telemetry",

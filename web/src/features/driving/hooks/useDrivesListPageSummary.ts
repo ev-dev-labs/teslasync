@@ -11,7 +11,7 @@ type SummaryInput = ReturnType<typeof useDrivesListPageData>
 
 export function useDrivesListPageSummary(input: SummaryInput) {
   const {
-    startDate, endDate, t, priorRange, toDistanceDisplay, toEfficiencyDisplay,
+    startDate, endDate, t, priorRange, isAllTime, toDistanceDisplay, toEfficiencyDisplay,
     costPerKwh, fmtNumber, currentStats, priorStats, dateFilteredDrives, anomalyDrives,
   } = input;
 
@@ -49,6 +49,8 @@ export function useDrivesListPageSummary(input: SummaryInput) {
       start: formatDayKey(priorRange.start, { style: 'long' }),
       end: formatDayKey(priorRange.end, { style: 'long' }),
     });
+  } else if (isAllTime) {
+    priorLabel = t('drives.noPriorAllTime', 'No prior-period comparison for All time: the range already covers your full history.');
   } else {
     priorLabel = undefined;
   }
