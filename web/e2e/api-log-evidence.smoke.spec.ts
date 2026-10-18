@@ -72,7 +72,7 @@ for (const theme of ['light', 'dark'] as const) {
         params.get('endpoint') === '/synthetic' && Number(params.get('offset') ?? 0) === 0)).toBe(true);
       await search.fill('');
       await expect.poll(() => new URL(page.url()).searchParams.get('endpoint')).toBeNull();
-      await table.getByRole('button', { name: 'Expand row', exact: true }).click();
+      await table.getByRole('button', { name: /^Expand row/ }).click();
       await expect(table).toContainText('"recorded": true');
       await expect(table.getByRole('button', { name: 'Copy Request body', exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);

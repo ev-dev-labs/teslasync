@@ -168,11 +168,14 @@ export function DataTableResizer({
       className={cn(
         tableTokens.resizer,
         // Keep the visible divider narrow without making its hit target narrow.
-        'w-11 min-h-11 md:w-6 md:min-h-6 touch-none opacity-100 bg-transparent ' +
+        // The hit target straddles the column boundary (half in each cell) so
+        // it never covers header controls; the divider line stays centered on
+        // the boundary itself.
+        'w-11 min-h-11 md:w-6 md:min-h-6 translate-x-1/2 touch-none opacity-100 bg-transparent ' +
           'hover:bg-transparent focus-visible:bg-transparent motion-reduce:transition-none ' +
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ' +
           'focus-visible:outline-[var(--focus-ring)] ' +
-          'after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-0.5 ' +
+          'after:pointer-events-none after:absolute after:inset-y-0 after:right-1/2 after:w-0.5 ' +
           'after:bg-[var(--text-secondary)] after:opacity-0 ' +
           'hover:after:opacity-100 focus-visible:after:opacity-100 ' +
           'forced-colors:focus-visible:outline-[Highlight] forced-colors:after:bg-[CanvasText]',

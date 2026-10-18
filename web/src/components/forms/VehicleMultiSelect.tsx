@@ -254,6 +254,7 @@ export function VehicleMultiSelect({
         type="button"
         disabled={disabled || isFleetEmpty}
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-controls={popoverId}
         aria-describedby={hasError ? errorId : undefined}
         onClick={() => setOpen((v) => !v)}

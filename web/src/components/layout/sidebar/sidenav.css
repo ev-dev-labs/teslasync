@@ -29,7 +29,7 @@
 .sidenav-account-link { display: flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
 .sidenav-phone-tabs { display: flex; position: fixed; inset-inline: 0; bottom: 0; z-index: 60; height: var(--shell-tab-bar-height); align-items: stretch; background: var(--surface-1); border-top: 1px solid var(--border-default); }
 .sidenav-phone-tab { position: relative; display: flex; flex: 1; min-width: 0; min-height: 44px; flex-direction: column; gap: 2px; padding: 4px 0; font-size: 11px; color: var(--text-secondary); border-radius: 0; }
-.sidenav-phone-tab.is-selected { color: var(--theme-accent); }
+.sidenav-phone-tab.is-selected { color: var(--text-primary); }
 .sidenav-phone-tab.is-selected::before { content: ''; position: absolute; top: 0; width: 24px; height: 3px; background: var(--theme-accent); border-radius: 0 0 3px 3px; }
 .sidenav-section-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 12px; overflow-y: auto; }
 .sidenav-section-grid button { display: flex; height: auto; min-height: 76px; flex-direction: column; gap: 8px; padding: 8px 4px; white-space: normal; font-size: 11px; text-align: center; }
