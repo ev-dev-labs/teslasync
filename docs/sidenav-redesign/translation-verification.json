@@ -16,12 +16,12 @@
   },
   {
     "file": "web/src/components/layout/sidebar/AtlasPanel.tsx",
-    "calls": 50,
+    "calls": 31,
     "errors": []
   },
   {
     "file": "web/src/components/layout/sidebar/SectionRail.tsx",
-    "calls": 11,
+    "calls": 12,
     "errors": []
   },
   {

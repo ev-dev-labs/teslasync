@@ -36,6 +36,7 @@
 .sidenav-sheet > [data-modal-scroll-body], .sidenav-tablet-panel > [data-modal-scroll-body] { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 .sidenav-sheet > [data-modal-scroll-body] > [role='navigation'], .sidenav-tablet-panel > [data-modal-scroll-body] > [role='navigation'] { flex: 1; }
 .sidenav-tablet-panel { position: fixed; inset-inline-start: 76px; top: 0; bottom: var(--shell-status-bar-height); width: 272px; max-width: calc(100vw - 76px); height: auto; max-height: none; border-radius: 0; }
+.z-overlay:has(.sidenav-tablet-panel), .z-overlay:has(.sidenav-tablet-panel) > [aria-hidden='true'] { inset-inline-start: 76px; }
 .sidenav-loading { width: 76px; flex: none; background: var(--nav-rail-bg); }
 @media (min-width: 768px) { .sidenav-phone-tabs { display: none; } }
 @media (prefers-reduced-motion: reduce) { .sidenav-deck *, .sidenav-sheet, .sidenav-tablet-panel { scroll-behavior: auto; animation: none; transition: none; } }

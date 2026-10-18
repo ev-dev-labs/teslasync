@@ -43,13 +43,15 @@ const VIEW_KEY = 'teslasync-deck-view'
 function readView(): DeckSelection | null {
   try { return JSON.parse(localStorage.getItem(VIEW_KEY) ?? 'null') as DeckSelection | null } catch { return null }
 }
-export function resolveDeckSection(stored: DeckSelection | null, sections: readonly SidebarSectionInput[], routeTitle?: string): string {
+export function resolveDeckSection(stored: DeckSelection | null, sections: readonly SidebarSectionInput[] = [], routeTitle?: string): string {
   if (stored?.kind === 'section' && sections.some(section => section.title === stored.title)) return stored.title
   return sections.find(section => section.title === routeTitle)?.title ?? sections[0]?.title ?? 'Home'
 }
 export function CommandDeck(props: CommandDeckProps) {
   const { t } = useTranslation()
-  const { sections, pathname, activeSectionTitle, panelOpen, onPanelOpenChange, onItemSelect, mobileBrowseOpen } = props
+  const { sections = [], pathname, activeSectionTitle, panelOpen, onPanelOpenChange, onItemSelect, mobileBrowseOpen } = props
+  const sectionLabel = props.navSectionTitle ?? ((section: { title: string }) => section.title)
+  const railItems = useRef(new Map<string, HTMLButtonElement>())
   const [stored, setStored] = useState(readView)
   const title = resolveDeckSection(stored, sections, activeSectionTitle)
   const [homeView, setHomeView] = useState<DeckSelection | null>(null)
@@ -80,7 +82,10 @@ export function CommandDeck(props: CommandDeckProps) {
   useEffect(() => {
     try { localStorage.setItem(VIEW_KEY, JSON.stringify({ kind: 'section', title })) } catch { /* Private storage is optional. */ }
   }, [title])
-  const close = () => { onPanelOpenChange(false); setPhoneSheet(null); onItemSelect?.() }
+  const close = () => {
+    onPanelOpenChange(false); setPhoneSheet(null); onItemSelect?.()
+    if (viewport === 'desktop') requestAnimationFrame(() => railItems.current.get(title)?.focus())
+  }
   const select = (selection: DeckSelection) => {
     if (selection.kind !== 'section') return
     setHomeView(null)
@@ -89,26 +94,27 @@ export function CommandDeck(props: CommandDeckProps) {
     else onPanelOpenChange(!(panelOpen && title === selection.title))
   }
   const view: DeckSelection = title === 'Home' && homeView ? homeView : { kind: 'section', title }
-  const panel = <AtlasPanel {...props} key={title} variant="secondary" view={view} collapsed={false}
+  const panel = <AtlasPanel {...props} sections={sections} navSectionTitle={sectionLabel} key={title} view={view}
     onClose={close} onHomeViewChange={setHomeView}
     onItemSelect={() => { setPhoneSheet(null); if (viewport !== 'desktop') onPanelOpenChange(false); onItemSelect?.() }} />
   return <div data-role="command-deck" className="sidenav-deck">
     {viewport !== 'phone' && <>
-      <div data-testid="command-deck-rail" className="sidenav-rail-column"><SectionRail {...props} alertCount={props.alertCount ?? 0}
+      <div data-testid="command-deck-rail" className="sidenav-rail-column"><SectionRail {...props} sections={sections} navSectionTitle={sectionLabel} alertCount={props.alertCount ?? 0}
+        itemRef={(key, element) => { const name = key.replace(/^section:/, ''); if (element) railItems.current.set(name, element); else railItems.current.delete(name) }}
         selection={{ kind: 'section', title }} onSelect={select} panelOpen={panelOpen} /></div>
       {viewport === 'desktop' && panelOpen && <div data-testid="command-deck-secondary" className="sidenav-context-column">{panel}</div>}
-      <Modal open={viewport === 'tablet' && panelOpen} onClose={close} ariaLabel={props.navSectionTitle(sections.find(s => s.title === title) ?? { title })}
+      <Modal open={viewport === 'tablet' && panelOpen} onClose={close} ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })}
         className="sidenav-tablet-panel">{panel}</Modal>
     </>}
     {viewport === 'phone' && <>
       <BottomTabBar activeSection={activeSectionTitle} onChoose={section => { if (section) select({ kind: 'section', title: section }); else setPhoneSheet('more') }} />
       <Modal open={phoneSheet !== null} onClose={() => { setPhoneSheet(null); onItemSelect?.() }}
         title={phoneSheet === 'more' ? t('nav.mobileMore', 'More') : undefined}
-        ariaLabel={props.navSectionTitle(sections.find(s => s.title === title) ?? { title })} className="sidenav-sheet">
+        ariaLabel={sectionLabel(sections.find(s => s.title === title) ?? { title })} className="sidenav-sheet">
         {phoneSheet === 'more' ? <div className="sidenav-section-grid">{sections.map(section => {
           const Icon = SIDEBAR_SECTION_ICONS[section.title] ?? Icons.home
           return <Button key={section.title} type="button" variant="ghost" onClick={() => select({ kind: 'section', title: section.title })}>
-            <Icon className="h-5 w-5" aria-hidden /><span>{props.navSectionTitle(section)}</span>
+            <Icon className="h-5 w-5" aria-hidden /><span>{sectionLabel(section)}</span>
           </Button>
         })}</div> : panel}
       </Modal>

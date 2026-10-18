@@ -59,6 +59,7 @@ import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
 import { useNavigationPins } from '@/api/hooks/useNavigationPins'
+import { getRecentPages, subscribeRecentPages } from '@/lib/recentPages'
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles'
 import { deriveVehicleStatus, type Alert } from '@/api/types'
 import { useSelectedVehicleStore } from '@/store/selectedVehicle'
@@ -743,6 +744,8 @@ export default function Layout() {
   const [recentNavPaths, setRecentNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getRecentNavPaths()),
   )
+  const [recentPagePaths, setRecentPagePaths] = useState(() => getRecentPages().map(page => page.path))
+  useEffect(() => subscribeRecentPages(() => setRecentPagePaths(getRecentPages().map(page => page.path))), [])
   const [pinnedNavPaths, setPinnedNavPathsState] = useState<string[]>(
     () => reconcileNavPaths(getPinnedNavPaths()),
   )
@@ -1052,7 +1055,7 @@ export default function Layout() {
     [pinnedNavPaths, vehicleCount, isForwardAuth],
   )
   const recentNavItems = useMemo(() =>
-    recentNavPaths
+    [...new Set([...recentPagePaths, ...recentNavPaths])]
       .map(path => findNavItemByExactPath(path))
       .filter((entry): entry is { section: NavSection; item: NavItem } => Boolean(entry))
       .map(entry => entry.item)
@@ -1062,7 +1065,7 @@ export default function Layout() {
       // here just adds visual noise and a confusing two-column "active"
       // indicator. Quick-jump rows for *other* recent pages remain.
       .filter(item => !isExclusiveActivePath(location.pathname, item.to, NAV_CATALOG_PATHS)),
-    [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
+    [recentPagePaths, recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
   )
 
   const pinnedNavSet = useMemo(() => new Set(pinnedNavPaths), [pinnedNavPaths])
