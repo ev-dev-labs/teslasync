@@ -12,18 +12,25 @@ export interface TableProps extends TableHTMLAttributes<HTMLTableElement> {
  * sorting, pagination, selection, or export behavior provided by DataTable.
  */
 export const Table = forwardRef<HTMLTableElement, TableProps>(
-  ({ className, variant = 'standalone', ...props }, ref) => (
+  ({ className, variant = 'standalone', tabIndex, ...props }, ref) => (
     <div
       data-table-variant={variant}
       className={variant === 'embedded' ? 'min-w-0 max-w-full' : tableTokens.frame}
     >
-      <div className={cn(
-        tableTokens.scrollContainer,
-        'min-w-0 max-w-full overflow-x-auto overscroll-x-contain',
-        variant === 'embedded' && 'rounded-none border-0',
-      )}>
+      {/* Scroll container is keyboard-focusable (axe scrollable-region-focusable);
+          yields when the caller already put the table itself in the tab order. */}
+      <div
+        tabIndex={tabIndex == null || tabIndex < 0 ? 0 : undefined}
+        className={cn(
+          tableTokens.scrollContainer,
+          'min-w-0 max-w-full overflow-x-auto overscroll-x-contain',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+          variant === 'embedded' && 'rounded-none border-0',
+        )}
+      >
         <table
           ref={ref}
+          tabIndex={tabIndex}
           className={cn(
             tableTokens.wrapper,
             tableTokens.semantic,

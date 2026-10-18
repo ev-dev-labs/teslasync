@@ -616,7 +616,28 @@ export function resolveApiFixture(
     return matched(fsdInsightsFixture(scenario));
   }
   if (path.startsWith('/analytics/charging-optimizer')) {
-    return matched({ recommended_start_hour: 1, estimated_savings: 4.2, confidence: 0.84 });
+    // Mirrors internal/api/chargeopt (optimizerResponse wire shape), incl. its
+    // zero-session response. The previous 3-field stub predates the current
+    // contract and crashed OptimizerSection on current_schedule.
+    if (scenario === 'empty') {
+      return matched({
+        current_schedule: { most_common_start_hour: 0, most_common_day: '', avg_sessions_per_week: 0, home_charging_pct: 0, avg_charge_to_pct: 0 },
+        cost_analysis: { peak_hours: [], offpeak_hours: [], peak_cost_per_kwh: 0, offpeak_cost_per_kwh: 0, sessions_during_peak_pct: 0, potential_monthly_savings: 0 },
+        battery_health_score: 0,
+        recommendations: [],
+        weekly_heatmap: [],
+      });
+    }
+    return matched({
+      current_schedule: { most_common_start_hour: 21, most_common_day: 'Tuesday', avg_sessions_per_week: 3.5, home_charging_pct: 72.5, avg_charge_to_pct: 80 },
+      cost_analysis: { peak_hours: [16, 17, 18, 19, 20], offpeak_hours: [0, 1, 2, 3, 4, 5], peak_cost_per_kwh: 0.42, offpeak_cost_per_kwh: 0.18, sessions_during_peak_pct: 22.5, potential_monthly_savings: 18.4 },
+      battery_health_score: 88,
+      recommendations: [{ type: 'shift_offpeak', priority: 'high', title: 'Shift charging to off-peak hours', detail: 'Moving two weekly sessions after midnight lowers cost.', estimated_savings: 18.4 }],
+      weekly_heatmap: [
+        { day: 2, hour: 21, sessions: 3, avg_cost_per_kwh: 0.2 },
+        { day: 5, hour: 18, sessions: 1, avg_cost_per_kwh: 0.42 },
+      ],
+    });
   }
   if (path.startsWith('/analytics/battery-health')) {
     return matched({

@@ -123,10 +123,20 @@ for (const theme of ['light', 'dark'] as const) {
 
     const nav = page.locator('[data-role="bottom-tab-bar"]');
     await expect(nav).toBeVisible();
-    await expect(nav).toHaveCSS(
-      'background-color',
-      theme === 'light' ? 'rgb(255, 255, 255)' : 'rgba(0, 0, 0, 0.6)',
-    );
+    // The bar follows the active theme (sidenav.css: var(--surface-1)), so pin
+    // the seeded theme's surface instead of a hardcoded drawer-era color. This
+    // keeps the contrast audit below deterministic without rotting on palette
+    // changes: un-themeing the bar still fails here.
+    const themedSurface = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.display = 'none';
+      probe.style.backgroundColor = 'var(--surface-1)';
+      document.body.appendChild(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    await expect(nav).toHaveCSS('background-color', themedSurface);
     const geometry = await nav.evaluate((element) => ({
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
