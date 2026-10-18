@@ -22,10 +22,12 @@ const h = vi.hoisted(() => ({
   } as OperationalModeContextValue,
   drives: undefined as unknown,
   charging: undefined as unknown,
+  calendar: undefined as unknown,
   timeZone: 'America/Los_Angeles',
   historyWindow: { start: '2026-05-01T07:00:00.000Z', end: '2026-06-02T12:00:00.000Z' },
   driveHook: vi.fn(),
   chargingHook: vi.fn(),
+  calendarHook: vi.fn(),
   timezoneHook: vi.fn(),
   driveRefetch: vi.fn(),
   chargingRefetch: vi.fn(),
@@ -65,6 +67,10 @@ vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
     useDriveHistory: (...args: Parameters<typeof actual.useDriveHistory>) => {
       h.driveHook(...args);
       return h.drives;
+    },
+    useDriveCalendarHistory: (...args: Parameters<typeof actual.useDriveCalendarHistory>) => {
+      h.calendarHook(...args);
+      return h.calendar;
     },
   };
 });
@@ -307,6 +313,7 @@ beforeEach(() => {
   h.historyWindow = { start: '2026-05-01T07:00:00.000Z', end: '2026-06-02T12:00:00.000Z' };
   h.drives = query(readyDrives(), {}, h.driveRefetch);
   h.charging = query([chargingAt('2026-05-30')], {}, h.chargingRefetch);
+  h.calendar = query(readyDrives());
   h.live = {
     state: {
       batteryLevel: 80,
@@ -1006,5 +1013,19 @@ describe('ChargeAdvisorPage', () => {
     fireEvent.click(within(warning).getByRole('button', { name: 'Refresh', exact: true }));
     expect(h.driveRefetch).toHaveBeenCalledTimes(source === 'drive' ? 1 : 0);
     expect(h.chargingRefetch).toHaveBeenCalledTimes(source === 'charging' ? 1 : 0);
+  });
+
+  it('hides scenarios until the coverage calendar succeeds', () => {
+    h.calendar = query(undefined, { isLoading: true, isSuccess: false });
+    const loadingView = renderPage();
+    expectEveryShell();
+    expect(screen.getByText(/qualified drive-associated/)).toBeInTheDocument();
+    loadingView.unmount();
+
+    h.calendar = query(readyDrives());
+    renderPage();
+    const table = within(screen.getByTestId('charge-advisor-scenarios'))
+      .getByRole('table', { hidden: true });
+    expect(within(table).getAllByRole('row', { hidden: true })).toHaveLength(8);
   });
 });

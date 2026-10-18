@@ -4,6 +4,7 @@ import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 
 import {
+  chargeAdvisorCoverageWindow,
   computeChargeAdvice,
   RESERVE_FLOOR_PCT,
   validSoc,
@@ -737,4 +738,49 @@ describe('computeChargeAdvice', () => {
       expect(validSoc(value)).toBe(false);
     },
   );
+});
+
+describe('chargeAdvisorCoverageWindow', () => {
+  it('derives the same 180-day window the analysis uses', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'UTC');
+    expect(window.startDate).toBe('2025-12-05');
+    expect(window.endDate).toBe('2026-06-02');
+    expect(window.lastCompleteDate).toBe('2026-06-01');
+    expect(window.coveredLocalDates).toHaveLength(179);
+    expect(window.coveredLocalDates[0]).toBe('2025-12-05');
+    expect(window.coveredLocalDates[178]).toBe('2026-06-01');
+  });
+
+  it('uses the vehicle timezone for the window bounds', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'America/Los_Angeles');
+    expect(window.startDate).toBe('2025-12-05');
+    expect(window.endDate).toBe('2026-06-02');
+    expect(window.lastCompleteDate).toBe('2026-06-01');
+    expect(window.coveredLocalDates).toHaveLength(179);
+  });
+
+  it('honors a custom history window', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'UTC', 30);
+    expect(window.startDate).toBe('2026-05-04');
+    expect(window.endDate).toBe('2026-06-02');
+    expect(window.lastCompleteDate).toBe('2026-06-01');
+    expect(window.coveredLocalDates).toHaveLength(29);
+  });
+
+  it('normalizes a hostile clock and timezone like the analysis', () => {
+    const window = chargeAdvisorCoverageWindow(Number.NaN, 'Not/AZone');
+    expect(window.startDate).toBe('1969-07-06');
+    expect(window.endDate).toBe('1970-01-01');
+    expect(window.coveredLocalDates).toHaveLength(179);
+  });
+
+  it('establishes coverage when the certified window is passed back in', () => {
+    const window = chargeAdvisorCoverageWindow(NOW, 'UTC');
+    const result = computeChargeAdvice(
+      qualifiedHistory(), [], live(80), NOW, 'UTC',
+      { coveredLocalDates: window.coveredLocalDates },
+    );
+    expect(result.coverageEstablished).toBe(true);
+    expect(result.scenarios.meanPath).toHaveLength(7);
+  });
 });

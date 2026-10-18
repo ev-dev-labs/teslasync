@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useChargingHistory } from '@/api/hooks/useCharging';
-import { useDriveHistory } from '@/api/hooks/useDriving';
+import { useDriveCalendarHistory, useDriveHistory } from '@/api/hooks/useDriving';
 
 import { CardGrid, PageLayout } from '@/components/layout';
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
@@ -15,6 +15,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { isLiveFieldFresh, liveFieldAge, LIVE_FRESHNESS_MS, useVehicleLive } from '@/hooks/useVehicleLive';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 import { useTimezone } from '@/lib/timezone';
 import type { ChargeAdvisorLiveSnapshot } from '../lib/chargeAdvisor';
 import {
@@ -33,7 +34,7 @@ import {
   ChargeAdvisorWeekdayProfile,
   type ChargeAdvisorQueryState,
 } from '../components/charge-advisor';
-import { computeChargeAdvice, validSoc } from '../lib/chargeAdvisor';
+import { chargeAdvisorCoverageWindow, computeChargeAdvice, validSoc } from '../lib/chargeAdvisor';
 
 const HISTORY_LIMIT = 1_000;
 const CURRENT_STATE_CLOCK_INTERVAL_MS = 60_000;
@@ -56,6 +57,31 @@ export default function ChargeAdvisorPage() {
   const chargingSource = useDataState(chargingQuery, { provenance: 'historical' });
   const live = useVehicleLive(vehicleId ?? undefined);
   const [analysisNowMs] = useState(() => Date.now());
+  // The scenario gate needs independently established complete drive
+  // coverage. The paginated calendar fetch below spans the whole analysis
+  // window, so its success certifies every complete date in it (drives or
+  // certified absence) — a capped history list alone cannot.
+  const coverageWindow = useMemo(
+    () => chargeAdvisorCoverageWindow(analysisNowMs, timeZone),
+    [analysisNowMs, timeZone],
+  );
+  const coverageBounds = useMemo(
+    () => calendarRangeToInstants({
+      startDate: coverageWindow.startDate,
+      endDate: coverageWindow.lastCompleteDate,
+      timezone: timeZone,
+    }),
+    [coverageWindow, timeZone],
+  );
+  const coverageQuery = useDriveCalendarHistory(
+    vehicleIdStr, coverageBounds.startInstant, coverageBounds.endInstantExclusive,
+  );
+  const coveredLocalDates = useMemo(
+    () => (vehicleIdStr != null && coverageQuery.isSuccess
+      ? coverageWindow.coveredLocalDates
+      : []),
+    [coverageQuery.isSuccess, coverageWindow, vehicleIdStr],
+  );
   const [currentStateNowMs, setCurrentStateNowMs] = useState(analysisNowMs);
   const liveUpdatedMs = live.state.lastUpdated?.getTime() ?? null;
   const previousLiveUpdatedMs = useRef(liveUpdatedMs);
@@ -101,6 +127,7 @@ export default function ChargeAdvisorPage() {
         historyLimit: HISTORY_LIMIT,
         reserveFloorPct,
         currentStateNowMs,
+        coveredLocalDates,
       };
       let result = computeChargeAdvice(
         drives, chargingSessions, liveSnapshot, analysisNowMs, timeZone, options,
@@ -149,6 +176,7 @@ export default function ChargeAdvisorPage() {
     [
       analysisNowMs,
       chargingSessions,
+      coveredLocalDates,
       currentStateNowMs,
       drives,
       liveSnapshot,
@@ -178,6 +206,7 @@ export default function ChargeAdvisorPage() {
     onRetry: () => {
       if (drivesQuery.isError) void drivesQuery.refetch();
       if (chargingQuery.isError) void chargingQuery.refetch();
+      if (coverageQuery.isError) void coverageQuery.refetch();
     },
   };
   const reserveOptions = [10, 20, 30].map((value) => ({

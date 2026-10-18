@@ -1290,3 +1290,49 @@ export function computeChargeAdvice(
     chargingProfile,
   };
 }
+
+export interface ChargeAdvisorCoverageWindow {
+  /** First local analysis date, `YYYY-MM-DD` (inclusive). */
+  startDate: string;
+  /** Local analysis end date, `YYYY-MM-DD` (exclusive); today is partial. */
+  endDate: string;
+  /** Last complete local date in the window, `YYYY-MM-DD` (inclusive). */
+  lastCompleteDate: string;
+  /**
+   * Every complete local date in the analysis window. A caller that fetches
+   * the full window through the paginated drive calendar certifies each of
+   * these dates (drives or certified absence) and may pass this list as
+   * `coveredLocalDates`.
+   */
+  coveredLocalDates: readonly string[];
+}
+
+/**
+ * Derives the analysis window `computeChargeAdvice` uses for the given clock
+ * and timezone, so callers can certify coverage over exactly that window.
+ * The math mirrors `computeChargeAdvice` (same clock, timezone, and window
+ * normalization); the two must stay in sync.
+ */
+export function chargeAdvisorCoverageWindow(
+  nowMs: number,
+  timeZone: string,
+  historyWindowDays?: number,
+): ChargeAdvisorCoverageWindow {
+  const windowDays = integerBounded(
+    historyWindowDays,
+    DEFAULT_HISTORY_WINDOW_DAYS,
+    1,
+    3_650,
+  );
+  const safeNowMs = sanitizeClock(nowMs, 0);
+  const resolvedTimeZone = normalizeTimeZone(timeZone);
+  const endDate = dateKey(localParts(safeNowMs, resolvedTimeZone));
+  const startDate = addDays(endDate, -(windowDays - 1));
+  const lastCompleteDate = addDays(endDate, -1);
+  return {
+    startDate,
+    endDate,
+    lastCompleteDate,
+    coveredLocalDates: calendarDates(startDate, lastCompleteDate),
+  };
+}
