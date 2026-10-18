@@ -497,3 +497,8 @@ Fixes (each verified locally under CI conditions before push):
    [[allowlists]] to .gitleaks.toml (audit-evidence dir + 5
    path+line entries). Local gitleaks 8.27.2 on pristine HEAD export:
    66→0; probe secret still detected.
+2. CI/Generated-artifacts STALE→OK: slogen catalog gained a
+   guard_config_availability SLO but artifacts were never regenerated.
+   Ran `go run ./cmd/slogen generate recording/alerts/dashboards`,
+   committed the 4 generator outputs. Freshness gate locally green
+   (11/11, 279 paths byte-identical).
