@@ -357,17 +357,35 @@ export function checkpointCatalog(catalog) {
     for (const key of keys) if (![key, key + '_one', key + '_other', key + '_zero'].some(candidate => typeof valueAt(catalog, candidate) === 'string')) missing.push(key);
   }
   if (missing.length) throw new Error('Missing used English keys: ' + JSON.stringify([...new Set(missing)]));
-  const names = { canonical: 'src/i18n/authorized-canonical-recovery.test.ts', owner: 'src/i18n/authorized-owner-recovery.test.ts', feature: 'src/i18n/excluded-feature-owned-producers.test.ts', consistent: 'src/i18n/excluded-consistent-defaults.test.ts', resolved: 'src/i18n/resolved-baseline-producer.test.ts' };
+  const names = { canonical: 'src/i18n/authorized-canonical-recovery.test.ts', owner: 'src/i18n/authorized-owner-recovery.test.ts', feature: 'src/i18n/excluded-feature-owned-producers.test.ts', consistent: 'src/i18n/excluded-consistent-defaults.test.ts', resolved: 'src/i18n/resolved-baseline-producer.test.ts', copyOwner: 'src/i18n/copy-owner-contracts.test.ts', final: 'src/i18n/final-four-localization-gaps.test.ts' };
   const fixture = (file, name) => literal(declarations(file).get(name).node);
   const canonical = fixture(names.canonical, 'authorizedCanonicalAdditions'), owner = fixture(names.owner, 'ownerRecoveryAdditions'), finalFour = fixture(names.owner, 'finalFourAdditions');
   const feature = fixture(names.feature, 'featureOwnedAdditions'), copy = fixture(names.feature, 'copyOwnerAdditions'), drives = fixture(names.feature, 'drivesEmptyAddition');
   const later = fixture(names.feature, 'interveningAdditions'), consistent = fixture(names.consistent, 'additions'), resolved = fixture(names.resolved, 'additions');
+  const copyPairs = fixture(names.copyOwner, 'pairs'), copyLater = fixture(names.copyOwner, 'interveningAdditions');
+  const finalAdds = fixture(names.final, 'additions'), finalLater = fixture(names.final, 'acceptedLaterAdditions');
   const shared = [...canonical, ...owner, ...finalFour];
   const exclude = {
     canonical: [...shared, ...later], owner: [...owner, ...finalFour, ...later],
     feature: [...feature, ...copy, drives, ['systemStatus.incidents.updateCount_other'], ...shared, ...later],
     consistent: [...consistent, ...feature, ...copy, drives, ['systemStatus.incidents.updateCount_other'], ...shared, ...later],
     resolved: [...resolved, ...consistent, ...feature, ...copy, drives, ['systemStatus.incidents.updateCount_other'], ...shared, ...later],
+    copyOwner: [...copyPairs, ['drives.emptyForCollection.title'], ['systemStatus.incidents.updateCount_other'], ...shared, ...copyLater],
+    final: [...finalAdds, ...finalLater],
+  };
+  // Per-group checkpoint shape. `helper`/`entryKey` mirror the test's own leaf
+  // enumeration; `exclusionKey` mirrors how the test subtracts its fixtures;
+  // `entryExclusions` mirrors a two-stage projection (final-four counts entries
+  // after projecting accepted later additions out); `variable`/`total` mirror
+  // the assertion receivers. Shapes for the original five groups are unchanged.
+  const shape = {
+    canonical: { helper: 'physical', variable: 'predecessor', total: 'expect(entries)', sort: false, entryKey: ([parts]) => JSON.stringify(parts), exclusionKey: ([key]) => JSON.stringify(key.split('.')), entryExclusions: [] },
+    owner: { helper: 'physical', variable: 'predecessor', total: 'expect(entries)', sort: false, entryKey: ([parts]) => JSON.stringify(parts), exclusionKey: ([key]) => JSON.stringify(key.split('.')), entryExclusions: [] },
+    feature: { helper: 'leaves', variable: 'oldEntries', total: 'expect(leaves(catalog))', sort: true, entryKey: ([key]) => key, exclusionKey: ([key]) => key, entryExclusions: [] },
+    consistent: { helper: 'leaves', variable: 'oldEntries', total: 'expect(leaves(catalog))', sort: true, entryKey: ([key]) => key, exclusionKey: ([key]) => key, entryExclusions: [] },
+    resolved: { helper: 'leaves', variable: 'oldEntries', total: 'expect(leaves(catalog))', sort: true, entryKey: ([key]) => key, exclusionKey: ([key]) => key, entryExclusions: [] },
+    copyOwner: { helper: 'leaves', variable: 'predecessor', total: 'expect(entries)', sort: true, entryKey: ([key]) => key, exclusionKey: ([key]) => key, entryExclusions: [] },
+    final: { helper: 'physical', variable: 'predecessor', total: 'expect(entries)', sort: false, entryKey: ([parts]) => JSON.stringify(parts), exclusionKey: ([parts]) => JSON.stringify(parts), entryExclusions: finalLater },
   };
   const physical = existingHelper(names.canonical, 'physical')(catalog);
   for (const language of ['ar', 'he']) {
@@ -376,18 +394,20 @@ export function checkpointCatalog(catalog) {
   }
   const results = [];
   for (const [group, file] of Object.entries(names)) {
-    const isPhysical = ['canonical', 'owner'].includes(group);
-    const keys = new Set(exclude[group].map(([key]) => isPhysical ? JSON.stringify(key.split('.')) : key));
-    const entries = existingHelper(file, isPhysical ? 'physical' : 'leaves')(catalog);
-    const predecessor = entries.filter(([key]) => !keys.has(isPhysical ? JSON.stringify(key) : key));
-    if (!isPhysical) predecessor.sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
-    const variable = isPhysical ? 'predecessor' : 'oldEntries';
+    const form = shape[group];
+    const stagedOut = new Set(form.entryExclusions.map(form.exclusionKey));
+    const allEntries = existingHelper(file, form.helper)(catalog);
+    const entries = allEntries.filter(entry => !stagedOut.has(form.entryKey(entry)));
+    const keys = new Set(exclude[group].map(form.exclusionKey));
+    const predecessor = entries.filter(entry => !keys.has(form.entryKey(entry)));
+    if (form.sort) predecessor.sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+    const variable = form.variable;
     const text = fs.readFileSync(path.resolve(root, file), 'utf8'), tree = parse(file, text), edits = [];
     function visit(node) {
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.arguments.length === 1) {
         const method = node.expression.name.text, receiver = node.expression.expression.getText(tree), argument = node.arguments[0];
         if (method === 'toHaveLength' && receiver === 'expect(' + variable + ')') edits.push({ start: argument.getStart(tree), end: argument.end, value: String(predecessor.length) });
-        if (method === 'toHaveLength' && receiver === (isPhysical ? 'expect(entries)' : 'expect(leaves(catalog))')) edits.push({ start: argument.getStart(tree), end: argument.end, value: String(entries.length) });
+        if (method === 'toHaveLength' && receiver === form.total) edits.push({ start: argument.getStart(tree), end: argument.end, value: String(entries.length) });
         if (method === 'toBe' && ts.isStringLiteralLike(argument) && /^[a-f0-9]{64}$/.test(argument.text) && receiver.includes('JSON.stringify(' + variable + ')')) edits.push({ start: argument.getStart(tree), end: argument.end, value: JSON.stringify(digest(JSON.stringify(predecessor))) });
       }
       ts.forEachChild(node, visit);

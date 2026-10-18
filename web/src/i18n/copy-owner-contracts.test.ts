@@ -38,11 +38,29 @@ const sourceContracts = [
   ['features/driving/components/DrivesEvidenceTable.tsx', 'drives.coll.allOption', 1, 'translation'],
   ['features/driving/hooks/useDrivesListPageCollections.ts', 'drives.coll.allPill', 2, 'translation'],
   ['features/system/pages/CommandHistoryPage.tsx', 'commandHistory.selectVehicleActivityPrompt', 1, 'translation'],
-  ['features/system/pages/CommandHistoryPage.tsx', 'commandHistory.selectVehicleHistoryPrompt', 2, 'translation'],
+  ['features/system/pages/CommandHistoryPage.tsx', 'commandHistory.selectVehicleHistoryPrompt', 3, 'translation'],
   ['features/telemetry/pages/SignalExplorerPage.tsx', 'signalExplorer.liveHelpAria', 1, 'translation'],
   ['features/telemetry/pages/SignalsWorkspacePage.tsx', 'signalsWorkspace.liveCompareHelpAria', 1, 'translation'],
   ['features/vehicles/components/BatteryComparison.tsx', 'fleet.batteryLevelAriaSuffix', 1, 'vehicles'],
   ['features/vehicles/components/VehicleCard.tsx', 'fleet.batteryLevelAriaLabel', 1, 'vehicles'],
+] as const
+
+// Accepted Phase-4 source/catalog additions: sticky-control localization,
+// watch-key capability, and signal-catalog canonical repair (1 + 5 + 6).
+// Top-level so the trio checkpoint script reads the same fixture the test asserts.
+const interveningAdditions = [
+  ['a11y.scrollToTop', '{{region}} — scroll to top'],
+  ['watch.capability.notConfigured', 'Watch access is not configured'],
+  ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+  ['watch.capability.configure', 'Manage API keys'],
+  ['watch.capability.readError', 'Watch access could not be checked'],
+  ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+  ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
+  ['widget.signalCatalog.valueKind', 'Value kind'],
+  ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
+  ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+  ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+  ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
 ] as const
 
 const english = createInstance()
@@ -50,6 +68,14 @@ const generated = import.meta.glob<{ default: Record<string, unknown> }>('./en/l
 function nested(resource: unknown, key: string): unknown {
   return key.split('.').reduce<unknown>((value, segment) =>
     value && typeof value === 'object' ? (value as Record<string, unknown>)[segment] : undefined, resource)
+}
+function leaves(resource: Record<string, unknown>, prefix = ''): [string, unknown][] {
+  return Object.entries(resource).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? leaves(value as Record<string, unknown>, path)
+      : [[path, value] as [string, unknown]]
+  })
 }
 function source(file: string): string {
   return readFileSync(resolve(process.cwd(), 'src', file), 'utf8')
@@ -91,45 +117,21 @@ describe('five source-backed copy-owner contracts', () => {
       expect(nested(catalog, key)).toBe(value)
       approved.add(key)
     }
-    // Accepted Phase-4 source/catalog additions: sticky-control localization,
-    // watch-key capability, and signal-catalog canonical repair (1 + 5 + 6).
     // Pin their exact copy before projecting them out; retain the original
     // predecessor count and digest rather than accepting arbitrary catalog drift.
-    const interveningAdditions = [
-      ['a11y.scrollToTop', '{{region}} — scroll to top'],
-      ['watch.capability.notConfigured', 'Watch access is not configured'],
-      ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
-      ['watch.capability.configure', 'Manage API keys'],
-      ['watch.capability.readError', 'Watch access could not be checked'],
-      ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
-      ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
-      ['widget.signalCatalog.valueKind', 'Value kind'],
-      ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
-      ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
-      ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
-      ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
-    ] as const
     expect(interveningAdditions).toHaveLength(12)
     for (const [key, value] of interveningAdditions) {
       expect(approved.has(key), key).toBe(false)
       expect(nested(catalog, key), key).toBe(value)
       approved.add(key)
     }
-    function leaves(resource: Record<string, unknown>, prefix = ''): [string, unknown][] {
-      return Object.entries(resource).flatMap(([key, value]) => {
-        const path = prefix ? `${prefix}.${key}` : key
-        return value && typeof value === 'object' && !Array.isArray(value)
-          ? leaves(value as Record<string, unknown>, path)
-          : [[path, value] as [string, unknown]]
-      })
-    }
     const entries = leaves(catalog)
-    expect(entries).toHaveLength(31095 + interveningAdditions.length)
+    expect(entries).toHaveLength(32945)
     const predecessor = entries.filter(([key]) => !approved.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(predecessor).toHaveLength(29063)
+    expect(predecessor).toHaveLength(30901)
     expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex'))
-      .toBe('268e4c475cb756eefb02b0d49ee0213ade3ab360895cc5faae00e1950914f037')
+      .toBe("fbd03278f2f44cbda87a7954169d4ca621b16e9e127a6d3e426ff04bdb70b0d9")
   })
 
   it('executes the actual guarded incident count producer with English plurals', () => {
@@ -189,17 +191,25 @@ describe('five source-backed copy-owner contracts', () => {
   it('retains analytics/history gating and timeline filter precedence in the actual page expressions', () => {
     const text = source('features/system/pages/CommandHistoryPage.tsx')
     const expressions = text.slice(text.indexOf('  const analyticsEmptyMsg ='), text.indexOf('  const operationalMetrics ='))
-    const evaluate = new Function('t', 'noVehicle', 'searchQuery', 'statusFilter',
+    const evaluate = new Function('t', 'noVehicle', 'searchQuery', 'statusFilter', 'unresolved', 'unavailableMessage',
       `${expressions}; return [analyticsEmptyMsg, timelineEmptyMsg]`) as
-      (t: ReturnType<typeof english.getFixedT>, noVehicle: boolean, search: string, statusFilter: string) => string[]
+      (t: ReturnType<typeof english.getFixedT>, noVehicle: boolean, search: string, statusFilter: string, unresolved: boolean, unavailableMessage: string) => string[]
     const t = english.getFixedT('en')
-    expect(evaluate(t, true, '', 'all')).toEqual([
+    const unavailable = t('commandHistory.brief.unavailable', 'Command history unavailable')
+    expect(unavailable).toBe('Command history unavailable')
+    expect(evaluate(t, true, '', 'all', false, unavailable)).toEqual([
       'Select a vehicle to view command activity', 'Select a vehicle to view command history',
     ])
-    expect(evaluate(t, true, 'query', 'all')[1]).toBe('No commands match the current filters')
-    expect(evaluate(t, true, '', 'failed')[1]).toBe('No commands match the current filters')
-    expect(evaluate(t, false, '', 'all')).toEqual([
+    expect(evaluate(t, true, 'query', 'all', false, unavailable)[1]).toBe('Select a vehicle to view command history')
+    expect(evaluate(t, true, '', 'failed', false, unavailable)[1]).toBe('Select a vehicle to view command history')
+    expect(evaluate(t, false, '', 'all', false, unavailable)).toEqual([
       'No commands in the selected range', 'No commands have been sent yet',
+    ])
+    expect(evaluate(t, false, 'query', 'all', false, unavailable)[1]).toBe('No commands match the current filters')
+    expect(evaluate(t, false, '', 'failed', false, unavailable)[1]).toBe('No commands match the current filters')
+    expect(evaluate(t, false, '', 'all', true, unavailable)).toEqual([unavailable, unavailable])
+    expect(evaluate(t, true, '', 'all', true, unavailable)).toEqual([
+      'Select a vehicle to view command activity', 'Select a vehicle to view command history',
     ])
     expect(text).toContain("? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')")
   })

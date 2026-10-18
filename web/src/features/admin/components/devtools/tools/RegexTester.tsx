@@ -79,7 +79,7 @@ export function RegexTesterTool() {
           <Input label={t('devtools.utils.regexPattern', 'Pattern')} placeholder="\\d+" value={pattern} onChange={(e) => setPattern(e.target.value)} icon={<Regex className="h-4 w-4" />} error={error ? t('devtools.utils.regexInvalidPattern', 'Invalid pattern') : undefined} />
           <Select label={t('devtools.utils.regexFlags', 'Flags')} options={flagOptions} value={flags} onChange={(e) => setFlags(e.target.value)} />
         </div>
-        <Textarea label={t('devtools.utils.regexTestString', 'Test string')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('devtools.utils.regexTestStringPlaceholder', 'Test String Placeholder')} />
+        <Textarea label={t('devtools.utils.regexTestString', 'Test string')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('devtools.utils.regexTestStringPlaceholder', "Test string placeholder")} />
 
         {error ? (
           <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
