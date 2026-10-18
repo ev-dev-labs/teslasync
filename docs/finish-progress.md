@@ -398,6 +398,9 @@ Trio ownership: the i18n trio + trio-class suites are owned by branch `ui/i18n-t
 ### Wave 4 kickoff + analytics (2026-10-17/18)
 
 Wave-4 mop-up on the 4 partial folders (392 fails: admin 175/59, charging 122/22, dashboard 86/41, analytics 9/5; branches `teslasync-wt-<folder>4` off 0de3ba882f; lists in D:/tmp/wave4-lists.txt, local only). Analytics integrated 9/9 (f44c30e579, 5 files incl. a 1-char FirmwareImpactPage production fix pinned by an unchanged test); cumulative resolved **3011**. Machine rebooted mid-wave-4 with the admin/charging/dashboard children active — all uncommitted WIP survived in the worktrees (admin 18, charging 17, dashboard 37 files; charging also had 3 file-subset helpers whose edits share its worktree) and 3 resume children were respawned on the same worktrees/branches to verify the WIP and finish the remainder.
+Dashboard integrated 86/86 (ce9c23bcce + 2809bbcd9a, 42 files, folder 4572/4572 green; 1 presentation-only production hunk pinned by pre-existing pilot mobile-minima tests, proven by review-by-revert). Charging integrated 122/122 (eaa5cd8f41, 23 files, folder 2064/2064 green; 1 production hunk pinned by a pre-existing unweakened source-contract test). Both worktrees/branches removed after push.
+Admin integrated 175/175 (59 files, folder 3338/3338 green; 1 value-neutral production hunk — GasTrendChart dataKey reads the model-native `price_per_unit` instead of the derived `price` alias — satisfying a pre-existing unweakened test that feeds raw model rows; worktree/branch removed after push).
+Wave 4 complete 4/4: **392/392 resolved** (analytics 9, dashboard 86, charging 122, admin 175). Cumulative original failures resolved: **3394**.
 
 ### Main-agent sequential remainder (2026-10-17)
 

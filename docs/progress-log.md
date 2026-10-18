@@ -75,3 +75,5 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-18 00:40 UTC | post-wave3 suite 55975/982 recorded; MapTileLayer 8 fixed (21/21); wave 4 spawning | reconciled exact (974+9-1); ChargingForensics 1 = flake; trio owned by ui/i18n-trio | none
 2026-10-18 00:50 UTC | wave 4 spawned (admin/charging/dashboard/analytics, 392 fails) | MapTileLayer fix pushed 0de3ba882f; suite-D recorded | none
 2026-10-18 04:25 UTC | reboot resume: wave4 analytics 9/9 integrated (f44c30e579, cumulative 3011); 3 children respawned on surviving WIP | admin 18, charging 17, dashboard 37 uncommitted files; D:/tmp lists intact | none
+2026-10-18 05:00 UTC | wave4 3/4 integrated (dashboard 86 + charging 122, cumulative 3219) | prod hunks pinned by pre-existing tests; worktrees removed; admin verifying | none
+2026-10-18 05:15 UTC | wave4 COMPLETE 4/4 (392 resolved, cumulative 3394); all worktrees/branches removed | admin 175/175 folder-green; prod hunk value-neutral, pre-existing pin | none
