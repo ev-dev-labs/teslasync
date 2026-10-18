@@ -33,7 +33,7 @@ import {
   ChargeAdvisorWeekdayProfile,
   type ChargeAdvisorQueryState,
 } from '../components/charge-advisor';
-import { computeChargeAdvice } from '../lib/chargeAdvisor';
+import { computeChargeAdvice, validSoc } from '../lib/chargeAdvisor';
 
 const HISTORY_LIMIT = 1_000;
 const CURRENT_STATE_CLOCK_INTERVAL_MS = 60_000;
@@ -121,8 +121,10 @@ export default function ChargeAdvisorPage() {
       }
       const isCharging = isLiveFieldFresh(live.state.advisorProvenance.isCharging, currentStateNowMs)
         ? live.state.isChargingObservation.value : null;
-      const chargeLimitPct = isLiveFieldFresh(live.state.advisorProvenance.chargeLimitSoc, currentStateNowMs)
+      const rawChargeLimitPct = isLiveFieldFresh(live.state.advisorProvenance.chargeLimitSoc, currentStateNowMs)
         ? live.state.chargeLimitSocObservation.value : null;
+      // Keep the model's sanitization: a fresh but invalid limit is unknown, never a raw value.
+      const chargeLimitPct = validSoc(rawChargeLimitPct) ? rawChargeLimitPct : null;
       // Neither retained live signals nor completed endpoints are an as-of advice contract.
       if (liveRecommendationsBlocked) {
         return {

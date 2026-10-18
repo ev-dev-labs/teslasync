@@ -359,7 +359,8 @@ function timestamp(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validSoc(value: unknown): value is number {
+/** Battery-percentage validity shared by the model and its callers. */
+export function validSoc(value: unknown): value is number {
   return finite(value) && value >= 0 && value <= 100;
 }
 

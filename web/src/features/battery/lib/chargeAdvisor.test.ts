@@ -6,6 +6,7 @@ import type { Drive } from '@/types/driving';
 import {
   computeChargeAdvice,
   RESERVE_FLOOR_PCT,
+  validSoc,
   type ChargeAdvisorLiveSnapshot,
 } from './chargeAdvisor';
 
@@ -725,4 +726,15 @@ describe('computeChargeAdvice', () => {
   it('exports the configured default reserve floor', () => {
     expect(RESERVE_FLOOR_PCT).toBe(20);
   });
+
+  it.each([0, -0, 0.25, 80.6, 100])('shares valid battery percentage %s with callers', (value) => {
+    expect(validSoc(value)).toBe(true);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -0.25, 100.25, null, undefined, '80'])(
+    'shares invalid battery percentage %s with callers',
+    (value) => {
+      expect(validSoc(value)).toBe(false);
+    },
+  );
 });
