@@ -14,6 +14,13 @@ function run(source) {
   const logger = { log: (line) => output.push(line), error: (line) => output.push(line) };
   return { exit: auditCanonicalPalettes(source, logger), output: output.join('\n') };
 }
+// Wrap the FIRST array open (the palette declaration) in a call expression.
+// indexOf/slice states the deliberate first-only intent; String.replace
+// (string or non-global regex) trips incomplete-escaping linters here.
+function wrapFirstArrayOpen(source) {
+  const at = source.indexOf('[');
+  return source.slice(0, at) + 'getPalette(' + source.slice(at);
+}
 
 test('reads the actual exported canonical arrays and checks every adjacent pair', () => {
   const palettes = readCanonicalPalettes(canonicalSource);
@@ -45,7 +52,7 @@ test('removed, nonexported, malformed, and shortened palettes fail closed', () =
     paletteFixture(distinct).replace('export const CHART_COLORS_NEON', 'const CHART_COLORS_NEON'),
     paletteFixture(distinct).replace('"#000000"', '"not-a-color"'),
     paletteFixture(distinct.slice(0, 7)),
-    paletteFixture(distinct).replace(/\[/, 'getPalette(['),
+    wrapFirstArrayOpen(paletteFixture(distinct)),
     paletteFixture(distinct).replace(' as const', ' as const; export const CHART_COLORS_CB_SAFE = []'),
   ];
   for (const source of fixtures) {
