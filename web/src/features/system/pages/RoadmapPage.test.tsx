@@ -148,7 +148,7 @@ describe('RoadmapPage — scaffolding & a11y', () => {
     );
     expect(
       screen.getByText(
-        "What's been built, What's in progress, and What's coming next",
+        "What's been built, what's in progress, and what's coming next",
       ),
     ).toBeInTheDocument();
 
@@ -256,11 +256,11 @@ describe('RoadmapPage — phase bands', () => {
       'Intelligence & Observability',
       'Fleet Telemetry',
       'Premium UI & Design System',
-      'Vehicle History & Physics',
-      'Charging & Energy Intelligence',
-      'Journeys & Ownership',
-      'Helix & Alert Studio',
-      'Operator Experience',
+      'Vehicle history & physics',
+      'Charging & energy intelligence',
+      'Journeys & ownership',
+      'Helix & alert studio',
+      'Operator experience',
     ].forEach((title) =>
       expect(
         done.getByRole('heading', { level: 3, name: title }),
@@ -272,7 +272,7 @@ describe('RoadmapPage — phase bands', () => {
       current.getByText('Areas receiving attention; priorities may change.'),
     ).toBeInTheDocument();
     expect(
-      current.getByRole('heading', { level: 3, name: 'Reliability & Data Trust' }),
+      current.getByRole('heading', { level: 3, name: 'Reliability & data trust' }),
     ).toBeInTheDocument();
   });
 });
@@ -306,13 +306,13 @@ describe('RoadmapPage — card contents', () => {
       within(cardByTitle('Core Platform')).getByText('Completed'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Reliability & Data Trust')).getByText('Active focus'),
+      within(cardByTitle('Reliability & data trust')).getByText('Active focus'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Helix Quality & Cost Controls')).getByText('Up next'),
+      within(cardByTitle('Helix quality & cost controls')).getByText('Up next'),
     ).toBeInTheDocument();
     expect(
-      within(cardByTitle('Energy Ecosystem')).getByText('Future'),
+      within(cardByTitle('Energy ecosystem')).getByText('Future'),
     ).toBeInTheDocument();
   });
 
@@ -339,18 +339,18 @@ describe('RoadmapPage — data integrity', () => {
       'Intelligence & Observability',
       'Fleet Telemetry',
       'Premium UI & Design System',
-      'Vehicle History & Physics',
-      'Charging & Energy Intelligence',
-      'Journeys & Ownership',
-      'Helix & Alert Studio',
-      'Operator Experience',
-      'Reliability & Data Trust',
-      'Helix Quality & Cost Controls',
+      'Vehicle history & physics',
+      'Charging & energy intelligence',
+      'Journeys & ownership',
+      'Helix & alert studio',
+      'Operator experience',
+      'Reliability & data trust',
+      'Helix quality & cost controls',
       'Recovery & Documentation',
-      'Energy Ecosystem',
-      'Privacy-preserving Fleet Insights',
+      'Energy ecosystem',
+      'Privacy-preserving fleet insights',
       'Interoperability',
-      'Accessible Operator Workflows',
+      'Accessible operator workflows',
     ]);
     // … reconciling with the Total Initiatives KPI.
     expect(cardHeadings).toHaveLength(Number(metricValue('Total initiatives')));
@@ -370,12 +370,12 @@ describe('RoadmapPage — restrained adoption and preserved evidence', () => {
 
     for (const [title, tone] of [
       ['Core Platform', 'success'],
-      ['Reliability & Data Trust', 'info'],
-      ['Helix Quality & Cost Controls', 'neutral'],
-      ['Energy Ecosystem', 'neutral'],
+      ['Reliability & data trust', 'info'],
+      ['Helix quality & cost controls', 'neutral'],
+      ['Energy ecosystem', 'neutral'],
     ]) {
       const card = cardByTitle(title);
-      const label = within(card).getByText(tone === 'success' ? 'Completed' : tone === 'info' ? 'Active focus' : title === 'Energy Ecosystem' ? 'Future' : 'Up next');
+      const label = within(card).getByText(tone === 'success' ? 'Completed' : tone === 'info' ? 'Active focus' : title === 'Energy ecosystem' ? 'Future' : 'Up next');
       expect(label).toHaveClass('forced-colors:border');
       expect(label).toHaveClass(tone === 'neutral' ? 'text-[var(--text-secondary)]' : `text-[var(--semantic-${tone})]`);
       expect(card.querySelector('[class*="blur-"]')).toBeNull();

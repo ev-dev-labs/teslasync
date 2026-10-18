@@ -697,7 +697,7 @@ describe('ScheduledExportsPanel — delete flow', () => {
     expect(within(dialog).getByText('Delete schedule?')).toBeInTheDocument();
     // Interpolated confirmation copy.
     expect(
-      within(dialog).getByText('This will stop future runs of Charging weekly.'),
+      within(dialog).getByText('This will stop future runs of Charging weekly. Past download artifacts are not affected.'),
     ).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -763,7 +763,7 @@ describe('ScheduledExportsPanel — delete flow', () => {
     const dialog = screen.getByRole('dialog');
     await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeEnabled());
     expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeEnabled();
-    expect(within(dialog).getByText('This will stop future runs of Charging weekly.')).toBeVisible();
+    expect(within(dialog).getByText('This will stop future runs of Charging weekly. Past download artifacts are not affected.')).toBeVisible();
     for (const row of DATA) {
       expect(screen.getByTestId(`scheduled-exports-row-${row.id}`)).toBeInTheDocument();
     }
@@ -783,7 +783,7 @@ describe('ScheduledExportsPanel — delete flow', () => {
     setQuery({ data: [makeRow({ id: 2, name: 'Refreshed schedule name' })] });
     rerender(<ScheduledExportsPanel />);
     expect(within(screen.getByRole('dialog'))
-      .getByText('This will stop future runs of Charging weekly.')).toBeVisible();
+      .getByText('This will stop future runs of Charging weekly. Past download artifacts are not affected.')).toBeVisible();
     await user.click(screen.getByTestId('scheduled-exports-delete-2'));
     expect(H.removeFn.mock.calls).toEqual([[2]]);
     await act(async () => pending.resolve());
@@ -801,7 +801,7 @@ describe('ScheduledExportsPanel — delete flow', () => {
     fireEvent.click(screen.getByTestId('scheduled-exports-delete-1'));
     await act(async () => pending.resolve());
     expect(within(screen.getByRole('dialog'))
-      .getByText('This will stop future runs of Drives weekly.')).toBeVisible();
+      .getByText('This will stop future runs of Drives weekly. Past download artifacts are not affected.')).toBeVisible();
     expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' })).toBeEnabled();
   });
 });

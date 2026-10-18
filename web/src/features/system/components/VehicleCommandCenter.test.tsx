@@ -476,7 +476,7 @@ describe('VehicleCommandCenter — command execution', () => {
       expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
       expect(screen.getByRole('button', { name: 'OFF' })).toBeDisabled();
       await act(async () => { resolve?.({ success: true }); });
-      await screen.findByText('Guest mode request sent to My Tesla.');
+      await screen.findByText('Guest Mode request sent to My Tesla.');
       expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
       commandResponse = () => Promise.resolve({ success: true });
       fireEvent.click(screen.getByRole('button', { name: 'OFF' }));
@@ -493,7 +493,7 @@ describe('VehicleCommandCenter — command execution', () => {
       fireEvent.click(screen.getByRole('button', { name: 'ON' }));
       expect(await screen.findByTestId('command-result-feedback')).not.toHaveTextContent('request sent');
       expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
-      expect(screen.getByRole('button', { name: 'Guest mode' })).not.toHaveAttribute('aria-pressed');
+      expect(screen.getByRole('button', { name: 'Guest Mode' })).not.toHaveAttribute('aria-pressed');
       expect(screen.getByRole('button', { name: 'OFF' })).not.toBeDisabled();
     });
 
@@ -508,7 +508,7 @@ describe('VehicleCommandCenter — command execution', () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
       await waitFor(() => expect(postCalls()).toHaveLength(1));
       expect(lastPostBody()).toEqual({ command: 'set_valet_mode', params: { on: 'true', password: '9182' } });
-      await screen.findByText('Valet mode request sent to My Tesla.');
+      await screen.findByText('Valet Mode request sent to My Tesla.');
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(screen.getByTestId('vehicle-command-center')).not.toHaveTextContent('9182');
       expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');

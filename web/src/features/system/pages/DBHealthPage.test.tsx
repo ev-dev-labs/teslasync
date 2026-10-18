@@ -345,7 +345,7 @@ describe('DBHealthPage — populated view', () => {
 
     // Page scaffolding.
     expect(
-      screen.getByRole('heading', { name: 'DB health dashboard', level: 1 }),
+      screen.getByRole('heading', { name: 'DB health', level: 1 }),
     ).toBeInTheDocument();
 
     // KPI band — real aggregates.
@@ -447,7 +447,7 @@ describe('DBHealthPage — loading', () => {
 
     // Canonical strip shells and labels remain mounted during loading.
     expect(
-      screen.getByRole('heading', { name: 'DB health dashboard', level: 1 }),
+      screen.getByRole('heading', { name: 'DB health', level: 1 }),
     ).toBeInTheDocument();
     expect(kpiRegion().getAllByText('Total DB size')[0]).toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);

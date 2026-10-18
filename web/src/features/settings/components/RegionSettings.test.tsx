@@ -193,7 +193,7 @@ describe('RegionSettings — loading / error / empty states', () => {
     mockedUseRegion.mockReturnValue(regionState({ data: undefined }))
     renderSection()
     expect(
-      screen.getByText('No region data yet. Click Refresh to fetch from Tesla.'),
+      screen.getByText('No region data yet. Click refresh to fetch from Tesla.'),
     ).toBeInTheDocument()
   })
 
@@ -224,7 +224,7 @@ describe('RegionSettings — populated region card', () => {
     )
     renderSection()
 
-    expect(screen.getByText('Region')).toBeInTheDocument()
+    expect(screen.getByText('Region code')).toBeInTheDocument()
     expect(screen.getByText('eu')).toBeInTheDocument()
     expect(screen.getByText('Fleet API base URL')).toBeInTheDocument()
     expect(

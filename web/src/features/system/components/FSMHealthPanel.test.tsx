@@ -151,7 +151,7 @@ describe('FSMHealthPanel', () => {
 
     const alert = screen.getByTestId('fsm-health-alert-stuck');
     expect(within(alert).getByText('Stuck sessions')).toBeInTheDocument();
-    expect(within(alert).getByText(/1 potentially stuck session\(s\).*pending\/active/)).toBeInTheDocument();
+    expect(within(alert).getByText(/1 potentially stuck sessions: latest loaded state is pending\/active for >4 hours/)).toBeInTheDocument();
   });
 
   it('does NOT flag a session as stuck once a later transition resolves it', () => {

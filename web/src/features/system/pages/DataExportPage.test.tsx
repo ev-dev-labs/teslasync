@@ -991,7 +991,7 @@ describe('DataExportPage — Project Apex elevation', () => {
       columnsData = catalog;
       renderPage();
       const picker = await screen.findByTestId('export-column-picker');
-      expect(within(picker).getByText('STEP 2½ — columns')).toBeInTheDocument();
+      expect(within(picker).getByText('STEP 2½ — Columns')).toBeInTheDocument();
       expect(within(picker).getByText('No export columns are available for this data type.')).toBeInTheDocument();
       expect(within(picker).queryByRole('checkbox')).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
@@ -1004,7 +1004,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     columnsData = { type: 'drives', supports_selection: false, columns: [] };
     const { queryClient } = renderPage();
     await waitFor(() => expect(queryClient.getQueryState(['export-columns', 'drives'])?.status).toBe('success'));
-    expect(screen.queryByText('STEP 2½ — columns')).not.toBeInTheDocument();
+    expect(screen.queryByText('STEP 2½ — Columns')).not.toBeInTheDocument();
     expect(screen.queryByTestId('export-column-picker')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled();
   });
@@ -1050,7 +1050,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     renderPage();
     await screen.findByTestId('export-column-picker');
     fireEvent.click(screen.getByRole('radio', { name: 'Full backup' }));
-    expect(screen.queryByText('STEP 2½ — columns')).not.toBeInTheDocument();
+    expect(screen.queryByText('STEP 2½ — Columns')).not.toBeInTheDocument();
     expect(mockedRequest.mock.calls.filter(([url]) => String(url).startsWith('/exports/columns'))
       .map(([url]) => url)).toEqual(['/exports/columns?type=drives']);
   });
@@ -1060,7 +1060,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     columnsData = new Error('Column catalog unavailable');
     renderPage();
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.getByText('STEP 2½ — columns')).toBeInTheDocument();
+    expect(screen.getByText('STEP 2½ — Columns')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled();
     expect(screen.getByText('Download my data')).toBeInTheDocument();
     columnsData = availableColumns;

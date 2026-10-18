@@ -873,7 +873,7 @@ describe('CommandPalette most-used ordering', () => {
     // header ("Preferences" — registry items always lead the static list once
     // most-used is present). Use textContent to inspect the slice.
     const allText = document.body.textContent ?? ''
-    const mostUsedIdx = allText.indexOf('Most Used')
+    const mostUsedIdx = allText.indexOf('Most used')
     const prefsIdx = allText.indexOf('Preferences', mostUsedIdx + 1)
     expect(mostUsedIdx).toBeGreaterThanOrEqual(0)
     expect(prefsIdx).toBeGreaterThan(mostUsedIdx)

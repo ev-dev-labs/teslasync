@@ -129,7 +129,7 @@ describe('FeatureToggles — loading state', () => {
       expect(placeholder).not.toHaveClass('animate-pulse', 'motion-safe:animate-pulse')
     })
     expect(
-      screen.queryByText('No feature config data yet. Click Refresh to fetch from Tesla.'),
+      screen.queryByText('No feature config data yet. Click refresh to fetch from Tesla.'),
     ).not.toBeInTheDocument()
     expect(screen.queryByText('Enabled')).not.toBeInTheDocument()
   })
@@ -141,7 +141,7 @@ describe('FeatureToggles — empty state', () => {
     renderPanel()
 
     expect(
-      await screen.findByText('No feature config data yet. Click Refresh to fetch from Tesla.'),
+      await screen.findByText('No feature config data yet. Click refresh to fetch from Tesla.'),
     ).toBeInTheDocument()
     // Loading skeleton is gone, and with fetched_at=null there is no "Synced" stamp.
     expect(screen.queryByTestId('feature-toggles-loading')).not.toBeInTheDocument()
@@ -153,7 +153,7 @@ describe('FeatureToggles — empty state', () => {
     renderPanel()
 
     expect(
-      await screen.findByText('No feature config data yet. Click Refresh to fetch from Tesla.'),
+      await screen.findByText('No feature config data yet. Click refresh to fetch from Tesla.'),
     ).toBeInTheDocument()
     expect(screen.queryByText('Enabled')).not.toBeInTheDocument()
   })
@@ -317,7 +317,7 @@ describe('FeatureToggles — fetch error + retry', () => {
     const retry = screen.getByRole('button', { name: 'Retry' })
     expect(retry).toBeInTheDocument()
     expect(
-      screen.queryByText('No feature config data yet. Click Refresh to fetch from Tesla.'),
+      screen.queryByText('No feature config data yet. Click refresh to fetch from Tesla.'),
     ).not.toBeInTheDocument()
 
     fireEvent.click(retry)

@@ -135,7 +135,7 @@ describe('SessionList', () => {
   it('shows the loading placeholder only while loading with no sessions', () => {
     renderList({ sessions: [], isLoading: true });
 
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
     expect(screen.queryByText('No conversations yet')).toBeNull();
   });
 
@@ -144,7 +144,7 @@ describe('SessionList', () => {
 
     const empty = screen.getByRole('status');
     expect(empty).toHaveTextContent('No conversations yet');
-    expect(screen.queryByText('Loading…')).toBeNull();
+    expect(screen.queryByText('Loading...')).toBeNull();
   });
 
   it('keeps rendering existing rows during an in-flight refetch', () => {
@@ -152,7 +152,7 @@ describe('SessionList', () => {
 
     expect(screen.getByText('Existing chat')).toBeInTheDocument();
     // The loading placeholder is reserved for the initial empty load only.
-    expect(screen.queryByText('Loading…')).toBeNull();
+    expect(screen.queryByText('Loading...')).toBeNull();
   });
 
   it("renders a row's title, relative time and message count", () => {

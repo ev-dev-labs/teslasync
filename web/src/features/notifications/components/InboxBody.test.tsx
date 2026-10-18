@@ -413,7 +413,7 @@ describe('InboxBody — flat view', () => {
     renderInbox();
 
     expect(await screen.findByText('Weekly digest sent to Slack')).toBeInTheDocument();
-    expect(screen.getByText('Digest FSD weekly')).toHaveAttribute('title', 'digest.fsd.weekly');
+    expect(screen.getByText('Weekly FSD digest')).toHaveAttribute('title', 'digest.fsd.weekly');
     expect(screen.getByRole('checkbox', { name: 'Select Weekly digest sent to Slack' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Open notification: Weekly digest sent to Slack' }));
     expect(await screen.findByRole('dialog')).toHaveTextContent('Your weekly driving summary');
@@ -456,7 +456,7 @@ describe('InboxBody — flat view', () => {
     {
       archived: false,
       query: 'source=rule',
-      message: 'No rule-triggered notifications match these filters. Check the date range or configure a rule in alert studio.',
+      message: 'No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.',
     },
     {
       archived: false,

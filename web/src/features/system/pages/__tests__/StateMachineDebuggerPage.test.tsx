@@ -552,12 +552,12 @@ describe('StateMachineDebuggerPage — filter controls', () => {
 
     renderPage();
 
-    const select = screen.getByLabelText('FSM type') as HTMLSelectElement;
+    const select = screen.getByLabelText('FSM type', { selector: 'select' }) as HTMLSelectElement;
     expect(select.value).toBe('all');
 
     fireEvent.change(select, { target: { value: 'vehicle' } });
 
-    expect((screen.getByLabelText('FSM type') as HTMLSelectElement).value).toBe('vehicle');
+    expect((screen.getByLabelText('FSM type', { selector: 'select' }) as HTMLSelectElement).value).toBe('vehicle');
   });
 
   it('lets the user change the per-page size', () => {
@@ -566,12 +566,12 @@ describe('StateMachineDebuggerPage — filter controls', () => {
 
     renderPage();
 
-    const select = screen.getByLabelText('Per Page') as HTMLSelectElement;
+    const select = screen.getByLabelText('Per page') as HTMLSelectElement;
     expect(select.value).toBe('50');
 
     fireEvent.change(select, { target: { value: '100' } });
 
-    expect((screen.getByLabelText('Per Page') as HTMLSelectElement).value).toBe('100');
+    expect((screen.getByLabelText('Per page') as HTMLSelectElement).value).toBe('100');
   });
 });
 
