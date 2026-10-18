@@ -13,8 +13,8 @@
  *   - the single labelled <nav> landmark, decorative (aria-hidden) icons, and
  *     keyboard-focusable links;
  *   - the i18n key wiring (guards against the "hardcoded English" prohibition);
- *   - the `noPadding` shell contract (clipped content, never a scroll wrapper)
- *     and the deliberate absence of a title header.
+ *   - the `noPadding` shell contract (vertical-only scroll boundary, clipped
+ *     horizontally) and the deliberate absence of a title header.
  *
  * Network is never touched — the widget has no data hooks. react-i18next is
  * stubbed (repo convention) so fallbacks render deterministically and the
@@ -178,7 +178,9 @@ describe('QuickNavWidget — shell + prop-agnostic contract', () => {
   it('mounts the grid in a scrollable shared body so cramped modes retain all links', () => {
     renderWidget();
     const wrapper = screen.getByRole('navigation').parentElement;
-    expect(wrapper?.className).toContain('overflow-auto');
+    // Vertical-only scroll boundary (horizontal is clipped) — cramped modes keep all links reachable.
+    expect(wrapper?.className).toContain('overflow-y-auto');
+    expect(wrapper?.className).toContain('overflow-x-clip');
     expect(wrapper?.className).toContain('@container');
   });
 

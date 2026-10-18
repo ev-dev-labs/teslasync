@@ -395,8 +395,12 @@ describe('SleepEfficiencyWidget populated', () => {
     );
     renderWidget({ vehicleId: 1 });
 
-    // Avg Drain/Day = (null ?? 0) × 24 → "0.00".
-    expect(await screen.findAllByText('—')).toHaveLength(4);
+    // Avg Drain/Day and the two sibling stats are omitted when unknown; only
+    // the gauge fallback dash remains on the face.
+    expect(await screen.findAllByText('—')).toHaveLength(1);
+    const unknownBrief = screen.getByTestId('sleep-efficiency-operational-brief');
+    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.queryByText('0')).toBeNull();
     expect(screen.queryByText('0.00')).toBeNull();

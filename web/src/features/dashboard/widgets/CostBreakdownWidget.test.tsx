@@ -237,13 +237,14 @@ it('reviews actual cost quantities and the original tariff conversion without hi
   mockCost.mockReturnValue(qr({ data: makeData(), isError: true, error: new Error('refresh failed') }));
   renderWidget(STANDARD, { vehicleId: 42 });
   const brief = screen.getByTestId('cost-breakdown-operational-brief');
-  expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
   fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
   const drawer = screen.getByRole('dialog');
+  expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
   expect(within(drawer).getByText('$240.00')).toBeInTheDocument();
   expect(within(drawer).getByText('$0.05')).toBeInTheDocument();
   expect(within(drawer).getByText('$180.00')).toBeInTheDocument();
-  expect(within(drawer).getByText(/not independently measured savings/)).toBeInTheDocument();
+  const savingsGroup = within(drawer).getByRole('group', { name: 'Gas savings' });
+  expect(within(savingsGroup).getByText(/not independently measured savings/)).toBeInTheDocument();
   expect(within(drawer).getByText(/^Vehicle 42;/)).toBeInTheDocument();
 });
 
@@ -566,7 +567,10 @@ describe('CostBreakdownWidget — null-safety & hardening', () => {
       } }));
       renderWidget(STANDARD);
       for (const label of ['Total cost', 'Cost / km', 'Gas savings']) expect(screen.getByText(label)).toBeInTheDocument();
-      expect(screen.getAllByText('—')).toHaveLength(3);
+      expect(screen.queryByText('—')).not.toBeInTheDocument();
+      const unknownBrief = screen.getByTestId('cost-breakdown-operational-brief');
+      fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
       expect(screen.getByText('$70.00')).toBeInTheDocument();
     });
 

@@ -251,7 +251,11 @@ describe('DashboardStatsWidget — states', () => {
     const { container } = renderWidget();
     expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
     expect(screen.queryByText('No dashboard stats available')).toBeNull();
-    expect(screen.queryByText('Vehicles')).toBeInTheDocument();
+    expect(screen.getByText('FSM state')).toBeInTheDocument();
+    expect(screen.getAllByText('online')).toHaveLength(2);
+    const pendingBrief = screen.getByTestId('dashboard-stats-operational-brief');
+    fireEvent.click(within(pendingBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('retains fleet counts as partial while the FSM state query is pending', () => {
@@ -333,12 +337,12 @@ describe('DashboardStatsWidget — populated (full size)', () => {
     renderWidget({ cols: 3, rows: 4 }, 42);
     const brief = screen.getByTestId('dashboard-stats-operational-brief');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    expect(within(brief).getByText('Fleet counts · FSM vehicle 42')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Fleet counts · FSM vehicle 42')).toBeInTheDocument();
     expect(within(drawer).getByText('1,234')).toBeInTheDocument();
     expect(within(drawer).getByText('online')).toBeInTheDocument();
-    expect(within(drawer).getAllByText(/separate 168-hour history query/).length).toBeGreaterThan(0);
+    expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('separate 168-hour history query');
     expect(screen.getByText('Recent transitions')).toBeInTheDocument();
     expect(screen.getByText('5m ago')).toBeInTheDocument();
   });
@@ -370,8 +374,11 @@ describe('DashboardStatsWidget — populated (full size)', () => {
   it('falls back to an em-dash FSM state when no state has landed', () => {
     useVehicleStateMachineMock.mockReturnValue(makeQ<VehicleState>(undefined));
     renderWidget({ cols: 2, rows: 2 });
-    // Grid "FSM State" card value + StatusBadge both render the '—' fallback.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    // The brief face omits the missing FSM metric; only the StatusBadge row renders the '—' fallback.
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    const fsmBrief = screen.getByTestId('dashboard-stats-operational-brief');
+    fireEvent.click(within(fsmBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('keeps missing fleet counts unknown rather than manufacturing zero', () => {
@@ -379,7 +386,10 @@ describe('DashboardStatsWidget — populated (full size)', () => {
       makeQ({ ...makeStats(), totalVehicles: undefined } as unknown as DashboardStats),
     );
     renderWidget({ cols: 2, rows: 2 });
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const countsBrief = screen.getByTestId('dashboard-stats-operational-brief');
+    fireEvent.click(within(countsBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('NaN')).toBeNull();
   });
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import SignalHealthWidget from '../../widgets/SignalHealthWidget';
 import LiveSignalSparklinesWidget from '../../widgets/LiveSignalSparklinesWidget';
 import { queryResult, renderWidget } from './testSupport';
@@ -53,7 +53,12 @@ describe('signal preservation in narrow-safe definitions and rows', () => {
     hooks.gaps.mockReturnValue(queryResult({ BatteryLevel: { value: 0, timestamp: new Date().toISOString() } }, { refetch: liveRetry }));
     renderWidget(<SignalHealthWidget size={{ cols: 3, rows: 4 }} />);
     expect(screen.getByText('Signal catalog')).toBeVisible();
-    expect(screen.getByText('Total signals').parentElement?.parentElement).toHaveTextContent('—');
+    expect(screen.queryByText('Total signals')).not.toBeInTheDocument();
+    const catalogBrief = screen.getByTestId('signal-health-operational-brief');
+    fireEvent.click(within(catalogBrief).getByRole('button', { name: 'Review details' }));
+    const catalogDrawer = screen.getByRole('dialog');
+    expect(within(catalogDrawer).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(catalogDrawer, { key: 'Escape' });
     expect(screen.getByText('Active')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(catalogRetry).toHaveBeenCalledOnce();

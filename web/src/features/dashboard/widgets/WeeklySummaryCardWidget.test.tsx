@@ -37,8 +37,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // i18n passthrough: honour the English fallback so every copy assertion is real.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: unknown) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -332,7 +336,10 @@ describe('WeeklySummaryCardWidget — lifecycle', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('No weekly data')).toBeInTheDocument();
     expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(document.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    const emptyBrief = screen.getByTestId('weekly-summary-operational-brief');
+    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('shows an accessible empty state (compact view) when no digest has landed', () => {
@@ -399,10 +406,15 @@ describe('WeeklySummaryCardWidget — null safety', () => {
     const { container } = renderWidget({ size: TALL, distanceUnit: 'km', query: makeQuery({ data: sparse }) });
 
     for (const label of ['Distance', 'Energy', 'Cost', 'Efficiency']) {
-      expect(within(cardOf(label)).getAllByText('—').length).toBeGreaterThan(0);
-      expect(within(cardOf(label)).queryByText('0.00')).toBeNull();
-      expect(within(cardOf(label)).queryByText('$0.00')).toBeNull();
+      // Labels survive only as empty-state chips; no value tiles render.
+      expect(screen.getByText(label)).toBeInTheDocument();
     }
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    const sparseBrief = screen.getByTestId('weekly-summary-operational-brief');
+    fireEvent.click(within(sparseBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    expect(screen.queryByText('0.00')).toBeNull();
+    expect(screen.queryByText('$0.00')).toBeNull();
     // Zero baselines → em-dash trend, never "NaN".
     expect(container.textContent ?? '').not.toContain('NaN');
   });

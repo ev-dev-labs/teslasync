@@ -30,7 +30,7 @@
  * and driven per-test.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -149,7 +149,10 @@ describe('ChargingTelemetryWidget — power unit conversion (1000× regression g
     renderWidget({ size: { cols: 4, rows: 4 } });
     const brief = screen.getByTestId('dashboard-charging-telemetry-brief');
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(5);
-    expect(brief).toHaveTextContent('source timestamp 2026-01-01T00:00:00Z');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const scopeDrawer = screen.getByRole('dialog');
+    expect(scopeDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('source timestamp 2026-01-01T00:00:00Z');
+    fireEvent.keyDown(scopeDrawer, { key: 'Escape' });
     expect(brief).toHaveTextContent('0.00 kW');
     expect(brief).toHaveTextContent('0.00 A');
     expect(brief).toHaveTextContent('0.00%');
@@ -285,8 +288,11 @@ describe('ChargingTelemetryWidget — wide layout (efficiency, badge, sparkline)
     );
     renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.getByText('Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Efficiency')).not.toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const effBrief = screen.getByTestId('dashboard-charging-telemetry-brief');
+    fireEvent.click(within(effBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('labels an AC charger below the DC voltage threshold', () => {

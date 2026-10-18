@@ -35,7 +35,7 @@
  * because the error branch's <QueryError> uses `useNavigate`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 import BatteryHealthAnalyticsWidget from './BatteryHealthAnalyticsWidget';
@@ -77,8 +77,12 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -257,8 +261,12 @@ describe('BatteryHealthAnalyticsWidget — standard layout', () => {
     const { container } = renderWidget();
     const brief = screen.getByTestId('dashboard-battery-health-brief');
     expect(brief).toHaveTextContent('Returned battery-health factors');
-    expect(brief).toHaveTextContent('continuous coverage is unknown');
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(5);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const factorsDrawer = screen.getByRole('dialog');
+    expect(factorsDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('continuous coverage is unknown');
+    expect(within(factorsDrawer).getByText('1 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(factorsDrawer, { key: 'Escape' });
     expect(brief).not.toHaveTextContent('NaN');
     expect(gaugeArc(container, 'var(--semantic-success)')).toBe(true);
   });
@@ -383,7 +391,10 @@ describe('BatteryHealthAnalyticsWidget — query states', () => {
     expect(screen.getByText('Battery analytics')).toBeInTheDocument();
     expect(screen.getByText('No battery health data')).toBeInTheDocument();
     expect(screen.getByText('Cycles')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(6);
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const emptyBrief = screen.getByTestId('dashboard-battery-health-brief');
+    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('6 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('keeps a partial payload unknown without fabricating zeros or a red gauge', () => {
@@ -397,7 +408,10 @@ describe('BatteryHealthAnalyticsWidget — query states', () => {
     }).not.toThrow();
 
     expect(screen.getByText('Cycles')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(7);
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    const partialBrief = screen.getByTestId('dashboard-battery-health-brief');
+    fireEvent.click(within(partialBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('6 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0')).toBeNull();
     expect(gaugeArc(container, 'var(--semantic-danger)')).toBe(false);
     expect(screen.queryByRole('meter')).toBeNull();

@@ -523,7 +523,7 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
       if (source === 'history') {
         fireEvent.click(within(row).getByRole('button', { name: 'Retry' }));
       } else {
-        fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+        fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
       }
       await waitFor(() => {
         expect(sourceCallCount(source)).toBe(counts[source] + 1);
@@ -575,7 +575,11 @@ describe('LiveSignalSparklinesWidget — independent source trust', () => {
         history: sourceCallCount('history'),
       };
       failures.clear();
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      if (source === 'history') {
+        fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      } else {
+        fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
+      }
       await waitFor(() => {
         expect(sourceCallCount(source)).toBe(counts[source] + 1);
         expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();

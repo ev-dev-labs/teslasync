@@ -428,8 +428,11 @@ describe('YearReviewWidget null-safety', () => {
     await screen.findByText(`Year in review ${YEAR}`);
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
-    // Busiest month with no monthly stats collapses to the em-dash placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(8);
+    // Busiest month with no monthly stats is omitted from the face and counted.
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const nullBrief = screen.getByTestId('year-review-operational-brief');
+    fireEvent.click(within(nullBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('8 empty fields are hidden.')).toBeInTheDocument();
     // Missing longest drive + missing energy → 0.0 (both 1-dp stats).
     expect(screen.queryByText('0.00')).toBeNull();
     // Nothing leaked NaN / undefined into the DOM.

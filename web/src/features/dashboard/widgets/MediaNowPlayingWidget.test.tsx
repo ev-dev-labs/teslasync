@@ -265,7 +265,13 @@ describe('MediaNowPlayingWidget — states', () => {
     it('bounds the accessible volume reading to the known scale', () => {
       useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 15, audio_volume_max: 10 }) }));
       renderWidget();
-      expect(screen.getByRole('progressbar', { name: 'Volume' })).toHaveAttribute('aria-valuenow', '10');
+      // MetricBar no longer fabricates a bounded progress value for out-of-range
+      // readings: the over-scale volume is exposed as a described group instead.
+      expect(screen.queryByRole('progressbar', { name: 'Volume' })).toBeNull();
+      const vol = screen.getByRole('group', { name: 'Volume' });
+      const describedId = vol.getAttribute('aria-describedby');
+      expect(describedId).toBeTruthy();
+      expect(document.getElementById(describedId!)).toHaveTextContent('15');
     });
 
     it('reacts to locale and precision without changing media identities or refetching', () => {

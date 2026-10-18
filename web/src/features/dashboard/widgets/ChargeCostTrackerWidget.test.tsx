@@ -440,7 +440,10 @@ describe('ChargeCostTrackerWidget — full layout', () => {
     renderWidget(FULL);
 
     expect(screen.getByText('Set gas price in settings')).toBeInTheDocument();
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const gasBrief = screen.getByTestId('charge-cost-operational-brief');
+    fireEvent.click(within(gasBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
   });
 });
 

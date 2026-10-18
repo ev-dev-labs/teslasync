@@ -899,7 +899,10 @@ describe('GlancePage — null safety + idle branches', () => {
       }));
       renderPage();
       expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
-      expect(screen.getAllByText(/No verified observation time for this vehicle/)).toHaveLength(3);
+      expect(screen.getAllByText(/No verified observation time for this vehicle/)).toHaveLength(2);
+      const glanceBrief = screen.getByTestId('glance-operational-brief');
+      fireEvent.click(within(glanceBrief).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText(/No verified observation time for this vehicle/)).toBeInTheDocument();
       expect(screen.queryByRole('img', { name: /Up to date/ })).toBeNull();
       expect(screen.getByText(/Telemetry stream observation does not verify individual reading timestamps/)).toBeInTheDocument();
       expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeDisabled();
@@ -917,7 +920,10 @@ describe('GlancePage — null safety + idle branches', () => {
       expect(rowValue(liveRegion(), 'Doors')).toBe('Locked');
       expect(rowValue(liveRegion(), 'Destination')).toBe('Office');
       expect(within(liveRegion()).getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
-      expect(screen.getAllByText(/Last real observation.*Stale/)).toHaveLength(3);
+      expect(screen.getAllByText(/Last real observation.*Stale/)).toHaveLength(2);
+      const staleBrief = screen.getByTestId('glance-operational-brief');
+      fireEvent.click(within(staleBrief).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText(/Last real observation.*Stale/)).toBeInTheDocument();
       expect(within(controlsRegion()).getByRole('button', { name: 'Unlock' })).toBeDisabled();
       expect(within(controlsRegion()).getByRole('button', { name: 'Climate off' })).toBeDisabled();
       expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeDisabled();
@@ -930,7 +936,9 @@ describe('GlancePage — null safety + idle branches', () => {
       expect(rowValue(historical, 'Place')).toBe('Home');
       expect(rowValue(historical, 'Destination')).toBe('Office');
       expect(screen.getByText('Latest')).toBeInTheDocument();
-      expect(kpiRegion()).toHaveTextContent('Historical signal reconstruction');
+      const historyBrief = screen.getByTestId('glance-operational-brief');
+      fireEvent.click(within(historyBrief).getByRole('button', { name: 'Review details' }));
+      expect(screen.getByRole('dialog').querySelector('[data-drawer-header]')).toHaveTextContent('Historical signal reconstruction');
       expect(within(controlsRegion()).getByText(/Read-only point-in-time mode/)).toBeInTheDocument();
       for (const name of ['Unlock', 'Climate off', 'Horn']) {
         expect(within(controlsRegion()).getByRole('button', { name })).toBeDisabled();

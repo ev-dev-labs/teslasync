@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { fmtNumber } from '@/lib/numberFormat';
 import ChargeStatusWidget from '../../widgets/ChargeStatusWidget';
 import ChargeHistoryWidget from '../../widgets/ChargeHistoryWidget';
@@ -65,5 +65,8 @@ it('keeps measured zero battery distinct from a missing charge-status reading', 
   rerender(<ChargeStatusWidget vehicleId={7} size={{ cols: 2, rows: 4 }} />);
   expect(screen.queryByText(`${fmtNumber(0)}%`)).not.toBeInTheDocument();
   expect(screen.getByText('Battery')).toBeVisible();
-  expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+  expect(screen.queryByText('—')).not.toBeInTheDocument();
+  const idleBrief = screen.getByTestId('dashboard-charge-status-idle-brief');
+  fireEvent.click(within(idleBrief).getByRole('button', { name: 'Review details' }));
+  expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
 });

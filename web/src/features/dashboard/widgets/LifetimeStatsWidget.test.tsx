@@ -295,7 +295,10 @@ describe('LifetimeStatsWidget — null safety', () => {
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const coreBrief = screen.getByTestId('lifetime-stats-operational-brief');
+    fireEvent.click(within(coreBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
@@ -306,9 +309,12 @@ describe('LifetimeStatsWidget — null safety', () => {
     );
     renderWidget({ size: { cols: 4, rows: 2 } });
 
-    expect(screen.getByText('Avg daily distance')).toBeInTheDocument();
-    // Guarded to 0 → "0.0"; never NaN / Infinity.
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Avg daily distance')).not.toBeInTheDocument();
+    // Guarded to unknown without NaN / Infinity; counted rather than dashed.
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const avgBrief = screen.getByTestId('lifetime-stats-operational-brief');
+    fireEvent.click(within(avgBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText(/NaN|Infinity/)).not.toBeInTheDocument();
   });
 });

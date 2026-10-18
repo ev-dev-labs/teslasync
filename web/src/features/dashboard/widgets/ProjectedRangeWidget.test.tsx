@@ -45,7 +45,7 @@
  * primitives reach for router context.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ProjectedRangeData } from '@/types/energy';
 import ProjectedRangeWidget from './ProjectedRangeWidget';
@@ -92,8 +92,12 @@ vi.mock('@/hooks/useUnits', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -175,11 +179,16 @@ it('keeps four real wide range-model operands without replacing the projected he
   }) }));
   renderWidget({ cols: 3, rows: 4 });
   const brief = screen.getByTestId('dashboard-projected-range-factors-brief');
-  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
-  expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+  // Four operands, but the unknown capacity is omitted from the face (counted as hidden in the drawer below).
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+  expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
   expect(brief).toHaveTextContent('0.00%');
   expect(brief).toHaveTextContent('0.00 km');
-  expect(brief).toHaveTextContent('inferred range analysis');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const factorsDrawer = screen.getByRole('dialog');
+  expect(factorsDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('inferred range analysis');
+  expect(within(factorsDrawer).getByText('1 empty fields are hidden.')).toBeInTheDocument();
+  fireEvent.keyDown(factorsDrawer, { key: 'Escape' });
   expect(screen.getByText('350.00')).toBeInTheDocument();
   expect(screen.getByText('70.00% of EPA rated')).toBeInTheDocument();
 });
@@ -411,7 +420,10 @@ describe('ProjectedRangeWidget — query states', () => {
     useProjectedRangeMock.mockReturnValue(makeQuery({ data: {} as ProjectedRangeData }));
     renderWidget({ cols: 3, rows: 2 });
     expect(screen.getByText('Range factors')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    const unknownBrief = screen.getByTestId('dashboard-projected-range-factors-brief');
+    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0')).toBeNull();
     expect(screen.queryByText('km')).toBeNull();
     expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');

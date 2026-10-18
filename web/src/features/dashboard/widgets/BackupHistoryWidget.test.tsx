@@ -257,8 +257,10 @@ describe('BackupHistoryWidget', () => {
     expect(within(brief).getByText('Outages (30d)')).toBeInTheDocument();
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(1);
     expect(within(brief).getByText('0')).toBeInTheDocument();
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
-    expect(within(brief).getByText('—')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    expect(within(brief).queryByText('—')).not.toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('renders outage count, average duration, and events sorted newest-first', () => {

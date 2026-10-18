@@ -25,7 +25,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -207,7 +207,10 @@ describe('BatteryCellsWidget', () => {
     renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
     const brief = screen.getByTestId('dashboard-battery-cells-brief');
     expect(brief).toHaveTextContent('Returned cell measurements');
-    expect(brief).toHaveTextContent('recording coverage is unknown');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const scopeDrawer = screen.getByRole('dialog');
+    expect(scopeDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('recording coverage is unknown');
+    fireEvent.keyDown(scopeDrawer, { key: 'Escape' });
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(7);
     expect(brief).toHaveTextContent('0.000 V');
     expect(brief).toHaveTextContent('0.00 mV');
@@ -325,7 +328,10 @@ describe('BatteryCellsWidget', () => {
 
     expect(screen.getByText('No battery cell data')).toBeInTheDocument();
     expect(screen.getByText('Min V')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const emptyBrief = screen.getByTestId('dashboard-battery-cells-brief');
+    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('renders a loading skeleton without any content while fetching the first time', () => {

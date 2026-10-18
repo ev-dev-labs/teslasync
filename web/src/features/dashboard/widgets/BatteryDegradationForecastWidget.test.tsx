@@ -32,7 +32,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -171,7 +171,10 @@ it('keeps measured health and degradation zero independent of projected risk and
   expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
   expect(brief).toHaveTextContent('0.00%');
   expect(brief).toHaveTextContent('0.00%/mo');
-  expect(brief).toHaveTextContent('does not establish continuous recording coverage');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const scopeDrawer = screen.getByRole('dialog');
+  expect(scopeDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('does not establish continuous recording coverage');
+  fireEvent.keyDown(scopeDrawer, { key: 'Escape' });
   expect(screen.getByText('High Temperature')).toBeInTheDocument();
   expect(screen.getByText('Charge to 80% for daily use')).toBeInTheDocument();
 });
@@ -427,7 +430,10 @@ describe('BatteryDegradationForecastWidget — hardening & null-safety', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('High Temperature')).toBeInTheDocument();
-    expect(screen.getByText('Current health')).toBeInTheDocument();
+    expect(screen.queryByText('Current health')).not.toBeInTheDocument();
+    const risksBrief = screen.getByTestId('dashboard-battery-forecast-brief');
+    fireEvent.click(within(risksBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText('Recommendations')).toBeInTheDocument();
   });
 
@@ -447,7 +453,10 @@ describe('BatteryDegradationForecastWidget — hardening & null-safety', () => {
 
     expect(screen.getByText('Keep it plugged in overnight')).toBeInTheDocument();
     expect(screen.getByText('Risk factors')).toBeInTheDocument();
-    expect(screen.getByText('Current health')).toBeInTheDocument();
+    expect(screen.queryByText('Current health')).not.toBeInTheDocument();
+    const recsBrief = screen.getByTestId('dashboard-battery-forecast-brief');
+    fireEvent.click(within(recsBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('falls back to "—" for a risk factor with no label or detail', () => {

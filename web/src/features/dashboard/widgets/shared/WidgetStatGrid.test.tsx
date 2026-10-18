@@ -192,7 +192,8 @@ describe('WidgetStatGrid — wrapping layout', () => {
   it('auto-selects a maximum row count from the item count when none is supplied', () => {
     expect(gridRoot(<WidgetStatGrid stats={makeStats(3)} />)).toHaveAttribute('data-max-per-row', '3');
     expect(gridRoot(<WidgetStatGrid stats={makeStats(4)} />)).toHaveAttribute('data-max-per-row', '4');
-    expect(gridRoot(<WidgetStatGrid stats={makeStats(5)} />)).toHaveAttribute('data-max-per-row', '2');
+    // 5 items resolve to 3-up (rows of 3+2); the old grid's 2-up match was the @xs intermediate breakpoint.
+    expect(gridRoot(<WidgetStatGrid stats={makeStats(5)} />)).toHaveAttribute('data-max-per-row', '3');
   });
 
   it('uses full-width metric rows with a tighter gap when compact', () => {

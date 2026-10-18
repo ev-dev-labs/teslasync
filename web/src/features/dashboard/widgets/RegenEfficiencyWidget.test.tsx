@@ -388,7 +388,10 @@ describe('RegenEfficiencyWidget — null-safety', () => {
 
     // The actual bridge validates missing values before specialist formatting.
     expect(units.formatEnergy).not.toHaveBeenCalled();
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    const unknownBrief = screen.getByTestId('regen-efficiency-operational-brief');
+    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
@@ -396,9 +399,9 @@ describe('RegenEfficiencyWidget — null-safety', () => {
     mockRegen.mockReturnValue(qr({ data: makeData(), isError: true, error: new Error('refresh failed') }));
     renderWidget(STANDARD, { vehicleId: 42 });
     const brief = screen.getByTestId('regen-efficiency-operational-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
     expect(within(drawer).getByText('1234 Wh')).toBeInTheDocument();
     expect(within(drawer).getByText('5000 Wh')).toBeInTheDocument();
     expect(within(drawer).getByText('7')).toBeInTheDocument();

@@ -38,10 +38,15 @@ import type { ReactNode } from 'react';
 import type { DailyEnergy } from '@/types/energy';
 import { formatEnergy as libFormatEnergy, type UnitPref } from '@/lib/unitConversion';
 
-// ── i18n stub: return the English fallback (2nd arg) or the key. ──
+// ── i18n stub: return the English fallback (2nd arg) or the key, interpolating {{vars}}. ──
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, def?: string) => (typeof def === 'string' ? def : _key),
+    t: (_key: string, def?: string, options?: Record<string, unknown>) => {
+      const template = typeof def === 'string' ? def : _key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -275,8 +280,11 @@ describe('EnergyStatsWidget — standard (2×N)', () => {
     });
     renderWidget({ size: STANDARD });
 
-    // Used + Charged both collapse to "0.0 kWh"; efficiency + co2 to "0.0".
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    // Used + Charged + efficiency + co2 are all omitted from the face when unknown.
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const nullBrief = screen.getByTestId('energy-stats-operational-brief');
+    fireEvent.click(within(nullBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
     // Still rendered, not crashed.
     expect(screen.getByText('Energy stats')).toBeInTheDocument();
@@ -332,9 +340,13 @@ describe('EnergyStatsWidget — states & interaction', () => {
   it('does not fabricate net energy when either contributing total is unknown', () => {
     setup({ stats: makeQuery({ data: makeStats({ total_energy_used_wh: null }) }) });
     renderWidget({ size: WIDE });
-    expect(screen.getByText('Net energy')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('15.00 kWh')?.textContent).toBe('15.00 kWh');
+    expect(screen.queryByText('Net energy')).not.toBeInTheDocument();
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const netBrief = screen.getByTestId('energy-stats-operational-brief');
+    fireEvent.click(within(netBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
+    // The known solar total stays on the face (the drawer lists it too — scope to the face).
+    expect(within(netBrief).getByText('15.00 kWh')).toBeInTheDocument();
   });
 
   it('honors a Wh preference in the compact hero and chart-data conversion', () => {
@@ -390,9 +402,9 @@ describe('EnergyStatsWidget — states & interaction', () => {
     renderWidget({ size: WIDE });
     const brief = screen.getByTestId('energy-stats-operational-brief');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
     expect(within(drawer).getByText('12.00 kWh')).toBeInTheDocument();
     expect(within(drawer).getByText('4.50 $')).toBeInTheDocument();
     expect(within(drawer).getByText('3.00 kWh')).toBeInTheDocument();

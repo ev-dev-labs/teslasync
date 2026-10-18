@@ -40,7 +40,7 @@
  * freshness/refresh chip renders without a Settings provider. A `<MemoryRouter>`
  * wraps every render because `EmptyState` reaches for `<Link>`.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -276,7 +276,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     renderWidget(FULL);
     const missing = screen.getByTestId('dashboard-range-comparison-brief');
     expect(within(missing).getByText('Ideal range')).toBeInTheDocument();
-    expect(within(missing).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(missing, 'Ideal range');
     expect(capturedBrief.metrics[0]).toMatchObject({ rawValue: undefined, valueState: 'missing' });
     expect(screen.getByText('300.00')).toBeInTheDocument();
     expect(within(missing).queryByText('EPA variance')).toBeNull();
@@ -331,7 +331,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     expect(screen.getByText('400.00')).toBeInTheDocument();
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
     expect(within(brief).getByText('Rated range')).toBeInTheDocument();
-    expect(within(brief).getByText('—')).toBeInTheDocument();
+    assertOperationalMetricUnavailable(brief, 'Rated range');
     expect(capturedBrief.metrics[0]).toMatchObject({ rawValue: null, valueState: 'missing' });
     expect(screen.queryByText('EPA variance')).toBeNull();
   });
@@ -340,10 +340,10 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     const q = setState({ state: makeState(), isError: true, error: new Error('refresh failed') });
     renderWidget(FULL);
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
     expect(within(brief).getByText('350.00 mi')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+    assertOperationalBriefDisclosure(brief, 'Retained readings');
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(q.refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -556,7 +556,8 @@ describe('RangeBarWidget — null safety', () => {
     renderWidget(FULL);
 
     expect(screen.getByText('No range data')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    assertOperationalMetricUnavailable(screen.getByTestId('dashboard-range-comparison-brief'), 'Rated range');
     expect(screen.queryByText('0')).toBeNull();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });

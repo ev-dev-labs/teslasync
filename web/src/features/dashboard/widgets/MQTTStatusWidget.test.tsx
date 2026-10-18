@@ -33,11 +33,15 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { VehicleTelemetry } from '@/types/telemetry';
 
-// ── i18n stub: return the English fallback (2nd arg) or the key. ──
+// ── i18n stub: return the English fallback (2nd arg) or the key, interpolating {{vars}}. ──
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, def?: string | Record<string, unknown>) =>
-      typeof def === 'string' ? def : _key,
+    t: (_key: string, def?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const template = typeof def === 'string' ? def : _key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -110,9 +114,9 @@ describe('deriveMqttStats', () => {
     mockMqtt.mockReturnValue(makeQuery({ data: makeStatus(), isError: true, error: new Error('refresh failed') }));
     renderWidget(STANDARD);
     const brief = screen.getByTestId('mqtt-operational-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
     expect(within(drawer).getByText('12.50')).toBeInTheDocument();
     expect(within(drawer).getByText('1,500')).toBeInTheDocument();
     expect(within(drawer).getByText(/one missing operand makes the total unknown/)).toBeInTheDocument();
@@ -236,7 +240,10 @@ describe('MQTTStatusWidget — states & interaction', () => {
       mockMqtt.mockReturnValue(makeQuery({ data: {} }));
       renderWidget(STANDARD);
       expect(screen.getByText('Unknown')).toBeInTheDocument();
-      expect(screen.getAllByText('—')).toHaveLength(4);
+      expect(screen.getAllByText('—')).toHaveLength(2);
+      const partialBrief = screen.getByTestId('mqtt-operational-brief');
+      fireEvent.click(within(partialBrief).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
       expect(screen.queryByText('Offline')).not.toBeInTheDocument();
     });
 

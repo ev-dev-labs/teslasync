@@ -222,7 +222,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.getByText('2025.20.1')).toBeInTheDocument();
     expect(screen.queryByText('Up to date')).not.toBeInTheDocument();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(refetchState).toHaveBeenCalledOnce();
     expect(refetchConfig).toHaveBeenCalledOnce();
   });

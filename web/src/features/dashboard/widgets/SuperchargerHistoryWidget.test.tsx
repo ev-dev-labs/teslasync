@@ -44,11 +44,16 @@ import { cleanup, fireEvent, render, renderHook, screen, waitFor, within } from 
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// i18n passthrough: honour the English fallback so every copy assertion is real.
+// i18n passthrough: honour the English fallback (interpolating {{vars}}) so every
+// copy assertion is real.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: unknown) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -331,8 +336,12 @@ describe('SuperchargerHistoryWidget — full view', () => {
     );
     renderWidget(FULL);
 
-    // Missing site name falls back to an em dash.
-    expect((await screen.findAllByText('—')).length).toBeGreaterThanOrEqual(3);
+    // Missing site name and usage fall back to em dashes in the row; the two
+    // missing summary metrics are omitted from the brief face and counted.
+    expect((await screen.findAllByText('—')).length).toBeGreaterThanOrEqual(2);
+    const nullBrief = screen.getByTestId('supercharger-history-operational-brief');
+    fireEvent.click(within(nullBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Missing usage stays unknown in both the row and the source summary.

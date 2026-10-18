@@ -172,9 +172,9 @@ describe('FsdWeeklyWidget', () => {
     renderWidget();
     const brief = screen.getByTestId('fsd-weekly-operational-brief');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
-    expect(within(brief).getByText(/exclusive · UTC/)).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('exclusive · UTC');
     expect(within(drawer).getByText('16.00 km')).toBeInTheDocument();
     expect(within(drawer).getByText('+3.00 pts')).toBeInTheDocument();
     expect(within(drawer).getByText(/not a percent growth rate/)).toBeInTheDocument();
@@ -208,8 +208,11 @@ describe('FsdWeeklyWidget', () => {
 
     renderWidget();
 
-    expect(screen.getByTestId('fsd-weekly-distance')).toHaveTextContent('—');
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getByTestId('fsd-weekly-distance')).not.toHaveTextContent('—');
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const unmeasuredBrief = screen.getByTestId('fsd-weekly-operational-brief');
+    fireEvent.click(within(unmeasuredBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
   });
 });

@@ -31,7 +31,7 @@
  * / `WidgetEventFeed` render, so those surfaces are exercised for real.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -217,9 +217,13 @@ describe('VampireDrainWidget — standard layout (2 col)', () => {
     renderWidget();
     const brief = screen.getByTestId('dashboard-vampire-drain-brief');
     expect(brief).toHaveTextContent('0.00%/day');
-    expect(brief).toHaveTextContent('Aggregate event count: 12');
-    expect(brief).toHaveTextContent('event feed is limited to 30 rows');
-    expect(brief).toHaveTextContent('exact aggregate recording bounds are not supplied');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drainDrawer = screen.getByRole('dialog');
+    const avgGroup = within(drainDrawer).getByRole('group', { name: 'Avg drain' });
+    expect(within(avgGroup).getByText(/Aggregate event count: 12/)).toBeInTheDocument();
+    expect(within(avgGroup).getByText(/event feed is limited to 30 rows/)).toBeInTheDocument();
+    expect(drainDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('exact aggregate recording bounds are not supplied');
+    fireEvent.keyDown(drainDrawer, { key: 'Escape' });
     expect(screen.getByText(`8.00% ${DOT} 40.00h`)).toBeInTheDocument();
   });
 

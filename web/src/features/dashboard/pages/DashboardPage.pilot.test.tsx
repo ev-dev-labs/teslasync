@@ -233,13 +233,15 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
     const actions = screen.getByRole('group', { name: 'Actions' });
     expect(actions).toHaveAttribute('data-action-order', 'context-secondary-destructive-overflow-primary');
     // Exercise the real PageLayout -> PageContainer -> PageActions API, not mocked geometry.
-    expect(actions).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-page-actions-scope', 'xl:flex');
+    expect(actions).toHaveClass('flex', 'flex-wrap', 'items-center', 'justify-end');
     const layouts = screen.getByRole('region', { name: 'Dashboard layouts' });
     const context = layouts.closest('[data-action-group="context"]');
-    expect(context).toHaveClass('order-1', 'sm:col-span-2', 'xl:order-2');
-    expect(actions.querySelector('[data-action-zone="context"]')).toHaveClass('contents');
+    expect(context).toHaveClass('flex', 'flex-wrap', 'items-center', 'sm:me-auto');
+    const contextZone = actions.querySelector('[data-action-zone="context"]');
+    expect(contextZone).toHaveClass('flex', 'flex-wrap');
+    expect(contextZone).toContainElement(layouts);
     const commands = actions.querySelector('[data-action-zone="commands"]');
-    expect(commands).toHaveClass('order-3');
+    expect(commands).toHaveClass('flex', 'flex-nowrap', 'justify-end');
     expect(commands).not.toContainElement(layouts);
     expect(commands?.querySelector('[data-action-group="secondary"]')).toContainElement(
       screen.getByRole('button', { name: editMode ? 'Auto arrange' : 'Refresh data' }),
@@ -248,7 +250,7 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
       screen.getByRole('button', { name: editMode ? 'Done' : 'Customize' }),
     );
     expect(Array.from(commands?.children ?? []).map((group) => group.getAttribute('data-action-group')))
-      .toEqual(editMode ? ['secondary', 'primary'] : ['secondary', 'overflow', 'primary']);
+      .toEqual(editMode ? ['metadata', 'secondary', 'primary'] : ['metadata', 'secondary', 'overflow', 'primary']);
     expect(actions).toContainElement(screen.getByTestId('pilot-switcher'));
     expect(screen.getByRole('region', { name: 'Dashboard widgets' })).toContainElement(screen.getByTestId('pilot-grid'));
     expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();

@@ -52,11 +52,16 @@ vi.mock('@/components/data-display', async (importActual) => {
   };
 });
 
-// i18n passthrough: honour the English fallback so every copy assertion is real.
+// i18n passthrough: honour the English fallback (interpolating {{vars}}) so every
+// copy assertion is real.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: unknown) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -244,16 +249,21 @@ describe('MotorPerformanceWidget — full view', () => {
     });
     const brief = screen.getByTestId('dashboard-motor-readouts-brief');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    // Four operands, but the unknown gear state is omitted from the face (counted as hidden in the drawer below).
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([0, null, 0, -0.12]);
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'missing', 'value', 'value']);
     expect(within(statCardOf('Stator temp')).getByText('32.00°F')).toBeInTheDocument();
-    expect(within(statCardOf('Gear state')).getByText('—')).toBeInTheDocument();
-    expect(within(statCardOf('Gear state')).getByText(/absent source remains unknown/)).toBeInTheDocument();
+    expect(screen.queryByText('Gear state')).not.toBeInTheDocument();
     expect(within(statCardOf('Lateral G')).getByText('0.00 g')).toBeInTheDocument();
     expect(within(statCardOf('Longitudinal G')).getByText('-0.12 g')).toBeInTheDocument();
-    expect(within(statCardOf('Lateral G')).getByText(/not verified SI acceleration/)).toBeInTheDocument();
-    expect(brief).toHaveTextContent('continuous recording coverage and extension-field units are not established');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const readoutsDrawer = screen.getByRole('dialog');
+    expect(within(readoutsDrawer).getByText('1 empty fields are hidden.')).toBeInTheDocument();
+    const lateralGroup = within(readoutsDrawer).getByRole('group', { name: 'Lateral G' });
+    expect(within(lateralGroup).getByText(/not verified SI acceleration/)).toBeInTheDocument();
+    expect(readoutsDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('continuous recording coverage and extension-field units are not established');
+    fireEvent.keyDown(readoutsDrawer, { key: 'Escape' });
     expect(screen.getByRole('meter', { name: 'Torque' })).toHaveAttribute('aria-valuenow', '0');
     measured.unmount();
 
@@ -269,7 +279,10 @@ describe('MotorPerformanceWidget — full view', () => {
     });
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([Number.NaN, null, null, null]);
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['invalid', 'missing', 'missing', 'missing']);
-    expect(within(screen.getByTestId('dashboard-motor-readouts-brief')).getAllByText('—')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    const invalidBrief = screen.getByTestId('dashboard-motor-readouts-brief');
+    fireEvent.click(within(invalidBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
 
@@ -295,7 +308,10 @@ describe('MotorPerformanceWidget — full view', () => {
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([-10, 'R', -0.25, 0]);
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'value', 'value', 'value']);
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const retainedDrawer = screen.getByRole('dialog');
+    expect(within(retainedDrawer).getByText('Retained readings')).toBeInTheDocument();
+    fireEvent.keyDown(retainedDrawer, { key: 'Escape' });
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     expect(within(statCardOf('Stator temp')).getByText('-10.00°C')).toBeInTheDocument();
     expect(within(statCardOf('Gear state')).getByText('R')).toBeInTheDocument();
@@ -379,7 +395,10 @@ describe('MotorPerformanceWidget — full view', () => {
     // G-forces each render the "—" placeholder — four in total.
     renderWidget(FULL, { query: makeQuery({ data: makeMotor() }) });
 
-    expect(screen.getAllByText('—')).toHaveLength(5);
+    expect(screen.getAllByText('—')).toHaveLength(1);
+    const nullBrief = screen.getByTestId('dashboard-motor-readouts-brief');
+    fireEvent.click(within(nullBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });

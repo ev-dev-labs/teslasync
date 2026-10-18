@@ -275,10 +275,10 @@ describe('AutomationStatusWidget — full view', () => {
     }));
     expect(screen.getByRole('switch', { name: 'Toggle Retained enabled' })).toBeInTheDocument();
     const brief = screen.getByTestId('automation-operational-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
     expect(within(drawer).getByText('2')).toBeInTheDocument();
     expect(within(drawer).getByText('1')).toBeInTheDocument();
     expect(within(drawer).getByText('0')).toBeInTheDocument();

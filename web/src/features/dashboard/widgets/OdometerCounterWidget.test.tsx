@@ -41,7 +41,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -66,11 +66,15 @@ vi.hoisted(() => {
 });
 
 // react-i18next passthrough — resolve the fallback (2nd arg) so assertions read
-// production copy.
+// production copy, interpolating {{vars}}.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : key,
+    t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+      const template = typeof fallback === 'string' ? fallback : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
   }),
 }));
 
@@ -159,7 +163,10 @@ it('keeps measured zero recorded distance in its own history brief without subst
   const brief = screen.getByTestId('dashboard-odometer-history-brief');
   expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
   expect(brief).toHaveTextContent('0.00 km');
-  expect(brief).toHaveTextContent('exact history bounds and completeness are not supplied');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const scopeDrawer = screen.getByRole('dialog');
+  expect(scopeDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('exact history bounds and completeness are not supplied');
+  fireEvent.keyDown(scopeDrawer, { key: 'Escape' });
   expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
 });
 
@@ -314,11 +321,14 @@ describe('OdometerCounterWidget', () => {
 
     renderWidget(<OdometerCounterWidget size={SIZE_WIDE} />);
 
-    // The odometer hero and the Total Driven label still render…
+    // The odometer hero still renders…
     expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
-    expect(screen.getByText('Total driven')).toBeInTheDocument();
-    // …but the missing stats source collapses to the em-dash, not a crash.
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Total driven')).not.toBeInTheDocument();
+    // …but the missing stats source is omitted and counted, not a crash.
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const statsBrief = screen.getByTestId('dashboard-odometer-history-brief');
+    fireEvent.click(within(statsBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('treats a zero odometer as a real reading (renders "0"), not the empty state', () => {

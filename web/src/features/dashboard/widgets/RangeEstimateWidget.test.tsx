@@ -36,11 +36,16 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// i18n passthrough: honour the English fallback so every copy assertion is real.
+// i18n passthrough: honour the English fallback (interpolating {{vars}}) so every
+// copy assertion is real.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: unknown) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: unknown, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -209,16 +214,27 @@ describe('RangeEstimateWidget — populated', () => {
 
       const brief = screen.getByTestId('dashboard-range-estimate-ideal-brief');
       expect(brief).toHaveAttribute('data-operational-brief');
-      expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
-      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
-      expect(brief.querySelector('[data-operational-metric]')).toHaveAttribute(
-        'data-value-state', idealRange === 0 ? 'value' : 'missing',
-      );
-      expect(within(brief).getByText(idealRange === 0 ? '0.00 km' : '—')).toBeInTheDocument();
-      expect(within(brief).getByText('Ideal range')).toBeInTheDocument();
-      expect(brief).toHaveTextContent('returned state snapshot');
-      expect(brief).toHaveTextContent('neither estimate measures achievable driving distance or a fleet aggregate');
-      expect(brief).toHaveTextContent('recording completeness are not supplied');
+      if (idealRange === 0) {
+        expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+        expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
+        expect(brief.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
+        expect(within(brief).getByText('0.00 km')).toBeInTheDocument();
+        expect(within(brief).getByText('Ideal range')).toBeInTheDocument();
+      } else {
+        expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+        expect(within(brief).getByText('Ideal range')).toBeInTheDocument();
+        expect(within(brief).queryByText('—')).not.toBeInTheDocument();
+      }
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const estimateDrawer = screen.getByRole('dialog');
+      const estimateHeader = estimateDrawer.querySelector('[data-drawer-header]');
+      expect(estimateHeader).toHaveTextContent('returned state snapshot');
+      expect(estimateHeader).toHaveTextContent('neither estimate measures achievable driving distance or a fleet aggregate');
+      expect(estimateHeader).toHaveTextContent('recording completeness are not supplied');
+      if (idealRange !== 0) {
+        expect(within(estimateDrawer).getByText('1 empty fields are hidden.')).toBeInTheDocument();
+      }
+      fireEvent.keyDown(estimateDrawer, { key: 'Escape' });
       expect(screen.getByText('Rated range')).toBeInTheDocument();
       expect(screen.getByText('500.00 km')).toBeInTheDocument();
       expect(screen.queryByText('No range data')).toBeNull();
@@ -237,9 +253,11 @@ describe('RangeEstimateWidget — populated', () => {
       });
 
       const brief = screen.getByTestId('dashboard-range-estimate-ideal-brief');
-      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(1);
-      expect(brief.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
-      expect(within(brief).getByText('—')).toBeInTheDocument();
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+      expect(brief.querySelector('[data-operational-metric]')).toBeNull();
+      expect(within(brief).queryByText('—')).not.toBeInTheDocument();
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
       expect(within(brief).queryByText('0.00 mi')).toBeNull();
       expect(screen.getByText('300.00 mi')).toBeInTheDocument();
       expect(screen.getByText('Rated range')).toBeInTheDocument();

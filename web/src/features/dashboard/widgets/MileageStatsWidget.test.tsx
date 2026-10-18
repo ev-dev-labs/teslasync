@@ -228,7 +228,11 @@ describe('MileageStatsWidget — standard layout (km)', () => {
     // lifetime 45 000 → next milestone 50 000; remaining 5 000 at 30 km/day
     // ≈ round(5000 / 30 / 30) = 6 months.
     expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
-    expect(screen.getByText('~6 mo')).toBeInTheDocument();
+    const etaBrief = screen.getByTestId('mileage-stats-operational-brief');
+    fireEvent.click(within(etaBrief).getByRole('button', { name: 'Review details' }));
+    const etaDrawer = screen.getByRole('dialog');
+    const milestoneGroup = within(etaDrawer).getByRole('group', { name: 'Next milestone' });
+    expect(within(milestoneGroup).getByText('~6 mo')).toBeInTheDocument();
   });
 
   it('advances past an exact 10 000 multiple (the +1 boundary guard)', () => {
@@ -241,8 +245,13 @@ describe('MileageStatsWidget — standard layout (km)', () => {
     // 20 000 is itself a milestone, so we must round up to 30 000 (remaining
     // 10 000 at 10 km/day ≈ 33 months) rather than reporting "0 remaining".
     expect(screen.getByText('30,000.00 km')).toBeInTheDocument();
-    expect(screen.getByText('~33 mo')).toBeInTheDocument();
-    expect(screen.getByText('10.00 km')).toBeInTheDocument();
+    const boundaryBrief = screen.getByTestId('mileage-stats-operational-brief');
+    fireEvent.click(within(boundaryBrief).getByRole('button', { name: 'Review details' }));
+    const boundaryDrawer = screen.getByRole('dialog');
+    const boundaryGroup = within(boundaryDrawer).getByRole('group', { name: 'Next milestone' });
+    expect(within(boundaryGroup).getByText('~33 mo')).toBeInTheDocument();
+    // The known daily average stays on the face (the drawer lists it too — scope to the face).
+    expect(within(boundaryBrief).getByText('10.00 km')).toBeInTheDocument();
   });
 });
 
@@ -335,7 +344,10 @@ describe('MileageStatsWidget — query states', () => {
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
 
     expect(screen.getByText('Daily avg')).toBeInTheDocument();
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const unknownBrief = screen.getByTestId('mileage-stats-operational-brief');
+    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0.0')).not.toBeInTheDocument();
     expect(screen.queryByText('10,000')).not.toBeInTheDocument();
   });

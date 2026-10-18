@@ -205,9 +205,12 @@ describe('FleetStatsBarWidget', () => {
 
   it('renders the online caption and percentage without inventing a comparison trend', () => {
     renderWidget(<FleetStatsBarWidget size={SIZE_STANDARD} />);
+    const brief = screen.getByTestId('fleet-stats-bar-operational-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
 
-    expect(screen.getByText('3 online')).toBeInTheDocument();
-    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(within(drawer).getByText('3 online')).toBeInTheDocument();
+    expect(within(drawer).getByText('75.00%')).toBeInTheDocument();
     expect(screen.queryAllByText('no change')).toHaveLength(0);
   });
 
@@ -237,7 +240,10 @@ describe('FleetStatsBarWidget', () => {
     // Vehicle-derived tiles still show; the missing analytics does not crash
     // or hide the panel.
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText('Distance (30d)')).toBeInTheDocument();
+    expect(screen.queryByText('Distance (30d)')).not.toBeInTheDocument();
+    const vehiclesOnlyBrief = screen.getByTestId('fleet-stats-bar-operational-brief');
+    fireEvent.click(within(vehiclesOnlyBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
 
@@ -263,8 +269,11 @@ describe('FleetStatsBarWidget', () => {
     expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(within(screen.getByText('Distance (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
-    expect(within(screen.getByText('Energy (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Distance (30d)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy (30d)')).not.toBeInTheDocument();
+    const loadingBrief = screen.getByTestId('fleet-stats-bar-operational-brief');
+    fireEvent.click(within(loadingBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });
@@ -279,8 +288,11 @@ describe('FleetStatsBarWidget', () => {
     // The affected source is partial; retained vehicle metrics remain readable.
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
-    expect(within(screen.getByText('Distance (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
-    expect(within(screen.getByText('Energy (30d)').closest('[data-operational-metric]') as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Distance (30d)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy (30d)')).not.toBeInTheDocument();
+    const partialBrief = screen.getByTestId('fleet-stats-bar-operational-brief');
+    fireEvent.click(within(partialBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     expect(screen.queryByText('No fleet data available')).not.toBeInTheDocument();
   });

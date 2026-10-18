@@ -251,7 +251,9 @@ describe('SignalHealthWidget — lifecycle states', () => {
     expect(screen.getByText('No signal health data')).toBeInTheDocument();
     // No StatCards leak through the empty branch.
     expect(screen.getByText('Total signals')).toBeInTheDocument();
-    expect(statValue('Total signals')).toBe('—');
+    const emptyBrief = screen.getByTestId('signal-health-operational-brief');
+    fireEvent.click(within(emptyBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh', exact: true }));
     expect(MOCK_STATS.refetch).toHaveBeenCalledTimes(1);
     expect(MOCK_GAPS.refetch).toHaveBeenCalledTimes(1);
@@ -342,7 +344,10 @@ describe('SignalHealthWidget — health classification (standard view)', () => {
     expect(statValue('Total signals')).toBe('2');
     expect(statValue('Active')).toBe('0');
     expect(statValue('With gaps')).toBe('0');
-    expect(statValue('Freshness')).toBe('—');
+    expect(screen.queryByText('Freshness')).not.toBeInTheDocument();
+    const unknownBrief = screen.getByTestId('signal-health-operational-brief');
+    fireEvent.click(within(unknownBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 });

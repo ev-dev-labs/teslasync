@@ -80,8 +80,12 @@ vi.mock('@/api/hooks/useAdmin', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const template = typeof defaultValue === 'string' ? defaultValue : key;
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(options[name] ?? ''))
+        : template;
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -197,7 +201,10 @@ describe('UptimeMonitorWidget — standard layout', () => {
 
     // A raw count of 0 is measured; empty database-size text remains missing.
     expect(screen.getByText('0')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    const blanked = screen.getByTestId('dashboard-uptime-snapshot-brief');
+    expect(within(blanked).queryByText('—')).not.toBeInTheDocument();
+    fireEvent.click(within(blanked).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
   });
 });
 
@@ -215,13 +222,13 @@ describe('UptimeMonitorWidget — real database source brief', () => {
     expect(count).toHaveTextContent('0');
     expect(sizeText).toHaveAttribute('data-value-state', 'value');
     expect(sizeText).toHaveTextContent(databaseSize);
-    expect(within(brief).getByText(/not complete fleet history/)).toBeInTheDocument();
 
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const details = screen.getByRole('dialog');
     expect(within(details).getByText(databaseSize)).toBeInTheDocument();
     expect(within(details).getByText('0')).toBeInTheDocument();
     expect(within(details).getByText(/no byte count is supplied/)).toBeInTheDocument();
+    expect(details.querySelector('[data-drawer-header]')).toHaveTextContent('not complete fleet history');
 
     cleanup();
     const withoutCount: Omit<SystemHealth, 'tableCount'> = {
@@ -233,9 +240,11 @@ describe('UptimeMonitorWidget — real database source brief', () => {
     renderWidget({ cols: 2, rows: 2 });
     const missingBrief = screen.getByTestId('dashboard-uptime-snapshot-brief');
     const missingCount = missingBrief.querySelector('[data-operational-metric="uptime-database-table-count"]');
-    expect(missingCount).toHaveAttribute('data-value-state', 'missing');
-    expect(within(missingBrief).getByText('—')).toBeInTheDocument();
+    expect(missingCount).toBeNull();
+    expect(within(missingBrief).queryByText('—')).not.toBeInTheDocument();
     expect(within(missingBrief).queryByText('0')).not.toBeInTheDocument();
+    fireEvent.click(within(missingBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('1 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getAllByText('OK')).toHaveLength(4);
   });
 
@@ -248,8 +257,11 @@ describe('UptimeMonitorWidget — real database source brief', () => {
 
     const { rerender } = renderWidget({ cols: 3, rows: 2 });
     const brief = screen.getByTestId('dashboard-uptime-snapshot-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
-    expect(brief.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const retainedDrawer = screen.getByRole('dialog');
+    expect(within(retainedDrawer).getByText('Retained readings')).toBeInTheDocument();
+    expect(retainedDrawer.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
+    fireEvent.keyDown(retainedDrawer, { key: 'Escape' });
     expect(within(brief).getByText('0')).toBeInTheDocument();
     expect(screen.getAllByText('OK')).toHaveLength(4);
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
@@ -273,8 +285,11 @@ describe('UptimeMonitorWidget — real database source brief', () => {
     useSystemHealthMock.mockReturnValue(makeQuery());
     rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
     const unavailable = screen.getByTestId('dashboard-uptime-snapshot-brief');
-    expect(within(unavailable).getByText('No source readings')).toBeInTheDocument();
-    expect(within(unavailable).getAllByText('—')).toHaveLength(2);
+    expect(within(unavailable).queryByText('—')).not.toBeInTheDocument();
+    fireEvent.click(within(unavailable).getByRole('button', { name: 'Review details' }));
+    const unavailableDrawer = screen.getByRole('dialog');
+    expect(within(unavailableDrawer).getByText('No source readings')).toBeInTheDocument();
+    expect(within(unavailableDrawer).getByText('2 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText('No system health data')).toBeInTheDocument();
   });
 });
@@ -373,7 +388,8 @@ describe('UptimeMonitorWidget — status classification', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.getByText('Unknown').parentElement?.parentElement?.className).toContain('bg-[var(--surface-2)]');
+    expect(screen.getByText('Database').closest('.relative')?.querySelector('[aria-hidden="true"]'))
+      .toHaveClass('bg-[var(--text-muted)]');
   });
 });
 
@@ -581,7 +597,7 @@ describe('UptimeMonitorWidget — graceful degradation on transient error', () =
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator is in its error state (danger dot).
-    expect(screen.getByRole('button', { name: 'Refresh data · {{state}}' }).querySelector('[aria-hidden="true"].rounded-full'))
+    expect(screen.getByRole('button', { name: 'Refresh data · Error · just now' }).querySelector('[aria-hidden="true"].rounded-full'))
       .toHaveClass('bg-[var(--semantic-danger)]');
   });
 });

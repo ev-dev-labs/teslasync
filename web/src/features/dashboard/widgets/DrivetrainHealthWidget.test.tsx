@@ -42,7 +42,7 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -218,10 +218,14 @@ describe('DrivetrainHealthWidget', () => {
     motorMock.mockReturnValue(makeQuery({ data: makeMotor({ di_stator_temp: Number.NaN }) }));
     renderWidget();
     const brief = screen.getByTestId('dashboard-drivetrain-readings-brief');
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(5);
-    expect(brief.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(1);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(4);
+    expect(brief.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(0);
     expect(brief).toHaveTextContent('0.00°C');
-    expect(brief).toHaveTextContent('independent sources');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const readingsDrawer = screen.getByRole('dialog');
+    expect(within(readingsDrawer).getByText('1 empty fields are hidden.')).toBeInTheDocument();
+    expect(readingsDrawer.querySelector('[data-drawer-header]')).toHaveTextContent('independent sources');
+    fireEvent.keyDown(readingsDrawer, { key: 'Escape' });
     expect(brief).toHaveTextContent('Drive');
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     expect(screen.getByText('Assessment from available telemetry; not a mechanical inspection.')).toBeInTheDocument();
@@ -428,10 +432,13 @@ describe('DrivetrainHealthWidget', () => {
 
     expect(() => renderWidget()).not.toThrow();
 
-    // The three temperature stats collapse to the em-dash placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(4);
-    // Drive State still resolves from the health motorStatus fallback.
-    expect(screen.getByText('Nominal')).toBeInTheDocument();
+    // The four temperature stats are omitted from the face when unknown.
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    const nullBrief = screen.getByTestId('dashboard-drivetrain-readings-brief');
+    fireEvent.click(within(nullBrief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('4 empty fields are hidden.')).toBeInTheDocument();
+    // Drive State still resolves from the health motorStatus fallback (drawer lists it too — scope to the face).
+    expect(within(nullBrief).getByText('Nominal')).toBeInTheDocument();
   });
 
   it('keeps the skeleton up while the default vehicle is still resolving', () => {

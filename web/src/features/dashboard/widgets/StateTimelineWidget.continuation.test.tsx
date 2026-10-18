@@ -15,8 +15,8 @@ function query<T>(data: T) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.summary.mockReturnValue(query([
-    { state: 'driving', totalMin: 180, count: 3 },
-    { state: 'idle', totalMin: 60, count: 1 },
+    { state: 'driving', total_seconds: 180 * 60, percentage: 75, transition_count: 3 },
+    { state: 'idle', total_seconds: 60 * 60, percentage: 25, transition_count: 1 },
   ]));
   mocks.timeline.mockReturnValue(query([
     { state: 'driving', startDate: '2026-10-05T10:00:00Z', durationMin: 100 },
@@ -52,7 +52,7 @@ describe('state timeline canonical composition preservation', () => {
 
   it('retains the compact five-cell policy without introducing a duplicate full legend', () => {
     mocks.summary.mockReturnValue(query(
-      ['driving', 'charging', 'asleep', 'idle', 'offline', 'unlisted'].map(state => ({ state, totalMin: 10, count: 1 })),
+      ['driving', 'charging', 'asleep', 'idle', 'offline', 'unlisted'].map(state => ({ state, total_seconds: 600, percentage: 100 / 6, transition_count: 1 })),
     ));
     render(<MemoryRouter><StateTimelineWidget size={{ cols: 1, rows: 2 }} /></MemoryRouter>);
     expect(screen.getByRole('img').children).toHaveLength(6);
