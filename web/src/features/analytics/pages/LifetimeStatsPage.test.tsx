@@ -348,7 +348,8 @@ describe('LifetimeStatsPage', () => {
   it('passes paused initial query state to every context brief without declaring empty', () => {
     h.query = makeQuery({ fetchStatus: 'paused', dataUpdatedAt: 0 });
     const { container } = renderPage();
-    const briefs = container.querySelectorAll('[data-operational-brief]');
+    const briefs = Array.from(container.querySelectorAll('[data-operational-brief]'))
+      .filter(brief => brief.closest('#lifetime-key-metrics') == null);
     expect(briefs).toHaveLength(3);
     for (const brief of Array.from(briefs)) {
       fireEvent.click(within(brief as HTMLElement).getByRole('button', { name: 'Review details' }));

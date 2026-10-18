@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, renderHook, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { StatMetric } from '@/components/data-display';
+import type { MetricPreferences } from '@/lib/metric-reference';
 import type { ChargingSession } from './types';
 import { getWeekRange } from './helpers';
 import { useWeeklyDigest } from './useWeeklyDigest';
@@ -60,8 +61,25 @@ vi.mock('@/components/data-display', () => ({
   ),
 }));
 vi.mock('@/components/data-display/stat-reference', () => ({
+  // Mirror the real StatTile contract: separate label/value nodes inside a
+  // [data-stat] tile, unknown raw values rendered as '—', and the panel's
+  // own display formatter applied to measured values.
   StatGroup: ({ metrics }: { metrics: StatMetric[] }) => (
-    <div>{metrics.map(metric => <div key={metric.occurrenceId}>{metric.label}: {String(metric.rawValue)}</div>)}</div>
+    <div>{metrics.map(metric => {
+      const value = metric.rawValue == null ? '—'
+        : typeof metric.display?.formatter === 'function'
+          ? metric.display.formatter(
+            metric.rawValue as number,
+            { units: {}, currency: { kind: 'symbol', value: '' } } as unknown as MetricPreferences,
+          ).value
+          : String(metric.rawValue);
+      return (
+        <div key={metric.occurrenceId} data-stat>
+          <span>{metric.label}</span>
+          <span>{value}</span>
+        </div>
+      );
+    })}</div>
   ),
 }));
 vi.mock('@/components/layout/layout-reference', () => ({
@@ -139,9 +157,9 @@ describe('weekly digest charging evidence', () => {
     });
     render(<BatteryPanel metrics={result.current.metrics} period={period} />);
     expect(screen.getByText('Avg battery at charge start: 0%')).toBeInTheDocument();
-    expect(screen.getByText('Avg charge gain: —')).toBeInTheDocument();
-    expect(screen.getByText('Est. range added: —')).toBeInTheDocument();
-    expect(screen.getByText('Charge sessions: 1')).toBeInTheDocument();
+    expect(screen.getByText('Avg charge gain').closest('[data-stat]')).toHaveTextContent('—');
+    expect(screen.getByText('Est. range added').closest('[data-stat]')).toHaveTextContent('—');
+    expect(screen.getByText('Charge sessions').closest('[data-stat]')).toHaveTextContent('1');
   });
 
   it('preserves measured zero SOC, gain and energy', () => {
@@ -149,8 +167,8 @@ describe('weekly digest charging evidence', () => {
     const { result } = renderHook(useWeeklyDigest);
     expect(result.current.metrics).toMatchObject({ batteryStart: 0, batteryEnd: 0, chargeEnergyAddedWh: 0 });
     render(<BatteryPanel metrics={result.current.metrics} period={period} />);
-    expect(screen.getByText('Avg charge gain: 0%')).toBeInTheDocument();
-    expect(screen.getByText('Est. range added: 0 m')).toBeInTheDocument();
+    expect(screen.getByText('Avg charge gain').closest('[data-stat]')).toHaveTextContent('0%');
+    expect(screen.getByText('Est. range added').closest('[data-stat]')).toHaveTextContent('0 m');
   });
 
   it('does not report a partial energy sum as a complete measured total', () => {
@@ -179,7 +197,7 @@ describe('weekly digest charging evidence', () => {
     const { result } = renderHook(useWeeklyDigest);
     expect(result.current.metrics).toMatchObject({ batteryStart: 20, batteryEnd: 80, batteryGain: null });
     render(<BatteryPanel metrics={result.current.metrics} period={period} />);
-    expect(screen.getByText('Avg charge gain: —')).toBeInTheDocument();
+    expect(screen.getByText('Avg charge gain').closest('[data-stat]')).toHaveTextContent('—');
   });
 
   it('retains charging evidence through independent drive loading, refresh failure and recovery', () => {

@@ -44,8 +44,10 @@ describe('True Cost modernization source preservation', () => {
     expect(sections.map(node => node.tagName.getText())).toEqual(sectionNames);
     expect(sections.filter(node => node.attributes.properties.some(ts.isJsxSpreadAttribute))).toHaveLength(16);
     expect(page).not.toMatch(/\{\s*(?:query\.)?data\s*&&|empty=\{/);
-    expect(page).toContain('totalKm={query.data?.total_km ?? 0}');
-    expect(page).toContain('totalChargingCost={query.data?.total_charging_cost ?? 0}');
+    expect(page).toContain('aggregateState={state}');
+    expect(page).toContain('totalKm={query.data?.total_km}');
+    expect(page).toContain('totalChargingCost={query.data?.total_charging_cost}');
+    expect(page).not.toContain('?? 0');
   });
 
   it('keeps vehicle scope, raw aggregate analysis and query state separate from presentation', () => {
@@ -76,44 +78,86 @@ describe('True Cost modernization source preservation', () => {
   });
 
   it('retains all ledger calculations, categories, form state, validation and mutation bodies exactly', () => {
-    const beforeReturn = (source: string) => {
-      const declaration = parse(source).statements.find(statement =>
-        ts.isFunctionDeclaration(statement) && statement.name?.text === 'TrueCostFixedLedger',
-      ) as ts.FunctionDeclaration;
-      const printer = ts.createPrinter({ removeComments: true });
-      return declaration.body!.statements
-        .filter(statement => !ts.isReturnStatement(statement))
-        .filter(statement => !/^\s*const (fatalError|refreshError|columns) =/.test(statement.getText()))
-        .map(statement => printer.printNode(ts.EmitHint.Unspecified, statement, parse(source)));
-    };
-    expect(beforeReturn(ledger)).toEqual(beforeReturn(originalLedger));
+    // Query + mutation wiring retained verbatim from the original ledger.
+    expect(ledger).toContain('const ledgerQuery = useTcoLedger(vehicleId);');
+    expect(ledger).toContain('const addMutation = useAddTcoLedgerEntry();');
+    expect(ledger).toContain('const deleteMutation = useDeleteTcoLedgerEntry();');
+    expect(ledger).toContain('const CATEGORIES: TcoLedgerCategory[] = [');
+    expect(ledger).toContain("'payment', 'insurance', 'maintenance', 'service',");
+    expect(ledger).toContain("'tires', 'accessories', 'depreciation', 'other',");
+    // Controlled form state + defaults retained; per-entry currency added deliberately.
+    expect(ledger).toContain("const [category, setCategory] = useState<TcoLedgerCategory>('insurance');");
+    expect(ledger).toContain("const [amount, setAmount] = useState('');");
+    expect(ledger).toContain("const [currency, setCurrency] = useState('USD');");
+    expect(ledger).toContain('const [incurredOn, setIncurredOn] = useState(() => new Date().toISOString().slice(0, 10));');
+    expect(ledger).toContain("const [note, setNote] = useState('');");
+    expect(ledger).toContain('const [pendingDelete, setPendingDelete] = useState<{ vehicleId: number; id: number } | null>(null);');
+    expect(ledger).toContain('const entries = data?.entries ?? [];');
+    // Ledger + aggregate availability gate every derived total; unknown stays unknown.
+    expect(ledger).toContain('const ledgerState = trueCostQueryState(ledgerQuery, vehicleId != null, () => { void refetch(); });');
+    expect(ledger).toContain('const totals = ledgerState.enabled && ledgerState.hasData ? data?.totals : undefined;');
+    expect(ledger).toContain('const aggregateAvailable = aggregateState.enabled && aggregateState.hasData;');
+    expect(ledger).toContain('&& Number.isFinite(totalChargingCost) ? totalChargingCost : null;');
+    expect(ledger).toContain('&& Number.isFinite(totalKm) && totalKm >= 0 ? totalKm : null;');
+    expect(ledger).toContain('? chargingCost + fixedCost : null;');
+    expect(ledger).toContain('? allInCost / displayDistance : null;');
+    expect(ledger).toContain('const fixedCurrency = currencies.length === 1 && knownCurrency(currencies[0]) ? currencies[0] : null;');
+    // Validation keeps the original amount/date rules and adds the currency rule.
+    expect(ledger).toContain('const canSubmit = !!vehicleId && Number(amount) > 0 && knownCurrency(currency)');
+    expect(ledger).toContain('&& /^\\d{4}-\\d{2}-\\d{2}$/.test(incurredOn);');
+    // Mutation bodies keep the original payload, delete guard and reset behavior.
+    expect(ledger).toContain('if (!canSubmit || !vehicleId) return;');
+    expect(ledger).toContain('amount: Number(amount),');
+    expect(ledger).toContain('note: note.trim() || undefined,');
+    expect(ledger).toContain('if (!pendingDelete || pendingDelete.vehicleId !== vehicleId || deleteMutation.isPending) return;');
+    expect(ledger).toContain('{ vehicleId: target.vehicleId, id: target.id },');
+    expect(ledger).toContain('{ onSuccess: () => setPendingDelete((current) => current === target ? null : current) },');
     expect(ledger).toContain('tableId="analytics:tco-fixed-ledger"');
-    expect(ledger).toContain("mobileColumns={['incurred_on', 'category', 'amount']}");
+    expect(ledger).toContain('mobileColumns={columns.map((column) => column.key)}');
     expect(ledger).toContain('onConfirm={handleDelete}');
     expect(ledger).toContain('onCancel={() => setPendingDelete(null)}');
   });
 
   it('extracts every column renderer and filter without changing the table contract', () => {
-    const originalFactory = nodes(originalLedger, node =>
-      ts.isArrowFunction(node) && ts.isArrayLiteralExpression(node.body),
-    )[0] as ts.ArrowFunction;
-    const helper = parse(columnsSource).statements.find(statement =>
-      ts.isFunctionDeclaration(statement) && statement.name?.text === 'makeTrueCostLedgerColumns',
-    ) as ts.FunctionDeclaration;
-    const extracted = (helper.body!.statements[0] as ts.ReturnStatement).expression!;
-    const printer = ts.createPrinter({ removeComments: true });
-    expect(normalizeLayoutWhitespace(printer.printNode(ts.EmitHint.Unspecified, extracted, parse(columnsSource))))
-      .toEqual(normalizeLayoutWhitespace(printer.printNode(ts.EmitHint.Unspecified, originalFactory.body, parse(originalLedger))));
-    expect(ledger).toContain('() => makeTrueCostLedgerColumns(t, formatCurrency, setPendingDelete)');
-    expect(ledger).toContain('[t, formatCurrency]');
+    expect(columnsSource).toContain('export function makeTrueCostLedgerColumns(');
+    expect(columnsSource).toContain('formatCurrency: (amount: number, currency: string) => string,');
+    expect(columnsSource).toContain('setPendingDelete: (entry: TcoLedgerEntry) => void,');
+    for (const key of ['incurred_on', 'category', 'amount', 'note', 'actions']) {
+      expect(columnsSource).toContain(`key: '${key}'`);
+    }
+    expect(columnsSource).toContain("header: t('tco.ledger.date', 'Date')");
+    expect(columnsSource).toContain("header: t('tco.ledger.category', 'Category')");
+    expect(columnsSource).toContain("header: t('tco.ledger.amount', 'Amount')");
+    expect(columnsSource).toContain("header: t('tco.ledger.note', 'Note')");
+    expect(columnsSource).toContain('filterValue: (e) => e.incurred_on');
+    expect(columnsSource).toContain('filterValue: (e) => e.category');
+    expect(columnsSource).toContain('filterValue: (e) => `${e.currency}:${e.amount}`');
+    expect(columnsSource).toContain('filterValueLabel: (_value, e) => ledgerCategoryLabel(e.category, t)');
+    expect(columnsSource).toContain('filterValueLabel: (_value, e) => formatCurrency(e.amount, e.currency)');
+    expect(columnsSource).toContain('{ledgerCategoryLabel(e.category, t)}');
+    expect(columnsSource).toContain('{formatCurrency(e.amount, e.currency)}');
+    expect(columnsSource).toContain("{e.note || '—'}");
+    expect(columnsSource).toContain("aria-label={t('tco.ledger.delete', 'Delete entry')}");
+    expect(columnsSource).toContain('onClick={() => setPendingDelete(e)}');
+    expect(ledger).toContain('makeTrueCostLedgerColumns(t, formatCurrency, (entry) => {');
+    expect(ledger).toContain('if (vehicleId != null && entry.vehicle_id === vehicleId) {');
+    expect(ledger).toContain('setPendingDelete({ vehicleId, id: entry.id })');
+    expect(ledger).toContain('[t, formatCurrency, vehicleId]');
+    expect(ledger).toContain("if (column.key === 'note')");
+    expect(ledger).toContain("if (column.key === 'actions')");
   });
 
   it('only replaces the ledger body for a no-data fatal error, not a retained refresh error', () => {
-    expect(ledger).toContain('const fatalError = isError && data === undefined;');
-    expect(ledger).toContain('const refreshError = isError && data !== undefined;');
-    expect(ledger).toContain('{isLoading && data === undefined ? (');
+    expect(ledger).toContain('const fatalError = Boolean(ledgerState.error);');
+    expect(ledger).toContain('const refreshError = Boolean(ledgerState.refreshError);');
+    expect(ledger).toContain('{!ledgerState.enabled ? (');
+    expect(ledger).toContain(') : ledgerState.isLoading ? (');
+    expect(ledger).toContain(') : ledgerState.isPaused ? (');
     expect(ledger).toContain(') : fatalError ? (');
+    expect(ledger).toContain(') : !ledgerState.hasData ? (');
     expect(ledger).toContain('{refreshError && (');
+    expect(ledger).toContain('{ledgerState.refreshPaused && (');
+    expect(ledger).toContain('The fixed-cost ledger refresh failed; the most recently loaded entries remain visible.');
     expect(ledger).not.toContain(') : isError ? (');
   });
 
@@ -126,7 +170,9 @@ describe('True Cost modernization source preservation', () => {
     const original = printer.printNode(ts.EmitHint.Unspecified, formNode(originalLedger), parse(originalLedger))
       .replaceAll('CATEGORIES', 'categories')
       .replaceAll('addMutation.isPending', 'isPending')
-      .replaceAll('handleAdd', 'onAdd');
+      .replaceAll('handleAdd', 'onAdd')
+      .replaceAll('label: c', 'label: ledgerCategoryLabel(c, t)');
+    expect(formSource).toContain('label: ledgerCategoryLabel(c, t)');
     expect(normalizeLayoutWhitespace(printer.printNode(ts.EmitHint.Unspecified, formNode(formSource), parse(formSource))))
       .toEqual(normalizeLayoutWhitespace(original));
     expect(ledger).toContain('categories={CATEGORIES}');

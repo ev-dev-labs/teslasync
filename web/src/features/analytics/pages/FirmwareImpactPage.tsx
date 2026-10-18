@@ -144,7 +144,7 @@ export default function FirmwareImpactPage() {
       )}
       query={[drivesQuery, updatesQuery]}
       dataSources={dataSources}
-      busy={drivesQuery.isFetching || updatesQuery.isFetching}
+      busy={Boolean(drivesQuery.isFetching || updatesQuery.isFetching)}
       announce={false}
     >
       <Text as="p" variant="bodySm">

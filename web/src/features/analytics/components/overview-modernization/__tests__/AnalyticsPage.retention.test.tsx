@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   children: {} as Record<string, FleetAnalyticsQuery>,
   fleetHook: vi.fn(),
   rangeHook: vi.fn(),
+  heroRetained: undefined as boolean | undefined,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -27,7 +28,10 @@ vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useRangeState', () => ({
   useRangeState: (options: unknown) => {
     h.rangeHook(options);
-    return { start: '2026-03-07', end: '2026-03-10' };
+    return {
+      start: '2026-03-07', end: '2026-03-10',
+      startInstant: '2026-03-07T00:00:00.000Z', endInstantExclusive: '2026-03-11T00:00:00.000Z',
+    };
   },
 }));
 vi.mock('@/api/hooks/useAnalytics', () => ({
@@ -64,8 +68,9 @@ vi.mock('../../analytics', () => {
   };
 });
 vi.mock('../../operationalbrief-a-m/FleetOverviewBrief', () => ({
-  FleetOverviewBrief: ({ query }: { query: FleetAnalyticsQuery }) => {
+  FleetOverviewBrief: ({ query, retained }: { query: FleetAnalyticsQuery; retained: boolean }) => {
     h.children.hero = query;
+    h.heroRetained = retained;
     return <div data-testid="hero">{query.data?.total_drives ?? 'No measurements'}</div>;
   },
 }));
@@ -76,6 +81,7 @@ beforeEach(() => {
   h.children = {};
   h.fleetHook.mockClear();
   h.rangeHook.mockClear();
+  h.heroRetained = undefined;
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -105,10 +111,14 @@ describe('analytics page retained-source orchestration', () => {
     expect(h.page?.loading).toBeUndefined();
     expect(h.page?.error).toBeUndefined();
     expect(h.page?.empty).toBeUndefined();
-    expect(h.rangeHook).toHaveBeenCalledWith({ persistKey: 'analytics.range' });
-    expect(h.fleetHook).toHaveBeenCalledWith({ start: '2026-03-07', end: '2026-03-10' });
+    expect(h.rangeHook).toHaveBeenCalledWith(undefined);
+    expect(h.fleetHook).toHaveBeenCalledWith({
+      start: '2026-03-07T00:00:00.000Z', end: '2026-03-11T00:00:00.000Z',
+    });
+    expect(h.children.hero).toBe(h.source);
     expect(h.children.hero.data).toBe(fixture);
-    expect(h.children.hero.isError).toBe(false);
+    expect(h.children.hero.isError).toBe(true);
+    expect(h.heroRetained).toBe(true);
 
     const nav = screen.getByRole('navigation', { name: 'Analytics sections' });
     const domains = [
