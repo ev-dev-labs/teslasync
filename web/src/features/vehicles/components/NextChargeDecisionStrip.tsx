@@ -8,6 +8,7 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { SourceContent } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useNextChargeDecision } from '@/api/hooks/useCharging';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
@@ -42,12 +43,21 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
   const { data, isLoading, refetch } = query;
   const trust = useDataState(query, { provenance: 'inferred' });
   const summary = useVehicleDetailSummary(t('nextCharge.resource', 'Next charge decision'), query);
+  // A verdict that still needs energy is unevidenced when every price option
+  // is empty (the backend falls back to charge-home-now when home scheduling
+  // is infeasible and no Supercharger quote exists). Don't recommend without
+  // the needed inputs; 'enough' legitimately carries no prices (0 kWh left).
+  const lacksPrices = data != null
+    && Number.isFinite(data.kwh_needed) && data.kwh_needed > 0
+    && !isFiniteNumber(data.home_now_cost)
+    && !isFiniteNumber(data.home_wait_cost)
+    && !isFiniteNumber(data.supercharger_cost);
 
   return (
     <GlassPanel className="p-4" data-testid="next-charge-decision">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle>{t('nextCharge.title', 'Next charge')}</PanelTitle>
-        {data ? (
+        {data && !lacksPrices ? (
           <Badge variant={VERDICT_BADGE[data.verdict] ?? 'neutral'}>
             {t(`nextCharge.verdict.${data.verdict}`, verdictLabel(data.verdict))}
           </Badge>
@@ -77,6 +87,13 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
         <EmptyState
           icon={<Zap className="h-5 w-5" />}
           message={t('nextCharge.noData', 'No charge decision yet')}
+          actionTo={{ label: t('nextCharge.openAutopilot', 'Open Autopilot'), to: '/smart-charge' }}
+          className="py-8"
+        />
+      ) : lacksPrices ? (
+        <EmptyState
+          icon={<Zap className="h-5 w-5" />}
+          message={t('nextCharge.notEnoughPriceData', 'Not enough price data')}
           actionTo={{ label: t('nextCharge.openAutopilot', 'Open Autopilot'), to: '/smart-charge' }}
           className="py-8"
         />

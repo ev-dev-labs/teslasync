@@ -2646,6 +2646,7 @@
   "nextCharge": {
     "homeNow": "Home now",
     "noData": "No charge decision yet",
+    "notEnoughPriceData": "Not enough price data",
     "openAutopilot": "Open Autopilot",
     "reason": {
       "charge_home_now": "Charge at home now — the cheapest window is already open (or too far out to wait).",

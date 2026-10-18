@@ -37919,6 +37919,7 @@
     "resource": "Next charge decision",
     "waitingSoc": "Waiting for live battery level",
     "noData": "No charge decision yet",
+    "notEnoughPriceData": "Not enough price data",
     "openAutopilot": "Open Autopilot",
     "homeNow": "Home now",
     "waitWindow": "Wait window",

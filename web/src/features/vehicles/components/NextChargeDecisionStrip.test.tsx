@@ -223,6 +223,42 @@ describe('NextChargeDecisionStrip', () => {
     expect(screen.getByText('Waiting for live battery level')).toBeInTheDocument();
   });
 
+  it('shows "Not enough price data" instead of recommending when all price options are empty', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT,
+      verdict: 'charge_home_now',
+      reason_key: 'charge_home_now',
+      reason: 'Start charging at home now',
+      home_now_cost: null,
+      home_wait_cost: null,
+      home_savings: null,
+      supercharger_cost: null,
+    } }));
+    renderStrip(50);
+    expect(screen.getByText('Not enough price data')).toBeInTheDocument();
+    expect(screen.queryByText('Charge home now')).not.toBeInTheDocument();
+    expect(document.querySelector('[data-operational-brief]')).toBeNull();
+  });
+
+  it('still recommends charge-home-now when price inputs are present', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT, verdict: 'charge_home_now', reason_key: 'charge_home_now',
+    } }));
+    renderStrip(50);
+    expect(screen.getAllByText('Charge home now').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Not enough price data')).not.toBeInTheDocument();
+  });
+
+  it('still renders the enough verdict without prices (nothing left to buy)', () => {
+    mockDecision.mockReturnValue(qr({ data: {
+      ...WAIT, verdict: 'enough', reason_key: 'enough', kwh_needed: 0,
+      home_now_cost: null, home_wait_cost: null, supercharger_cost: null,
+    } }));
+    renderStrip(80);
+    expect(screen.getAllByText('Enough energy').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Not enough price data')).not.toBeInTheDocument();
+  });
+
   it('renders the wait verdict, costs, and Autopilot CTA', () => {
     mockDecision.mockReturnValue(qr({ data: WAIT }));
     renderStrip(50);

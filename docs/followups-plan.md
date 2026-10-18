@@ -150,7 +150,28 @@ Step 1 closeout: npm web 13→9 (0 critical; 7H+2M all blocked with reasons), do
   16 passed + baseline-only TripReplay 3. No i18n changes; trio 7672/0;
   tsc/lint/build green.
 
-### 2e–2f. TBD
+### 2e. "Charge home now" with empty price options — FIXED
+- Root cause (backend): `nextcharge.Decide` falls through to
+  `charge_home_now` when `Preview()` fails (unknown rate plan, bad
+  ready-by, no feasible window, …) and no Supercharger quote exists —
+  with all cost pointers nil (`decide.go` lines 123-127). The strip
+  rendered the badge + empty "Charging options" metrics.
+- Fix (frontend, at the recommendation surface): the strip suppresses
+  the verdict badge + body and shows `nextCharge.notEnoughPriceData`
+  ("Not enough price data", with the Autopilot CTA for configuring
+  inputs) whenever energy is still needed (`kwh_needed > 0`) but all
+  three price options are empty. `enough` (0 kWh) legitimately carries
+  no prices and still renders. Backend enum left untouched (contract
+  ripple across API consumers; display gate is sufficient and robust to
+  any future unevidenced verdict).
+- Regression tests: fail-before showed badge "Charge home now" + "No
+  metric values are available yet"; pass-after shows the message with
+  no badge/body. Guards: priced charge-home-now still recommends;
+  priceless `enough` still renders. Strip suite 26/26.
+- Catalog: 1 new key, regen + trio re-pin (42,199 keys) → 7672/0.
+  tsc/lint/build green.
+
+### 2f. TBD
 
 ## 3. Performance (dashboard 60s re-render)
 

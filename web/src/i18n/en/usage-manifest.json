@@ -31724,6 +31724,7 @@
       "nav.vehicles",
       "nextCharge.homeNow",
       "nextCharge.noData",
+      "nextCharge.notEnoughPriceData",
       "nextCharge.openAutopilot",
       "nextCharge.reason.charge_home_now",
       "nextCharge.reason.enough",
