@@ -336,7 +336,69 @@ Results:
 
 ## 6. Phase 6 items (284 failed)
 
-TBD.
+Method: every item was re-checked against current code. Items whose verify
+file passes clean AND whose current test titles match the item's demanded
+behavior were accepted in bulk (16/16 spot-check sample, all matching, then
+full acceptance of the score>=5 green group). The remaining items got direct
+code+test review; genuinely missing behavior was fixed with regression
+tests; ambiguous/product-choice items went to the decision list. Workbook
+(scratch, not committed): `D:/tmp/phase6-evidence.json` (per-item evidence),
+`D:/tmp/phase6-classes.json` (per-item class + fixing commit).
+
+Counts per class (284 total):
+- already fixed by later work (done): 264 — 121 individually verified
+  against their verify files + 143 bulk-accepted (verify file fully green,
+  test titles match the demanded behavior).
+- obsolete / excluded: 0 with that exact label — the redesign did not
+  replace any of these items outright; the by-design reds are recorded
+  under step 5 instead (A4, D1, G1).
+- still relevant and fixed in this step: 12 (all with regression tests;
+  suites re-run green, tsc/eslint clean):
+  - th06 history UTC half-open bounds (`ad1e9818a9`)
+  - ctt-s01 thermal adapter (`ad1e9818a9`)
+  - ss10 status-announcer plurals (`ad1e9818a9`)
+  - as-05 session-toast namespace alignment (`ad1e9818a9`)
+  - as-02 unknown-activity names (`54e3315ece`)
+  - privacy-02 consent preview copy (`54e3315ece`)
+  - tl08 tariff enum labels (`54e3315ece`)
+  - sd-12 grouped count localization (`54e3315ece`)
+  - tu09 API-usage bucket plurals (`54e3315ece`)
+  - ss-011 status-hero headlines (`54e3315ece`)
+  - sc-f01 SmartCharge live-mode write gating (`63a6c2b05d`)
+  - ex05 exports delete-failure localization (`63a6c2b05d`)
+- needs owner decision: 8 (below).
+
+### Step 6 decision list (needs owner)
+1. Vehicle-cost page: keep its own 1/7/30/90-day picker, or migrate to the
+   shared header date range with server-side filtering? Options: (a) keep
+   the local picker as-is (close the item); (b) migrate to the shared range
+   (page + hook + server work).
+2. Energy-flow page: same question — local trailing-range picker vs shared
+   header instants through hook/cache/handler/service. Options: (a) keep
+   local; (b) migrate to shared instants.
+3. Science-lab page: same question for 5 sources — local 7/30-day picker
+   (30-day max, legacy URLs) vs shared header range. Options: (a) keep
+   local; (b) register for the shared range and thread instants through.
+4. Charge-advisor analysis dates: same question — independent
+   tomorrow-first planning dates vs shared header instants through typed
+   history requests. Options: (a) keep independent dates; (b) thread the
+   shared instants (joins the E1–E9 coverage gate question).
+5. Cost-analysis charger labels: the category helper returns raw server
+   names; where should translation live? Options: (a) client-side label map
+   at the render boundary; (b) backend returns stable keys; (c) close as-is
+   (server owns the names).
+6. Anomaly timeline explanations: the backend returns English prose; the
+   item wants structured facts+limits. Options: (a) backend adds structured
+   explanation fields (contract change); (b) keep localizing the prose
+   presentation only; (c) close as-is.
+7. Automations list: the Duplicate/Export card actions have no contracts to
+   wire (dead buttons). Options: (a) specify the contracts and wire them;
+   (b) hide the buttons until specified; (c) leave as-is.
+8. Insurance page "0..60" contract: the item demands alignment to a "0..60
+   contract", but no such contract exists in the page or backend (form is
+   localized; rejection/draft lifecycle fully pinned). Options: (a) accept
+   as done under that reading; (b) tell me what 0..60 refers to and I fix
+   it.
 
 ## Decisions
 

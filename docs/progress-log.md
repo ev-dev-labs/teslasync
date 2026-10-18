@@ -121,3 +121,12 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Announcer plurals ({{count}} governed leaves + defaultValue_one/other), session-toast namespace alignment (settingsSessions.* + 3 leaves + displayCount), th06 live-mode pin, ctt-s01 thermal adapter test.
 - Batch suites 188/188; i18n folder at 7 pre-existing shell reds only; catalog 32954 + checkpoints re-pinned via generators; tsc/eslint clean.
 - Post-reboot state loss: pre-reboot manual triage conclusions lost; rebuilding step-6 classification from artifacts + close report with fresh evidence. Next: evidence table, review queue, remaining fixables, plan write-up.
+
+## 2026-10-18 08:50 UTC - step 6 batch 2 pushed (54e3315ece); classification ~45/284
+- Fixed+pushed: as-02 (unknown activity), privacy-02 (consent preview copy), tl08 (tariff enum labels), sd-12 (grouped counts), tu09 (bucket plurals), ss-011 (hero headlines). Suites 199/199 + trio 7672/0; catalog 32969.
+- G5 bulk (159) accepted after clean 16/16 sample. Decisions so far: f03, f01-energy, sci-001, f05-anomaly, ca-s05(joins E1-9). All 10 sidelined resolved. Next: remaining review queue (~80).
+
+## 2026-10-18 09:23 UTC - step 6 COMPLETE; batch 3 pushed (63a6c2b05d)
+- Fixed+pushed: sc-f01 (SmartCharge Run/Apply live-mode gating via useOperationalMode disable+guard; mutations already requiresLiveMode), ex05 (exports delete failures: not_found->Already deleted + unknown fallback retaining raw reason). Suites 170/170 post-regen; catalog 32971; checkpoints re-pinned via generators; tsc/eslint clean.
+- Classification done: 284 = 264 already-fixed (121 individually verified + 143 bulk-accepted) + 12 fixed-here + 8 needs-decision. 0 excluded (redesign replaced nothing outright; by-design reds live under step 5). Plan section 6 written with counts + 8 plain-language decisions (4 shared-range migrations, ca13 labels, f05 prose, f08 dead buttons, insurance 0..60 phantom).
+- i18n folder 8123/7: the 7 reds are the pre-existing C1-C7 shell byte-pins (blocked, needs owner). Next: step 7 final gates.
