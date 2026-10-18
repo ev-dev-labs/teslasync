@@ -59,7 +59,7 @@ export function ScoreExtremesSection({ model, driveState, scoreState }: ScoreExt
 
         {/* Score breakdown */}
         <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3">{t('driveScore.breakdown', 'Score Breakdown')}</PanelTitle>
+          <PanelTitle className="mb-3">{t('driveScore.breakdown', "Score breakdown")}</PanelTitle>
           {scoreState(
             200,
             noDrivesMsg,
@@ -80,7 +80,7 @@ export function ScoreExtremesSection({ model, driveState, scoreState }: ScoreExt
                 },
                 {
                   id: 'speed',
-                  label: t('driveScore.speedLabel', 'Speed Discipline'),
+                  label: t('driveScore.speedLabel', "Speed discipline"),
                   value: speedReading != null ? `${speedReading}/30` : '—',
                 },
                 {

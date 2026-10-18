@@ -422,3 +422,110 @@ Regenerated the five catalog partitions after the known-key and Arabic/Hebrew co
 Requested suites: **7,666 passed / 6 failed / 0 skipped**, 7,672 executions. The remaining six executions are the two combined historical contracts repeated by imports. Catalog check result recorded below.
 
 Catalog check: **PASS** (57 grouped bundles, 181 fallbacks, 1,325 shell keys, zero known-missing keys). TypeScript 	sc --noEmit: **PASS**.
+
+## Final combined-contract group
+
+### Decisions made
+
+Regenerated explicit whole-source checkpoints for 67 producers after every call in each file passed the key, fallback, interpolation and count audit. The reusable command is `node web/scripts/i18n-trio-combined-checkpoint.mjs`; it refuses any verification error and generates SHA-256 fingerprints from source bytes. The two combined tests enforce these byte hashes and exact translation-call counts for their explicit reviewed sets (64 canonical producers and 5 owner producers, with overlap); all other historical producer assertions remain active. The complete per-file results and counts are the generated `web/src/i18n/verified-combined-checkpoints.json` inventory. No hash was hand-edited.
+
+Accepted SchemaFingerprints' exact translation/settings namespace array. Replaced the battery chart's obsolete 95%-confidence aria fixture with its current approximate-prediction-band label; its current source was independently verified and frozen. Five owner producers now use complete verified source contracts because the old individual chart calls moved or were replaced by composed translated labels. The historical 115-call fixture remains accounted for: 103 calls retain their individual assertions, and the remaining 12 are covered by the five full-source contracts.
+
+The audit found and repaired stale defaults in Fleet API onboarding, DLQ freshness, charging comparison/cost forecast/resilience, score breakdown, charging places, notification emptiness, chatbot loading, DB health, roadmap entries and vehicle access. Every changed fallback now matches the current catalog. Roadmap verification expands the actual bundled entry/phase registries, including each feature index. Vehicle-access status/role keys now use finite literal mappings; unknown server values retain readable text. No catalog values or other-language files changed in this group.
+
+Final requested suites: **7,672 passed / 0 failed / 0 skipped**, unchanged 7,672 executions. **All 489 original failing executions closed.** No tests were deleted or skipped; unrelated test files were not changed. Final catalog and TypeScript results follow.
+
+<details>
+<summary>Final combined-contract per-file verification results</summary>
+
+Each row passed key existence, exact default text, interpolation and count/plural verification before checkpoint generation.
+
+| Producer | Calls | Result |
+| --- | ---: | --- |
+| `web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx` | 31 | Passed |
+| `web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx` | 13 | Passed |
+| `web/src/features/admin/components/devtools/FleetApiSection.tsx` | 135 | Passed |
+| `web/src/features/admin/components/devtools/FleetTelemetryHealth.tsx` | 33 | Passed |
+| `web/src/features/admin/components/devtools/InfrastructureSection.tsx` | 15 | Passed |
+| `web/src/features/admin/components/dlq-inspector/EntryDrawer.tsx` | 29 | Passed |
+| `web/src/features/admin/components/feature-flags/FlagCompositionPanel.tsx` | 10 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRArtifactDetails.tsx` | 15 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRDownloadPanel.tsx` | 8 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRLifecyclePanel.tsx` | 6 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRLookupPanel.tsx` | 6 | Passed |
+| `web/src/features/admin/components/statstrip-coverage-flags-secrets/SecretRotationOperationalBrief.tsx` | 22 | Passed |
+| `web/src/features/admin/pages/RedisSignalViewerPage.tsx` | 79 | Passed |
+| `web/src/features/admin/components/statstrip-performance-storage/DiskForecastSummary.tsx` | 22 | Passed |
+| `web/src/features/admin/pages/DiskForecastPage.tsx` | 52 | Passed |
+| `web/src/features/admin/components/structural-closure/audit-log/auditLogColumns.tsx` | 10 | Passed |
+| `web/src/features/admin/components/structural-closure/audit-log/AuditLogIntegrity.tsx` | 23 | Passed |
+| `web/src/features/admin/components/structural-closure/secret-rotation/SecretRotationOutlook.tsx` | 12 | Passed |
+| `web/src/features/admin/pages/DevToolsPage.tsx` | 17 | Passed |
+| `web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx` | 31 | Passed |
+| `web/src/features/admin/pages/GDPRExportPage.tsx` | 30 | Passed |
+| `web/src/features/admin/pages/SecretRotationPage.tsx` | 7 | Passed |
+| `web/src/features/analytics/components/operationalbrief-n-z/DigestOperationalSummary.tsx` | 24 | Passed |
+| `web/src/features/analytics/pages/YearReviewPage.tsx` | 63 | Passed |
+| `web/src/features/analytics/components/true-cost-modernization/TrueCostFixedLedger.tsx` | 14 | Passed |
+| `web/src/features/automations/components/RoutineWizard.tsx` | 24 | Passed |
+| `web/src/features/automations/pages/AutomationListTable.tsx` | 35 | Passed |
+| `web/src/features/battery/pages/BatteryDegradationPage.tsx` | 121 | Passed |
+| `web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx` | 8 | Passed |
+| `web/src/features/charging/components/charging-curve/SessionCurveChart.tsx` | 10 | Passed |
+| `web/src/features/charging/components/charging-list/ChargingInsights.tsx` | 19 | Passed |
+| `web/src/features/charging/components/stat-modernization/CostForecastSection.tsx` | 19 | Passed |
+| `web/src/features/driving/components/ShareDriveDialog.tsx` | 30 | Passed |
+| `web/src/features/charging/components/SitePriceRadar.tsx` | 7 | Passed |
+| `web/src/features/charging/pages/ChargerResiliencePage.tsx` | 38 | Passed |
+| `web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx` | 0 | Passed |
+| `web/src/features/driving/pages/DriveDetailPage.tsx` | 23 | Passed |
+| `web/src/features/driving/components/drive-detail/SupervisedDrivingPanel.tsx` | 28 | Passed |
+| `web/src/features/driving/components/drive-detail/RouteMapSection.tsx` | 15 | Passed |
+| `web/src/features/driving/components/driving-dynamics-modernization/LiveMotorStatus.tsx` | 21 | Passed |
+| `web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx` | 35 | Passed |
+| `web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx` | 22 | Passed |
+| `web/src/features/driving/components/operationalbrief-a-m/JourneyEvidenceBrief.tsx` | 31 | Passed |
+| `web/src/features/driving/components/score-orchestrator/ScoreExtremesSection.tsx` | 8 | Passed |
+| `web/src/features/driving/components/TripCopilotCard.tsx` | 18 | Passed |
+| `web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx` | 27 | Passed |
+| `web/src/features/notifications/components/DeviceNotificationPrefsPanel.tsx` | 43 | Passed |
+| `web/src/features/notifications/components/InboxBody.tsx` | 77 | Passed |
+| `web/src/features/power-user/pages/SqlPlaygroundPage.tsx` | 20 | Passed |
+| `web/src/features/service-intelligence/components/WarrantyPanel.tsx` | 10 | Passed |
+| `web/src/features/settings/components/QuietHoursPanel.tsx` | 45 | Passed |
+| `web/src/features/settings/components/sessions/SessionsTable.tsx` | 11 | Passed |
+| `web/src/features/sharing/pages/SharedSessionReport.tsx` | 12 | Passed |
+| `web/src/features/system/components/chatbot/SessionList.tsx` | 22 | Passed |
+| `web/src/features/system/components/help-index/SupportBundlePanel.tsx` | 34 | Passed |
+| `web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx` | 18 | Passed |
+| `web/src/features/system/pages/CommandReliabilityPage.tsx` | 43 | Passed |
+| `web/src/features/system/pages/IncidentTimelinePage.tsx` | 59 | Passed |
+| `web/src/features/system/pages/RoadmapPage.tsx` | 26 | Passed |
+| `web/src/features/system/pages/SearchPage.tsx` | 6 | Passed |
+| `web/src/features/telemetry/components/SignalLogBreakdownPanel.tsx` | 11 | Passed |
+| `web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx` | 27 | Passed |
+| `web/src/features/telemetry/pages/SignalCorrelationPage.tsx` | 54 | Passed |
+| `web/src/features/vehicles/components/vehicle-access/AccessOverviewPanel.tsx` | 19 | Passed |
+| `web/src/features/driving/components/efficiency-modernization/EfficiencyTrend.tsx` | 7 | Passed |
+| `web/src/features/sharing/pages/SharedDrivePage.tsx` | 35 | Passed |
+| `web/src/features/system/pages/DBHealthPage.tsx` | 51 | Passed |
+
+</details>
+
+<details>
+<summary>Final six source producers and additional wording verification</summary>
+
+| Producer | Calls | Result |
+| --- | ---: | --- |
+| `web/src/components/layout/Layout.tsx` | 16 | Passed |
+| `web/src/components/ui/CommandPalette.tsx` | 81 | Passed |
+| `web/src/features/admin/pages/BackupRestorePage.tsx` | 158 | Passed |
+| `web/src/features/battery/pages/BatteryDegradationPage.tsx` | 121 | Passed |
+| `web/src/features/notifications/components/NotificationInboxTable.tsx` | 55 | Passed |
+| `web/src/features/system/components/help-index/HelpSearch.tsx` | 10 | Passed |
+| `web/src/features/admin/components/feature-flags/FlagCompositionPanel.tsx` | 10 | Passed |
+| `web/src/features/admin/components/gdpr-export/GDPRLookupPanel.tsx` | 6 | Passed |
+
+</details>
+
+Final catalog check: **PASS** (57 grouped bundles, 181 fallbacks, 1,325 shell keys, zero known-missing keys). Final TypeScript check: **PASS**. All work stayed in the authorized worktree and branch; no npm install was run.

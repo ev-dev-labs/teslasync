@@ -122,7 +122,7 @@ export function SessionList({
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {isLoading && sessions.length === 0 ? (
             <Text as="p" size="xs" color="muted" className="px-2 py-4 text-center">
-              {t('common.loading', 'Loading…')}
+              {t('common.loading', "Loading...")}
             </Text>
           ) : sessions.length === 0 ? (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

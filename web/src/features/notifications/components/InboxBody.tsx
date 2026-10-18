@@ -870,7 +870,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               : t('notifications.inbox.empty.title', 'No notifications')}
             message={hasOptionalFilters
               ? !archived && source === 'rule'
-                ? t('notifications.inbox.empty.ruleTriggers', 'No rule-triggered notifications match these filters. Check the date range or configure a rule in alert studio.')
+                ? t('notifications.inbox.empty.ruleTriggers', "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.")
                 : t('notifications.inbox.empty.noMatchesMessage', 'Clear the notification filters or adjust the workspace date range to see other records.')
               : archived
               ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')

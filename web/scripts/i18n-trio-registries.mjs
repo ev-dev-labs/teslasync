@@ -39,6 +39,13 @@ export function registryCalls(call, api) {
     if (typeof key !== 'string' || typeof fallback !== 'string') throw new Error('Nonliteral registry pair');
     return { ...call, key, fallback };
   });
+  if (call.file === 'web/src/features/system/pages/RoadmapPage.tsx') {
+    const entries = read(call.file, 'roadmapItems');
+    if (key === '`roadmap.entries.${item.id}.title`' && fallback === 'item.title') return expand(entries.map(item => ['roadmap.entries.' + item.id + '.title', item.title]));
+    if (key === '`roadmap.entries.${item.id}.description`' && fallback === 'item.description') return expand(entries.map(item => ['roadmap.entries.' + item.id + '.description', item.description]));
+    if (key === '`roadmap.entries.${item.id}.features.${i}`' && fallback === 'feature') return expand(entries.flatMap(item => item.features.map((feature, i) => ['roadmap.entries.' + item.id + '.features.' + i, feature])));
+    if (key === 'segment.meta.labelKey' && fallback === 'segment.meta.labelFallback') return expand(Object.values(read(call.file, 'PHASE_META')).map(meta => [meta.labelKey, meta.labelFallback]));
+  }
   if ((isLayout || isPalette) && ['item.labelKey', 'section.titleKey'].includes(key)) {
     const sections = read('web/src/components/layout/Layout.tsx', 'navSections');
     if (key === 'item.labelKey' && fallback === 'item.label') return expand(sections.flatMap(s => s.items.map(i => [i.labelKey, i.label])));

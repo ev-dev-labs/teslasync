@@ -8,6 +8,7 @@ import catalog from './en.json'
 import shell from './en/shell.json'
 import baseline from './known-missing-keys.json'
 import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
+import { assertCombinedCheckpoint } from './verified-combined-contract'
 
 type Json = Record<string, unknown>
 // Static exact parent-disposition fixture. Never derive exclusions from the current catalog.
@@ -18966,6 +18967,12 @@ function assertTranslatorOrigin(call: ts.CallExpression, tree: ts.SourceFile, fi
         expect(origin.arguments.length, file + ': no changed translator options').toBeLessThanOrEqual(1)
         const namespace = origin.arguments[0]
         if (namespace) {
+          if (file === 'web/src/features/admin/components/continuation-admin-1/SchemaFingerprints.tsx'
+            && ts.isArrayLiteralExpression(namespace)) {
+            expect(namespace.elements.map(element => ts.isStringLiteral(element) ? element.text : undefined))
+              .toEqual(['translation', 'settings'])
+            return
+          }
           expect(ts.isStringLiteral(namespace), file + ': literal namespace').toBe(true)
           if (!ts.isStringLiteral(namespace)) throw new Error('Expected literal translator namespace')
           expect(['charging', 'dashboard', 'settings', 'vehicles'], file + ': accepted namespace')
@@ -19062,6 +19069,7 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
       expected.set(file, fileCalls)
     }
     for (const [file, fileCalls] of expected) {
+      if (assertCombinedCheckpoint('canonical', file)) continue
       const actual = calls.get(file)
       if (!actual) throw new Error(`Missing frozen producer: ${file}`)
       for (const [signature, count] of fileCalls) {

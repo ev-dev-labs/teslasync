@@ -34,7 +34,7 @@ const GROUPED_BY_DEFAULTS: Record<SiteGroupedBy, string> = {
 export default function ChargerResiliencePage() {
   const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('chargerResilience.title', 'Charger Resilience'));
+  usePageTitle(t('chargerResilience.title', "Charger resilience"));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -64,13 +64,13 @@ export default function ChargerResiliencePage() {
   const exportData = useMemo(
     () => chartData.map(({ isTop, ...rest }) => ({
       ...rest,
-      dependency: isTop ? t('chargerResilience.topDependency', 'Top-Site Dependency') : '—',
+      dependency: isTop ? t('chargerResilience.topDependency', "Top-site dependency") : '—',
     })),
     [chartData, t],
   );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('chargerResilience.title', 'Charger Resilience')} />;
+    return <NoVehicleSelected pageTitle={t('chargerResilience.title', "Charger resilience")} />;
   }
 
   const isLoading = sessionsQuery.isLoading && !sessionsState.hasData;
@@ -86,7 +86,7 @@ export default function ChargerResiliencePage() {
 
   return (
     <PageLayout
-      title={t('chargerResilience.title', 'Charger Resilience')}
+      title={t('chargerResilience.title', "Charger resilience")}
       subtitle={t(
         'chargerResilience.subtitle',
         'How much charging depends on a single location, and what would happen if it disappeared',
@@ -103,7 +103,7 @@ export default function ChargerResiliencePage() {
       {/* 2 — Energy share by site */}
       <FadeIn delay={0.1}>
           <ChartContainer
-            title={t('chargerResilience.chart', 'Energy Share by Site')}
+            title={t('chargerResilience.chart', "Energy share by site")}
             subtitle={t('chargerResilience.chartHint', 'The top site is highlighted; a taller bar means more dependency')}
             ariaLabel={t(
               'chargerResilience.chartAria',
@@ -125,7 +125,7 @@ export default function ChargerResiliencePage() {
               { key: 'site', label: t('chargerResilience.col.site', 'Site') },
               { key: 'share', label: t('chargerResilience.col.share', 'Energy share (%)'), kind: 'measurement' },
               { key: 'sessions', label: t('chargerResilience.col.sessions', 'Sessions'), kind: 'count' },
-              { key: 'dependency', label: t('chargerResilience.topDependency', 'Top-Site Dependency') },
+              { key: 'dependency', label: t('chargerResilience.topDependency', "Top-site dependency") },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -148,7 +148,7 @@ export default function ChargerResiliencePage() {
       {/* 3 — What-if top-site loss + site detail */}
       <FadeIn delay={0.2}>
         <div className="grid min-w-0 gap-4 @3xl:grid-cols-2">
-          <LayoutCard title={t('chargerResilience.whatIf', 'What If the Top Site Disappeared?')} actions={<div className="flex items-center gap-2">
+          <LayoutCard title={t('chargerResilience.whatIf', "What if the Top site disappeared?")} actions={<div className="flex items-center gap-2">
               <Icon icon={ShieldCheck} className={typography.color.muted} />
               <HelpTooltip
                 size="sm"
@@ -220,7 +220,7 @@ export default function ChargerResiliencePage() {
                         {t(`chargerResilience.groupedBy.${s.groupedBy}`, GROUPED_BY_DEFAULTS[s.groupedBy])}
                       </Text>
                       {s.key === summary.topSite?.key && (
-                        <Text variant="caption">{t('chargerResilience.topDependency', 'Top-Site Dependency')}</Text>
+                        <Text variant="caption">{t('chargerResilience.topDependency', "Top-site dependency")}</Text>
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
