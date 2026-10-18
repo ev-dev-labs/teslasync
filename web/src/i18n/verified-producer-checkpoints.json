@@ -42,7 +42,7 @@
   {
     "file": "web/src/components/layout/Layout.tsx",
     "calls": 14,
-    "sha256": "c5e63cbe8df9664889a73c85bb5f39d3e7cc644cc45dcdf4f1d3a589dafedec7",
+    "sha256": "2cd86cf77fd0010317d4b6da24ea709b4539faf97f6b79bf353a02e3ae787a8f",
     "dependencies": [
       {
         "file": "web/src/lib/routeRegistry.ts",
@@ -515,12 +515,12 @@
   {
     "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
     "calls": 38,
-    "sha256": "b4a5bc8003c565722b3ff7ab2663d3469d3c363c2d9ca80e71e4f065f3194c31"
+    "sha256": "6747ccbf2b1a1ea4462fda9c30931e572978f0501a751ea521b45a474d430e64"
   },
   {
     "file": "web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx",
     "calls": 18,
-    "sha256": "cb9e14b654913d5d52db8c25bec8f97044c5602950fdd69eb40f65ae0d79e701"
+    "sha256": "68ca949a5afc19e01a6d1bf783fc47c8978c59f65a65ebe65582875cab4032e1"
   },
   {
     "file": "web/src/features/dashboard/widgets/AnomalyDetectorWidget.tsx",
