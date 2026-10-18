@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { registryCalls, registryDependencies } from './i18n-trio-registries.mjs';
 
 export const root = fileURLToPath(new URL('../', import.meta.url));
 const repo = path.dirname(root);
@@ -53,7 +54,7 @@ export function literal(node) {
   throw new Error('Nonliteral fixture: ' + node.getText());
 }
 export function declarations(file) {
-  const text = fs.readFileSync(path.resolve(root, file), 'utf8'), tree = parse(file, text), result = new Map();
+  const text = fs.readFileSync(path.resolve(root, file), 'utf8'), tree = typedProgram?.getSourceFile(path.resolve(root, file)) ?? parse(file, text), result = new Map();
   for (const statement of tree.statements) if (ts.isVariableStatement(statement)) {
     for (const declaration of statement.declarationList.declarations) if (declaration.initializer && ts.isIdentifier(declaration.name)) result.set(declaration.name.text, { node: unwrap(declaration.initializer), tree, text });
   }
@@ -219,6 +220,8 @@ function possibleValues(node, seen = new Set()) {
 }
 export function verificationCalls(file) {
   return callsIn(file).flatMap(call => {
+    const registry = registryCalls(call, { declarations, staticValue });
+    if (registry) return registry;
     const arrow = call.node.parent;
     if (ts.isArrowFunction(arrow) && arrow.body === call.node && arrow.parameters.length === 2 && call.node.arguments.length === 2 && arrow.parameters.every((parameter, index) => parameter.name.getText() === call.node.arguments[index].getText()) && ts.isPropertyAssignment(arrow.parent) && arrow.parent.name.getText() === 't' && ts.isObjectLiteralExpression(arrow.parent.parent) && ts.isCallExpression(arrow.parent.parent.parent)) {
       const invocation = arrow.parent.parent.parent;
@@ -404,7 +407,9 @@ export function checkpointSources(catalog, files) {
   const target = path.join(root, 'src/i18n/verified-producer-checkpoints.json');
   const existing = fs.existsSync(target) ? JSON.parse(fs.readFileSync(target, 'utf8')) : [];
   const merged = new Map(existing.map(row => [row.file, row]));
-  for (const result of verification) merged.set(result.file, { file: result.file, calls: result.calls, sha256: digest(fs.readFileSync(path.resolve(repo, result.file))) });
+  for (const result of verification) merged.set(result.file, { file: result.file, calls: result.calls, sha256: digest(fs.readFileSync(path.resolve(repo, result.file))),
+    ...(['web/src/components/layout/Layout.tsx', 'web/src/components/ui/CommandPalette.tsx', 'web/src/features/system/components/help-index/HelpSearch.tsx'].includes(result.file)
+      ? { dependencies: registryDependencies.map(file => ({ file, sha256: digest(fs.readFileSync(path.resolve(repo, file))) })) } : {}) });
   fs.writeFileSync(target, JSON.stringify([...merged.values()].sort((a, b) => a.file.localeCompare(b.file, 'en')), null, 2) + '\n');
   console.log('Verified and checkpointed ' + verification.length + ' source files');
 }

@@ -40,9 +40,95 @@
     "sha256": "4b7eea25548cc606580e8781e946204f533d11697f7a094bb859b5bb97ad62ff"
   },
   {
+    "file": "web/src/components/layout/Layout.tsx",
+    "calls": 16,
+    "sha256": "8d0949756a0c29011b3302e06f0725ce389dc8f87d3c787cdb30a32c81b3c569",
+    "dependencies": [
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97"
+      },
+      {
+        "file": "web/src/lib/helpGlossary.ts",
+        "sha256": "9ed85c67591c6ce715cac4a3df3aa55f60e2e816d0bc270f89fd98f5fcf2739d"
+      },
+      {
+        "file": "web/src/lib/emptyStateGuidance.ts",
+        "sha256": "c38beae355fb6143f3524ed57e423e368aacc98650ad8661fa79118d70aece5a"
+      },
+      {
+        "file": "web/src/lib/onboardingTasks.ts",
+        "sha256": "65d00706e20a2642a1b53fea791826bd10ccc99db0ad56c7b5d8f6d93ba1e748"
+      },
+      {
+        "file": "web/src/lib/dataUnavailability.ts",
+        "sha256": "22c987676459432c12ea7de220d4ce4a08dedecc42643c369e5af86f9c29bd28"
+      },
+      {
+        "file": "web/src/lib/helpIndex.ts",
+        "sha256": "da1ca2af6714809f346e555e82c9d5f30247888934e3a1996d5cbb8e4bd92d9c"
+      },
+      {
+        "file": "web/src/lib/routeMeta.ts",
+        "sha256": "85dab02020da219bbb2aa6c21f3c39b434f847b9ec9f306b195c074ba7357128"
+      },
+      {
+        "file": "web/src/lib/contextNavigation.ts",
+        "sha256": "f8f99848167df92589120d406b3bda5a9625b0576aa8f31cfbf719372d9a70a5"
+      },
+      {
+        "file": "web/src/lib/palettePrefix.ts",
+        "sha256": "0ebb3fcd62b1b3a261aa0daa39d105e23fb0fd97c3a06c88c788399fdc83b8b6"
+      }
+    ]
+  },
+  {
     "file": "web/src/components/layout/WorkspaceContextControl.tsx",
     "calls": 34,
     "sha256": "73561f633f504e2ad3d2b78331337f667b2dbfa79ed2fc50a6956fabade1e84f"
+  },
+  {
+    "file": "web/src/components/ui/CommandPalette.tsx",
+    "calls": 81,
+    "sha256": "02ddb99ff8e9b3f31988790acfc4e342a487d09a8cf466535ab9e6d5fad080be",
+    "dependencies": [
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97"
+      },
+      {
+        "file": "web/src/lib/helpGlossary.ts",
+        "sha256": "9ed85c67591c6ce715cac4a3df3aa55f60e2e816d0bc270f89fd98f5fcf2739d"
+      },
+      {
+        "file": "web/src/lib/emptyStateGuidance.ts",
+        "sha256": "c38beae355fb6143f3524ed57e423e368aacc98650ad8661fa79118d70aece5a"
+      },
+      {
+        "file": "web/src/lib/onboardingTasks.ts",
+        "sha256": "65d00706e20a2642a1b53fea791826bd10ccc99db0ad56c7b5d8f6d93ba1e748"
+      },
+      {
+        "file": "web/src/lib/dataUnavailability.ts",
+        "sha256": "22c987676459432c12ea7de220d4ce4a08dedecc42643c369e5af86f9c29bd28"
+      },
+      {
+        "file": "web/src/lib/helpIndex.ts",
+        "sha256": "da1ca2af6714809f346e555e82c9d5f30247888934e3a1996d5cbb8e4bd92d9c"
+      },
+      {
+        "file": "web/src/lib/routeMeta.ts",
+        "sha256": "85dab02020da219bbb2aa6c21f3c39b434f847b9ec9f306b195c074ba7357128"
+      },
+      {
+        "file": "web/src/lib/contextNavigation.ts",
+        "sha256": "f8f99848167df92589120d406b3bda5a9625b0576aa8f31cfbf719372d9a70a5"
+      },
+      {
+        "file": "web/src/lib/palettePrefix.ts",
+        "sha256": "0ebb3fcd62b1b3a261aa0daa39d105e23fb0fd97c3a06c88c788399fdc83b8b6"
+      }
+    ]
   },
   {
     "file": "web/src/features/admin/components/continuation-admin-1/SchemaFingerprints.tsx",
@@ -75,6 +161,11 @@
     "sha256": "adeacdeb8c998708d665ec974e4580235ba52fbf91e7b517f882e674e6a5cde6"
   },
   {
+    "file": "web/src/features/admin/components/feature-flags/FlagCompositionPanel.tsx",
+    "calls": 10,
+    "sha256": "b1c0025b2f46b54bc3375cb70c494491b8e79dd9c21f388724d5c301fcef9f20"
+  },
+  {
     "file": "web/src/features/admin/components/gdpr-export/GDPRArtifactDetails.tsx",
     "calls": 15,
     "sha256": "339b7ee0f8a20884582b786d702a2ef50cc13173d338f23774057d1bbd88aba4"
@@ -88,6 +179,11 @@
     "file": "web/src/features/admin/components/gdpr-export/GDPRLifecyclePanel.tsx",
     "calls": 6,
     "sha256": "5cea3a2c72fb10d4016681b4469273ad635bc069d3f6c5949775aaa0681cbabd"
+  },
+  {
+    "file": "web/src/features/admin/components/gdpr-export/GDPRLookupPanel.tsx",
+    "calls": 6,
+    "sha256": "809c75d218acec9e832f617a2b4c6d29fbaffe7096cd8f1249c3ca2c1e466176"
   },
   {
     "file": "web/src/features/admin/components/live-signal-inspector/LiveSignalsTable.tsx",
@@ -193,6 +289,11 @@
     "file": "web/src/features/admin/pages/AuditLogPage.tsx",
     "calls": 11,
     "sha256": "8f2b9fa43a030be2fb4ad4ff03474e0a13db25e52493bbfc9123d5b6213b7eeb"
+  },
+  {
+    "file": "web/src/features/admin/pages/BackupRestorePage.tsx",
+    "calls": 158,
+    "sha256": "297ad350d56137edb90dc8f54c078d7f573d157badfe23f54abee13b71b8fb64"
   },
   {
     "file": "web/src/features/admin/pages/DataQualityPage.tsx",
@@ -303,6 +404,11 @@
     "file": "web/src/features/battery/pages/BatteryCellsPage.tsx",
     "calls": 109,
     "sha256": "5528884b78febe370194a7074fff9348e65aca1c5058013ce9c04e61dfe34c49"
+  },
+  {
+    "file": "web/src/features/battery/pages/BatteryDegradationPage.tsx",
+    "calls": 121,
+    "sha256": "02dc91bb261f1198ca50d73fdb07b1e736d43988b3a91624c5b7c2ab8480d7de"
   },
   {
     "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
@@ -480,6 +586,11 @@
     "sha256": "7fd0abe4db296056a656fe75dfa466f357d186b011089926381240323f63b972"
   },
   {
+    "file": "web/src/features/notifications/components/NotificationInboxTable.tsx",
+    "calls": 55,
+    "sha256": "f3f60c0c9a597865e5187f33d05c51cfdda8a806d93e1a1fdd51ce45d8c0171e"
+  },
+  {
     "file": "web/src/features/notifications/pages/AuditLogPage.tsx",
     "calls": 23,
     "sha256": "e3f3a24a08412f294ca810719ba2e328216a9e25bfe31aeb77c71decdf3809e6"
@@ -608,6 +719,49 @@
     "file": "web/src/features/system/components/FSMSubFSMPanel.tsx",
     "calls": 6,
     "sha256": "1d686d30b4391c60d4348a37c8d062af52d062de3f99387d8f61107100bf651b"
+  },
+  {
+    "file": "web/src/features/system/components/help-index/HelpSearch.tsx",
+    "calls": 10,
+    "sha256": "9b0717017bdcd74060ec51993a1cb55b8b89cc31bf008adaa74f0cd7c02e7a24",
+    "dependencies": [
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97"
+      },
+      {
+        "file": "web/src/lib/helpGlossary.ts",
+        "sha256": "9ed85c67591c6ce715cac4a3df3aa55f60e2e816d0bc270f89fd98f5fcf2739d"
+      },
+      {
+        "file": "web/src/lib/emptyStateGuidance.ts",
+        "sha256": "c38beae355fb6143f3524ed57e423e368aacc98650ad8661fa79118d70aece5a"
+      },
+      {
+        "file": "web/src/lib/onboardingTasks.ts",
+        "sha256": "65d00706e20a2642a1b53fea791826bd10ccc99db0ad56c7b5d8f6d93ba1e748"
+      },
+      {
+        "file": "web/src/lib/dataUnavailability.ts",
+        "sha256": "22c987676459432c12ea7de220d4ce4a08dedecc42643c369e5af86f9c29bd28"
+      },
+      {
+        "file": "web/src/lib/helpIndex.ts",
+        "sha256": "da1ca2af6714809f346e555e82c9d5f30247888934e3a1996d5cbb8e4bd92d9c"
+      },
+      {
+        "file": "web/src/lib/routeMeta.ts",
+        "sha256": "85dab02020da219bbb2aa6c21f3c39b434f847b9ec9f306b195c074ba7357128"
+      },
+      {
+        "file": "web/src/lib/contextNavigation.ts",
+        "sha256": "f8f99848167df92589120d406b3bda5a9625b0576aa8f31cfbf719372d9a70a5"
+      },
+      {
+        "file": "web/src/lib/palettePrefix.ts",
+        "sha256": "0ebb3fcd62b1b3a261aa0daa39d105e23fb0fd97c3a06c88c788399fdc83b8b6"
+      }
+    ]
   },
   {
     "file": "web/src/features/system/components/help-index/SupportBundlePanel.tsx",

@@ -196,6 +196,37 @@ export default function BackupRestorePage() {
   const { formatDurationMsCompact } = useNumberFormatting();
   const { formatBytes, fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
+  // Only known product values are translation keys; future server values retain their readable fallback.
+  const providerLabels: Record<string, string> = {
+    "local": t("backup.provider.local", "Local"),
+    "s3": t("backup.provider.s3", "Amazon S3"),
+    "azure": t("backup.provider.azure", "Azure Blob"),
+    "gcs": t("backup.provider.gcs", "Google Cloud"),
+  };
+  const runTypeLabels: Record<string, string> = {
+    "backup": t("backup.runType.backup", "backup"),
+    "restore": t("backup.runType.restore", "restore"),
+  };
+  const statusLabels: Record<string, string> = {
+    "completed": t("backup.status.completed", "completed"),
+    "failed": t("backup.status.failed", "failed"),
+    "running": t("backup.status.running", "running"),
+    "queued": t("backup.status.queued", "queued"),
+  };
+  const fieldLabels: Record<string, string> = {
+    "path": t("backup.field.path", "Path"),
+    "bucket": t("backup.field.bucket", "Bucket"),
+    "region": t("backup.field.region", "Region"),
+    "access_key": t("backup.field.access_key", "Access key"),
+    "secret_key": t("backup.field.secret_key", "Secret key"),
+    "endpoint": t("backup.field.endpoint", "Endpoint (optional)"),
+    "prefix": t("backup.field.prefix", "Prefix (optional)"),
+    "account_name": t("backup.field.account_name", "Account name"),
+    "account_key": t("backup.field.account_key", "Account key"),
+    "container_name": t("backup.field.container_name", "Container name"),
+    "credentials_json": t("backup.field.credentials_json", "Credentials JSON"),
+  };
+
   const toast = useToast();
   const qc = useQueryClient();
   const { reduce } = useMotionPreference();
@@ -329,7 +360,7 @@ export default function BackupRestorePage() {
 
   /* ---- i18n label helpers ---- */
   const providerLabel = useCallback(
-    (v: string) => t(`backup.provider.${v}`, PROVIDERS.find((p) => p.value === v)?.label ?? v),
+    (v: string) => providerLabels[v] ?? v,
     [t],
   );
 
@@ -658,14 +689,14 @@ export default function BackupRestorePage() {
     {
       key: 'run_type',
       filterValue: (row) => row.run_type ?? null,
-      filterValueLabel: (_value, row) => t(`backup.runType.${row.run_type}`, row.run_type),
+      filterValueLabel: (_value, row) => runTypeLabels[row.run_type] ?? row.run_type,
       header: t('backup.runType', 'Run type'),
       render: (row) => (
         <Badge
           variant="neutral"
           size="sm"
         >
-          {t(`backup.runType.${row.run_type}`, row.run_type)}
+          {runTypeLabels[row.run_type] ?? row.run_type}
         </Badge>
       ),
     },
@@ -680,7 +711,7 @@ export default function BackupRestorePage() {
         return (
           <div className="flex items-center gap-1.5">
             <Icon className={cn('h-4 w-4', s.color, row.status === 'running' && !reduce && 'animate-spin')} aria-hidden="true" />
-            <Badge variant={s.variant} size="sm">{t(`backup.status.${row.status}`, row.status)}</Badge>
+            <Badge variant={s.variant} size="sm">{statusLabels[row.status] ?? row.status}</Badge>
           </div>
         );
       },
@@ -1054,10 +1085,10 @@ export default function BackupRestorePage() {
                   const values: Record<string, string> = {
                     file_name: row.file_name ?? t('backup.runN', 'Run #{{id}}', { id: row.id }),
                     file_size: row.file_size == null ? '—' : formatBytes(row.file_size),
-                    status: t(`backup.status.${row.status}`, row.status),
+                    status: statusLabels[row.status] ?? row.status,
                     created_at: formatRelative(row.created_at),
                     provider: providerLabel(row.provider),
-                    run_type: t(`backup.runType.${row.run_type}`, row.run_type),
+                    run_type: runTypeLabels[row.run_type] ?? row.run_type,
                   };
                   return values[key];
                 },
@@ -1151,7 +1182,7 @@ export default function BackupRestorePage() {
           <FormSection title={t('backup.providerSettings', 'Provider settings')}>
             <div className="grid gap-3">
               {(PROVIDER_FIELDS[form.provider] ?? []).map((field) => {
-                const fieldLabel = t(`backup.field.${field.key}`, field.label);
+                const fieldLabel = fieldLabels[field.key] ?? field.label;
                 return (
                   <div key={field.key}>
                     {field.type === 'textarea' ? (

@@ -302,10 +302,58 @@
     }
   },
   "emptyState": {
+    "alerts": {
+      "list": {
+        "likelyCause": "Either no rules are configured yet, or every rule has evaluated cleanly in the selected window.",
+        "meaning": "No alerts have fired — this is the expected steady state."
+      }
+    },
+    "analytics": {
+      "efficiency": {
+        "likelyCause": "Most often the selected range contains no completed drives — widen it before assuming data is missing.",
+        "meaning": "No efficiency figures can be computed for the selected period."
+      }
+    },
+    "automations": {
+      "list": {
+        "likelyCause": "This list is empty by default — automations are opt-in and are never created for you.",
+        "meaning": "No automations are configured, so nothing is being evaluated."
+      }
+    },
+    "battery": {
+      "degradation": {
+        "likelyCause": "Most often the vehicle was linked recently, so the observation window is still too short to be meaningful.",
+        "meaning": "There is not enough history yet to estimate battery degradation."
+      }
+    },
+    "charging": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not charged since it was linked, or it charged while asleep and unreachable.",
+        "meaning": "No charging sessions have been recorded for this vehicle yet."
+      }
+    },
+    "drives": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not driven since it was linked, or the selected date range ends before the first recorded drive.",
+        "meaning": "No completed drives have been recorded for this vehicle yet."
+      }
+    },
     "generic": "No data available yet.",
     "label": {
       "likelyCause": "Most likely reason",
       "prerequisite": "What has to happen first"
+    },
+    "signals": {
+      "live": {
+        "likelyCause": "Most often the vehicle is asleep — Tesla stops streaming while a car sleeps, and waking it costs range.",
+        "meaning": "No live signals are arriving for this vehicle right now."
+      }
+    },
+    "vehicles": {
+      "list": {
+        "likelyCause": "Either setup has not been completed, or the stored Tesla authorisation was revoked and needs renewing.",
+        "meaning": "No vehicles are linked, so nothing is being collected anywhere in the app."
+      }
     }
   },
   "entityContext": {

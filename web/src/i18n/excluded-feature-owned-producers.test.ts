@@ -1435,10 +1435,10 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
-    expect(oldEntries).toHaveLength(29780)
+    expect(oldEntries).toHaveLength(30077)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
-      .toBe("e71776df5cebe346d8ba4c1adabf3d1cf68cceb246a6441038a5e7247c681627")
-    expect(leaves(catalog)).toHaveLength(32630)
+      .toBe("c91b6e7d0d09ded7aa78eebc23e31096e4a2bc9d5ce6f79ee744293aff70e5a0")
+    expect(leaves(catalog)).toHaveLength(32927)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })
@@ -1451,6 +1451,10 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     if (checkpoint) {
       expect(producerProjection(path, actualSource).calls, path).toHaveLength(checkpoint.calls)
       expect(createHash('sha256').update(actualSource).digest('hex'), path).toBe(checkpoint.sha256)
+      if ('dependencies' in checkpoint) for (const dependency of checkpoint.dependencies ?? []) {
+        const bytes = readFileSync(resolve(process.cwd(), '..', dependency.file))
+        expect(createHash('sha256').update(bytes).digest('hex'), dependency.file).toBe(dependency.sha256)
+      }
       return
     }
     let source = Buffer.from(actualSource)

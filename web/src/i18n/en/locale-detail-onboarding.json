@@ -158,7 +158,27 @@
     "privateHelp": "Your fleet data stays in the infrastructure you control.",
     "tasks": {
       "optOut": "Stop showing setup tips",
-      "dismiss": "Dismiss this tip"
+      "dismiss": "Dismiss this tip",
+      "linkVehicle": {
+        "title": "Link a vehicle to start collecting data",
+        "body": "Nothing is recorded until at least one vehicle is linked to your Tesla account."
+      },
+      "liveTelemetry": {
+        "title": "Turn on live telemetry for second-by-second signals",
+        "body": "Without streaming telemetry this page can only show polled snapshots, which arrive minutes apart."
+      },
+      "chargingCost": {
+        "title": "Set an electricity price to see charging costs",
+        "body": "Charging sessions are recorded without a price until a tariff is configured, so cost columns stay empty."
+      },
+      "automation": {
+        "title": "Create your first automation",
+        "body": "Automations react to vehicle state — for example, notify when charging stops below a target."
+      },
+      "notificationChannel": {
+        "title": "Add a notification channel so alerts can reach you",
+        "body": "Automations and alerts evaluate normally, but nothing is delivered until a channel exists."
+      }
     },
     "welcome.title": "Welcome to TeslaSync",
     "connect.title": "Connect Your Tesla",

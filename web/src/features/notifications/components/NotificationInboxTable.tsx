@@ -47,6 +47,35 @@ export function NotificationInboxTable({
   onFiltersChange,
 }: NotificationInboxTableProps) {
   const { t } = useTranslation();
+  // Only known product values are translation keys; future server values retain their readable fallback.
+  const eventLabels: Record<string, string> = {
+    "digest.fsd.weekly": t("notifications.report.values.digest.fsd.weekly", "Weekly FSD digest"),
+    "system.telemetry.outage": t("notifications.report.values.system.telemetry.outage", "System telemetry outage"),
+    "system.telemetry.recovery": t("notifications.report.values.system.telemetry.recovery", "System telemetry recovery"),
+    "system.mqtt.outage": t("notifications.report.values.system.mqtt.outage", "System MQTT outage"),
+    "system.mqtt.recovery": t("notifications.report.values.system.mqtt.recovery", "System MQTT recovery"),
+    "system.database.outage": t("notifications.report.values.system.database.outage", "System database outage"),
+    "system.redis.outage": t("notifications.report.values.system.redis.outage", "System Redis outage"),
+    "system.redis.recovery": t("notifications.report.values.system.redis.recovery", "System Redis recovery"),
+    "system.tesla_api.outage": t("notifications.report.values.system.tesla_api.outage", "System Tesla API outage"),
+    "system.tesla_api.recovery": t("notifications.report.values.system.tesla_api.recovery", "System Tesla API recovery"),
+    "system.worker.outage": t("notifications.report.values.system.worker.outage", "System worker outage"),
+    "system.worker.recovery": t("notifications.report.values.system.worker.recovery", "System worker recovery"),
+    "system.database.recovery": t("notifications.report.values.system.database.recovery", "Database recovery"),
+    "system": t("notifications.report.values.system", "System"),
+    "alert": t("notifications.report.values.alert", "Alert rules"),
+    "automation": t("notifications.report.values.automation", "Automation"),
+    "schedule": t("notifications.report.values.schedule", "Schedules"),
+    "test": t("notifications.report.values.test", "Tests"),
+    "other": t("notifications.report.values.other", "Other"),
+    "unknown": t("notifications.report.values.unknown", "Unattributed"),
+  };
+  const severityLabels: Record<string, string> = {
+    "info": t("notifications.inbox.filter.severity.info", "Info"),
+    "warn": t("notifications.inbox.filter.severity.warn", "Warn"),
+    "critical": t("notifications.inbox.filter.severity.critical", "Critical"),
+  };
+
   const isMobile = useMediaQuery('(max-width: 767px)');
   const { expandedKeys, setExpandedKeys, clear } = useTableExpansion<number>();
   const rowIds = rows.map(row => row.id).join(',');
@@ -100,7 +129,7 @@ export function NotificationInboxTable({
           </span>
           </Button>
           <span className="block truncate text-xs text-[var(--text-muted)]" title={log.event_type}>
-            {log.event_type ? t(`notifications.report.values.${log.event_type}`, notificationEventTypeFallback(log.event_type)) : '—'}
+            {log.event_type ? eventLabels[log.event_type] ?? notificationEventTypeFallback(log.event_type) : '—'}
           </span>
           <span className="block text-xs text-[var(--text-muted)] md:hidden">
             {log.created_at && Number.isFinite(Date.parse(log.created_at)) ? <DateTime value={log.created_at} in="user" /> : '—'}
@@ -135,7 +164,7 @@ export function NotificationInboxTable({
       header: t('notifications.inbox.columns.type', 'Type'),
       defaultVisible: false,
       defaultWidth: 200,
-      render: log => <span title={log.event_type}>{log.event_type ? t(`notifications.report.values.${log.event_type}`, notificationEventTypeFallback(log.event_type)) : '—'}</span>,
+      render: log => <span title={log.event_type}>{log.event_type ? eventLabels[log.event_type] ?? notificationEventTypeFallback(log.event_type) : '—'}</span>,
     },
     {
       key: 'source',
@@ -152,7 +181,7 @@ export function NotificationInboxTable({
           ?? (log.alert_id != null
             ? t('notifications.inbox.source.ruleId', 'Rule #{{id}}', { id: log.alert_id })
             : log.event_type
-              ? t(`notifications.report.values.${log.event_type.split('.')[0]}`, notificationEventTypeFallback(log.event_type.split('.')[0]))
+              ? eventLabels[log.event_type.split('.')[0]] ?? notificationEventTypeFallback(log.event_type.split('.')[0])
               : log.channel_id != null && log.channel_id > 0
                 ? t('notifications.inbox.source.legacyDelivery', 'Legacy channel delivery')
                 : t('notifications.inbox.source.unknown', 'Unknown source'));
@@ -175,7 +204,7 @@ export function NotificationInboxTable({
       onFilterClear: () => onFiltersChange({ ...filters, severity: undefined }),
       filter: <NotificationFilterBar section="severity" filters={filters} onChange={onFiltersChange} vehicles={vehicles} rules={rules} />,
       render: log => ['info', 'warn', 'warning', 'critical'].includes(log.severity ?? '')
-        ? <SeverityBadge severity={log.severity} size="sm">{t(`notifications.inbox.filter.severity.${log.severity === 'warning' ? 'warn' : log.severity}`, log.severity === 'critical' ? 'Critical' : log.severity === 'info' ? 'Info' : 'Warn')}</SeverityBadge>
+        ? <SeverityBadge severity={log.severity} size="sm">{severityLabels[log.severity === 'warning' ? 'warn' : log.severity!]}</SeverityBadge>
         : <Badge variant="neutral" size="sm">{log.severity || '—'}</Badge>,
     },
     {

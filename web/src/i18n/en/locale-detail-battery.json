@@ -269,7 +269,14 @@
       "predictionIntervalEvidence_other": "Approximate OLS prediction band for a future SOH observation, not confidence in the fitted mean. Basis: {{count}} valid dated SOH samples (finite, 0–100%); residual degrees of freedom: {{df}}. Half-width = {{multiplier}} × residual standard error × sqrt(1 + 1/n + (x − mean(x))² / Sxx). The fixed multiplier is 2 for 3–30 samples and 1.96 above 30, not a Student-t quantile. Displayed bounds are clipped to 0–100% and rounded to 0.1 percentage point. Linear trend and independent, constant-variance residuals are model assumptions; empirical coverage remains unmeasured in BD-C01, not calibrated 95% coverage.",
       "chargeEquivalentEvidence_one": "Estimated charge equivalents: recorded energy added across {{count}} valid charging session divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
       "chargeEquivalentEvidence_other": "Estimated charge equivalents: recorded energy added across {{count}} valid charging sessions divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.",
-      "validFitRequired": "Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)"
+      "validFitRequired": "Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)",
+      "risk": {
+        "fast_charge_ratio": "fast charge ratio",
+        "high_soc_charging": "high soc charging",
+        "temperature_exposure": "temperature exposure",
+        "cycle_count_rate": "cycle count rate",
+        "deep_discharge_frequency": "deep discharge frequency"
+      }
     },
     "health": {
       "excellent": "Excellent",

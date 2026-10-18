@@ -94,7 +94,7 @@ export function FlagCompositionPanel({
       <EmptyState
         message={t(
           'admin.flags.composition.empty',
-          'No flags to summarize yet. Add a flag to see its value-type breakdown here.',
+          'No flags to summarize yet. Stored values are text, including valid empty text.',
         )}
         // no-action: the create surface is the "Add flag" CTA in the page header.
       />

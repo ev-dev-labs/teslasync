@@ -410,3 +410,15 @@ Group verification: **7,630 passed / 42 failed / 0 skipped**, still 7,672 execut
 Retained the interrupted repairs after checking their actual source: runtime health reason defaults, finite command-history labels (unknown commands retain their raw human-readable fallback), secret-rotation event messages, and existing command-label capitalization. Verified six additional source files with the typed AST audit before generating their byte fingerprints: RuntimeHealthBanner, useSecretRotationPage, DashboardsPage, FleetSetupProgress, CommandWorkspace and CommandHistoryPage. Source verification is now 145/151; six dynamic-domain files and both combined contracts remain pending. Regenerated all five catalog checkpoints after the known-key and Arabic/Hebrew counterpart checks passed; no catalog wording was reversed. Requested suites and catalog-check results follow.
 
 Recovery-group verification: **7648 passed / 24 failed / 0 skipped**, 7,672 executions. Catalog split check **PASS** (1,325 shell keys, zero known-missing manifest keys). The remaining failures are the six pending source files, the two pending combined contracts, and their imported repetitions.
+
+## Final source verification group
+
+### Decisions made
+
+Verified the six remaining producers using finite source registries and typed AST analysis before regenerating their checkpoints. Repaired 271 help-index defaults from the actual route, onboarding and empty-state registries; added 26 backup and battery labels from their production domains and existing readable fallbacks. Retained the current catalog wording, including the flag empty-state wording and glossary capitalization. Server-supplied unknown values now retain readable text without constructing unbounded translation keys. Layout, CommandPalette and HelpSearch checkpoints also freeze the registry dependency bytes. All 151 originally failing source contracts are now checkpointed; additionally verified FlagCompositionPanel and GDPRLookupPanel. No fingerprints were hand-edited.
+
+Regenerated the five catalog partitions after the known-key and Arabic/Hebrew counterpart checks passed: 32,927 total leaves, zero deleted starting English keys. The whole-code typed scan resolves 42,017 calls and finds zero missing known keys; 240 runtime expressions remain unresolved globally and are not claimed as finite verified domains. All calls in the six remaining producers pass the required checks.
+
+Requested suites: **7,666 passed / 6 failed / 0 skipped**, 7,672 executions. The remaining six executions are the two combined historical contracts repeated by imports. Catalog check result recorded below.
+
+Catalog check: **PASS** (57 grouped bundles, 181 fallbacks, 1,325 shell keys, zero known-missing keys). TypeScript 	sc --noEmit: **PASS**.

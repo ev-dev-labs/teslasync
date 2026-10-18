@@ -128,7 +128,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
     termFallback: 'State of health (SoH)',
     definitionKey: 'help.battery.soh',
     definitionFallback:
-      'State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.',
+      'State of health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.',
     howMeasuredKey: 'glossary.stateOfHealth.howMeasured',
     howMeasuredFallback:
       'Estimated from observed full-charge capacity over time. It is an estimate with a real error bar, which is why the trend matters more than any single value.',

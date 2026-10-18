@@ -479,6 +479,743 @@
       "glossary": "Definition",
       "task": "Setup task",
       "troubleshooting": "Troubleshooting"
+    },
+    "page": {
+      "Dashboard": {
+        "summary": "Open the Dashboard page."
+      },
+      "TwoFactorAuth": {
+        "summary": "Open the Two factor auth page."
+      },
+      "Privacy": {
+        "summary": "Open the Privacy page."
+      },
+      "ActiveSessions": {
+        "summary": "Open the Active sessions page."
+      },
+      "ActionCenter": {
+        "summary": "Open the Action center page."
+      },
+      "ActivityTimeline": {
+        "summary": "Open the Activity timeline page."
+      },
+      "AuditLog": {
+        "summary": "Open the Audit log page."
+      },
+      "DataQuality": {
+        "summary": "Open the Data quality page."
+      },
+      "DiskForecast": {
+        "summary": "Open the Disk forecast page."
+      },
+      "DLQInspector": {
+        "summary": "Open the DLQ inspector page."
+      },
+      "FeedbackQueue": {
+        "summary": "Open the Feedback queue page."
+      },
+      "FeatureFlagsAdmin": {
+        "summary": "Open the Feature flags admin page."
+      },
+      "GDPRExport": {
+        "summary": "Open the GDPR export page."
+      },
+      "IngestXRay": {
+        "summary": "Open the Ingest X ray page."
+      },
+      "LiveSignalInspector": {
+        "summary": "Open the Live signal inspector page."
+      },
+      "SchemaDrift": {
+        "summary": "Open the Schema drift page."
+      },
+      "SecretRotation": {
+        "summary": "Open the Secret rotation page."
+      },
+      "SlowQueries": {
+        "summary": "Open the Slow queries page."
+      },
+      "FleetTelemetryCoverage": {
+        "summary": "Open the Fleet Telemetry coverage page."
+      },
+      "VehicleCost": {
+        "summary": "Open the Vehicle cost page."
+      },
+      "LegacyAlertRulesRedirect": {
+        "summary": "Open the Legacy alert rules redirect page."
+      },
+      "LegacyAlertStudioRedirect": {
+        "summary": "Open the Legacy alert studio redirect page."
+      },
+      "Analytics": {
+        "summary": "Open the Analytics page."
+      },
+      "AnomalyDashboard": {
+        "summary": "Open the Anomaly dashboard page."
+      },
+      "CarbonIntelligence": {
+        "summary": "Open the Carbon intelligence page."
+      },
+      "ProjectedRange": {
+        "summary": "Open the Projected range page."
+      },
+      "TrueCostOwnership": {
+        "summary": "Open the True cost ownership page."
+      },
+      "APIKeys": {
+        "summary": "Open the API keys page."
+      },
+      "ApiLogs": {
+        "summary": "Open the API logs page."
+      },
+      "ApiPlayground": {
+        "summary": "Open the API playground page."
+      },
+      "ArrivalReliability": {
+        "summary": "Open the Arrival reliability page."
+      },
+      "Automations": {
+        "summary": "Open the Automations page."
+      },
+      "AutomationHistory": {
+        "summary": "Open the Automation history page."
+      },
+      "AutomationList": {
+        "summary": "Open the Automation list page."
+      },
+      "AutomationBuilder": {
+        "summary": "Open the Automation builder page."
+      },
+      "BackupRestore": {
+        "summary": "Open the Backup restore page."
+      },
+      "BatteryHealth": {
+        "summary": "Open the Battery health page."
+      },
+      "BatteryCare": {
+        "summary": "Open the Battery care page."
+      },
+      "BatteryCells": {
+        "summary": "Open the Battery cells page."
+      },
+      "BatteryDegradation": {
+        "summary": "Open the Battery degradation page."
+      },
+      "BatteryPassport": {
+        "summary": "Open the Battery passport page."
+      },
+      "PrivacyBenchmarks": {
+        "summary": "Open the Privacy benchmarks page."
+      },
+      "CabinThermal": {
+        "summary": "Open the Cabin thermal page."
+      },
+      "ChargeAdvisor": {
+        "summary": "Open the Charge advisor page."
+      },
+      "ChargeDepartureAlignment": {
+        "summary": "Open the Charge departure alignment page."
+      },
+      "ChargeInterruption": {
+        "summary": "Open the Charge interruption page."
+      },
+      "ChargerHealth": {
+        "summary": "Open the Charger health page."
+      },
+      "ChargerResilience": {
+        "summary": "Open the Charger resilience page."
+      },
+      "Charging": {
+        "summary": "Open the Charging page."
+      },
+      "ChargingCurve": {
+        "summary": "Open the Charging curve page."
+      },
+      "ChargingHeatmap": {
+        "summary": "Open the Charging heatmap page."
+      },
+      "ChargingThermalTax": {
+        "summary": "Open the Charging thermal tax page."
+      },
+      "CostAnalysis": {
+        "summary": "Open the Cost analysis page."
+      },
+      "SmartCharge": {
+        "summary": "Open the Smart charge page."
+      },
+      "VampireDrain": {
+        "summary": "Open the Vampire drain page."
+      },
+      "Chatbot": {
+        "summary": "Open the Chatbot page."
+      },
+      "ClimateControl": {
+        "summary": "Open the Climate control page."
+      },
+      "ColdStart": {
+        "summary": "Open the Cold start page."
+      },
+      "ComfortConsistency": {
+        "summary": "Open the Comfort consistency page."
+      },
+      "CommandHistory": {
+        "summary": "Open the Command history page."
+      },
+      "CommandReliability": {
+        "summary": "Open the Command reliability page."
+      },
+      "Commands": {
+        "summary": "Open the Commands page."
+      },
+      "Connect": {
+        "summary": "Open the Connect page."
+      },
+      "CycleStress": {
+        "summary": "Open the Cycle stress page."
+      },
+      "DashcamIntelligence": {
+        "summary": "Open the Dashcam intelligence page."
+      },
+      "DataExport": {
+        "summary": "Open the Data export page."
+      },
+      "DataRepair": {
+        "summary": "Open the Data repair page."
+      },
+      "DayLog": {
+        "summary": "Open the Day log page."
+      },
+      "DBHealthDashboard": {
+        "summary": "Open the DB health dashboard page."
+      },
+      "DepartureForecast": {
+        "summary": "Open the Departure forecast page."
+      },
+      "DestinationTransitions": {
+        "summary": "Open the Destination transitions page."
+      },
+      "DevTools": {
+        "summary": "Open the Dev tools page."
+      },
+      "MobileGridReference": {
+        "summary": "Open the Mobile grid reference page."
+      },
+      "LayoutReference": {
+        "summary": "Open the Layout reference page."
+      },
+      "StatReference": {
+        "summary": "Open the Stat reference page."
+      },
+      "RootCauseIntelligence": {
+        "summary": "Open the Root cause intelligence page."
+      },
+      "RemainingUsefulLife": {
+        "summary": "Open the Remaining useful life page."
+      },
+      "ServiceEvidencePack": {
+        "summary": "Open the Service evidence pack page."
+      },
+      "DigitalTwin": {
+        "summary": "Open the Digital twin page."
+      },
+      "StatusApiDocs": {
+        "summary": "Open the Status API docs page."
+      },
+      "DriveArchetypes": {
+        "summary": "Open the Drive archetypes page."
+      },
+      "DriveCalendar": {
+        "summary": "Open the Drive calendar page."
+      },
+      "DriveCompare": {
+        "summary": "Open the Drive compare page."
+      },
+      "DriveDNA": {
+        "summary": "Open the Drive DNA page."
+      },
+      "DriveScore": {
+        "summary": "Open the Drive score page."
+      },
+      "Drives": {
+        "summary": "Open the Drives page."
+      },
+      "DrivetrainHealth": {
+        "summary": "Open the Drivetrain health page."
+      },
+      "DrivingDynamics": {
+        "summary": "Open the Driving dynamics page."
+      },
+      "DrivingRhythm": {
+        "summary": "Open the Driving rhythm page."
+      },
+      "Efficiency": {
+        "summary": "Open the Efficiency page."
+      },
+      "EfficiencyTarget": {
+        "summary": "Open the Efficiency target page."
+      },
+      "Energy": {
+        "summary": "Open the Energy page."
+      },
+      "EnergyFlow": {
+        "summary": "Open the Energy flow page."
+      },
+      "EnergyLedger": {
+        "summary": "Open the Energy ledger page."
+      },
+      "WholeHomeEnergy": {
+        "summary": "Open the Whole home energy page."
+      },
+      "EnergyProducts": {
+        "summary": "Open the Energy products page."
+      },
+      "Explore": {
+        "summary": "Open the Explore page."
+      },
+      "Explorer": {
+        "summary": "Open the Explorer page."
+      },
+      "Exports": {
+        "summary": "Open the Exports page."
+      },
+      "FirmwareImpact": {
+        "summary": "Open the Firmware impact page."
+      },
+      "FleetAPI": {
+        "summary": "Open the Fleet API page."
+      },
+      "FleetOperations": {
+        "summary": "Open the Fleet operations page."
+      },
+      "FSDInsights": {
+        "summary": "Open the FSD insights page."
+      },
+      "GasPriceAutoPoll": {
+        "summary": "Open the Gas price auto poll page."
+      },
+      "Geofences": {
+        "summary": "Open the Geofences page."
+      },
+      "Glance": {
+        "summary": "Open the Glance page."
+      },
+      "GuardMode": {
+        "summary": "Open the Guard mode page."
+      },
+      "Help": {
+        "summary": "Open the Help page."
+      },
+      "HvacCycling": {
+        "summary": "Open the HVAC cycling page."
+      },
+      "Helix": {
+        "summary": "Open the Helix page."
+      },
+      "IntelligencePackMarketplace": {
+        "summary": "Open the Intelligence pack marketplace page."
+      },
+      "BehavioralSentinel": {
+        "summary": "Open the Behavioral sentinel page."
+      },
+      "CausalExperimentLab": {
+        "summary": "Open the Causal experiment lab page."
+      },
+      "ChargingForensics": {
+        "summary": "Open the Charging forensics page."
+      },
+      "ChargingSiteTwin": {
+        "summary": "Open the Charging site twin page."
+      },
+      "ComponentSurvival": {
+        "summary": "Open the Component survival page."
+      },
+      "EmergencyResilience": {
+        "summary": "Open the Emergency resilience page."
+      },
+      "FederatedLearningStudio": {
+        "summary": "Open the Federated learning studio page."
+      },
+      "FirmwareCanary": {
+        "summary": "Open the Firmware canary page."
+      },
+      "JourneyAssurance": {
+        "summary": "Open the Journey assurance page."
+      },
+      "RoadHazardMesh": {
+        "summary": "Open the Road hazard mesh page."
+      },
+      "TCOOptimizer": {
+        "summary": "Open the TCO optimizer page."
+      },
+      "TwinLab": {
+        "summary": "Open the Vehicle twin lab page."
+      },
+      "JourneyFragmentation": {
+        "summary": "Open the Journey fragmentation page."
+      },
+      "Journeys": {
+        "summary": "Open the Journeys page."
+      },
+      "LifetimeStats": {
+        "summary": "Open the Lifetime stats page."
+      },
+      "LiveMap": {
+        "summary": "Open the Live map page."
+      },
+      "LiveSignalMonitor": {
+        "summary": "Open the Live signal monitor page."
+      },
+      "Locations": {
+        "summary": "Open the Locations page."
+      },
+      "TripLogbook": {
+        "summary": "Open the Trip logbook page."
+      },
+      "Maintenance": {
+        "summary": "Open the Maintenance page."
+      },
+      "MyActivity": {
+        "summary": "Open the My activity page."
+      },
+      "MediaPlayer": {
+        "summary": "Open the Media player page."
+      },
+      "Mileage": {
+        "summary": "Open the Mileage page."
+      },
+      "MileageBudget": {
+        "summary": "Open the Mileage budget page."
+      },
+      "Milestones": {
+        "summary": "Open the Milestones page."
+      },
+      "MQTTInspector": {
+        "summary": "Open the MQTT inspector page."
+      },
+      "NavigationRoute": {
+        "summary": "Open the Navigation route page."
+      },
+      "NotificationsInbox": {
+        "summary": "Open the Notifications inbox page."
+      },
+      "NotificationsArchived": {
+        "summary": "Open the Notifications archived page."
+      },
+      "NotificationsAudit": {
+        "summary": "Open the Notifications audit page."
+      },
+      "NotificationsBrowser": {
+        "summary": "Open the Notifications browser page."
+      },
+      "NotificationsChannels": {
+        "summary": "Open the Notifications channels page."
+      },
+      "NotificationHealth": {
+        "summary": "Open the Notification health page."
+      },
+      "NotificationsPacks": {
+        "summary": "Open the Notifications packs page."
+      },
+      "NotificationsQuietHours": {
+        "summary": "Open the Notifications quiet hours page."
+      },
+      "NotificationsRules": {
+        "summary": "Open the Notifications rules page."
+      },
+      "NotificationsStudio": {
+        "summary": "Open the Notifications studio page."
+      },
+      "Onboarding": {
+        "summary": "Open the Onboarding page."
+      },
+      "OutageAutobiography": {
+        "summary": "Open the Outage autobiography page."
+      },
+      "ChargingReconciliation": {
+        "summary": "Open the Charging reconciliation page."
+      },
+      "ConsumablesLifecycle": {
+        "summary": "Open the Consumables lifecycle page."
+      },
+      "DataGovernance": {
+        "summary": "Open the Data governance page."
+      },
+      "DriverAttribution": {
+        "summary": "Open the Driver attribution page."
+      },
+      "InsuranceTelematics": {
+        "summary": "Open the Insurance telematics page."
+      },
+      "JurisdictionCompliance": {
+        "summary": "Open the Jurisdiction compliance page."
+      },
+      "ModelTrust": {
+        "summary": "Open the Model trust page."
+      },
+      "SubscriptionROI": {
+        "summary": "Open the Subscription ROI page."
+      },
+      "TariffLab": {
+        "summary": "Open the Tariff lab page."
+      },
+      "WarrantyCommand": {
+        "summary": "Open the Warranty command page."
+      },
+      "PackCapacity": {
+        "summary": "Open the Pack capacity page."
+      },
+      "ParkingAnalytics": {
+        "summary": "Open the Parking analytics page."
+      },
+      "PeriodCompare": {
+        "summary": "Open the Period compare page."
+      },
+      "PhysicsCockpit": {
+        "summary": "Open the Physics cockpit page."
+      },
+      "PowerFlowDashboard": {
+        "summary": "Open the Power flow dashboard page."
+      },
+      "PowerDashboards": {
+        "summary": "Open the Power dashboards page."
+      },
+      "PowerGrafanaPanel": {
+        "summary": "Open the Power Grafana panel page."
+      },
+      "PowerSqlPlayground": {
+        "summary": "Open the Power SQL playground page."
+      },
+      "Powershare": {
+        "summary": "Open the Powershare page."
+      },
+      "PreconditioningEffectiveness": {
+        "summary": "Open the Preconditioning effectiveness page."
+      },
+      "QuickStats": {
+        "summary": "Open the Quick stats page."
+      },
+      "RangeBuffer": {
+        "summary": "Open the Range buffer page."
+      },
+      "RedisSignalViewer": {
+        "summary": "Open the Redis signal viewer page."
+      },
+      "RegenEfficiency": {
+        "summary": "Open the Regen efficiency page."
+      },
+      "WarrantyResaleVault": {
+        "summary": "Open the Warranty resale vault page."
+      },
+      "Roadmap": {
+        "summary": "Open the Roadmap page."
+      },
+      "RouteEfficiency": {
+        "summary": "Open the Route efficiency page."
+      },
+      "SafetySettings": {
+        "summary": "Open the Safety settings page."
+      },
+      "ScienceLab": {
+        "summary": "Open the Science lab page."
+      },
+      "Search": {
+        "summary": "Open the Search page."
+      },
+      "SeasonalEfficiency": {
+        "summary": "Open the Seasonal efficiency page."
+      },
+      "SecurityAccess": {
+        "summary": "Open the Security access page."
+      },
+      "Segments": {
+        "summary": "Open the Segments page."
+      },
+      "ServiceIntelligence": {
+        "summary": "Open the Service intelligence page."
+      },
+      "Settings": {
+        "summary": "Open the Settings page."
+      },
+      "FleetSetup": {
+        "summary": "Open the Fleet setup page."
+      },
+      "SafetySettingsPage": {
+        "summary": "Open the Safety settings page page."
+      },
+      "ShareCard": {
+        "summary": "Open the Share card page."
+      },
+      "SharingTrips": {
+        "summary": "Open the Sharing trips page."
+      },
+      "SignalChangePoints": {
+        "summary": "Open the Signal change points page."
+      },
+      "SignalCorrelation": {
+        "summary": "Open the Signal correlation page."
+      },
+      "SignalDeadband": {
+        "summary": "Open the Signal deadband page."
+      },
+      "SignalDiff": {
+        "summary": "Open the Signal diff page."
+      },
+      "SignalEntropy": {
+        "summary": "Open the Signal entropy page."
+      },
+      "SignalExplorer": {
+        "summary": "Open the Signal explorer page."
+      },
+      "SignalGapDetector": {
+        "summary": "Open the Signal gap detector page."
+      },
+      "SignalLogViewer": {
+        "summary": "Open the Signal log viewer page."
+      },
+      "SignalMutualInformation": {
+        "summary": "Open the Signal mutual information page."
+      },
+      "SignalTrend": {
+        "summary": "Open the Signal trend page."
+      },
+      "SignalsWorkspace": {
+        "summary": "Open the Signals workspace page."
+      },
+      "SleepEfficiency": {
+        "summary": "Open the Sleep efficiency page."
+      },
+      "SoftwareUpdates": {
+        "summary": "Open the Software updates page."
+      },
+      "SpeedProfile": {
+        "summary": "Open the Speed profile page."
+      },
+      "SpeedSweetSpot": {
+        "summary": "Open the Speed sweet spot page."
+      },
+      "StateMachineDebugger": {
+        "summary": "Open the State machine debugger page."
+      },
+      "Statistics": {
+        "summary": "Open the Statistics page."
+      },
+      "SystemStatus": {
+        "summary": "Open the System status page."
+      },
+      "TemperatureImpact": {
+        "summary": "Open the Temperature impact page."
+      },
+      "TeslaAccount": {
+        "summary": "Open the Tesla account page."
+      },
+      "TeslaApiUsage": {
+        "summary": "Open the Tesla API usage page."
+      },
+      "TeslaChargingHistory": {
+        "summary": "Open the Tesla charging history page."
+      },
+      "TeslaChargingSessions": {
+        "summary": "Open the Tesla charging sessions page."
+      },
+      "TeslaFeatureFlags": {
+        "summary": "Open the Tesla feature flags page."
+      },
+      "TeslaOrders": {
+        "summary": "Open the Tesla orders page."
+      },
+      "TeslaPhysics": {
+        "summary": "Open the Tesla physics page."
+      },
+      "PhysicsBlackBox": {
+        "summary": "Open the Physics black box page."
+      },
+      "PhysicsCarKeptLiving": {
+        "summary": "Open the Physics car kept living page."
+      },
+      "PhysicsChargePort": {
+        "summary": "Open the Physics charge port page."
+      },
+      "PhysicsClocks": {
+        "summary": "Open the Physics clocks page."
+      },
+      "PhysicsContradictions": {
+        "summary": "Open the Physics contradictions page."
+      },
+      "PhysicsDictionary": {
+        "summary": "Open the Physics dictionary page."
+      },
+      "PhysicsFirmwareEpochs": {
+        "summary": "Open the Physics firmware epochs page."
+      },
+      "PhysicsLedger": {
+        "summary": "Open the Physics ledger page."
+      },
+      "PhysicsLifeTape": {
+        "summary": "Open the Physics life tape page."
+      },
+      "PhysicsLogbook": {
+        "summary": "Open the Physics logbook page."
+      },
+      "PhysicsMeters": {
+        "summary": "Open the Physics meters page."
+      },
+      "PhysicsModes": {
+        "summary": "Open the Physics modes page."
+      },
+      "PhysicsNervousSystem": {
+        "summary": "Open the Physics nervous system page."
+      },
+      "PhysicsRange": {
+        "summary": "Open the Physics range page."
+      },
+      "PhysicsUnknown": {
+        "summary": "Open the Physics unknown page."
+      },
+      "PhysicsVault": {
+        "summary": "Open the Physics vault page."
+      },
+      "TeslaRegion": {
+        "summary": "Open the Tesla region page."
+      },
+      "TimeMachine": {
+        "summary": "Open the Time machine page."
+      },
+      "Timeline": {
+        "summary": "Open the Timeline page."
+      },
+      "TireDifferentialDrift": {
+        "summary": "Open the Tire differential drift page."
+      },
+      "TirePressure": {
+        "summary": "Open the Tire pressure page."
+      },
+      "TripPlanner": {
+        "summary": "Open the Trip planner page."
+      },
+      "Trips": {
+        "summary": "Open the Trips page."
+      },
+      "Utilization": {
+        "summary": "Open the Utilization page."
+      },
+      "FleetCompare": {
+        "summary": "Open the Fleet compare page."
+      },
+      "VehicleManagement": {
+        "summary": "Open the Vehicle management page."
+      },
+      "Vehicles": {
+        "summary": "Open the Vehicles page."
+      },
+      "WatchFace": {
+        "summary": "Open the Watch face page."
+      },
+      "WeeklyDigest": {
+        "summary": "Open the Weekly digest page."
+      },
+      "WhatIf": {
+        "summary": "Open the What if page."
+      }
     }
   },
   "incidentTimeline": {
@@ -2895,10 +3632,58 @@
     }
   },
   "emptyState": {
+    "alerts": {
+      "list": {
+        "likelyCause": "Either no rules are configured yet, or every rule has evaluated cleanly in the selected window.",
+        "meaning": "No alerts have fired — this is the expected steady state."
+      }
+    },
+    "analytics": {
+      "efficiency": {
+        "likelyCause": "Most often the selected range contains no completed drives — widen it before assuming data is missing.",
+        "meaning": "No efficiency figures can be computed for the selected period."
+      }
+    },
+    "automations": {
+      "list": {
+        "likelyCause": "This list is empty by default — automations are opt-in and are never created for you.",
+        "meaning": "No automations are configured, so nothing is being evaluated."
+      }
+    },
+    "battery": {
+      "degradation": {
+        "likelyCause": "Most often the vehicle was linked recently, so the observation window is still too short to be meaningful.",
+        "meaning": "There is not enough history yet to estimate battery degradation."
+      }
+    },
+    "charging": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not charged since it was linked, or it charged while asleep and unreachable.",
+        "meaning": "No charging sessions have been recorded for this vehicle yet."
+      }
+    },
+    "drives": {
+      "list": {
+        "likelyCause": "Most often the vehicle has not driven since it was linked, or the selected date range ends before the first recorded drive.",
+        "meaning": "No completed drives have been recorded for this vehicle yet."
+      }
+    },
     "generic": "No data available yet.",
     "label": {
       "likelyCause": "Most likely reason",
       "prerequisite": "What has to happen first"
+    },
+    "signals": {
+      "live": {
+        "likelyCause": "Most often the vehicle is asleep — Tesla stops streaming while a car sleeps, and waking it costs range.",
+        "meaning": "No live signals are arriving for this vehicle right now."
+      }
+    },
+    "vehicles": {
+      "list": {
+        "likelyCause": "Either setup has not been completed, or the stored Tesla authorisation was revoked and needs renewing.",
+        "meaning": "No vehicles are linked, so nothing is being collected anywhere in the app."
+      }
     }
   },
   "entityContext": {
@@ -3443,7 +4228,29 @@
     "progress": {
       "stepOf": "Step {{current}} of {{total}}"
     },
-    "skip": "Skip for now"
+    "skip": "Skip for now",
+    "tasks": {
+      "automation": {
+        "body": "Automations react to vehicle state — for example, notify when charging stops below a target.",
+        "title": "Create your first automation"
+      },
+      "chargingCost": {
+        "body": "Charging sessions are recorded without a price until a tariff is configured, so cost columns stay empty.",
+        "title": "Set an electricity price to see charging costs"
+      },
+      "linkVehicle": {
+        "body": "Nothing is recorded until at least one vehicle is linked to your Tesla account.",
+        "title": "Link a vehicle to start collecting data"
+      },
+      "liveTelemetry": {
+        "body": "Without streaming telemetry this page can only show polled snapshots, which arrive minutes apart.",
+        "title": "Turn on live telemetry for second-by-second signals"
+      },
+      "notificationChannel": {
+        "body": "Automations and alerts evaluate normally, but nothing is delivered until a channel exists.",
+        "title": "Add a notification channel so alerts can reach you"
+      }
+    }
   },
   "operationalMode": {
     "commandsDisabled": {
