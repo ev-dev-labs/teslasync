@@ -295,7 +295,10 @@ describe('XRayTopFields — limit clamping & row null-safety', () => {
     expect(screen.getByText('7')).toBeInTheDocument();
   });
 
-  it.each([undefined, null, NaN, Infinity, -Infinity, '100'])(
+  // Numeric strings ('100') are KNOWN: backend numerics serialize as strings
+  // through aggregate views (see knownNumber) — covered by the dedicated
+  // test below.
+  it.each([undefined, null, NaN, Infinity, -Infinity])(
     'ranks unknown count %s after valid zero without fabricating a reading',
     (sample_count) => {
       const malformed = { ...makeRow({ field: 'unknown' }), sample_count } as IngestXRayFieldStat;
@@ -311,4 +314,15 @@ describe('XRayTopFields — limit clamping & row null-safety', () => {
       expect(items[1]).toHaveTextContent('—');
     },
   );
+
+  it('ranks a numeric-string count as its parsed value with a real reading', () => {
+    const stringy = { ...makeRow({ field: 'stringy' }), sample_count: '100' } as unknown as IngestXRayFieldStat;
+    renderPanel({ rows: [stringy, makeRow({ field: 'zero', sample_count: 0 })] });
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]).toHaveTextContent('stringy');
+    expect(items[1]).toHaveTextContent('zero');
+    const bars = screen.getAllByRole('progressbar');
+    expect(bars[0]).toHaveAttribute('aria-valuenow', '100');
+    expect(items[0]).toHaveTextContent('100');
+  });
 });

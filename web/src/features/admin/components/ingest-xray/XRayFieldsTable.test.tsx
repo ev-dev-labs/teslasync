@@ -375,7 +375,10 @@ describe('XRayFieldsTable — null-safety & hardening', () => {
     expect(rowOrder()).toEqual(['good', 'broken']);
   });
 
-  it.each([undefined, null, NaN, Infinity, -Infinity, '100'])(
+  // Numeric strings ('100') are KNOWN: backend numerics serialize as strings
+  // through aggregate views (see knownNumber), so they sort and render as
+  // their parsed value — covered by the dedicated test below.
+  it.each([undefined, null, NaN, Infinity, -Infinity])(
     'keeps malformed count %s unknown in cells, filters and mobile summaries',
     (sample_count) => {
       const holed = { ...ALPHA, field: 'no-samples', sample_count } as IngestXRayFieldStat;
@@ -393,6 +396,24 @@ describe('XRayFieldsTable — null-safety & hardening', () => {
       expect(rowOrder()).toEqual(['bravo', 'no-samples']);
     },
   );
+
+  it('treats a numeric-string count as its parsed value in cells, filters, summaries and sort', () => {
+    const stringy = { ...ALPHA, field: 'stringy', sample_count: '100' } as unknown as IngestXRayFieldStat;
+    renderTable([stringy, { ...BRAVO, sample_count: 0 }]);
+    // Descending: the parsed 100 outranks the valid zero.
+    expect(rowOrder()).toEqual(['stringy', 'bravo']);
+    const cells = screen.getAllByTestId('cell-sample_count');
+    expect(cells[0]).toHaveTextContent(/^100$/);
+    expect(cells[1]).toHaveTextContent(/^0$/);
+    const contract = tableContract.current!;
+    const count = contract.columns.find(column => column.key === 'sample_count')!;
+    expect(count.filterValue?.(stringy)).toBe(100);
+    expect(count.filterValueLabel?.(null, stringy)).toBe('100');
+    expect(contract.mobilePresentation?.displayValue(stringy, 'sample_count')).toBe('100');
+    // Ascending toggle reverses the known pair.
+    fireEvent.click(screen.getByTestId('sort-sample_count'));
+    expect(rowOrder()).toEqual(['bravo', 'stringy']);
+  });
 
   it('localizes the human kind fallback without translating known raw type names', () => {
     localizedCopy.kindFallback = 'tipo {{kind}}';

@@ -179,8 +179,8 @@ function renderPage() {
  *  the "Session Status" label doesn't collide with the status panel title. */
 function kpiValue(label: string): string {
   const region = screen.getByRole('region', { name: 'Impersonation summary' })
-  const labelEl = within(region).getByText(label)
-  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? ''
+  const labelEl = within(region).queryByText(label)
+  return labelEl?.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? ''
 }
 
 /** The real <button> refresh control — disambiguated from the freshness chip,
@@ -278,8 +278,13 @@ describe('UsersPage', () => {
     })
     renderPage()
 
-    // Bug-fix: the count is unknown, not zero — "—" avoids implying 0 subjects.
-    expect(kpiValue('Available subjects')).toBe('—')
+    // Bug-fix: the count is unknown, not zero — omitted from the face, never zero-filled.
+    const strip = screen.getByTestId('subjects-operational-brief')
+    expect(kpiValue('Available subjects')).toBe('')
+    expect(strip.querySelector('[data-operational-metric="subjects-available"]')).toBeNull()
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog', { name: 'Subject and session posture details' }))
+      .toHaveTextContent('1 empty fields are hidden.')
 
     // The table degrades to a retryable QueryError wired to refetch.
     expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1)
@@ -298,8 +303,14 @@ describe('UsersPage', () => {
     renderPage()
 
     // Hardening: don't confidently claim Forward-auth/Idle on a failed fetch.
-    expect(kpiValue('Access mode')).toBe('—')
-    expect(kpiValue('Session status')).toBe('—')
+    const strip = screen.getByTestId('subjects-operational-brief')
+    expect(kpiValue('Access mode')).toBe('')
+    expect(kpiValue('Session status')).toBe('')
+    expect(strip.querySelector('[data-operational-metric="subjects-access"]')).toBeNull()
+    expect(strip.querySelector('[data-operational-metric="subjects-session"]')).toBeNull()
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog', { name: 'Subject and session posture details' }))
+      .toHaveTextContent('2 empty fields are hidden.')
     // Candidates are still healthy, so the count remains truthful.
     expect(kpiValue('Available subjects')).toBe('2')
   })

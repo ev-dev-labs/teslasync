@@ -184,9 +184,12 @@ describe('APIKeysPage', () => {
     const summary = screen.getByTestId('api-keys-summary');
     expect(summary).toHaveAttribute('data-operational-brief');
     expect(summary.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(4);
-    expect(summary).toHaveTextContent('Loaded inventory snapshot');
+    // Scope moved from the face to the Review-details drawer.
+    expect(summary).not.toHaveTextContent('Loaded inventory snapshot');
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('loaded API key inventory');
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('loaded API key inventory');
+    expect(drawer).toHaveTextContent('Loaded inventory snapshot');
     expect(screen.getByRole('button', { name: 'Create key' })).toBeInTheDocument();
   });
 
@@ -259,10 +262,14 @@ describe('APIKeysPage', () => {
     );
     expect(screen.getAllByText("Can't reach server").length).toBe(2);
 
-    // Regression guard: the KPI band must not lie with "0" on a failed load.
-    expect(screen.getAllByText('\u2014')).toHaveLength(4);
-    expect(kpiCardText('Total keys')).toContain('\u2014');
-    expect(kpiCardText('Total keys')).not.toContain('0');
+    // Regression guard: the KPI band must not lie with "0" on a failed load —
+    // unknown tiles are omitted from the face and counted in the drawer.
+    const summary = screen.getByTestId('api-keys-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(summary).not.toHaveTextContent('0');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('4 empty fields are hidden.');
   });
 
   it('renders skeletons while the query is pending', async () => {

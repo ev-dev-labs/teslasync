@@ -85,21 +85,30 @@ describe('SecretRotationOutlook', () => {
   });
 
   it.each([
-    { name: 'measured zero', age_days: 0, critical_days: 120, severity: 'ok', now: '0', tone: 'success' },
-    { name: 'before threshold', age_days: 119, critical_days: 120, severity: 'warn', now: '119', tone: 'warning' },
-    { name: 'at threshold', age_days: 120, critical_days: 120, severity: 'critical', now: '120', tone: 'danger' },
-    { name: 'after threshold', age_days: 121, critical_days: 120, severity: 'critical', now: '120', tone: 'danger' },
-    { name: 'unknown severity with known operands', age_days: 80, critical_days: 120, severity: 'unknown', now: '80', tone: 'neutral' },
+    { name: 'measured zero', age_days: 0, critical_days: 120, severity: 'ok', now: '0', tone: 'success', scaled: true },
+    { name: 'before threshold', age_days: 119, critical_days: 120, severity: 'warn', now: '119', tone: 'warning', scaled: true },
+    { name: 'at threshold', age_days: 120, critical_days: 120, severity: 'critical', now: '120', tone: 'danger', scaled: true },
+    { name: 'after threshold', age_days: 121, critical_days: 120, severity: 'critical', now: '120', tone: 'danger', scaled: false },
+    { name: 'unknown severity with known operands', age_days: 80, critical_days: 120, severity: 'unknown', now: '80', tone: 'neutral', scaled: true },
   ] satisfies Array<{
-    name: string; age_days: number; critical_days: number; severity: SecretRotationStatus['severity']; now: string; tone: string;
-  }>)('preserves $name operands and uses a restrained solid fill', async ({ age_days, critical_days, severity, now, tone }) => {
+    name: string; age_days: number; critical_days: number; severity: SecretRotationStatus['severity']; now: string; tone: string; scaled: boolean;
+  }>)('preserves $name operands and uses a restrained solid fill', async ({ age_days, critical_days, severity, now, tone, scaled }) => {
     vi.mocked(request).mockResolvedValue({ items: [status({ age_days, critical_days, severity })] });
     renderOutlook();
 
-    const bar = await screen.findByRole('progressbar', { name: 'Session JWK · synthetic-target' });
-    expect(bar).toHaveAttribute('aria-valuemax', '120');
-    expect(bar).toHaveAttribute('aria-valuenow', now);
-    expect(bar).not.toHaveAttribute('aria-valuetext');
+    const bar = await screen.findByRole(scaled ? 'progressbar' : 'group', { name: 'Session JWK · synthetic-target' });
+    if (scaled) {
+      expect(bar).toHaveAttribute('aria-valuemax', '120');
+      expect(bar).toHaveAttribute('aria-valuenow', now);
+      expect(bar).not.toHaveAttribute('aria-valuetext');
+    } else {
+      // Out-of-range readings use a described group instead of reporting a fabricated progress value.
+      expect(bar).not.toHaveAttribute('aria-valuemax');
+      expect(bar).not.toHaveAttribute('aria-valuenow');
+      expect(bar).not.toHaveAttribute('aria-valuetext');
+      expect(bar).toHaveAttribute('aria-describedby');
+      expect(within(bar).getByText(age_days.toFixed(2))).toBeInTheDocument();
+    }
     expect(within(bar).getByText(`${age_days.toFixed(2)}d / 120.00d`)).toBeInTheDocument();
     const fill = bar.querySelector<HTMLElement>('[data-metric-fill]');
     expect(fill).not.toBeNull();
@@ -115,12 +124,15 @@ describe('SecretRotationOutlook', () => {
     ];
     vi.mocked(request).mockResolvedValue({ items });
     const { client } = renderOutlook();
-    await screen.findByRole('progressbar', { name: 'Session JWK · synthetic-known' });
+    await screen.findByRole('group', { name: 'Session JWK · synthetic-known' });
     vi.mocked(request).mockRejectedValue(new Error('synthetic refresh failure'));
     await act(async () => { await client.invalidateQueries(); });
     await waitFor(() => expect(client.getQueryCache().getAll().some(query => query.state.error !== null)).toBe(true));
 
-    expect(screen.getAllByRole('progressbar')).toHaveLength(2);
+    // Both rows keep their identities: the unknown-threshold row stays a
+    // valueless progressbar while the past-threshold row is a described group.
+    expect(screen.getByRole('progressbar', { name: 'Session JWK · synthetic-unknown' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Session JWK · synthetic-known' })).toBeInTheDocument();
     expect(screen.getByText('200.00d / 180.00d')).toBeInTheDocument();
     expect(screen.getByText('80.00d / —')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -142,7 +154,7 @@ describe('SecretRotationOutlook', () => {
     const expired = screen.getAllByText('Session JWK · synthetic-expired').find(node => node.closest('li'));
     expect(expired).toBeDefined();
     expect(within(expired!.closest('li')!).getByText('-3.00 d')).toHaveClass('text-[var(--semantic-danger)]');
-    expect(within(expired!.closest('li')!).getByText('Overdue')).toBeInTheDocument();
+    expect(within(expired!.closest('li')!).getByText('Critical')).toBeInTheDocument();
     expect(screen.getByText('0.00 d')).toBeInTheDocument();
     const expiryList = screen.getByRole('list');
     expect(within(expiryList).getAllByRole('listitem')).toHaveLength(3);

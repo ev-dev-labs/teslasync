@@ -52,7 +52,8 @@ describe('GasHistoryTable', () => {
       effective_from: '2026-01-15T00:00:00Z', effective_to: null, created_at: '2026-01-15T00:00:00Z' }]);
     resize(375);
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(screen.getByText('25.0 mpg')).toBeInTheDocument();
+    // Efficiency follows the global 2-decimal precision.
+    expect(screen.getByText('25.00 mpg')).toBeInTheDocument();
     const trigger = screen.getByRole('button', { name: 'Quick view' });
     trigger.focus();
     await user.keyboard('{Enter}');
@@ -60,9 +61,10 @@ describe('GasHistoryTable', () => {
     for (const label of ['Effective from', 'Price', 'Unit', 'Efficiency', 'Effective to']) {
       expect(dialog.getByText(label)).toBeInTheDocument();
     }
-    expect(dialog.getByText('$3.29/gal')).toBeInTheDocument();
+    // The price value and unit render in nested nodes; assert their combined text.
+    expect(dialog.getByText('Price').closest('div')).toHaveTextContent('$3.29/gal');
     expect(dialog.getByText('gal')).toBeInTheDocument();
-    expect(dialog.getByText('25.0 mpg')).toBeInTheDocument();
+    expect(dialog.getByText('25.00 mpg')).toBeInTheDocument();
     expect(dialog.getByText('Current')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -83,9 +85,11 @@ describe('GasHistoryTable', () => {
     const rows = within(screen.getByRole('table')).getAllByRole('row');
     expect(rows[1]).toHaveTextContent('$5.00');
     resize(375);
-    expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(5);
-    expect(screen.getByText('$5.00/gal')).toBeInTheDocument();
+    // Mobile uses its own cumulative reveal starting at the first rows...
+    expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(25);
+    expect(screen.getByText('$30.00/gal')).toBeInTheDocument();
     resize(1200);
+    // ...while the desktop page is preserved across the transition.
     expect(within(screen.getByRole('table')).getAllByRole('row')[1]).toHaveTextContent('$5.00');
     expect(data.map(row => row.id)).toEqual(Array.from({ length: 30 }, (_, index) => index + 1));
   });

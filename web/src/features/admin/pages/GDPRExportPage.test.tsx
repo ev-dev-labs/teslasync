@@ -258,10 +258,14 @@ describe('GDPRExportPage — empty + lookup', () => {
     const summary = screen.getByTestId('gdpr-export-summary');
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(summary).toHaveAttribute('data-operational-brief');
-    expect(summary).toHaveTextContent('only the selected export artifact');
-    expect(summary).toHaveTextContent('not export-job progress or file availability');
+    // The artifact-only scope moved from the face to the Review-details drawer.
+    expect(summary).not.toHaveTextContent('only the selected export artifact');
+    expect(summary).not.toHaveTextContent('not export-job progress or file availability');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('selected export artifact');
+    const drawer = screen.getByRole('dialog', { name: 'Artifact summary details' });
+    expect(drawer).toHaveTextContent('only the selected export artifact');
+    expect(drawer).toHaveTextContent('not export-job progress or file availability');
+    expect(drawer).toHaveTextContent('selected export artifact');
     expect(screen.getByRole('link', { name: /Download bundle/i })).toBeInTheDocument();
   });
 
@@ -416,7 +420,13 @@ describe('GDPRExportPage — status-specific panels', () => {
     renderPage([pagePath(ART_A)]);
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
 
-    expect(screen.getByText('Loading sources')).toBeInTheDocument();
+    // The loading status moved from the face to the Review-details drawer;
+    // the face advertises the pending load via aria-busy + skeleton values.
+    const summary = screen.getByTestId('gdpr-export-summary');
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(summary).not.toHaveTextContent('Loading sources');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Artifact summary details' })).toHaveTextContent('Loading sources');
     for (const title of ['Artifact details', 'Download', 'Lifecycle']) {
       expect(screen.getByRole('heading', { name: title }).closest('[data-print-card]')).toHaveAttribute('aria-busy', 'true');
     }
@@ -590,7 +600,13 @@ describe('GDPRExportPage — canonical manifest boundary coverage', () => {
     renderPage([pagePath(ART_A)]);
     await screen.findByRole('link', { name: 'Download bundle' });
     expect(metadataValue('Byte count')).toHaveTextContent(/^—$/);
-    expect(screen.getByTestId('gdpr-export-summary').querySelector('[data-operational-metric="bytes"]')).toHaveAttribute('data-value-state', 'missing');
+    // The malformed byte count is omitted from the face (never zero-filled)...
+    const summary = screen.getByTestId('gdpr-export-summary');
+    expect(summary.querySelector('[data-operational-metric="bytes"]')).toBeNull();
+    // ...and counted as hidden in the Review-details drawer.
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Artifact summary details' }))
+      .toHaveTextContent('1 empty fields are hidden.');
     expect(screen.queryByText('0 B')).toBeNull();
   });
 

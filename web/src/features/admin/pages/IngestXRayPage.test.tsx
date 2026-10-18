@@ -143,8 +143,6 @@ import IngestXRayPage from './IngestXRayPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
-const DASH = '—';
-
 function makeXRay(
   overrides: Partial<IngestXRayResponse> = {},
 ): IngestXRayResponse {
@@ -311,12 +309,23 @@ describe('IngestXRayPage', () => {
       onlineManager.setOnline(false);
       fireEvent.click(screen.getByRole('button', { name: 'Refresh ingest x-ray' }));
 
+      // The summary band remounts when retained flips, so re-query it inside
+      // the wait instead of polling a detached node.
+      await waitFor(() => expect(screen.getByTestId('ingest-xray-summary')).toHaveAttribute('data-retained', 'true'));
       const summary = screen.getByTestId('ingest-xray-summary');
-      await waitFor(() => expect(summary).toHaveAttribute('data-retained', 'true'));
       expect(summary).toHaveTextContent('Showing retained measurements');
-      expect(summary).toHaveTextContent('Retained measurements');
       expect(summary).not.toHaveTextContent('Source loaded');
       expect(summary).not.toHaveTextContent('Read failed');
+      // The source status badge moved from the face to the Review-details drawer.
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+      expect(drawer).toHaveTextContent('Retained measurements');
+      expect(drawer).not.toHaveTextContent('Source loaded');
+      expect(drawer).not.toHaveTextContent('Read failed');
+      // Close the drawer so the retained-value assertions below match the face only.
+      const close = within(drawer).getAllByRole('button', { name: 'Close' });
+      fireEvent.click(close[close.length - 1]);
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Ingest summary metrics details' })).toBeNull());
       expect(screen.getByText('4,096')).toBeInTheDocument();
       expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Field statistics')).toBeInTheDocument();
@@ -338,18 +347,23 @@ describe('IngestXRayPage', () => {
     await screen.findByText('4,096');
     const strip = screen.getByTestId('ingest-xray-operational-brief');
     expect(strip).toHaveAttribute('data-operational-brief');
-    expect(strip).toHaveTextContent('Exact query bounds are not supplied');
+    // Bounds and per-metric captions moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('Exact query bounds are not supplied');
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     const mean = strip.querySelector('[data-operational-metric="mean"]');
     expect(mean).toHaveAttribute('data-value-state', 'value');
     expect(mean?.querySelector('[data-operational-value]')?.textContent).toMatch(/^5[.,]5/);
-    for (const caption of ['within selected window', 'unique signal names', 'busiest interval',
-      'mean per interval', 'observation horizon', 'aggregation interval']) {
-      expect(strip).toHaveTextContent(caption);
-    }
     fireEvent.change(screen.getByLabelText('Bucket'), { target: { value: '30s' } });
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(
       expect.stringContaining('bucket=30s'), expect.anything()));
+    fireEvent.click(within(screen.getByTestId('ingest-xray-operational-brief'))
+      .getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(drawer).toHaveTextContent('Exact query bounds are not supplied');
+    for (const caption of ['within selected window', 'unique signal names', 'busiest interval',
+      'mean per interval', 'observation horizon', 'aggregation interval']) {
+      expect(drawer).toHaveTextContent(caption);
+    }
     expect(screen.getByText('Field statistics')).toBeInTheDocument();
     expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
   });
@@ -367,8 +381,10 @@ describe('IngestXRayPage', () => {
     expect(within(within(drawer).getByRole('region', { name: 'How this was calculated' })).getByText('Exact query bounds are not supplied')).toBeInTheDocument();
     expect(within(drawer).getByText('4,096')).toBeInTheDocument();
     expect(screen.getByLabelText('Vehicle')).toHaveValue('1');
-    expect(screen.getByLabelText('Window')).toHaveValue('1h');
-    expect(screen.getByLabelText('Bucket')).toHaveValue('1m');
+    // The open drawer also exposes "Window"/"Bucket" detail groups, so pin the
+    // toolbar selects by their combobox role (the drawer groups are not comboboxes).
+    expect(screen.getByRole('combobox', { name: 'Window' })).toHaveValue('1h');
+    expect(screen.getByRole('combobox', { name: 'Bucket' })).toHaveValue('1m');
     const close = within(drawer).getAllByRole('button', { name: 'Close' });
     fireEvent.click(close[close.length - 1]);
     expect(screen.getByText('Field statistics')).toBeInTheDocument();
@@ -391,9 +407,20 @@ describe('IngestXRayPage', () => {
       screen.getByRole('button', { name: 'Refresh ingest x-ray' }),
     ).toBeDisabled();
 
-    // The four numeric KPIs (samples / fields / peak / avg) read em-dash so a
-    // "no vehicle" state never renders as a real 0.
-    expect(screen.getAllByText(DASH).length).toBeGreaterThanOrEqual(4);
+    // The four numeric KPIs (samples / fields / peak / avg) are omitted as
+    // unknown so a "no vehicle" state never renders as a real 0, while the
+    // selector-derived window/bucket captions stay visible.
+    const strip = screen.getByTestId('ingest-xray-operational-brief');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(strip.querySelector('[data-operational-metric="samples"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="fields"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="peak"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="mean"]')).toBeNull();
+    expect(within(strip).queryByText('0')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(drawer).toHaveTextContent('4 empty fields are hidden.');
+    expect(drawer).toHaveTextContent('No vehicle selected');
   });
 
   it('fires the X-Ray query at the exact backend path and renders KPIs, chart, table + top-fields', async () => {
@@ -438,8 +465,19 @@ describe('IngestXRayPage', () => {
       screen.getAllByRole('button', { name: 'Retry' }).length,
     ).toBeGreaterThanOrEqual(1);
 
-    // No data ever landed → KPI band must still read dashes, not "0".
-    expect(screen.getAllByText(DASH).length).toBeGreaterThanOrEqual(4);
+    // No data ever landed → the four numeric KPIs stay omitted (unknown),
+    // never rendered as "0"; window/bucket captions stay visible.
+    const strip = screen.getByTestId('ingest-xray-operational-brief');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(strip.querySelector('[data-operational-metric="samples"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="fields"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="peak"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="mean"]')).toBeNull();
+    expect(within(strip).queryByText('0')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
+    expect(drawer).toHaveTextContent('4 empty fields are hidden.');
+    expect(drawer).toHaveTextContent('Read failed');
   });
 
   it('does NOT blank populated panels when a later poll fails (keeps last-good data)', async () => {
@@ -530,7 +568,12 @@ describe('IngestXRayPage', () => {
     renderPage();
     pickVehicle('1');
     await waitFor(() => expect(screen.getAllByText('0').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh ingest x-ray' }));
+    // A bare '0' can match pre-settle chrome while the first fetch is still
+    // in flight, so also wait for the refresh control to enable (fetch
+    // settled) — clicking while it is disabled would be a silent no-op.
+    const refreshBtn = screen.getByRole('button', { name: 'Refresh ingest x-ray' });
+    await waitFor(() => expect(refreshBtn).toBeEnabled());
+    fireEvent.click(refreshBtn);
     await waitFor(() => expect(screen.getByText('Data may be stale')).toBeInTheDocument());
 
     expect(screen.getByText('Field statistics')).toBeInTheDocument();

@@ -216,8 +216,11 @@ describe('ChangesPanel', () => {
     renderPanel({ rows: [], loading: true })
 
     expect(screen.getByText(/Loading audit log/)).toBeInTheDocument()
-    // EmptyState (role=status) is only rendered on the not-loading branch.
-    expect(screen.queryByRole('status')).toBeNull()
+    // EmptyState (role=status) is only rendered on the not-loading branch —
+    // the only live region here is the placeholder's own sr-only announcer.
+    const liveRegions = screen.queryAllByRole('status')
+    expect(liveRegions).toHaveLength(1)
+    expect(liveRegions[0]).toHaveClass('sr-only')
     expect(screen.queryByText('No flag changes yet')).toBeNull()
   })
 

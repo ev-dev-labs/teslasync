@@ -105,11 +105,19 @@ describe('RedisSignalViewerPage continuation preservation', () => {
     await screen.findByText('BatteryLevel');
     const strip = screen.getByTestId('redis-signals-operational-brief');
     expect(strip).toHaveAttribute('data-operational-brief');
-    expect(strip).toHaveTextContent('Cached signals');
+    // Scope and per-source freshness moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('Cached signals');
     const values = () => Array.from(strip.querySelectorAll('[data-operational-value]')).map(value => value.textContent);
     expect(values()).toEqual(['3', '2', '0', '1', '4', '3']);
-    expect(strip.querySelector('[data-operational-metric="l1"]')).toHaveTextContent('In-process store · L1 last seen:');
-    expect(strip.querySelector('[data-operational-metric="l2"]')).toHaveTextContent('Redis HSET · L2 last seen:');
+    expect(strip.querySelector('[data-operational-metric="l1"]')).not.toHaveTextContent('In-process store · L1 last seen:');
+    expect(strip.querySelector('[data-operational-metric="l2"]')).not.toHaveTextContent('Redis HSET · L2 last seen:');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Cache metrics details' });
+    expect(drawer).toHaveTextContent('Cached signals');
+    expect(within(drawer).getByText(/In-process store · L1 last seen:/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Redis HSET · L2 last seen:/)).toBeInTheDocument();
+    const close = within(drawer).getAllByRole('button', { name: 'Close' });
+    fireEvent.click(close[close.length - 1]);
     fireEvent.change(screen.getByRole('textbox', { name: 'Filter signals by name' }), { target: { value: 'Battery' } });
     expect(values()).toEqual(['3', '2', '0', '1', '4', '3']);
     expect(screen.getByText('Cache diagnostics')).toBeInTheDocument();

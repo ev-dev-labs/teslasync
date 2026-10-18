@@ -54,7 +54,17 @@ describe('AuditLogPage deployment capability evidence', () => {
     expect(within(entries as HTMLElement).getByRole('button', { name: /retry/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Actor' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Verify chain' })).toBeInTheDocument();
-    expect(screen.getByTestId('admin-audit-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    const strip = screen.getByTestId('admin-audit-summary');
+    // The failed entries source omits its four page counts from the face
+    // (never zero-filled); the independent catalog counts stay visible.
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(strip.querySelector('[data-operational-metric="entries"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="ok"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="failed"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="actors"]')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Audit overview details' }))
+      .toHaveTextContent('4 empty fields are hidden.');
     install();
     fireEvent.click(within(entries as HTMLElement).getByRole('button', { name: /retry/i }));
     await screen.findByText(ROW.actor);
@@ -343,11 +353,16 @@ describe('AuditLogPage presentation preservation', () => {
       .toEqual(['Entries shown', 'OK (in view)', 'Failed (in view)', 'Actors (in view)', 'Categories', 'Action types']);
     expect(metrics.map(metric => metric.querySelector('[data-operational-value]')?.textContent))
       .toEqual(['1', '1', '0', '1', '1', '1']);
-    expect(strip).toHaveTextContent('Current filtered page and queried catalogs');
-    expect(strip).toHaveTextContent('No full-ledger period is implied.');
-    expect(metrics[0]).toHaveTextContent('Current filtered page only; not the full ledger');
-    expect(metrics[4]).toHaveTextContent('Queried category catalog; not limited to this page');
-    expect(metrics[5]).toHaveTextContent('Queried action catalog; not limited to this page');
+    // Scope and per-metric captions moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('Current filtered page and queried catalogs');
+    expect(strip).not.toHaveTextContent('No full-ledger period is implied.');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Audit overview details' });
+    expect(details).toHaveTextContent('Current filtered page and queried catalogs');
+    expect(details).toHaveTextContent('No full-ledger period is implied.');
+    expect(details).toHaveTextContent('Current filtered page only; not the full ledger');
+    expect(details).toHaveTextContent('Queried category catalog; not limited to this page');
+    expect(details).toHaveTextContent('Queried action catalog; not limited to this page');
     expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-stat-strip]')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Verify chain' })).toBeInTheDocument();
@@ -374,7 +389,9 @@ describe('AuditLogPage presentation preservation', () => {
     await waitFor(() => expect(mockedRequest.mock.calls.filter(([path]) => path.startsWith('/admin/audit-log/verify')).length).toBeGreaterThan(1));
     await waitFor(() => expect(client.getQueryState(['admin', 'audit-log', 'verify', null, 1000])?.error).toBeInstanceOf(Error));
     expect(screen.getByText('Chain intact')).toBeInTheDocument();
-    expect(screen.getByText('operator@example.test')).toBeInTheDocument();
+    // The retained actor renders twice: the entries-table cell plus the
+    // expanded detail list — both must survive the refresh errors.
+    expect(screen.getAllByText('operator@example.test')).toHaveLength(2);
     expect(screen.getByRole('group', { name: 'Before' })).toBeInTheDocument();
     expect(screen.getByText(ROW.trace_id ?? '')).toBeInTheDocument();
   });

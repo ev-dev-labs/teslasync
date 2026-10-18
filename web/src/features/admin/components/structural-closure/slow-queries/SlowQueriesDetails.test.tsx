@@ -136,7 +136,9 @@ describe('SlowQueriesDetails full-detail mobile contract', () => {
     it('keeps independent analysis and detail shells with shared unsupported feedback for an initial 503', async () => {
       vi.mocked(request).mockRejectedValue(new ApiError('pg_stat_statements missing', 503));
       const { container } = mountAnalysis();
-      await waitFor(() => expect(container.querySelectorAll('[data-data-state="unsupported"]')).toHaveLength(3));
+      // The query retries once before surfacing the error, so allow past the
+      // default 1s waitFor budget for the unsupported shells to land.
+      await waitFor(() => expect(container.querySelectorAll('[data-data-state="unsupported"]')).toHaveLength(3), { timeout: 5000 });
       expect(screen.getByText('Top queries by Mean time')).toBeInTheDocument();
       expect(screen.getByText('Cache efficiency')).toBeInTheDocument();
       expect(screen.getByRole('region', { name: 'Top queries' })).toBeInTheDocument();
@@ -198,7 +200,13 @@ describe('SlowQueriesDetails full-detail mobile contract', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(1));
     fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
     expect(details()[0].value).toBe('fixture query 25');
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close', exact: true }));
+    // The quick view now offers both a header icon Close and a footer Close
+    // action; either dismisses the dialog.
+    const quickViewDialog = screen.getByRole('dialog');
+    const closeButtons = within(quickViewDialog).getAllByRole('button', { name: 'Close' });
+    expect(closeButtons.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(closeButtons[closeButtons.length - 1]);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }), { target: { value: '' } });
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(25));
     resize(1440);

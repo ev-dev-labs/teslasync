@@ -317,7 +317,7 @@ describe('FleetTelemetryHealth', () => {
     // Card 1 (VINs) → error-vins refresh.
     fireEvent.click(refreshButtons[0])
     await waitFor(() =>
-      expect(mockedRequest).toHaveBeenCalledWith(VINS_REFRESH_URL, { method: 'POST' }),
+      expect(mockedRequest).toHaveBeenCalledWith(VINS_REFRESH_URL, { method: 'POST', requiresLiveMode: true }),
     )
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith('Telemetry error VINs refreshed'),
@@ -326,7 +326,7 @@ describe('FleetTelemetryHealth', () => {
     // Card 2 (Errors) → errors refresh.
     fireEvent.click(refreshButtons[1])
     await waitFor(() =>
-      expect(mockedRequest).toHaveBeenCalledWith(ERRORS_REFRESH_URL, { method: 'POST' }),
+      expect(mockedRequest).toHaveBeenCalledWith(ERRORS_REFRESH_URL, { method: 'POST', requiresLiveMode: true }),
     )
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith('Telemetry errors refreshed'),

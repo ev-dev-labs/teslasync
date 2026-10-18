@@ -128,7 +128,7 @@ const ENTRY_A_SOURCE = 'telemetry/VIN1/v/Field';
 const INNER_JSON = '{"field":"VehicleSpeed"}';
 
 const entryA: DLQEntrySummary = {
-  id: 1,
+  id: '1',
   arrived_at: '2026-07-01T10:00:00.000Z',
   dlq_topic: 'dlq/telemetry',
   parsed_reason: 'unknown_enum',
@@ -144,7 +144,7 @@ const entryA: DLQEntrySummary = {
 };
 
 const entryB: DLQEntrySummary = {
-  id: 2,
+  id: '2',
   arrived_at: '2026-07-02T11:00:00.000Z',
   dlq_topic: 'dlq/telemetry',
   parsed_reason: 'kind_mismatch',
@@ -174,14 +174,14 @@ const entryBFull: DLQEntryFull = {
 const auditResponse: DLQAuditResponse = {
   count: 1,
   limit: 50,
-  dlq_id: 0,
+  dlq_id: '0',
   rows: [
     {
       id: 10,
       replayed_at: '2026-07-02T12:00:00.000Z',
       actor: 'admin@example.com',
       actor_ip: '10.0.0.1',
-      dlq_id: 1,
+      dlq_id: '1',
       src_topic: ENTRY_A_SOURCE,
       dst_topic: ENTRY_A_SOURCE,
       payload: 'x',
@@ -195,7 +195,7 @@ const auditResponse: DLQAuditResponse = {
 
 const replayOk: DLQReplayResponse = {
   ok: true,
-  replayed_id: 1,
+  replayed_id: '1',
   dst_topic: ENTRY_A_SOURCE,
   result: 'ok',
   audit_id: 10,
@@ -287,9 +287,16 @@ describe('DLQInspectorPage — bento surface', () => {
     expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
     const payload = strip.querySelector('[data-operational-metric="payload"]');
     expect(payload).toHaveTextContent(formatBytes(2948));
+    // Captions live in the Review-details drawer, never on the face.
     for (const caption of ['in dead-letter queue', 'parsed with source topic', 'no replay target',
       'unique failure causes', 'raw bytes queued', 'DLQ_REPLAY_ENABLED env']) {
-      expect(strip).toHaveTextContent(caption);
+      expect(strip).not.toHaveTextContent(caption);
+    }
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Dead-letter queue summary details' });
+    for (const caption of ['in dead-letter queue', 'parsed with source topic', 'no replay target',
+      'unique failure causes', 'raw bytes queued', 'DLQ_REPLAY_ENABLED env']) {
+      expect(drawer).toHaveTextContent(caption);
     }
     expect(screen.getByText('Recent replay activity')).toBeInTheDocument();
     expect(screen.getByText('Failure reasons')).toBeInTheDocument();

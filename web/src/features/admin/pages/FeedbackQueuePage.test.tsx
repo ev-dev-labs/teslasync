@@ -26,6 +26,7 @@ import type { FeedbackEntry } from '@/api/types'
 import type { FeedbackListParams } from '@/api/hooks/useFeedback'
 import * as apiClient from '@/api/client'
 import type { OperationalModeContextValue } from '@/hooks/useOperationalMode'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => operationalMode,
@@ -458,9 +459,12 @@ describe('FeedbackQueuePage', () => {
     const summary = screen.getByTestId('feedback-queue-summary')
     expect(summary).toHaveAttribute('data-operational-brief')
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
-    expect(summary).toHaveTextContent('unaffected by the table filters')
+    // Scope moved from the face to the Review-details drawer.
+    expect(summary).not.toHaveTextContent('unaffected by the table filters')
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
-    expect(screen.getByRole('dialog')).toHaveTextContent('independent status and category queries')
+    const drawer = screen.getByRole('dialog')
+    expect(drawer).toHaveTextContent('unaffected by the table filters')
+    expect(drawer).toHaveTextContent('independent status and category queries')
     expect(screen.getByText('Queue')).toBeInTheDocument()
   })
 
@@ -960,10 +964,14 @@ describe('FeedbackQueuePage', () => {
   it('retains known status counts without inventing an unknown total or denominator after a partial first load', () => {
     configure({ counts: { new: { total: undefined, error: new Error('counts down') } } })
     renderPage()
-    const totalTile = screen.getByText('Total feedback').closest('[data-operational-metric]')
-    if (!totalTile) throw new Error('Missing total feedback identity')
-    expect(within(totalTile).getByText('—')).toBeInTheDocument()
-    expect(within(totalTile).queryByText('5')).toBeNull()
+    // The unknown total is omitted from the face (never dashed, never a
+    // partial sum), as is the failed 'new' count it depends on; both are
+    // counted as hidden in the drawer.
+    const summary = screen.getByTestId('feedback-queue-summary')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
+    assertOperationalMetricUnavailable(summary, 'Total feedback')
+    assertOperationalMetricUnavailable(summary, 'New')
+    expect(within(summary).queryByText('5')).toBeNull()
     expect(screen.queryByRole('img', { name: /Status distribution:/ })).toBeNull()
     const triageCard = screen.getByRole('heading', { name: 'Triage progress' }).closest('[data-card]')
     if (!triageCard) throw new Error('Missing triage panel')

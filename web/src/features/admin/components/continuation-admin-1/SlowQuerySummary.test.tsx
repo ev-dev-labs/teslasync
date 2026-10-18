@@ -41,10 +41,16 @@ describe('SlowQuerySummary canonical preservation', () => {
     setGlobalPrecision(2);
     setGlobalLocale('en-US');
     const { rerender } = render(<SlowQuerySummary {...props} known={false} />);
-    expect(screen.getByTestId('slow-queries-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Query performance summary details' }))
+      .toHaveTextContent('6 empty fields are hidden.');
     rerender(<SlowQuerySummary {...props} count={0}
       totals={{ calls: 0, totalMs: 0, maxMean: 0, maxPeak: 0, cacheRatio: null }} />);
-    expect(values()).toEqual(['0', '0', '0.00 ms', '0.00 ms', '0.00 ms', '—']);
+    expect(values()).toEqual(['0', '0', '0.00 ms', '0.00 ms', '0.00 ms']);
+    expect(screen.getByTestId('slow-queries-summary').querySelector('[data-operational-metric="cache-hit-ratio"]')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Query performance summary details' }))
+      .toHaveTextContent('1 empty fields are hidden.');
   });
 
   it('preserves the exact one-second promotion boundary and source count compactness', () => {

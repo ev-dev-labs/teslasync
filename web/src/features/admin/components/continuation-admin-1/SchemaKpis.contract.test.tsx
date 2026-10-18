@@ -102,8 +102,13 @@ describe('SchemaKpis source and details parity', () => {
     const unavailable: SchemaDrift = { ...drift, table_count_delta: Number.NaN,
       column_count_delta: Number.NaN, index_count_delta: Number.NaN, expected_generated_at: '' };
     render(<SchemaKpis state={{ ...state, drift: unavailable }} isDrifted />);
-    expect(values()).toEqual(['Drift detected', '—', '—', '—']);
+    expect(values()).toEqual(['Drift detected']);
+    const strip = screen.getByTestId('schema-drift-summary');
+    expect(strip.querySelector('[data-operational-metric="schema-tables-delta"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="schema-columns-delta"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="schema-indexes-delta"]')).toBeNull();
     const drawer = openDetails();
+    expect(drawer).toHaveTextContent('3 empty fields are hidden.');
     expect(field(drawer, 'What changed')).toBe(unknownChange);
     expect(field(drawer, 'Recommended response')).toBe(response);
     expect(drawer).not.toHaveTextContent('No current attention items.');
@@ -115,8 +120,10 @@ describe('SchemaKpis source and details parity', () => {
 
   it('reports missing evidence in Attention instead of inventing a clean verdict', () => {
     render(<SchemaKpis state={{ ...state, drift: null }} isDrifted={false} />);
-    expect(values()).toEqual(['—', '—', '—', '—']);
+    expect(values()).toEqual([]);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
     const drawer = openDetails();
+    expect(drawer).toHaveTextContent('4 empty fields are hidden.');
     expect(field(drawer, 'What changed')).toBe(missingChange);
     expect(field(drawer, 'Recommended response')).toBe(missingChange);
     expect(drawer).toHaveTextContent('Not measured');

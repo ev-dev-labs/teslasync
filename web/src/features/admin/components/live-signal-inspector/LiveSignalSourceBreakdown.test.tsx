@@ -107,9 +107,20 @@ function renderBreakdown(overrides: Partial<RenderProps> = {}) {
   return { ...utils, props };
 }
 
-/** The stat card wrapping a given human label ('Live · L1', 'Stale', …). */
+/** The stat card for a given human label ('Live · L1', 'Stale', …), anchored on
+ *  its badge's `data-source` — badge freshness labels ('Unknown' on the L2
+ *  card) no longer match the card captions one-to-one. */
+const SOURCE_BY_LABEL: Record<string, string> = {
+  'Live · L1': 'l1',
+  'Stale': 'stale',
+  'Legacy · L2': 'l2',
+  'Unknown': 'unknown',
+};
 function cardByLabel(label: string): HTMLElement {
-  const el = screen.getAllByText(label).map((element) => element.closest('div.rounded-lg')).find(Boolean);
+  const badge = screen
+    .getAllByTestId('source-layer-badge')
+    .find((element) => element.getAttribute('data-source') === SOURCE_BY_LABEL[label]);
+  const el = badge?.closest('div.rounded-lg');
   if (!el) throw new Error(`no card container for label "${label}"`);
   return el as HTMLElement;
 }

@@ -250,10 +250,13 @@ describe('SystemPage independent retained feeds', () => {
     await screen.findByTestId('queue-rows')
     installRouter({ rate: () => Promise.reject(new Error('rate unavailable')), queue: () => Promise.reject(new Error('queue unavailable')) })
     await client.invalidateQueries()
-    await waitFor(() => expect(screen.getByTestId('system-operational-brief')).toHaveTextContent('Retained evidence'))
-    expect(within(screen.getByTestId('system-operational-brief')).getByText('2 / 3')).toBeInTheDocument()
+    // Retained values stay on the face while the retained status moved to the drawer.
+    const brief = screen.getByTestId('system-operational-brief')
+    expect(within(brief).getByText('2 / 3')).toBeInTheDocument()
+    expect(brief).not.toHaveTextContent('Retained evidence')
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
     const drawer = screen.getByRole('dialog')
+    await waitFor(() => expect(drawer).toHaveTextContent('Retained evidence'))
     expect(within(drawer).getByText('Active workers')).toBeInTheDocument()
     expect(within(drawer).getByText('49')).toBeInTheDocument()
     expect(within(drawer).getAllByText(/terminally failed jobs cover the last 24 hours/).length).toBeGreaterThan(0)
@@ -434,8 +437,14 @@ describe('SystemPage', () => {
     })
 
     // Overview never disappears — it collapses to a zeroed / "no budgets" band.
-    expect(screen.getByTestId('system-overview')).toBeInTheDocument()
-    expect(screen.getByText('No active budgets')).toBeInTheDocument()
+    const overview = screen.getByTestId('system-overview')
+    expect(overview).toBeInTheDocument()
+    expect(overview.querySelector('[data-operational-metric="system-budgets"] [data-operational-value]')).toHaveTextContent('0')
+    // The "no budgets" hint moved from the face to the Review-details drawer.
+    expect(overview).not.toHaveTextContent('No active budgets')
+    fireEvent.click(within(overview).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog', { name: 'Budgets and worker posture details' }))
+      .toHaveTextContent('No active budgets')
   })
 
   it('sets the document title via usePageTitle', async () => {

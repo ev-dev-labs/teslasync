@@ -211,6 +211,11 @@ function metricValue(label: string): string {
   return labelEl?.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
+/** The Value editor inside the open flag drawer (the registry table also labels a column "Value"). */
+function drawerValueEditor(): HTMLElement {
+  return within(screen.getByRole('dialog')).getByLabelText(/^Value$/i);
+}
+
 /** The `<tr>` in the registry table that owns the given flag key. */
 function registryRow(key: string): HTMLElement {
   const cell = screen
@@ -297,7 +302,7 @@ describe('FeatureFlagsPage', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
-    fireEvent.change(screen.getByLabelText(/^Value$/i), {
+    fireEvent.change(drawerValueEditor(), {
       target: { value: '{"enabled":true}' },
     });
     fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
@@ -330,7 +335,7 @@ describe('FeatureFlagsPage', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
-    fireEvent.change(screen.getByLabelText(/^Value$/i), {
+    fireEvent.change(drawerValueEditor(), {
       target: { value: 'false' },
     });
     fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
@@ -362,7 +367,7 @@ describe('FeatureFlagsPage', () => {
       fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
         target: { value: 'feature.pending' },
       });
-      fireEvent.change(screen.getByLabelText(/^Value$/i), {
+      fireEvent.change(drawerValueEditor(), {
         target: { value: '  false  ' },
       });
       fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
@@ -424,7 +429,7 @@ describe('FeatureFlagsPage', () => {
     expect(keyInput).toBeDisabled();
     expect(keyInput).toHaveValue('ui.new_dashboard');
     // The stored text is seeded without adding JSON quotes.
-    expect(screen.getByLabelText(/^Value$/i)).toHaveValue('false');
+    expect(drawerValueEditor()).toHaveValue('false');
   });
 
   it('gates the delete confirm on a reason then forwards { key, reason } to deleteFlag', async () => {
@@ -611,9 +616,15 @@ describe('FeatureFlagsPage', () => {
     renderPage();
     expect(metricValue('Total flags')).toBe('5');
     expect(metricValue('Boolean toggles')).toBe('0');
-    expect(metricValue('Recent changes')).toBe('—');
-    expect(metricValue('Deletes')).toBe('—');
-    expect(metricValue('Contributors')).toBe('—');
+    const summary = screen.getByTestId('feature-flags-summary');
+    // Unknown audit counts are omitted from the face (never zero-filled)...
+    expect(summary.querySelector('[data-operational-metric="changes"]')).toBeNull();
+    expect(summary.querySelector('[data-operational-metric="deletes"]')).toBeNull();
+    expect(summary.querySelector('[data-operational-metric="actors"]')).toBeNull();
+    // ...and counted as hidden in the Review-details drawer.
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Registry and recent changes details' }))
+      .toHaveTextContent('3 empty fields are hidden.');
     expect(screen.getAllByRole('button', { name: /Edit flag/ })).toHaveLength(5);
   });
 

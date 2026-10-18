@@ -100,8 +100,10 @@ describe('useSlowQueriesPage measured maxima', () => {
       row({ mean_time_ms: null, max_time_ms: Number.NaN }),
     ];
     const { result, query } = renderRows(rows);
+    // Rows 2–3 lack shared-buffer counters, so the across-queries cache total
+    // requires complete evidence and stays null (see the cache-evidence contract).
     expect(result.current.totals).toEqual({
-      calls: 6, totalMs: 30, rowsReturned: 8, cacheRatio: 75,
+      calls: 6, totalMs: 30, rowsReturned: 8, cacheRatio: null,
       maxMean: -2.75, maxPeak: -1.25,
     });
     expect(result.current.rows).toBe(rows);

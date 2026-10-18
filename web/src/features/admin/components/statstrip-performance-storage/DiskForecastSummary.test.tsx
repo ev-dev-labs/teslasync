@@ -42,11 +42,16 @@ describe('DiskForecastSummary canonical preservation', () => {
     const strip = screen.getByTestId('disk-forecast-summary');
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(strip.querySelector('[data-operational-metric="soonest-quota"]')).toHaveAttribute('data-value-state', 'value');
-    expect(strip).toHaveTextContent('Compressed chunks only; not a share of current disk usage.');
+    // Compression basis and full identities moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('Compressed chunks only; not a share of current disk usage.');
     expect(strip).toHaveTextContent('Before compression');
     expect(strip).toHaveTextContent('After compression');
     expect(strip).not.toHaveTextContent('% of total');
-    expect(screen.getAllByText(largest.hypertable_name)).toHaveLength(2);
+    expect(screen.queryByText(largest.hypertable_name)).not.toBeInTheDocument();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Fleet disk summary details' });
+    expect(within(drawer).getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2);
+    expect(within(drawer).getAllByText(largest.hypertable_name)).toHaveLength(2);
     act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
     expect(values()).toEqual(['4,500 GB', '3,000 GB', '1,500 GB', '150,000 MB/d', '3,000 GB', '5,000 d']);
     expect(largest.total_bytes).toBe(3 * GB);
@@ -55,11 +60,18 @@ describe('DiskForecastSummary canonical preservation', () => {
 
   it('distinguishes missing evidence from measured zero, including a zero-day quota estimate', () => {
     const { rerender } = render(<DiskForecastSummary {...props} known={false} largest={null} soonest={null} />);
-    expect(screen.getByTestId('disk-forecast-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Fleet disk summary details' }))
+      .toHaveTextContent('6 empty fields are hidden.');
     rerender(<DiskForecastSummary {...props} totals={{ total: 0, uncompressed: 0, compressed: 0, growth: 0 }}
       count={0} largest={null} soonest={null} />);
     expect(values().slice(0, 4)).toEqual(['0 B', '0 B', '0 B', '0 B/d']);
-    expect(values().slice(4)).toEqual(['—', '—']);
+    expect(values()).toHaveLength(4);
+    expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="largest-table"]')).toBeNull();
+    expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="soonest-quota"]')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Fleet disk summary details' }))
+      .toHaveTextContent('2 empty fields are hidden.');
     rerender(<DiskForecastSummary {...props} soonest={{ ...largest, est_days_to_quota: 0 }} />);
     expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="soonest-quota"]'))
       .toHaveAttribute('data-value-state', 'value');
@@ -73,7 +85,10 @@ describe('DiskForecastSummary canonical preservation', () => {
     expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
     rerender(<DiskForecastSummary {...props} known={false} largest={null} soonest={null}
       error={new Error('source failure')} onRetry={onRetry} />);
-    expect(strip.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Fleet disk summary details' }))
+      .toHaveTextContent('6 empty fields are hidden.');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
@@ -106,11 +121,15 @@ describe('DiskForecastSummary canonical preservation', () => {
 
   it('does not equate a missing estimate with an absent quota', () => {
     render(<DiskForecastSummary {...props} soonest={null} />);
-    expect(screen.getByText('No quota estimate available')).toBeInTheDocument();
+    // The missing estimate omits the tile (never a zero-day reading)...
+    expect(values()).toEqual(['4.50 GB', '3.00 GB', '1.50 GB', '150.00 MB/d', '3.00 GB']);
+    const strip = screen.getByTestId('disk-forecast-summary');
+    expect(strip.querySelector('[data-operational-metric="soonest-quota"]')).toBeNull();
+    // ...and a missing estimate never claims the quota itself is absent.
     expect(screen.queryByText('No quota configured')).not.toBeInTheDocument();
-    expect(values()).toEqual(['4.50 GB', '3.00 GB', '1.50 GB', '150.00 MB/d', '3.00 GB', '—']);
-    expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="soonest-quota"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Fleet disk summary details' }))
+      .toHaveTextContent('1 empty fields are hidden.');
   });
 
   it('keeps producer before/after measurements independent of the current total', () => {
@@ -119,7 +138,12 @@ describe('DiskForecastSummary canonical preservation', () => {
     render(<DiskForecastSummary {...props}
       totals={{ total: 10 * MB, uncompressed: 100 * MB, compressed: 10 * MB, growth: 0 }} />);
     expect(values().slice(0, 4)).toEqual(['10.00 MB', '100.00 MB', '10.00 MB', '0 B/d']);
-    expect(screen.getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2);
+    // Compression basis moved from the face to the Review-details drawer.
+    expect(screen.queryByText('Compressed chunks only; not a share of current disk usage.')).not.toBeInTheDocument();
     expect(screen.queryByText(/% of total/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Fleet disk summary details' });
+    expect(within(drawer).getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2);
+    expect(within(drawer).queryByText(/% of total/)).not.toBeInTheDocument();
   });
 });

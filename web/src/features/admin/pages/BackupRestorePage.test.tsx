@@ -308,14 +308,20 @@ async function waitForLoaded({
 } = {}) {
   await waitFor(() => {
     const summary = screen.getByTestId('backup-restore-summary');
-    expect(summary.querySelector('[data-operational-metric="configs"]')).toHaveAttribute('data-value-state', configs);
-    expect(summary.querySelector('[data-operational-metric="backups"]')).toHaveAttribute('data-value-state', backups);
+    const configsTile = summary.querySelector('[data-operational-metric="configs"]');
+    const backupsTile = summary.querySelector('[data-operational-metric="backups"]');
+    if (configs === 'missing') expect(configsTile).toBeNull();
+    else expect(configsTile).toHaveAttribute('data-value-state', 'value');
+    if (backups === 'missing') expect(backupsTile).toBeNull();
+    else expect(backupsTile).toHaveAttribute('data-value-state', 'value');
     if (configs === 'missing' || backups === 'missing') {
       expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeInTheDocument();
     }
   });
-  expect(screen.getByText('Total configs')).toBeInTheDocument();
-  expect(screen.getByText('Total backups')).toBeInTheDocument();
+  if (configs === 'value') expect(screen.getByText('Total configs')).toBeInTheDocument();
+  else expect(screen.queryByText('Total configs')).not.toBeInTheDocument();
+  if (backups === 'value') expect(screen.getByText('Total backups')).toBeInTheDocument();
+  else expect(screen.queryByText('Total backups')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -335,9 +341,11 @@ describe('BackupRestorePage — data rendering', () => {
     expect(summary).toHaveAttribute('data-operational-brief');
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(summary.querySelector('[data-operational-metric="size"]')).toHaveAttribute('data-value-state', 'value');
-    expect(summary).toHaveTextContent('not a server-wide total');
+    expect(summary).not.toHaveTextContent('not a server-wide total');
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('returned run list');
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('returned run list');
+    expect(drawer).toHaveTextContent('not a server-wide total');
     expect(screen.getByRole('button', { name: 'Quick backup' })).toBeInTheDocument();
     expect(screen.getByText('Backup history')).toBeInTheDocument();
     expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
@@ -457,7 +465,16 @@ describe('BackupRestorePage — data rendering', () => {
     await waitForLoaded({ configs: 'value', backups: 'missing' });
     const band = screen.getByRole('region', { name: 'Backup overview' });
     expect(within(band).getByText('2')).toBeInTheDocument();
-    expect(within(band).getAllByText('—')).toHaveLength(5);
+    // Failed run-source metrics are omitted from the face (never dashed
+    // placeholders or zero-filled) and disclosed in the drawer instead.
+    expect(within(band).queryByText('—')).not.toBeInTheDocument();
+    const summary = screen.getByTestId('backup-restore-summary');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    for (const id of ['backups', 'success', 'failed', 'last', 'size']) {
+      expect(summary.querySelector(`[data-operational-metric="${id}"]`)).toBeNull();
+    }
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('5 empty fields are hidden.');
     expect(screen.getByText('Nightly Full')).toBeInTheDocument();
     expect(screen.queryByText('0 B')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New config' })).toBeInTheDocument();
@@ -555,6 +572,14 @@ describe('BackupRestorePage — actions & mutations', () => {
     expect(nameInput.value).toBe('Nightly Full');
 
     fireEvent.change(nameInput, { target: { value: 'Nightly Full v2' } });
+    // The s3 provider requires credential fields the stored row predates;
+    // fill them so the form validates like a real user edit.
+    fireEvent.change(within(dialog).getByLabelText(/Access key/), {
+      target: { value: 'AKIAEXAMPLE' },
+    });
+    fireEvent.change(within(dialog).getByLabelText(/Secret key/), {
+      target: { value: 'secret-example' },
+    });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() =>
@@ -625,7 +650,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     openSpy.mockRestore();
   });
 
-  it('verify tolerates a 204/empty body and reports a checksum mismatch', async () => {
+  it('verify tolerates a 204/empty body and reports Unknown', async () => {
     // 204 No Content → request() resolves undefined. The handler must not crash.
     configureRoutes({ verify: null });
     installRouter();
@@ -641,7 +666,9 @@ describe('BackupRestorePage — actions & mutations', () => {
         expect.objectContaining({ method: 'POST' }),
       ),
     );
-    expect(await screen.findByText('Checksum mismatch')).toBeInTheDocument();
+    // An empty body is honest-unknown: neither a mismatch nor verified.
+    expect(await screen.findByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Checksum mismatch')).not.toBeInTheDocument();
     expect(screen.queryByText('Checksum verified')).not.toBeInTheDocument();
   });
 
@@ -677,7 +704,7 @@ describe('BackupRestorePage — restore preview', () => {
     expect(within(dialog).getByText('drives')).toBeInTheDocument();
   });
 
-  it('handles an empty manifest and a failed checksum', async () => {
+  it('handles an empty manifest and an unverified checksum', async () => {
     configureRoutes({
       preview: { tables: [], metadata: null, checksum_verified: false },
     });
@@ -689,7 +716,8 @@ describe('BackupRestorePage — restore preview', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Preview' })[0]);
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Checksum verification failed')).toBeInTheDocument();
+    // An unverified checksum is honest-unknown, not a failure claim.
+    expect(within(dialog).getByText('Unknown')).toBeInTheDocument();
     expect(within(dialog).getByText('No tables found in backup')).toBeInTheDocument();
   });
 
@@ -755,7 +783,7 @@ describe('BackupRestorePage — phase five preservation', () => {
     await waitForLoaded();
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByLabelText('Max retention')).toHaveValue(19);
+    expect(within(dialog).getByRole('spinbutton', { name: 'Max retention required' })).toHaveValue(19);
     expect(within(dialog).getByLabelText('Name')).toHaveAttribute('required');
     expect(within(dialog).getByLabelText(/Path/)).toHaveAttribute('id', 'backup-provider-path');
     expect(within(dialog).getByLabelText(/Path/)).toHaveAttribute('required');

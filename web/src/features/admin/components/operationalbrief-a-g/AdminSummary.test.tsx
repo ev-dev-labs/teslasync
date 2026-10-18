@@ -36,8 +36,10 @@ describe('admin operational summary bridge', () => {
     const { container } = render(<MemoryRouter><AdminSummary {...props} metrics={metrics} /></MemoryRouter>);
     expect(container.querySelector('[data-operational-metric="zero"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-operational-metric="zero"] [data-operational-value]')).toHaveTextContent('0');
-    expect(container.querySelector('[data-operational-metric="missing"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(container.querySelector('[data-operational-metric="invalid"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(container.querySelector('[data-operational-metric="missing"]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="invalid"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 empty fields are hidden.');
     expect(metrics[0].rawValue).toBe(0);
     expect(metrics[2].rawValue).toBeNaN();
   });
@@ -50,7 +52,9 @@ describe('admin operational summary bridge', () => {
     }];
     const { container } = render(<MemoryRouter><AdminSummary {...props} metrics={metrics} /></MemoryRouter>);
     expect(container.querySelector('[data-operational-value]')).toHaveTextContent('1,499 ms');
-    expect(screen.getByText('Saved browser request history only')).toBeInTheDocument();
+    expect(screen.queryByText('Saved browser request history only')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Saved browser request history only');
     expect(metrics[0].rawValue).toBe(1.499);
   });
 
@@ -74,8 +78,10 @@ describe('admin operational summary bridge', () => {
     expect(screen.getByText('Configs')).toBeInTheDocument();
     expect(container.querySelector('[data-operational-value]')).toBeNull();
     rerender(<MemoryRouter><AdminSummary {...props} metrics={metrics} sourceStatus="stale" /></MemoryRouter>);
-    expect(screen.getByTestId('summary')).toHaveTextContent('Retained measurements');
+    expect(screen.getByTestId('summary')).not.toHaveTextContent('Retained measurements');
     expect(container.querySelector('[data-operational-value]')).toHaveTextContent('3');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Retained measurements');
   });
 
   it('opens the real review drawer with scope, provenance and full metric context preserved', () => {
@@ -85,8 +91,9 @@ describe('admin operational summary bridge', () => {
     }];
     render(<MemoryRouter><AdminSummary {...props} metrics={metrics} /></MemoryRouter>);
     expect(screen.getByTestId('summary')).toHaveAttribute('data-operational-brief');
-    expect(screen.getByText(props.scope)).toBeInTheDocument();
+    expect(screen.queryByText(props.scope)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(props.scope);
     expect(screen.getByRole('dialog')).toHaveTextContent('Not the complete server archive');
     expect(screen.getByRole('dialog')).toHaveTextContent(props.description);
     expect(screen.getByTestId('summary')).toBeInTheDocument();

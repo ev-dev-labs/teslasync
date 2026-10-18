@@ -34,7 +34,7 @@ describe('playground extracted preservation model', () => {
     });
     expect(endpoints.map(endpoint => `${endpoint.tag}:${endpoint.method}`)).toEqual(['Alerts:DELETE', 'Vehicles:GET', 'Vehicles:PATCH']);
     const patch = endpoints[2];
-    expect(patch.parameters).toEqual([{ name: 'vehicleID', in: 'path', required: true, type: 'integer', description: 'Full identity', default: '42' }]);
+    expect(patch.parameters).toEqual([{ name: 'vehicleID', in: 'path', required: true, type: 'integer', description: 'Full identity', default: '42', schema: { type: 'integer', default: 42 } }]);
     expect(patch.requestBody?.example).toEqual({ nested: { retained: true } });
     expect(patch.responses['202'].description).toBe('Accepted without truncation');
     expect(patch.operationId).toBe('update');

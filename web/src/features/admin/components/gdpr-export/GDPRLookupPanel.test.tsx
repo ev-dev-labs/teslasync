@@ -76,8 +76,8 @@ describe('GDPRLookupPanel — structure', () => {
     expect(input).toBeInTheDocument();
     expect(input).toHaveAttribute('placeholder', 'e.g. 8f4c…');
     expect(button).toBeInTheDocument();
-    expect(screen.getByText(/IDs come from the GDPR export queue/i)).toBeInTheDocument();
-    expect(screen.getByText(/Bundles are streamed straight from the backend/i)).toBeInTheDocument();
+    expect(screen.getByText(/Enter an artifact ID to look up its saved metadata/i)).toBeInTheDocument();
+    expect(screen.getByText(/they do not create exports or download bundles/i)).toBeInTheDocument();
   });
 
   it('reflects the idInput prop as the input value', () => {

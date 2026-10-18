@@ -228,31 +228,39 @@ describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => 
       screen.queryByText('No signals cached for this vehicle'),
     ).toBeNull();
 
-    // Stat cards must show the placeholder, not "0", so the operator
+    // The summary must show the empty face, not "0", so the operator
     // doesn't see a fake "0 Total Signals" reading on a failed request.
-    await waitFor(() => {
-      const labelEl = screen.getByText('Total signals');
-      // Walk up to the StatCard root and inspect its rendered value text.
-      const card = labelEl.closest('div')?.parentElement?.parentElement;
-      expect(card?.textContent).toContain('—');
-    });
+    const strip = screen.getByTestId('redis-signals-operational-brief');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(strip).getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Cache metrics details' }))
+      .toHaveTextContent('6 empty fields are hidden.');
   });
 
   it('retains structured raw values through the real Redis query hook', async () => {
       const value = { active: false, samples: [0, null, 'fixture'] };
-      mockedGetSignals.mockResolvedValue({
-        vehicle_id: 1,
-        signal_count: 1,
-        signals: { DiagnosticCompound: { value, type: 'string', source: 'redis' } },
-      });
-      renderPage();
-      fireEvent.change(screen.getByLabelText('Select vehicle'), { target: { value: '1' } });
+      // jsdom needs viewport dimensions for the real virtualized signal table.
+      const heightSpy = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+      const widthSpy = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(1024);
+      try {
+        mockedGetSignals.mockResolvedValue({
+          vehicle_id: 1,
+          signal_count: 1,
+          signals: { DiagnosticCompound: { value, type: 'string', source: 'redis' } },
+        });
+        renderPage();
+        fireEvent.change(screen.getByLabelText('Select vehicle'), { target: { value: '1' } });
 
-      const name = await screen.findByText('DiagnosticCompound');
-      const row = name.closest('tr');
-      expect(row?.querySelector('code')?.textContent).toBe(JSON.stringify(value, null, 2));
-      expect(row).toHaveTextContent('string');
-      expect(mockedGetSignals).toHaveBeenCalledWith(1, { signal: expect.any(AbortSignal) });
+        const name = await screen.findByText('DiagnosticCompound');
+        const row = name.closest('tr');
+        expect(row?.querySelector('code')?.textContent).toBe(JSON.stringify(value, null, 2));
+        expect(row).toHaveTextContent('string');
+        expect(mockedGetSignals).toHaveBeenCalledWith(1, { signal: expect.any(AbortSignal) });
+      } finally {
+        heightSpy.mockRestore();
+        widthSpy.mockRestore();
+      }
   });
 });
 
@@ -395,3 +403,4 @@ describe('RedisSignalViewerPage — Purge cache controls', () => {
     );
   });
 });
+

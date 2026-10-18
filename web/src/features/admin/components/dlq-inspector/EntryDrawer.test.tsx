@@ -266,7 +266,10 @@ describe('EntryDrawer — metadata + payload', () => {
     await screen.findByRole('dialog', { name: /DLQ entry #1/ });
 
     const panel = screen.getByRole('tabpanel');
-    expect(panel).toHaveTextContent(/non-UTF-8 binary, 512 bytes/);
+    // The marker reports measured decoded bytes (4), not the summary's
+    // server-claimed inner_payload_size (512) — the fixture intentionally
+    // disagrees so the marker can't pass off a stale claim as measured.
+    expect(panel).toHaveTextContent(/non-UTF-8 binary, 4 bytes/);
     expect(panel).not.toHaveTextContent(INNER_JSON);
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
@@ -366,12 +369,13 @@ describe('EntryDrawer — dismissal + degradation', () => {
     // Header still populated from the summary row.
     expect(within(dialog).getByText(VIN)).toBeInTheDocument();
 
-    // No decoded body available → the size marker keeps the viewer non-blank.
-    const panel = screen.getByRole('tabpanel');
-    expect(panel).toHaveTextContent(/non-UTF-8 binary, 512 bytes/);
-
-    // With no base64 to hand over, Copy still resolves to a stable empty string.
-    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(''));
+    // No full blob → the viewer keeps its loading skeleton (never a blank
+    // panel, never summary bytes passed off as loaded detail).
+    expect(within(dialog).getByRole('status', { name: /Loading payload/i })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('tabpanel')).toBeNull();
+    // With no payload to hand over there is no Copy target, and Replay stays
+    // disabled until decodable bytes arrive.
+    expect(within(dialog).queryByRole('button', { name: 'Copy' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Replay' })).toBeDisabled();
   });
 });

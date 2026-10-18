@@ -62,14 +62,19 @@ describe('coverage shared OperationalBrief contract', () => {
     expect(strip).toHaveAttribute('data-operational-brief');
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(strip.querySelector('[data-operational-metric="coverage"] [data-operational-value]')).toHaveTextContent('50');
-    expect(screen.getByText('1 subscribed / 2 routed fields')).toBeInTheDocument();
+    expect(screen.queryByText('1 subscribed / 2 routed fields')).not.toBeInTheDocument();
     expect(screen.getByText(/not per-vehicle telemetry/)).toBeInTheDocument();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Fleet telemetry coverage details' });
+    expect(within(drawer).getByText('1 subscribed / 2 routed fields')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not per-vehicle telemetry/)).toBeInTheDocument();
     rerender(<MemoryRouter><CoverageOperationalBrief query={{ data: coverage, error: new Error('snapshot refresh failed') }} /></MemoryRouter>);
     expect(strip.closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
     expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
     expect(screen.getByRole('alert')).toHaveTextContent('snapshot refresh failed');
     rerender(<MemoryRouter><CoverageOperationalBrief query={{ error: new Error('initial failure') }} /></MemoryRouter>);
-    expect(strip.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.');
   });
 
   it('opens the shared review drawer with the coverage denominator and package provenance', async () => {
@@ -103,8 +108,15 @@ describe('feature flags shared OperationalBrief contract', () => {
       changes={{ error: new Error('audit unavailable'), refetch: retry }} /></MemoryRouter>);
     const strip = screen.getByTestId('feature-flags-summary');
     expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
-    expect(strip.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
-    expect(strip).toHaveTextContent('limit 50');
+    expect(strip.querySelector('[data-operational-metric="changes"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="deletes"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="actors"]')).toBeNull();
+    // The failed audit feed omits its tiles, so the audit-subset limitation
+    // has no drawer group to live in either.
+    expect(strip).not.toHaveTextContent('limit 50');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Registry and recent changes details' }))
+      .toHaveTextContent('3 empty fields are hidden.');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
   });

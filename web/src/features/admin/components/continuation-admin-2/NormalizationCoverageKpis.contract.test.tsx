@@ -1,6 +1,6 @@
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 import { NormalizationCoverageKpis } from './NormalizationCoverageKpis';
@@ -16,14 +16,14 @@ describe('NormalizationCoverageKpis actual refresh contract', () => {
   it('shows actual refreshing instead of loaded while keeping measured zero and every metric', () => {
     const { rerender } = render(<MemoryRouter><NormalizationCoverageKpis {...BASE} isRefreshing retained /></MemoryRouter>);
     const brief = screen.getByTestId('normalization-coverage-summary');
-    expect(brief).toHaveTextContent('Refreshing source');
+    assertOperationalBriefDisclosure(brief, 'Refreshing source');
     expect(brief).not.toHaveTextContent('Source loaded');
     expect(brief).not.toHaveAttribute('aria-busy', 'true');
     expect(screen.getByText('Showing retained measurements')).toBeInTheDocument();
     expect(brief.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
     expect(brief.querySelector('[data-operational-metric="normalization-coverage"]')).toHaveTextContent('0.00%');
     rerender(<MemoryRouter><NormalizationCoverageKpis {...BASE} isRefreshing={false} /></MemoryRouter>);
-    expect(brief).toHaveTextContent('Source loaded');
+    assertOperationalBriefDisclosure(brief, 'Source loaded');
     expect(brief).not.toHaveTextContent('Refreshing source');
     expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument();
   });
@@ -41,12 +41,13 @@ describe('NormalizationCoverageKpis actual refresh contract', () => {
       normalization={{ required_version: 1, total_sample_count: 0, versioned_sample_count: 0,
         unversioned_sample_count: 0, coverage_pct: null, coverage_state: 'unknown', versions: [] }} /></MemoryRouter>);
     const brief = screen.getByTestId('normalization-coverage-summary');
-    expect(brief).toHaveTextContent('Refreshing source');
+    assertOperationalBriefDisclosure(brief, 'Refreshing source');
     const coverage = brief.querySelector('[data-operational-metric="normalization-coverage"]');
-    expect(coverage).toHaveAttribute('data-value-state', 'missing');
-    expect(coverage).toHaveTextContent('Unknown');
-    expect(coverage).not.toHaveTextContent('0.00%');
+    expect(coverage).toBeNull();
+    expect(brief).not.toHaveTextContent('0.00%');
     expect(brief.querySelector('[data-operational-metric="normalization-total"]')).toHaveTextContent('0');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 empty field is hidden.');
   });
 
   it('keeps initial loading distinct from refreshing when no measurement has arrived', () => {

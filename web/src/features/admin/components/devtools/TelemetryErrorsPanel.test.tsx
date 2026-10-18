@@ -271,7 +271,9 @@ describe('TelemetryErrorsPanel', () => {
     renderPanel({ errors: [], ok: false, rawData: null })
 
     expect(screen.getByText('?')).toBeInTheDocument()
-    expect(screen.getByText(EMPTY)).toBeInTheDocument()
+    // An unrecognized shape no longer masquerades as the healthy empty state.
+    expect(screen.getByText('Fleet Telemetry error status is unknown: the response format was not recognized.')).toBeInTheDocument()
+    expect(screen.queryByText(EMPTY)).toBeNull()
     expect(screen.queryByText(RAW_LABEL)).toBeNull()
     expect(document.querySelector('details')).toBeNull()
   })

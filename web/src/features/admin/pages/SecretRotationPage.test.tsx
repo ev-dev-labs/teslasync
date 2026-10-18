@@ -8,7 +8,7 @@
  *  1. Loading skeletons render before data lands.
  *  2. The KPI band derives totals, distinct-kind count, healthy %, oldest
  *     secret, and soonest expiry from the raw rows.
- *  3. The "Overdue rotations" banner appears only when a secret is critical
+ *  3. The critical-severity banner appears only when a secret is critical
  *     (and interpolates the count).
  *  4. The per-secret detail table renders each row (kind + target + expiry).
  *  5. Accessible landmarks, chart img labels, and the refresh control exist.
@@ -230,16 +230,22 @@ describe('SecretRotationPage', () => {
 
     await waitForSummary()
 
-    // total (3) + distinctKinds (3) drive the "Tracked secrets" subtitle.
-    expect(screen.getByText('3 kinds tracked')).toBeInTheDocument()
-    // okPct = round(1/3 * 100) = 33.
-    expect(screen.getByText('33% of tracked')).toBeInTheDocument()
-    // oldest picks the LARGEST age (200), not the smallest.
+    // total (3) + distinctKinds (3) drive the "Tracked secrets" subtitle and
+    // okPct = round(1/3 * 100) = 33 drives the healthy subtitle — both live
+    // in the Review-details drawer, never on the face.
     const summary = screen.getByTestId('secret-rotation-summary')
+    expect(summary).not.toHaveTextContent('3 kinds tracked')
+    expect(summary).not.toHaveTextContent('33% of tracked')
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog')
+    expect(within(drawer).getByText('3 kinds tracked')).toBeInTheDocument()
+    expect(within(drawer).getByText('33% of tracked')).toBeInTheDocument()
+    // oldest picks the LARGEST age (200), not the smallest.
     const oldest = within(summary).getByText('Oldest secret').closest('[data-operational-metric]')
     expect(oldest?.querySelector('[data-operational-value]')).toHaveTextContent('200.00 d')
     // soonest expiry picks the SMALLEST days-to-expiry (3), not the largest (45).
-    expect(screen.getByText('Soonest expiry')).toBeInTheDocument()
+    // (Scoped to the face: the open drawer repeats the metric label.)
+    expect(within(summary).getByText('Soonest expiry')).toBeInTheDocument()
     const expiry = within(summary).getByText('Soonest expiry').closest('[data-operational-metric]')
     expect(expiry?.querySelector('[data-operational-value]')).toHaveTextContent('3.00 d')
     // The oldest/soonest subtitle resolves the friendly kind label.
@@ -252,15 +258,15 @@ describe('SecretRotationPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(screen.getByText('Overdue rotations')).toBeInTheDocument(),
+      expect(
+        screen.getByText(
+          /Returned credentials classified critical by their server-side per-kind thresholds\./,
+        ),
+      ).toBeInTheDocument(),
     )
 
     // Count is interpolated (exactly one critical row in the fixture).
-    expect(
-      screen.getByText(
-        /1 secrets are past their critical rotation threshold/i,
-      ),
-    ).toBeInTheDocument()
+    expect(screen.getByText(/1\.00\s*—/)).toBeInTheDocument()
   })
 
   it('hides the overdue banner when nothing is critical', async () => {
@@ -274,7 +280,11 @@ describe('SecretRotationPage', () => {
     renderPage()
 
     await waitForSummary()
-    expect(screen.queryByText('Overdue rotations')).toBeNull()
+    expect(
+      screen.queryByText(
+        /Returned credentials classified critical by their server-side per-kind thresholds\./,
+      ),
+    ).toBeNull()
   })
 
   it('renders one detail-table row per secret with target + days-to-expiry', async () => {
@@ -334,10 +344,11 @@ describe('SecretRotationPage', () => {
     // the section bodies are still skeletons, so waiting on them would race.
     await waitForSummary()
 
-    // Urgency bar sublabels read "age / critical" per secret.
+    // Urgency bar sublabels read "age / critical" per secret — except
+    // certificate kinds, whose thresholds are remaining-expiry horizons.
     expect(screen.getByText('Rotation urgency')).toBeInTheDocument()
     expect(screen.getByText('200.00d / 180.00d')).toBeInTheDocument()
-    expect(screen.getByText('80.00d / 120.00d')).toBeInTheDocument()
+    expect(screen.getByText('Expires: 45.00d remaining / 120.00d')).toBeInTheDocument()
 
     // Severity mix panel + its legend list every tier label.
     expect(
@@ -345,8 +356,8 @@ describe('SecretRotationPage', () => {
     ).toBeGreaterThan(0)
     expect(screen.getByText('Expiry watch')).toBeInTheDocument()
     expect(screen.getAllByText('OK').length).toBeGreaterThan(0)
-    // "Overdue" is the critical severity label (legend + badges).
-    expect(screen.getAllByText('Overdue').length).toBeGreaterThan(0)
+    // "Critical" is the critical severity label (banner + legend + badges).
+    expect(screen.getAllByText('Critical').length).toBeGreaterThan(0)
   })
 
   it('renders the subsystem-unavailable explainer on a 503 (not an error)', async () => {
@@ -357,11 +368,11 @@ describe('SecretRotationPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(screen.getByText('Feature not supported')).toBeInTheDocument(),
+      expect(screen.getAllByText('Feature not supported').length).toBeGreaterThan(0),
     )
     expect(
-      screen.getByText(/rotation tracker is Not configured on this deployment/i),
-    ).toBeInTheDocument()
+      screen.getAllByText(/rotation tracker is Not configured on this deployment/i).length,
+    ).toBeGreaterThan(0)
     // 503 is a graceful "not wired" state — never a red error panel.
     expect(screen.queryByText("Can't reach server")).toBeNull()
   })
@@ -376,11 +387,13 @@ describe('SecretRotationPage', () => {
     )
     // The KPI band must not lie with "0.00 tracked / 0.00 overdue" cards when
     // the fetch failed — that would tell a security operator nothing is
-    // overdue while the data never loaded. Every KPI label lives only in the
-    // summary band; canonical tiles retain their labels and mark values missing.
-    const tiles = screen.getByTestId('secret-rotation-summary').querySelectorAll('[data-operational-metric]')
-    expect(tiles).toHaveLength(6)
-    for (const tile of tiles) expect(tile).toHaveAttribute('data-value-state', 'missing')
+    // overdue while the data never loaded. Unknown tiles are omitted from
+    // the face entirely and counted in the Review-details drawer instead.
+    const summary = screen.getByTestId('secret-rotation-summary')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument()
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('6 empty fields are hidden.')
     // A hard failure is distinct from the 503 not-configured state.
     expect(screen.queryByText('Feature not supported')).toBeNull()
   })
@@ -402,13 +415,21 @@ describe('SecretRotationPage', () => {
     expect(screen.getByText('No rotation ages to rank yet.')).toBeInTheDocument()
     expect(screen.getByText('No expiring credentials')).toBeInTheDocument()
     expect(screen.getByText('No tracked secrets')).toBeInTheDocument()
-    // KPI placeholders degrade gracefully rather than vanishing.
-    expect(screen.getByText('No data')).toBeInTheDocument()
-    expect(screen.getByText('No expiry tracked')).toBeInTheDocument()
-    // Counts retain literal measured zero, while ages/expiry remain unknown.
-    const tiles = screen.getByTestId('secret-rotation-summary').querySelectorAll('[data-operational-metric]')
-    expect([...tiles].slice(0, 4).every(tile => tile.querySelector('[data-operational-value]')?.textContent === '0')).toBe(true)
-    expect([...tiles].slice(4).every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true)
+    // Counts retain literal measured zero on the face, while unknown
+    // ages/expiry are omitted from the face and disclosed in the drawer.
+    const summary = screen.getByTestId('secret-rotation-summary')
+    const tiles = summary.querySelectorAll('[data-operational-metric]')
+    expect(tiles).toHaveLength(4)
+    expect([...tiles].every(tile => tile.querySelector('[data-operational-value]')?.textContent === '0')).toBe(true)
+    expect(summary.querySelector('[data-operational-metric="oldest"]')).toBeNull()
+    expect(summary.querySelector('[data-operational-metric="expiry"]')).toBeNull()
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog')
+    // Omitted metrics contribute only the hidden count — their placeholder
+    // contexts are not rendered as drawer rows.
+    expect(within(drawer).queryByText('No data')).not.toBeInTheDocument()
+    expect(within(drawer).queryByText('No expiry tracked')).not.toBeInTheDocument()
+    expect(drawer).toHaveTextContent('2 empty fields are hidden.')
   })
 
   it('preserves full over-long kind identities in summary text and the table', async () => {
@@ -431,7 +452,12 @@ describe('SecretRotationPage', () => {
 
     const oldestCard = screen.getByText('Oldest secret').closest<HTMLElement>('[data-operational-metric]')
     if (!oldestCard) throw new Error('Oldest secret metric must remain mounted')
-    expect(within(oldestCard).getByText(LONG)).toBeInTheDocument()
+    // The kind identity is the metric context: disclosed in the
+    // Review-details drawer, not on the face.
+    expect(within(oldestCard).queryByText(LONG)).not.toBeInTheDocument()
+    fireEvent.click(within(screen.getByTestId('secret-rotation-summary')).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog')
+    expect(within(drawer).getByText(LONG)).toBeInTheDocument()
     const table = within(
       screen.getByRole('region', { name: 'Rotation status' }),
     ).getByRole('table')

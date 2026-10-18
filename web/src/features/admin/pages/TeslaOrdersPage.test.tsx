@@ -243,20 +243,25 @@ describe('TeslaOrdersPage — ready state', () => {
     const strip = container.querySelector('[data-operational-brief][data-testid="tesla-orders-summary"]')!
     const tiles = strip.querySelectorAll('[data-operational-metric]')
     expect(tiles).toHaveLength(6)
-    expect(within(strip as HTMLElement).getByText(/Last synced:/)).toBeInTheDocument()
+    // Sync caption and per-metric hints moved from the face to the Review-details drawer.
+    expect(within(strip as HTMLElement).queryByText(/Last synced:/)).toBeNull()
+    expect(tiles[2]).not.toHaveTextContent('Booked or building')
+    expect(tiles[3]).not.toHaveTextContent('Awaiting handover')
+    expect(tiles[5]).not.toHaveTextContent('Soonest upcoming')
     expect(Array.from(tiles).map((tile) => tile.querySelector('[data-operational-value]')?.textContent))
       .toEqual(['4', '1', '1', '1', '1', expect.stringContaining('2099')])
-    expect(tiles[2]).toHaveTextContent('Booked or building')
-    expect(tiles[3]).toHaveTextContent('Awaiting handover')
-    expect(tiles[5]).toHaveTextContent('Soonest upcoming')
     expect(headerRefresh()).toBeEnabled()
     expect(screen.getByRole('textbox', { name: 'Filter orders' })).toBeInTheDocument()
     expect(insightsRegion()).toBeInTheDocument()
     fireEvent.click(within(strip as HTMLElement).getByRole('button', { name: 'Review details' }))
-    const drawer = await screen.findByRole('dialog')
+    const drawer = await screen.findByRole('dialog', { name: 'Order progress details' })
+    expect(drawer).toHaveTextContent(/Last synced:/)
     expect(drawer).toHaveTextContent('Booked or building')
     expect(drawer).toHaveTextContent('Awaiting handover')
     expect(drawer).toHaveTextContent('Soonest upcoming')
+    expect(within(drawer).getByRole('group', { name: 'In progress' })).toHaveTextContent('Booked or building')
+    expect(within(drawer).getByRole('group', { name: 'Ready · transit' })).toHaveTextContent('Awaiting handover')
+    expect(within(drawer).getByRole('group', { name: 'Next delivery' })).toHaveTextContent('Soonest upcoming')
   })
   it('renders the header, KPI band, status breakdown, board and detail table', async () => {
     install()
@@ -320,16 +325,28 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
     const { container } = renderPage()
     await screen.findAllByText('No order data yet. Refresh to fetch the latest orders from Tesla.')
     const strip = container.querySelector('[data-operational-brief][data-testid="tesla-orders-summary"]')!
-    expect(strip.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6)
-    expect(within(strip as HTMLElement).getByText('Not synced yet')).toBeInTheDocument()
+    // Unknown counts are omitted from the face (never zero-filled)...
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    expect(within(strip as HTMLElement).getByText('No metric values are available yet.')).toBeInTheDocument()
+    expect(within(strip as HTMLElement).queryByText('Not synced yet')).toBeNull()
+    // ...and counted as hidden in the Review-details drawer, which also
+    // carries the sync caption.
+    fireEvent.click(within(strip as HTMLElement).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Order progress details' })
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.')
+    expect(drawer).toHaveTextContent('Not synced yet')
   })
   it('keeps unknown counts missing on failure but renders a successful empty snapshot as real zero', async () => {
     install({ ordersError: true })
     const first = renderPage()
     await screen.findAllByRole('alert')
     const failed = first.container.querySelector('[data-operational-brief][data-testid="tesla-orders-summary"]')!
-    expect(failed.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6)
-    expect(failed.querySelector('[data-operational-value]')).toHaveTextContent('—')
+    expect(failed.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    expect(failed.querySelector('[data-operational-value]')).toBeNull()
+    expect(within(failed as HTMLElement).getByText('No metric values are available yet.')).toBeInTheDocument()
+    fireEvent.click(within(failed as HTMLElement).getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('dialog', { name: 'Order progress details' }))
+      .toHaveTextContent('6 empty fields are hidden.')
     first.unmount()
 
     install({ orders: [] })
@@ -339,7 +356,11 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
     expect(empty.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(5)
     expect(Array.from(empty.querySelectorAll('[data-operational-metric][data-value-state="value"] [data-operational-value]'))
       .map((value) => value.textContent)).toEqual(['0', '0', '0', '0', '0'])
-    expect(empty.querySelector('[data-operational-metric="orders-next-delivery"]')).toHaveAttribute('data-value-state', 'missing')
+    // The unknown next delivery is omitted from the face, never a placeholder.
+    expect(empty.querySelector('[data-operational-metric="orders-next-delivery"]')).toBeNull()
+    fireEvent.click(within(empty as HTMLElement).getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('dialog', { name: 'Order progress details' }))
+      .toHaveTextContent('1 empty fields are hidden.')
   })
   it('shows skeleton placeholders while the orders query is pending (never blank)', () => {
     install({ pending: true })
@@ -423,8 +444,11 @@ describe('TeslaOrdersPage — interactions', () => {
     const { container } = renderPage()
     await screen.findByRole('table')
 
-    expect(headerRefresh()).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0')
-    expect(headerRefresh()).toHaveClass('whitespace-normal')
+    // The header Refresh is an icon-only action with a tooltip description.
+    expect(headerRefresh()).toHaveClass('h-9', 'w-9')
+    expect(headerRefresh()).toHaveAttribute('aria-describedby')
+    expect(headerRefresh().querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(headerRefresh().querySelector('svg')).toHaveAttribute('focusable', 'false')
     for (const glyph of ['lucide-layout-grid', 'lucide-list-ordered']) {
       const icon = container.querySelector(`svg.${glyph}`)
       expect(icon).toHaveClass('text-[var(--text-muted)]', 'shrink-0')
@@ -504,8 +528,12 @@ describe('TeslaOrdersPage — interactions', () => {
     }
     expect(within(kpiRegion()).getByText('4')).toBeInTheDocument()
     expect(screen.getAllByText('Cybertruck').length).toBeGreaterThanOrEqual(2)
+    // The retained status badge moved from the face to the Review-details drawer.
+    expect(within(kpiRegion()).queryByText('Retained account snapshot')).toBeNull()
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog', { name: 'Order progress details' })
     await waitFor(() =>
-      expect(within(kpiRegion()).getByText('Retained account snapshot')).toBeInTheDocument(),
+      expect(drawer).toHaveTextContent('Retained account snapshot'),
     )
     expect(screen.queryByText("Can't reach server")).toBeNull()
     expect(screen.getByText('Data may be stale')).toBeInTheDocument()

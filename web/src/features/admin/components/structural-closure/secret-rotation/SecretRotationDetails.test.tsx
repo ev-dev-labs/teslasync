@@ -118,7 +118,8 @@ describe('SecretRotationDetails mobile preservation', () => {
     expect(detailValue(dialog, 'Age (days)')).toHaveTextContent('200.00');
     expect(detailValue(dialog, 'Expires')).toHaveTextContent('-2d remaining');
     expect(detailValue(dialog, 'Warn / critical')).toHaveTextContent('90.00d / 180.00d');
-    expect(detailValue(dialog, 'Severity')).toHaveTextContent('Overdue');
+    // The critical severity label is 'Critical' (shared common.critical copy).
+    expect(detailValue(dialog, 'Severity')).toHaveTextContent('Critical');
     expect(items).toEqual(before);
   });
 

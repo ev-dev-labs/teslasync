@@ -239,7 +239,8 @@ describe('TeslaFeatureFlagsPage', () => {
     const strip = region.querySelector('[data-operational-brief][data-testid="tesla-feature-config-summary"]')!;
     const tiles = strip.querySelectorAll('[data-operational-metric]');
     expect(tiles).toHaveLength(4);
-    expect(within(strip as HTMLElement).getByText(/Last synced:/)).toBeInTheDocument();
+    // The sync caption moved from the face to the Review-details drawer.
+    expect(within(strip as HTMLElement).queryByText(/Last synced:/)).toBeNull();
     expect(Array.from(tiles).map((tile) => tile.querySelector('[data-operational-value]')?.textContent))
       .toEqual(['4', '2', '2', '50.00%']);
     expect(tiles[3]).toHaveAttribute('data-value-state', 'value');
@@ -265,10 +266,11 @@ describe('TeslaFeatureFlagsPage', () => {
       false,
     );
     fireEvent.click(within(strip as HTMLElement).getByRole('button', { name: 'Review details' }));
-    const drawer = await screen.findByRole('dialog');
+    const drawer = await screen.findByRole('dialog', { name: 'Account feature configuration details' });
     expect(drawer).toHaveTextContent('Total features');
     expect(drawer).toHaveTextContent('Enabled rate');
     expect(drawer).toHaveTextContent('50.00%');
+    expect(drawer).toHaveTextContent(/Last synced:/);
   });
 
   it('filters the table down to the matching feature as the user searches', async () => {
@@ -333,7 +335,13 @@ describe('TeslaFeatureFlagsPage', () => {
     renderPage();
     await screen.findByText('No feature config data yet. Click Refresh to fetch from Tesla.');
     const strip = kpiRegion().querySelector('[data-operational-brief][data-testid="tesla-feature-config-summary"]')!;
-    expect(strip.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    // Unknown counts are omitted from the face (never zero-filled)...
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(kpiRegion()).getByText('No metric values are available yet.')).toBeInTheDocument();
+    // ...and counted as hidden in the Review-details drawer.
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    expect(await screen.findByRole('dialog', { name: 'Account feature configuration details' }))
+      .toHaveTextContent('4 empty fields are hidden.');
     expect(within(kpiRegion()).queryByText('0')).toBeNull();
     expect(screen.getByText('No feature data to summarise yet.')).toBeInTheDocument();
     expect(screen.getByText('No feature composition to chart yet.')).toBeInTheDocument();
@@ -348,12 +356,17 @@ describe('TeslaFeatureFlagsPage', () => {
     // All three data panels degrade to the actionable network error state.
     expect(await screen.findAllByRole('button', { name: 'Retry', exact: true })).toHaveLength(3);
 
-    // Truthfulness guard: the KPI band must NOT invent "0 features" — every
-    // value collapses to an em-dash while the labels stay put.
+    // Truthfulness guard: the KPI band must NOT invent "0 features" — unknown
+    // values are omitted from the face (labels stay put as chips) and counted
+    // as hidden in the Review-details drawer.
     const region = kpiRegion();
     expect(within(region).getByText('Total features')).toBeInTheDocument();
-    expect(within(region).getAllByText('—')).toHaveLength(4);
-    expect(region.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    expect(within(region).queryByText('—')).toBeNull();
+    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(region).getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }));
+    expect(await screen.findByRole('dialog', { name: 'Account feature configuration details' }))
+      .toHaveTextContent('4 empty fields are hidden.');
     expect(within(region).queryByText('0')).toBeNull();
     expect(within(region).queryByText('0.00%')).toBeNull();
 
@@ -433,9 +446,12 @@ describe('TeslaFeatureFlagsPage', () => {
     expect(screen.getByRole('searchbox', { name: 'Search features' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument();
     expect(getRefreshButton()).toBeInTheDocument();
-    expect(getRefreshButton()).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    // The header Refresh is an icon-only action with a tooltip description.
+    expect(getRefreshButton()).toHaveClass('h-9', 'w-9');
+    expect(getRefreshButton()).toHaveAttribute('aria-describedby');
+    expect(getRefreshButton().querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     expect(getRefreshButton().querySelector('svg')).toHaveAttribute('focusable', 'false');
-    expect(getRefreshButton().querySelector('span')).toHaveClass('shrink-0');
+    expect(getRefreshButton().querySelector('svg')).toHaveClass('shrink-0');
   });
 
   it('retains an authoritative empty feature snapshot after a failed refresh', async () => {
@@ -451,7 +467,11 @@ describe('TeslaFeatureFlagsPage', () => {
     await waitFor(() => expect(screen.getByText('Data may be stale')).toBeInTheDocument());
 
     expect(within(kpiRegion()).getAllByText('0')).toHaveLength(3);
-    expect(within(kpiRegion()).getByText('Retained account snapshot')).toBeInTheDocument();
+    // The retained status badge moved from the face to the Review-details drawer.
+    expect(within(kpiRegion()).queryByText('Retained account snapshot')).toBeNull();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    expect(await screen.findByRole('dialog', { name: 'Account feature configuration details' }))
+      .toHaveTextContent('Retained account snapshot');
     expect(screen.getByText('No feature data to summarise yet.')).toBeInTheDocument();
     expect(screen.getByText('No feature composition to chart yet.')).toBeInTheDocument();
     expect(screen.getByText('No feature config data yet. Click Refresh to fetch from Tesla.')).toBeInTheDocument();

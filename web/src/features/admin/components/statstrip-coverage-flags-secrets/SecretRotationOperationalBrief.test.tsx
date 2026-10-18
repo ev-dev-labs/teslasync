@@ -80,11 +80,12 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     expectMissing();
     expect(metricValues()).toEqual([]);
     assertOperationalBriefDisclosure(summary(), 'Loading source', { contains: true });
-    expect(summary()).toHaveTextContent('Fetch time not supplied');
+    expect(summary()).not.toHaveTextContent('Fetch time not supplied');
     expect(screen.queryByText(/tracked credentials have unknown severity/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(summary()).getByRole('button', { name: 'Review details' }));
     const drawer = await screen.findByRole('dialog');
+    expect(drawer).toHaveTextContent('Fetch time not supplied');
     expect(within(drawer).getByText(provenance)).toBeInTheDocument();
     expect(drawer.querySelectorAll('[aria-busy="true"]')).toHaveLength(6);
   });
@@ -93,21 +94,25 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     mockedRequest.mockResolvedValue({ data: { items } });
     const client = renderBrief({ items });
     await waitFor(() => expect(client.getQueryState(queryKey)?.fetchStatus).toBe('idle'));
-    expect(summary()).toHaveTextContent('Snapshot loaded');
-    expect(summary()).toHaveTextContent('Rotation tracker snapshot');
-    expect(summary()).toHaveTextContent('Credential observability');
+    expect(summary()).not.toHaveTextContent('Snapshot loaded');
+    expect(summary()).not.toHaveTextContent('Rotation tracker snapshot');
+    expect(summary()).not.toHaveTextContent('Credential observability');
     expect(summary()).toHaveTextContent('Rotation and expiry outlook');
     expect(metricValues()).toEqual(['3', '1', '0', '1', '30.00 d', '-2.00 d']);
     expect([...summary().querySelectorAll('[data-operational-metric]')]
       .map(node => node.getAttribute('data-operational-metric')))
       .toEqual(['tracked', 'healthy', 'soon', 'overdue', 'oldest', 'expiry']);
-    expect(summary()).toHaveTextContent('33% of tracked');
+    expect(summary()).not.toHaveTextContent('33% of tracked');
     expect(screen.getByText('1 tracked credentials have unknown severity')).toBeInTheDocument();
     expect(screen.queryByText(provenance)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(summary()).getByRole('button', { name: 'Review details' }));
     const drawer = await screen.findByRole('dialog');
     expect(within(drawer).getAllByText(provenance)).toHaveLength(1);
+    expect(within(drawer).getByText('Snapshot loaded')).toBeInTheDocument();
+    expect(within(drawer).getByText('Rotation tracker snapshot')).toBeInTheDocument();
+    expect(within(drawer).getByText('Credential observability')).toBeInTheDocument();
+    expect(within(drawer).getByText('33% of tracked')).toBeInTheDocument();
     expect(within(drawer).getByText(/Negative values mean already expired/)).toBeInTheDocument();
     expect(within(drawer).getAllByText('Session JWK · fixture-overdue')).toHaveLength(2);
   });
@@ -115,10 +120,15 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
   it('keeps measured zero counts separate from unknown age and expiry after an empty successful response', async () => {
     mockedRequest.mockResolvedValue({ data: { items: [] } });
     renderBrief();
-    await waitFor(() => expect(summary()).toHaveTextContent('Snapshot loaded'));
-    expect(metricValues()).toEqual(['0', '0', '0', '0', '—', '—']);
+    await waitFor(() => expect(metricValues().slice(0, 4)).toEqual(['0', '0', '0', '0']));
+    expect(metricValues()).toEqual(['0', '0', '0', '0']);
     expect(summary().querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    expect(summary().querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    expect(summary().querySelector('[data-operational-metric="oldest"]')).toBeNull();
+    expect(summary().querySelector('[data-operational-metric="expiry"]')).toBeNull();
+    fireEvent.click(within(summary()).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(drawer).toHaveTextContent('Snapshot loaded');
+    expect(drawer).toHaveTextContent('2 empty fields are hidden.');
     expect(summary()).not.toHaveAttribute('aria-busy');
     expect(screen.getByText('0 tracked credentials have unknown severity')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -128,10 +138,13 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     mockedRequest.mockRejectedValue(new Error('fixture initial query failure'));
     const client = renderBrief();
     await waitFor(() => expect(client.getQueryState(queryKey)?.status).toBe('error'));
-    expectMissing();
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(summary().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
     assertOperationalBriefDisclosure(summary(), 'Source unavailable', { contains: true });
-    const status = within(summary()).getByText('Source unavailable');
-    expect(status).toHaveClass('text-[var(--semantic-warning)]');
+    fireEvent.click(within(summary()).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.');
+    expect(within(drawer).getByText('Source unavailable')).toHaveClass('text-[var(--semantic-warning)]');
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getByRole('alert')).toHaveTextContent("Can't reach server");
     expect(screen.queryByText('fixture initial query failure')).not.toBeInTheDocument();
@@ -140,7 +153,7 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     const calls = mockedRequest.mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(mockedRequest.mock.calls.length).toBeGreaterThan(calls));
-    await waitFor(() => expect(summary()).toHaveTextContent('Snapshot loaded'));
+    await waitFor(() => expect(metricValues().slice(0, 4)).toEqual(['0', '0', '0', '0']));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(metricValues().slice(0, 4)).toEqual(['0', '0', '0', '0']);
   });
@@ -149,12 +162,16 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     mockedRequest.mockRejectedValue(new ApiError('fixture subsystem unavailable', 503, 'SUBSYSTEM_NOT_CONFIGURED'));
     const client = renderBrief();
     await waitFor(() => expect(client.getQueryState(queryKey)?.status).toBe('error'));
-    expectMissing();
-    expect(summary()).toHaveTextContent('Tracker not configured');
-    expect(within(summary()).getByText('Tracker not configured')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(summary().querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(summary()).not.toHaveTextContent('Tracker not configured');
+    fireEvent.click(within(summary()).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.');
+    expect(within(drawer).getByText('Tracker not configured')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(drawer).toHaveTextContent('Fetch time not supplied');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-    expect(summary()).toHaveTextContent('Fetch time not supplied');
   });
 
   it('retains measurements and the real fetch timestamp on refresh failure without adding raw error chrome', async () => {
@@ -164,9 +181,9 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     expect(metricValues()).toEqual(['3', '1', '0', '1', '30.00 d', '-2.00 d']);
     expect(summary().closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
     expect(summary()).not.toHaveAttribute('aria-busy');
-    expect(within(summary()).getByText('Retained source data')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(summary()).not.toHaveTextContent('Retained source data');
     expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
-    expect(summary()).toHaveTextContent(`Fetched ${new Date(fetchedAt).toLocaleString()}`);
+    expect(summary()).not.toHaveTextContent(`Fetched ${new Date(fetchedAt).toLocaleString()}`);
     expect(screen.getByText('1 tracked credentials have unknown severity')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('fixture refresh query failure')).not.toBeInTheDocument();
@@ -176,6 +193,7 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     const drawer = await screen.findByRole('dialog');
     expect(within(drawer).getAllByText(provenance)).toHaveLength(1);
     expect(within(drawer).getAllByText('Retained source data')).toHaveLength(1);
+    expect(within(drawer).getByText('Retained source data')).toHaveClass('text-[var(--semantic-warning)]');
     expect(within(drawer).getByText(`Fetched ${new Date(fetchedAt).toLocaleString()}`)).toBeInTheDocument();
   });
 
@@ -187,10 +205,14 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     expect(summary().closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
     expect(metricValues()).toEqual(['3', '1', '0', '1', '30.00 d', '-2.00 d']);
     expect(summary()).not.toHaveAttribute('aria-busy');
-    expect(summary()).toHaveTextContent('Snapshot loaded');
+    expect(summary()).not.toHaveTextContent('Snapshot loaded');
     expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
-    expect(summary()).toHaveTextContent(`Fetched ${new Date(fetchedAt).toLocaleString()}`);
+    expect(summary()).not.toHaveTextContent(`Fetched ${new Date(fetchedAt).toLocaleString()}`);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    fireEvent.click(within(summary()).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(drawer).toHaveTextContent('Snapshot loaded');
+    expect(within(drawer).getByText(`Fetched ${new Date(fetchedAt).toLocaleString()}`)).toBeInTheDocument();
   });
 });

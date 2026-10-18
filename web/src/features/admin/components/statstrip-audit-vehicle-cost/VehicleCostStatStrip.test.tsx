@@ -45,9 +45,10 @@ describe('Vehicle ingest canonical summary preservation', () => {
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(container.querySelectorAll('[data-stat-strip]')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
-    expect(container).toHaveTextContent('Window: 30d');
+    expect(container).not.toHaveTextContent('Window: 30d');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const details = screen.getByRole('dialog', { name: 'Fleet ingest totals details' });
+    expect(details).toHaveTextContent('Window: 30d');
     expect(within(details).getByText('Total bytes (est.)')).toBeInTheDocument();
     expect(within(details).getByText('1,28 MB')).toBeInTheDocument();
     expect(details).toHaveTextContent('Totals sum the returned vehicles only (query limit 100)');
@@ -64,16 +65,26 @@ describe('Vehicle ingest canonical summary preservation', () => {
     expect(tiles.map(tile => tile.querySelector('[data-operational-value]')?.textContent))
       .toEqual(['14.000', '1,28 MB', '12,50', '3', '3', '4.667']);
     expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent(/^1,28 MB$/);
-    expect(tiles[1]).toHaveTextContent('96 bytes/row average');
     expect(tiles[2]).toHaveTextContent('Rate (rows/min, 24h)');
     expect(tiles[3]).toHaveTextContent('DLQ failures (24h)');
-    expect(tiles[4]).toHaveTextContent('Denominator: returned vehicles (query limit 100)');
-    expect(tiles[0]).toHaveTextContent('Totals sum the returned vehicles only (query limit 100)');
-    expect(tiles[5]).toHaveTextContent('Returned-vehicle total rows divided by returned vehicle count');
+    // Context, status, scope and period moved from the face to the Review-details drawer.
+    expect(tiles[1]).not.toHaveTextContent('96 bytes/row average');
+    expect(tiles[4]).not.toHaveTextContent('Denominator: returned vehicles (query limit 100)');
+    expect(tiles[0]).not.toHaveTextContent('Totals sum the returned vehicles only (query limit 100)');
+    expect(tiles[5]).not.toHaveTextContent('Returned-vehicle total rows divided by returned vehicle count');
     const strip = screen.getByTestId('vehicle-cost-summary');
-    expect(strip).toHaveTextContent('Queried snapshot');
-    expect(strip).toHaveTextContent('Window: 30d');
-    expect(strip).toHaveTextContent('The response does not provide exact report bounds.');
+    expect(strip).not.toHaveTextContent('Queried snapshot');
+    expect(strip).not.toHaveTextContent('Window: 30d');
+    expect(strip).not.toHaveTextContent('The response does not provide exact report bounds.');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Fleet ingest totals details' });
+    expect(drawer).toHaveTextContent('96 bytes/row average');
+    expect(drawer).toHaveTextContent('Denominator: returned vehicles (query limit 100)');
+    expect(drawer).toHaveTextContent('Totals sum the returned vehicles only (query limit 100)');
+    expect(drawer).toHaveTextContent('Returned-vehicle total rows divided by returned vehicle count');
+    expect(drawer).toHaveTextContent('Queried snapshot');
+    expect(drawer).toHaveTextContent('Window: 30d');
+    expect(drawer).toHaveTextContent('The response does not provide exact report bounds.');
     expect(formatMetric('bytes', totals.total_bytes_est, preferences).rawValue).toBe(1344000);
     expect(formatMetric('number', totals.total_rows / 3, preferences, undefined, { precision: 0 }).rawValue)
       .toBe(14000 / 3);
@@ -86,21 +97,29 @@ describe('Vehicle ingest canonical summary preservation', () => {
     const { container, rerender } = setup({ totals: { total_rows: 0, total_bytes_est: 0,
       total_rate_per_minute_24h: 0, total_failures_24h: 0 }, vehicleCount: 0 });
     const tiles = [...container.querySelectorAll('[data-operational-metric]')];
-    expect(tiles.slice(0, 5).every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
-    expect(tiles[5]).toHaveAttribute('data-value-state', 'missing');
+    expect(tiles).toHaveLength(5);
+    expect(tiles.every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
+    expect(container.querySelector('[data-operational-metric="mean-rows"]')).toBeNull();
     expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent(/^0 B$/);
-    expect(tiles[5]).toHaveTextContent('No returned vehicles to average');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Fleet ingest totals details' }))
+      .toHaveTextContent('1 empty fields are hidden.');
     rerender(<VehicleCostStatStrip totals={undefined} vehicleCount={null} windowDays={7}
       loading={false} error={null} onRetry={vi.fn()} />);
-    expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true);
+    expect(within(screen.getByTestId('vehicle-cost-summary')).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
   });
 
   it('does not invent an average when the returned-vehicle denominator is unknown', () => {
     const { container } = setup({ vehicleCount: null });
     const tiles = [...container.querySelectorAll('[data-operational-metric]')];
+    expect(tiles).toHaveLength(4);
     expect(tiles[0]).toHaveAttribute('data-value-state', 'value');
-    expect(tiles[4]).toHaveAttribute('data-value-state', 'missing');
-    expect(tiles[5]).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="returned-vehicles"]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="mean-rows"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Fleet ingest totals details' }))
+      .toHaveTextContent('2 empty fields are hidden.');
   });
 
   it('keeps a genuine zero mean when zero rows have a known positive vehicle denominator', () => {
@@ -114,7 +133,7 @@ describe('Vehicle ingest canonical summary preservation', () => {
     const retry = vi.fn();
     const { container, rerender } = setup({ totals: undefined, vehicleCount: null, loading: true });
     expect(screen.getByTestId('vehicle-cost-summary')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByTestId('vehicle-cost-summary')).toHaveTextContent('Loading sources');
+    assertOperationalBriefDisclosure(screen.getByTestId('vehicle-cost-summary'), 'Loading sources', { contains: true });
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true);
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
@@ -123,7 +142,7 @@ describe('Vehicle ingest canonical summary preservation', () => {
     rerender(<VehicleCostStatStrip totals={totals} vehicleCount={3} windowDays={30}
       loading retained refreshError={new Error('retained ingest refresh failed')} error={null} onRetry={retry} />);
     assertOperationalBriefDisclosure(screen.getByTestId('vehicle-cost-summary'), 'Retained source data', { contains: true });
-    expect(screen.getByTestId('vehicle-cost-summary')).toHaveTextContent('Showing retained measurements');
+    assertOperationalBriefDisclosure(screen.getByTestId('vehicle-cost-summary'), 'Showing retained measurements', { contains: true });
     expect(screen.getByTestId('vehicle-cost-summary')).not.toHaveAttribute('aria-busy', 'true');
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));

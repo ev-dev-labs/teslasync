@@ -189,8 +189,12 @@ describe('phase6 API logs initial trust and authoritative page', () => {
         client.invalidateQueries({ queryKey: adminKeys.webErrorsSummary }),
       ]);
     });
-    expect(within(card('Backend runtime errors')).getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(within(card('Frontend error reports')).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    // The failed background refetch lands asynchronously; await the same
+    // retained-data warnings (the page's main suite asserts them via waitFor).
+    await waitFor(() => {
+      expect(within(card('Backend runtime errors')).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(within(card('Frontend error reports')).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    });
     expect(screen.getByText('Retained backend evidence')).toBeInTheDocument();
     expect(screen.getByText('TypeError')).toBeInTheDocument();
     expect(screen.getByText('/phase6-evidence')).toBeInTheDocument();
@@ -262,19 +266,31 @@ describe('phase6 API logs initial trust and authoritative page', () => {
     })));
   });
 
-  it('does not use a paused retained total to rewrite the requested URL or erase independent evidence', () => {
+  it('does not use a paused retained total to rewrite the requested URL or erase independent evidence', async () => {
     onlineManager.setOnline(false);
-    const { router } = renderPage('/api-logs?page=3', true, (client) => {
-      client.setQueryData(adminKeys.apiCallLogs(3, {}, 25), response(5, 75));
-      client.setQueryData(adminKeys.apiCallLogStats(), stats);
+    const { client, router } = renderPage('/api-logs?page=3', true, (client) => {
       client.setQueryData(adminKeys.systemErrorStats, backend);
       client.setQueryData(adminKeys.webErrorsSummary, browser);
+    });
+    // The logs/stats queries are keyed by the page's resolved range window,
+    // so their retained payloads must land on the live keys (the mount fetch
+    // is paused offline, which keeps the retained total stale, not trusted).
+    const liveLogsKey = client.getQueryCache()
+      .find({ predicate: (query) => query.queryKey[0] === 'api-logs' })?.queryKey;
+    const liveStatsKey = client.getQueryCache()
+      .find({ predicate: (query) => query.queryKey[0] === 'api-log-stats' })?.queryKey;
+    expect(liveLogsKey).toBeDefined();
+    expect(liveStatsKey).toBeDefined();
+    await act(async () => {
+      client.setQueryData(liveLogsKey!, response(5, 75));
+      client.setQueryData(liveStatsKey!, stats);
+      await client.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'api-logs' });
     });
     expect(new URLSearchParams(router.state.location.search).get('page')).toBe('3');
     expect(mockedLogs).not.toHaveBeenCalled();
     expect(screen.getByText('No backend runtime errors in this process.')).toBeInTheDocument();
     expect(screen.getByText('No browser error reports received in this window.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Tesla API/, pressed: false })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Tesla API/, pressed: false })).toBeInTheDocument();
     expect(within(card('Frontend error reports')).queryByText('Refresh paused', { exact: true })).not.toBeInTheDocument();
     expect(within(card('Frontend error reports')).getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
@@ -289,9 +305,21 @@ describe('phase6 API logs initial trust and authoritative page', () => {
   });
 
   it('waits for refresh confirmation and does not reconcile a retained total after refresh failure', async () => {
+    // Hold the mount fetch open so the retained total lands on the live
+    // range-keyed query before the refresh failure resolves against it.
+    let rejectMount!: (reason: unknown) => void;
+    mockedLogs.mockImplementationOnce(
+      () => new Promise<APICallLogResponse>((_, reject) => { rejectMount = reject; }),
+    );
     mockedLogs.mockRejectedValue(new Error('requested-page refresh failed'));
-    const { router } = renderPage('/api-logs?page=3', true, (client) => {
-      client.setQueryData(adminKeys.apiCallLogs(3, {}, 25), response(5, 75));
+    const { client, router } = renderPage('/api-logs?page=3');
+    await waitFor(() => expect(mockedLogs).toHaveBeenCalled());
+    const liveLogsKey = client.getQueryCache()
+      .find({ predicate: (query) => query.queryKey[0] === 'api-logs' })?.queryKey;
+    expect(liveLogsKey).toBeDefined();
+    await act(async () => {
+      client.setQueryData(liveLogsKey!, response(5, 75));
+      rejectMount(new Error('requested-page refresh failed'));
     });
     await waitFor(() => expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument());
     expect(new URLSearchParams(router.state.location.search).get('page')).toBe('3');

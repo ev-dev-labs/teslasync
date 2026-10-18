@@ -107,7 +107,8 @@ describe('AuditPanel mobile field preservation', () => {
     expect(screen.getByRole('button', { name: 'Actor filter' })).toHaveClass('h-11', 'w-11', 'md:h-8', 'md:w-8');
     resize(768);
     expect(screen.getByRole('button', { name: 'Export list' })).toHaveClass('md:min-h-9', 'md:min-w-9');
-    expect(screen.getByRole('button', { name: 'Reorder or hide columns' })).toHaveClass('md:min-h-9');
+    // The column-menu trigger is a fixed-density icon button now (no md: density override).
+    expect(screen.getByRole('button', { name: 'Reorder or hide columns' })).toHaveClass('h-9', 'w-9');
     expect(screen.getByRole('searchbox', { name: 'Search loaded rows' })).toHaveClass('min-h-10');
     const compact = screen.getByRole('radio', { name: 'Compact' });
     expect(compact).toHaveClass('px-2', 'py-1');

@@ -58,7 +58,9 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   expect(fetchMock).not.toHaveBeenCalled();
-  expect(localGetItem).not.toHaveBeenCalled();
+  // Page chrome reads the web-vitals consent policy on mount; history must
+  // never touch localStorage for any other key.
+  expect(localGetItem.mock.calls.filter(([key]) => key !== 'teslasync:consent-policy:v1')).toEqual([]);
   expect(localSetItem).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -144,17 +146,26 @@ describe('playground history bounded shape trust', () => {
     }
 
     it.each([
-      ['malformed JSON', '{"private":"synthetic-secret"', 'API playground history is not valid JSON'],
-      ['non-array history', 'null', 'API playground history must be an array'],
-      ['entirely invalid history', '[null,{},false]', 'API playground history contains invalid entries'],
-    ])('surfaces %s through the existing render boundary without a false ready summary', async (_name, raw, message) => {
+      ['malformed JSON', '{"private":"synthetic-secret"'],
+      ['non-array history', 'null'],
+      ['entirely invalid history', '[null,{},false]'],
+    ])('surfaces %s through the existing render boundary without a false ready summary', async (_name, raw) => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
       const { client } = await renderPage(raw);
-      expect(screen.getByText(message)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
-      expect(screen.queryByTestId('api-playground-history-summary')).not.toBeInTheDocument();
+      // Corrupt history no longer trips the render boundary: the page
+      // recovers with an empty history and a recovery notice.
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('Saved request history could not be loaded');
+      expect(alert).toHaveTextContent('started with an empty history');
+      expect(screen.queryByRole('button', { name: 'Try Again' })).not.toBeInTheDocument();
+      // ...but the summary must not invent measurements: zero requests counted, average latency unknown.
+      const summary = screen.getByTestId('api-playground-history-summary');
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      expect(within(summary).getByText('0')).toBeInTheDocument();
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent('1 empty field is hidden.');
       expect(reportFrontendError).toHaveBeenCalledWith(
-        expect.objectContaining({ message }), 'react',
+        expect.objectContaining({ message: 'API playground saved history could not be loaded' }), 'react',
       );
       expect(setItem).not.toHaveBeenCalled();
       client.clear();

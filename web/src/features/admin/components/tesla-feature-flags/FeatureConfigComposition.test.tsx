@@ -22,6 +22,7 @@ import type { ReactNode } from 'react';
 
 import type { FeatureCompositionRow, FeatureFlagKind } from './parseFeatureFlags';
 import { FeatureConfigComposition } from './FeatureConfigComposition';
+import { CHART_COLORS_CB_SAFE } from '@/lib/colors';
 
 // ── i18n: resolve the string fallback (2nd arg) so assertions read on copy. ──
 vi.mock('react-i18next', () => {
@@ -237,15 +238,16 @@ describe('FeatureConfigComposition — populated', () => {
   it('binds the two series to their dataKey, localized name and fixed fill', () => {
     renderComposition({ composition: COMPOSITION });
 
+    // Series fills come from the shared chart palette (slots 0/1), not fixed hex.
     const enabled = screen.getByTestId('bar-enabled');
     expect(enabled).toHaveAttribute('data-key', 'enabled');
     expect(enabled).toHaveAttribute('data-name', 'Enabled');
-    expect(enabled).toHaveAttribute('data-fill', '#10b981');
+    expect(enabled).toHaveAttribute('data-fill', CHART_COLORS_CB_SAFE[0]);
 
     const disabled = screen.getByTestId('bar-disabled');
     expect(disabled).toHaveAttribute('data-key', 'disabled');
     expect(disabled).toHaveAttribute('data-name', 'Disabled');
-    expect(disabled).toHaveAttribute('data-fill', '#64748b');
+    expect(disabled).toHaveAttribute('data-fill', CHART_COLORS_CB_SAFE[1]);
   });
 
   it('renders one grouped bar per composition row', () => {

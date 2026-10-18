@@ -80,9 +80,10 @@ describe('Admin R–Z real OperationalBrief source contracts', () => {
     expect(latestRaw().at(-1)?.metricId).toBe('count');
     expect(latestRaw().at(-1)?.display?.countTotal).toBe(2);
     expect(value('rbac-effective')).toHaveTextContent('1 / 2');
-    expect(screen.getByText('Retained evidence')).toBeVisible();
+    expect(screen.queryByText('Retained evidence')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Retained evidence')).toBeVisible();
     expect(within(drawer).getByText('Effective for me')).toBeVisible();
     expect(within(drawer).getByText('1 / 2')).toBeVisible();
     expect(within(drawer).getAllByText(/unsaved edits are not included/).length).toBeGreaterThan(0);
@@ -94,9 +95,13 @@ describe('Admin R–Z real OperationalBrief source contracts', () => {
     expect(latestRaw().every(metric => metric.rawValue === null)).toBe(true);
     expect(document.querySelector('[data-operational-value]')).toBeNull();
     rerender(<RbacOperationalBrief source={{ known: false, loading: false, retained: false, failed: true }} />);
-    expect(value('rbac-roles')).toHaveTextContent('—');
-    expect(document.querySelector('[data-operational-metric="rbac-roles"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('Source unavailable')).toBeVisible();
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(document.querySelector('[data-operational-metric="rbac-roles"]')).toBeNull();
+    expect(screen.queryByText('Source unavailable')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.');
+    expect(within(drawer).getByText('Source unavailable')).toBeVisible();
   });
 
   it('retains a raw canonical 900-second policy limit without confusing it with expiry', () => {
@@ -114,9 +119,11 @@ describe('Admin R–Z real OperationalBrief source contracts', () => {
     show(<SubjectsOperationalBrief subjectCount={null} accessMode={null} sessionStatus={null}
       source={{ ...snapshot, known: false, failed: true }} />);
     expect(latestRaw().slice(0, 3).map(metric => metric.rawValue)).toEqual([null, null, null]);
-    expect(value('subjects-available')).toHaveTextContent('—');
-    expect(value('subjects-session')).toHaveTextContent('—');
+    expect(document.querySelector('[data-operational-metric="subjects-available"]')).toBeNull();
+    expect(document.querySelector('[data-operational-metric="subjects-session"]')).toBeNull();
     expect(value('subjects-limit')).toHaveTextContent('15 min');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('3 empty fields are hidden.');
   });
 
   it('preserves security snapshot versus bounded event-sample scope and the existing lock-age display', () => {
@@ -155,7 +162,9 @@ describe('Admin R–Z real OperationalBrief source contracts', () => {
       latestLoading={false} historyLoading={true} source={{ ...snapshot, known: false }}
       start={start} endExclusive={end} vehicleId="7" />);
     expect(value('security-status')).toHaveTextContent('Secure');
-    expect(value('security-events')).toHaveTextContent('—');
+    expect(document.querySelector('[data-operational-metric="security-events"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('3 empty fields are hidden.');
     expect(latestRaw().slice(1).every(metric => metric.rawValue === null)).toBe(true);
     expect(screen.getByTestId('security-operational-brief')).not.toHaveAttribute('aria-busy');
   });
@@ -172,15 +181,19 @@ describe('Admin R–Z real OperationalBrief source contracts', () => {
     show(<SecurityStatisticsBrief securityStats={null} sentryUptime={0} isLoading={false}
       error={null} onRetry={vi.fn()} source={snapshot} scope={scope} />);
     expect(latestRaw().every(metric => metric.rawValue == null)).toBe(true);
-    expect(value('security-stats-total')).toHaveTextContent('—');
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(document.querySelector('[data-operational-metric="security-stats-total"]')).toBeNull();
     expect(screen.getByText('No security events are available in this history window.')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('7 empty fields are hidden.');
   });
 
   it('keeps invalid fractional counts invalid rather than disguising them as source text', () => {
     show(<SubjectsOperationalBrief subjectCount={1.5} accessMode="Forward-auth" sessionStatus="Idle" source={snapshot} />);
     expect(latestRaw()[0]).toMatchObject({ metricId: 'count', rawValue: 1.5 });
-    expect(document.querySelector('[data-operational-metric="subjects-available"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(value('subjects-available')).toHaveTextContent('—');
+    expect(document.querySelector('[data-operational-metric="subjects-available"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 empty fields are hidden.');
   });
 
   it('uses both real system feeds, six raw typed measurements and source-specific 24-hour periods', async () => {

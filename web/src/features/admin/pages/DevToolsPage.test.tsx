@@ -99,6 +99,7 @@ vi.mock('../components/devtools', async () => {
 })
 
 import { request } from '@/api/client'
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions'
 import DevToolsPage from './DevToolsPage'
 import type { FleetTelemetryErrorVIN } from '@/api/hooks/useTelemetry'
 import type { Vehicle } from '@/types/vehicle'
@@ -203,7 +204,12 @@ describe('DevToolsPage', () => {
     const catalog = screen.getByTestId('devtools-catalog-summary')
     expect(live.querySelectorAll('[data-operational-metric]')).toHaveLength(2)
     expect(catalog.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3)
-    expect(catalog).toHaveTextContent('not measured live coverage')
+    // Scope moved from the face to the Review-details drawer.
+    expect(catalog).not.toHaveTextContent('not measured live coverage')
+    fireEvent.click(within(catalog).getByRole('button', { name: 'Review details' }))
+    const catalogDrawer = screen.getByRole('dialog')
+    expect(catalogDrawer).toHaveTextContent('not measured live coverage')
+    fireEvent.keyDown(catalogDrawer, { key: 'Escape' })
     fireEvent.click(within(live).getByRole('button', { name: 'Review details' }))
     expect(screen.getByRole('dialog')).toHaveTextContent('independent vehicle inventory')
     expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
@@ -274,11 +280,17 @@ describe('DevToolsPage', () => {
     ).toBeInTheDocument()
 
     // Regression guard: the KPI band must NOT read a healthy-looking `0` on a
-    // failed load — both live metrics degrade to the "—" placeholder.
+    // failed load — both live metrics are omitted from the face and counted
+    // in the drawer instead of degrading to a placeholder.
     const region = overviewRegion()
+    const live = screen.getByTestId('devtools-live-summary')
     await waitFor(() =>
-      expect(within(region).getAllByText('—')).toHaveLength(2),
+      expect(live.querySelectorAll('[data-operational-metric]')).toHaveLength(0),
     )
+    expect(within(live).getByText('No metric values are available yet.')).toBeInTheDocument()
+    expect(within(region).queryByText('—')).toBeNull()
+    fireEvent.click(within(live).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 empty fields are hidden.')
     expect(within(region).queryByText('0')).toBeNull()
 
     // Page content is never hidden behind the error — the section still shows.
@@ -417,7 +429,13 @@ describe('DevToolsPage', () => {
     expect(await screen.findByText(/Failed to load data: telemetry unavailable/)).toBeInTheDocument()
     const band = overviewRegion()
     await waitFor(() => expect(within(band).getByText('9')).toBeInTheDocument())
-    expect(within(band).getAllByText('—')).toHaveLength(1)
+    const live = screen.getByTestId('devtools-live-summary')
+    // The failed telemetry tile is omitted (never dashed or zero-filled)
+    // while the successful fleet metric stays.
+    await waitFor(() =>
+      expect(live.querySelectorAll('[data-operational-metric]')).toHaveLength(1),
+    )
+    assertOperationalMetricUnavailable(live, 'Telemetry errors')
     expect(within(band).queryByText('0')).toBeNull()
     expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
   })

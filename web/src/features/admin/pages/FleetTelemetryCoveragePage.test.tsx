@@ -232,7 +232,9 @@ describe('FleetTelemetryCoveragePage', () => {
     const input = screen.getByLabelText(label)
     fireEvent.change(input, { target: { value: 'BrakePedal' } })
 
-    expect(screen.getByText(label, { selector: 'label' })).toBeVisible()
+    // The filter toolbar fades in on mount; wait for the entry animation to
+    // complete before asserting visibility.
+    await waitFor(() => expect(screen.getByText(label, { selector: 'label' })).toBeVisible(), { timeout: 3000 })
     expect(screen.getByLabelText(label)).toHaveValue('BrakePedal')
     expect(screen.getByText('Showing 1 of 2 categories')).toHaveAttribute('role', 'status')
   })
@@ -442,11 +444,13 @@ describe('FleetTelemetryCoveragePage', () => {
     mockedRequest.mockRejectedValue(new Error('routing unavailable'))
     renderPage()
     await screen.findByTestId('coverage-error')
-    const tiles = screen.getByTestId('coverage-summary').querySelectorAll('[data-operational-metric]')
-    expect(tiles).toHaveLength(6)
-    for (const tile of tiles) {
-      expect(tile).toHaveAttribute('data-value-state', 'missing')
-      expect(tile.querySelector('[data-operational-value]')).toHaveTextContent('—')
-    }
+    const summary = screen.getByTestId('coverage-summary')
+    // Unknown readings are omitted from the face (never zero-filled)...
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0)
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument()
+    // ...and counted as hidden in the Review-details drawer.
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog', { name: 'Fleet telemetry coverage details' }))
+      .toHaveTextContent('6 empty fields are hidden.')
   })
 })

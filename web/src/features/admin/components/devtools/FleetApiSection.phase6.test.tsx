@@ -74,7 +74,12 @@ async function card(name: string) {
 }
 
 function select(element: HTMLElement, value: string) {
-  fireEvent.change(within(element).getByRole('combobox'), { target: { value } })
+  // Loaded result tables add their own "Rows per page" combobox; the vehicle
+  // picker is the one without that accessible name.
+  const boxes = within(element).getAllByRole('combobox')
+  const vehicle = boxes.find(box => box.getAttribute('aria-label') !== 'Rows per page')
+  if (!vehicle) throw new Error('vehicle combobox not found')
+  fireEvent.change(vehicle, { target: { value } })
 }
 
 function calls(path: string) {
@@ -194,7 +199,7 @@ describe('phase6 Fleet API contracts and provenance', () => {
     requestMock.mockImplementation(async () => { throw new Error('Synthetic refresh failed') })
     await act(async () => { await client.invalidateQueries({ queryKey: ['devtools', 'fleet-api-info'] }) })
     expect(within(config).getByText(fleetInfo.base_url)).toBeInTheDocument()
-    expect(within(config).getByText(/Synthetic refresh failed/)).toBeInTheDocument()
+    expect(await within(config).findByText(/Synthetic refresh failed/)).toBeInTheDocument()
   })
 
   it('uses the actual rejection/live-only helper seam and does not pause a write offline', async () => {

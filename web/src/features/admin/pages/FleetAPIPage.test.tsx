@@ -454,9 +454,13 @@ describe('FleetAPIPage', () => {
 
     const region = kpiRegion();
     // Settings source is unknown → the KPI must NOT invent "Active"/"Suspended".
-    await waitFor(() => expect(within(region).getByText('—')).toBeInTheDocument());
+    await waitFor(() => expect(within(region).getByText('2 / 7')).toBeInTheDocument());
+    expect(region.querySelector('[data-operational-metric="status"]')).toBeNull();
     expect(within(region).queryByText('Active')).toBeNull();
     expect(within(region).queryByText('Suspended')).toBeNull();
+    fireEvent.click(within(region).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Fleet API summary details' }))
+      .toHaveTextContent('1 empty fields are hidden.');
 
     // The other three sources resolved, so their KPIs stay truthful.
     expect(within(region).getByText('2 / 7')).toBeInTheDocument();

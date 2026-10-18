@@ -1,6 +1,6 @@
 import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { DataStateSource } from '@/api/dataState';
@@ -106,7 +106,7 @@ describe('DataQualityPage source-status contract', () => {
     renderPage();
     expectSections();
     const brief = screen.getByTestId('normalization-coverage-summary');
-    expect(brief).toHaveTextContent('Refreshing source');
+    assertOperationalBriefDisclosure(brief, 'Refreshing source');
     expect(brief).not.toHaveTextContent('Source loaded');
     expect(brief.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
     expect(brief).toHaveTextContent('80.00%');
@@ -139,10 +139,16 @@ describe('DataQualityPage source-status contract', () => {
     expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
     expect(container.querySelector('[data-unavailable-reason="service_outage"]')).toBeNull();
     const brief = screen.getByTestId('normalization-coverage-summary');
-    expect(brief).toHaveTextContent('Awaiting source');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
-    expect(brief.querySelector('[data-operational-metric="normalization-coverage"]')).toHaveTextContent('Unknown');
-    expect(brief.querySelector('[data-operational-metric="normalization-total"]')).not.toHaveTextContent('0');
+    assertOperationalBriefDisclosure(brief, 'Awaiting source');
+    // Unknown tiles are omitted from the face (never zero-filled); only the
+    // contract-version tile survives, reading 'Unknown'.
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+    expect(brief.querySelector('[data-operational-metric="normalization-coverage"]')).toBeNull();
+    expect(brief.querySelector('[data-operational-metric="normalization-total"]')).toBeNull();
+    expect(within(brief).getByText('Required version')).toBeInTheDocument();
+    expect(within(brief).getByText('Unknown')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('5 empty fields are hidden.');
     screen.getAllByRole('button', { name: 'Refresh' }).forEach(button => fireEvent.click(button));
     expect(query.refetch).toHaveBeenCalledTimes(2);
   });

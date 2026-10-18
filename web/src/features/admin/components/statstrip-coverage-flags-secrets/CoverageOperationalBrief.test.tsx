@@ -30,7 +30,7 @@ vi.mock('@/components/data-display', () => ({
 }));
 
 const translation = createInstance();
-void translation.init({ lng: 'en', fallbackLng: 'en', resources: {}, initAsync: false });
+void translation.init({ lng: 'en', fallbackLng: 'en', resources: {}, initAsync: false, interpolation: { escapeValue: false } });
 const snapshot = { categories: [], destination_totals: {}, orphan_fields: [] };
 afterEach(cleanup);
 

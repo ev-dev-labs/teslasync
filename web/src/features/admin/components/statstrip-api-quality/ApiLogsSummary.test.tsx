@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState } from '@/api/dataState';
 import type { APICallLogStats } from '@/api/types';
+import {
+  assertOperationalBriefDisclosure,
+  assertOperationalMetricUnavailable,
+} from '@/test/operationalBriefAssertions';
 import { ApiLogsSummary } from './ApiLogsSummary';
 
 vi.mock('react-i18next', () => ({
@@ -30,12 +34,18 @@ describe('API log summary canonical preservation', () => {
     const { container } = render(<MemoryRouter><ApiLogsSummary {...range} state={state} loading={false} allTime={false} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(container.querySelector('[data-operational-metric="api-average-duration"] [data-operational-value]')).toHaveTextContent('146 ms');
-    expect(container.querySelector('[data-operational-metric="api-error-rate"]')).toHaveTextContent('80');
-    expect(container.querySelector('[data-operational-metric="api-error-rate"]')).toHaveTextContent('increased');
+    // The comparison count moved off the face into the drawer's per-metric group.
+    expect(container.querySelector('[data-operational-metric="api-error-rate"]')).not.toHaveTextContent('80');
+    expect(container.querySelector('[data-operational-metric="api-error-rate"]')).not.toHaveTextContent(/increased|decreased/i);
     expect(snapshot.avg_duration_ms).toBe(145.9);
-    expect(screen.getByTestId('api-logs-range-summary')).toHaveAttribute('data-operational-brief');
-    expect(screen.getByTestId('api-logs-range-summary')).toHaveTextContent('2026-10-01T00:00:00Z');
-    expect(screen.getByTestId('api-logs-24h-summary')).toHaveTextContent('does not record its exact bounds');
+    const rangeSummary = screen.getByTestId('api-logs-range-summary');
+    expect(rangeSummary).toHaveAttribute('data-operational-brief');
+    fireEvent.click(within(rangeSummary).getByRole('button', { name: 'Review details' }));
+    const rangeDrawer = screen.getByRole('dialog');
+    expect(within(rangeDrawer).getByRole('group', { name: 'Error rate' })).toHaveTextContent('80');
+    fireEvent.keyDown(rangeDrawer, { key: 'Escape' });
+    assertOperationalBriefDisclosure(rangeSummary, '2026-10-01T00:00:00Z', { contains: true });
+    assertOperationalBriefDisclosure(screen.getByTestId('api-logs-24h-summary'), 'does not record its exact bounds', { contains: true });
   });
 
   it('attests all-time separately from the fixed 24-hour count and retains both after refresh failure', () => {
@@ -43,13 +53,13 @@ describe('API log summary canonical preservation', () => {
     render(<MemoryRouter><ApiLogsSummary {...range} state={state} loading={false} allTime /></MemoryRouter>);
     const total = screen.getByTestId('api-logs-range-summary');
     const rolling = screen.getByTestId('api-logs-24h-summary');
-    expect(total).toHaveTextContent('All time');
-    expect(total).toHaveTextContent('Refreshing source');
     expect(total).toHaveTextContent('1,234');
     expect(screen.getByRole('alert')).toHaveTextContent('stats refresh failed');
-    expect(rolling).toHaveTextContent('Refreshing source');
     expect(rolling).toHaveTextContent('56');
-    expect(rolling).toHaveTextContent('not the View settings range');
+    assertOperationalBriefDisclosure(total, 'All time', { contains: true });
+    assertOperationalBriefDisclosure(total, 'Refreshing source');
+    assertOperationalBriefDisclosure(rolling, 'Refreshing source');
+    assertOperationalBriefDisclosure(rolling, 'not the View settings range', { contains: true });
   });
 
   it('preserves fixed integer milliseconds above one second instead of adapting to seconds', () => {
@@ -69,7 +79,12 @@ describe('API log summary canonical preservation', () => {
     expect(container.querySelector('[data-operational-value]')).toBeNull();
     const failed = deriveDataState<APICallLogStats>({ error: new Error('stats unavailable') });
     rerender(<MemoryRouter><ApiLogsSummary {...range} state={failed} loading={false} allTime={false} /></MemoryRouter>);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    // All four readings are unknown with no retained data; each tile is
+    // omitted and each drawer carries its counted explanation.
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-range-summary'), 'Total calls');
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-range-summary'), 'Error rate');
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-range-summary'), 'Avg duration');
+    assertOperationalMetricUnavailable(screen.getByTestId('api-logs-24h-summary'), 'Last 24h');
     expect(screen.getByRole('alert')).toHaveTextContent('stats unavailable');
   });
   it('opens the real review details drawer without replacing the request workspace', () => {

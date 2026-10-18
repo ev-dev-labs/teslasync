@@ -24,7 +24,7 @@
  * measurement decimal precision ("42.00", "+3.00").
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -136,6 +136,13 @@ function headerRefreshButton(): HTMLElement {
     .find((n) => n.tagName === 'BUTTON');
   if (!el) throw new Error('header refresh button not found');
   return el;
+}
+
+/** Opens the summary Brief's Review-details drawer; context and hidden counts live there. */
+function openDriftDrawer(): HTMLElement {
+  const strip = screen.getByTestId('schema-drift-summary');
+  fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog', { name: 'Schema drift summary details' });
 }
 
 beforeEach(() => {
@@ -261,12 +268,13 @@ describe('SchemaDriftPage', () => {
     expect(screen.getByText(`45 ${ARROW} 42`)).toBeInTheDocument();
     // Mismatched categories are badged as "Drift".
     expect(screen.getAllByText('Drift').length).toBeGreaterThanOrEqual(3);
-    // Guidance enumerates the concrete count changes.
+    // Guidance enumerates the concrete count changes on both the brief face
+    // (primary attention) and the guidance section.
     expect(
-      screen.getByText(
+      screen.getAllByText(
         new RegExp(`Tables \\+3 ${MIDDOT} Columns \\+2 ${MIDDOT} Indexes \\+1`),
       ),
-    ).toBeInTheDocument();
+    ).toHaveLength(2);
   });
 
   it('flags a hash-only drift (matching counts) as drifted while every count reads Match', () => {
@@ -286,10 +294,11 @@ describe('SchemaDriftPage', () => {
     // Deltas are all zero, so each tile/row is still a "Match".
     expect(screen.getAllByText('Match').length).toBeGreaterThanOrEqual(3);
     expect(screen.queryByText('Drift detected but counts')).toBeNull();
-    // The guidance falls to the hash-only explanation branch.
+    // The guidance falls to the hash-only explanation branch, shown on both
+    // the brief face (primary attention) and the guidance section.
     expect(
-      screen.getByText(/differs from the seed even though object counts match/i),
-    ).toBeInTheDocument();
+      screen.getAllByText(/differs from the seed even though object counts match/i),
+    ).toHaveLength(2);
     // Counts still render as integers in the "42 → 42" transition.
     expect(screen.getByText(`42 ${ARROW} 42`)).toBeInTheDocument();
   });
@@ -324,7 +333,7 @@ describe('SchemaDriftPage', () => {
     expect(screen.getByText('live-full-hash')).toBeInTheDocument();
     expect(screen.getByText('seed-full-hash')).toBeInTheDocument();
     expect(screen.getByText('Drift detected')).toBeInTheDocument();
-    expect(screen.getByText(/differs from the seed even though object counts match/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/differs from the seed even though object counts match/i)).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Copy fingerprint hash' })).toHaveLength(2);
     expect(screen.getByText(`42 ${ARROW} 42`)).toBeInTheDocument();
     expect(screen.queryByText('Feature not supported')).toBeNull();
@@ -338,8 +347,13 @@ describe('SchemaDriftPage', () => {
     mockedUseSchemaDrift.mockReturnValue(makeQuery({ data: { drift, is_different: false } }));
     renderPage();
     expect(screen.getByText(`— ${ARROW} 42`)).toBeInTheDocument();
-    expect(screen.getByText(`— current ${MIDDOT} 42 expected`)).toBeInTheDocument();
-    expect(screen.getAllByText('Match')).toHaveLength(4);
+    // The missing tables comparison is omitted from the face (never inferred
+    // as a zero delta or a Match badge); only the measured breakdown rows badge.
+    expect(screen.queryByText(`— current ${MIDDOT} 42 expected`)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Match')).toHaveLength(2);
+    const drawer = openDriftDrawer();
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
+    expect(within(drawer).getAllByText('Match')).toHaveLength(2);
     expect(screen.getAllByText('a1b2c3d4e5f60011')).toHaveLength(2);
   });
 
@@ -351,7 +365,7 @@ describe('SchemaDriftPage', () => {
     mockedUseSchemaDrift.mockReturnValue(makeQuery({ data: { drift, is_different: true } }));
     renderPage();
     expect(screen.getByText('Drift detected')).toBeInTheDocument();
-    expect(screen.getByText(/Object-count comparisons are unavailable/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Object-count comparisons are unavailable/i)).toHaveLength(2);
     expect(screen.queryByText(/even though object counts match/i)).toBeNull();
     expect(screen.queryByText('Match')).toBeNull();
     expect(screen.getByText(/Confirm migrations are applied/i)).toBeInTheDocument();
@@ -364,12 +378,18 @@ describe('SchemaDriftPage', () => {
     renderPage();
     const strip = screen.getByTestId('schema-drift-summary');
     expect([...strip.querySelectorAll('[data-operational-value]')].map(value => value.textContent))
-      .toEqual(['Drift detected', '-3', '0', '—']);
+      .toEqual(['Drift detected', '-3', '0']);
+    expect(strip.querySelector('[data-operational-metric="schema-indexes-delta"]')).toBeNull();
     expect([...strip.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-value-state')))
-      .toEqual(['value', 'value', 'value', 'missing']);
-    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+      .toEqual(['value', 'value', 'value']);
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(3);
     expect(strip).toHaveTextContent('Drift');
-    expect(strip).toHaveTextContent('Match');
+    // Badges moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('Match');
+    const drawer = openDriftDrawer();
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
+    expect(within(drawer).getByText('Drift')).toBeInTheDocument();
+    expect(within(drawer).getByText('Match')).toBeInTheDocument();
   });
 
   it.each([
@@ -443,7 +463,7 @@ describe('SchemaDriftPage', () => {
     expect(screen.getByText('paused-live-hash')).toBeInTheDocument();
     expect(screen.getByText('paused-seed-hash')).toBeInTheDocument();
     expect(screen.getByText(`42 ${ARROW} 42`)).toBeInTheDocument();
-    expect(screen.getByText(/differs from the seed even though object counts match/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/differs from the seed even though object counts match/i)).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Copy fingerprint hash' })).toHaveLength(2);
     expect(screen.getByTestId('schema-drift-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
     expect(screen.queryByText('Feature not supported')).toBeNull();

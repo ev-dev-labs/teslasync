@@ -210,16 +210,23 @@ describe('SlowQueriesPage — populated view', () => {
     expect(metricValue('Aggregate time')).toBe('7.00 s'); // 7000ms promoted to s
     expect(metricValue('Slowest mean')).toBe('40.00 ms'); // max mean, Settings precision
     expect(metricValue('Peak max')).toBe('1.50 s'); // max peak promoted to s
-    // Weighted cache ratio = (900 + 20) / (900 + 100 + 20 + 180).
-    // Its label collides with the table
-    // column header, so assert the value directly.
-    expect(metricValue('Cache hit ratio')).toBe('76.67%');
+    // r103 has no shared-buffer stats, so the across-queries cache total
+    // requires complete evidence and stays unknown (omitted, not a partial
+    // estimate) — see the slow-query cache-evidence contract.
+    expect(metricValue('Cache hit ratio')).toBe('');
     const strip = screen.getByTestId('slow-queries-summary');
     expect(strip).toHaveAttribute('data-operational-brief');
+    expect(strip.querySelector('[data-operational-metric="cache-hit-ratio"]')).toBeNull();
     expect([...strip.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-operational-metric')))
-      .toEqual(['queries-analyzed', 'total-calls', 'aggregate-time', 'slowest-mean', 'peak-max', 'cache-hit-ratio']);
-    expect(strip).toHaveTextContent('Top 25 by Mean time');
-    expect(strip).toHaveTextContent('Across shown queries');
+      .toEqual(['queries-analyzed', 'total-calls', 'aggregate-time', 'slowest-mean', 'peak-max']);
+    // Scope and period moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('Top 25 by Mean time');
+    expect(strip).not.toHaveTextContent('Across shown queries');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Query performance summary details' });
+    expect(drawer).toHaveTextContent('Top 25 by Mean time');
+    expect(drawer).toHaveTextContent('Across shown queries');
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
   });
 
   it('renders the ranking chart region, cache panel and detail table', () => {
@@ -257,14 +264,16 @@ describe('SlowQueriesPage — populated view', () => {
     act(() => setGlobalPrecision(3));
     expect(metricValue('Slowest mean')).toBe('40.000 ms');
     expect(metricValue('Aggregate time')).toBe('7.000 s');
-    expect(metricValue('Cache hit ratio')).toBe('76.667%');
+    // Incomplete cache evidence stays omitted at every precision.
+    expect(metricValue('Cache hit ratio')).toBe('');
+    expect(screen.getByTestId('slow-queries-summary').querySelector('[data-operational-metric="cache-hit-ratio"]')).toBeNull();
     expect(screen.getByText('1,200')).toBeInTheDocument();
     expect(screen.getByText('3,400')).toBeInTheDocument();
 
     act(() => setGlobalPrecision(0));
     expect(metricValue('Slowest mean')).toBe('40 ms');
     expect(metricValue('Aggregate time')).toBe('7 s');
-    expect(metricValue('Cache hit ratio')).toBe('77%');
+    expect(metricValue('Cache hit ratio')).toBe('');
     expect(ROWS[0].mean_time_ms).toBe(4);
     expect(ROWS[0].shared_blks_hit).toBe(900);
   });
@@ -300,8 +309,13 @@ describe('SlowQueriesPage — non-happy states', () => {
     // …with a working Retry affordance.
     expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThanOrEqual(1);
     // …and the KPI band never fabricates a "0".
-    expect(metricValue('Queries analyzed')).toBe('—');
-    expect(screen.getByTestId('slow-queries-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(metricValue('Queries analyzed')).toBe('');
+    const strip = screen.getByTestId('slow-queries-summary');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(strip).getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Query performance summary details' }))
+      .toHaveTextContent('6 empty fields are hidden.');
   });
 
   it('routes a 503 to the "subsystem unavailable" banner, not the network error', () => {
@@ -320,7 +334,12 @@ describe('SlowQueriesPage — non-happy states', () => {
     // The generic QueryError must NOT show for the 503 branch.
     expect(screen.queryByText("Can't reach server")).toBeNull();
     // Unsupported/unmeasured is unknown, not a measured empty response.
-    expect(metricValue('Queries analyzed')).toBe('—');
+    expect(metricValue('Queries analyzed')).toBe('');
+    const strip = screen.getByTestId('slow-queries-summary');
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Query performance summary details' }))
+      .toHaveTextContent('6 empty fields are hidden.');
   });
 
   it('shows per-section empty states when the query returns zero rows', () => {
@@ -338,8 +357,13 @@ describe('SlowQueriesPage — non-happy states', () => {
     expect(metricValue('Total calls')).toBe('0');
     expect(metricValue('Aggregate time')).toBe('0.00 ms');
     const strip = screen.getByTestId('slow-queries-summary');
-    expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
-    expect(strip.querySelector('[data-operational-metric="cache-hit-ratio"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
+    expect(strip.querySelector('[data-operational-metric="slowest-mean"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="peak-max"]')).toBeNull();
+    expect(strip.querySelector('[data-operational-metric="cache-hit-ratio"]')).toBeNull();
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Query performance summary details' }))
+      .toHaveTextContent('3 empty fields are hidden.');
   });
 
   it('keeps the last-good data visible when a background refetch fails', () => {

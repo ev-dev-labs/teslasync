@@ -57,9 +57,12 @@ function renderBrowser() {
   };
 }
 
-function renderBackend(data?: ErrorStats, error?: Error, loading = false) {
+function renderBackend(data?: ErrorStats, error?: Error, loading = false, unavailable = false) {
   const onRetry = vi.fn();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const state = deriveDataState({ data, error, isError: !!error, isPending: loading });
+  // An answered-but-absent source reports 'unavailable' rather than 'initial'.
+  if (unavailable) state.status = 'unavailable';
   return {
     onRetry,
     ...render(
@@ -67,7 +70,7 @@ function renderBackend(data?: ErrorStats, error?: Error, loading = false) {
         <MemoryRouter>
           <ApiLogsBackendErrors
             data={data}
-            state={deriveDataState({ data, error, isError: !!error, isPending: loading })}
+            state={state}
             loading={loading}
             onRetry={onRetry}
           />
@@ -133,7 +136,9 @@ describe('API logs runtime diagnostic cards', () => {
     expect(screen.getByRole('status', { name: 'Loading backend error summary' })).toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
     pending.unmount();
-    const unavailable = renderBackend();
+    // Authoritatively unavailable: the source answered "there is none" —
+    // distinct from a still-pending initial load.
+    const unavailable = renderBackend(undefined, undefined, false, true);
     expect(screen.getByText('Backend runtime error summary unavailable.')).toBeInTheDocument();
     unavailable.unmount();
     const failed = renderBackend(undefined, new Error('offline'));

@@ -36,11 +36,17 @@ describe('SchemaKpis canonical preservation', () => {
     expect([...strip.querySelectorAll('[data-operational-value]')].map(node => node.textContent))
       .toEqual(['Drift detected', '+3', '-3', '0']);
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(strip).toHaveTextContent('45 current · 42 expected');
-    expect(strip).toHaveTextContent('125 current · 128 expected');
-    expect(strip).toHaveTextContent('40 current · 40 expected');
-    expect(strip).toHaveTextContent('Match');
+    // Operands and badges moved from the face to the Review-details drawer.
+    expect(strip).not.toHaveTextContent('45 current · 42 expected');
+    expect(strip).not.toHaveTextContent('Match');
     expect(strip).toHaveTextContent('Drift');
+    fireEvent.click(within(strip).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Schema drift summary details' });
+    expect(within(drawer).getByText('45 current · 42 expected')).toBeInTheDocument();
+    expect(within(drawer).getByText('125 current · 128 expected')).toBeInTheDocument();
+    expect(within(drawer).getByText('40 current · 40 expected')).toBeInTheDocument();
+    expect(within(drawer).getByText('Match')).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Drift')).toHaveLength(2);
     expect(state.drift?.table_count_delta).toBe(3);
   });
 

@@ -45,7 +45,7 @@ export function GasTrendChart({ source }: { source: DataState<GasPriceHistory[]>
           <Legend wrapperStyle={{ ...chartText, color: chartTokens.tooltipMutedText }} />
           {units.map((unit, index) => (
             <Area key={unit} {...AREA_DEFAULTS}
-              dataKey={(row: (typeof rows)[number]) => row.unit === unit ? row.price : null}
+              dataKey={(row: (typeof rows)[number]) => row.unit === unit ? row.price_per_unit : null}
               connectNulls={false}
               unit={unitLabel(unit)}
               name={`${t('gas.priceSeries', 'Price')}/${unitLabel(unit)}`}

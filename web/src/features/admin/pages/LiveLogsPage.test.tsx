@@ -299,14 +299,18 @@ describe('LiveLogsPage', () => {
     const drops = brief.querySelector('[data-operational-metric="drops"]');
     expect(drops).toHaveAttribute('data-value-state', 'value');
     expect(drops?.querySelector('[data-operational-value]')).toHaveTextContent('3');
+    // Captions moved from the face to the Review-details drawer.
     for (const caption of ['After filters', 'max', 'Since mount', 'Buffer overflow', 'Server filter']) {
-      expect(brief).toHaveTextContent(caption);
+      expect(brief).not.toHaveTextContent(caption);
     }
     const review = within(brief).getByRole('button', { name: 'Review details' });
     review.focus();
     expect(review).toHaveFocus();
     fireEvent.click(review);
     const drawer = await screen.findByRole('dialog', { name: 'Log stream summary details' });
+    for (const caption of ['After filters', 'max', 'Since mount', 'Buffer overflow', 'Server filter']) {
+      expect(drawer).toHaveTextContent(caption);
+    }
     expect(drawer).toHaveTextContent('Clear buffer also resets received and drop counters.');
     expect(drawer).toHaveTextContent('The rolling buffer is capacity-limited; it is not durable replay or complete server history.');
     expect(drawer).toHaveTextContent('Server filter');
@@ -315,6 +319,8 @@ describe('LiveLogsPage', () => {
     expect(screen.getByText('brief evidence')).toBeInTheDocument();
     expect(screen.getByTestId('livelogs-download-button')).toBeEnabled();
     fireEvent.click(screen.getByTestId('livelogs-clear-button'));
+    // Clearing the buffer now confirms first.
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Clear the stream?' })).getByRole('button', { name: 'Confirm' }));
     await waitFor(() => {
       for (const key of ['visible', 'buffered', 'received', 'drops']) {
         expect(brief.querySelector(`[data-operational-metric="${key}"] [data-operational-value]`)).toHaveTextContent('0');
@@ -528,6 +534,10 @@ describe('LiveLogsPage', () => {
     );
 
     fireEvent.click(screen.getByTestId('livelogs-clear-button'));
+    // Clearing the buffer now confirms first.
+    const confirmDialog = screen.getByRole('dialog', { name: 'Clear the stream?' });
+    expect(confirmDialog).toHaveTextContent('This removes the lines shown so far.');
+    fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => {
       expect(screen.queryByText(/about-to-clear/)).not.toBeInTheDocument();

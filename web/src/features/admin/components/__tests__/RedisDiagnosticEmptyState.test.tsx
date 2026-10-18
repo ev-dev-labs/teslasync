@@ -206,7 +206,9 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
       await client.refetchQueries({ queryKey: redisSignalKeys.keys });
     });
     await within(section).findByText('Cached · refresh failed');
-    expect(within(section).getByText('No data available')).toBeInTheDocument();
+    // The retained empty enumeration renders the informational empty state
+    // (not the bare 'No data available' message) beside the stale warning.
+    expect(within(section).getByText('No Redis signal keys are available yet.')).toBeInTheDocument();
     fireEvent.click(within(section).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(within(section).queryByText('Cached · refresh failed')).toBeNull());
     expect(within(section).getByText('No data available')).toBeInTheDocument();
@@ -290,7 +292,8 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
       expect(link).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'px-3');
       link.focus();
       expect(link).toHaveFocus();
-      expect(translate).toHaveBeenCalledWith(key, label);
+      // react-i18next forwards (key, fallback) as (key, { defaultValue }); pin the same key + fallback.
+      expect(translate).toHaveBeenCalledWith(key, expect.objectContaining({ defaultValue: label }));
     } finally {
       translate.mockRestore();
     }
@@ -438,7 +441,8 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
       );
       const unnamed = await screen.findByTestId('redis-diagnostic-other-12345');
       expect(unnamed).toHaveTextContent('Vehicle 12345 · 1.234');
-      expect(translate).toHaveBeenCalledWith('redis.vehicleFallback', 'Vehicle {{id}}', { id: 12345 });
+      // react-i18next forwards (key, fallback, opts) as (key, { defaultValue, ...opts }); pin the same key + fallback + id.
+      expect(translate).toHaveBeenCalledWith('redis.vehicleFallback', expect.objectContaining({ defaultValue: 'Vehicle {{id}}', id: 12345 }));
       expect(screen.getByTestId('redis-diagnostic-other-23456')).toHaveTextContent('VIN23456 · 2.345');
       expect(screen.getByTestId('redis-diagnostic-other-34567')).toHaveTextContent('Falcon · 3.456');
       expect(screen.getByText(/has 1\.234 signals/)).toBeInTheDocument();
