@@ -112,3 +112,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 06:45 UTC - step 5 partial: B + E integrated (50 resolved, 9 blocked)
 - B: 45 shell tests migrated, 122/122, pushed 23e4741d02. E: 5 battery fixed via validSoc sanitization, 9 scenario-gate blocked (owner decision), pushed c6a26b002d.
 - Worktrees step5b/step5e removed. A, C, D, F, G, H still running.
+
+## 2026-10-18 07:15 UTC - step 5 ALL 8 integrated (143 resolved, 24 blocked/by-design)
+- A31/4, C4/7, D7/1, F6/2, G30/1 + B45, E5/9, H15. Full close suite running.
+- Decision list: E9 scenario gate, F1 NaN-chart, F2 isStale, C1-7 shell pins. Worktrees removed.

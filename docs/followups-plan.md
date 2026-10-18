@@ -264,7 +264,75 @@ Results:
   with exported `validSoc` (+ regression tests); 5 fixed (invalid-percentage NaN/±Inf/
   out-of-range), 9 scenario-gate failures remain BLOCKED (coverageEstablished via
   coveredLocalDates, no caller provides it — owner decision).
-- A, C, D, F, G, H running.
+- H integrated (`345feddafc` + re-pin `ac98aa74ab`): 15 pre-existing fixed (admin
+  tri-state, StatusHero a11y prod fix, watch units, weekly_digest localization prod
+  fix + catalog regen, quiet-hours label, DataTable copy) + ChargingForensics flake
+  hardened (reduced-motion pin; 10x + 6 shuffles 29/29). The new catalog key broke
+  16 pinned i18n assertions; re-pinned via `i18n-trio-checkpoint.mjs
+  --typed --checkpoint-catalog` (generator) — back to exactly the 11 legitimate reds.
+  `HelixEvidenceTrail.tsx` keeps a pre-existing dynamic key, so it stays (by design)
+  outside the source-checkpoint set.
+- A integrated (`e0fac90924`): CommandDeck 31/35 migrated at equal strictness
+  (expects 160→206, no skips/deletes) + 1 shell prod fix (persist effect no longer
+  clobbers the saved deck view while its section late-loads). 4 left red BY DESIGN:
+  icon-only collapsed secondary rail ×2, directional ltr/rtl entrances ×2 (verified
+  absent from the new deck; no successor contract).
+- F integrated (`26f7bd6`): 6/8 (signalCorrelation -0→+0 prod fix; deadband stale
+  pins refreshed to exact delta-MAD outputs; TripReplay map-height + null-efficiency
+  hide-missing pins). 2 left red for OWNER DECISION (see list).
+- D integrated (`5ec32bc835`): 7/8 (dateFormat `<=0` guard restored + 2 regression-
+  ratifying pins corrected; 6h i18nKey moved to `date.preset.last6h` + catalog key;
+  workspaceScope + WorkspaceHeader pins; mobile.viewport migrated). The branch's
+  additions-list registration was replaced at pick time with the step-2b/H
+  convention (split regen + `--checkpoint-catalog` fold; predecessor now 32947).
+  1 left red BY DESIGN: phase6 mobile-drawer fanout (drawer scope block removed by
+  sidenav merge, no `drawer` concept left in workspaceScope).
+- G integrated (`c9164c98d6`): 30/31 pre-existing hooks (DLQ string ring ids + 500
+  cap export; guardWriteOptions fail-closed pins; AbortSignal, envelope/array-shape
+  mocks; gas-price poll chain + 2 new tests; camelCaseKeys aliases; governance
+  prefix key; simulate fail-closed prod fix; isRefetching tracked-props; mediaHistory
+  short-key prod fix). Expects 997→1005, renames only, no deletes. 1 left red BY
+  DESIGN: useVehicleVinFilter stale-VIN removal (d2cb6396ac deliberately replaced
+  cleanup with retain + scopeReady gating).
+- C integrated (`b22ccc53c1` + re-pin): copy-owner 3 + final-four 1 fixed via the
+  blessed route — the child EXTENDED `i18n-trio-checkpoint --checkpoint-catalog` to
+  the two forgotten suites (original five byte-identical) and regen'd; HistoryPrompt
+  gating migrated to reviewed noVehicle-first precedence (verified against
+  CommandHistoryPage + page-test oracle); RegexTester Title-Case fallback aligned.
+  shell-preservation 0/7 BLOCKED (see decision list).
+- Step 5 close: 143 resolved, 24 blocked/by-design (E9 + A4 + F2 + D1 + G1 + C7);
+  143+24=167 reconciles the inventory exactly. Both known flakes hardened
+  (ChargingForensics here, JourneyAssurance in step 4). All worktrees removed.
+
+### Step 5 decision list (needs owner)
+- E1–E9 ChargeAdvisor scenario gate (9 tests listed in inventory): scenarios require
+  `coverageEstablished` via `coveredLocalDates`, which no caller provides. Options:
+  (a) provide coverage from the history calendar; (b) relax the gate for
+  single-source scenarios; (c) accept scenarios hidden until coverage exists (then
+  update tests to the hidden contract).
+- F1 driving TripReplay NaN-chart (`never feeds NaN ... first ts is unparseable`):
+  demands finite chart times anchored on first parseable row, but the trips
+  TripReplayPage deliberately feeds NaN for unknown timestamps ("without inventing
+  a time", pinned passing at `trips/.../TripReplayPage.test.tsx:381`). Options:
+  (a) driving adopts the trips NaN contract (update driving test); (b) trips adopts
+  finite-anchor (change trips page + its passing pin).
+- F2 gap-detector isStale (`retains observations ... during a stale response`):
+  expects `retained=true` for plain react-query `isStale` with data, but shared
+  `deriveDataState` deliberately ignores `isStale` (rules 1–8; staleness-flag ≠
+  stale evidence) so the page computes `retained=false`. Options: (a) wire isStale
+  into the shared retained derivation (broad: every deriveDataState consumer);
+  (b) accept isStale≠retained and adjust the case to the shared contract.
+- C1–C7 shell-preservation byte-pins (Layout, CommandPalette, ThemeQuickSwitcher
+  current-source hashes + 4 cascade fragment errors): pins predate the trio + sidenav
+  redesigns; the shell files changed legitimately (behaviorally verified: Layout
+  98/98, BottomTabBar 24/24, CommandDeck 32/36, sidenav e2e). No repo generator
+  covers these pins, and hand-editing hashes is forbidden. Options: (a) owner
+  reviews the new shell bytes and blesses new pins (+ deltas table); (b) owner
+  authorizes writing a blessed re-pin generator for this suite.
+- By-design reds needing no decision, only records: A4 (collapsed-icon secondary
+  rail ×2, directional entrances ×2 — absent from the new deck), D1 (mobile-drawer
+  fanout — drawer scope removed by sidenav merge), G1 (stale-VIN removal —
+  deliberately replaced by retain + scopeReady in d2cb6396ac).
 
 ## 6. Phase 6 items (284 failed)
 
