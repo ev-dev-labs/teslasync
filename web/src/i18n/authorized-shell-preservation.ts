@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 export const acceptedShellDeltas = [
   {
     path: 'web/src/components/layout/Layout.tsx',
-    predecessorSHA256: '8eb9026972d5c49dd42537182ad5d4cfaf43f6b38eb2a2c7e943433758526e63',
+    predecessorSHA256: 'abe491d1c7226d5f7d9ff3fff995c962f3c94d8df8b0b71c7783ea65992eccdf',
     fragments: [
       {
         current: "import { RouteTransition } from '@/components/motion/runtime'\nimport {\n",
@@ -31,7 +31,7 @@ export const acceptedShellDeltas = [
         predecessor: "  const sidebarCloseRef = useRef<HTMLButtonElement>(null)\n  // Command Deck rail collapse. Host-owned (not deck-owned) because the\n",
       },
       {
-        current: "      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-role=\"sidebar\" data-tour=\"sidebar\" className=\"sidenav-host\">\n        <Suspense fallback={<div className=\"sidenav-loading\" />} >\n",
+        current: "      {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-role=\"sidebar\" data-tour=\"sidebar\" className=\"sidenav-host\">\n        {/* Width-matched placeholder (CLS guard): the loaded deck occupies the\n            76px rail plus the 272px docked panel on desktop (see sidenav.css),\n            the rail alone on tablet (panel is a modal overlay there), and zero\n            in-flow width on phone (fixed bottom tabs). A 76px-always fallback\n            squeezes the content column when the deck resolves (Lighthouse CLS\n            0.19 on every route). Both sides read the same deckPanelOpen state\n            so they cannot disagree. */}\n        <Suspense fallback={deckViewport === 'phone' ? null : <div className=\"sidenav-loading\" style={{ width: 76 + (deckViewport === 'desktop' && deckPanelOpen ? 272 : 0) }} />} >\n",
         predecessor: "            // Rationale: drawer scrim \u2014 pure backdrop with no content. Pairs\n            // with the <aside> sidebar (drawer pattern), not a dialog. New\n            // interactive dialogs MUST use <Modal>.\n      {/* Sidebar */}\n      <aside\n        ref={sidebarRef}\n        {/* Mobile sidebar brand. Build version intentionally not rendered\n            here; canonical provenance lives in the footer <VersionSegment>. */}\n        <div className=\"flex items-center gap-2 border-b border-[var(--border-default)] px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden\">\n          <PrefetchNavLink to=\"/\" className=\"min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors\" onClick={() => setSidebarOpen(false)}>\n          <PrefetchNavLink to=\"/\" className=\"min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors\" onClick={() => setSidebarOpen(false)}>\n            <Logo size={32} showWordmark />\n          </PrefetchNavLink>\n",
       },
       {

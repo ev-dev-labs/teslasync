@@ -741,6 +741,10 @@ export default function Layout() {
       return false
     }
   })
+  // Viewport bracket read synchronously so the deck Suspense fallback below
+  // reserves the exact in-flow width of the loaded deck. Same brackets as
+  // CommandDeck's own viewport state (phone <768 < tablet <1280 <= desktop).
+  const [deckViewport] = useState(() => window.innerWidth < 768 ? 'phone' : window.innerWidth < 1280 ? 'tablet' : 'desktop')
   useEffect(() => {
     try {
       window.localStorage.setItem('teslasync-deck-panel-open', deckPanelOpen ? '1' : '0')
@@ -1257,7 +1261,14 @@ export default function Layout() {
       <AnnouncerRegion />
 
       {presentation.mode === 'standard' && <nav aria-label={t('a11y.primaryNav', 'Primary')} data-role="sidebar" data-tour="sidebar" className="sidenav-host">
-        <Suspense fallback={<div className="sidenav-loading" />} >
+        {/* Width-matched placeholder (CLS guard): the loaded deck occupies the
+            76px rail plus the 272px docked panel on desktop (see sidenav.css),
+            the rail alone on tablet (panel is a modal overlay there), and zero
+            in-flow width on phone (fixed bottom tabs). A 76px-always fallback
+            squeezes the content column when the deck resolves (Lighthouse CLS
+            0.19 on every route). Both sides read the same deckPanelOpen state
+            so they cannot disagree. */}
+        <Suspense fallback={deckViewport === 'phone' ? null : <div className="sidenav-loading" style={{ width: 76 + (deckViewport === 'desktop' && deckPanelOpen ? 272 : 0) }} />} >
           <CommandDeck
             sections={groupedSidebarSections}
             pinnedItems={pinnedNavItems}
