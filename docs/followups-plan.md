@@ -216,7 +216,29 @@ Done (commit `2e7c0657b1`, pushed).
 
 ## 4. JourneyAssurance flake
 
-TBD.
+Done (commit `4d23694bc1`, pushed).
+- Root cause of the REAL defect found: `JourneyAssurancePage.departureZone.test.tsx`
+  asserted a divergent host zone (`America/Los_Angeles`) but relied on ambient TZ —
+  14/14 fail on any other host zone (reproduced fail-before under `TZ=UTC` and
+  `TZ=America/New_York`). Fix: pin `process.env.TZ = 'America/Los_Angeles'` at the
+  top of the file (repo precedent: `AdvancedIntelligencePages.test.tsx`,
+  `SmartChargePage.test.tsx`); the beforeEach guards verify the pin. Probed that
+  each test file runs in its own worker process, so the pin cannot leak to other
+  files. No assertions changed.
+- No shared-state leak found in `JourneyAssurancePage.test.tsx`: zombie
+  paused-mutation resume disproven by probe (0 calls after 250ms; `client.clear()`
+  drops paused mutations); fixture mutation disproven (27/27 with deep-frozen
+  `journey`); no module formatter caches in the hooks used; drawer close is
+  synchronous. Historical in-suite red was the pre-wave-2 brief contract, fixed by
+  `f73d90792e` (both files green in reports c/d; dependency cone byte-identical
+  since). The suite-F transient had no recorded signature on identical code.
+- Proof: file 1 20/20 + 12 shuffle seeds green; file 2 20/20 under ambient UTC +
+  14 shuffle seeds green; file 2 also 14/14 under ambient NY after the pin.
+- Follow-ups for later steps: `EvidencePanel.datePreferences.test.tsx` and
+  `AnalysisBrief.datePreferences.test.tsx` assert the LA zone with no pin — same
+  ambient-TZ dependence (step 5 / PR #198 CI-UTC candidates). Bare 1s RTL `waitFor`
+  defaults under full-suite contention remain the likeliest explanation for the
+  signature-less suite-F transient; not changed (assertions out of scope).
 
 ## 5. Remaining 80 failures
 

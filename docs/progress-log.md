@@ -99,3 +99,8 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - Browser verification passed (temp Playwright spec via MS Edge: oldest-reading age advanced across 125s fast-forward, no fixture churn); temp spec + config deleted.
 - Committed + pushed step 3 (shared useTicker, memoization, ticker-isolation tests). Gates: dashboard 4575/0, trio 7672/0, tsc/lint/build green.
 - Next: step 4 JourneyAssurance isolation fix.
+
+## 2026-10-18 06:15 UTC - step 4 done, pushed as 4d23694bc1
+- departureZone TZ pin: 14/14 under ambient UTC + NY (was 14/14 fail); file1 20/20; file2 20/20 under UTC; 26 shuffle seeds green total.
+- Ruled out zombie-mutation, fixture-mutation, formatter-cache, drawer-timing, worker-reuse leaks with probes. Full suite (this tree) shows Failed Tests 167, no JourneyAssurance red observed.
+- Next: step 5 remaining failures (parallel worktrees).
