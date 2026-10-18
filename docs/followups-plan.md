@@ -591,8 +591,28 @@ Fixes (each verified locally under CI conditions before push):
     synthetic nested Card>Panel still caught, parsed==0 guard added
     (9aaff79e93). CodeQL: first-only replace -> explicit /\[/ regex,
     same behavior, 7/7 (8c224d3244).
-12. E2E triage (run 39161392445, still in progress at last poll):
-    visual green + functional red; perf commit ruled out as cause
+12. E2E triage (run 39161392445): harvested failure artifacts instead
+    of waiting (reports upload always). Perf commit ruled out as cause
     (palette namespace already shell-loaded before/after; mirror is
-    behavior-neutral; smoke failures pre-date the commit per prior
-    plan). Waiting on run completion for logs (gh blocks until done).
+    behavior-neutral). Fixes pushed:
+    (a) 72625d1f69: optimizer mock returned a 3-field stub predating the
+    contract while backend always returns full optimizerResponse ->
+    OptimizerSection crashed on current_schedule (responsive charging +
+    a11y charging). Mock now mirrors wire shape incl. zero-session
+    empty variant. A11y tab-bar bg pin expected drawer-era colors; bar
+    follows var(--surface-1) -> pin the seeded theme surface
+    relationally (no magic colors; un-themeing still fails). Table
+    scroll container keyboard-focusable (axe
+    scrollable-region-focusable, /fsd), yielding when caller tabindex
+    present (honors the no-redundant-stops unit test); Table 6/6.
+    (b) dff4cdb2ba: smoke mobile-nav journey migrated to the redesigned
+    deck (More sheet -> Home section -> All pages -> /explore, sheet
+    closes). data-sidebar-open is gone by design (unit pins absence);
+    drawer-era e2e was stale. Verified 3/3 on Edge via local override
+    config (engine-agnostic flow); pwa-navigation.spec references the
+    attribute too but matches no CI project (dead spec, left alone).
+    Perf job failure (dashboard CLS 0.233) is the fixed shell shift;
+    queued CLS fix should green it. Remaining r2 distinct failures to
+    triage from the fresh run: alert-pack dialog counts/clicks, API
+    evidence table Expand/Comfortable, appearance Display Mode text
+    (charging-overview was crash cascade).
