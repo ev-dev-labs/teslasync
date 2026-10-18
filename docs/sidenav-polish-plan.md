@@ -37,3 +37,13 @@
 - Phone screenshots exposed the shared Button's fixed height compressing SVGs despite the tab bar's reserved height. Set tab height to fill the bar, minimum 60px, 14px caption line height, and non-shrinking 22px icons. Added real SVG bounding-box assertions.
 - The fetched base defaults tablet panels closed on a fresh visit; Edge checks explicitly open the section before measuring the drawer, preserving that existing behavior.
 - Full lint including audits passed. The first build was intentionally stopped before bundling while correcting the observed phone sizing; final build will run after the correction commit.
+
+## Gate results
+- Expanded unit run (all sidebar helpers, legacy Sidebar, BottomTabBar, ThemeQuickSwitcherPopover, StatusBar and status-bar suites): **478 passed / 0 failed / 0 skipped**, 30 files.
+- Three i18n trio suites: **7,672 passed / 0 failed / 0 skipped**.
+- TypeScript `tsc --noEmit`: passed; production build also completed both app and service-worker typechecks.
+- `npm run lint`: passed, including the complete audit chain and release-identity check. Existing thresholded help-tooltip coverage remains 8/9; unchanged.
+- `node scripts/split-i18n-catalog.mjs --check`: passed (57 bundles, 181 fallbacks, 1,272 shell keys, zero known-missing keys).
+- `npm run build`: passed at source commit **41a8824660**, including bundle budgets, PWA precache/contract and source-map postchecks. HEAD and app sources stayed fixed throughout the completed build.
+- Committed-byte verification: all six regenerated producer SHA256 values match the exact committed LF source bytes; no hashes edited manually.
+- Edge route guard: **15 passed / 0 failed / 0 skipped**, covering 25 requested route/width combinations (5 routes × 5 widths); zero narrow-card, per-character wrapping or horizontal-overflow violations.
