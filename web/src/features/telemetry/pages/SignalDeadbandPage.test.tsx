@@ -215,25 +215,28 @@ describe('SignalDeadbandPage evidence preservation', () => {
     expect(state.chart?.error).toBeNull();
   });
 
-  it('preserves exact SI thresholds, all six distributions, recommendation and default exports', () => {
+  it('preserves exact SI thresholds, all fourteen distributions, recommendation and default exports', () => {
     const response = history([0, 0, 1]);
     const original = structuredClone(response);
     state.history = query(response);
     render(<SignalDeadbandPage />);
+    // The chart mock records one series entry per render; drop the
+    // pre-selection render so the series assertion pins the live chart.
+    state.series = [];
     choose();
     assertSections();
     expect(response).toEqual(original);
     expect(state.briefs['signal-deadband-summary']?.metrics.map((metric) => metric.rawValue))
-      .toEqual([0, 50, 0.25, 33.3333]);
+      .toEqual([2.2239, 100, 1.11195, 66.6667]);
     expect(state.briefs['signal-deadband-retention-summary']?.metrics.map((metric) => metric.rawValue))
-      .toEqual([3, 100, 100, 100]);
+      .toEqual([3, 100, 100, 35.85]);
     expect(state.chart?.dataColumns?.map((column) => column.key))
       .toEqual(['threshold', 'retained', 'reduction', 'noiseSuppression', 'materialRetention', 'fidelity']);
     expect(state.chart?.data?.[0]).toEqual({
       threshold: 0, retained: 3, reduction: 0, noiseSuppression: 0, materialRetention: 100, fidelity: 100,
     });
     expect(state.chart?.data?.at(-1)).toEqual({
-      threshold: 0.95, retained: 2, reduction: 33.3, noiseSuppression: 100, materialRetention: 100, fidelity: 100,
+      threshold: 4.4478, retained: 1, reduction: 66.7, noiseSuppression: 100, materialRetention: 100, fidelity: 35.9,
     });
     expect(state.series).toEqual([expect.objectContaining({ dataKey: 'retained', type: 'monotone', strokeWidth: 2 })]);
     expect(state.chart?.exportData).toBeUndefined();
@@ -274,11 +277,11 @@ describe('SignalDeadbandPage evidence preservation', () => {
     choose();
     assertSections();
     expect(state.chart?.error).toBeNull();
-    expect(state.chart?.data).toHaveLength(6);
+    expect(state.chart?.data).toHaveLength(14);
     expect(state.briefs['signal-deadband-summary']?.retained).toBe(true);
     expect(state.briefs['signal-deadband-retention-summary']?.retained).toBe(true);
     expect(state.briefs['signal-deadband-summary']?.sourceStatus).toBe('stale');
-    expect(state.briefs['signal-deadband-summary']?.metrics[2]?.rawValue).toBe(0.25);
+    expect(state.briefs['signal-deadband-summary']?.metrics[2]?.rawValue).toBe(1.11195);
   });
 
   it('keeps a titled fatal history chart and one source-owned retry without losing catalog actions', () => {

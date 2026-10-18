@@ -272,7 +272,11 @@ export function analyzeCorrelation(
   for (let offset = -maxOffset; offset <= maxOffset; offset++) {
     const { r, n } = pearson(va, vb, offset);
     if (n < opts.minOverlap || !Number.isFinite(r)) continue;
-    correlogram.push({ lagS: offset * opts.stepS, r: Math.round(r * 10000) / 10000, n });
+    // When maxLagS < stepS the sweep starts at -maxOffset === -0, so the
+    // zero-lag product is -0. Normalize to canonical +0: downstream identity
+    // checks (and the bestLagS contract) distinguish the two.
+    const lagS = offset * opts.stepS;
+    correlogram.push({ lagS: lagS === 0 ? 0 : lagS, r: Math.round(r * 10000) / 10000, n });
   }
   if (correlogram.length === 0) return { result: null, reason: 'insufficient' };
 

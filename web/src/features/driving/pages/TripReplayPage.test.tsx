@@ -436,12 +436,15 @@ describe('TripReplayPage — drive summary KPIs', () => {
     renderPage();
 
     const summary = screen.getByRole('region', { name: 'Drive Summary' });
-    const value = within(summary).getByText('Efficiency').closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
-    expect(value).toHaveTextContent(expected);
-    expect(value?.textContent).toBe(expected);
     if (energyUsedWh === null) {
+      // Unknown energy hides the tile under the shared brief contract instead
+      // of rendering a unit-bearing zero — still distinct from measured 0.
+      expect(within(summary).queryByText('Efficiency')).not.toBeInTheDocument();
       expect(within(summary).queryByText(/Wh\/km$/)).not.toBeInTheDocument();
     } else {
+      const value = within(summary).getByText('Efficiency').closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
+      expect(value).toHaveTextContent(expected);
+      expect(value?.textContent).toBe(expected);
       expect(within(summary).getByText('0.00 Wh/km')).toBeInTheDocument();
     }
     expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
@@ -486,7 +489,7 @@ describe('TripReplayPage — live-position stats + seek', () => {
     expect(mapProps.last?.height).toBe('100%');
     expect(mapProps.last?.embedded).toBe(true);
     expect(screen.getByTestId('trip-replay-map').parentElement).toHaveClass(
-      'h-[320px]', 'sm:h-[380px]', 'lg:h-[440px]',
+      'h-[55vh]', 'lg:h-auto', 'lg:min-h-[440px]',
     );
     expect(chartsProps.last?.currentIndex).toBe(0);
     expect(chartsProps.last?.speedUnit).toBe('km/h');
