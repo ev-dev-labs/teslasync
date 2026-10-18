@@ -564,6 +564,35 @@ Fixes (each verified locally under CI conditions before push):
    Rejected: registry i18nKey-drop (gzip already dedups vs name, ~1KB);
    theme key-compression (repetitive keys, low gz value); tour split
    (tours already tree-shaken, ~20KB source mostly i18n keys).
-9. CI run on e86a58ef8e: run 39161392364 (+siblings 39161392349/
-   39161392377/39161392383/39161382484/39161392438/39161392475/
-   39161392604) — pending at push time; watching.
+9. CI run on e86a58ef8e: run 39161392364 (+siblings) — 18 fail,
+   56 pass at last poll. Fails: Lighthouse CLS; FE shards 3/8+7/8
+   (frozen producer checkpoints); nestedSurfaces 30s timeout (shard 7);
+   CodeQL high (palette test replace); e2e run 39161392445 widely red
+   (responsive shards, a11y, perf, ff/webkit smoke; visual 10/10 green).
+10. Lighthouse CLS: 0.19 shell shift on all 6 routes was the lazy
+    CommandDeck resolving behind a fixed 76px Suspense fallback while
+    loaded = 348px (08a970bd71: width-matched fallback from the same
+    deckPanelOpen state; shell-preservation fragment 6 re-derived, pins
+    recomputed via blessed generator + manual trio-unalignable rederive
+    with escaper self-check). Local CLS probe (Playwright+Edge @1350):
+    / /drives /charging /battery ~0.000. /vehicles (0.167) + /analytics
+    (0.168) keep LATE (~2s) error-notice shifts: DataSourceNotice and
+    page notices mount after query settle with no pending placeholder.
+    BLOCKED (over box): any pending box mismatches one outcome (success
+    collapses vs error expands) — needs notice-stability design.
+11. Shard fixes: SI modernization changed QuickStatsPage +
+    AnalyticsSummaryWidget rawValue only (t-calls 38/18 unchanged);
+    re-checkpointed all 3 files incl. Layout via
+    i18n-trio-checkpoint.mjs --checkpoint-sources (20dc21ddf6); trio
+    7672/7672 twice (one transient 9-file/1796-fail run right after the
+    JSON rewrite — stale transform cache, never reproduced again).
+    nestedSurfaces audit: literal pre-filter skips 3902/4759 files that
+    provably cannot contain findings; 5.8s->1.6s, identical output (0),
+    synthetic nested Card>Panel still caught, parsed==0 guard added
+    (9aaff79e93). CodeQL: first-only replace -> explicit /\[/ regex,
+    same behavior, 7/7 (8c224d3244).
+12. E2E triage (run 39161392445, still in progress at last poll):
+    visual green + functional red; perf commit ruled out as cause
+    (palette namespace already shell-loaded before/after; mirror is
+    behavior-neutral; smoke failures pre-date the commit per prior
+    plan). Waiting on run completion for logs (gh blocks until done).

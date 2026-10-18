@@ -138,3 +138,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 13:00 UTC - perf startup diet fixed+pushed; CI watching
 - e86a58ef8e: commandShortcuts mirror split (GlobalShortcuts no longer pins 22KB commandRegistry at boot); regen i18n moves 44 palette keys out of shell.json. Startup 402.7KB -> 399.0KB, local bundle check + 64/64 tests + tsc/eslint/catalog green.
 - CI run 39161392364 (+7 siblings) pending on push. Next: watch to green, fix failures as they land.
+
+## 2026-10-18 13:45 UTC - shard+codeql+CLS-shell fixes queued; e2e harvest pending
+- CI on e86a58ef8e: 18 fail / 56 pass. Fixed+committed locally (unpushed, holding for e2e logs): CLS shell shift 08a970bd71 (4/6 routes ~0 CLS; vehicles/analytics notice-shifts BLOCKED over-box), trio checkpoints 20dc21ddf6 (7672/7672 x2), nestedSurfaces pre-filter 9aaff79e93 (5.8s->1.6s, identical findings), CodeQL regex 8c224d3244 (7/7).
+- E2E run 39161392445 still in progress (logs locked); failures look pre-existing (smoke was red before; perf commit ruled out by bundle-mapping check). Next: harvest e2e logs, push batch, fix e2e.
