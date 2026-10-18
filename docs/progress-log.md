@@ -150,3 +150,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 ## 2026-10-18 14:45 UTC - e2e layer3 + visual baselines pushed
 - Root-caused+fixed on Edge: tablet modal default (Layout viewport-aware), VehicleMultiSelect haspopup dialog, alert-pack TH-polluted locators (22/22), api-log Expand regex + resizer straddle (6/6), tab contrast text-primary (a11y 13/13), Display-mode sentence case, CodeQL indexOf helper. 6 charging.png regenerated (crash-error -> real content).
 - Pushed as layer-3 batch. Next: watch fresh CI, triage remaining shards (r3/r5/r6/r13/r14/r16) from new artifacts.
+
+## 2026-10-18 15:00 UTC - full suite green; waiting on e2e matrix
+- Local full suite alone: 2714 files, 57064 passed / 0 failed / 4 skipped (7.7 min; vs step-7 baseline 57050/24 — the CI-loop fixes cleared the known set too).
+- CI: 37 pass, 39 pending (e2e matrix), 1 fail = Lighthouse (blocked notice-shifts, recorded). Next: triage e2e when it lands.
