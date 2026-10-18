@@ -205,7 +205,8 @@ describe('SecurityEvent window/door/sentry unions', () => {
   });
 
   it('doorClosed accepts bool / number / string / object door signals', () => {
-    expect(doorClosed(null)).toBe(true);
+    // Tri-state by design (helpers.ts): missing evidence is unknown, never closed.
+    expect(doorClosed(null)).toBeNull();
     expect(doorClosed(false)).toBe(true);
     expect(doorClosed(true)).toBe(false);
     expect(doorClosed(0)).toBe(true);
@@ -218,13 +219,15 @@ describe('SecurityEvent window/door/sentry unions', () => {
     expect(isSentryActive(false)).toBe(false);
     expect(isSentryActive('SentryModeStateOff')).toBe(false);
     expect(isSentryActive('SentryModeStateArmed')).toBe(true);
-    expect(isSentryActive(null)).toBe(false);
+    // Tri-state by design (helpers.ts): missing evidence is unknown, never inactive.
+    expect(isSentryActive(null)).toBeNull();
   });
 
   it('allWindowsClosed only when every window narrows to Closed', () => {
     expect(allWindowsClosed(makeEvent())).toBe(true);
     expect(allWindowsClosed(makeEvent({ fdWindow: 'open' }))).toBe(false);
-    expect(allWindowsClosed(undefined)).toBe(true);
+    // Tri-state by design (helpers.ts): no readings is unknown, never secured.
+    expect(allWindowsClosed(undefined)).toBeNull();
   });
 
   it('computeSecurityStats aggregates lock/door/window/homelink/guest counts', () => {
@@ -265,17 +268,19 @@ describe('SecurityEvent window/door/sentry unions', () => {
       makeEvent({ id: '2', sentryMode: 'SentryModeStateOff', createdAt: '2024-01-01T06:00:00Z' }),
     ];
 
-    expect(buildSentryBuckets(events)).toEqual([{ date: '2024-01-01', sentryOn: 1, sentryOff: 1 }]);
+    // Explicit UTC: without a timezone the bucket day follows the worker's local TZ.
+    expect(buildSentryBuckets(events, 'UTC')).toEqual([{ date: '2024-01-01', sentryOn: 1, sentryOff: 1 }]);
     expect(computeSentryUptime(events)).toBe(50);
     expect(computeSentryUptime([])).toBe(0);
   });
 
-  it('findLastLockChange returns the timestamp preceding the first toggle', () => {
+  it('findLastLockChange returns the timestamp of the latest lock toggle', () => {
     const events: SecurityEvent[] = [
       makeEvent({ id: '1', locked: true, createdAt: '2024-01-01T00:00:00Z' }),
       makeEvent({ id: '2', locked: false, createdAt: '2024-01-01T01:00:00Z' }),
     ];
-    expect(findLastLockChange(events)).toBe('2024-01-01T00:00:00Z');
+    // The transition timestamp is the toggling row's createdAt, not its predecessor's.
+    expect(findLastLockChange(events)).toBe('2024-01-01T01:00:00Z');
     expect(findLastLockChange([])).toBeUndefined();
   });
 });

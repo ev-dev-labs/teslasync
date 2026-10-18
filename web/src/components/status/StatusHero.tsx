@@ -90,7 +90,13 @@ export function StatusHero({
               {subline}
               {live && (
                 <span className="inline-flex items-center gap-1.5">
-                  <LiveIndicator variant="dot" />
+                  {/* Decorative inside this live region: the hero's own
+                      role="status" already announces the "Live" label, and
+                      connection drops are spoken via the global status
+                      announcer — a nested live region would double-announce. */}
+                  <span aria-hidden="true" className="inline-flex">
+                    <LiveIndicator variant="dot" />
+                  </span>
                   <Text as="span" size="xs" color="muted" className="uppercase tracking-wider">Live</Text>
                 </span>
               )}

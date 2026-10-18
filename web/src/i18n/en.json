@@ -24884,7 +24884,8 @@
     "errorLabel": "Helix error:",
     "tools": {
       "batteryStatus": "Battery status",
-      "vehicleLocation": "Vehicle location"
+      "vehicleLocation": "Vehicle location",
+      "weeklyDigest": "Weekly digest"
     }
   },
   "chatbot": {

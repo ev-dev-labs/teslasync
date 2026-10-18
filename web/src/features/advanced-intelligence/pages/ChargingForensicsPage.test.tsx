@@ -30,6 +30,15 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: mocks.vehicleId }),
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
+// Pin reduced motion: the page wraps its panels in <FadeIn> (the evidence
+// panel with a 50ms stagger delay), which mounts at inline opacity 0 and
+// ramps via rAF. Visibility assertions then race the animation clock —
+// usually the animation wins, but under suite load the test reaches them
+// first and toBeVisible flakes. Reduced motion renders the final state
+// immediately, so visibility is deterministic without touching assertions.
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
+}));
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     formatDateTime: (value: string | null) => formatDateTime(value, { locale: 'en-GB', tz: 'Pacific/Auckland' }),

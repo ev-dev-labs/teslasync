@@ -58,6 +58,9 @@ export function HelixEvidenceTrail({
     if (name === 'query_vehicle_location') {
       return t('helix.tools.vehicleLocation', 'Vehicle location');
     }
+    if (name === 'weekly_digest') {
+      return t('helix.tools.weeklyDigest', 'Weekly digest');
+    }
     return name;
   };
 

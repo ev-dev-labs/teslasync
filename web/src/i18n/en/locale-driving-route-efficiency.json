@@ -991,7 +991,8 @@
     "thinkingStatusLabel": "Helix is thinking",
     "tools": {
       "batteryStatus": "Battery status",
-      "vehicleLocation": "Vehicle location"
+      "vehicleLocation": "Vehicle location",
+      "weeklyDigest": "Weekly digest"
     },
     "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
   },

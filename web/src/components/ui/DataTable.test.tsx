@@ -227,7 +227,11 @@ describe('DataTable — reusable value filters', () => {
     expect(screen.queryByText('Alpha')).toBeNull()
     expect(screen.getByText('1 matching / 3 loaded rows')).toBeInTheDocument()
     fireEvent.click(within(filter).getByRole('checkbox', { name: 'fail' }))
-    expect(screen.getByText('Nothing matches')).toBeInTheDocument()
+    // Loaded rows filtered to zero show the no-match copy (not the
+    // caller-owned emptyMessage, which is reserved for truly-empty data).
+    expect(screen.getByText('No results')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument()
+    expect(screen.queryByText('Nothing matches')).toBeNull()
     expect(screen.getByText('0 matching / 3 loaded rows')).toBeInTheDocument()
     fireEvent.click(within(filter).getByRole('button', { name: 'Clear' }))
     expect(screen.getByText('Alpha')).toBeInTheDocument()

@@ -22,9 +22,10 @@
 //      guard inside useAiStream + the visual `disabled` mirror it
 //      from canStart). This proves W1 Rule A — the disabled prop
 //      is a computed expression that reacts to state.
-//   4. With an empty message, the body POSTed is `{}` (the
-//      handler's deterministic "give a glance summary" default
-//      prompt path). This is the most common case the SPA needs
+//   4. With an empty message, the body POSTed carries ONLY the
+//      display unit prefs (no `message` key — the handler's
+//      deterministic "give a glance summary" default prompt
+//      path). This is the most common case the SPA needs
 //      to support (one-click summary, no typing required).
 //
 // The off-mode invariant test
@@ -158,12 +159,16 @@ describe('TestWatchFaceNlResponseAIOnWiredCallsRoute (watch-face-nl-response on-
     const { url, init } = fetchCalls[0]
     expect(url).toBe('/api/v1/ai/watch/respond')
     expect(init?.method).toBe('POST')
-    // The body must contain the typed message — proves the
-    // component is feeding the handler-side parser the same
-    // shape the Go test exercises.
+    // The body must contain the typed message plus the display
+    // unit prefs — proves the component is feeding the
+    // handler-side parser the same shape the Go test exercises.
     expect(typeof init?.body).toBe('string')
     const parsedBody = JSON.parse(init?.body as string)
-    expect(parsedBody).toEqual({ message: 'how is my battery doing?' })
+    expect(parsedBody).toEqual({
+      message: 'how is my battery doing?',
+      unit_of_length: 'km',
+      unit_of_temp: 'C',
+    })
     // Accept header must be text/event-stream — proves the SSE
     // contract is honoured by the hook.
     const headers = new Headers(init?.headers)
@@ -178,11 +183,12 @@ describe('TestWatchFaceNlResponseAIOnWiredCallsRoute (watch-face-nl-response on-
     })
   })
 
-  it('TestWatchFaceNlResponseAIOnWiredCallsRoute: clicking Ask with an empty message POSTs {} (default-summary path)', async () => {
+  it('TestWatchFaceNlResponseAIOnWiredCallsRoute: clicking Ask with an empty message POSTs unit prefs without a message (default-summary path)', async () => {
     // The watch surface is glance-style — the user often wants
-    // a one-click summary with no typing. The component sends
-    // `{}` in that case and the Go handler applies its
-    // deterministic "give a glance summary" default prompt.
+    // a one-click summary with no typing. The component omits
+    // `message` in that case (keeping the unit prefs so narration
+    // matches the fixed watch face) and the Go handler applies
+    // its deterministic "give a glance summary" default prompt.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',
@@ -213,7 +219,7 @@ describe('TestWatchFaceNlResponseAIOnWiredCallsRoute (watch-face-nl-response on-
 
     await waitFor(() => expect(fetchCalls).toHaveLength(1))
     const parsedBody = JSON.parse(fetchCalls[0].init?.body as string)
-    expect(parsedBody).toEqual({})
+    expect(parsedBody).toEqual({ unit_of_length: 'km', unit_of_temp: 'C' })
   })
 
   it('TestWatchFaceNlResponseAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {

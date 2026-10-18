@@ -4,7 +4,9 @@ import { StatusHero } from '../StatusHero'
 
 describe('StatusHero', () => {
   it.each([
-    ['healthy', 'circle-check'],
+    // CheckCircle is lucide's deprecated alias for CircleCheckBig — the
+    // rendered class follows the canonical name, not the alias.
+    ['healthy', 'circle-check-big'],
     ['degraded', 'triangle-alert'],
     ['unhealthy', 'circle-x'],
     ['unknown', 'circle-help'],
