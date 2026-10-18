@@ -240,9 +240,24 @@ Done (commit `4d23694bc1`, pushed).
   defaults under full-suite contention remain the likeliest explanation for the
   signature-less suite-F transient; not changed (assertions out of scope).
 
-## 5. Remaining 80 failures
+## 5. Remaining failures
 
-TBD (trio-class 6, blocked 22, pre-existing 52).
+Inventory on current tree (`D:/tmp/vitest-step5.json`, local only): **56,859 passed /
+167 failed, 35 red files** (baseline was 56,831/168 in 36 files; delta = +1 flake-passed
+ChargingForensics + 27 new passing tests from steps 2–4, 0 new failures).
+
+Groups (8 parallel children, isolated sibling worktrees `D:/repos/teslasync-step5{a..h}`
+on branches `fix/step5-{a..h}`, node_modules junctions, `--maxWorkers=2`):
+- A sidenav shell 35: CommandDeck.test.
+- B sidenav shell 45: Layout.test 24 + BottomTabBar.test 21.
+- C i18n 11: shell-preservation 7 (5 sidenav + 2 trio-class, one worker) + copy-owner 3 + final-four 1 (trio rule + generators).
+- D shell-adjacent + lib 8: workspaceScope 3 + mobile.viewport 1 + WorkspaceHeader 2 + datePresets 1 + dateFormat.duration 1 (known `<=`→`<` culprit 2a1cea45ff).
+- E battery block 14: ChargeAdvisorPage (recorded: raw-NaN overwrite since 5fb15a0609 + gate drift since d2cb6396ac).
+- F telemetry+trips blocks 8: SignalDeadband 3 (stale pins) + signalCorrelation 1 (`-0`) + SignalGapDetector 1 (isStale) + TripReplay 3 (`NaN.toFixed(3)` calc).
+- G hooks pre-existing 31: useDLQ 11 + useGuard 8 + 11 files ×1–2.
+- H misc 15 + flake hardening: admin 5 + StatusHero 5 + TestWatchFace 2 + AIDigest 1 + AIQuietHours 1 + DataTable 1 + ChargingForensics isolation proof.
+
+Results: TBD (children running).
 
 ## 6. Phase 6 items (284 failed)
 

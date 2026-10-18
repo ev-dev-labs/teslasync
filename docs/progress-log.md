@@ -104,3 +104,7 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 - departureZone TZ pin: 14/14 under ambient UTC + NY (was 14/14 fail); file1 20/20; file2 20/20 under UTC; 26 shuffle seeds green total.
 - Ruled out zombie-mutation, fixture-mutation, formatter-cache, drawer-timing, worker-reuse leaks with probes. Full suite (this tree) shows Failed Tests 167, no JourneyAssurance red observed.
 - Next: step 5 remaining failures (parallel worktrees).
+
+## 2026-10-18 06:30 UTC - step 5 launched: 8 children on worktrees step5a-h
+- Inventory: 56859/167 in 35 files (0 new vs baseline; +27 new passing from steps 2-4).
+- Children: A CommandDeck 35, B Layout+Tabs 45, C i18n 11, D shell/lib 8, E battery 14, F telemetry/trips 8, G hooks 31, H misc 15 + flake.
